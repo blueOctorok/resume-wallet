@@ -1,0 +1,40 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "C:\\Users\\blaha\\Desktop\\resume-wallet\\contracts\\ResumeRegistry.sol": {
+      "lastModificationDate": 1755873007237,
+      "contentHash": "9db5d1d4f02ece872af4e883dad01f46",
+      "sourceName": "contracts/ResumeRegistry.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.19"
+      ],
+      "artifacts": [
+        "ResumeRegistry"
+      ]
+    }
+  }
+}
