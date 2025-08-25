@@ -51,6 +51,34 @@ export default function ResumeUpload() {
     }
   }
 
+  const saveResumeToDatabase = async (resumeData: {
+    title: string
+    filename: string
+    ipfsHash: string
+    isPublic: boolean
+  }) => {
+    try {
+      const response = await fetch('/api/resumes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(resumeData),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to save resume: ${response.statusText}`)
+      }
+
+      const savedResume = await response.json()
+      console.log('Resume saved to database:', savedResume)
+      return savedResume
+    } catch (error) {
+      console.error('Error saving to database:', error)
+      throw error
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -64,21 +92,27 @@ export default function ResumeUpload() {
     setErrorMessage('')
 
     try {
+      // Step 1: Upload to IPFS
       const result = await uploadToIPFS(file)
+
+      // Step 2: Save to database
+      await saveResumeToDatabase({
+        title,
+        filename: file.name,
+        ipfsHash: result.ipfsHash,
+        isPublic,
+      })
 
       setUploadStatus('success')
 
-      // Log the upload result for now
-      console.log('Resume uploaded:', {
+      // Log the complete upload result
+      console.log('Resume uploaded successfully:', {
         ipfsHash: result.ipfsHash,
         url: result.url,
         filename: file.name,
         isPublic,
         title,
       })
-
-      // TODO: Save to database and blockchain
-      // This will be implemented in the next phase
 
       // Reset form after successful upload
       setFile(null)
@@ -87,7 +121,11 @@ export default function ResumeUpload() {
     } catch (error) {
       console.error('Upload failed:', error)
       setUploadStatus('error')
-      setErrorMessage('Upload failed. Please try again.')
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Upload failed. Please try again.'
+      )
     } finally {
       setIsUploading(false)
     }
@@ -215,7 +253,8 @@ export default function ResumeUpload() {
           <div className='flex items-center p-3 bg-green-50 border border-green-200 rounded-md'>
             <CheckCircle className='w-5 h-5 text-green-400 mr-2' />
             <span className='text-sm text-green-700'>
-              Resume uploaded successfully! Your file is now stored on IPFS.
+              Resume uploaded successfully! Your file is now stored on IPFS and
+              saved to the database.
             </span>
           </div>
         )}

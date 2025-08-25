@@ -24,6 +24,25 @@ This file tracks all modifications made to the DriverAppChain codebase during de
   - Upload status tracking and success messages
   - Public/private visibility toggle
   - Auto-title generation from filename
+- `src/app/api/resumes/route.ts` - Resume management API endpoints
+  - POST /api/resumes - Create new resume record
+  - GET /api/resumes - Fetch user's resumes
+  - Database integration with Prisma
+- `src/app/api/users/profile/route.ts` - User profile management API
+  - GET /api/users/profile - Fetch user profile with resumes
+  - PUT /api/users/profile - Update user profile
+  - CDL-specific fields support
+- `src/lib/db.ts` - Centralized database utility
+  - Prisma client initialization with connection management
+  - Global instance management for development
+  - Connection/disconnection utilities
+- `env.example` - Environment variables template
+  - Database, IPFS, and wallet configuration examples
+- `docs/PROJECT_ROADMAP.md` - Comprehensive project vision and development roadmap
+  - Complete project overview from start to finish
+  - Architecture decisions and best practices explained
+  - Phase-by-phase development plan
+  - Learning resources and development insights
 
 ### Modified
 
@@ -32,6 +51,11 @@ This file tracks all modifications made to the DriverAppChain codebase during de
   - Created sidebar with stats and quick actions
   - Integrated ResumeUpload component
   - Responsive grid layout with Tailwind 4
+- `src/components/ResumeUpload.tsx` - Enhanced with database integration
+  - Added saveResumeToDatabase function
+  - Two-step upload process: IPFS → Database
+  - Better error handling and user feedback
+  - Updated success message to reflect database storage
 
 ### Fixed
 
@@ -49,14 +73,18 @@ This file tracks all modifications made to the DriverAppChain codebase during de
 - Resume upload component fully functional with IPFS integration
 - Dashboard UI implemented with modern design
 - Build process working correctly
+- **NEW**: API endpoints for resume and user management
+- **NEW**: Database integration with Prisma ORM
+- **NEW**: Two-step upload workflow (IPFS + Database)
+- **NEW**: Complete project roadmap and development plan
 
 ### Next Planned Changes
 
-- API endpoints for resume management
-- Database integration for saving uploaded resumes
 - Blockchain integration for resume verification
 - User authentication and wallet connection
-- Resume management dashboard
+- Resume management dashboard with list view
+- Environment variable setup and testing
+- Database migration and seeding
 
 ---
 
