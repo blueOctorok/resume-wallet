@@ -1,24 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { getUserProfile, upsertUser } from '@/lib/supabase-db'
 
 export async function GET() {
   try {
     // TODO: Get actual user ID from wallet authentication
     const walletAddress = 'temp-wallet-address'
 
-    const user = await prisma.user.findUnique({
-      where: { walletAddress },
-      include: {
-        resumes: {
-          orderBy: { createdAt: 'desc' },
-        },
-      },
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
+    const user = await getUserProfile(walletAddress)
     return NextResponse.json(user)
   } catch (error) {
     console.error('Error fetching user profile:', error)
@@ -37,22 +25,13 @@ export async function PUT(request: NextRequest) {
     // TODO: Get actual user ID from wallet authentication
     const walletAddress = 'temp-wallet-address'
 
-    // Update user profile
-    const user = await prisma.user.upsert({
-      where: { walletAddress },
-      update: {
-        name,
-        cdlNumber,
-        cdlState,
-        cdlClass,
-      },
-      create: {
-        walletAddress,
-        name,
-        cdlNumber,
-        cdlState,
-        cdlClass,
-      },
+    // Update user profile using Supabase
+    const user = await upsertUser({
+      walletAddress,
+      name,
+      cdlNumber,
+      cdlState,
+      cdlClass,
     })
 
     return NextResponse.json(user)

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { createResume, getUserResumes } from '@/lib/supabase-db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,15 +18,13 @@ export async function POST(request: NextRequest) {
     // For now, create a placeholder user or use a default
     const userId = 'temp-user-id'
 
-    // Create resume record in database
-    const resume = await prisma.resume.create({
-      data: {
-        title,
-        filename,
-        ipfsHash,
-        isPublic: isPublic || false,
-        userId,
-      },
+    // Create resume record using Supabase
+    const resume = await createResume({
+      title,
+      filename,
+      ipfsHash,
+      isPublic: isPublic || false,
+      userId,
     })
 
     return NextResponse.json(resume, { status: 201 })
@@ -44,11 +42,7 @@ export async function GET() {
     // TODO: Get actual user ID from wallet authentication
     const userId = 'temp-user-id'
 
-    const resumes = await prisma.resume.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-    })
-
+    const resumes = await getUserResumes(userId)
     return NextResponse.json(resumes)
   } catch (error) {
     console.error('Error fetching resumes:', error)
