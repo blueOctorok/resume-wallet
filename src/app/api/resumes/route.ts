@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createResume, getUserResumes } from '@/lib/supabase-db'
+import { createResume, getUserResumes, upsertUser } from '@/lib/supabase-db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,8 +15,14 @@ export async function POST(request: NextRequest) {
     }
 
     // TODO: Get actual user ID from wallet authentication
-    // For now, create a placeholder user or use a default
-    const userId = 'temp-user-id'
+    // For now, create a placeholder user with a proper UUID
+    const tempWalletAddress = 'temp-wallet-' + Date.now()
+
+    // Create or get a temporary user
+    const tempUser = await upsertUser({
+      walletAddress: tempWalletAddress,
+      name: 'Temporary User',
+    })
 
     // Create resume record using Supabase
     const resume = await createResume({
@@ -24,7 +30,7 @@ export async function POST(request: NextRequest) {
       filename,
       ipfsHash,
       isPublic: isPublic || false,
-      userId,
+      userId: tempUser.id, // Use the actual UUID from the created user
     })
 
     return NextResponse.json(resume, { status: 201 })
@@ -40,9 +46,16 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   try {
     // TODO: Get actual user ID from wallet authentication
-    const userId = 'temp-user-id'
+    // For now, use a placeholder wallet address
+    const tempWalletAddress = 'temp-wallet-' + Date.now()
 
-    const resumes = await getUserResumes(userId)
+    // Get or create a temporary user
+    const tempUser = await upsertUser({
+      walletAddress: tempWalletAddress,
+      name: 'Temporary User',
+    })
+
+    const resumes = await getUserResumes(tempUser.id)
     return NextResponse.json(resumes)
   } catch (error) {
     console.error('Error fetching resumes:', error)

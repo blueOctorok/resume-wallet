@@ -10,9 +10,18 @@ export async function createResume(data: {
 }) {
   const supabase = await createClient()
 
+  // Transform camelCase to snake_case for database
+  const dbData = {
+    title: data.title,
+    filename: data.filename,
+    ipfs_hash: data.ipfsHash,
+    is_public: data.isPublic,
+    user_id: data.userId,
+  }
+
   const { data: resume, error } = await supabase
     .from('resumes')
-    .insert([data])
+    .insert([dbData])
     .select()
     .single()
 
@@ -29,8 +38,8 @@ export async function getUserResumes(userId: string) {
   const { data: resumes, error } = await supabase
     .from('resumes')
     .select('*')
-    .eq('userId', userId)
-    .order('createdAt', { ascending: false })
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
 
   if (error) {
     throw new Error(`Failed to fetch resumes: ${error.message}`)
@@ -50,7 +59,7 @@ export async function getUserProfile(walletAddress: string) {
       resumes (*)
     `
     )
-    .eq('walletAddress', walletAddress)
+    .eq('wallet_address', walletAddress)
     .single()
 
   if (error) {
@@ -69,9 +78,18 @@ export async function upsertUser(data: {
 }) {
   const supabase = await createClient()
 
+  // Transform camelCase to snake_case for database
+  const dbData = {
+    wallet_address: data.walletAddress,
+    name: data.name,
+    cdl_number: data.cdlNumber,
+    cdl_state: data.cdlState,
+    cdl_class: data.cdlClass,
+  }
+
   const { data: user, error } = await supabase
     .from('users')
-    .upsert([data], { onConflict: 'walletAddress' })
+    .upsert([dbData], { onConflict: 'wallet_address' })
     .select()
     .single()
 
