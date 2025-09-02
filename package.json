@@ -9,9 +9,9 @@
     "supabase:test": "node scripts/test-supabase.js"
   },
   "dependencies": {
-    "@dynamic-labs/ethereum": "^4.29.4",
-    "@dynamic-labs/sdk-react-core": "^4.29.4",
-    "@dynamic-labs/wagmi-connector": "^4.29.4",
+    "@dynamic-labs/ethereum": "^4.29.6",
+    "@dynamic-labs/iframe-setup": "^4.29.6",
+    "@dynamic-labs/sdk-react-core": "^4.29.6",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.2.1",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -24,6 +24,9 @@
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "ethers": "^6.15.0",
+    "jose": "^6.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.2.0",
     "lucide-react": "^0.540.0",
     "next": "15.5.0",
     "pinata-web3": "^0.5.4",
@@ -31,6 +34,7 @@
     "react-dom": "19.1.0",
     "react-hook-form": "^7.62.0",
     "tailwind-merge": "^3.3.1",
+    "viem": "^2.37.1",
     "zod": "^4.0.17",
     "zustand": "^5.0.8"
   },

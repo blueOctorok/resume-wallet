@@ -1,5 +1,6 @@
 import ResumeUpload from '@/components/ResumeUpload'
 import { WalletConnect } from '@/components/WalletConnect'
+import { WalletTransactions } from '@/components/WalletTransactions'
 
 const Home = () => {
   return (
@@ -79,6 +80,11 @@ const Home = () => {
             </div>
 
             <ResumeUpload />
+
+            {/* Wallet Transaction Tests */}
+            <div className='mt-8'>
+              <WalletTransactions />
+            </div>
           </div>
         </div>
       </main>

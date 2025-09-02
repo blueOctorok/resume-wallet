@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createResume, getUserResumes, upsertUser } from '@/lib/supabase-db'
+import { getUserFromRequest } from '@/lib/auth-middleware'
 
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate the request using Dynamic JWT
+    const user = await getUserFromRequest(request)
+
     const body = await request.json()
     const { title, filename, ipfsHash, isPublic } = body
 
@@ -14,14 +18,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // TODO: Get actual user ID from wallet authentication
-    // For now, create a placeholder user with a proper UUID
-    const tempWalletAddress = 'temp-wallet-' + Date.now()
+    // Get wallet address from verified JWT
+    const walletAddress =
+      user.verified_account?.address || user.verified_credentials?.[0]?.address
 
-    // Create or get a temporary user
-    const tempUser = await upsertUser({
-      walletAddress: tempWalletAddress,
-      name: 'Temporary User',
+    if (!walletAddress) {
+      return NextResponse.json(
+        { error: 'No verified wallet address found in token' },
+        { status: 400 }
+      )
+    }
+
+    // Create or get user from verified wallet address
+    const dbUser = await upsertUser({
+      walletAddress,
+      name:
+        user.given_name && user.family_name
+          ? `${user.given_name} ${user.family_name}`
+          : user.alias || 'User',
     })
 
     // Create resume record using Supabase
@@ -30,12 +44,21 @@ export async function POST(request: NextRequest) {
       filename,
       ipfsHash,
       isPublic: isPublic || false,
-      userId: tempUser.id, // Use the actual UUID from the created user
+      userId: dbUser.id,
     })
 
     return NextResponse.json(resume, { status: 201 })
   } catch (error) {
     console.error('Error creating resume:', error)
+
+    // Handle authentication errors specifically
+    if (error instanceof Error && error.message.includes('authorization')) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
     return NextResponse.json(
       { error: 'Failed to create resume' },
       { status: 500 }
@@ -43,22 +66,44 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // TODO: Get actual user ID from wallet authentication
-    // For now, use a placeholder wallet address
-    const tempWalletAddress = 'temp-wallet-' + Date.now()
+    // Authenticate the request using Dynamic JWT
+    const user = await getUserFromRequest(request)
 
-    // Get or create a temporary user
-    const tempUser = await upsertUser({
-      walletAddress: tempWalletAddress,
-      name: 'Temporary User',
+    // Get wallet address from verified JWT
+    const walletAddress =
+      user.verified_account?.address || user.verified_credentials?.[0]?.address
+
+    if (!walletAddress) {
+      return NextResponse.json(
+        { error: 'No verified wallet address found in token' },
+        { status: 400 }
+      )
+    }
+
+    // Get or create user from verified wallet address
+    const dbUser = await upsertUser({
+      walletAddress,
+      name:
+        user.given_name && user.family_name
+          ? `${user.given_name} ${user.family_name}`
+          : user.alias || 'User',
     })
 
-    const resumes = await getUserResumes(tempUser.id)
+    const resumes = await getUserResumes(dbUser.id)
     return NextResponse.json(resumes)
   } catch (error) {
     console.error('Error fetching resumes:', error)
+
+    // Handle authentication errors specifically
+    if (error instanceof Error && error.message.includes('authorization')) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
     return NextResponse.json(
       { error: 'Failed to fetch resumes' },
       { status: 500 }

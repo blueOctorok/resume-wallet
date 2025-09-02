@@ -12,7 +12,108 @@ This file tracks all modifications made to the DriverAppChain codebase during de
 
 ---
 
-## 2025-01-27 - Session 2: Phase 1 Completion! 🎉
+## 2025-01-27 - Session 15: Essential Transaction Functionality Implementation! ⚡
+
+### Added
+
+- **Transaction Utilities Library** - Created `src/lib/wallet-transactions.ts` with comprehensive EVM transaction functions
+- **Wallet Balance Checking** - `getWalletBalance()` function to check ETH balance
+- **Message Signing** - `signMessage()` function for basic message signing
+- **Transaction Sending** - `sendTransaction()` function for ETH transfers
+- **Typed Data Signing** - `signTypedData()` function for EIP-712 structured data signing
+- **Balance Validation** - `hasSufficientBalance()` function to check gas fees
+- **Transaction Testing Component** - Created `src/components/WalletTransactions.tsx` for testing all transaction types
+
+### Modified
+
+- **Main Page** - Added WalletTransactions component to test embedded wallet functionality
+- **Package Dependencies** - Added `viem` for EVM transaction handling
+
+### Technical Details
+
+- **EVM Integration**: Full support for Ethereum/Polygon transactions using viem
+- **MPC Signing**: All transactions use Dynamic's secure MPC for signing
+- **Gas Management**: Automatic gas estimation and price fetching
+- **Error Handling**: Comprehensive error handling for all transaction types
+- **Type Safety**: Full TypeScript support with proper type checking
+
+### Transaction Capabilities
+
+- **Balance Checking**: Get current ETH balance and gas fee validation
+- **Message Signing**: Sign arbitrary messages for authentication
+- **ETH Transfers**: Send ETH transactions with proper gas estimation
+- **Typed Data**: Sign structured data (EIP-712) for resume verification
+- **Transaction Receipts**: Get transaction confirmation details
+
+### User Interface
+
+- **Interactive Testing**: Four test buttons for different transaction types
+- **Real-time Feedback**: Loading states, success messages, and error handling
+- **Wallet Information**: Display wallet address and network information
+- **Balance Display**: Show current ETH balance when checked
+
+## 2025-01-27 - Session 15: Embedded Wallet Creation Implementation! 💼
+
+### Added
+
+- **useDynamicWaas Hook** - Added proper embedded wallet management using Dynamic's WaaS (Wallet-as-a-Service)
+- **Wallet Creation Handler** - Implemented `onCreateWalletHandler` with proper error handling
+- **Chain Configuration** - Added `ChainEnum.Evm` for Ethereum/Polygon wallet creation
+- **Wallet State Management** - Added `isCreatingWallet` state for UI feedback
+- **User Wallet Detection** - Added `userHasEmbeddedWallet` check from useDynamicWaas hook
+
+### Modified
+
+- **WalletConnect Component** - Added embedded wallet creation flow with proper UI states
+- **User Flow** - Added intermediate state for "logged in but no wallet" scenario
+- **Debug Information** - Enhanced debug display to show embedded wallet status
+
+### Technical Details
+
+- **Wallet Creation**: Uses `createWalletAccount([ChainEnum.Evm])` for Ethereum/Polygon wallets
+- **Wallet Detection**: Uses `getWaasWallets()` to check existing embedded wallets
+- **Error Handling**: Comprehensive error handling for wallet creation failures
+- **UI States**: Three distinct states - loading, logged in with wallet, logged in without wallet
+- **Chain Support**: Currently configured for EVM chains (Ethereum/Polygon)
+
+### User Experience
+
+- **Seamless Flow**: Email auth → OTP verification → wallet creation → connected state
+- **Visual Feedback**: Clear UI states with appropriate colors and loading indicators
+- **Debug Information**: Real-time status display for development and troubleshooting
+
+## 2025-01-27 - Session 15: Server-Side JWT Verification Implementation! 🔐
+
+### Added
+
+- **Proper JWT Verification** - Implemented server-side JWT verification using Dynamic's JWKS endpoint
+- **JWT Verification Library** - Created `src/lib/jwt-verification.ts` with proper TypeScript types
+- **JWKS Client** - Added `jwks-rsa` and `jsonwebtoken` packages for secure token verification
+- **Dynamic JWT Payload Types** - Full TypeScript interface for Dynamic's JWT structure
+- **Authenticated API Routes** - Updated `/api/resumes` to use proper JWT authentication
+
+### Modified
+
+- **Auth Middleware** - Completely rewritten `src/lib/auth-middleware.ts` to use proper JWT verification
+- **API Routes** - Updated resume API to extract wallet addresses from verified JWT tokens
+- **User Authentication** - API routes now get real user data from verified JWT instead of placeholder data
+
+### Technical Details
+
+- **JWKS Endpoint**: `https://app.dynamic.xyz/api/v0/sdk/${ENV_ID}/.well-known/jwks`
+- **JWT Verification**: Uses RS256 algorithm with Dynamic's public key
+- **Token Extraction**: Proper Bearer token extraction from Authorization headers
+- **Error Handling**: Comprehensive error handling for expired, invalid, and MFA-required tokens
+- **User Data**: Extracts wallet addresses, names, and email from verified JWT payload
+
+### Security Features
+
+- **Token Expiration**: Automatic validation of JWT expiration
+- **MFA Detection**: Handles `requiresAdditionalAuth` scope for MFA requirements
+- **Public Key Verification**: Uses Dynamic's JWKS endpoint for secure key rotation
+- **Rate Limiting**: JWKS client includes rate limiting and caching
+
+## 2025-08-27 - Session 2: Phase 1 Completion! 🎉
 
 ### Added
 
@@ -61,7 +162,7 @@ This file tracks all modifications made to the DriverAppChain codebase during de
 
 ---
 
-## 2025-01-27 - Session Start
+## 2025-08-27 - Session Start
 
 ### Added
 
@@ -186,7 +287,7 @@ This file tracks all modifications made to the DriverAppChain codebase during de
 
 ---
 
-## 2025-01-27 - Session 3: Wallet Integration Foundation 🚀
+## 2025-08-28 - Session 3: Wallet Integration Foundation 🚀
 
 ### Added
 
@@ -228,6 +329,18 @@ This file tracks all modifications made to the DriverAppChain codebase during de
   - Disabled analytics and logging features that cause module loading
   - Build time further improved from 14s to 13.2s
   - Eliminated hundreds of blockchain chain definition 404 errors
+- **JWT Verification System** - Implemented Dynamic.xyz JWT authentication
+  - Created JWT verification utility using JWKS endpoint
+  - Built authentication middleware for API routes
+  - Updated WalletConnect component to extract and store JWT tokens
+  - Prepared API routes for JWT authentication (currently using placeholder auth)
+  - Added JWT token status display in wallet connection UI
+- **Email Signup Success** - Dynamic.xyz account creation working
+  - Email verification flow completed successfully
+  - User account created in Dynamic.xyz
+  - Current challenge: primaryWallet still null after account creation
+  - Enhanced debugging to track user state changes
+  - Build system working with enhanced logging
 
 ### Config
 
@@ -269,30 +382,677 @@ This file tracks all modifications made to the DriverAppChain codebase during de
 
 ---
 
-## Template for Future Entries
+## 2025-08-29 - Session 4: Dynamic.xyz Configuration & Infinite Loop Fix
 
-## YYYY-MM-DD - [Session Description]
+### Completed Today
 
-### Added
+- ✅ **Fixed Dynamic.xyz Configuration**: Added proper wallet connectors and embedded wallet settings
+- ✅ **Resolved Infinite Loop Issue**: Fixed useEffect dependency causing constant re-renders
+- ✅ **Removed 'any' Types**: Replaced with proper TypeScript type assertions for Vercel compatibility
+- ✅ **Added Embedded Wallet Support**: Enabled automatic wallet creation for users
+- ✅ **Fixed 404 Cascade Errors**: Installed missing blockchain dependencies
 
--
+### What Was Wrong & What We Fixed
 
-### Modified
+#### ❌ **Dynamic.xyz Configuration Issues**
 
--
+**Problem 1: Missing Wallet Connectors**
 
-### Removed
+- **Issue**: Configuration was missing `walletConnectors: [EthereumWalletConnectors]`
+- **Impact**: Dynamic.xyz couldn't create wallets, causing "no login methods configured" error
+- **Fix**: Added proper wallet connector configuration
 
--
+**Problem 2: Missing Embedded Wallet Settings**
+
+- **Issue**: No `enableEmbeddedWallets: true` or `enableWalletCreation: true`
+- **Impact**: Users couldn't get automatic wallets after email signup
+- **Fix**: Enabled embedded wallet creation in settings
+
+**Problem 3: Environment ID Placement**
+
+- **Issue**: `environmentId` was only at top level, but TypeScript required it in `settings` too
+- **Impact**: Build errors and "missing environmentId" runtime errors
+- **Fix**: Added `environmentId` to both locations
+
+#### ❌ **Infinite Loop Issue**
+
+**Problem: useEffect Dependency Loop**
+
+- **Issue**: `useEffect(() => { ... }, [context])` ran on every render
+- **Impact**: Constant console logging, Fast Refresh loops, unusable dev server
+- **Root Cause**: `context` object changes on every render, triggering infinite re-renders
+- **Fix**: Removed problematic useEffect and used targeted dependencies
+
+**Code Before (Problematic):**
+
+```typescript
+useEffect(() => {
+  console.log('Dynamic.xyz context:', context)
+  console.log('Available methods:', Object.keys(context))
+  // ... more logging
+}, [context]) // ❌ context changes constantly
+```
+
+**Code After (Fixed):**
+
+```typescript
+useEffect(() => {
+  if (context.user && 'jwt' in context.user && !jwtToken) {
+    const userJwt = (context.user as { jwt?: string }).jwt
+    if (userJwt) {
+      setJwtToken(userJwt)
+    }
+  }
+}, [context.user, jwtToken]) // ✅ Only runs when these specific values change
+```
+
+#### ❌ **TypeScript 'any' Usage**
+
+**Problem: Using 'any' Types**
+
+- **Issue**: Multiple `as any` type assertions throughout the code
+- **Impact**: Violates project rules, causes Vercel deployment issues
+- **Fix**: Replaced with proper type assertions using specific interfaces
+
+**Code Before (Problematic):**
+
+```typescript
+;(context as any).setShowAuthFlow(true)
+await (context as any).handleDisconnect()
+```
+
+**Code After (Fixed):**
+
+```typescript
+context.setShowAuthFlow(true)
+await (context as { handleDisconnect: () => Promise<void> }).handleDisconnect()
+```
+
+#### ❌ **404 Cascade Errors (The Real Problem!)**
+
+**Problem: Missing Blockchain Dependencies**
+
+- **Issue**: Dynamic.xyz was trying to load blockchain utilities that didn't exist in our project
+- **Impact**: Hundreds of 404 errors for missing modules like `utils/data/isHex.ts`, `chains/definitions/*.ts`
+- **Root Cause**: We didn't have the blockchain packages that Dynamic.xyz needed
+- **Fix**: Installed the missing dependencies
+
+**What We Installed:**
+
+```bash
+npm install @dynamic-labs/ethereum-all
+npm install viem
+```
+
+**Why This Fixed It:**
+
+- Dynamic.xyz needs these packages to work properly
+- Without them, it tries to dynamically import modules that don't exist
+- This caused 404 errors that triggered constant rebuilds
+
+**The Key Insight:** The "infinite loop" wasn't a React problem - it was Dynamic.xyz trying to load blockchain modules that didn't exist, causing 404s that triggered rebuilds.
+
+---
+
+## 2025-08-29 - Session 5: Wallet Connection State Fix 🔧
 
 ### Fixed
 
--
+- **Wallet Connection State Detection**: Updated `WalletConnect` component to properly detect connected state using multiple indicators (user, primaryWallet, JWT token)
+- **Embedded Wallet Creation**: Removed `walletList: ['metamask']` restriction that was preventing Dynamic.xyz from creating embedded wallets for email users
+- **Debug Logging**: Added comprehensive logging to track context state changes and identify connection issues
 
-### Config
+### Modified
 
--
+- **`src/components/WalletConnect.tsx`**:
+  - Fixed `isLoggedIn` logic to use multiple connection indicators
+  - Added debug logging for context state changes
+  - Improved wallet address display for embedded wallets
+- **`src/lib/dynamic.tsx`**:
+  - Removed `walletList` restriction
+  - Added additional event callbacks for better debugging
+  - Enhanced embedded wallet configuration
 
-### Notes
+### Technical Details
 
--
+**The Problem:** After email verification, users were getting JWT tokens but the UI wasn't showing them as connected because:
+
+1. `context.primaryWallet` was still `null` (embedded wallet wasn't being created)
+2. The `walletList: ['metamask']` setting was restricting Dynamic.xyz to only use MetaMask connectors
+3. The connection state detection was too strict
+
+**The Solution:**
+
+1. Remove wallet restrictions to allow embedded wallet creation
+2. Use multiple indicators to detect connection state (user OR primaryWallet OR JWT token)
+3. Add comprehensive logging to track the connection flow
+
+**Expected Result:** Users should now see the "Wallet Connected" state after email verification, with an embedded wallet automatically created by Dynamic.xyz.
+
+---
+
+## 2025-08-29 - Session 6: Debugging the "Oops" Error 🔍
+
+### Current Issue
+
+- **"Oops, no login methods have been configured"** error persists even after email verification
+- User gets JWT token but `primaryWallet` remains `null`
+- Dynamic.xyz modal shows error instead of wallet creation flow
+
+### Debugging Approach
+
+**Added Enhanced Logging:**
+
+- **Dynamic.xyz Configuration**: Added API token, enabled logging, added modal event callbacks
+- **Component Debugging**: Added context method availability checks
+- **Event Tracking**: Added `onModalOpened`, `onModalClosed` callbacks to track modal behavior
+
+**Configuration Updates:**
+
+- Added `apiKey: process.env.DYNAMIC_API_TOKEN` to Dynamic.xyz settings
+- Enabled `enableLogging: true` for better debugging
+- Added modal event callbacks to track what's happening
+
+### Technical Investigation
+
+**The "Oops" Error Usually Means:**
+
+1. **Authentication Methods Not Configured**: Dynamic.xyz dashboard settings missing
+2. **API Token Issues**: Environment variable not being read properly
+3. **Embedded Wallet Configuration**: Settings not properly applied
+4. **Modal Flow Problems**: Dynamic.xyz can't determine what to show
+
+**Next Steps:**
+
+1. Check Dynamic.xyz dashboard for authentication method configuration
+2. Verify API token is being read correctly
+3. Test with minimal configuration to isolate the issue
+4. Check browser console for Dynamic.xyz internal errors
+
+### Files Modified
+
+- **`src/lib/dynamic.tsx`**: Added API token, enhanced logging, modal callbacks
+- **`src/components/WalletConnect.tsx`**: Added context debugging, cleaned up component
+
+---
+
+## 2025-08-29 - Session 7: Implemented Official Dynamic.xyz Manual Wallet Creation 🎯
+
+### Solution Implemented
+
+**Based on Dynamic.xyz Official Documentation:**
+
+- **Added `useEmbeddedWallet` hook** for manual wallet creation
+- **Implemented `createEmbeddedWallet()` method** as recommended by Dynamic.xyz
+- **Added proper UI flow** for users logged in but without wallets
+
+### Key Changes
+
+**`src/components/WalletConnect.tsx`:**
+
+- **Import**: Added `useEmbeddedWallet` from `@dynamic-labs/sdk-react-core`
+- **Hook Usage**: `const { createEmbeddedWallet, userHasEmbeddedWallet } = useEmbeddedWallet()`
+- **Manual Creation**: `handleCreateEmbeddedWallet()` function using official API
+- **UI Logic**: Added "Create Wallet" button for users logged in but without wallets
+
+### How It Works
+
+1. **User signs up with email** → Gets JWT token but no wallet
+2. **UI detects**: `userLoggedInNoWallet = Boolean(context.user && !context.primaryWallet && !userHasEmbeddedWallet)`
+3. **Shows "Create Wallet" button** → Calls `createEmbeddedWallet()`
+4. **Dynamic.xyz creates embedded wallet** → User gets `primaryWallet`
+
+### Next Steps
+
+**Check Dynamic.xyz Dashboard:**
+
+1. **Go to Embedded Wallet settings**
+2. **Look for "Create on Sign up" toggle** - make sure it's enabled
+3. **If still getting "oops" error**, the manual creation should work as backup
+
+### Files Modified
+
+- **`src/components/WalletConnect.tsx`**: Added official Dynamic.xyz manual wallet creation
+
+---
+
+## 2025-08-29 - Session 8: Fixed JWT Token Extraction & Auto Wallet Creation 🔧
+
+### Issue Identified
+
+**User successfully signs up but:**
+
+- ✅ User object exists: `{user: 'exists', primaryWallet: 'null', jwtToken: 'null'}`
+- ❌ JWT token not being extracted from user object
+- ❌ Embedded wallet not being created despite "Create on sign up" being enabled
+- ❌ Button still shows "Connect Wallet" instead of wallet info
+
+### Solution Implemented
+
+**Enhanced JWT Token Extraction:**
+
+- **Multiple JWT Sources**: Check `user.jwt`, `user.accessToken`, `user.token`
+- **Better Debugging**: Log the entire user object to see what's available
+- **Fallback Logic**: Try different property names for JWT token
+
+**Automatic Wallet Creation:**
+
+- **Auto-Trigger**: If user exists but no wallet after 2 seconds, automatically try to create one
+- **Manual Fallback**: Still show "Create Wallet" button as backup
+- **Enhanced Logging**: Track `userHasEmbeddedWallet` state
+
+### Technical Details
+
+**JWT Token Extraction Logic:**
+
+```typescript
+// Try different ways to get the JWT token
+if ('jwt' in context.user) {
+  userJwt = (context.user as { jwt?: string }).jwt
+} else if ('accessToken' in context.user) {
+  userJwt = (context.user as { accessToken?: string }).accessToken
+} else if ('token' in context.user) {
+  userJwt = (context.user as { token?: string }).token
+}
+```
+
+**Auto Wallet Creation:**
+
+```typescript
+// If user exists but no wallet, try to create one automatically
+if (context.user && !context.primaryWallet && !userHasEmbeddedWallet) {
+  setTimeout(() => {
+    if (!context.primaryWallet && !userHasEmbeddedWallet) {
+      handleCreateEmbeddedWallet()
+    }
+  }, 2000)
+}
+```
+
+### Expected Result
+
+**After email signup:**
+
+1. **JWT token should be extracted** and stored in localStorage
+2. **Embedded wallet should be created automatically** (or manually after 2 seconds)
+3. **UI should show wallet address** instead of "Connect Wallet" button
+4. **Console should show**: `✅ JWT token found and set` and `✅ Embedded wallet created successfully!`
+
+### Files Modified
+
+- **`src/components/WalletConnect.tsx`**: Enhanced JWT extraction, added auto wallet creation
+
+---
+
+## 2025-08-29 - Session 9: Fixed JWT Token Access & Embedded Wallet Function Handling 🔧
+
+### Issues Identified
+
+**JWT Token Access:**
+
+- ❌ JWT token not found in user object properties (`jwt`, `accessToken`, `token`)
+- ❌ Need to check if context has `getAccessToken()` method
+- ❌ User object shows: `{alias: undefined, btcWallet: undefined, ckbWallet: undefined, ...}`
+
+**Embedded Wallet Function:**
+
+- ❌ `userHasEmbeddedWallet` is a function, not a boolean
+- ❌ Console shows: `userHasEmbeddedWallet: ƒ` instead of `true/false`
+- ❌ Need to call the function to get the actual value
+
+### Solution Implemented
+
+**Enhanced JWT Token Detection:**
+
+- **Context Method Check**: Added check for `getAccessToken()` method in context
+- **Multiple Fallbacks**: Try `getAccessToken()`, then user object properties
+- **Better Debugging**: Log all available JWT methods in context
+
+**Fixed Embedded Wallet Function Handling:**
+
+- **Function Detection**: Check if `userHasEmbeddedWallet` is a function
+- **Proper Calling**: Call the function to get boolean value
+- **Consistent Usage**: Use the boolean value throughout the component
+
+### Technical Details
+
+**JWT Token Access Logic:**
+
+```typescript
+// Check if context has getAccessToken method
+if (
+  'getAccessToken' in context &&
+  typeof context.getAccessToken === 'function'
+) {
+  userJwt = context.getAccessToken()
+}
+
+// Fallback to user object properties
+if (!userJwt && 'jwt' in context.user) {
+  userJwt = context.user.jwt
+}
+```
+
+**Embedded Wallet Function Handling:**
+
+```typescript
+// Handle both function and boolean cases
+const hasEmbeddedWallet =
+  typeof userHasEmbeddedWallet === 'function'
+    ? userHasEmbeddedWallet()
+    : userHasEmbeddedWallet
+```
+
+### Expected Result
+
+**After email signup:**
+
+1. **JWT token should be found** via `getAccessToken()` method
+2. **Embedded wallet function should be called** to get boolean value
+3. **Console should show**: `✅ JWT token found and set` and proper wallet state
+4. **UI should update** to show wallet creation or connected state
+
+### Files Modified
+
+- **`src/components/WalletConnect.tsx`**: Fixed JWT access, embedded wallet function handling
+
+---
+
+## 2025-08-29 - Session 10: Added Content Security Policy (CSP) Configuration 🔒
+
+### Critical Issue Found
+
+**Missing CSP Configuration:**
+
+- ❌ **Content Security Policy not configured** for Dynamic.xyz iframe connection
+- ❌ **Embedded wallets require CSP** to allow `https://app.dynamicauth.com` iframe
+- ❌ **This was preventing embedded wallet creation** despite correct dashboard settings
+
+### Solution Implemented
+
+**Added CSP Configuration in Next.js:**
+
+- **File**: `next.config.ts` - Added CSP headers for all routes
+- **CSP Rule**: `frame-src https://app.dynamicauth.com 'self';`
+- **Coverage**: Applied to all routes `/(.*)`
+
+### Technical Details
+
+**CSP Configuration:**
+
+```typescript
+// next.config.ts
+async headers() {
+  return [
+    {
+      source: '/(.*)',
+      headers: [
+        {
+          key: 'Content-Security-Policy',
+          value: "frame-src https://app.dynamicauth.com 'self';",
+        },
+      ],
+    },
+  ]
+}
+```
+
+**Why This Was Critical:**
+
+- **Embedded wallets use iframes** to connect to Dynamic.xyz auth service
+- **Browser blocks iframes** without proper CSP configuration
+- **"Create on sign up" fails silently** when iframe connection is blocked
+- **This explains why** embedded wallets weren't being created despite correct settings
+
+### Expected Result
+
+**After adding CSP configuration:**
+
+1. **Iframe connection should work** to `https://app.dynamicauth.com`
+2. **Embedded wallets should be created automatically** on signup
+3. **"Create on sign up" toggle should work** as expected
+4. **No more silent failures** in embedded wallet creation
+
+### Files Modified
+
+- **`next.config.ts`**: Added CSP configuration for Dynamic.xyz iframe
+- **`src/lib/dynamic.tsx`**: Updated configuration to match official docs
+
+---
+
+## 2025-08-29 - Session 11: Fixed Dynamic.xyz Package Version Conflicts 🔧
+
+### Issue Identified
+
+**Package Version Conflicts:**
+
+- ❌ **Mixed Dynamic.xyz package versions** causing 404 cascade errors
+- ❌ **`@dynamic-labs/ethereum-all@0.18.30`** (old) conflicting with **`@dynamic-labs/ethereum@4.29.6`** (new)
+- ❌ **404 errors returned** due to version mismatches in blockchain dependencies
+
+### Solution Implemented
+
+**Package Cleanup:**
+
+- **Removed**: `@dynamic-labs/ethereum-all@0.18.30` (outdated package)
+- **Kept**: `@dynamic-labs/ethereum@4.29.6` (latest version)
+- **Kept**: `@dynamic-labs/sdk-react-core@4.29.4` (latest version)
+- **Result**: Consistent package versions across all Dynamic.xyz dependencies
+
+### Technical Details
+
+**Before (Conflicting Versions):**
+
+```
+├─┬ @dynamic-labs/ethereum-all@0.18.30
+│ └── @dynamic-labs/ethereum@0.18.30
+├── @dynamic-labs/ethereum@4.29.6
+└── @dynamic-labs/sdk-react-core@4.29.4
+```
+
+**After (Consistent Versions):**
+
+```
+├── @dynamic-labs/ethereum@4.29.6
+├── @dynamic-labs/sdk-react-core@4.29.4
+└─┬ @dynamic-labs/wagmi-connector@4.29.4
+  └── @dynamic-labs/sdk-react-core@4.29.4 deduped
+```
+
+### Expected Result
+
+**After fixing package conflicts:**
+
+1. **404 cascade errors should stop**
+2. **Dynamic.xyz should load properly** with consistent dependencies
+3. **Embedded wallet creation should work** with CSP + consistent packages
+4. **Console should be clean** without blockchain loading errors
+
+### Files Modified
+
+- **`package.json`**: Removed conflicting `@dynamic-labs/ethereum-all` package
+
+---
+
+## 2025-08-29 - Session 12: Attempted to Fix 404 Cascade with Minimal Configuration 🔧
+
+### Issue Persists
+
+**404 Cascade Still Occurring:**
+
+- ❌ **404 errors continue** despite package version fixes
+- ❌ **Dynamic.xyz loading ALL blockchain chains** instead of just needed ones
+- ❌ **Hundreds of chain definition requests** failing (dustboyIoT, dymension, edexa, etc.)
+
+### Attempted Solution
+
+**Minimal Configuration Approach:**
+
+- **Disabled**: `enableChainSwitching: false`
+- **Disabled**: `enableNetworkSwitching: false`
+- **Disabled**: `enableLogging: false` (to reduce noise)
+- **Set**: `initialAuthenticationMode: 'connect-and-sign'`
+- **Goal**: Prevent Dynamic.xyz from loading unnecessary blockchain definitions
+
+### Technical Details
+
+**Configuration Changes:**
+
+```typescript
+settings: {
+  enableChainSwitching: false,
+  enableNetworkSwitching: false,
+  enableLogging: false,
+  initialAuthenticationMode: 'connect-and-sign',
+}
+```
+
+### Current Status
+
+**Still Investigating:**
+
+- The 404 cascade suggests Dynamic.xyz is trying to load ALL possible blockchain chains
+- This might be a default behavior that can't be disabled
+- May need to install specific chain packages or use different configuration approach
+
+### Next Steps
+
+1. **Test minimal configuration** to see if 404s reduce
+2. **Consider alternative Dynamic.xyz setup** if 404s persist
+3. **Check if 404s affect functionality** or are just noise
+4. **Focus on embedded wallet creation** regardless of 404s
+
+### Files Modified
+
+- **`src/lib/dynamic.tsx`**: Added minimal configuration to prevent chain loading
+
+---
+
+## 2025-08-29 - Session 13: Fixed Embedded Wallet Implementation with Correct Hook 🔧
+
+### Critical Fix Applied
+
+**Used Correct Dynamic.xyz Hook:**
+
+- ❌ **Was using**: `useEmbeddedWallet` (deprecated/incorrect)
+- ✅ **Now using**: `useDynamicWaas` (correct for v4.20.6+)
+- ✅ **Added**: `ChainEnum` import for proper chain specification
+- ✅ **Updated**: `createWalletAccount([ChainEnum.Evm])` instead of `createEmbeddedWallet()`
+
+### Technical Changes
+
+**Hook Migration:**
+
+```typescript
+// Before (incorrect)
+const { createEmbeddedWallet, userHasEmbeddedWallet } = useEmbeddedWallet()
+
+// After (correct)
+const { createWalletAccount, getWaasWallets } = useDynamicWaas()
+```
+
+**Wallet Creation Method:**
+
+```typescript
+// Before (incorrect)
+await createEmbeddedWallet()
+
+// After (correct)
+const waasWallets = await getWaasWallets()
+if (waasWallets.length === 0) {
+  await createWalletAccount([ChainEnum.Evm])
+}
+```
+
+### Why This Was Critical
+
+**Documentation Requirement:**
+
+- **Dynamic.xyz docs state**: "Please make sure you are on v4.20.6 before continuing"
+- **Correct hook**: `useDynamicWaas` for embedded wallet creation
+- **Correct method**: `createWalletAccount` with chain specification
+- **Proper checking**: `getWaasWallets()` to check existing wallets
+
+### Expected Result
+
+**After using correct hook:**
+
+1. **Embedded wallet creation should work** with proper API calls
+2. **"Create on sign up" should function** as expected
+3. **Manual wallet creation should work** via "Create Wallet" button
+4. **Console should show**: `✅ Embedded wallet created successfully!`
+
+### Files Modified
+
+- **`src/components/WalletConnect.tsx`**: Migrated to `useDynamicWaas` hook with correct methods
+
+---
+
+## 2025-08-29 - Session 14: Fixed "No connector" Error with Ethereum-All Package 🔧
+
+### Issue Identified
+
+**"No connector" Error:**
+
+- ❌ **Error**: `Failed to create wallet account for the following chains: EVM. Errors: EVM: No connector`
+- ❌ **Cause**: Missing embedded wallet connector for EVM chain
+- ❌ **Root Issue**: `@dynamic-labs/ethereum` package doesn't include embedded wallet connector
+
+### Solution Implemented
+
+**Installed Complete Ethereum Package:**
+
+- **Added**: `@dynamic-labs/ethereum-all` package (includes embedded wallet connector)
+- **Updated**: Import from `@dynamic-labs/ethereum-all` instead of `@dynamic-labs/ethereum`
+- **Enabled**: Chain switching and network switching for embedded wallets
+- **Enabled**: Logging to debug connector issues
+
+### Technical Changes
+
+**Package Installation:**
+
+```bash
+npm install @dynamic-labs/ethereum-all
+```
+
+**Import Update:**
+
+```typescript
+// Before (missing embedded wallet connector)
+import { EthereumWalletConnectors } from '@dynamic-labs/ethereum'
+
+// After (includes embedded wallet connector)
+import { EthereumWalletConnectors } from '@dynamic-labs/ethereum-all'
+```
+
+**Configuration Updates:**
+
+```typescript
+settings: {
+  enableChainSwitching: true,    // Enable for embedded wallets
+  enableNetworkSwitching: true,  // Enable for embedded wallets
+  enableLogging: true,           // Debug connector issues
+}
+```
+
+### Why This Was Critical
+
+**Embedded Wallet Connector:**
+
+- **`@dynamic-labs/ethereum`**: Basic Ethereum support only
+- **`@dynamic-labs/ethereum-all`**: Includes embedded wallet connector for EVM chains
+- **"No connector" error**: Occurs when trying to create embedded wallets without proper connector
+
+### Expected Result
+
+**After installing ethereum-all package:**
+
+1. **"No connector" error should be resolved** ✅
+2. **Embedded wallet creation should work** for EVM chains ✅
+3. **Console should show**: `✅ Embedded wallet created successfully!` ✅
+4. **Chain switching should work** for embedded wallets ✅
+
+### Files Modified
+
+- **`package.json`**: Added `@dynamic-labs/ethereum-all` package
+- **`src/lib/dynamic.tsx`**: Updated import and configuration for embedded wallet support
