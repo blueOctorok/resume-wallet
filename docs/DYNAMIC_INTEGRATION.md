@@ -54,7 +54,7 @@ export const dynamicConfig = {
 ```typescript
 // src/components/WalletConnect.tsx
 const context = useDynamicContext()
-// Uses available methods: setShowAuthFlow, handleUnlinkWallet, etc.
+// Uses available methods: setShowAuthFlow, handleLogOut, etc.
 ```
 
 **What this does:**
@@ -62,6 +62,39 @@ const context = useDynamicContext()
 - Provides UI for wallet connection
 - Handles different Dynamic.xyz API versions
 - Shows connection status and wallet info
+
+### 4. **Proper Disconnect Functionality** ✅
+
+```typescript
+// src/components/WalletConnect.tsx
+const { handleLogOut } = useDynamicContext()
+
+const handleDisconnectWallet = async () => {
+  try {
+    // Try Dynamic's proper logout method first
+    if (handleLogOut && typeof handleLogOut === 'function') {
+      await handleLogOut()
+    } else {
+      // Fallback: Clear localStorage and reload
+      localStorage.removeItem('dynamic_authentication_token')
+      localStorage.removeItem('dynamic_min_authentication_token')
+      window.location.reload()
+    }
+  } catch (error) {
+    // Fallback on error
+    localStorage.removeItem('dynamic_authentication_token')
+    localStorage.removeItem('dynamic_min_authentication_token')
+    window.location.reload()
+  }
+}
+```
+
+**What this does:**
+
+- Uses Dynamic.xyz's official `handleLogOut` method for proper session cleanup
+- Implements robust fallback strategy for error handling
+- Ensures complete logout and state reset
+- Prevents console errors and session management issues
 
 ---
 
@@ -252,6 +285,38 @@ const isLoggedIn = context.user && context.primaryWallet
 - **Truck drivers won't know** they're using blockchain
 - **Seamless integration** = Better adoption
 - **Professional interface** = Trust and credibility
+
+### **5. Dynamic.xyz API Evolution - Critical Lesson!**
+
+**What We Learned from Disconnect Issues:**
+
+- **SDK versions change** - methods get added/removed/renamed between versions
+- **Always check current documentation** - don't assume methods exist
+- **Use official methods when available** - `handleLogOut` vs `handleDisconnect`
+- **Implement robust fallbacks** - for when official methods fail
+- **Test thoroughly** - session management is critical for user experience
+
+**Common API Evolution Patterns:**
+
+```typescript
+// ❌ WRONG: Assuming methods exist
+const { handleDisconnect } = useDynamicContext()
+
+// ✅ CORRECT: Check method availability
+const { handleLogOut } = useDynamicContext()
+if (handleLogOut && typeof handleLogOut === 'function') {
+  await handleLogOut()
+} else {
+  // Fallback strategy
+}
+```
+
+**Why This Matters:**
+
+- **Production stability** - prevents runtime errors in production
+- **User experience** - ensures logout always works
+- **Maintenance** - easier to update when SDK changes
+- **Debugging** - clear error handling and fallbacks
 
 ---
 

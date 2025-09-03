@@ -6,6 +6,7 @@ import {
   useConnectWithOtp,
   getAuthToken,
   useDynamicWaas,
+  useUserWallets,
 } from '@dynamic-labs/sdk-react-core'
 import { ChainEnum } from '@dynamic-labs/sdk-api-core'
 import { useState, FormEventHandler, useEffect } from 'react'
@@ -23,6 +24,7 @@ export function WalletConnect() {
   const isLoggedIn = useIsLoggedIn()
   const { connectWithEmail, verifyOneTimePassword } = useConnectWithOtp()
   const { createWalletAccount, getWaasWallets } = useDynamicWaas()
+  const userWallets = useUserWallets()
   const [isConnecting, setIsConnecting] = useState(false)
   const [showOtpForm, setShowOtpForm] = useState(false)
   const [jwtToken, setJwtToken] = useState<string | null>(null)
@@ -39,6 +41,37 @@ export function WalletConnect() {
       console.log('❌ No JWT token found')
     }
   }, [isLoggedIn, user])
+
+  // Enhanced wallet detection using useUserWallets
+  useEffect(() => {
+    if (userWallets.length > 0) {
+      console.log('📊 User wallets detected:', userWallets.length)
+
+      // Check for embedded wallets
+      const embeddedWallets = userWallets.filter(
+        (wallet) => wallet.connector?.isEmbeddedWallet
+      )
+
+      if (embeddedWallets.length > 0) {
+        console.log('✅ Embedded wallets found:', embeddedWallets.length)
+        embeddedWallets.forEach((wallet) => {
+          console.log(`  - Embedded wallet: ${wallet.address}`)
+        })
+      }
+
+      // Check for external wallets
+      const externalWallets = userWallets.filter(
+        (wallet) => !wallet.connector?.isEmbeddedWallet
+      )
+
+      if (externalWallets.length > 0) {
+        console.log('🔗 External wallets found:', externalWallets.length)
+        externalWallets.forEach((wallet) => {
+          console.log(`  - External wallet: ${wallet.address}`)
+        })
+      }
+    }
+  }, [userWallets])
 
   const onSubmitEmailHandler: FormEventHandler<HTMLFormElement> = async (
     event

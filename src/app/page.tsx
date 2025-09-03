@@ -1,6 +1,8 @@
 import ResumeUpload from '@/components/ResumeUpload'
 import { WalletConnect } from '@/components/WalletConnect'
 import { WalletTransactions } from '@/components/WalletTransactions'
+import { RpcProviderTest } from '@/components/RpcProviderTest'
+import { NetworkDiscovery } from '@/components/NetworkDiscovery'
 
 const Home = () => {
   return (
@@ -84,6 +86,16 @@ const Home = () => {
             {/* Wallet Transaction Tests */}
             <div className='mt-8'>
               <WalletTransactions />
+            </div>
+
+            {/* RPC Provider Tests */}
+            <div className='mt-8'>
+              <RpcProviderTest />
+            </div>
+
+            {/* Network Discovery Tests */}
+            <div className='mt-8'>
+              <NetworkDiscovery />
             </div>
           </div>
         </div>

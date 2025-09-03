@@ -241,6 +241,46 @@
 - **Engagement** - Track application status
 - **Data collection** - Improve AI algorithms
 
+### ⛽ Gasless Transactions (Smart Wallets)
+
+**Why This Matters:**
+
+- **User Experience** - Truck drivers don't need to understand gas fees
+- **Adoption** - Removes blockchain complexity barrier
+- **Competitive Advantage** - Seamless experience vs. other platforms
+
+**What We'll Build:**
+
+1. **Smart Wallet Integration**
+   - Account abstraction with ZeroDev or Alchemy
+   - Gas sponsorship for user transactions
+   - Seamless wallet creation and management
+
+2. **Gasless Resume Verification**
+   - Users can verify resumes without paying gas
+   - Backend sponsors transaction costs
+   - Transparent blockchain verification
+
+### 💰 Exchange Funding Integration
+
+**Why This Matters:**
+
+- **User Onboarding** - Easy way for users to fund their wallets
+- **Fiat Gateway** - Bridge between traditional finance and crypto
+- **User Experience** - Seamless funding from exchanges
+
+**What We'll Build:**
+
+1. **Exchange Integration**
+   - Connect to major exchanges (Coinbase, Binance, etc.)
+   - OAuth authentication for secure access
+   - Direct transfer from exchange to wallet
+
+2. **Funding Management**
+   - Real-time transfer status tracking
+   - Webhook notifications for success/failure
+   - Transaction history and audit trail
+
 ---
 
 ## 🚀 Phase 4: Market Expansion
