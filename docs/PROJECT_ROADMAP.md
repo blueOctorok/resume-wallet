@@ -65,13 +65,16 @@
 - **Gateway service** - Easy URLs for file access
 - **Reliable infrastructure** - Handles IPFS complexity
 
-### Blockchain: Polygon + Solidity
+### Blockchain: Base Network + Solidity
 
-**Why Polygon?**
+**Why Base Network?**
 
-- **Low costs** - $0.001 vs $20+ on Ethereum
-- **Fast** - 2-3 second confirmations
-- **Ethereum compatible** - Same development experience
+- **Lower costs** - Even cheaper than Polygon for transactions
+- **Faster finality** - Quicker transaction confirmations
+- **Better UX** - Simpler for non-tech users (truck drivers)
+- **Coinbase integration** - Familiar brand for mainstream users
+- **Future-proof** - Coinbase's strategic focus on Base
+- **Gasless support** - Better native gasless transaction support
 
 ---
 
@@ -213,25 +216,41 @@
 
 ## 🎯 Phase 3: AI Intelligence Layer
 
-### 🤖 Resume Analysis & Job Matching
+### 🤖 AI-Powered Resume Analysis & Job Matching
 
 **Why This Matters:**
 
 - **User value** - Instant feedback on resume quality
 - **Employer value** - Pre-screened candidates
 - **Competitive advantage** - No other platform does this
+- **Chat interface** - Users interact with AI agent via Base App messaging
+
+**📋 Detailed Documentation:**
+
+- **[AI Integration Guide](./AI_INTEGRATION.md)** - Complete AI strategy, services, and implementation
 
 **What We'll Build:**
 
-1. **Resume Parsing**
-   - Extract skills, experience, education
-   - Identify gaps and improvements
-   - Generate structured data
+1. **Resume Parsing & Analysis** - Extract skills, experience, education from PDF/DOC files
+2. **Job Compatibility Scoring** - AI-powered matching algorithm with 1-10 scoring
+3. **AI Resume Building Assistant** - Job-specific optimization suggestions
+4. **Employer Dashboard Intelligence** - Automated candidate ranking and insights
+5. **Chat Agent Integration** - Natural language interface via Base App + XMTP
 
-2. **Job Compatibility Scoring**
-   - AI-powered matching algorithm
-   - 1-10 scoring system
-   - Improvement suggestions
+**AI Services Required:**
+
+- **Document Processing** - OpenAI GPT-4 Vision API ($0.01-0.03/page)
+- **Natural Language Processing** - GPT-4 or Claude 3.5 ($0.03-0.06/1K tokens)
+- **Resume Analysis** - Custom ML models ($0.10-0.50/analysis)
+- **Job Matching** - Vector database + ML ($0.01-0.05/match)
+- **Chat Intelligence** - GPT-4 or Claude ($0.01-0.05/message)
+
+**Cost Analysis:**
+
+- Low usage (100 users): $100-200/month
+- Medium usage (1,000 users): $500-1,000/month
+- High usage (10,000 users): $2,000-5,000/month
+- **Total Savings**: $1,000/month vs Dynamic.xyz Enterprise
 
 ### 📈 Application Tracking
 
@@ -241,25 +260,28 @@
 - **Engagement** - Track application status
 - **Data collection** - Improve AI algorithms
 
-### ⛽ Gasless Transactions (Smart Wallets)
+### ⛽ Gasless Transactions (Base Account SDK)
 
 **Why This Matters:**
 
 - **User Experience** - Truck drivers don't need to understand gas fees
 - **Adoption** - Removes blockchain complexity barrier
 - **Competitive Advantage** - Seamless experience vs. other platforms
+- **Base Gasless Campaign** - Up to $15k in gas credits available
 
 **What We'll Build:**
 
-1. **Smart Wallet Integration**
-   - Account abstraction with ZeroDev or Alchemy
-   - Gas sponsorship for user transactions
-   - Seamless wallet creation and management
+1. **Base Account SDK Integration**
+   - Native Base Account authentication
+   - One-tap USDC payments
+   - Built-in gas sponsorship
+   - EIP-5792 batch transactions
 
 2. **Gasless Resume Verification**
    - Users can verify resumes without paying gas
-   - Backend sponsors transaction costs
+   - Base Paymaster service sponsorship
    - Transparent blockchain verification
+   - Contract allowlist for sponsored operations
 
 ### 💰 Exchange Funding Integration
 
@@ -283,7 +305,162 @@
 
 ---
 
-## 🚀 Phase 4: Market Expansion
+## 🔧 Base Account SDK Implementation Plan
+
+### **Current Status: Dynamic.xyz Integration (Phase 1)**
+
+**What We Have:**
+
+- ✅ Dynamic.xyz wallet provider configured
+- ✅ Email authentication flow
+- ✅ OTP verification
+- ✅ Embedded wallet creation
+- ✅ JWT token handling
+- ✅ Base network support (8453, 84532)
+
+**What We're Testing:**
+
+- 🔍 Wallet connection flow
+- 🔍 Base network switching
+- 🔍 Transaction capabilities
+- 🔍 Resume upload integration
+
+### **Phase 2: Base Account SDK Integration**
+
+**Why Add Base Account SDK:**
+
+- **Native Base integration** - Official Base way to authenticate
+- **Better UX** - "Sign in with Base" is more intuitive
+- **One-tap payments** - Built-in USDC payment support
+- **Gas sponsorship** - Users don't pay gas fees
+- **Future-proof** - Base's recommended approach
+
+**What We'll Add:**
+
+1. **Base Account SDK Packages**
+
+   ```bash
+   npm install @base-org/account @base-org/account-ui
+   ```
+
+2. **Sign in with Base**
+   - Native Base authentication
+   - Wallet signature verification
+   - EIP-4361 (Sign in with Ethereum) standard
+   - Better user experience
+
+3. **Base Pay Integration**
+   - One-tap USDC payments
+   - Built-in payment status tracking
+   - User information collection
+   - No gas fees for users
+
+4. **Gas Sponsorship (Paymaster)**
+   - Coinbase Developer Platform integration
+   - Up to $15k in gas credits
+   - Contract allowlist for sponsored operations
+   - Proxy protection for paymaster URLs
+
+5. **Batch Transactions (EIP-5792)**
+   - Multiple operations in one transaction
+   - Atomic operations (all succeed or all fail)
+   - Gas efficiency improvements
+   - Advanced wallet capabilities
+
+**Implementation Strategy:**
+
+- **Keep Dynamic.xyz** - Don't break what's working
+- **Add Base Account SDK** - As an alternative auth method
+- **Gradual migration** - Test both systems side by side
+- **User choice** - Let users choose their preferred method
+
+### **Phase 3: Advanced Base Features**
+
+**What We'll Add Later:**
+
+1. **Advanced Gas Sponsorship**
+   - Custom paymaster policies
+   - Dynamic gas pricing
+   - Usage analytics and monitoring
+
+2. **Enhanced Payment Features**
+   - Subscription payments
+   - Recurring billing
+   - Payment analytics
+
+3. **Advanced Batch Operations**
+   - Complex multi-step workflows
+   - Conditional transactions
+   - Advanced error handling
+
+### **Base Account SDK vs Dynamic.xyz Comparison**
+
+| Feature                | Dynamic.xyz              | Base Account SDK           |
+| ---------------------- | ------------------------ | -------------------------- |
+| **Wallet Management**  | ✅ Multiple wallet types | ✅ Base Account only       |
+| **Authentication**     | ✅ Email/OTP             | ✅ Wallet signatures       |
+| **Network Support**    | ✅ Multi-chain           | ✅ Base networks only      |
+| **Payments**           | ❌ Manual implementation | ✅ One-tap USDC            |
+| **Gas Sponsorship**    | ❌ Not built-in          | ✅ Native support          |
+| **Batch Transactions** | ✅ EIP-5792 support      | ✅ EIP-5792 support        |
+| **User Experience**    | ✅ Good                  | ✅ Excellent (Base-native) |
+| **Development**        | ✅ More complex          | ✅ Simpler (Base-focused)  |
+
+### **Decision Framework**
+
+**Use Dynamic.xyz when:**
+
+- Need multi-chain support
+- Want multiple wallet options
+- Building for broader ecosystem
+
+**Use Base Account SDK when:**
+
+- Focused on Base ecosystem
+- Want native Base experience
+- Need gas sponsorship
+- Want one-tap payments
+
+**Our Approach:**
+
+- **Phase 1**: Keep Dynamic.xyz, test current setup
+- **Phase 2**: Add Base Account SDK as alternative
+- **Phase 3**: Consider migration based on user feedback
+
+---
+
+## 🚀 Phase 4: Base Pay Integration & Premium Features
+
+### 💰 Monetization Strategy
+
+**Why This Matters:**
+
+- **Sustainable revenue** - USDC payments through Base Pay
+- **Premium value** - Advanced features for drivers and employers
+- **Competitive advantage** - Seamless payment experience
+- **Platform growth** - Revenue enables feature development
+
+**📋 Detailed Documentation:**
+
+- **[Base Pay Integration Guide](./BASE_PAY_INTEGRATION.md)** - Complete monetization strategy, premium features, and revenue model
+- **[Base Account SDK Guide](./BASE_ACCOUNT_SDK.md)** - Native Base integration with authentication, payments, and gas sponsorship
+- **[Deployment Guide](./DEPLOYMENT_GUIDE.md)** - Production deployment to Base network
+
+**What We'll Build:**
+
+1. **Base Pay Integration** - One-tap USDC payments for premium features
+2. **Premium Driver Features** - Advanced analytics, job matching, templates
+3. **Employer Subscriptions** - Tiered access to verified resumes
+4. **Batch Transaction Optimization** - Complex operations in single transaction
+
+**Revenue Potential:**
+
+- Driver subscriptions: $5-15/month
+- Employer plans: $29-199/month
+- Transaction fees: $1.99-9.99
+- Enterprise solutions: $500+/month
+
+## 🚀 Phase 5: Market Expansion
 
 ### 🌐 Multi-Industry Platform
 

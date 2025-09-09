@@ -9,6 +9,9 @@ export function DynamicProvider({ children }: { children: React.ReactNode }) {
       settings={{
         environmentId: process.env.NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID!,
         walletConnectors: [EthereumWalletConnectors],
+        // Base network configuration
+        enableChainSelect: true,
+        enableNetworkSwitching: true,
         events: {
           onAuthInit: (args) => {
             console.log('onAuthInit was called', args)

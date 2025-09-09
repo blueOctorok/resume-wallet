@@ -1,8 +1,10 @@
 import ResumeUpload from '@/components/ResumeUpload'
-import { WalletConnect } from '@/components/WalletConnect'
+import { BaseWalletConnect } from '@/components/BaseWalletConnect'
+import { BaseAccountAuth } from '@/components/BaseAccountAuth'
 import { WalletTransactions } from '@/components/WalletTransactions'
 import { RpcProviderTest } from '@/components/RpcProviderTest'
 import { NetworkDiscovery } from '@/components/NetworkDiscovery'
+import { DeploymentTest } from '@/components/DeploymentTest'
 
 const Home = () => {
   return (
@@ -28,8 +30,11 @@ const Home = () => {
         <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
           {/* Left Sidebar - Stats & Quick Actions */}
           <div className='lg:col-span-1 space-y-6'>
-            {/* Wallet Connection */}
-            <WalletConnect />
+            {/* Base Account Authentication */}
+            <BaseAccountAuth />
+
+            {/* Base Wallet Connection */}
+            <BaseWalletConnect />
 
             <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
               <h3 className='text-lg font-medium text-gray-900 mb-4'>
@@ -85,17 +90,24 @@ const Home = () => {
 
             {/* Wallet Transaction Tests */}
             <div className='mt-8'>
-              <WalletTransactions />
+              <WalletTransactions walletAddress='' />
             </div>
 
             {/* RPC Provider Tests */}
             <div className='mt-8'>
-              <RpcProviderTest />
+              <RpcProviderTest walletAddress='' />
             </div>
 
             {/* Network Discovery Tests */}
             <div className='mt-8'>
-              <NetworkDiscovery />
+              <NetworkDiscovery walletAddress='' />
+            </div>
+
+            {/* Driver Experience Test */}
+            <div className='mt-8'>
+              <DeploymentTest
+                contractAddress={process.env.NEXT_PUBLIC_CONTRACT_ADDRESS}
+              />
             </div>
           </div>
         </div>

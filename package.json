@@ -6,9 +6,22 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "supabase:test": "node scripts/test-supabase.js"
+    "supabase:test": "node scripts/test-supabase.js",
+    "deploy:base": "npx hardhat run scripts/deploy.js --network base",
+    "deploy:base-sepolia": "npx hardhat run scripts/deploy.js --network baseSepolia",
+    "verify:base": "npx hardhat verify --network base",
+    "verify:base-sepolia": "npx hardhat verify --network baseSepolia",
+    "interact": "npx hardhat run scripts/interact.js --network baseSepolia",
+    "interact:mainnet": "npx hardhat run scripts/interact.js --network base",
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test",
+    "setup:deployment": "npx hardhat run scripts/setup-deployment.js",
+    "deploy:base-account": "npx hardhat run scripts/deploy-with-base-account.js",
+    "test:user-experience": "npx hardhat run scripts/test-user-experience.js"
   },
   "dependencies": {
+    "@base-org/account": "^2.1.0",
+    "@base-org/account-ui": "^1.0.1",
     "@dynamic-labs/ethereum": "^4.29.6",
     "@dynamic-labs/iframe-setup": "^4.29.6",
     "@dynamic-labs/sdk-react-core": "^4.29.6",

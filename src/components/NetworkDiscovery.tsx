@@ -1,7 +1,5 @@
 'use client'
 
-import { useDynamicContext } from '@dynamic-labs/sdk-react-core'
-import { isEthereumWallet } from '@dynamic-labs/ethereum'
 import { useState } from 'react'
 import {
   getEnabledNetworks,
@@ -9,7 +7,7 @@ import {
   isNetworkEnabled,
   getEnabledChainIds,
   getNetworkDisplayInfo,
-} from '@/lib/wallet-transactions'
+} from '@/lib/wallet-utils'
 import {
   GlobeAltIcon,
   CheckCircleIcon,
@@ -17,8 +15,13 @@ import {
   InformationCircleIcon,
 } from '@heroicons/react/24/outline'
 
-export function NetworkDiscovery() {
-  const { primaryWallet } = useDynamicContext()
+interface NetworkDiscoveryProps {
+  walletAddress?: string
+}
+
+export function NetworkDiscovery({
+  walletAddress = '',
+}: NetworkDiscoveryProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<string>('')
   const [error, setError] = useState<string>('')
@@ -26,8 +29,8 @@ export function NetworkDiscovery() {
 
   // Test enabled networks discovery
   const handleTestEnabledNetworks = async () => {
-    if (!primaryWallet || !isEthereumWallet(primaryWallet)) {
-      setError('No Ethereum wallet connected')
+    if (!walletAddress) {
+      setError('No wallet connected. Please connect your Base Account first.')
       return
     }
 
@@ -36,21 +39,18 @@ export function NetworkDiscovery() {
     setResult('')
 
     try {
-      const enabledNetworks = getEnabledNetworks(primaryWallet)
-      const enabledChainIds = getEnabledChainIds(primaryWallet)
-      const networkDisplayInfo = getNetworkDisplayInfo(primaryWallet)
+      const enabledNetworks = getEnabledNetworks()
+      const enabledChainIds = getEnabledChainIds()
+      const networkDisplayInfo = getNetworkDisplayInfo(84532) // Base Sepolia
 
       setResult(
         `Enabled Networks Discovery:\n` +
           `Total Networks: ${enabledNetworks.length}\n` +
           `Enabled Chain IDs: ${enabledChainIds.join(', ')}\n\n` +
           `Network Details:\n` +
-          networkDisplayInfo
-            .map(
-              (network) =>
-                `• ${network.chainName} (${network.chainId}) - ${network.symbol}`
-            )
-            .join('\n')
+          (networkDisplayInfo
+            ? `• ${networkDisplayInfo.name} (${networkDisplayInfo.chainId}) - ETH`
+            : 'No network info available')
       )
     } catch (err) {
       setError(
@@ -63,8 +63,8 @@ export function NetworkDiscovery() {
 
   // Test specific network info
   const handleTestNetworkInfo = async () => {
-    if (!primaryWallet || !isEthereumWallet(primaryWallet)) {
-      setError('No Ethereum wallet connected')
+    if (!walletAddress) {
+      setError('No wallet connected. Please connect your Base Account first.')
       return
     }
 
@@ -79,18 +79,16 @@ export function NetworkDiscovery() {
 
     try {
       const chainId = parseInt(testChainId)
-      const networkInfo = getNetworkInfo(primaryWallet, chainId)
-      const isEnabled = isNetworkEnabled(primaryWallet, chainId)
+      const networkInfo = getNetworkInfo(chainId)
+      const isEnabled = isNetworkEnabled(chainId)
 
       if (networkInfo) {
         setResult(
           `Network Info for Chain ID ${chainId}:\n` +
-            `Chain Name: ${networkInfo.chainName || networkInfo.name}\n` +
             `Name: ${networkInfo.name}\n` +
-            `Symbol: ${networkInfo.nativeCurrency?.symbol || 'ETH'}\n` +
-            `Decimals: ${networkInfo.nativeCurrency?.decimals || 18}\n` +
-            `RPC URLs: ${networkInfo.rpcUrls?.join(', ') || 'N/A'}\n` +
-            `Block Explorer: ${networkInfo.blockExplorerUrls?.join(', ') || 'N/A'}\n` +
+            `Symbol: ETH\n` +
+            `Decimals: 18\n` +
+            `RPC URL: ${networkInfo.rpcUrl}\n` +
             `Is Enabled: ${isEnabled ? '✅ Yes' : '❌ No'}`
         )
       } else {
@@ -107,8 +105,8 @@ export function NetworkDiscovery() {
 
   // Test network status for common chains
   const handleTestCommonChains = async () => {
-    if (!primaryWallet || !isEthereumWallet(primaryWallet)) {
-      setError('No Ethereum wallet connected')
+    if (!walletAddress) {
+      setError('No wallet connected. Please connect your Base Account first.')
       return
     }
 
@@ -120,19 +118,19 @@ export function NetworkDiscovery() {
       const commonChains = [
         { chainId: 1, name: 'Ethereum Mainnet' },
         { chainId: 5, name: 'Ethereum Goerli' },
-        { chainId: 137, name: 'Polygon' },
-        { chainId: 80001, name: 'Polygon Mumbai' },
+        { chainId: 8453, name: 'Base Mainnet' },
+        { chainId: 84532, name: 'Base Sepolia' },
         { chainId: 10, name: 'Optimism' },
         { chainId: 42161, name: 'Arbitrum' },
         { chainId: 56, name: 'BNB Smart Chain' },
       ]
 
       const results = commonChains.map((chain) => {
-        const isEnabled = isNetworkEnabled(primaryWallet, chain.chainId)
-        const networkInfo = getNetworkInfo(primaryWallet, chain.chainId)
+        const isEnabled = isNetworkEnabled(chain.chainId)
+        const networkInfo = getNetworkInfo(chain.chainId)
         return `${chain.name} (${chain.chainId}): ${
           isEnabled ? '✅ Enabled' : '❌ Not Enabled'
-        }${networkInfo ? ` - ${networkInfo.nativeCurrency?.symbol || 'ETH'}` : ''}`
+        }${networkInfo ? ` - ETH` : ''}`
       })
 
       setResult(`Common Chains Status:\n` + results.join('\n'))
@@ -145,11 +143,11 @@ export function NetworkDiscovery() {
     }
   }
 
-  if (!primaryWallet || !isEthereumWallet(primaryWallet)) {
+  if (!walletAddress) {
     return (
       <div className='p-4 bg-gray-50 border border-gray-200 rounded-lg'>
         <p className='text-sm text-gray-600'>
-          Connect an Ethereum wallet to test network discovery
+          Connect your Base Account to test network discovery
         </p>
       </div>
     )

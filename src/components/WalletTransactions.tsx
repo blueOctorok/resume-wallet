@@ -1,8 +1,7 @@
 'use client'
 
-import { useDynamicContext } from '@dynamic-labs/sdk-react-core'
-import { isEthereumWallet } from '@dynamic-labs/ethereum'
 import { useState } from 'react'
+import { baseProvider } from '@/lib/base-account-sdk'
 import {
   getWalletBalance,
   signMessage,
@@ -17,7 +16,7 @@ import {
   decodeSignature,
   verifySignature,
   signAndVerifyMessage,
-} from '@/lib/wallet-transactions'
+} from '@/lib/wallet-utils'
 import {
   WalletIcon,
   CurrencyDollarIcon,
@@ -25,8 +24,13 @@ import {
   PaperAirplaneIcon,
 } from '@heroicons/react/24/outline'
 
-export function WalletTransactions() {
-  const { primaryWallet } = useDynamicContext()
+interface WalletTransactionsProps {
+  walletAddress?: string
+}
+
+export function WalletTransactions({
+  walletAddress = '',
+}: WalletTransactionsProps) {
   const [balance, setBalance] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<string>('')
@@ -35,10 +39,13 @@ export function WalletTransactions() {
   const [paymasterSupport, setPaymasterSupport] = useState<boolean | null>(null)
   const [walletCapabilities, setWalletCapabilities] = useState<any>(null)
 
+  // Check if wallet is connected
+  const isWalletConnected = !!walletAddress && !!baseProvider
+
   // Test message signing
   const handleSignMessage = async () => {
-    if (!primaryWallet || !isEthereumWallet(primaryWallet)) {
-      setError('No Ethereum wallet connected')
+    if (!isWalletConnected) {
+      setError('No wallet connected. Please connect your Base Account first.')
       return
     }
 
@@ -48,7 +55,7 @@ export function WalletTransactions() {
 
     try {
       const message = 'Hello from DriverAppChain! This is a test signature.'
-      const signature = await signMessage(primaryWallet, message)
+      const signature = await signMessage(message, baseProvider)
       setResult(`Message signed successfully!\nSignature: ${signature}`)
     } catch (err) {
       setError(
@@ -61,8 +68,8 @@ export function WalletTransactions() {
 
   // Test wallet balance
   const handleGetBalance = async () => {
-    if (!primaryWallet || !isEthereumWallet(primaryWallet)) {
-      setError('No Ethereum wallet connected')
+    if (!isWalletConnected) {
+      setError('No wallet connected. Please connect your Base Account first.')
       return
     }
 
@@ -71,12 +78,12 @@ export function WalletTransactions() {
     setResult('')
 
     try {
-      const walletBalance = await getWalletBalance(primaryWallet)
+      const walletBalance = await getWalletBalance(walletAddress, baseProvider)
       setBalance(walletBalance)
       setResult(`Wallet Balance: ${walletBalance} ETH`)
 
       // Check if sufficient for gas
-      const hasGas = await hasSufficientBalance(primaryWallet)
+      const hasGas = await hasSufficientBalance()
       setResult(
         (prev) => prev + `\nSufficient for gas: ${hasGas ? 'Yes' : 'No'}`
       )
@@ -91,8 +98,8 @@ export function WalletTransactions() {
 
   // Test typed data signing (for resume verification)
   const handleSignTypedData = async () => {
-    if (!primaryWallet || !isEthereumWallet(primaryWallet)) {
-      setError('No Ethereum wallet connected')
+    if (!isWalletConnected) {
+      setError('No wallet connected. Please connect your Base Account first.')
       return
     }
 
@@ -104,7 +111,7 @@ export function WalletTransactions() {
       const domain = {
         name: 'DriverAppChain',
         version: '1',
-        chainId: 80001, // Mumbai testnet
+        chainId: 84532, // Base Sepolia testnet
         verifyingContract:
           '0x0000000000000000000000000000000000000000' as `0x${string}`,
       }
@@ -123,13 +130,8 @@ export function WalletTransactions() {
         userId: 'test-user-123',
       }
 
-      const signature = await signTypedData(
-        primaryWallet,
-        domain,
-        types,
-        message
-      )
-      setResult(`Typed data signed successfully!\nSignature: ${signature}`)
+      const signature = await signTypedData()
+      setResult(`Typed data signing not yet implemented with Base Account SDK`)
     } catch (err) {
       setError(
         `Failed to sign typed data: ${err instanceof Error ? err.message : 'Unknown error'}`
@@ -141,8 +143,8 @@ export function WalletTransactions() {
 
   // Test transaction (sends 0 ETH to self - just for testing)
   const handleTestTransaction = async () => {
-    if (!primaryWallet || !isEthereumWallet(primaryWallet)) {
-      setError('No Ethereum wallet connected')
+    if (!isWalletConnected) {
+      setError('No wallet connected. Please connect your Base Account first.')
       return
     }
 
@@ -152,19 +154,15 @@ export function WalletTransactions() {
 
     try {
       // Check if wallet has sufficient balance
-      const hasGas = await hasSufficientBalance(primaryWallet, '0.001')
+      const hasGas = await hasSufficientBalance()
       if (!hasGas) {
         setError('Insufficient balance for gas fees. Need at least 0.001 ETH.')
         return
       }
 
       // Send 0 ETH to self (just to test transaction signing)
-      const txHash = await sendTransaction(
-        primaryWallet,
-        primaryWallet.address!,
-        '0'
-      )
-      setResult(`Transaction sent successfully!\nHash: ${txHash}`)
+      const txHash = await sendTransaction()
+      setResult(`Transaction sending not yet implemented with Base Account SDK`)
     } catch (err) {
       setError(
         `Failed to send transaction: ${err instanceof Error ? err.message : 'Unknown error'}`
@@ -176,8 +174,8 @@ export function WalletTransactions() {
 
   // Test atomic transactions (EIP-5792)
   const handleAtomicTransactions = async () => {
-    if (!primaryWallet || !isEthereumWallet(primaryWallet)) {
-      setError('No Ethereum wallet connected')
+    if (!isWalletConnected) {
+      setError('No wallet connected. Please connect your Base Account first.')
       return
     }
 
@@ -187,7 +185,7 @@ export function WalletTransactions() {
 
     try {
       // Check if wallet supports atomic transactions
-      const supportsAtomic = await supportsAtomicTransactions(primaryWallet)
+      const supportsAtomic = await supportsAtomicTransactions()
       if (!supportsAtomic) {
         setError('Wallet does not support atomic transactions (EIP-5792)')
         return
@@ -205,10 +203,8 @@ export function WalletTransactions() {
         },
       ]
 
-      const atomicId = await sendAtomicTransactions(primaryWallet, calls)
-      setResult(
-        `Atomic transactions sent successfully!\nAtomic ID: ${atomicId}`
-      )
+      const atomicId = await sendAtomicTransactions()
+      setResult(`Atomic transactions not yet implemented with Base Account SDK`)
     } catch (err) {
       setError(
         `Failed to send atomic transactions: ${err instanceof Error ? err.message : 'Unknown error'}`
@@ -220,8 +216,8 @@ export function WalletTransactions() {
 
   // Check wallet capabilities
   const handleCheckCapabilities = async () => {
-    if (!primaryWallet || !isEthereumWallet(primaryWallet)) {
-      setError('No Ethereum wallet connected')
+    if (!isWalletConnected) {
+      setError('No wallet connected. Please connect your Base Account first.')
       return
     }
 
@@ -230,8 +226,8 @@ export function WalletTransactions() {
     setResult('')
 
     try {
-      const atomic = await supportsAtomicTransactions(primaryWallet)
-      const paymaster = await supportsPaymasterServices(primaryWallet)
+      const atomic = await supportsAtomicTransactions()
+      const paymaster = await supportsPaymasterServices()
 
       setAtomicSupport(atomic)
       setPaymasterSupport(paymaster)
@@ -250,8 +246,8 @@ export function WalletTransactions() {
 
   // Test signature verification
   const handleSignAndVerify = async () => {
-    if (!primaryWallet || !isEthereumWallet(primaryWallet)) {
-      setError('No Ethereum wallet connected')
+    if (!isWalletConnected) {
+      setError('No wallet connected. Please connect your Base Account first.')
       return
     }
 
@@ -262,17 +258,9 @@ export function WalletTransactions() {
     try {
       const message =
         'Hello from DriverAppChain! This is a test signature for verification.'
-      const result = await signAndVerifyMessage(primaryWallet, message)
+      const result = await signAndVerifyMessage()
 
-      setResult(
-        `Sign & Verify Complete!\n` +
-          `Message: ${result.verification.originalMessage}\n` +
-          `Signature: ${result.signature}\n` +
-          `Recovered Address: ${result.verification.recoveredAddress}\n` +
-          `Expected Address: ${result.verification.expectedAddress}\n` +
-          `Valid Signature: ${result.verification.isValidSignature ? '✅ Yes' : '❌ No'}\n` +
-          `Address Match: ${result.verification.addressMatch ? '✅ Yes' : '❌ No'}`
-      )
+      setResult(`Sign & Verify not yet implemented with Base Account SDK`)
     } catch (err) {
       setError(
         `Failed to sign and verify: ${err instanceof Error ? err.message : 'Unknown error'}`
@@ -284,8 +272,8 @@ export function WalletTransactions() {
 
   // Test signature decoding
   const handleDecodeSignature = async () => {
-    if (!primaryWallet || !isEthereumWallet(primaryWallet)) {
-      setError('No Ethereum wallet connected')
+    if (!isWalletConnected) {
+      setError('No wallet connected. Please connect your Base Account first.')
       return
     }
 
@@ -296,24 +284,12 @@ export function WalletTransactions() {
     try {
       // First sign a message
       const message = 'Test message for signature decoding'
-      const signature = await signMessage(primaryWallet, message)
+      const signature = await signMessage(message, baseProvider)
 
       // Then decode and verify it
-      const decoded = await decodeSignature(
-        message,
-        signature,
-        primaryWallet.address
-      )
+      const decoded = await decodeSignature()
 
-      setResult(
-        `Signature Decoded!\n` +
-          `Message: ${decoded.originalMessage}\n` +
-          `Signature: ${decoded.signature}\n` +
-          `Recovered Address: ${decoded.recoveredAddress}\n` +
-          `Expected Address: ${decoded.expectedAddress}\n` +
-          `Valid Signature: ${decoded.isValidSignature ? '✅ Yes' : '❌ No'}\n` +
-          `Address Match: ${decoded.addressMatch ? '✅ Yes' : '❌ No'}`
-      )
+      setResult(`Signature decoding not yet implemented with Base Account SDK`)
     } catch (err) {
       setError(
         `Failed to decode signature: ${err instanceof Error ? err.message : 'Unknown error'}`
@@ -325,8 +301,8 @@ export function WalletTransactions() {
 
   // Test enhanced EIP-5792 capabilities
   const handleGetCapabilities = async () => {
-    if (!primaryWallet || !isEthereumWallet(primaryWallet)) {
-      setError('No Ethereum wallet connected')
+    if (!isWalletConnected) {
+      setError('No wallet connected. Please connect your Base Account first.')
       return
     }
 
@@ -335,16 +311,20 @@ export function WalletTransactions() {
     setResult('')
 
     try {
-      const capabilities = await getWalletCapabilities(primaryWallet)
-      if (capabilities) {
+      const capabilities = await getWalletCapabilities()
+      if (
+        capabilities &&
+        typeof capabilities === 'object' &&
+        'chainId' in capabilities
+      ) {
         setWalletCapabilities(capabilities)
         setResult(
           `Wallet Capabilities (EIP-5792):\n` +
-            `Chain ID: ${capabilities.chainId}\n` +
-            `Atomic Transactions: ${capabilities.capabilities.atomic ? '✅ Supported' : '❌ Not Supported'}\n` +
-            `Atomic Status: ${capabilities.capabilities.atomicStatus}\n` +
-            `Paymaster Service: ${capabilities.capabilities.paymasterService ? '✅ Supported' : '❌ Not Supported'}\n` +
-            `Paymaster Status: ${capabilities.capabilities.paymasterStatus}`
+            `Chain ID: ${(capabilities as any).chainId}\n` +
+            `Atomic Transactions: ${(capabilities as any).capabilities?.atomic ? '✅ Supported' : '❌ Not Supported'}\n` +
+            `Atomic Status: ${(capabilities as any).capabilities?.atomicStatus || 'Unknown'}\n` +
+            `Paymaster Service: ${(capabilities as any).capabilities?.paymasterService ? '✅ Supported' : '❌ Not Supported'}\n` +
+            `Paymaster Status: ${(capabilities as any).capabilities?.paymasterStatus || 'Unknown'}`
         )
       } else {
         setError('Failed to get wallet capabilities')
@@ -360,8 +340,8 @@ export function WalletTransactions() {
 
   // Test enhanced atomic transactions with paymaster
   const handleEnhancedAtomicTransactions = async () => {
-    if (!primaryWallet || !isEthereumWallet(primaryWallet)) {
-      setError('No Ethereum wallet connected')
+    if (!isWalletConnected) {
+      setError('No wallet connected. Please connect your Base Account first.')
       return
     }
 
@@ -375,21 +355,10 @@ export function WalletTransactions() {
         { to: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6', value: '0.0001' },
       ]
 
-      const result = await sendAtomicTransactionsEnhanced(
-        primaryWallet,
-        calls,
-        {
-          usePaymaster: true,
-        }
-      )
+      const result = await sendAtomicTransactionsEnhanced()
 
       setResult(
-        `Enhanced Atomic Transactions Sent!\n` +
-          `Transaction ID: ${result.id}\n` +
-          `Atomic Support: ${result.capabilities.atomic ? '✅ Yes' : '❌ No'}\n` +
-          `Atomic Status: ${result.capabilities.atomicStatus}\n` +
-          `Paymaster Support: ${result.capabilities.paymasterService ? '✅ Yes' : '❌ No'}\n` +
-          `Paymaster Status: ${result.capabilities.paymasterStatus}`
+        `Enhanced atomic transactions not yet implemented with Base Account SDK`
       )
     } catch (err) {
       setError(
@@ -400,11 +369,11 @@ export function WalletTransactions() {
     }
   }
 
-  if (!primaryWallet || !isEthereumWallet(primaryWallet)) {
+  if (!isWalletConnected) {
     return (
       <div className='p-4 bg-gray-50 border border-gray-200 rounded-lg'>
         <p className='text-sm text-gray-600'>
-          Connect an Ethereum wallet to test transactions
+          Connect your Base Account to test transactions
         </p>
       </div>
     )
@@ -540,10 +509,10 @@ export function WalletTransactions() {
 
       <div className='text-xs text-gray-500'>
         <p>
-          <strong>Wallet Address:</strong> {primaryWallet.address}
+          <strong>Wallet Address:</strong> {walletAddress || 'Not connected'}
         </p>
         <p>
-          <strong>Network:</strong> {primaryWallet.chain || 'Unknown'}
+          <strong>Network:</strong> Base Sepolia (Testnet)
         </p>
       </div>
     </div>
