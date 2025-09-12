@@ -1,12 +1,16 @@
+'use client'
+
 import ResumeUpload from '@/components/ResumeUpload'
-import { BaseWalletConnect } from '@/components/BaseWalletConnect'
-import { BaseAccountAuth } from '@/components/BaseAccountAuth'
+import { useState } from 'react'
+import { SimpleBaseAuth } from '@/components/SimpleBaseAuth'
 import { WalletTransactions } from '@/components/WalletTransactions'
 import { RpcProviderTest } from '@/components/RpcProviderTest'
 import { NetworkDiscovery } from '@/components/NetworkDiscovery'
 import { DeploymentTest } from '@/components/DeploymentTest'
 
 const Home = () => {
+  const [user, setUser] = useState<any>(null)
+
   return (
     <div className='min-h-screen bg-gray-50'>
       {/* Header */}
@@ -30,11 +34,17 @@ const Home = () => {
         <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
           {/* Left Sidebar - Stats & Quick Actions */}
           <div className='lg:col-span-1 space-y-6'>
-            {/* Base Account Authentication */}
-            <BaseAccountAuth />
-
-            {/* Base Wallet Connection */}
-            <BaseWalletConnect />
+            {/* Simple Base Authentication */}
+            <SimpleBaseAuth
+              onAuthSuccess={(userData) => {
+                console.log('Authentication successful:', userData)
+                setUser(userData)
+              }}
+              onAuthError={(error) => {
+                console.error('Authentication failed:', error)
+                setUser(null)
+              }}
+            />
 
             <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
               <h3 className='text-lg font-medium text-gray-900 mb-4'>
@@ -86,21 +96,21 @@ const Home = () => {
               </p>
             </div>
 
-            <ResumeUpload />
+            <ResumeUpload user={user} />
 
             {/* Wallet Transaction Tests */}
             <div className='mt-8'>
-              <WalletTransactions walletAddress='' />
+              <WalletTransactions walletAddress={user?.address || ''} />
             </div>
 
             {/* RPC Provider Tests */}
             <div className='mt-8'>
-              <RpcProviderTest walletAddress='' />
+              <RpcProviderTest walletAddress={user?.address || ''} />
             </div>
 
             {/* Network Discovery Tests */}
             <div className='mt-8'>
-              <NetworkDiscovery walletAddress='' />
+              <NetworkDiscovery walletAddress={user?.address || ''} />
             </div>
 
             {/* Driver Experience Test */}

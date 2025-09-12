@@ -1,4 +1,6 @@
 const hre = require('hardhat')
+const fs = require('fs')
+const path = require('path')
 
 async function main() {
   console.log('🚀 Starting ResumeRegistry deployment...')
@@ -23,6 +25,24 @@ async function main() {
     '⛽ Gas Used:',
     (await resumeRegistry.deploymentTransaction())?.gasLimit?.toString()
   )
+
+  // Update .env.local with contract address
+  const envPath = path.join(__dirname, '..', '.env.local')
+  if (fs.existsSync(envPath)) {
+    let envContent = fs.readFileSync(envPath, 'utf8')
+
+    // Remove existing CONTRACT_ADDRESS line if it exists
+    envContent = envContent.replace(/^NEXT_PUBLIC_CONTRACT_ADDRESS=.*$/m, '')
+
+    // Add new CONTRACT_ADDRESS
+    envContent += `\nNEXT_PUBLIC_CONTRACT_ADDRESS=${contractAddress}\n`
+
+    fs.writeFileSync(envPath, envContent)
+    console.log('✅ Updated .env.local with CONTRACT_ADDRESS')
+  } else {
+    console.log('⚠️ .env.local not found - please add manually:')
+    console.log(`NEXT_PUBLIC_CONTRACT_ADDRESS=${contractAddress}`)
+  }
 
   // Verify contract on BaseScan (if not localhost)
   if (hre.network.name !== 'hardhat' && hre.network.name !== 'localhost') {
@@ -54,7 +74,7 @@ async function main() {
   console.log(JSON.stringify(deploymentInfo, null, 2))
 
   console.log('\n🎯 Next Steps:')
-  console.log('1. Update NEXT_PUBLIC_CONTRACT_ADDRESS in your .env.local')
+  console.log('1. ✅ Contract address updated in .env.local')
   console.log('2. Test the contract functions')
   console.log('3. Integrate with your frontend')
 

@@ -20,11 +20,8 @@
     "test:user-experience": "npx hardhat run scripts/test-user-experience.js"
   },
   "dependencies": {
-    "@base-org/account": "^2.1.0",
+    "@base-org/account": "^2.2.0",
     "@base-org/account-ui": "^1.0.1",
-    "@dynamic-labs/ethereum": "^4.29.6",
-    "@dynamic-labs/iframe-setup": "^4.29.6",
-    "@dynamic-labs/sdk-react-core": "^4.29.6",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.2.1",
     "@radix-ui/react-dialog": "^1.1.15",

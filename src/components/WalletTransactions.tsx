@@ -40,7 +40,8 @@ export function WalletTransactions({
   const [walletCapabilities, setWalletCapabilities] = useState<any>(null)
 
   // Check if wallet is connected
-  const isWalletConnected = !!walletAddress && !!baseProvider
+  const isWalletConnected =
+    !!walletAddress && typeof window !== 'undefined' && !!baseProvider
 
   // Test message signing
   const handleSignMessage = async () => {

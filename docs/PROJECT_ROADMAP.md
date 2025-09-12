@@ -75,6 +75,7 @@
 - **Coinbase integration** - Familiar brand for mainstream users
 - **Future-proof** - Coinbase's strategic focus on Base
 - **Gasless support** - Better native gasless transaction support
+- **Base Account SDK** - Native wallet solution with seedless wallets
 
 ---
 
@@ -117,6 +118,8 @@
 1. **API Endpoints**
    - `/api/resumes` - Create and fetch resumes
    - `/api/users/profile` - User management
+   - `/api/auth/verify` - EIP-712 signature verification
+   - `/api/paymaster/*` - ERC20 gas payment support
    - Proper error handling and validation
 
 2. **Database Integration**
@@ -152,25 +155,28 @@
 
 ## 🚧 What We're Building Next (Phase 2)
 
-### 🔐 Authentication & Wallet Integration
+### 🔐 Base Account SDK Authentication & Wallet Integration
 
 **Why This Matters:**
 
 - **User identity** - Know who's uploading resumes
 - **Blockchain interaction** - Users need wallets to verify credentials
 - **Security** - Prevent unauthorized access
+- **Seedless wallets** - No seed phrase required for users
 
 **What We'll Build:**
 
-1. **Dynamic.xyz Integration**
-   - Seedless wallet creation
-   - Social login options
+1. **Base Account SDK Integration**
+   - Native Base wallet creation
+   - EIP-712 typed data authentication
    - Wallet connection state management
+   - MagicSpend capability detection
 
 2. **User Session Management**
-   - JWT tokens for API authentication
+   - EIP-712 signature verification
    - Wallet address verification
    - User profile creation/update
+   - Nonce-based authentication
 
 ### 💾 Blockchain Integration
 
@@ -183,7 +189,7 @@
 **What We'll Build:**
 
 1. **Smart Contract Deployment**
-   - Deploy to Mumbai testnet
+   - Deploy to Base Sepolia testnet
    - Contract verification
    - Transaction handling
 
@@ -250,7 +256,6 @@
 - Low usage (100 users): $100-200/month
 - Medium usage (1,000 users): $500-1,000/month
 - High usage (10,000 users): $2,000-5,000/month
-- **Total Savings**: $1,000/month vs Dynamic.xyz Enterprise
 
 ### 📈 Application Tracking
 
@@ -283,7 +288,7 @@
    - Transparent blockchain verification
    - Contract allowlist for sponsored operations
 
-### 💰 Exchange Funding Integration
+### 💰 Base Pay Integration
 
 **Why This Matters:**
 
@@ -293,139 +298,73 @@
 
 **What We'll Build:**
 
-1. **Exchange Integration**
-   - Connect to major exchanges (Coinbase, Binance, etc.)
-   - OAuth authentication for secure access
-   - Direct transfer from exchange to wallet
+1. **Base Pay Integration**
+   - One-tap USDC payments
+   - Credit card to USDC conversion
+   - Zero fees for users and merchants
+   - Payment status tracking
 
-2. **Funding Management**
-   - Real-time transfer status tracking
-   - Webhook notifications for success/failure
-   - Transaction history and audit trail
+2. **ERC20 Gas Payments**
+   - Pay gas fees with USDC instead of ETH
+   - Paymaster integration
+   - USDC allowance management
+   - Gas payment options
 
 ---
 
 ## 🔧 Base Account SDK Implementation Plan
 
-### **Current Status: Dynamic.xyz Integration (Phase 1)**
+### **Current Status: Base Account SDK Integration (Phase 1) ✅**
 
 **What We Have:**
 
-- ✅ Dynamic.xyz wallet provider configured
-- ✅ Email authentication flow
-- ✅ OTP verification
-- ✅ Embedded wallet creation
-- ✅ JWT token handling
+- ✅ Base Account SDK configured and working
+- ✅ EIP-712 typed data authentication
+- ✅ Wallet connection state management
 - ✅ Base network support (8453, 84532)
+- ✅ MagicSpend capability detection
+- ✅ ERC20 gas payment system
+- ✅ Base Pay integration
+- ✅ Payment status tracking
 
 **What We're Testing:**
 
-- 🔍 Wallet connection flow
-- 🔍 Base network switching
-- 🔍 Transaction capabilities
+- 🔍 Complete driver experience flow
+- 🔍 Base Pay payment processing
+- 🔍 ERC20 gas payment options
 - 🔍 Resume upload integration
 
-### **Phase 2: Base Account SDK Integration**
-
-**Why Add Base Account SDK:**
-
-- **Native Base integration** - Official Base way to authenticate
-- **Better UX** - "Sign in with Base" is more intuitive
-- **One-tap payments** - Built-in USDC payment support
-- **Gas sponsorship** - Users don't pay gas fees
-- **Future-proof** - Base's recommended approach
+### **Phase 2: Advanced Base Features**
 
 **What We'll Add:**
 
-1. **Base Account SDK Packages**
-
-   ```bash
-   npm install @base-org/account @base-org/account-ui
-   ```
-
-2. **Sign in with Base**
-   - Native Base authentication
-   - Wallet signature verification
-   - EIP-4361 (Sign in with Ethereum) standard
-   - Better user experience
-
-3. **Base Pay Integration**
-   - One-tap USDC payments
-   - Built-in payment status tracking
-   - User information collection
-   - No gas fees for users
-
-4. **Gas Sponsorship (Paymaster)**
-   - Coinbase Developer Platform integration
-   - Up to $15k in gas credits
-   - Contract allowlist for sponsored operations
-   - Proxy protection for paymaster URLs
-
-5. **Batch Transactions (EIP-5792)**
-   - Multiple operations in one transaction
-   - Atomic operations (all succeed or all fail)
-   - Gas efficiency improvements
-   - Advanced wallet capabilities
-
-**Implementation Strategy:**
-
-- **Keep Dynamic.xyz** - Don't break what's working
-- **Add Base Account SDK** - As an alternative auth method
-- **Gradual migration** - Test both systems side by side
-- **User choice** - Let users choose their preferred method
-
-### **Phase 3: Advanced Base Features**
-
-**What We'll Add Later:**
-
-1. **Advanced Gas Sponsorship**
-   - Custom paymaster policies
-   - Dynamic gas pricing
-   - Usage analytics and monitoring
-
-2. **Enhanced Payment Features**
+1. **Enhanced Payment Features**
    - Subscription payments
    - Recurring billing
    - Payment analytics
 
-3. **Advanced Batch Operations**
+2. **Advanced Batch Operations**
    - Complex multi-step workflows
    - Conditional transactions
    - Advanced error handling
 
-### **Base Account SDK vs Dynamic.xyz Comparison**
+3. **Custom Paymaster Policies**
+   - Dynamic gas pricing
+   - Usage analytics and monitoring
+   - Contract allowlist management
 
-| Feature                | Dynamic.xyz              | Base Account SDK           |
-| ---------------------- | ------------------------ | -------------------------- |
-| **Wallet Management**  | ✅ Multiple wallet types | ✅ Base Account only       |
-| **Authentication**     | ✅ Email/OTP             | ✅ Wallet signatures       |
-| **Network Support**    | ✅ Multi-chain           | ✅ Base networks only      |
-| **Payments**           | ❌ Manual implementation | ✅ One-tap USDC            |
-| **Gas Sponsorship**    | ❌ Not built-in          | ✅ Native support          |
-| **Batch Transactions** | ✅ EIP-5792 support      | ✅ EIP-5792 support        |
-| **User Experience**    | ✅ Good                  | ✅ Excellent (Base-native) |
-| **Development**        | ✅ More complex          | ✅ Simpler (Base-focused)  |
+### **Base Account SDK Advantages**
 
-### **Decision Framework**
-
-**Use Dynamic.xyz when:**
-
-- Need multi-chain support
-- Want multiple wallet options
-- Building for broader ecosystem
-
-**Use Base Account SDK when:**
-
-- Focused on Base ecosystem
-- Want native Base experience
-- Need gas sponsorship
-- Want one-tap payments
-
-**Our Approach:**
-
-- **Phase 1**: Keep Dynamic.xyz, test current setup
-- **Phase 2**: Add Base Account SDK as alternative
-- **Phase 3**: Consider migration based on user feedback
+| Feature                | Base Account SDK           |
+| ---------------------- | -------------------------- |
+| **Wallet Management**  | ✅ Seedless wallets        |
+| **Authentication**     | ✅ EIP-712 typed data      |
+| **Network Support**    | ✅ Base networks only      |
+| **Payments**           | ✅ One-tap USDC            |
+| **Gas Sponsorship**    | ✅ Native support          |
+| **Batch Transactions** | ✅ EIP-5792 support        |
+| **User Experience**    | ✅ Excellent (Base-native) |
+| **Development**        | ✅ Simple (Base-focused)   |
 
 ---
 
@@ -520,7 +459,7 @@ You already have a `.env.local` with:
 
 - ✅ **Database configuration** - Supabase connection working
 - ✅ **Pinata IPFS setup** - IPFS uploads working perfectly
-- ✅ **Dynamic.xyz wallet setup** - Ready for integration
+- ✅ **Base Account SDK setup** - Ready for integration
 - ✅ **Blockchain configuration** - Ready for deployment
 
 ---
@@ -559,8 +498,8 @@ You already have a `.env.local` with:
 1. **✅ Database setup** - Supabase integration COMPLETE
 2. **✅ Test database connection** - Working perfectly
 3. **✅ Test resume upload flow** - End-to-end working
-4. **🔐 Wallet authentication** - Dynamic.xyz integration
-5. **⛓️ Deploy smart contract** - Mumbai testnet
+4. **✅ Base Account SDK authentication** - COMPLETE
+5. **⛓️ Deploy smart contract** - Base Sepolia testnet
 6. **📊 Resume management dashboard** - List and detail views
 
 ---
@@ -607,23 +546,30 @@ You already have a `.env.local` with:
 - ✅ IPFS upload and storage
 - ✅ Complete end-to-end upload flow
 - ✅ Database persistence and retrieval
+- ✅ Base Account SDK authentication
+- ✅ EIP-712 typed data signing
+- ✅ MagicSpend capability detection
+- ✅ ERC20 gas payment system
+- ✅ Base Pay integration
+- ✅ Payment status tracking
 
 **What We're Building Next:**
 
-- 🔐 **Wallet authentication** (Dynamic.xyz)
-- ⛓️ **Blockchain integration** (smart contract deployment)
+- ⛓️ **Blockchain integration** (smart contract deployment to Base Sepolia)
 - 📊 **Resume management dashboard**
 
 **Major Milestone Achieved:**
 
-**🎯 WE NOW HAVE A WORKING BLOCKCHAIN-READY RESUME UPLOAD PLATFORM!**
+**🎯 WE NOW HAVE A WORKING BLOCKCHAIN-READY RESUME UPLOAD PLATFORM WITH BASE ACCOUNT SDK!**
 
 Users can:
 
 1. Upload resumes to IPFS (decentralized storage)
 2. Get IPFS hashes for blockchain verification
 3. Store metadata in Supabase database
-4. Complete the full upload workflow
+4. Authenticate with Base Account SDK (seedless wallets)
+5. Pay for premium features with Base Pay
+6. Complete the full upload workflow
 
 **This is the foundation for everything else!** 🚀
 

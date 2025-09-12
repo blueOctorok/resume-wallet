@@ -1,36 +1,45 @@
-import { createBaseAccountSDK, base } from '@base-org/account'
-
-// Base Account SDK Configuration
+// Base Account SDK Configuration - using hardcoded values to avoid build-time imports
 export const baseAccountConfig = {
   appName: 'Resume Wallet',
   appLogoUrl: '/logo.png', // Update this to your app logo
-  appChainIds: [
-    base.constants.CHAIN_IDS.base,
-    base.constants.CHAIN_IDS.baseSepolia,
-  ],
+  appChainIds: [8453, 84532], // Base Mainnet and Base Sepolia chain IDs
+  preference: {
+    attribution: {
+      auto: false, // Disable auto attribution to prevent analytics calls
+    },
+    telemetry: false, // Disable telemetry to prevent analytics calls
+  },
 }
 
-// Create Base Account SDK instance (client-side only)
+// Base network constants - hardcoded to avoid build-time imports
+export const BASE_CHAIN_IDS = {
+  MAINNET: 8453, // Base Mainnet chain ID
+  SEPOLIA: 84532, // Base Sepolia chain ID
+} as const
+
+// Create Base Account SDK instance (client-side only with dynamic import)
 let baseAccountSDK: any = null
 let baseProvider: any = null
 
-// Initialize SDK only on client side
+// Initialize SDK only on client side with dynamic import
 if (typeof window !== 'undefined') {
   try {
-    baseAccountSDK = createBaseAccountSDK(baseAccountConfig)
-    baseProvider = baseAccountSDK.getProvider()
+    // Use dynamic import to avoid module loading issues at build time
+    import('@base-org/account')
+      .then(({ createBaseAccountSDK }) => {
+        baseAccountSDK = createBaseAccountSDK(baseAccountConfig)
+        baseProvider = baseAccountSDK.getProvider()
+        console.log('✅ Base Account SDK initialized successfully')
+      })
+      .catch((error) => {
+        console.error('❌ Failed to initialize Base Account SDK:', error)
+      })
   } catch (error) {
-    console.error('Failed to initialize Base Account SDK:', error)
+    console.error('❌ Failed to initialize Base Account SDK:', error)
   }
 }
 
 export { baseAccountSDK, baseProvider }
-
-// Base network constants
-export const BASE_CHAIN_IDS = {
-  MAINNET: base.constants.CHAIN_IDS.base,
-  SEPOLIA: base.constants.CHAIN_IDS.baseSepolia,
-} as const
 
 // Helper function to get current chain ID
 export const getCurrentChainId = (): number => {

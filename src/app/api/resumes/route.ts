@@ -1,64 +1,115 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createResume, getUserResumes, upsertUser } from '@/lib/supabase-db'
-import { getUserFromRequest } from '@/lib/auth-middleware'
+import { getUserFromRequest } from '@/lib/base-auth-middleware'
 
 export async function POST(request: NextRequest) {
   try {
-    // Authenticate the request using Dynamic JWT
+    console.log('📝 Resume API: Starting POST request')
+
+    // Check Supabase environment variables
+    console.log('🔍 Resume API: Checking environment variables...')
+    console.log(
+      '🔍 Resume API: NEXT_PUBLIC_SUPABASE_URL:',
+      !!process.env.NEXT_PUBLIC_SUPABASE_URL
+    )
+    console.log(
+      '🔍 Resume API: NEXT_PUBLIC_SUPABASE_ANON_KEY:',
+      !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    )
+
+    // Authenticate the request using Base Account SDK
+    console.log('🔐 Resume API: Authenticating user...')
     const user = await getUserFromRequest(request)
+    console.log('✅ Resume API: User authenticated:', {
+      address: user.address,
+      method: user.method,
+    })
 
     const body = await request.json()
     const { title, filename, ipfsHash, isPublic } = body
+    console.log('📋 Resume API: Request body:', {
+      title,
+      filename,
+      ipfsHash,
+      isPublic,
+    })
 
     // Validate required fields
     if (!title || !filename || !ipfsHash) {
+      console.log('❌ Resume API: Missing required fields')
       return NextResponse.json(
         { error: 'Missing required fields: title, filename, ipfsHash' },
         { status: 400 }
       )
     }
 
-    // Get wallet address from verified JWT
-    const walletAddress =
-      user.verified_account?.address || user.verified_credentials?.[0]?.address
+    // Get wallet address from verified signature
+    const walletAddress = user.address
 
     if (!walletAddress) {
+      console.log('❌ Resume API: No wallet address found')
       return NextResponse.json(
-        { error: 'No verified wallet address found in token' },
+        { error: 'No verified wallet address found' },
         { status: 400 }
       )
     }
 
     // Create or get user from verified wallet address
-    const dbUser = await upsertUser({
-      walletAddress,
-      name:
-        user.given_name && user.family_name
-          ? `${user.given_name} ${user.family_name}`
-          : user.alias || 'User',
-    })
+    console.log('👤 Resume API: Upserting user...')
+    let dbUser
+    try {
+      dbUser = await upsertUser({
+        walletAddress,
+        name: `User ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`,
+      })
+      console.log('✅ Resume API: User upserted:', {
+        id: dbUser.id,
+        walletAddress,
+      })
+    } catch (userError) {
+      console.error('❌ Resume API: User upsert failed:', userError)
+      throw new Error(
+        `Failed to create/update user: ${userError instanceof Error ? userError.message : 'Unknown error'}`
+      )
+    }
 
     // Create resume record using Supabase
-    const resume = await createResume({
-      title,
-      filename,
-      ipfsHash,
-      isPublic: isPublic || false,
-      userId: dbUser.id,
-    })
+    console.log('📄 Resume API: Creating resume...')
+    let resume
+    try {
+      resume = await createResume({
+        title,
+        filename,
+        ipfsHash,
+        isPublic: isPublic || false,
+        userId: dbUser.id,
+      })
+      console.log('✅ Resume API: Resume created:', { id: resume.id, title })
+    } catch (resumeError) {
+      console.error('❌ Resume API: Resume creation failed:', resumeError)
+      throw new Error(
+        `Failed to create resume: ${resumeError instanceof Error ? resumeError.message : 'Unknown error'}`
+      )
+    }
 
     return NextResponse.json(resume, { status: 201 })
   } catch (error) {
-    console.error('Error creating resume:', error)
+    console.error('❌ Resume API: Error creating resume:', error)
+    console.error(
+      '❌ Resume API: Error stack:',
+      error instanceof Error ? error.stack : 'No stack trace'
+    )
 
     // Handle authentication errors specifically
     if (error instanceof Error && error.message.includes('authorization')) {
+      console.log('🔐 Resume API: Authentication error')
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       )
     }
 
+    console.log('💥 Resume API: Generic error, returning 500')
     return NextResponse.json(
       { error: 'Failed to create resume' },
       { status: 500 }
@@ -68,16 +119,15 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Authenticate the request using Dynamic JWT
+    // Authenticate the request using Base Account SDK
     const user = await getUserFromRequest(request)
 
-    // Get wallet address from verified JWT
-    const walletAddress =
-      user.verified_account?.address || user.verified_credentials?.[0]?.address
+    // Get wallet address from verified signature
+    const walletAddress = user.address
 
     if (!walletAddress) {
       return NextResponse.json(
-        { error: 'No verified wallet address found in token' },
+        { error: 'No verified wallet address found' },
         { status: 400 }
       )
     }
@@ -85,10 +135,7 @@ export async function GET(request: NextRequest) {
     // Get or create user from verified wallet address
     const dbUser = await upsertUser({
       walletAddress,
-      name:
-        user.given_name && user.family_name
-          ? `${user.given_name} ${user.family_name}`
-          : user.alias || 'User',
+      name: `User ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`,
     })
 
     const resumes = await getUserResumes(dbUser.id)

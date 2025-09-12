@@ -9,8 +9,18 @@ import {
   Loader2,
 } from 'lucide-react'
 import { uploadToIPFS } from '@/lib/ipfs'
+import { createAuthToken } from '@/lib/base-auth-middleware'
 
-export default function ResumeUpload() {
+interface ResumeUploadProps {
+  user?: {
+    address: string
+    message: string
+    signature: string
+    method: 'base_sdk' | 'fallback'
+  }
+}
+
+export default function ResumeUpload({ user }: ResumeUploadProps) {
   const [file, setFile] = useState<File | null>(null)
   const [title, setTitle] = useState('')
   const [isPublic, setIsPublic] = useState(false)
@@ -57,17 +67,47 @@ export default function ResumeUpload() {
     ipfsHash: string
     isPublic: boolean
   }) => {
+    if (!user) {
+      throw new Error('User authentication required to save resume')
+    }
+
     try {
+      const authToken = createAuthToken(user)
+      console.log('📤 Resume Upload: Sending request to API:', {
+        url: '/api/resumes',
+        method: 'POST',
+        resumeData,
+        hasAuthToken: !!authToken,
+        authTokenLength: authToken.length,
+      })
+
       const response = await fetch('/api/resumes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify(resumeData),
       })
 
+      console.log('📥 Resume Upload: API response:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+      })
+
       if (!response.ok) {
-        throw new Error(`Failed to save resume: ${response.statusText}`)
+        // Try to get more details about the error
+        let errorDetails = response.statusText
+        try {
+          const errorBody = await response.json()
+          errorDetails =
+            errorBody.error || errorBody.message || response.statusText
+          console.error('❌ Resume Upload: Server error details:', errorBody)
+        } catch {
+          console.error('❌ Resume Upload: Could not parse error response')
+        }
+        throw new Error(`Failed to save resume: ${errorDetails}`)
       }
 
       const savedResume = await response.json()

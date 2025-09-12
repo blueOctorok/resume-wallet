@@ -76,26 +76,38 @@ export async function upsertUser(data: {
   cdlState?: string
   cdlClass?: string
 }) {
-  const supabase = await createClient()
+  console.log('👤 Supabase DB: Starting user upsert...')
+  console.log('👤 Supabase DB: Input data:', data)
 
-  // Transform camelCase to snake_case for database
-  const dbData = {
-    wallet_address: data.walletAddress,
-    name: data.name,
-    cdl_number: data.cdlNumber,
-    cdl_state: data.cdlState,
-    cdl_class: data.cdlClass,
+  try {
+    const supabase = await createClient()
+    console.log('👤 Supabase DB: Client created successfully')
+
+    // Transform camelCase to snake_case for database
+    const dbData = {
+      wallet_address: data.walletAddress,
+      name: data.name,
+      cdl_number: data.cdlNumber,
+      cdl_state: data.cdlState,
+      cdl_class: data.cdlClass,
+    }
+    console.log('👤 Supabase DB: Transformed data:', dbData)
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .upsert([dbData], { onConflict: 'wallet_address' })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('❌ Supabase DB: User upsert error:', error)
+      throw new Error(`Failed to upsert user: ${error.message}`)
+    }
+
+    console.log('✅ Supabase DB: User upserted successfully:', user)
+    return user
+  } catch (error) {
+    console.error('❌ Supabase DB: User upsert failed:', error)
+    throw error
   }
-
-  const { data: user, error } = await supabase
-    .from('users')
-    .upsert([dbData], { onConflict: 'wallet_address' })
-    .select()
-    .single()
-
-  if (error) {
-    throw new Error(`Failed to upsert user: ${error.message}`)
-  }
-
-  return user
 }
