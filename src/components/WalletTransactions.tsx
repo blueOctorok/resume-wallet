@@ -18,6 +18,11 @@ import {
   signAndVerifyMessage,
 } from '@/lib/wallet-utils'
 import {
+  checkUSDCBalance,
+  formatUSDCAmount,
+  parseUSDCAmount,
+} from '@/lib/erc20-gas-payment'
+import {
   WalletIcon,
   CurrencyDollarIcon,
   DocumentTextIcon,
@@ -32,6 +37,7 @@ export function WalletTransactions({
   walletAddress = '',
 }: WalletTransactionsProps) {
   const [balance, setBalance] = useState<string>('')
+  const [usdcBalance, setUsdcBalance] = useState<string>('0')
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<string>('')
   const [error, setError] = useState<string>('')
@@ -79,9 +85,23 @@ export function WalletTransactions({
     setResult('')
 
     try {
+      // Get ETH balance
       const walletBalance = await getWalletBalance(walletAddress, baseProvider)
       setBalance(walletBalance)
-      setResult(`Wallet Balance: ${walletBalance} ETH`)
+
+      // Get USDC balance
+      let usdcBalanceResult = '0.00'
+      try {
+        usdcBalanceResult = await checkUSDCBalance(walletAddress, baseProvider)
+        setUsdcBalance(usdcBalanceResult)
+      } catch (usdcError) {
+        console.warn('⚠️ Failed to get USDC balance:', usdcError)
+        setUsdcBalance('0.00')
+      }
+
+      setResult(
+        `ETH: ${walletBalance} ETH | USDC: ${formatUSDCAmount(parseUSDCAmount(usdcBalanceResult))} USDC`
+      )
 
       // Check if sufficient for gas
       const hasGas = await hasSufficientBalance()
@@ -488,11 +508,21 @@ export function WalletTransactions({
         </div>
       )}
 
-      {balance && (
-        <div className='p-3 bg-green-50 border border-green-200 rounded-md'>
-          <p className='text-sm text-green-800'>
-            <strong>Current Balance:</strong> {balance} ETH
-          </p>
+      {(balance || usdcBalance !== '0') && (
+        <div className='space-y-2'>
+          <div className='p-3 bg-blue-50 border border-blue-200 rounded-md'>
+            <p className='text-sm text-blue-800'>
+              <strong>USDC Balance:</strong>{' '}
+              {formatUSDCAmount(parseUSDCAmount(usdcBalance))} USDC
+            </p>
+          </div>
+          {balance && (
+            <div className='p-3 bg-gray-50 border border-gray-200 rounded-md'>
+              <p className='text-sm text-gray-700'>
+                <strong>ETH Balance:</strong> {balance} ETH
+              </p>
+            </div>
+          )}
         </div>
       )}
 

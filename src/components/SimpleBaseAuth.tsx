@@ -2,6 +2,11 @@
 
 import React, { useState, useEffect } from 'react'
 import { baseAccountSDK, baseProvider } from '@/lib/base-account-sdk'
+import {
+  checkUSDCBalance,
+  formatUSDCAmount,
+  parseUSDCAmount,
+} from '@/lib/erc20-gas-payment'
 
 interface SimpleBaseAuthProps {
   onAuthSuccess?: (user: any) => void
@@ -17,6 +22,11 @@ export const SimpleBaseAuth: React.FC<SimpleBaseAuthProps> = ({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const [availableProviders, setAvailableProviders] = useState<string[]>([])
+  const [usdcBalance, setUsdcBalance] = useState<string>('0')
+  const [ethBalance, setEthBalance] = useState<string>('0')
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false)
+  const [currentChainId, setCurrentChainId] = useState<string>('')
+  const [isSwitchingNetwork, setIsSwitchingNetwork] = useState(false)
 
   // Check if we're in a browser environment
   const isBrowser = typeof window !== 'undefined'
@@ -48,6 +58,104 @@ export const SimpleBaseAuth: React.FC<SimpleBaseAuthProps> = ({
       console.log('Available providers:', providers)
     }
   }, [isBrowser])
+
+  // Check balances when user is authenticated
+  const checkBalances = async (userAddress: string) => {
+    if (!baseProvider) return
+
+    setIsLoadingBalance(true)
+    try {
+      console.log('💰 Checking balances for:', userAddress)
+
+      // Check ETH balance
+      const ethBalance = await baseProvider.request({
+        method: 'eth_getBalance',
+        params: [userAddress, 'latest'],
+      })
+      const ethInWei = BigInt(ethBalance)
+      const ethFormatted = (Number(ethInWei) / 1e18).toFixed(6)
+      setEthBalance(ethFormatted)
+
+      // Check USDC balance
+      try {
+        const usdcBalance = await checkUSDCBalance(userAddress, baseProvider)
+        setUsdcBalance(usdcBalance)
+        console.log('✅ Balances:', { eth: ethFormatted, usdc: usdcBalance })
+      } catch (usdcError) {
+        console.warn('⚠️ Failed to get USDC balance:', usdcError)
+        setUsdcBalance('0.00') // Set default USDC balance
+        console.log('✅ Balances:', { eth: ethFormatted, usdc: '0.00 (error)' })
+      }
+    } catch (error) {
+      console.error('❌ Failed to check balances:', error)
+    } finally {
+      setIsLoadingBalance(false)
+    }
+  }
+
+  // Check balances when user changes
+  useEffect(() => {
+    if (user?.address) {
+      checkBalances(user.address)
+    }
+  }, [user?.address])
+
+  // Get current chain ID
+  const getCurrentChainId = async () => {
+    if (!baseProvider) return
+
+    try {
+      const chainId = await baseProvider.request({ method: 'eth_chainId' })
+      setCurrentChainId(chainId)
+      console.log('🔍 Current chain ID:', chainId)
+    } catch (error) {
+      console.error('Failed to get chain ID:', error)
+    }
+  }
+
+  // Switch to Base Sepolia
+  const switchToBaseSepolia = async () => {
+    if (!baseProvider) return
+
+    setIsSwitchingNetwork(true)
+    setError('')
+
+    try {
+      console.log('🔄 Switching to Base Sepolia...')
+
+      await baseProvider.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x14a34' }], // Base Sepolia
+      })
+
+      console.log('✅ Switched to Base Sepolia')
+
+      // Update chain ID and refresh balances
+      await getCurrentChainId()
+      if (user?.address) {
+        await checkBalances(user.address)
+      }
+    } catch (error: any) {
+      console.error('❌ Failed to switch network:', error)
+      if (error.code === 4902) {
+        // Network not added to wallet
+        setError(
+          'Base Sepolia network not found. Please add it to your wallet.'
+        )
+      } else {
+        setError(`Failed to switch network: ${error.message}`)
+      }
+    } finally {
+      setIsSwitchingNetwork(false)
+    }
+  }
+
+  // Get chain ID when user is authenticated
+  useEffect(() => {
+    if (user?.address) {
+      getCurrentChainId()
+    }
+  }, [user?.address])
 
   const signInWithWallet = async () => {
     if (!isBrowser) {
@@ -181,26 +289,137 @@ export const SimpleBaseAuth: React.FC<SimpleBaseAuthProps> = ({
 
   if (isAuthenticated && user) {
     return (
-      <div className='flex items-center gap-4 p-4 bg-green-50 border border-green-200 rounded-lg'>
-        <div className='flex items-center gap-2'>
-          <div className='w-3 h-3 bg-green-500 rounded-full'></div>
-          <div className='flex flex-col'>
-            <span className='text-sm font-medium text-green-800'>
-              Signed in: {user.address.slice(0, 6)}...{user.address.slice(-4)}
-            </span>
-            <span className='text-xs text-green-600'>
-              Method:{' '}
-              {user.method === 'base-account-sdk'
-                ? 'Base Account SDK'
-                : 'Web3 Wallet'}
-            </span>
+      <div className='p-4 bg-white border border-gray-200 rounded-lg shadow-sm'>
+        {/* Authentication Status */}
+        <div className='p-3 bg-green-50 border border-green-200 rounded-lg mb-4'>
+          <div className='flex items-center justify-between mb-2'>
+            <div className='flex items-center gap-2'>
+              <div className='w-3 h-3 bg-green-500 rounded-full'></div>
+              <div className='flex flex-col'>
+                <span className='text-sm font-medium text-green-800'>
+                  Signed in: {user.address.slice(0, 6)}...
+                  {user.address.slice(-4)}
+                </span>
+                <span className='text-xs text-green-600'>
+                  Method:{' '}
+                  {user.method === 'base-account-sdk'
+                    ? 'Base Account SDK'
+                    : 'Web3 Wallet'}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={signOut}
+              className='px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors'
+            >
+              Sign Out
+            </button>
+          </div>
+
+          {/* Network Status */}
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center gap-2'>
+              <span className='text-xs text-gray-600'>Network:</span>
+              <span
+                className={`text-xs font-medium ${
+                  currentChainId === '0x14a34'
+                    ? 'text-green-600'
+                    : 'text-orange-600'
+                }`}
+              >
+                {currentChainId === '0x14a34'
+                  ? 'Base Sepolia ✅'
+                  : currentChainId === '0x2105'
+                    ? 'Base Mainnet ⚠️'
+                    : currentChainId
+                      ? `Chain ${currentChainId}`
+                      : 'Unknown'}
+              </span>
+            </div>
+            {currentChainId !== '0x14a34' && (
+              <button
+                onClick={switchToBaseSepolia}
+                disabled={isSwitchingNetwork}
+                className='px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50 transition-colors'
+              >
+                {isSwitchingNetwork ? 'Switching...' : 'Switch to Sepolia'}
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Balance Display - Prominent */}
+        <div className='space-y-2 mb-4'>
+          <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center gap-2'>
+                <div className='w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center'>
+                  <span className='text-white text-xs font-bold'>$</span>
+                </div>
+                <span className='text-sm font-medium text-blue-800'>
+                  USDC Balance
+                </span>
+              </div>
+              <span className='text-lg font-bold text-blue-900'>
+                {isLoadingBalance ? (
+                  <div className='w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin'></div>
+                ) : (
+                  `${formatUSDCAmount(parseUSDCAmount(usdcBalance))} USDC`
+                )}
+              </span>
+            </div>
+          </div>
+
+          <div className='p-3 bg-gray-50 border border-gray-200 rounded-lg'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center gap-2'>
+                <div className='w-6 h-6 bg-gray-600 rounded-full flex items-center justify-center'>
+                  <span className='text-white text-xs font-bold'>Ξ</span>
+                </div>
+                <span className='text-sm font-medium text-gray-700'>
+                  ETH Balance
+                </span>
+              </div>
+              <span className='text-sm font-medium text-gray-900'>
+                {isLoadingBalance ? (
+                  <div className='w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin'></div>
+                ) : (
+                  `${ethBalance} ETH`
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Refresh Button */}
         <button
-          onClick={signOut}
-          className='px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors'
+          onClick={() => user?.address && checkBalances(user.address)}
+          disabled={isLoadingBalance}
+          className='w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50 transition-colors'
         >
-          Sign Out
+          {isLoadingBalance ? (
+            <>
+              <div className='w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin'></div>
+              Refreshing...
+            </>
+          ) : (
+            <>
+              <svg
+                className='w-4 h-4'
+                fill='none'
+                stroke='currentColor'
+                viewBox='0 0 24 24'
+              >
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth={2}
+                  d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15'
+                />
+              </svg>
+              Refresh Balances
+            </>
+          )}
         </button>
       </div>
     )

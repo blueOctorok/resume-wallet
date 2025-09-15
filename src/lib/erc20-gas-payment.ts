@@ -7,7 +7,7 @@ import { baseProvider } from './base-account-sdk'
 
 // USDC contract address on Base Sepolia
 export const USDC_CONTRACT_ADDRESS =
-  '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
+  '0x036cbd53842c5426634e7929541ec2318f3dcf7e'
 
 // ERC20 ABI for USDC contract (minimal set for balance, allowance, approve)
 export const USDC_ABI = [
@@ -68,6 +68,30 @@ export const checkUSDCBalance = async (
 ): Promise<string> => {
   try {
     console.log('🔍 Checking USDC balance for:', address)
+    console.log('🔍 Using USDC contract:', USDC_CONTRACT_ADDRESS)
+
+    // Check what network we're on
+    const chainId = await provider.request({ method: 'eth_chainId' })
+    console.log('🔍 Current chain ID:', chainId)
+    console.log('🔍 Expected Base Sepolia chain ID: 0x14a34 (84532)')
+
+    if (chainId !== '0x14a34') {
+      console.warn('⚠️ Not on Base Sepolia! Current chain:', chainId)
+      return '0.00'
+    }
+
+    // Test if the contract exists first
+    const code = await provider.request({
+      method: 'eth_getCode',
+      params: [USDC_CONTRACT_ADDRESS, 'latest'],
+    })
+
+    console.log('🔍 USDC contract code length:', code?.length || 0)
+
+    if (!code || code === '0x') {
+      console.error('❌ USDC contract does not exist at this address!')
+      return '0.00'
+    }
 
     const result = await provider.request({
       method: 'eth_call',
@@ -79,6 +103,19 @@ export const checkUSDCBalance = async (
         'latest',
       ],
     })
+
+    console.log('🔍 Raw USDC balance result:', result)
+
+    // Handle empty or invalid result
+    if (!result || result === '0x' || result === '0x0') {
+      console.log('⚠️ Empty USDC balance result, returning 0')
+      console.log('💡 This could mean:')
+      console.log('   - No USDC in this wallet')
+      console.log('   - Wrong USDC contract address')
+      console.log('   - Network connectivity issue')
+      console.log('   - USDC contract not deployed on this network')
+      return '0.00'
+    }
 
     const balance = BigInt(result)
     const formattedBalance = formatUSDCAmount(balance.toString())
