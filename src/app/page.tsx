@@ -3,6 +3,7 @@
 import ResumeUpload from '@/components/ResumeUpload'
 import { useState } from 'react'
 import { SimpleBaseAuth } from '@/components/SimpleBaseAuth'
+import { DriverApplication } from '@/components/DriverApplication'
 import { WalletTransactions } from '@/components/WalletTransactions'
 import { RpcProviderTest } from '@/components/RpcProviderTest'
 import { NetworkDiscovery } from '@/components/NetworkDiscovery'
@@ -97,6 +98,11 @@ const Home = () => {
             </div>
 
             <ResumeUpload user={user} />
+
+            {/* Driver Application */}
+            <div className='mt-8'>
+              <DriverApplication user={user} />
+            </div>
 
             {/* Wallet Transaction Tests */}
             <div className='mt-8'>

@@ -111,3 +111,105 @@ export async function upsertUser(data: {
     throw error
   }
 }
+
+// Driver Application Functions
+export async function getDriverApplication(userAddress: string) {
+  console.log('📋 Supabase DB: Getting driver application for:', userAddress)
+
+  try {
+    const supabase = await createClient()
+
+    const { data, error } = await supabase
+      .from('driver_applications')
+      .select('*')
+      .eq('user_address', userAddress)
+      .single()
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('❌ Supabase DB: Get application error:', error)
+      throw error
+    }
+
+    if (data) {
+      console.log('✅ Supabase DB: Found existing application:', data)
+    } else {
+      console.log('📝 Supabase DB: No existing application found')
+    }
+
+    return data
+  } catch (error) {
+    console.error('❌ Supabase DB: Get application failed:', error)
+    throw error
+  }
+}
+
+export async function saveDriverApplication(
+  userAddress: string,
+  applicationData: any,
+  currentStep: number
+) {
+  console.log('💾 Supabase DB: Saving driver application...')
+  console.log('💾 Supabase DB: User:', userAddress)
+  console.log('💾 Supabase DB: Step:', currentStep)
+
+  try {
+    const supabase = await createClient()
+
+    const { data, error } = await supabase
+      .from('driver_applications')
+      .upsert({
+        user_address: userAddress,
+        application_data: applicationData,
+        current_step: currentStep,
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('❌ Supabase DB: Save application error:', error)
+      throw error
+    }
+
+    console.log('✅ Supabase DB: Application saved successfully:', data)
+    return data
+  } catch (error) {
+    console.error('❌ Supabase DB: Save application failed:', error)
+    throw error
+  }
+}
+
+export async function completeDriverApplication(
+  userAddress: string,
+  applicationData: any
+) {
+  console.log('🎉 Supabase DB: Completing driver application...')
+  console.log('🎉 Supabase DB: User:', userAddress)
+
+  try {
+    const supabase = await createClient()
+
+    const { data, error } = await supabase
+      .from('driver_applications')
+      .upsert({
+        user_address: userAddress,
+        application_data: applicationData,
+        current_step: 8, // All steps complete
+        is_complete: true,
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('❌ Supabase DB: Complete application error:', error)
+      throw error
+    }
+
+    console.log('✅ Supabase DB: Application completed successfully:', data)
+    return data
+  } catch (error) {
+    console.error('❌ Supabase DB: Complete application failed:', error)
+    throw error
+  }
+}

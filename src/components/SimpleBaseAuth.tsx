@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { baseAccountSDK, baseProvider } from '@/lib/base-account-sdk'
 import {
   checkUSDCBalance,
@@ -8,9 +8,75 @@ import {
   parseUSDCAmount,
 } from '@/lib/erc20-gas-payment'
 
+// Session interface for persistent authentication
+interface AuthSession {
+  address: string
+  signature: string
+  message: string
+  method: 'base-account-sdk' | 'web3-wallet'
+  timestamp: number
+  expiresAt: number
+}
+
 interface SimpleBaseAuthProps {
   onAuthSuccess?: (user: any) => void
   onAuthError?: (error: string) => void
+}
+
+// Session storage configuration
+const SESSION_KEY = 'resume-wallet-auth-session'
+const SESSION_DURATION = 4 * 60 * 60 * 1000 // 4 hours
+
+// Session storage functions
+const saveSession = (session: AuthSession) => {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+    console.log('💾 Session saved:', {
+      address: session.address.slice(0, 6) + '...' + session.address.slice(-4),
+      expiresAt: new Date(session.expiresAt).toLocaleString(),
+    })
+  } catch (error) {
+    console.error('❌ Failed to save session:', error)
+  }
+}
+
+const loadSession = (): AuthSession | null => {
+  try {
+    const stored = localStorage.getItem(SESSION_KEY)
+    if (!stored) {
+      console.log('🔍 No stored session found')
+      return null
+    }
+
+    const session = JSON.parse(stored)
+
+    if (session.expiresAt > Date.now()) {
+      console.log('✅ Valid session found:', {
+        address:
+          session.address.slice(0, 6) + '...' + session.address.slice(-4),
+        method: session.method,
+        expiresAt: new Date(session.expiresAt).toLocaleString(),
+      })
+      return session
+    } else {
+      console.log('⏰ Session expired, clearing...')
+      localStorage.removeItem(SESSION_KEY)
+      return null
+    }
+  } catch (error) {
+    console.error('❌ Failed to load session:', error)
+    localStorage.removeItem(SESSION_KEY)
+    return null
+  }
+}
+
+const clearSession = () => {
+  try {
+    localStorage.removeItem(SESSION_KEY)
+    console.log('🗑️ Session cleared')
+  } catch (error) {
+    console.error('❌ Failed to clear session:', error)
+  }
 }
 
 export const SimpleBaseAuth: React.FC<SimpleBaseAuthProps> = ({
@@ -31,7 +97,11 @@ export const SimpleBaseAuth: React.FC<SimpleBaseAuthProps> = ({
   // Check if we're in a browser environment
   const isBrowser = typeof window !== 'undefined'
 
-  // Check for wallet providers on component mount
+  // Use ref to avoid infinite loops with onAuthSuccess
+  const onAuthSuccessRef = useRef(onAuthSuccess)
+  onAuthSuccessRef.current = onAuthSuccess
+
+  // Check for wallet providers and restore session on component mount
   useEffect(() => {
     if (isBrowser) {
       console.log('🔍 Checking for wallet providers on mount...')
@@ -56,8 +126,28 @@ export const SimpleBaseAuth: React.FC<SimpleBaseAuthProps> = ({
 
       setAvailableProviders(providers)
       console.log('Available providers:', providers)
+
+      // Try to restore session from localStorage
+      const savedSession = loadSession()
+      if (savedSession) {
+        console.log('🔄 Restoring authentication from session...')
+        setUser({
+          address: savedSession.address,
+          message: savedSession.message,
+          signature: savedSession.signature,
+          method: savedSession.method,
+        })
+        setIsAuthenticated(true)
+        onAuthSuccessRef.current?.({
+          address: savedSession.address,
+          message: savedSession.message,
+          signature: savedSession.signature,
+          method: savedSession.method,
+        })
+        console.log('✅ Session restored successfully')
+      }
     }
-  }, [isBrowser])
+  }, [isBrowser]) // Only depend on isBrowser, not onAuthSuccess
 
   // Check balances when user is authenticated
   const checkBalances = async (userAddress: string) => {
@@ -221,9 +311,20 @@ export const SimpleBaseAuth: React.FC<SimpleBaseAuthProps> = ({
           method: 'base-account-sdk',
         }
 
+        // Save session to localStorage
+        const sessionData: AuthSession = {
+          address: userAddress,
+          message,
+          signature,
+          method: 'base-account-sdk',
+          timestamp: Date.now(),
+          expiresAt: Date.now() + SESSION_DURATION,
+        }
+        saveSession(sessionData)
+
         setUser(userInfo)
         setIsAuthenticated(true)
-        onAuthSuccess?.(userInfo)
+        onAuthSuccessRef.current?.(userInfo)
 
         console.log('✅ Base Account SDK authentication successful')
       } else {
@@ -264,12 +365,23 @@ export const SimpleBaseAuth: React.FC<SimpleBaseAuthProps> = ({
           address: userAddress,
           message,
           signature,
-          method: 'ethereum',
+          method: 'web3-wallet',
         }
+
+        // Save session to localStorage
+        const sessionData: AuthSession = {
+          address: userAddress,
+          message,
+          signature,
+          method: 'web3-wallet',
+          timestamp: Date.now(),
+          expiresAt: Date.now() + SESSION_DURATION,
+        }
+        saveSession(sessionData)
 
         setUser(userInfo)
         setIsAuthenticated(true)
-        onAuthSuccess?.(userInfo)
+        onAuthSuccessRef.current?.(userInfo)
 
         console.log('✅ Ethereum authentication successful')
       } else {
@@ -282,6 +394,9 @@ export const SimpleBaseAuth: React.FC<SimpleBaseAuthProps> = ({
   }
 
   const signOut = async () => {
+    // Clear session from localStorage
+    clearSession()
+
     setUser(null)
     setIsAuthenticated(false)
     console.log('✅ Signed out')
