@@ -222,9 +222,9 @@ export const DeploymentTest: React.FC<DeploymentTestProps> = ({
         {userAddress && (
           <div className='mt-4'>
             <MagicSpendButton
-              address={userAddress}
+              recipient={userAddress}
               amount='5.00'
-              onSend={() => {
+              onTransactionCreated={() => {
                 setResult((prev) => prev + '\n💳 MagicSpend Test:\n')
                 setResult(
                   (prev) =>

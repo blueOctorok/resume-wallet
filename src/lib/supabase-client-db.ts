@@ -133,6 +133,9 @@ export async function completeDriverApplicationClient(
     return { success: true, data: result }
   } catch (error) {
     console.error('❌ Client DB: Complete application failed:', error)
-    return { success: false, error: error.message || 'Unknown error' }
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
   }
 }

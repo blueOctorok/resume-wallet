@@ -230,7 +230,8 @@ export const createUSDCApprovalTransaction = async (
     console.log('🔐 Creating USDC approval transaction...', { owner, amount })
 
     // Encode approve function call
-    const approveData = `0x095ea7b3${PAYMASTER_CONTRACT_ADDRESS.slice(2).padStart(64, '0')}${parseUSDCAmount(amount).toString(16).padStart(64, '0')}`
+    const amountBigInt = BigInt(parseUSDCAmount(amount))
+    const approveData = `0x095ea7b3${PAYMASTER_CONTRACT_ADDRESS.slice(2).padStart(64, '0')}${amountBigInt.toString(16).padStart(64, '0')}`
 
     const transaction = {
       from: owner,

@@ -5,9 +5,13 @@ export const baseAccountConfig = {
   appChainIds: [8453, 84532], // Base Mainnet and Base Sepolia chain IDs
   preference: {
     attribution: {
-      auto: false, // Disable auto attribution to prevent analytics calls
+      auto: true, // Enable auto attribution for proper transaction tracking
     },
-    telemetry: false, // Disable telemetry to prevent analytics calls
+    telemetry: true, // Enable telemetry for better debugging
+  },
+  paymasterUrls: {
+    8453: 'https://paymaster.base.org/api/v1/sponsor',
+    84532: 'https://paymaster.base-sepolia.org/api/v1/sponsor',
   },
 }
 

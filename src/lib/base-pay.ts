@@ -76,7 +76,7 @@ export const sendPayment = async (
 ): Promise<PaymentResult> => {
   try {
     const result = await pay(request)
-    return result
+    return result as PaymentResult
   } catch (error: any) {
     console.error('Base Pay payment failed:', error)
     throw {
@@ -176,7 +176,7 @@ export const sendCustomPayment = async (
  * Check if Base Pay is available
  */
 export const isBasePayAvailable = (): boolean => {
-  return typeof window !== 'undefined' && !!window.base
+  return typeof window !== 'undefined' && !!(window as any).base
 }
 
 /**

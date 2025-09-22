@@ -8,6 +8,7 @@ import { WalletTransactions } from '@/components/WalletTransactions'
 import { RpcProviderTest } from '@/components/RpcProviderTest'
 import { NetworkDiscovery } from '@/components/NetworkDiscovery'
 import { DeploymentTest } from '@/components/DeploymentTest'
+import AlchemyTest from '@/components/AlchemyTest'
 
 const Home = () => {
   const [user, setUser] = useState<any>(null)
@@ -107,6 +108,11 @@ const Home = () => {
             {/* Wallet Transaction Tests */}
             <div className='mt-8'>
               <WalletTransactions walletAddress={user?.address || ''} />
+            </div>
+
+            {/* Alchemy Infrastructure Test */}
+            <div className='mt-8'>
+              <AlchemyTest />
             </div>
 
             {/* RPC Provider Tests */}

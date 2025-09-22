@@ -1,418 +1,169 @@
-# Deployment Guide
+# 🚀 Smart Contract Deployment Guide
 
 ## Overview
 
-This guide covers deploying our resume wallet platform to Base network, including smart contract deployment, environment configuration, and production setup.
+This guide walks you through deploying the ResumeRegistry smart contract to Base Sepolia testnet for blockchain verification.
 
-## 🎯 Deployment Strategy
+## Prerequisites
 
-### Network Selection
+- ✅ Smart contract compiled (`ResumeRegistry.sol`)
+- ✅ Hardhat configuration set up for Base Sepolia
+- ✅ Demo private key configured
+- ✅ Base Sepolia ETH for gas fees
 
-- **Base Sepolia** - Testing and development
-- **Base Mainnet** - Production deployment
-- **Local Hardhat** - Development and testing
+## Deployment Steps
 
-### Deployment Phases
+### 1. Get Base Sepolia ETH
 
-1. **Development** - Local testing with Hardhat
-2. **Testnet** - Base Sepolia deployment and testing
-3. **Production** - Base Mainnet deployment
-4. **Verification** - Contract verification on BaseScan
+The demo address `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266` needs Base Sepolia ETH for gas fees.
 
-## 🔧 Environment Setup
+**Working Faucets:**
 
-### 1. Required Environment Variables
+- 🔗 **Alchemy**: https://faucet.quicknode.com/base/sepolia
+- 🔗 **Coinbase**: https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet
+- 🔗 **Base Bridge**: https://bridge.base.org/deposit
 
-```bash
-# .env.local
-# Database
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+**Manual Steps:**
 
-# Pinata IPFS
-NEXT_PUBLIC_PINATA_GATEWAY=your_pinata_gateway
-PINATA_API_KEY=your_pinata_api_key
-PINATA_API_SECRET=your_pinata_api_secret
-NEXT_PUBLIC_PINATA_JWT=your_pinata_jwt
+1. Visit one of the faucet URLs above
+2. Connect your wallet or enter the address: `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`
+3. Request testnet ETH (usually 0.1-0.5 ETH)
+4. Wait 2-5 minutes for confirmation
 
-# Blockchain Configuration - Base Networks Only
-NEXT_PUBLIC_CONTRACT_ADDRESS=0x...deployed_contract_address
-PRIVATE_KEY=your_deployer_private_key_here
-BASE_RPC_URL=https://mainnet.base.org
-BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
-BASESCAN_API_KEY=your_basescan_api_key_here
+### 2. Deploy the Contract
 
-# Base Account SDK
-NEXT_PUBLIC_PAYMASTER_PROXY_SERVER_URL=your_paymaster_proxy_url
-
-# NextAuth
-NEXTAUTH_SECRET=your_nextauth_secret
-NEXTAUTH_URL=http://localhost:3000
-```
-
-### 2. Private Key Configuration
-
-**⚠️ Security Warning**: Never commit private keys to version control!
+Once funded, run the deployment:
 
 ```bash
-# Get Base Sepolia ETH from faucet
-# https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet
-
-# Add your private key to .env.local
-PRIVATE_KEY="0x...your_private_key_here"
+npx hardhat run scripts/deploy-simple.js --network baseSepolia
 ```
 
-### 3. BaseScan API Key
+**Expected Output:**
 
-```bash
-# Get API key from BaseScan
-# https://basescan.org/apis
-
-# Add to .env.local
-BASESCAN_API_KEY="your_api_key_here"
+```
+🚀 Starting ResumeRegistry deployment to Base Sepolia...
+📍 Using demo address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+📝 Deploying ResumeRegistry contract...
+✅ ResumeRegistry deployed successfully!
+📍 Contract Address: 0x...
+👤 Deployer Address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+🌐 Network: Base Sepolia
+🔗 Explorer: https://sepolia-explorer.base.org/address/0x...
 ```
 
-## 🚀 Smart Contract Deployment
+### 3. Verify Deployment
 
-### 1. Hardhat Configuration
+- ✅ Contract address updated in `.env.local`
+- ✅ Test resume added to verify functionality
+- ✅ Contract verified on BaseScan (if API key provided)
 
-```javascript
-// hardhat.config.js
-require('@nomicfoundation/hardhat-toolbox')
-require('dotenv').config({ path: '.env.local' })
+## Contract Functions
 
-/** @type import('hardhat/config').HardhatUserConfig */
-module.exports = {
-  solidity: {
-    version: '0.8.19',
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
-      },
-    },
-  },
-  networks: {
-    base: {
-      url: process.env.BASE_RPC_URL,
-      accounts: [process.env.PRIVATE_KEY],
-      chainId: 8453,
-    },
-    baseSepolia: {
-      url: process.env.BASE_SEPOLIA_RPC_URL,
-      accounts: [process.env.PRIVATE_KEY],
-      chainId: 84532,
-    },
-  },
-  etherscan: {
-    apiKey: {
-      base: process.env.BASESCAN_API_KEY,
-      baseSepolia: process.env.BASESCAN_API_KEY,
-    },
-    customChains: [
-      {
-        network: 'base',
-        chainId: 8453,
-        urls: {
-          apiURL: 'https://api.basescan.org/api',
-          browserURL: 'https://basescan.org',
-        },
-      },
-      {
-        network: 'baseSepolia',
-        chainId: 84532,
-        urls: {
-          apiURL: 'https://api-sepolia.basescan.org/api',
-          browserURL: 'https://sepolia.basescan.org',
-        },
-      },
-    ],
-  },
-}
+### Core Functions
+
+- `addResume(ipfsHash, title, filename, isPublic)` - Add new resume
+- `getResume(resumeId)` - Get resume details
+- `verifyResume(resumeId, verified, verificationHash, notes)` - Verify resume
+- `getUserResumes(userAddress)` - Get user's resumes
+
+### Admin Functions
+
+- `addVerifier(verifierAddress)` - Add verification role
+- `removeVerifier(verifierAddress)` - Remove verification role
+- `pause()` / `unpause()` - Emergency controls
+
+## Integration
+
+### Frontend Integration
+
+1. Update `NEXT_PUBLIC_CONTRACT_ADDRESS` in `.env.local`
+2. Import contract ABI from `artifacts/contracts/ResumeRegistry.sol/ResumeRegistry.json`
+3. Use ethers.js to interact with deployed contract
+
+### Example Usage
+
+```typescript
+import { ethers } from 'ethers'
+import ResumeRegistryABI from '../artifacts/contracts/ResumeRegistry.sol/ResumeRegistry.json'
+
+const contract = new ethers.Contract(
+  process.env.NEXT_PUBLIC_CONTRACT_ADDRESS!,
+  ResumeRegistryABI.abi,
+  provider
+)
+
+// Add resume
+const tx = await contract.addResume(
+  'QmTestHash123456789',
+  'Test Resume',
+  'test-resume.pdf',
+  true
+)
 ```
 
-### 2. Deployment Script
+## Data Flow
 
-```javascript
-// scripts/deploy.js
-const hre = require('hardhat')
-
-async function main() {
-  console.log('🚀 Starting ResumeRegistry deployment...')
-
-  // Get the contract factory
-  const ResumeRegistry = await hre.ethers.getContractFactory('ResumeRegistry')
-
-  // Deploy the contract
-  console.log('📝 Deploying ResumeRegistry...')
-  const resumeRegistry = await ResumeRegistry.deploy()
-  await resumeRegistry.waitForDeployment()
-
-  const contractAddress = await resumeRegistry.getAddress()
-  console.log('✅ ResumeRegistry deployed successfully!')
-  console.log('📍 Contract Address:', contractAddress)
-  console.log('🌐 Network:', hre.network.name)
-
-  // Wait for confirmations
-  console.log('⏳ Waiting for confirmations...')
-  await resumeRegistry.deploymentTransaction().wait(6)
-
-  // Verify contract on BaseScan
-  if (hre.network.name !== 'hardhat') {
-    console.log('🔍 Verifying contract on BaseScan...')
-    try {
-      await hre.run('verify:verify', {
-        address: contractAddress,
-        constructorArguments: [],
-      })
-      console.log('✅ Contract verified on BaseScan!')
-    } catch (error) {
-      console.log('❌ Verification failed:', error.message)
-    }
-  }
-
-  console.log('\n🎉 Deployment Summary:')
-  console.log(`Contract Address: ${contractAddress}`)
-  console.log(`Network: ${hre.network.name}`)
-  console.log(
-    `Explorer: https://${hre.network.name === 'base' ? 'basescan.org' : 'sepolia.basescan.org'}/address/${contractAddress}`
-  )
-}
-
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error('❌ Deployment failed:', error)
-    process.exit(1)
-  })
+```
+File Upload → IPFS → Database → Blockchain Verification
 ```
 
-### 3. Deployment Commands
+1. **File Upload**: User uploads resume file
+2. **IPFS Storage**: File stored on IPFS, get hash
+3. **Database**: Store metadata in Supabase for fast queries
+4. **Blockchain**: Store IPFS hash on-chain for immutable verification
 
-```bash
-# Compile contracts
-npm run compile
+## Verification Process
 
-# Deploy to Base Sepolia (testnet)
-npm run deploy:base-sepolia
+1. **Upload**: Resume uploaded to IPFS
+2. **Store**: IPFS hash stored in database + blockchain
+3. **Verify**: Verifier checks resume and updates blockchain
+4. **Query**: Anyone can verify resume authenticity via blockchain
 
-# Deploy to Base Mainnet (production)
-npm run deploy:base
+## Troubleshooting
 
-# Verify contract
-npm run verify:base-sepolia
-npm run verify:base
+### Insufficient Funds
+
+```
+❌ Insufficient funds for deployment!
+💰 Need Base Sepolia ETH for gas fees
 ```
 
-## 🧪 Testing Deployment
+**Solution**: Get ETH from faucet and wait for confirmation
 
-### 1. Driver Experience Test
+### Network Issues
 
-```bash
-# Test the complete user experience
-npm run test:user-experience
+```
+❌ Network connection failed
 ```
 
-This will:
+**Solution**: Check RPC URL in `hardhat.config.js`
 
-- Simulate driver authentication with Base Account SDK
-- Test resume upload and blockchain interaction
-- Verify the complete user journey
-- Show exactly how drivers will use the app
+### Contract Verification Failed
 
-### 2. Contract Interaction Test
-
-```bash
-# Test contract functions
-npm run interact
+```
+❌ Contract verification failed
 ```
 
-This will:
+**Solution**: Ensure BaseScan API key is set in environment
 
-- Test basic contract functions
-- Verify resume storage and retrieval
-- Check event emission
-- Validate contract functionality
+## Next Steps
 
-## 🌐 Frontend Deployment
+1. ✅ Deploy contract to Base Sepolia
+2. ✅ Test contract functions
+3. ✅ Integrate with frontend
+4. ✅ Add verification workflow
+5. ✅ Deploy to Base Mainnet (production)
 
-### 1. Environment Configuration
+## Security Notes
 
-```bash
-# Production environment variables
-NEXT_PUBLIC_CONTRACT_ADDRESS=0x...deployed_contract_address
-NEXT_PUBLIC_BASE_RPC_URL=https://mainnet.base.org
-NEXT_PUBLIC_PAYMASTER_PROXY_SERVER_URL=your_production_paymaster_url
-```
+- 🔒 Demo private key is for testing only
+- 🔒 Never use demo keys in production
+- 🔒 Use hardware wallets for mainnet deployment
+- 🔒 Verify all contract interactions
 
-### 2. Build and Deploy
+## Resources
 
-```bash
-# Build for production
-npm run build
-
-# Deploy to Vercel/Netlify
-npm run deploy
-```
-
-### 3. Domain Configuration
-
-```bash
-# Update NEXTAUTH_URL for production
-NEXTAUTH_URL=https://your-domain.com
-```
-
-## 🔒 Security Checklist
-
-### Pre-Deployment
-
-- [ ] Private keys secured and not in version control
-- [ ] Environment variables properly configured
-- [ ] Contract code reviewed and tested
-- [ ] Gas limits and costs calculated
-- [ ] BaseScan API key configured
-
-### Post-Deployment
-
-- [ ] Contract verified on BaseScan
-- [ ] Frontend deployed and accessible
-- [ ] Database connections working
-- [ ] IPFS uploads functioning
-- [ ] Base Account SDK integration tested
-- [ ] Payment flows working
-- [ ] Gas sponsorship operational
-
-## 📊 Monitoring & Maintenance
-
-### 1. Contract Monitoring
-
-```javascript
-// Monitor contract events
-const contract = new ethers.Contract(contractAddress, abi, provider)
-
-contract.on('ResumeAdded', (resumeId, owner, ipfsHash, event) => {
-  console.log('New resume added:', {
-    resumeId: resumeId.toString(),
-    owner,
-    ipfsHash,
-    blockNumber: event.blockNumber,
-    transactionHash: event.transactionHash,
-  })
-})
-```
-
-### 2. Performance Metrics
-
-- Transaction success rates
-- Gas usage optimization
-- User engagement metrics
-- Payment completion rates
-- Error rates and debugging
-
-### 3. Regular Maintenance
-
-- Monitor gas prices and optimize
-- Update dependencies regularly
-- Review and update security measures
-- Backup critical data
-- Monitor Base network updates
-
-## 🚨 Troubleshooting
-
-### Common Issues
-
-#### 1. Deployment Failures
-
-```bash
-# Check network connection
-npx hardhat console --network baseSepolia
-
-# Verify private key
-echo $PRIVATE_KEY | wc -c  # Should be 66 characters (0x + 64 hex)
-
-# Check gas prices
-npx hardhat run scripts/check-gas.js --network baseSepolia
-```
-
-#### 2. Contract Verification Issues
-
-```bash
-# Manual verification
-npx hardhat verify --network baseSepolia 0x...contract_address
-
-# Check constructor arguments
-npx hardhat verify --network baseSepolia 0x...contract_address "arg1" "arg2"
-```
-
-#### 3. Frontend Connection Issues
-
-```bash
-# Check RPC endpoints
-curl -X POST -H "Content-Type: application/json" \
-  --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
-  https://sepolia.base.org
-
-# Verify contract address
-npx hardhat run scripts/check-contract.js --network baseSepolia
-```
-
-## 📈 Scaling Considerations
-
-### 1. Gas Optimization
-
-- Batch multiple operations
-- Use gas sponsorship for users
-- Optimize contract functions
-- Monitor gas prices
-
-### 2. Database Scaling
-
-- Implement connection pooling
-- Add database indexes
-- Consider read replicas
-- Monitor query performance
-
-### 3. IPFS Scaling
-
-- Use multiple pinning services
-- Implement caching strategies
-- Monitor storage usage
-- Plan for data growth
-
-## 🎯 Production Checklist
-
-### Smart Contract
-
-- [ ] Contract deployed to Base Mainnet
-- [ ] Contract verified on BaseScan
-- [ ] All functions tested and working
-- [ ] Gas costs optimized
-- [ ] Security audit completed
-
-### Frontend
-
-- [ ] Production build successful
-- [ ] Environment variables configured
-- [ ] Domain and SSL configured
-- [ ] Performance optimized
-- [ ] Error handling implemented
-
-### Backend
-
-- [ ] Database production ready
-- [ ] API endpoints secured
-- [ ] Authentication working
-- [ ] File uploads functional
-- [ ] Monitoring implemented
-
-### Integration
-
-- [ ] Base Account SDK working
-- [ ] Base Pay integration tested
-- [ ] Gas sponsorship operational
-- [ ] Payment flows verified
-- [ ] User experience validated
-
----
-
-_This deployment guide ensures a smooth transition from development to production with proper security, monitoring, and maintenance procedures._
+- 📖 [Base Documentation](https://docs.base.org)
+- 🔗 [Base Sepolia Explorer](https://sepolia-explorer.base.org)
+- 🔗 [BaseScan](https://sepolia.basescan.org)
+- 🔗 [IPFS Documentation](https://docs.ipfs.io)

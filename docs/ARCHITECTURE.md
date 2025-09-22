@@ -1,101 +1,131 @@
-# DriverAppChain - Technical Architecture
+# DriverAppChain Verification Architecture
 
-## Overview
+## Layer 1: Smart Contracts (YOU WRITE)
 
-Blockchain-powered resume and credential verification platform for CDL drivers and employers.
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Solidity Smart Contracts                 │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │ResumeRegistry│  │Verification │  │  CredentialManager  │  │
+│  │             │  │   Manager   │  │                     │  │
+│  │• Store IPFS │  │• Employment │  │• CDL verification   │  │
+│  │  hashes     │  │  verification│  │• DOT compliance     │  │
+│  │• Privacy    │  │• Employer   │  │• License validation │  │
+│  │  controls   │  │  attestation│  │• Expiration tracking│  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
 
-## Technology Stack
+## Layer 2: Blockchain Infrastructure (ALCHEMY PROVIDES)
 
-### Frontend
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Alchemy Infrastructure                   │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │Reliable RPC │  │Enhanced APIs│  │  Event Monitoring   │  │
+│  │             │  │             │  │                     │  │
+│  │• Node access│  │• Fast queries│  │• Real-time alerts   │  │
+│  │• High uptime│  │• Bulk data  │  │• Webhook integration│  │
+│  │• Load       │  │• Historical │  │• Error handling     │  │
+│  │  balancing  │  │  data       │  │• Rate limiting      │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
 
-- **Next.js 15** with App Router - Full-stack React framework
-- **Tailwind CSS 4** - Styling and responsive design
-- **TypeScript** - Type safety and developer experience
+## Layer 3: Application Services (YOU BUILD)
 
-### Blockchain
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  Next.js Application Layer                  │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │Email System │  │Identity     │  │  UI/UX Components   │  │
+│  │             │  │Verification │  │                     │  │
+│  │• Send       │  │• Employer   │  │• Driver dashboard   │  │
+│  │  verification│  │  validation │  │• Employer portal    │  │
+│  │• Templates  │  │• KYC process│  │• Verification flows │  │
+│  │• Tracking   │  │• Compliance │  │• Mobile interface   │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
 
-- **Polygon** - Low-cost Ethereum-compatible blockchain
-- **Solidity 0.8.19** - Smart contract development
-- **Dynamic.xyz** - Seedless wallet integration for user-friendly onboarding
+## Layer 4: Production Infrastructure (MISSING - NEEDS TO BE ADDED)
 
-### Database & Storage
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Production Support Layer                  │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │Error        │  │Security &   │  │  Monitoring &       │  │
+│  │Handling     │  │Auth         │  │  Performance        │  │
+│  │             │  │             │  │                     │  │
+│  │• Error      │  │• API route  │  │• Application logs   │  │
+│  │  boundaries │  │  protection │  │• Health checks      │  │
+│  │• Crash      │  │• Rate       │  │• Performance        │  │
+│  │  recovery   │  │  limiting   │  │  monitoring         │  │
+│  │• Fallback   │  │• Input      │  │• Database           │  │
+│  │  handling   │  │  validation │  │  connection pooling │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
 
-- **PostgreSQL** - Relational database for user-friendly data
-- **Prisma** - Type-safe database ORM
-- **IPFS (Pinata)** - Decentralized file storage for resumes
+## Layer 5: Base Account SDK Integration (CURRENT)
 
-### Development Tools
+```
+┌─────────────────────────────────────────────────────────────┐
+│                 Base Account SDK Layer                      │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │Smart Wallets│  │Gas          │  │  USDC Payments      │  │
+│  │             │  │Sponsorship  │  │                     │  │
+│  │• Seedless   │  │• Paymaster  │  │• Base Pay           │  │
+│  │  wallets    │  │  service    │  │  integration        │  │
+│  │• Account    │  │• USDC gas   │  │• ERC20 gas          │  │
+│  │  abstraction│  │  payments   │  │  payments           │  │
+│  │• EIP-5792   │  │• Bundler    │  │• Payment status     │  │
+│  │  batch txs  │  │  service    │  │  tracking           │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
 
-- **Hardhat** - Smart contract development and testing
-- **Vitest** - Modern testing framework
+## Current Status & Missing Pieces
 
-## Architecture Decisions
+### ✅ **What's Implemented:**
 
-### Hybrid Storage Model
+- Layer 1: ResumeRegistry.sol smart contract ✅
+- Layer 3: Next.js app, Supabase, Pinata ✅
+- Layer 5: Base Account SDK integration ✅
 
-**Decision:** Store hashes on-chain, files on IPFS, metadata in PostgreSQL
-**Reasoning:**
+### ❌ **Critical Missing (Production Blockers):**
 
-- Users get normal web app experience (see "resume.pdf" not "QmXd7...")
-- Blockchain provides verification and immutability
-- PostgreSQL enables fast search and complex queries
-- Cost-effective compared to pure on-chain storage
+- Layer 2: Alchemy RPC infrastructure ❌
+- Layer 4: Error handling, security, monitoring ❌
+- Contract deployment to Base Sepolia ❌
 
-### Why Polygon Over Ethereum
+### 🎯 **Immediate Priority:**
 
-**Decision:** Use Polygon for all transactions
-**Reasoning:**
+1. **Add Alchemy** - Fix blockchain infrastructure
+2. **Deploy contract** - Enable core functionality
+3. **Add error boundaries** - Prevent crashes
+4. **Secure API routes** - Prevent abuse
 
-- Gas costs: $0.001 vs $20-100 on Ethereum
-- Same development experience (Solidity, MetaMask)
-- 2-3 second confirmation times
-- Enterprise adoption (Disney, Starbucks)
+## Data Flow Example:
 
-### Why Dynamic.xyz Over Manual Wallet Integration
+1. **Driver uploads resume** → Next.js app → IPFS → Database
+2. **Driver requests verification** → Smart contract via Alchemy RPC
+3. **System emails employer** → Next.js email service
+4. **Employer verifies** → Smart contract via Alchemy RPC
+5. **Event emitted** → Alchemy webhook → Next.js updates UI
 
-**Decision:** Use Dynamic.xyz for wallet connection
-**Reasoning:**
+## Production Deployment Architecture
 
-- Seedless wallets (email/SMS login) for CDL drivers unfamiliar with crypto
-- Handles complex wallet connection edge cases
-- Social login options (Google, Apple)
-- Professional appearance
-
-## System Components
-
-### Smart Contracts
-
-1. **ResumeRegistry.sol** - Core resume storage and verification
-2. **Future:** VerificationManager.sol for employer attestations
-
-### Database Schema
-
-- **Users** - Driver/employer profiles with CDL-specific fields
-- **Resumes** - File metadata and blockchain references
-- **Future:** Job postings, applications, verifications
-
-### Key Integrations
-
-- **IPFS** - Decentralized file storage via Pinata
-- **Blockchain** - Polygon for verification and ownership
-- **Wallet** - Dynamic.xyz for user authentication
-
-## Security Considerations
-
-- Personal data stored off-chain only
-- IPFS hashes on-chain for verification
-- Wallet-based authentication
-- File type and size validation
-
-## Scalability Plan
-
-1. **Phase 1:** CDL drivers (current)
-2. **Phase 2:** Other transportation roles
-3. **Phase 3:** Multi-industry expansion
-4. **Phase 4:** AI-powered matching and feedback
-
-## Development Environment
-
-- **Local:** Hardhat local blockchain + local PostgreSQL
-- **Testing:** Mumbai testnet + Supabase staging
-- **Production:** Polygon mainnet + Supabase production
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Production Stack                        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │Frontend     │  │Backend      │  │  Blockchain         │  │
+│  │             │  │             │  │                     │  │
+│  │• Next.js    │  │• Supabase   │  │• Base Sepolia       │  │
+│  │• Vercel     │  │• PostgreSQL │  │• Alchemy RPC        │  │
+│  │• CDN        │  │• Auth       │  │• ResumeRegistry     │  │
+│  │• PWA        │  │• File APIs  │  │• Base Account SDK   │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
