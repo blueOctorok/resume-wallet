@@ -2,8 +2,22 @@
 
 import ResumeUpload from '@/components/ResumeUpload'
 import { useState } from 'react'
-import { SimpleBaseAuth } from '@/components/SimpleBaseAuth'
+import dynamic from 'next/dynamic'
 import { DriverApplication } from '@/components/DriverApplication'
+
+// Dynamic import to avoid SSR issues with Alchemy hooks
+const EmailOTPAuth = dynamic(() => import('@/components/EmailOTPAuth'), {
+  ssr: false,
+  loading: () => (
+    <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
+      <div className='animate-pulse'>
+        <div className='h-6 bg-gray-200 rounded mb-4'></div>
+        <div className='h-4 bg-gray-200 rounded mb-4'></div>
+        <div className='h-10 bg-gray-200 rounded'></div>
+      </div>
+    </div>
+  ),
+})
 import { WalletTransactions } from '@/components/WalletTransactions'
 import { RpcProviderTest } from '@/components/RpcProviderTest'
 import { NetworkDiscovery } from '@/components/NetworkDiscovery'
@@ -16,6 +30,7 @@ import TransfersAPITest from '@/components/TransfersAPITest'
 import RawTransfersAPITest from '@/components/RawTransfersAPITest'
 import SimulationAPITest from '@/components/SimulationAPITest'
 import WebhookTest from '@/components/WebhookTest'
+import AlchemyAuthTest from '@/components/AlchemyAuthTest'
 
 const Home = () => {
   const [user, setUser] = useState<any>(null)
@@ -43,15 +58,12 @@ const Home = () => {
         <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
           {/* Left Sidebar - Stats & Quick Actions */}
           <div className='lg:col-span-1 space-y-6'>
-            {/* Simple Base Authentication */}
-            <SimpleBaseAuth
+            {/* Email OTP Authentication */}
+            <EmailOTPAuth
+              mode='general'
               onAuthSuccess={(userData) => {
-                console.log('Authentication successful:', userData)
+                console.log('✅ Email OTP authentication successful:', userData)
                 setUser(userData)
-              }}
-              onAuthError={(error) => {
-                console.error('Authentication failed:', error)
-                setUser(null)
               }}
             />
 
@@ -186,6 +198,28 @@ const Home = () => {
                 </p>
               </div>
               <WebhookTest />
+            </div>
+
+            {/* Email OTP Authentication Test */}
+            <div className='mt-8'>
+              <div className='mb-4'>
+                <h2 className='text-xl font-bold'>
+                  🔐 Email OTP Authentication Test
+                </h2>
+                <p className='text-gray-600'>
+                  Test different authentication modes for drivers and employers
+                </p>
+              </div>
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                <div>
+                  <h3 className='font-medium mb-3'>Driver Mode</h3>
+                  <EmailOTPAuth mode='driver' />
+                </div>
+                <div>
+                  <h3 className='font-medium mb-3'>Employer Mode</h3>
+                  <EmailOTPAuth mode='employer' />
+                </div>
+              </div>
             </div>
 
             {/* RPC Provider Tests */}

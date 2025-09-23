@@ -255,6 +255,29 @@
 - **IP Address Validation:** Optional additional security layer
 - **Error Handling:** Graceful failure and retry logic
 
+### **Alchemy Smart Wallets Migration**
+
+- **File:** `src/lib/alchemy-account-config.ts`
+- **Components:** `AlchemyAuth.tsx`, `AlchemyAuthTest.tsx`
+- **Provider:** `AlchemyAccountProvider` in `layout.tsx`
+- **Features Implemented:**
+  - ✅ Email + OTP authentication (dead simple for users)
+  - ✅ Automatic wallet creation (users don't know it's crypto)
+  - ✅ Professional SaaS appearance
+  - ✅ Mode-specific UI (driver/employer/general)
+  - ✅ USDC gas sponsorship configuration
+  - ✅ Integration with existing Alchemy APIs
+
+### **Smart Wallets Benefits**
+
+- **SaaS-First Experience:** Looks like Stripe, not MetaMask
+- **Dead Simple Onboarding:** Email signup, not wallet connection
+- **Professional Appearance:** Builds trust with employers
+- **Mobile Optimized:** Perfect for drivers
+- **Hidden Complexity:** Users don't know it's crypto
+- **USDC Native:** Built for our payment model
+- **Unified Alchemy Stack:** All APIs use same infrastructure
+
 ---
 
 ## 🚨 Critical Decisions Needed
