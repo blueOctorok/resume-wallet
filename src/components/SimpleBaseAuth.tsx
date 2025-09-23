@@ -166,15 +166,39 @@ export const SimpleBaseAuth: React.FC<SimpleBaseAuthProps> = ({
       const ethFormatted = (Number(ethInWei) / 1e18).toFixed(6)
       setEthBalance(ethFormatted)
 
-      // Check USDC balance
+      // Check USDC balance using Alchemy Token API
       try {
-        const usdcBalance = await checkUSDCBalance(userAddress, baseProvider)
+        const { getUSDCBalance } = await import('@/lib/alchemy-token-api')
+        const usdcResult = await getUSDCBalance(userAddress)
+        const usdcBalance = usdcResult.success
+          ? usdcResult.balanceFormatted
+          : '0.00'
         setUsdcBalance(usdcBalance)
-        console.log('✅ Balances:', { eth: ethFormatted, usdc: usdcBalance })
+        console.log('✅ Balances (via Alchemy):', {
+          eth: ethFormatted,
+          usdc: usdcBalance,
+        })
       } catch (usdcError) {
-        console.warn('⚠️ Failed to get USDC balance:', usdcError)
-        setUsdcBalance('0.00') // Set default USDC balance
-        console.log('✅ Balances:', { eth: ethFormatted, usdc: '0.00 (error)' })
+        console.warn('⚠️ Failed to get USDC balance via Alchemy:', usdcError)
+        // Fallback to original method
+        try {
+          const usdcBalance = await checkUSDCBalance(userAddress, baseProvider)
+          setUsdcBalance(usdcBalance)
+          console.log('✅ Balances (fallback):', {
+            eth: ethFormatted,
+            usdc: usdcBalance,
+          })
+        } catch (fallbackError) {
+          console.warn(
+            '⚠️ Fallback USDC balance check also failed:',
+            fallbackError
+          )
+          setUsdcBalance('0.00')
+          console.log('✅ Balances:', {
+            eth: ethFormatted,
+            usdc: '0.00 (error)',
+          })
+        }
       }
     } catch (error) {
       console.error('❌ Failed to check balances:', error)

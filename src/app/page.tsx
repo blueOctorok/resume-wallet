@@ -9,6 +9,13 @@ import { RpcProviderTest } from '@/components/RpcProviderTest'
 import { NetworkDiscovery } from '@/components/NetworkDiscovery'
 import { DeploymentTest } from '@/components/DeploymentTest'
 import AlchemyTest from '@/components/AlchemyTest'
+import TokenAPITest from '@/components/TokenAPITest'
+import USDCBalance from '@/components/USDCBalance'
+import TransactionHistory from '@/components/TransactionHistory'
+import TransfersAPITest from '@/components/TransfersAPITest'
+import RawTransfersAPITest from '@/components/RawTransfersAPITest'
+import SimulationAPITest from '@/components/SimulationAPITest'
+import WebhookTest from '@/components/WebhookTest'
 
 const Home = () => {
   const [user, setUser] = useState<any>(null)
@@ -113,6 +120,72 @@ const Home = () => {
             {/* Alchemy Infrastructure Test */}
             <div className='mt-8'>
               <AlchemyTest />
+            </div>
+
+            {/* USDC Balance Display */}
+            {user?.address && (
+              <div className='mt-8'>
+                <div className='mb-4'>
+                  <h2 className='text-xl font-bold'>💰 USDC Balance</h2>
+                </div>
+                <USDCBalance
+                  walletAddress={user.address}
+                  showSufficiencyCheck={true}
+                  requiredAmount='1.00'
+                />
+              </div>
+            )}
+
+            {/* Token API Test */}
+            <div className='mt-8'>
+              <TokenAPITest walletAddress={user?.address} />
+            </div>
+
+            {/* Transaction History */}
+            {user?.address && (
+              <div className='mt-8'>
+                <div className='mb-4'>
+                  <h2 className='text-xl font-bold'>📊 Transaction History</h2>
+                </div>
+                <TransactionHistory
+                  walletAddress={user.address}
+                  maxTransactions={20}
+                  showFilters={true}
+                  autoRefresh={false}
+                />
+              </div>
+            )}
+
+            {/* Transfers API Test */}
+            <div className='mt-8'>
+              <TransfersAPITest walletAddress={user?.address} />
+            </div>
+
+            {/* Raw Transfers API Test */}
+            <div className='mt-8'>
+              <RawTransfersAPITest walletAddress={user?.address} />
+            </div>
+
+            {/* Simulation API Test */}
+            <div className='mt-8'>
+              <div className='mb-4'>
+                <h2 className='text-xl font-bold'>🧪 Transaction Simulation</h2>
+                <p className='text-gray-600'>
+                  Preview transaction costs and asset changes before sending
+                </p>
+              </div>
+              <SimulationAPITest />
+            </div>
+
+            {/* Webhook Test */}
+            <div className='mt-8'>
+              <div className='mb-4'>
+                <h2 className='text-xl font-bold'>🔗 Real-Time Webhooks</h2>
+                <p className='text-gray-600'>
+                  Set up real-time notifications for transaction completion
+                </p>
+              </div>
+              <WebhookTest />
             </div>
 
             {/* RPC Provider Tests */}
