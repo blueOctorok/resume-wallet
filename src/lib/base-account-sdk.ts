@@ -7,7 +7,7 @@ export const baseAccountConfig = {
     attribution: {
       auto: true, // Enable auto attribution for proper transaction tracking
     },
-    telemetry: true, // Enable telemetry for better debugging
+    telemetry: false, // Disable telemetry to reduce analytics errors
   },
   paymasterUrls: {
     8453: 'https://paymaster.base.org/api/v1/sponsor',

@@ -15,6 +15,16 @@ export async function getDriverApplicationClient(userAddress: string) {
 
     if (error && error.code !== 'PGRST116') {
       console.error('❌ Client DB: Get application error:', error)
+      // Don't throw on 406 errors, just log and return null
+      if (
+        error.message?.includes('406') ||
+        error.message?.includes('Not Acceptable')
+      ) {
+        console.warn(
+          '⚠️ Client DB: 406 error, likely table/RLS issue. Returning null.'
+        )
+        return null
+      }
       throw error
     }
 

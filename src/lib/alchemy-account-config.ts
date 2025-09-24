@@ -9,7 +9,7 @@
  */
 
 import { AlchemyAccountsUIConfig, createConfig } from '@account-kit/react'
-import { alchemy, sepolia } from '@account-kit/infra'
+import { alchemy, baseSepolia } from '@account-kit/infra'
 
 // Environment variables
 const ALCHEMY_API_KEY =
@@ -46,7 +46,7 @@ try {
   alchemyAccountConfig = createConfig(
     {
       transport: alchemy({ apiKey: ALCHEMY_API_KEY }),
-      chain: sepolia,
+      chain: baseSepolia,
       policyId: ALCHEMY_POLICY_ID,
     },
     uiConfig
@@ -55,7 +55,7 @@ try {
   alchemyAccountConfigProduction = createConfig(
     {
       transport: alchemy({ apiKey: ALCHEMY_API_KEY }),
-      chain: sepolia,
+      chain: baseSepolia,
       policyId: ALCHEMY_POLICY_ID,
     },
     uiConfig
@@ -84,8 +84,8 @@ export function getAlchemyAccountConfig() {
 export { alchemyAccountConfig, alchemyAccountConfigProduction }
 
 // Export chain info for other components
-export const currentChain = sepolia
-export const isTestnet = currentChain.id === sepolia.id
+export const currentChain = baseSepolia
+export const isTestnet = currentChain.id === baseSepolia.id
 
 // Export policy ID for gas sponsorship
 export const policyId = ALCHEMY_POLICY_ID

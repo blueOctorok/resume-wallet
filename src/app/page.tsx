@@ -1,7 +1,7 @@
 'use client'
 
 import ResumeUpload from '@/components/ResumeUpload'
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { DriverApplication } from '@/components/DriverApplication'
 
@@ -35,6 +35,12 @@ import AlchemyAuthTest from '@/components/AlchemyAuthTest'
 const Home = () => {
   const [user, setUser] = useState<any>(null)
 
+  // Stable callback to prevent infinite loops
+  const handleAuthSuccess = useCallback((userData: any) => {
+    console.log('✅ Email OTP authentication successful:', userData)
+    setUser(userData)
+  }, [])
+
   return (
     <div className='min-h-screen bg-gray-50'>
       {/* Header */}
@@ -59,13 +65,7 @@ const Home = () => {
           {/* Left Sidebar - Stats & Quick Actions */}
           <div className='lg:col-span-1 space-y-6'>
             {/* Email OTP Authentication */}
-            <EmailOTPAuth
-              mode='general'
-              onAuthSuccess={(userData) => {
-                console.log('✅ Email OTP authentication successful:', userData)
-                setUser(userData)
-              }}
-            />
+            <EmailOTPAuth mode='general' onAuthSuccess={handleAuthSuccess} />
 
             <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
               <h3 className='text-lg font-medium text-gray-900 mb-4'>

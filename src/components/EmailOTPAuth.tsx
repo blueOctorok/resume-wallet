@@ -9,7 +9,7 @@
  * - Perfect for drivers and employers
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   useAuthenticate,
   useSignerStatus,
@@ -18,6 +18,7 @@ import {
   useLogout,
 } from '@account-kit/react'
 import { AlchemySignerStatus } from '@account-kit/signer'
+import { getUSDCBalance } from '@/lib/alchemy-token-api'
 
 interface EmailOTPAuthProps {
   onAuthSuccess?: (user: any) => void
@@ -37,6 +38,9 @@ export default function EmailOTPAuth({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [otpSent, setOtpSent] = useState(false) // Track if OTP was sent
+  const [usdcBalance, setUsdcBalance] = useState<string>('0.00')
+  const [balanceLoading, setBalanceLoading] = useState(false)
+  const authSuccessCalledRef = useRef(false) // Track if onAuthSuccess was already called
 
   const { authenticate } = useAuthenticate()
   const { status, isConnected } = useSignerStatus()
@@ -44,15 +48,38 @@ export default function EmailOTPAuth({
   const account = useAccount({ type: 'LightAccount' })
   const { logout } = useLogout()
 
+  // Fetch USDC balance
+  const fetchUSDCBalance = async (address: string) => {
+    if (!address) return
+
+    setBalanceLoading(true)
+    try {
+      const result = await getUSDCBalance(address)
+      if (result.success) {
+        setUsdcBalance(result.balanceFormatted)
+        console.log(`💰 USDC Balance: $${result.balanceFormatted}`)
+      } else {
+        console.error('❌ Failed to get USDC balance:', result.error)
+        setUsdcBalance('0.00')
+      }
+    } catch (error) {
+      console.error('❌ Error fetching USDC balance:', error)
+      setUsdcBalance('0.00')
+    } finally {
+      setBalanceLoading(false)
+    }
+  }
+
   // Handle successful authentication
   useEffect(() => {
-    console.log('🔍 Auth state check:', {
-      isConnected,
-      user: user?.email,
-      account: account?.address,
-    })
+    if (
+      isConnected &&
+      user &&
+      account?.address &&
+      !authSuccessCalledRef.current
+    ) {
+      authSuccessCalledRef.current = true // Mark as called to prevent loops
 
-    if (isConnected && user && account?.address) {
       const authData = {
         address: account.address,
         email: user.email,
@@ -72,8 +99,18 @@ export default function EmailOTPAuth({
         email: user.email,
         chain: 'Base Sepolia',
       })
+
+      // Fetch USDC balance when authenticated
+      fetchUSDCBalance(account.address)
     }
-  }, [isConnected, user, account, onAuthSuccess])
+  }, [isConnected, user?.email, account?.address, onAuthSuccess])
+
+  // Fetch balance when wallet address changes
+  useEffect(() => {
+    if (account?.address && isConnected) {
+      fetchUSDCBalance(account.address)
+    }
+  }, [account?.address, isConnected])
 
   // Send OTP to email
   const handleSendCode = async (e: React.FormEvent) => {
@@ -154,6 +191,9 @@ export default function EmailOTPAuth({
       setOtpCode('')
       setError('')
       setOtpSent(false) // Reset OTP sent state
+      setUsdcBalance('0.00') // Reset USDC balance
+      setBalanceLoading(false) // Reset balance loading state
+      authSuccessCalledRef.current = false // Reset auth success flag
       console.log('👋 User logged out')
     } catch (error) {
       console.error('❌ Logout error:', error)
@@ -210,6 +250,37 @@ export default function EmailOTPAuth({
                 ? `${account.address.slice(0, 6)}...${account.address.slice(-4)}`
                 : 'Wallet address loading...'}
             </p>
+          </div>
+
+          {/* USDC Balance Display */}
+          <div className='bg-blue-50 p-4 rounded-lg border border-blue-200'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center space-x-2'>
+                <span className='text-blue-600'>💰</span>
+                <span className='font-medium text-blue-900'>USDC Balance:</span>
+                <span className='font-bold text-blue-900'>
+                  {balanceLoading ? (
+                    <span className='flex items-center space-x-1'>
+                      <div className='animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600'></div>
+                      <span>Loading...</span>
+                    </span>
+                  ) : (
+                    `$${usdcBalance}`
+                  )}
+                </span>
+              </div>
+              <button
+                onClick={() =>
+                  account?.address && fetchUSDCBalance(account.address)
+                }
+                className='text-xs text-blue-600 hover:text-blue-800 underline'
+                title='Refresh balance'
+                disabled={balanceLoading}
+              >
+                🔄 Refresh
+              </button>
+            </div>
+            <p className='text-xs text-blue-600 mt-1'>Base Sepolia Testnet</p>
           </div>
 
           <div className='text-sm text-gray-600'>

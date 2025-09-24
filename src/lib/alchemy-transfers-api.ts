@@ -80,7 +80,7 @@ export async function getWalletTransfers(
       toBlock = 'latest',
       maxCount = 100,
       pageKey,
-      category = ['external', 'internal', 'erc20', 'erc721', 'erc1155'],
+      category = ['external', 'erc20', 'erc721', 'erc1155'], // Removed 'internal' - not supported on Base Sepolia
       order = 'desc', // newest first
       withMetadata = true,
       includeFromAddress = true,
@@ -96,7 +96,7 @@ export async function getWalletTransfers(
     const params: any = {
       fromBlock,
       toBlock,
-      maxCount,
+      maxCount: `0x${maxCount.toString(16)}`, // Convert to hex string
       pageKey,
       category,
       order,
@@ -266,7 +266,7 @@ export async function getResumeVerificationHistory(
           contractAddresses: [contractAddress], // Filter for our ResumeRegistry contract
           maxCount,
           pageKey,
-          category: ['external', 'internal'], // Contract interactions
+          category: ['external'], // Contract interactions (removed 'internal' - not supported on Base Sepolia)
           order,
           withMetadata: true,
           excludeZeroValue: false, // Include gas-sponsored transactions
@@ -340,7 +340,7 @@ export async function getContractFirstTransfer(
     console.log(`🔍 Getting first transfer for contract: ${contractAddress}`)
 
     const {
-      category = ['external', 'internal', 'erc20', 'erc721', 'erc1155'],
+      category = ['external', 'erc20', 'erc721', 'erc1155'], // Removed 'internal' - not supported on Base Sepolia
       excludeZeroValue = true,
     } = options
 
@@ -358,7 +358,7 @@ export async function getContractFirstTransfer(
           contractAddresses: [contractAddress],
           excludeZeroValue,
           category,
-          maxCount: 1, // Only need the first one
+          maxCount: '0x1', // Only need the first one (hex required for direct API)
           order: 'asc', // Ascending to get the earliest
         },
       ],
@@ -431,7 +431,7 @@ export async function getContractLastTransfer(
     console.log(`🔍 Getting last transfer for contract: ${contractAddress}`)
 
     const {
-      category = ['external', 'internal', 'erc20', 'erc721', 'erc1155'],
+      category = ['external', 'erc20', 'erc721', 'erc1155'], // Removed 'internal' - not supported on Base Sepolia
       excludeZeroValue = true,
       maxPages = 10, // Prevent infinite loops for very active contracts
     } = options
@@ -451,7 +451,7 @@ export async function getContractLastTransfer(
           contractAddresses: [contractAddress],
           excludeZeroValue,
           category,
-          maxCount: 1000, // Max per request
+          maxCount: '0x3e8', // Max per request (1000 in hex)
           order: 'desc', // Descending to get most recent first
         },
       ],
@@ -517,7 +517,7 @@ export async function getContractLastTransfer(
             contractAddresses: [contractAddress],
             excludeZeroValue,
             category,
-            maxCount: 1000,
+            maxCount: '0x3e8', // 1000 in hex
             order: 'desc',
             pageKey: pageKey.toString(),
           },
@@ -741,9 +741,12 @@ export function formatTransferForDisplay(transfer: TransferResult): {
   // Determine transaction type based on Alchemy tutorial examples
   let type = 'Transfer'
   if (transfer.category === 'external') {
-    type = 'ETH Transfer'
-  } else if (transfer.category === 'internal') {
-    type = 'Contract Interaction'
+    // Check if it's a contract interaction (external transaction to a contract)
+    if (transfer.to && transfer.to !== transfer.from && transfer.value === 0) {
+      type = 'Contract Interaction'
+    } else {
+      type = 'ETH Transfer'
+    }
   } else if (transfer.category === 'erc20') {
     type = `${transfer.asset || 'Token'} Transfer`
   } else if (transfer.category === 'erc721') {

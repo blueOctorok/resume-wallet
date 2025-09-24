@@ -10,10 +10,13 @@
     "supabase:test": "node scripts/test-supabase.js",
     "compile": "npx hardhat compile",
     "test": "npx hardhat test",
-    "deploy:base-sepolia": "npx hardhat run scripts/deploy.js --network baseSepolia",
-    "deploy:base": "npx hardhat run scripts/deploy.js --network base",
+    "test:local": "npx hardhat run scripts/test-contract-local.js --network hardhat",
+    "deploy:local": "npx hardhat run scripts/deploy-resume-registry.js --network hardhat",
+    "deploy:base-sepolia": "npx hardhat run scripts/deploy-resume-registry.js --network baseSepolia",
+    "deploy:base": "npx hardhat run scripts/deploy-resume-registry.js --network baseMainnet",
+    "transfer-ownership": "npx hardhat run scripts/transfer-ownership.js --network baseSepolia",
     "verify:base-sepolia": "npx hardhat verify --network baseSepolia",
-    "verify:base": "npx hardhat verify --network base"
+    "verify:base": "npx hardhat verify --network baseMainnet"
   },
   "dependencies": {
     "@account-kit/core": "^4.64.0",
@@ -57,7 +60,7 @@
     "@types/node": "^20.19.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "dotenv": "^16.4.7",
+    "dotenv": "^16.6.1",
     "eslint": "^8",
     "eslint-config-next": "15.5.0",
     "eslint-config-prettier": "^10.1.8",
