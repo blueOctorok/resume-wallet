@@ -1,6 +1,24 @@
 'use client'
 
 import ResumeUpload from '@/components/ResumeUpload'
+// Dynamic import to avoid SSR issues with Alchemy hooks
+const ResumeUploadWithVerification = dynamic(
+  () => import('@/components/ResumeUploadWithVerification'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
+        <div className='animate-pulse'>
+          <div className='h-6 bg-gray-200 rounded mb-4'></div>
+          <div className='h-4 bg-gray-200 rounded mb-4'></div>
+          <div className='h-10 bg-gray-200 rounded mb-4'></div>
+          <div className='h-32 bg-gray-200 rounded'></div>
+        </div>
+      </div>
+    ),
+  }
+)
+
 import { useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { DriverApplication } from '@/components/DriverApplication'
@@ -117,7 +135,18 @@ const Home = () => {
               </p>
             </div>
 
-            <ResumeUpload user={user} />
+            {/* Resume Upload with Full Verification */}
+            <div className='mb-8'>
+              <ResumeUploadWithVerification />
+            </div>
+
+            {/* Original Resume Upload (for comparison) */}
+            <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
+              <h3 className='text-lg font-medium text-gray-900 mb-4'>
+                📄 Simple Resume Upload (Original)
+              </h3>
+              <ResumeUpload user={user} />
+            </div>
 
             {/* Driver Application */}
             <div className='mt-8'>
@@ -200,27 +229,7 @@ const Home = () => {
               <WebhookTest />
             </div>
 
-            {/* Email OTP Authentication Test */}
-            <div className='mt-8'>
-              <div className='mb-4'>
-                <h2 className='text-xl font-bold'>
-                  🔐 Email OTP Authentication Test
-                </h2>
-                <p className='text-gray-600'>
-                  Test different authentication modes for drivers and employers
-                </p>
-              </div>
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                <div>
-                  <h3 className='font-medium mb-3'>Driver Mode</h3>
-                  <EmailOTPAuth mode='driver' />
-                </div>
-                <div>
-                  <h3 className='font-medium mb-3'>Employer Mode</h3>
-                  <EmailOTPAuth mode='employer' />
-                </div>
-              </div>
-            </div>
+            {/* Email OTP Authentication Test - Removed duplicates to prevent console spam */}
 
             {/* RPC Provider Tests */}
             <div className='mt-8'>

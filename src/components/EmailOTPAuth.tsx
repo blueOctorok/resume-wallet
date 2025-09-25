@@ -57,7 +57,6 @@ export default function EmailOTPAuth({
       const result = await getUSDCBalance(address)
       if (result.success) {
         setUsdcBalance(result.balanceFormatted)
-        console.log(`💰 USDC Balance: $${result.balanceFormatted}`)
       } else {
         console.error('❌ Failed to get USDC balance:', result.error)
         setUsdcBalance('0.00')
@@ -105,10 +104,15 @@ export default function EmailOTPAuth({
     }
   }, [isConnected, user?.email, account?.address, onAuthSuccess])
 
-  // Fetch balance when wallet address changes
+  // Fetch balance when wallet address changes (with debounce)
   useEffect(() => {
     if (account?.address && isConnected) {
-      fetchUSDCBalance(account.address)
+      // Debounce the balance fetch to prevent spam
+      const timeoutId = setTimeout(() => {
+        fetchUSDCBalance(account.address)
+      }, 1000) // 1 second delay
+
+      return () => clearTimeout(timeoutId)
     }
   }, [account?.address, isConnected])
 

@@ -14,7 +14,7 @@ export default function USDCBalance({
   walletAddress,
   requiredAmount,
   showSufficiencyCheck = false,
-  refreshInterval = 30000, // 30 seconds default
+  refreshInterval = 60000, // 60 seconds default (reduced frequency)
 }: USDCBalanceProps) {
   const [balance, setBalance] = useState<string>('0.00')
   const [loading, setLoading] = useState<boolean>(true)

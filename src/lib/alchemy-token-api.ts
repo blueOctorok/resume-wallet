@@ -39,8 +39,6 @@ export async function getUSDCBalance(walletAddress: string): Promise<{
   error?: string
 }> {
   try {
-    console.log(`🔍 Getting USDC balance for: ${walletAddress}`)
-
     // Get token balances for the specific USDC contract
     const balances = await alchemySDK.core.getTokenBalances(walletAddress, [
       BASE_SEPOLIA_USDC_ADDRESS,
@@ -84,8 +82,6 @@ export async function getUSDCBalance(walletAddress: string): Promise<{
     const balanceFormatted = (
       Number(balanceBigInt) / Math.pow(10, decimals)
     ).toFixed(2)
-
-    console.log(`✅ USDC Balance: ${balanceFormatted} USDC`)
 
     return {
       balance: balanceBigInt.toString(),
