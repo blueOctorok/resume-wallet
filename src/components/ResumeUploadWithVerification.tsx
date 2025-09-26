@@ -48,6 +48,7 @@ export default function ResumeUploadWithVerification() {
   const [file, setFile] = useState<File | null>(null)
   const [steps, setSteps] = useState<UploadStep[]>([
     { id: 'ipfs', name: '📁 Upload to IPFS (Pinata)', status: 'pending' },
+    { id: 'duplicate-check', name: '🔍 Duplicate Check', status: 'pending' },
     {
       id: 'database',
       name: '💾 Save to Database (Supabase)',
@@ -147,6 +148,50 @@ export default function ResumeUploadWithVerification() {
         timestamp: new Date().toISOString(),
       })
 
+      // Step 1.5: Check for duplicates
+      updateStep('duplicate-check', 'loading')
+      console.log('🔄 Step 1.5: Checking for duplicate file...')
+
+      const duplicateCheckResponse = await fetch(
+        '/api/resumes/check-user-file',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userAddress: account.address,
+            ipfsHash: ipfsHash,
+          }),
+        }
+      )
+
+      if (!duplicateCheckResponse.ok) {
+        throw new Error(
+          `Duplicate check failed: ${duplicateCheckResponse.statusText}`
+        )
+      }
+
+      const duplicateCheck = await duplicateCheckResponse.json()
+
+      if (duplicateCheck.exists) {
+        // Stop the upload process and show user-friendly error
+        updateStep(
+          'duplicate-check',
+          'error',
+          undefined,
+          'You have already uploaded this file. Please select a different file or update your existing resume.'
+        )
+        return // Exit the upload function early
+      }
+
+      updateStep('duplicate-check', 'success', {
+        message: 'No duplicate found',
+        checkedHash: ipfsHash.substring(0, 10) + '...',
+      })
+
+      console.log('✅ Step 1.5 Complete: No duplicate found, proceeding...')
+
       // Step 2: Save to Database
       updateStep('database', 'loading')
       console.log('🔄 Step 2: Saving to database...')
@@ -224,18 +269,36 @@ export default function ResumeUploadWithVerification() {
 
       // Use Smart Account Client sendUserOperation method
       // Gas sponsorship is handled automatically by the Alchemy Smart Account Client
-      const result = await client.sendUserOperation({
-        uo: {
-          target: process.env
-            .NEXT_PUBLIC_RESUME_REGISTRY_ADDRESS as `0x${string}`,
-          data: encodeFunctionData({
-            abi: resumeRegistryABI,
-            functionName: 'addResume',
-            args: [ipfsHash, file.name.replace('.pdf', ''), file.name, true],
-          }),
-          value: 0n,
-        },
-      })
+      const result = await client
+        .sendUserOperation({
+          uo: {
+            target: process.env
+              .NEXT_PUBLIC_RESUME_REGISTRY_ADDRESS as `0x${string}`,
+            data: encodeFunctionData({
+              abi: resumeRegistryABI,
+              functionName: 'addResume',
+              args: [ipfsHash, file.name.replace('.pdf', ''), file.name, true],
+            }),
+            value: BigInt(0),
+          },
+        })
+        .catch((error: any) => {
+          // Handle contract revert errors specifically
+          if (
+            error.code === -32521 ||
+            error.message?.includes('Execution reverted')
+          ) {
+            // This is a contract revert - check if it's the duplicate IPFS hash error
+            const errorString = JSON.stringify(error)
+            if (errorString.includes('IPFS hash already used')) {
+              throw new Error(
+                'IPFS hash already used - Cannot upload the same file twice. Please select a different file or rename your current file.'
+              )
+            }
+          }
+          // Re-throw other errors
+          throw error
+        })
 
       console.log('✅ User operation submitted:', result)
 
@@ -255,7 +318,7 @@ export default function ResumeUploadWithVerification() {
       const transactionHash =
         typeof receipt === 'string'
           ? receipt
-          : receipt.transactionHash || result.hash
+          : (receipt as any)?.transactionHash || result.hash
 
       console.log('✅ Step 3 Complete: Transaction Hash:', transactionHash)
 
@@ -287,18 +350,27 @@ export default function ResumeUploadWithVerification() {
       console.log('🎉 All steps completed successfully!')
     } catch (error) {
       console.error('❌ Upload failed:', error)
+      console.error('❌ Error details:', JSON.stringify(error, null, 2))
+      console.error('❌ Error string:', String(error))
       const currentStep = steps.find((step) => step.status === 'loading')
 
       // Handle specific blockchain errors more gracefully
       let errorMessage = 'Unknown error'
       if (error instanceof Error) {
-        if (error.message.includes('IPFS hash already used')) {
+        // Check for our custom duplicate file error message
+        if (
+          error.message.includes(
+            'IPFS hash already used - Cannot upload the same file twice'
+          )
+        ) {
           errorMessage =
             'Cannot upload the same file twice. Please select a different file or rename your current file.'
         } else if (error.message.includes('User rejected')) {
           errorMessage = 'Transaction was cancelled by user.'
         } else if (error.message.includes('insufficient funds')) {
           errorMessage = 'Insufficient funds for transaction.'
+        } else if (error.message.includes('HTTP request failed')) {
+          errorMessage = 'Blockchain transaction failed. Please try again.'
         } else {
           errorMessage = error.message
         }
@@ -369,7 +441,7 @@ export default function ResumeUploadWithVerification() {
         disabled={!file || !account?.address || uploading}
         className='w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed mb-6'
       >
-        {uploading ? 'Uploading...' : 'Upload Resume (3-Step Process)'}
+        {uploading ? 'Uploading...' : 'Upload Resume (4-Step Process)'}
       </button>
 
       {/* Progress Steps */}

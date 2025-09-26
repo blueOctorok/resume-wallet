@@ -1,6 +1,5 @@
 'use client'
 
-import ResumeUpload from '@/components/ResumeUpload'
 // Dynamic import to avoid SSR issues with Alchemy hooks
 const ResumeUploadWithVerification = dynamic(
   () => import('@/components/ResumeUploadWithVerification'),
@@ -138,14 +137,6 @@ const Home = () => {
             {/* Resume Upload with Full Verification */}
             <div className='mb-8'>
               <ResumeUploadWithVerification />
-            </div>
-
-            {/* Original Resume Upload (for comparison) */}
-            <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
-              <h3 className='text-lg font-medium text-gray-900 mb-4'>
-                📄 Simple Resume Upload (Original)
-              </h3>
-              <ResumeUpload user={user} />
             </div>
 
             {/* Driver Application */}

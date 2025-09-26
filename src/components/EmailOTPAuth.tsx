@@ -20,11 +20,70 @@ import {
 import { AlchemySignerStatus } from '@account-kit/signer'
 import { getUSDCBalance } from '@/lib/alchemy-token-api'
 
+// Session persistence constants
+const AUTH_STORAGE_KEY = 'resume-wallet-auth'
+const SESSION_DURATION = 2 * 60 * 60 * 1000 // 2 hours in milliseconds
+
 interface EmailOTPAuthProps {
   onAuthSuccess?: (user: any) => void
   title?: string
   subtitle?: string
   mode?: 'driver' | 'employer' | 'general'
+}
+
+// Session persistence utilities
+const saveAuthState = (userData: any) => {
+  try {
+    const authState = {
+      ...userData,
+      timestamp: Date.now(),
+      expiresAt: Date.now() + SESSION_DURATION,
+    }
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authState))
+    console.log('💾 Auth state saved to localStorage')
+  } catch (error) {
+    console.error('❌ Failed to save auth state:', error)
+  }
+}
+
+const getAuthState = () => {
+  try {
+    const stored = localStorage.getItem(AUTH_STORAGE_KEY)
+    if (!stored) return null
+
+    const authState = JSON.parse(stored)
+    const now = Date.now()
+
+    // Check if session has expired
+    if (now > authState.expiresAt) {
+      localStorage.removeItem(AUTH_STORAGE_KEY)
+      console.log('⏰ Session expired, clearing localStorage')
+      return null
+    }
+
+    // Check if session is close to expiring (5 minutes warning)
+    const timeUntilExpiry = authState.expiresAt - now
+    const fiveMinutes = 5 * 60 * 1000
+    if (timeUntilExpiry < fiveMinutes && timeUntilExpiry > 0) {
+      console.log('⚠️ Session expires in less than 5 minutes')
+    }
+
+    console.log('✅ Valid session found in localStorage')
+    return authState
+  } catch (error) {
+    console.error('❌ Failed to get auth state:', error)
+    localStorage.removeItem(AUTH_STORAGE_KEY)
+    return null
+  }
+}
+
+const clearAuthState = () => {
+  try {
+    localStorage.removeItem(AUTH_STORAGE_KEY)
+    console.log('🗑️ Auth state cleared from localStorage')
+  } catch (error) {
+    console.error('❌ Failed to clear auth state:', error)
+  }
 }
 
 export default function EmailOTPAuth({
@@ -40,6 +99,8 @@ export default function EmailOTPAuth({
   const [otpSent, setOtpSent] = useState(false) // Track if OTP was sent
   const [usdcBalance, setUsdcBalance] = useState<string>('0.00')
   const [balanceLoading, setBalanceLoading] = useState(false)
+  const [sessionExpiry, setSessionExpiry] = useState<number | null>(null)
+  const [showSessionWarning, setShowSessionWarning] = useState(false)
   const authSuccessCalledRef = useRef(false) // Track if onAuthSuccess was already called
 
   const { authenticate } = useAuthenticate()
@@ -47,6 +108,47 @@ export default function EmailOTPAuth({
   const user = useUser()
   const account = useAccount({ type: 'LightAccount' })
   const { logout } = useLogout()
+
+  // Check for existing session on component mount
+  useEffect(() => {
+    const existingSession = getAuthState()
+    if (existingSession) {
+      setSessionExpiry(existingSession.expiresAt)
+      console.log('🔄 Restoring session from localStorage')
+    }
+  }, [])
+
+  // Monitor session expiry and show warnings
+  useEffect(() => {
+    if (!sessionExpiry) return
+
+    const checkExpiry = () => {
+      const now = Date.now()
+      const timeUntilExpiry = sessionExpiry - now
+      const fiveMinutes = 5 * 60 * 1000
+
+      if (timeUntilExpiry <= 0) {
+        // Session expired
+        setShowSessionWarning(false)
+        clearAuthState()
+        setSessionExpiry(null)
+        console.log('⏰ Session expired, user needs to re-authenticate')
+      } else if (timeUntilExpiry < fiveMinutes) {
+        // Show warning
+        setShowSessionWarning(true)
+        console.log('⚠️ Session expires in less than 5 minutes')
+      } else {
+        setShowSessionWarning(false)
+      }
+    }
+
+    // Check immediately
+    checkExpiry()
+
+    // Check every minute
+    const interval = setInterval(checkExpiry, 60000)
+    return () => clearInterval(interval)
+  }, [sessionExpiry])
 
   // Fetch USDC balance
   const fetchUSDCBalance = async (address: string) => {
@@ -88,6 +190,10 @@ export default function EmailOTPAuth({
         chain: 'Base Sepolia',
         chainId: 84532,
       }
+
+      // Save session to localStorage
+      saveAuthState(authData)
+      setSessionExpiry(Date.now() + SESSION_DURATION)
 
       if (onAuthSuccess) {
         onAuthSuccess(authData)
@@ -197,7 +303,10 @@ export default function EmailOTPAuth({
       setOtpSent(false) // Reset OTP sent state
       setUsdcBalance('0.00') // Reset USDC balance
       setBalanceLoading(false) // Reset balance loading state
+      setSessionExpiry(null) // Clear session expiry
+      setShowSessionWarning(false) // Clear session warning
       authSuccessCalledRef.current = false // Reset auth success flag
+      clearAuthState() // Clear localStorage
       console.log('👋 User logged out')
     } catch (error) {
       console.error('❌ Logout error:', error)
@@ -234,6 +343,38 @@ export default function EmailOTPAuth({
   if (isConnected && user) {
     return (
       <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
+        {/* Session Warning */}
+        {showSessionWarning && (
+          <div className='bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4'>
+            <div className='flex items-center'>
+              <span className='text-yellow-400 mr-2'>⏰</span>
+              <p className='text-yellow-800 text-sm'>
+                Your session expires in less than 5 minutes.
+                <button
+                  onClick={() => {
+                    // Extend session by re-saving current state
+                    const authData = {
+                      address: account?.address,
+                      email: user.email,
+                      userId: user.userId,
+                      method: 'alchemy-email-otp',
+                      isConnected: true,
+                      chain: 'Base Sepolia',
+                      chainId: 84532,
+                    }
+                    saveAuthState(authData)
+                    setSessionExpiry(Date.now() + SESSION_DURATION)
+                    setShowSessionWarning(false)
+                  }}
+                  className='underline ml-1 hover:text-yellow-900'
+                >
+                  Extend session
+                </button>
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className='flex items-center justify-between mb-4'>
           <h3 className='text-lg font-medium text-gray-900'>
             ✅ Authenticated

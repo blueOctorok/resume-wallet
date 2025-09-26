@@ -14,6 +14,7 @@
 - **✅ Real Blockchain Transactions** - Actual resume stored on Base Sepolia
 - **✅ Contract Deployment** - ResumeRegistry.sol deployed and verified
 - **✅ End-to-End Testing** - All 3 steps working perfectly
+- **✅ 2-Hour Session Persistence** - Users stay logged in with localStorage
 
 ## 🎯 Goal: Seedless Wallets + USDC Gas Sponsorship + Resume Verification
 
