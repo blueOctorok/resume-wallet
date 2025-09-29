@@ -22,7 +22,7 @@ if (!ALCHEMY_POLICY_ID) {
   )
 }
 
-// UI Configuration for Email OTP Authentication (following React docs)
+// UI Configuration for Simple Authentication Options
 const uiConfig: AlchemyAccountsUIConfig = {
   auth: {
     sections: [
@@ -32,6 +32,13 @@ const uiConfig: AlchemyAccountsUIConfig = {
           emailMode: 'otp',
           buttonLabel: 'Continue with Email',
           placeholder: 'Enter your email address',
+        },
+      ],
+      [
+        {
+          type: 'social',
+          authProviderId: 'google',
+          mode: 'popup',
         },
       ],
     ],
@@ -48,6 +55,7 @@ try {
       transport: alchemy({ apiKey: ALCHEMY_API_KEY }),
       chain: baseSepolia,
       policyId: ALCHEMY_POLICY_ID,
+      enablePopupOauth: true, // Enable popup OAuth for Google
     },
     uiConfig
   )
@@ -57,6 +65,7 @@ try {
       transport: alchemy({ apiKey: ALCHEMY_API_KEY }),
       chain: baseSepolia,
       policyId: ALCHEMY_POLICY_ID,
+      enablePopupOauth: true, // Enable popup OAuth for Google
     },
     uiConfig
   )
@@ -95,5 +104,6 @@ console.log('🔧 Alchemy Smart Wallets configured:', {
   testnet: isTestnet,
   gasSponsorship: !!ALCHEMY_POLICY_ID,
   apiKey: ALCHEMY_API_KEY.slice(0, 8) + '...',
-  emailOTP: true,
+  authMethods: ['email-otp', 'google'],
+  uiConfig: uiConfig,
 })

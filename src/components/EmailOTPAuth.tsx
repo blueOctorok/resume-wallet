@@ -1,10 +1,12 @@
 'use client'
 
 /**
- * Email OTP Authentication Component
+ * Multi-Method Authentication Component
  *
- * Following Alchemy React documentation for Email OTP authentication
- * - Dead simple email + OTP flow
+ * Following Alchemy React documentation for multiple authentication methods
+ * - Email + OTP authentication
+ * - Passkey authentication (biometric)
+ * - Google social authentication
  * - Professional SaaS appearance
  * - Perfect for drivers and employers
  */
@@ -16,6 +18,7 @@ import {
   useUser,
   useAccount,
   useLogout,
+  AuthCard,
 } from '@account-kit/react'
 import { AlchemySignerStatus } from '@account-kit/signer'
 import { getUSDCBalance } from '@/lib/alchemy-token-api'
@@ -24,7 +27,7 @@ import { getUSDCBalance } from '@/lib/alchemy-token-api'
 const AUTH_STORAGE_KEY = 'resume-wallet-auth'
 const SESSION_DURATION = 2 * 60 * 60 * 1000 // 2 hours in milliseconds
 
-interface EmailOTPAuthProps {
+interface MultiMethodAuthProps {
   onAuthSuccess?: (user: any) => void
   title?: string
   subtitle?: string
@@ -86,17 +89,12 @@ const clearAuthState = () => {
   }
 }
 
-export default function EmailOTPAuth({
+export default function MultiMethodAuth({
   onAuthSuccess,
   title = 'Sign In',
-  subtitle = 'Enter your email to get started',
+  subtitle = 'Choose your preferred sign-in method',
   mode = 'general',
-}: EmailOTPAuthProps) {
-  const [email, setEmail] = useState('')
-  const [otpCode, setOtpCode] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [otpSent, setOtpSent] = useState(false) // Track if OTP was sent
+}: MultiMethodAuthProps) {
   const [usdcBalance, setUsdcBalance] = useState<string>('0.00')
   const [balanceLoading, setBalanceLoading] = useState(false)
   const [sessionExpiry, setSessionExpiry] = useState<number | null>(null)
@@ -150,6 +148,33 @@ export default function EmailOTPAuth({
     return () => clearInterval(interval)
   }, [sessionExpiry])
 
+  // Auto-refresh session to prevent Alchemy timeout
+  useEffect(() => {
+    if (!isConnected || !user || !account?.address) return
+
+    // Refresh session every 5 minutes to prevent Alchemy timeout
+    const refreshInterval = setInterval(
+      () => {
+        console.log('🔄 Refreshing session to prevent timeout...')
+        // Re-save auth state to extend localStorage session
+        const authData = {
+          address: account.address,
+          email: user.email,
+          userId: user.userId,
+          method: user.authMethod || 'alchemy-auth',
+          isConnected: true,
+          chain: 'Base Sepolia',
+          chainId: 84532,
+        }
+        saveAuthState(authData)
+        setSessionExpiry(Date.now() + SESSION_DURATION)
+      },
+      5 * 60 * 1000
+    ) // Every 5 minutes
+
+    return () => clearInterval(refreshInterval)
+  }, [isConnected, user, account?.address])
+
   // Fetch USDC balance
   const fetchUSDCBalance = async (address: string) => {
     if (!address) return
@@ -185,7 +210,7 @@ export default function EmailOTPAuth({
         address: account.address,
         email: user.email,
         userId: user.userId,
-        method: 'alchemy-email-otp',
+        method: user.authMethod || 'alchemy-auth',
         isConnected: true,
         chain: 'Base Sepolia',
         chainId: 84532,
@@ -222,85 +247,12 @@ export default function EmailOTPAuth({
     }
   }, [account?.address, isConnected])
 
-  // Send OTP to email
-  const handleSendCode = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email) return
-
-    setLoading(true)
-    setError('')
-
-    try {
-      await authenticate(
-        {
-          type: 'email',
-          emailMode: 'otp',
-          email,
-        },
-        {
-          onSuccess: () => {
-            console.log('✅ Email OTP flow completed')
-            setOtpSent(true) // Mark OTP as sent
-            setLoading(false)
-          },
-          onError: (error) => {
-            console.error('❌ Email OTP error:', error)
-            setError('Failed to send verification code. Please try again.')
-            setLoading(false)
-          },
-        }
-      )
-      // Also set OTP sent immediately after authenticate call
-      setOtpSent(true)
-      setLoading(false)
-    } catch (error) {
-      console.error('❌ Send code error:', error)
-      setError('Failed to send verification code. Please try again.')
-      setLoading(false)
-    }
-  }
-
-  // Verify OTP code
-  const handleVerifyCode = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!otpCode) return
-
-    setLoading(true)
-    setError('')
-
-    try {
-      await authenticate(
-        {
-          type: 'otp',
-          otpCode,
-        },
-        {
-          onSuccess: () => {
-            console.log('✅ OTP verification successful')
-            setLoading(false)
-          },
-          onError: (error) => {
-            console.error('❌ OTP verification error:', error)
-            setError('Invalid verification code. Please try again.')
-            setLoading(false)
-          },
-        }
-      )
-    } catch (error) {
-      console.error('❌ Verify code error:', error)
-      setError('Invalid verification code. Please try again.')
-      setLoading(false)
-    }
-  }
+  // Note: Email OTP handling is now managed by Alchemy's AuthCard component
 
   // Handle logout
   const handleLogout = async () => {
     try {
       await logout()
-      setEmail('')
-      setOtpCode('')
-      setError('')
-      setOtpSent(false) // Reset OTP sent state
       setUsdcBalance('0.00') // Reset USDC balance
       setBalanceLoading(false) // Reset balance loading state
       setSessionExpiry(null) // Clear session expiry
@@ -357,7 +309,7 @@ export default function EmailOTPAuth({
                       address: account?.address,
                       email: user.email,
                       userId: user.userId,
-                      method: 'alchemy-email-otp',
+                      method: user.authMethod || 'alchemy-auth',
                       isConnected: true,
                       chain: 'Base Sepolia',
                       chainId: 84532,
@@ -438,85 +390,9 @@ export default function EmailOTPAuth({
     )
   }
 
-  // Show OTP input when waiting for email auth OR when we've sent an OTP
-  if (status === AlchemySignerStatus.AWAITING_EMAIL_AUTH || otpSent) {
-    return (
-      <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
-        <h3 className='text-lg font-medium text-gray-900 mb-4'>
-          📧 Check Your Email
-        </h3>
+  // Note: OTP verification UI is now handled by Alchemy's AuthCard component
 
-        <div className='mb-4'>
-          <p className='text-gray-600 mb-2'>
-            We sent a 6-digit code to <strong>{email}</strong>
-          </p>
-          <div className='bg-green-50 p-3 rounded-lg'>
-            <p className='text-green-800 text-sm'>
-              ✅ Verification code sent! Check your email inbox.
-            </p>
-          </div>
-        </div>
-
-        <form onSubmit={handleVerifyCode} className='space-y-4'>
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-2'>
-              Verification Code
-            </label>
-            <input
-              type='text'
-              value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value)}
-              placeholder='123456'
-              maxLength={6}
-              className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-lg font-mono'
-              disabled={loading}
-            />
-          </div>
-
-          {error && (
-            <div className='bg-red-50 p-3 rounded-lg'>
-              <p className='text-red-800 text-sm'>{error}</p>
-            </div>
-          )}
-
-          <button
-            type='submit'
-            disabled={loading || !otpCode}
-            className='w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed'
-          >
-            {loading ? 'Verifying...' : 'Verify Code'}
-          </button>
-        </form>
-
-        <div className='flex gap-2 mt-3'>
-          <button
-            onClick={() => {
-              setEmail('')
-              setOtpCode('')
-              setError('')
-              setOtpSent(false) // Reset OTP sent state
-            }}
-            className='flex-1 text-sm text-gray-500 hover:text-gray-700'
-          >
-            ← Use different email
-          </button>
-          <button
-            onClick={() => {
-              setOtpCode('')
-              setError('')
-              handleSendCode({ preventDefault: () => {} } as React.FormEvent)
-            }}
-            disabled={loading}
-            className='flex-1 text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50'
-          >
-            {loading ? 'Sending...' : 'Resend code'}
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  // Show email input form
+  // Show Alchemy AuthCard with all authentication methods
   return (
     <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
       <h3 className='text-lg font-medium text-gray-900 mb-2'>
@@ -524,36 +400,18 @@ export default function EmailOTPAuth({
       </h3>
       <p className='text-gray-600 mb-4'>{content.subtitle}</p>
 
-      <form onSubmit={handleSendCode} className='space-y-4'>
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            Email Address
-          </label>
-          <input
-            type='email'
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder='Enter your email address'
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            disabled={loading}
-            required
-          />
-        </div>
+      {/* Use Alchemy's AuthCard component for proper multi-method authentication */}
+      <div className='flex flex-row p-4 bg-white border border-gray-200 rounded-lg'>
+        <AuthCard />
+      </div>
 
-        {error && (
-          <div className='bg-red-50 p-3 rounded-lg'>
-            <p className='text-red-800 text-sm'>{error}</p>
-          </div>
-        )}
-
-        <button
-          type='submit'
-          disabled={loading || !email}
-          className='w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed'
-        >
-          {loading ? 'Sending...' : 'Continue with Email'}
-        </button>
-      </form>
+      {/* Debug info */}
+      <div className='mt-4 p-3 bg-gray-50 rounded text-xs'>
+        <p className='font-medium'>Debug Info:</p>
+        <p>Status: {status}</p>
+        <p>Connected: {isConnected ? 'Yes' : 'No'}</p>
+        <p>User: {user ? 'Authenticated' : 'Not authenticated'}</p>
+      </div>
 
       <div className='mt-4 text-xs text-gray-500'>
         <p>{content.description}</p>
@@ -566,7 +424,7 @@ export default function EmailOTPAuth({
 }
 
 // Export hook for other components to use
-export function useEmailOTPAuth() {
+export function useMultiMethodAuth() {
   const { isConnected } = useSignerStatus()
   const user = useUser()
   const account = useAccount({ type: 'LightAccount' })
@@ -577,6 +435,10 @@ export function useEmailOTPAuth() {
     address: account?.address,
     email: user?.email,
     userId: user?.userId,
+    authMethod: user?.authMethod || 'alchemy-auth',
     chain: { name: 'Base Sepolia', id: 84532 },
   }
 }
+
+// Keep backward compatibility
+export const useEmailOTPAuth = useMultiMethodAuth

@@ -23,7 +23,7 @@ import dynamic from 'next/dynamic'
 import { DriverApplication } from '@/components/DriverApplication'
 
 // Dynamic import to avoid SSR issues with Alchemy hooks
-const EmailOTPAuth = dynamic(() => import('@/components/EmailOTPAuth'), {
+const MultiMethodAuth = dynamic(() => import('@/components/EmailOTPAuth'), {
   ssr: false,
   loading: () => (
     <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
@@ -54,7 +54,7 @@ const Home = () => {
 
   // Stable callback to prevent infinite loops
   const handleAuthSuccess = useCallback((userData: any) => {
-    console.log('✅ Email OTP authentication successful:', userData)
+    console.log('✅ Multi-method authentication successful:', userData)
     setUser(userData)
   }, [])
 
@@ -81,8 +81,8 @@ const Home = () => {
         <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
           {/* Left Sidebar - Stats & Quick Actions */}
           <div className='lg:col-span-1 space-y-6'>
-            {/* Email OTP Authentication */}
-            <EmailOTPAuth mode='general' onAuthSuccess={handleAuthSuccess} />
+            {/* Multi-Method Authentication */}
+            <MultiMethodAuth mode='general' onAuthSuccess={handleAuthSuccess} />
 
             <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
               <h3 className='text-lg font-medium text-gray-900 mb-4'>
