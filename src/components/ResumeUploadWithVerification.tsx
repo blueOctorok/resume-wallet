@@ -48,15 +48,19 @@ export default function ResumeUploadWithVerification() {
   const [file, setFile] = useState<File | null>(null)
   const [steps, setSteps] = useState<UploadStep[]>([
     { id: 'ipfs', name: '📁 Upload to IPFS (Pinata)', status: 'pending' },
-    { id: 'duplicate-check', name: '🔍 Duplicate Check', status: 'pending' },
     {
-      id: 'database',
-      name: '💾 Save to Database (Supabase)',
+      id: 'duplicate-check',
+      name: '🔍 Duplicate Check (User + Global)',
       status: 'pending',
     },
     {
       id: 'blockchain',
       name: '⛓️ Store on Blockchain (Base Sepolia)',
+      status: 'pending',
+    },
+    {
+      id: 'database',
+      name: '💾 Save to Database (Supabase)',
       status: 'pending',
     },
   ])
@@ -148,12 +152,12 @@ export default function ResumeUploadWithVerification() {
         timestamp: new Date().toISOString(),
       })
 
-      // Step 1.5: Check for duplicates
+      // Step 1.5: Check for duplicates (both user and global)
       updateStep('duplicate-check', 'loading')
-      console.log('🔄 Step 1.5: Checking for duplicate file...')
+      console.log('🔄 Step 1.5: Checking for duplicate file (user + global)...')
 
       const duplicateCheckResponse = await fetch(
-        '/api/resumes/check-user-file',
+        '/api/resumes/check-duplicate-global',
         {
           method: 'POST',
           headers: {
@@ -175,59 +179,45 @@ export default function ResumeUploadWithVerification() {
       const duplicateCheck = await duplicateCheckResponse.json()
 
       if (duplicateCheck.exists) {
+        // Determine appropriate error message based on duplicate type
+        let errorMessage =
+          'File already exists. Please select a different file.'
+
+        if (duplicateCheck.duplicateType === 'user') {
+          errorMessage =
+            'You have already uploaded this file. Please select a different file or update your existing resume.'
+        } else if (duplicateCheck.duplicateType === 'global') {
+          errorMessage =
+            'This file has already been uploaded to the blockchain by another user. Please select a different file or rename your current file.'
+        }
+
         // Stop the upload process and show user-friendly error
         updateStep(
           'duplicate-check',
           'error',
-          undefined,
-          'You have already uploaded this file. Please select a different file or update your existing resume.'
+          {
+            duplicateType: duplicateCheck.duplicateType,
+            userDuplicate: duplicateCheck.userDuplicate,
+            blockchainDuplicate: duplicateCheck.blockchainDuplicate,
+          },
+          errorMessage
         )
+        setUploading(false)
         return // Exit the upload function early
       }
 
       updateStep('duplicate-check', 'success', {
-        message: 'No duplicate found',
+        message: 'No duplicates found (user or global)',
         checkedHash: ipfsHash.substring(0, 10) + '...',
+        checkedDatabase: true,
+        checkedBlockchain: true,
       })
 
       console.log('✅ Step 1.5 Complete: No duplicate found, proceeding...')
 
-      // Step 2: Save to Database
-      updateStep('database', 'loading')
-      console.log('🔄 Step 2: Saving to database...')
-
-      const dbResponse = await fetch('/api/resumes/simple', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ipfsHash,
-          title: file.name.replace('.pdf', ''),
-          filename: file.name,
-          userAddress: account.address,
-          isPublic: true,
-          fileSize: file.size,
-          mimeType: file.type,
-        }),
-      })
-
-      if (!dbResponse.ok) {
-        throw new Error(`Database save failed: ${dbResponse.statusText}`)
-      }
-
-      const dbData = await dbResponse.json()
-      console.log('✅ Step 2 Complete: Database ID:', dbData.id)
-
-      updateStep('database', 'success', {
-        id: dbData.id,
-        created_at: dbData.created_at,
-        table: 'resumes',
-      })
-
-      // Step 3: Store on Blockchain (Client-side with user's wallet)
+      // Step 2: Store on Blockchain FIRST (Client-side with user's wallet)
       updateStep('blockchain', 'loading')
-      console.log('🔄 Step 3: Storing on blockchain with user wallet...')
+      console.log('🔄 Step 2: Storing on blockchain with user wallet...')
 
       // Use the smart account client from component state
       if (!smartAccountClient) {
@@ -269,6 +259,8 @@ export default function ResumeUploadWithVerification() {
 
       // Use Smart Account Client sendUserOperation method
       // Gas sponsorship is handled automatically by the Alchemy Smart Account Client
+      let duplicateErrorHandled = false
+
       const result = await client
         .sendUserOperation({
           uo: {
@@ -283,22 +275,62 @@ export default function ResumeUploadWithVerification() {
           },
         })
         .catch((error: any) => {
+          console.log('🔍 Caught error in sendUserOperation:', error)
+          console.log('🔍 Error type:', typeof error)
+          console.log('🔍 Error name:', error.name)
+          console.log('🔍 Error message:', error.message)
+
           // Handle contract revert errors specifically
           if (
             error.code === -32521 ||
-            error.message?.includes('Execution reverted')
+            error.message?.includes('Execution reverted') ||
+            error.message?.includes('IPFS hash already used')
           ) {
             // This is a contract revert - check if it's the duplicate IPFS hash error
             const errorString = JSON.stringify(error)
+            console.log('🔍 Full error string:', errorString)
+
             if (errorString.includes('IPFS hash already used')) {
-              throw new Error(
-                'IPFS hash already used - Cannot upload the same file twice. Please select a different file or rename your current file.'
+              // Update the blockchain step with error instead of throwing
+              updateStep(
+                'blockchain',
+                'error',
+                undefined,
+                'Cannot upload the same file twice. This file has already been uploaded to the blockchain. Please select a different file or rename your current file.'
               )
+              duplicateErrorHandled = true
+              return null // Return null to indicate we handled the error
             }
           }
-          // Re-throw other errors
+
+          // Handle HTTP request errors that contain the duplicate message
+          if (
+            error.name === 'HttpRequestError' &&
+            error.message?.includes('HTTP request failed')
+          ) {
+            const errorString = JSON.stringify(error)
+            if (errorString.includes('IPFS hash already used')) {
+              // Update the blockchain step with error instead of throwing
+              updateStep(
+                'blockchain',
+                'error',
+                undefined,
+                'Cannot upload the same file twice. This file has already been uploaded to the blockchain. Please select a different file or rename your current file.'
+              )
+              duplicateErrorHandled = true
+              return null // Return null to indicate we handled the error
+            }
+          }
+
+          // Re-throw other errors (only if we haven't handled them gracefully)
           throw error
         })
+
+      // If we handled a duplicate error, exit early
+      if (duplicateErrorHandled) {
+        setUploading(false)
+        return
+      }
 
       console.log('✅ User operation submitted:', result)
 
@@ -320,7 +352,7 @@ export default function ResumeUploadWithVerification() {
           ? receipt
           : (receipt as any)?.transactionHash || result.hash
 
-      console.log('✅ Step 3 Complete: Transaction Hash:', transactionHash)
+      console.log('✅ Step 2 Complete: Transaction Hash:', transactionHash)
 
       const blockchainData = {
         transactionHash: transactionHash || 'unknown',
@@ -334,6 +366,39 @@ export default function ResumeUploadWithVerification() {
         resumeId: blockchainData.resumeId,
         contractAddress: process.env.NEXT_PUBLIC_RESUME_REGISTRY_ADDRESS,
         explorerUrl: `https://sepolia.basescan.org/tx/${blockchainData.transactionHash}`,
+      })
+
+      // Step 3: Save to Database ONLY AFTER blockchain success
+      updateStep('database', 'loading')
+      console.log('🔄 Step 3: Saving to database...')
+
+      const dbResponse = await fetch('/api/resumes/simple', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ipfsHash,
+          title: file.name.replace('.pdf', ''),
+          filename: file.name,
+          userAddress: account.address,
+          isPublic: true,
+          fileSize: file.size,
+          mimeType: file.type,
+        }),
+      })
+
+      if (!dbResponse.ok) {
+        throw new Error(`Database save failed: ${dbResponse.statusText}`)
+      }
+
+      const dbData = await dbResponse.json()
+      console.log('✅ Step 3 Complete: Database ID:', dbData.id)
+
+      updateStep('database', 'success', {
+        id: dbData.id,
+        created_at: dbData.created_at,
+        table: 'resumes',
       })
 
       // Set final result
@@ -358,19 +423,21 @@ export default function ResumeUploadWithVerification() {
       let errorMessage = 'Unknown error'
       if (error instanceof Error) {
         // Check for our custom duplicate file error message
-        if (
-          error.message.includes(
-            'IPFS hash already used - Cannot upload the same file twice'
-          )
-        ) {
-          errorMessage =
-            'Cannot upload the same file twice. Please select a different file or rename your current file.'
+        if (error.message.includes('Cannot upload the same file twice')) {
+          errorMessage = error.message // Use the full custom message
         } else if (error.message.includes('User rejected')) {
           errorMessage = 'Transaction was cancelled by user.'
         } else if (error.message.includes('insufficient funds')) {
           errorMessage = 'Insufficient funds for transaction.'
         } else if (error.message.includes('HTTP request failed')) {
-          errorMessage = 'Blockchain transaction failed. Please try again.'
+          // Check if this HTTP error contains the duplicate message
+          const errorString = JSON.stringify(error)
+          if (errorString.includes('IPFS hash already used')) {
+            errorMessage =
+              'Cannot upload the same file twice. This file has already been uploaded to the blockchain. Please select a different file or rename your current file.'
+          } else {
+            errorMessage = 'Blockchain transaction failed. Please try again.'
+          }
         } else {
           errorMessage = error.message
         }
@@ -441,7 +508,9 @@ export default function ResumeUploadWithVerification() {
         disabled={!file || !account?.address || uploading}
         className='w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed mb-6'
       >
-        {uploading ? 'Uploading...' : 'Upload Resume (4-Step Process)'}
+        {uploading
+          ? 'Uploading...'
+          : 'Upload Resume (Blockchain-First Process)'}
       </button>
 
       {/* Progress Steps */}

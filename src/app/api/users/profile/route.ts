@@ -1,17 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUserProfile, upsertUser } from '@/lib/supabase-db'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // TODO: Get actual user ID from wallet authentication
-    const walletAddress = 'temp-wallet-address'
+    console.log('👤 User Profile API: Starting GET request')
+
+    // Get wallet address from query parameters
+    const { searchParams } = new URL(request.url)
+    const walletAddress = searchParams.get('walletAddress')
+
+    if (!walletAddress) {
+      console.log('❌ User Profile API: No wallet address provided')
+      return NextResponse.json(
+        { error: 'Wallet address is required' },
+        { status: 400 }
+      )
+    }
+
+    console.log(
+      '👤 User Profile API: Fetching profile for wallet:',
+      walletAddress
+    )
 
     const user = await getUserProfile(walletAddress)
+    console.log('✅ User Profile API: Profile fetched successfully')
+
     return NextResponse.json(user)
   } catch (error) {
-    console.error('Error fetching user profile:', error)
+    console.error('❌ User Profile API: Error fetching user profile:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch user profile' },
+      {
+        error: 'Failed to fetch user profile',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     )
   }

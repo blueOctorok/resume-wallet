@@ -36,18 +36,12 @@ const MultiMethodAuth = dynamic(() => import('@/components/EmailOTPAuth'), {
   ),
 })
 import { WalletTransactions } from '@/components/WalletTransactions'
-import { RpcProviderTest } from '@/components/RpcProviderTest'
-import { NetworkDiscovery } from '@/components/NetworkDiscovery'
-import { DeploymentTest } from '@/components/DeploymentTest'
 import AlchemyTest from '@/components/AlchemyTest'
 import TokenAPITest from '@/components/TokenAPITest'
-import USDCBalance from '@/components/USDCBalance'
 import TransactionHistory from '@/components/TransactionHistory'
-import TransfersAPITest from '@/components/TransfersAPITest'
-import RawTransfersAPITest from '@/components/RawTransfersAPITest'
 import SimulationAPITest from '@/components/SimulationAPITest'
 import WebhookTest from '@/components/WebhookTest'
-import AlchemyAuthTest from '@/components/AlchemyAuthTest'
+import QuickStats from '@/components/QuickStats'
 
 const Home = () => {
   const [user, setUser] = useState<any>(null)
@@ -84,25 +78,8 @@ const Home = () => {
             {/* Multi-Method Authentication */}
             <MultiMethodAuth mode='general' onAuthSuccess={handleAuthSuccess} />
 
-            <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
-              <h3 className='text-lg font-medium text-gray-900 mb-4'>
-                Quick Stats
-              </h3>
-              <div className='space-y-3'>
-                <div className='flex justify-between'>
-                  <span className='text-gray-600'>Resumes Uploaded</span>
-                  <span className='font-medium text-gray-900'>0</span>
-                </div>
-                <div className='flex justify-between'>
-                  <span className='text-gray-600'>Blockchain Verified</span>
-                  <span className='font-medium text-gray-900'>0</span>
-                </div>
-                <div className='flex justify-between'>
-                  <span className='text-gray-600'>Public Resumes</span>
-                  <span className='font-medium text-gray-900'>0</span>
-                </div>
-              </div>
-            </div>
+            {/* User-specific Stats (only shown when logged in) */}
+            <QuickStats userAddress={user?.address} />
 
             <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
               <h3 className='text-lg font-medium text-gray-900 mb-4'>
@@ -154,20 +131,6 @@ const Home = () => {
               <AlchemyTest />
             </div>
 
-            {/* USDC Balance Display */}
-            {user?.address && (
-              <div className='mt-8'>
-                <div className='mb-4'>
-                  <h2 className='text-xl font-bold'>💰 USDC Balance</h2>
-                </div>
-                <USDCBalance
-                  walletAddress={user.address}
-                  showSufficiencyCheck={true}
-                  requiredAmount='1.00'
-                />
-              </div>
-            )}
-
             {/* Token API Test */}
             <div className='mt-8'>
               <TokenAPITest walletAddress={user?.address} />
@@ -188,17 +151,7 @@ const Home = () => {
               </div>
             )}
 
-            {/* Transfers API Test */}
-            <div className='mt-8'>
-              <TransfersAPITest walletAddress={user?.address} />
-            </div>
-
-            {/* Raw Transfers API Test */}
-            <div className='mt-8'>
-              <RawTransfersAPITest walletAddress={user?.address} />
-            </div>
-
-            {/* Simulation API Test */}
+            {/* Transaction Simulation */}
             <div className='mt-8'>
               <div className='mb-4'>
                 <h2 className='text-xl font-bold'>🧪 Transaction Simulation</h2>
@@ -209,34 +162,15 @@ const Home = () => {
               <SimulationAPITest />
             </div>
 
-            {/* Webhook Test */}
+            {/* Alchemy Webhooks Test */}
             <div className='mt-8'>
               <div className='mb-4'>
-                <h2 className='text-xl font-bold'>🔗 Real-Time Webhooks</h2>
+                <h2 className='text-xl font-bold'>🔗 Alchemy Webhooks</h2>
                 <p className='text-gray-600'>
                   Set up real-time notifications for transaction completion
                 </p>
               </div>
               <WebhookTest />
-            </div>
-
-            {/* Email OTP Authentication Test - Removed duplicates to prevent console spam */}
-
-            {/* RPC Provider Tests */}
-            <div className='mt-8'>
-              <RpcProviderTest walletAddress={user?.address || ''} />
-            </div>
-
-            {/* Network Discovery Tests */}
-            <div className='mt-8'>
-              <NetworkDiscovery walletAddress={user?.address || ''} />
-            </div>
-
-            {/* Driver Experience Test */}
-            <div className='mt-8'>
-              <DeploymentTest
-                contractAddress={process.env.NEXT_PUBLIC_CONTRACT_ADDRESS}
-              />
             </div>
           </div>
         </div>

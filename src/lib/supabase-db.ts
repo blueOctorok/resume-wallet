@@ -49,6 +49,8 @@ export async function getUserResumes(userId: string) {
 }
 
 export async function getUserProfile(walletAddress: string) {
+  console.log('👤 Supabase DB: Getting user profile for:', walletAddress)
+
   const supabase = await createClient()
 
   const { data: user, error } = await supabase
@@ -63,8 +65,24 @@ export async function getUserProfile(walletAddress: string) {
     .single()
 
   if (error) {
+    // If user doesn't exist (PGRST116), return empty profile with empty resumes array
+    if (error.code === 'PGRST116') {
+      console.log('👤 Supabase DB: User not found, returning empty profile')
+      return {
+        wallet_address: walletAddress,
+        resumes: [],
+        created_at: null,
+        updated_at: null,
+      }
+    }
+    console.error('❌ Supabase DB: Error fetching user profile:', error)
     throw new Error(`Failed to fetch user profile: ${error.message}`)
   }
+
+  console.log('✅ Supabase DB: User profile fetched successfully:', {
+    wallet_address: user.wallet_address,
+    resumes_count: user.resumes?.length || 0,
+  })
 
   return user
 }

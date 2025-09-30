@@ -67,20 +67,20 @@
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Layer 5: Base Account SDK Integration (CURRENT)
+## Layer 5: Alchemy Smart Wallets Integration (CURRENT)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                 Base Account SDK Layer                      │
+│                Alchemy Smart Wallets Layer                  │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │Smart Wallets│  │Gas          │  │  USDC Payments      │  │
+│  │Smart Wallets│  │Gas          │  │  Enhanced APIs      │  │
 │  │             │  │Sponsorship  │  │                     │  │
-│  │• Seedless   │  │• Paymaster  │  │• Base Pay           │  │
-│  │  wallets    │  │  service    │  │  integration        │  │
-│  │• Account    │  │• USDC gas   │  │• ERC20 gas          │  │
-│  │  abstraction│  │  payments   │  │  payments           │  │
-│  │• EIP-5792   │  │• Bundler    │  │• Payment status     │  │
-│  │  batch txs  │  │  service    │  │  tracking           │  │
+│  │• Email + OTP│  │• Paymaster  │  │• Token API          │  │
+│  │  auth       │  │  Policy     │  │• Transfers API      │  │
+│  │• Account    │  │• Gas        │  │• Simulation API     │  │
+│  │  abstraction│  │  sponsorship│  │• Webhook API        │  │
+│  │• EIP-1271   │  │• Bundler    │  │• MEV Protection     │  │
+│  │  signatures │  │  service    │  │• Production Ready   │  │
 │  └─────────────┘  └─────────────┘  └─────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -90,21 +90,20 @@
 ### ✅ **What's Implemented:**
 
 - Layer 1: ResumeRegistry.sol smart contract ✅
+- Layer 2: Alchemy RPC infrastructure ✅
 - Layer 3: Next.js app, Supabase, Pinata ✅
-- Layer 5: Base Account SDK integration ✅
+- Layer 5: Alchemy Smart Wallets integration ✅
 
 ### ❌ **Critical Missing (Production Blockers):**
 
-- Layer 2: Alchemy RPC infrastructure ❌
 - Layer 4: Error handling, security, monitoring ❌
 - Contract deployment to Base Sepolia ❌
 
 ### 🎯 **Immediate Priority:**
 
-1. **Add Alchemy** - Fix blockchain infrastructure
-2. **Deploy contract** - Enable core functionality
-3. **Add error boundaries** - Prevent crashes
-4. **Secure API routes** - Prevent abuse
+1. **Deploy contract** - Enable core functionality
+2. **Add error boundaries** - Prevent crashes
+3. **Secure API routes** - Prevent abuse
 
 ## Data Flow Example:
 
@@ -125,7 +124,7 @@
 │  │• Next.js    │  │• Supabase   │  │• Base Sepolia       │  │
 │  │• Vercel     │  │• PostgreSQL │  │• Alchemy RPC        │  │
 │  │• CDN        │  │• Auth       │  │• ResumeRegistry     │  │
-│  │• PWA        │  │• File APIs  │  │• Base Account SDK   │  │
+│  │• PWA        │  │• File APIs  │  │• Alchemy Smart Wallets│  │
 │  └─────────────┘  └─────────────┘  └─────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```

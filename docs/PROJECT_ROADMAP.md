@@ -65,26 +65,28 @@
 - **Gateway service** - Easy URLs for file access
 - **Reliable infrastructure** - Handles IPFS complexity
 
-### Blockchain: Base Sepolia + Alchemy Infrastructure + Solidity
+### Blockchain: Base Sepolia + Full Alchemy Infrastructure + Solidity
 
-**Why Base Sepolia + Alchemy?**
+**Why Base Sepolia + Full Alchemy?**
 
 - **Production-Ready Infrastructure** - Alchemy provides 99.9% uptime RPC nodes
 - **Enhanced Performance** - Faster blockchain queries and transaction broadcasting
-- **Base Account SDK Native** - Perfect integration with Base Account SDK paymaster
+- **Alchemy Smart Wallets** - Complete migration from Base SDK to Alchemy Account Kit
 - **Reliable Deployments** - Consistent contract deployment success rates
 - **Real Network Testing** - Test on actual Base testnet with production infrastructure
 - **Scalable Architecture** - Handle high transaction volumes
 - **Session Persistence** - localStorage wallet state persists across page refreshes
-- **4-Hour Session Expiry** - Automatic session timeout for security
+- **2-Hour Session Expiry** - Automatic session timeout for security
 
-**Alchemy Integration:**
+**Full Alchemy Integration:**
 
 - **API Key:** `1EacVcYetgk_QIWCKp4hI`
 - **Base Sepolia RPC:** `https://base-sepolia.g.alchemy.com/v2/1EacVcYetgk_QIWCKp4hI`
-- **Enhanced APIs** - Better blockchain data queries and monitoring
+- **Smart Wallets** - Alchemy Account Kit with gas sponsorship
+- **Enhanced APIs** - Token, Transfers, Simulation, Webhooks
 - **Developer Tools** - Comprehensive debugging and transaction tracking
 - **🛡️ Built-in MEV Protection** - Automatic protection from frontrunning and sandwich attacks
+- **💰 Gas Sponsorship** - Paymaster Policy for seamless user experience
 
 ---
 
@@ -271,24 +273,24 @@ Users → Base Account SDK → Connect → Use Existing Contract (Gas Sponsored 
 
 ## 🚧 What We're Building Next (Phase 2) - CORRECTED APPROACH
 
-### 🔐 Base Account SDK Authentication & Wallet Integration ✅ COMPLETE
+### 🔐 Alchemy Smart Wallets Authentication & Integration ✅ COMPLETE
 
 **What We Have:**
 
-- ✅ **Base Account SDK Integration** - Native Base wallet creation
-- ✅ **EIP-712 typed data authentication** - Enhanced security
+- ✅ **Alchemy Smart Wallets Integration** - Complete migration from Base SDK
+- ✅ **Email + OTP Authentication** - Dead simple user onboarding
 - ✅ **Wallet connection state management** - Session persistence
-- ✅ **MagicSpend capability detection** - Gas sponsorship support
-- ✅ **ERC20 gas payment system** - Pay gas with USDC
-- ✅ **Base Pay integration** - One-tap USDC payments
-- ✅ **Payment status tracking** - Real-time payment monitoring
+- ✅ **Gas Sponsorship** - Paymaster Policy configured
+- ✅ **Production Infrastructure** - Alchemy RPC, APIs, and Smart Wallets
+- ✅ **Enhanced APIs** - Token, Transfers, Simulation, Webhooks
+- ✅ **MEV Protection** - Automatic protection from frontrunning
 
 ### 💾 Blockchain Integration - PRODUCTION-READY WITH ALCHEMY ✅
 
 **The Complete Infrastructure Stack:**
 
 ```
-Users → Base Account SDK → Alchemy RPC Infrastructure → Base Sepolia → Smart Contracts
+Users → Alchemy Smart Wallets → Alchemy RPC Infrastructure → Base Sepolia → Smart Contracts
 ```
 
 **1. Developer Deploys Contract Once** (You)
@@ -301,17 +303,17 @@ Users → Base Account SDK → Alchemy RPC Infrastructure → Base Sepolia → S
 
 **2. Users Interact With Existing Contract** (All Users)
 
-- Users connect with Base Account SDK (seedless)
+- Users connect with Alchemy Smart Wallets (email + OTP)
 - Alchemy provides reliable blockchain connection
 - Users interact with the already-deployed contract
-- Gas sponsored in USDC via Base SDK paymaster (no ETH needed)
+- Gas sponsored via Alchemy Paymaster Policy (no ETH needed)
 - **This happens for every user transaction with production reliability**
 
 **Why This Production Stack Works:**
 
 - **One contract serves thousands of users** globally
 - **Alchemy provides production-grade infrastructure** - 99.9% uptime
-- **Base Account SDK sponsors user transactions** in USDC
+- **Alchemy Smart Wallets with gas sponsorship** - seamless user experience
 - **Users never need ETH** - perfect for mainstream adoption
 - **Reliable architecture** - deploy once with Alchemy, use forever
 - **Scalable infrastructure** - handles high transaction volumes
