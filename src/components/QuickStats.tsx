@@ -63,14 +63,8 @@ export default function QuickStats({ userAddress }: QuickStatsProps) {
 
   useEffect(() => {
     fetchStats()
-
-    // Refresh stats every 30 seconds only if user is logged in
-    const interval = userAddress ? setInterval(fetchStats, 30000) : null
-
-    return () => {
-      if (interval) clearInterval(interval)
-    }
-  }, [userAddress])
+    // Removed automatic polling - stats only refresh on manual button click or user address change
+  }, [userAddress]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Don't show anything if user is not logged in
   if (!userAddress) {

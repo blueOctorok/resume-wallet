@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { useAccount, useSmartAccountClient } from '@account-kit/react'
 import { encodeFunctionData } from 'viem'
+import { calculateFileHash, validateFile } from '@/lib/hash-utils'
 
 interface UploadStep {
   id: string
@@ -47,20 +48,19 @@ export default function ResumeUploadWithVerification() {
   }
   const [file, setFile] = useState<File | null>(null)
   const [steps, setSteps] = useState<UploadStep[]>([
-    { id: 'ipfs', name: '📁 Upload to IPFS (Pinata)', status: 'pending' },
     {
-      id: 'duplicate-check',
-      name: '🔍 Duplicate Check (User + Global)',
+      id: 'hash',
+      name: '🔢 Calculate File Hash (FREE)',
+      status: 'pending',
+    },
+    {
+      id: 'upload',
+      name: '📁 Upload & Database Validation',
       status: 'pending',
     },
     {
       id: 'blockchain',
-      name: '⛓️ Store on Blockchain (Base Sepolia)',
-      status: 'pending',
-    },
-    {
-      id: 'database',
-      name: '💾 Save to Database (Supabase)',
+      name: '⛓️ Blockchain Verification (Optional)',
       status: 'pending',
     },
   ])
@@ -108,339 +108,144 @@ export default function ResumeUploadWithVerification() {
     setUploading(true)
 
     try {
-      // Step 1: Upload to IPFS
-      updateStep('ipfs', 'loading')
-      console.log('🔄 Step 1: Uploading to IPFS...')
+      // Step 1: Calculate File Hash Locally (FREE)
+      updateStep('hash', 'loading')
+      console.log('🔄 Step 1: Calculating file hash locally...')
 
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append(
-        'pinataMetadata',
-        JSON.stringify({
-          name: `Resume-${file.name}-${Date.now()}`,
-          keyvalues: {
-            uploader: account.address,
-            type: 'resume',
-            filename: file.name,
-          },
-        })
-      )
-
-      const ipfsResponse = await fetch(
-        'https://api.pinata.cloud/pinning/pinFileToIPFS',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_PINATA_JWT}`,
-          },
-          body: formData,
-        }
-      )
-
-      if (!ipfsResponse.ok) {
-        throw new Error(`IPFS upload failed: ${ipfsResponse.statusText}`)
+      // Validate file first
+      const validation = validateFile(file)
+      if (!validation.valid) {
+        throw new Error(validation.error)
       }
 
-      const ipfsData = await ipfsResponse.json()
-      const ipfsHash = ipfsData.IpfsHash
-      console.log('✅ Step 1 Complete: IPFS Hash:', ipfsHash)
+      // Calculate SHA-256 hash locally
+      const fileHash = await calculateFileHash(file)
+      console.log(
+        '✅ Step 1 Complete: File hash calculated:',
+        fileHash.substring(0, 16) + '...'
+      )
 
-      updateStep('ipfs', 'success', {
-        hash: ipfsHash,
-        url: `https://${process.env.NEXT_PUBLIC_PINATA_GATEWAY}/ipfs/${ipfsHash}`,
+      updateStep('hash', 'success', {
+        hash: fileHash.substring(0, 16) + '...',
+        algorithm: 'SHA-256',
         size: file.size,
         timestamp: new Date().toISOString(),
       })
 
-      // Step 1.5: Check for duplicates (both user and global)
-      updateStep('duplicate-check', 'loading')
-      console.log('🔄 Step 1.5: Checking for duplicate file (user + global)...')
+      // Step 2: Upload & Database Validation (Hash-First Flow)
+      updateStep('upload', 'loading')
+      console.log('🔄 Step 2: Uploading file with hash-first validation...')
 
-      const duplicateCheckResponse = await fetch(
-        '/api/resumes/check-duplicate-global',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userAddress: account.address,
-            ipfsHash: ipfsHash,
-          }),
-        }
-      )
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('title', file.name.replace('.pdf', ''))
+      formData.append('fileHash', fileHash)
 
-      if (!duplicateCheckResponse.ok) {
-        throw new Error(
-          `Duplicate check failed: ${duplicateCheckResponse.statusText}`
-        )
-      }
-
-      const duplicateCheck = await duplicateCheckResponse.json()
-
-      if (duplicateCheck.exists) {
-        // Determine appropriate error message based on duplicate type
-        let errorMessage =
-          'File already exists. Please select a different file.'
-
-        if (duplicateCheck.duplicateType === 'user') {
-          errorMessage =
-            'You have already uploaded this file. Please select a different file or update your existing resume.'
-        } else if (duplicateCheck.duplicateType === 'global') {
-          errorMessage =
-            'This file has already been uploaded to the blockchain by another user. Please select a different file or rename your current file.'
-        }
-
-        // Stop the upload process and show user-friendly error
-        updateStep(
-          'duplicate-check',
-          'error',
-          {
-            duplicateType: duplicateCheck.duplicateType,
-            userDuplicate: duplicateCheck.userDuplicate,
-            blockchainDuplicate: duplicateCheck.blockchainDuplicate,
-          },
-          errorMessage
-        )
-        setUploading(false)
-        return // Exit the upload function early
-      }
-
-      updateStep('duplicate-check', 'success', {
-        message: 'No duplicates found (user or global)',
-        checkedHash: ipfsHash.substring(0, 10) + '...',
-        checkedDatabase: true,
-        checkedBlockchain: true,
-      })
-
-      console.log('✅ Step 1.5 Complete: No duplicate found, proceeding...')
-
-      // Step 2: Store on Blockchain FIRST (Client-side with user's wallet)
-      updateStep('blockchain', 'loading')
-      console.log('🔄 Step 2: Storing on blockchain with user wallet...')
-
-      // Use the smart account client from component state
-      if (!smartAccountClient) {
-        throw new Error(
-          'Smart account client not available. Please make sure you are connected.'
-        )
-      }
-
-      const client = smartAccountClient
-
-      // Contract ABI for addResume function
-      const resumeRegistryABI = [
-        {
-          name: 'addResume',
-          type: 'function',
-          stateMutability: 'nonpayable',
-          inputs: [
-            { name: 'ipfsHash', type: 'string' },
-            { name: 'title', type: 'string' },
-            { name: 'filename', type: 'string' },
-            { name: 'isPublic', type: 'bool' },
-          ],
-          outputs: [{ name: 'resumeId', type: 'uint256' }],
+      const uploadResponse = await fetch('/api/resumes/upload', {
+        method: 'POST',
+        headers: {
+          'x-wallet-address': account.address,
         },
-      ]
+        body: formData,
+      })
 
-      console.log('📝 Preparing contract interaction...')
-      console.log(
-        'Contract Address:',
-        process.env.NEXT_PUBLIC_RESUME_REGISTRY_ADDRESS
-      )
-      console.log('User Address:', account.address)
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json()
 
-      // Execute the blockchain transaction using Smart Account Client (viem extension)
-      console.log(
-        '📝 Available client methods:',
-        Object.getOwnPropertyNames(client)
-      )
+        // Handle specific error cases gracefully
+        let errorMessage = 'Upload failed'
 
-      // Use Smart Account Client sendUserOperation method
-      // Gas sponsorship is handled automatically by the Alchemy Smart Account Client
-      let duplicateErrorHandled = false
+        if (uploadResponse.status === 429) {
+          errorMessage = errorData.message || 'Rate limit exceeded'
+        } else if (uploadResponse.status === 402) {
+          errorMessage = errorData.message || 'Payment required'
+        } else if (uploadResponse.status === 409) {
+          errorMessage = errorData.message || 'Duplicate file detected'
+        } else {
+          errorMessage =
+            errorData.message || `Upload failed: ${uploadResponse.statusText}`
+        }
 
-      const result = await client
-        .sendUserOperation({
-          uo: {
-            target: process.env
-              .NEXT_PUBLIC_RESUME_REGISTRY_ADDRESS as `0x${string}`,
-            data: encodeFunctionData({
-              abi: resumeRegistryABI,
-              functionName: 'addResume',
-              args: [ipfsHash, file.name.replace('.pdf', ''), file.name, true],
-            }),
-            value: BigInt(0),
-          },
-        })
-        .catch((error: any) => {
-          console.log('🔍 Caught error in sendUserOperation:', error)
-          console.log('🔍 Error type:', typeof error)
-          console.log('🔍 Error name:', error.name)
-          console.log('🔍 Error message:', error.message)
-
-          // Handle contract revert errors specifically
-          if (
-            error.code === -32521 ||
-            error.message?.includes('Execution reverted') ||
-            error.message?.includes('IPFS hash already used')
-          ) {
-            // This is a contract revert - check if it's the duplicate IPFS hash error
-            const errorString = JSON.stringify(error)
-            console.log('🔍 Full error string:', errorString)
-
-            if (errorString.includes('IPFS hash already used')) {
-              // Update the blockchain step with error instead of throwing
-              updateStep(
-                'blockchain',
-                'error',
-                undefined,
-                'Cannot upload the same file twice. This file has already been uploaded to the blockchain. Please select a different file or rename your current file.'
-              )
-              duplicateErrorHandled = true
-              return null // Return null to indicate we handled the error
-            }
-          }
-
-          // Handle HTTP request errors that contain the duplicate message
-          if (
-            error.name === 'HttpRequestError' &&
-            error.message?.includes('HTTP request failed')
-          ) {
-            const errorString = JSON.stringify(error)
-            if (errorString.includes('IPFS hash already used')) {
-              // Update the blockchain step with error instead of throwing
-              updateStep(
-                'blockchain',
-                'error',
-                undefined,
-                'Cannot upload the same file twice. This file has already been uploaded to the blockchain. Please select a different file or rename your current file.'
-              )
-              duplicateErrorHandled = true
-              return null // Return null to indicate we handled the error
-            }
-          }
-
-          // Re-throw other errors (only if we haven't handled them gracefully)
-          throw error
-        })
-
-      // If we handled a duplicate error, exit early
-      if (duplicateErrorHandled) {
+        // Show error in UI instead of throwing
+        console.log('🚨 Upload error (showing in UI):', errorMessage)
+        updateStep('upload', 'error', undefined, errorMessage)
         setUploading(false)
-        return
+        return // Exit gracefully instead of throwing
       }
 
-      console.log('✅ User operation submitted:', result)
+      const uploadData = await uploadResponse.json()
+      console.log('✅ Step 2 Complete: Upload successful:', uploadData)
 
-      // Wait for transaction confirmation using Smart Account method
-      console.log('⏳ Waiting for confirmation...')
-      console.log('🔍 User operation result:', result)
-      console.log('🔍 User operation hash:', result.hash)
-
-      const receipt = await client.waitForUserOperationTransaction({
-        hash: result.hash,
+      updateStep('upload', 'success', {
+        resumeId: uploadData.resume.id,
+        ipfsHash: uploadData.resume.ipfsHash,
+        ipfsUrl: uploadData.resume.ipfsUrl,
+        wasPaid: uploadData.resume.wasPaid,
+        costUSDC: uploadData.resume.costUSDC,
+        eligibility: uploadData.eligibility,
       })
 
-      console.log('🔍 Full receipt object:', receipt)
-      console.log('🔍 Receipt type:', typeof receipt)
+      // Step 3: Blockchain Verification (Optional)
+      updateStep('blockchain', 'loading')
+      console.log('🔄 Step 3: Blockchain verification...')
 
-      // Handle case where receipt is just a transaction hash string
-      const transactionHash =
-        typeof receipt === 'string'
-          ? receipt
-          : (receipt as any)?.transactionHash || result.hash
-
-      console.log('✅ Step 2 Complete: Transaction Hash:', transactionHash)
-
-      const blockchainData = {
-        transactionHash: transactionHash || 'unknown',
-        resumeId: '1', // Assume success if we got this far
-        blockNumber: 'confirmed',
-        gasUsed: 'sponsored',
-      }
-
-      updateStep('blockchain', 'success', {
-        transactionHash: blockchainData.transactionHash,
-        resumeId: blockchainData.resumeId,
-        contractAddress: process.env.NEXT_PUBLIC_RESUME_REGISTRY_ADDRESS,
-        explorerUrl: `https://sepolia.basescan.org/tx/${blockchainData.transactionHash}`,
-      })
-
-      // Step 3: Save to Database ONLY AFTER blockchain success
-      updateStep('database', 'loading')
-      console.log('🔄 Step 3: Saving to database...')
-
-      const dbResponse = await fetch('/api/resumes/simple', {
+      const blockchainResponse = await fetch('/api/blockchain/verify-resume', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ipfsHash,
-          title: file.name.replace('.pdf', ''),
-          filename: file.name,
-          userAddress: account.address,
-          isPublic: true,
-          fileSize: file.size,
-          mimeType: file.type,
+          resumeId: uploadData.resume.id,
+          ...uploadData.blockchainData,
         }),
       })
 
-      if (!dbResponse.ok) {
-        throw new Error(`Database save failed: ${dbResponse.statusText}`)
+      if (!blockchainResponse.ok) {
+        console.warn('⚠️ Blockchain verification failed, but upload succeeded')
+        updateStep(
+          'blockchain',
+          'error',
+          undefined,
+          'Blockchain verification failed, but your resume was uploaded successfully'
+        )
+      } else {
+        const blockchainData = await blockchainResponse.json()
+        console.log(
+          '✅ Step 3 Complete: Blockchain verification:',
+          blockchainData
+        )
+
+        updateStep('blockchain', 'success', {
+          transactionHash: blockchainData.transactionHash,
+          resumeId: blockchainData.resumeId,
+          contractAddress: blockchainData.contractAddress,
+          explorerUrl: blockchainData.explorerUrl,
+        })
       }
-
-      const dbData = await dbResponse.json()
-      console.log('✅ Step 3 Complete: Database ID:', dbData.id)
-
-      updateStep('database', 'success', {
-        id: dbData.id,
-        created_at: dbData.created_at,
-        table: 'resumes',
-      })
 
       // Set final result
       setFinalResult({
-        ipfsHash,
-        ipfsUrl: `https://${process.env.NEXT_PUBLIC_PINATA_GATEWAY}/ipfs/${ipfsHash}`,
-        databaseId: dbData.id,
-        resumeId: blockchainData.resumeId,
-        transactionHash: blockchainData.transactionHash,
-        explorerUrl: `https://sepolia.basescan.org/tx/${blockchainData.transactionHash}`,
-        contractAddress: process.env.NEXT_PUBLIC_RESUME_REGISTRY_ADDRESS,
+        ipfsHash: uploadData.resume.ipfsHash,
+        ipfsUrl: uploadData.resume.ipfsUrl,
+        databaseId: uploadData.resume.id,
+        wasPaid: uploadData.resume.wasPaid,
+        costUSDC: uploadData.resume.costUSDC,
+        eligibility: uploadData.eligibility,
+        // Blockchain data if available
+        blockchainData:
+          steps.find((s) => s.id === 'blockchain')?.status === 'success'
+            ? steps.find((s) => s.id === 'blockchain')?.data
+            : null,
       })
 
-      console.log('🎉 All steps completed successfully!')
+      console.log('🎉 Upload completed successfully!')
     } catch (error) {
       console.error('❌ Upload failed:', error)
-      console.error('❌ Error details:', JSON.stringify(error, null, 2))
-      console.error('❌ Error string:', String(error))
       const currentStep = steps.find((step) => step.status === 'loading')
 
-      // Handle specific blockchain errors more gracefully
-      let errorMessage = 'Unknown error'
+      let errorMessage = 'Upload failed'
       if (error instanceof Error) {
-        // Check for our custom duplicate file error message
-        if (error.message.includes('Cannot upload the same file twice')) {
-          errorMessage = error.message // Use the full custom message
-        } else if (error.message.includes('User rejected')) {
-          errorMessage = 'Transaction was cancelled by user.'
-        } else if (error.message.includes('insufficient funds')) {
-          errorMessage = 'Insufficient funds for transaction.'
-        } else if (error.message.includes('HTTP request failed')) {
-          // Check if this HTTP error contains the duplicate message
-          const errorString = JSON.stringify(error)
-          if (errorString.includes('IPFS hash already used')) {
-            errorMessage =
-              'Cannot upload the same file twice. This file has already been uploaded to the blockchain. Please select a different file or rename your current file.'
-          } else {
-            errorMessage = 'Blockchain transaction failed. Please try again.'
-          }
-        } else {
-          errorMessage = error.message
-        }
+        errorMessage = error.message
       }
 
       if (currentStep) {
@@ -508,9 +313,7 @@ export default function ResumeUploadWithVerification() {
         disabled={!file || !account?.address || uploading}
         className='w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed mb-6'
       >
-        {uploading
-          ? 'Uploading...'
-          : 'Upload Resume (Blockchain-First Process)'}
+        {uploading ? 'Uploading...' : 'Upload Resume (Hash-First Process)'}
       </button>
 
       {/* Progress Steps */}
@@ -547,6 +350,41 @@ export default function ResumeUploadWithVerification() {
         ))}
       </div>
 
+      {/* Cost Breakdown */}
+      <div className='mt-4 bg-blue-50 p-4 rounded-lg border border-blue-200'>
+        <h4 className='font-medium text-blue-800 mb-2'>
+          💰 Cost Breakdown (Hash-First Flow)
+        </h4>
+        <div className='text-sm text-blue-700 space-y-1'>
+          <div>
+            🔢 File hash calculation:{' '}
+            <span className='font-semibold text-green-600'>FREE</span>
+          </div>
+          <div>
+            🔍 Database validation:{' '}
+            <span className='font-semibold text-green-600'>FREE</span>
+          </div>
+          <div>
+            📁 IPFS upload:{' '}
+            <span className='font-semibold text-yellow-600'>~$0.10</span>
+          </div>
+          <div>
+            💾 Database save:{' '}
+            <span className='font-semibold text-yellow-600'>~$0.001</span>
+          </div>
+          <div>
+            ⛓️ Blockchain verification:{' '}
+            <span className='font-semibold text-yellow-600'>~$0.02</span>
+          </div>
+          <div className='border-t pt-1 mt-2'>
+            <strong>Total for legitimate upload: ~$0.121</strong>
+          </div>
+          <div className='text-xs text-blue-600'>
+            💡 Spam attempts cost $0 (stopped before IPFS)
+          </div>
+        </div>
+      </div>
+
       {/* Final Result */}
       {finalResult && (
         <div className='mt-6 bg-green-50 p-4 rounded-lg border border-green-200'>
@@ -569,30 +407,43 @@ export default function ResumeUploadWithVerification() {
               <strong>Database ID:</strong> {finalResult.databaseId}
             </div>
             <div>
-              <strong>Blockchain Resume ID:</strong> {finalResult.resumeId}
+              <strong>Payment:</strong>{' '}
+              {finalResult.wasPaid ? `$${finalResult.costUSDC} USDC` : 'Free'}
             </div>
             <div>
-              <strong>Transaction:</strong>{' '}
-              <a
-                href={finalResult.explorerUrl}
-                target='_blank'
-                rel='noopener noreferrer'
-                className='text-blue-600 hover:underline'
-              >
-                View on BaseScan
-              </a>
+              <strong>Uploads This Week:</strong>{' '}
+              {finalResult.eligibility?.uploadsThisWeek || 0}
             </div>
-            <div>
-              <strong>Contract:</strong>{' '}
-              <a
-                href={`https://sepolia.basescan.org/address/${finalResult.contractAddress}`}
-                target='_blank'
-                rel='noopener noreferrer'
-                className='text-blue-600 hover:underline'
-              >
-                View Contract
-              </a>
-            </div>
+            {finalResult.blockchainData && (
+              <>
+                <div>
+                  <strong>Blockchain Resume ID:</strong>{' '}
+                  {finalResult.blockchainData.resumeId}
+                </div>
+                <div>
+                  <strong>Transaction:</strong>{' '}
+                  <a
+                    href={finalResult.blockchainData.explorerUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='text-blue-600 hover:underline'
+                  >
+                    View on BaseScan
+                  </a>
+                </div>
+                <div>
+                  <strong>Contract:</strong>{' '}
+                  <a
+                    href={`https://sepolia.basescan.org/address/${finalResult.blockchainData.contractAddress}`}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='text-blue-600 hover:underline'
+                  >
+                    View Contract
+                  </a>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
