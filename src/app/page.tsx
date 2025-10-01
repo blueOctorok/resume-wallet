@@ -20,7 +20,7 @@ const ResumeUploadWithVerification = dynamic(
 
 import { useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
-import { DriverApplication } from '@/components/DriverApplication'
+import DriverApplication from '@/components/DriverApplication'
 
 // Dynamic import to avoid SSR issues with Alchemy hooks
 const MultiMethodAuth = dynamic(() => import('@/components/EmailOTPAuth'), {
@@ -113,7 +113,7 @@ const Home = () => {
 
             {/* Resume Upload with Full Verification */}
             <div className='mb-8'>
-              <ResumeUploadWithVerification />
+              <ResumeUploadWithVerification user={user} />
             </div>
 
             {/* Driver Application */}
