@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     // Get current resume count (for the new resume ID)
     const currentCount = await contract.resumeCount()
-    const newResumeId = currentCount + 1n
+    const newResumeId = currentCount + BigInt(1)
 
     console.log('📊 Current resume count:', currentCount.toString())
     console.log('🆕 New resume ID will be:', newResumeId.toString())

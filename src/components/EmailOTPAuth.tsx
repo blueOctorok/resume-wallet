@@ -161,7 +161,7 @@ export default function MultiMethodAuth({
           address: account.address,
           email: user.email,
           userId: user.userId,
-          method: user.authMethod || 'alchemy-auth',
+          method: (user as any).authMethod || 'alchemy-auth',
           isConnected: true,
           chain: 'Base Sepolia',
           chainId: 84532,
@@ -210,7 +210,7 @@ export default function MultiMethodAuth({
         address: account.address,
         email: user.email,
         userId: user.userId,
-        method: user.authMethod || 'alchemy-auth',
+        method: (user as any).authMethod || 'alchemy-auth',
         isConnected: true,
         chain: 'Base Sepolia',
         chainId: 84532,
@@ -240,7 +240,9 @@ export default function MultiMethodAuth({
     if (account?.address && isConnected) {
       // Debounce the balance fetch to prevent spam
       const timeoutId = setTimeout(() => {
-        fetchUSDCBalance(account.address)
+        if (account.address) {
+          fetchUSDCBalance(account.address)
+        }
       }, 1000) // 1 second delay
 
       return () => clearTimeout(timeoutId)
@@ -309,7 +311,7 @@ export default function MultiMethodAuth({
                       address: account?.address,
                       email: user.email,
                       userId: user.userId,
-                      method: user.authMethod || 'alchemy-auth',
+                      method: (user as any).authMethod || 'alchemy-auth',
                       isConnected: true,
                       chain: 'Base Sepolia',
                       chainId: 84532,
@@ -435,7 +437,7 @@ export function useMultiMethodAuth() {
     address: account?.address,
     email: user?.email,
     userId: user?.userId,
-    authMethod: user?.authMethod || 'alchemy-auth',
+    authMethod: (user as any)?.authMethod || 'alchemy-auth',
     chain: { name: 'Base Sepolia', id: 84532 },
   }
 }

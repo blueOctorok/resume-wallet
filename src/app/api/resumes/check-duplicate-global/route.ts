@@ -113,15 +113,16 @@ export async function POST(request: NextRequest) {
         })
 
         // If we get a result and resumeId is not 0, it exists
-        blockchainDuplicateExists = result && result[0] && Number(result[0]) > 0
+        blockchainDuplicateExists =
+          result && Array.isArray(result) && result[0] && Number(result[0]) > 0
 
         if (blockchainDuplicateExists) {
           console.log(
             '⛓️ Global Duplicate Check API: Found blockchain duplicate:',
             {
-              resumeId: result[0],
-              uploader: result[5],
-              timestamp: result[6],
+              resumeId: Array.isArray(result) ? result[0] : null,
+              uploader: Array.isArray(result) ? result[5] : null,
+              timestamp: Array.isArray(result) ? result[6] : null,
             }
           )
         } else {
