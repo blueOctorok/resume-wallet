@@ -1,18 +1,37 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { DriverApplicationData } from './types/driver-application.types'
+import { ValidationResult } from '@/lib/validation'
+import { FormInput, FormSelect, FormTextarea, FormCheckbox } from './FormInput'
+import { ErrorDisplay } from './ErrorDisplay'
 
 // Training Records Step Component
 interface TrainingRecordsStepProps {
   data: DriverApplicationData['trainingRecords']
   onChange: (data: DriverApplicationData['trainingRecords']) => void
+  validation?: ValidationResult
 }
 
 export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
   data,
   onChange,
+  validation,
 }) => {
+  const [localValidation, setLocalValidation] = useState<ValidationResult>({
+    isValid: true,
+    errors: [],
+    warnings: [],
+  })
+
+  // Validate on data change
+  useEffect(() => {
+    const { validateTrainingRecords } = require('@/lib/validation')
+    const validationResult = validateTrainingRecords(data)
+    setLocalValidation(validationResult)
+  }, [data])
+
+  const currentValidation = validation || localValidation
   const addTraining = () => {
     const newTraining = {
       trainingType: '',
@@ -37,6 +56,9 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
 
   return (
     <div className='space-y-6'>
+      {/* Validation Summary */}
+      <ErrorDisplay validation={currentValidation} />
+
       <div className='flex justify-between items-center'>
         <h4 className='text-md font-medium text-gray-900'>
           Training Records & Certifications
@@ -57,103 +79,106 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
         </div>
       )}
 
-      {data.map((training, index) => (
-        <div key={index} className='border border-gray-200 rounded-lg p-4'>
-          <div className='flex justify-between items-center mb-4'>
-            <h5 className='font-medium text-gray-900'>Training #{index + 1}</h5>
-            <button
-              type='button'
-              onClick={() => removeTraining(index)}
-              className='text-red-600 hover:text-red-800 text-sm'
-            >
-              Remove
-            </button>
-          </div>
-
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Training Type *
-              </label>
-              <select
-                value={training.trainingType}
-                onChange={(e) =>
-                  updateTraining(index, 'trainingType', e.target.value)
-                }
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+      {Array.isArray(data) &&
+        data.map((training, index) => (
+          <div key={index} className='border border-gray-200 rounded-lg p-4'>
+            <div className='flex justify-between items-center mb-4'>
+              <h5 className='font-medium text-gray-900'>
+                Training #{index + 1}
+              </h5>
+              <button
+                type='button'
+                onClick={() => removeTraining(index)}
+                className='text-red-600 hover:text-red-800 text-sm'
               >
-                <option value=''>Select training type</option>
-                <option value='Defensive Driving'>Defensive Driving</option>
-                <option value='Hazmat'>Hazmat</option>
-                <option value='Tanker'>Tanker</option>
-                <option value='Doubles/Triples'>Doubles/Triples</option>
-                <option value='Passenger'>Passenger</option>
-                <option value='School Bus'>School Bus</option>
-                <option value='ELDT'>Entry-Level Driver Training</option>
-                <option value='Other'>Other</option>
-              </select>
+                Remove
+              </button>
             </div>
 
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Training Date *
-              </label>
-              <input
-                type='date'
-                value={training.trainingDate}
-                onChange={(e) =>
-                  updateTraining(index, 'trainingDate', e.target.value)
-                }
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-              />
-            </div>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Training Type *
+                </label>
+                <select
+                  value={training.trainingType}
+                  onChange={(e) =>
+                    updateTraining(index, 'trainingType', e.target.value)
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                >
+                  <option value=''>Select training type</option>
+                  <option value='Defensive Driving'>Defensive Driving</option>
+                  <option value='Hazmat'>Hazmat</option>
+                  <option value='Tanker'>Tanker</option>
+                  <option value='Doubles/Triples'>Doubles/Triples</option>
+                  <option value='Passenger'>Passenger</option>
+                  <option value='School Bus'>School Bus</option>
+                  <option value='ELDT'>Entry-Level Driver Training</option>
+                  <option value='Other'>Other</option>
+                </select>
+              </div>
 
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Training Company
-              </label>
-              <input
-                type='text'
-                value={training.trainingCompany}
-                onChange={(e) =>
-                  updateTraining(index, 'trainingCompany', e.target.value)
-                }
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                placeholder='Enter training company name'
-              />
-            </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Training Date *
+                </label>
+                <input
+                  type='date'
+                  value={training.trainingDate}
+                  onChange={(e) =>
+                    updateTraining(index, 'trainingDate', e.target.value)
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                />
+              </div>
 
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Certificate Number
-              </label>
-              <input
-                type='text'
-                value={training.certificateNumber}
-                onChange={(e) =>
-                  updateTraining(index, 'certificateNumber', e.target.value)
-                }
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                placeholder='Enter certificate number'
-              />
-            </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Training Company
+                </label>
+                <input
+                  type='text'
+                  value={training.trainingCompany}
+                  onChange={(e) =>
+                    updateTraining(index, 'trainingCompany', e.target.value)
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  placeholder='Enter training company name'
+                />
+              </div>
 
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Expiration Date
-              </label>
-              <input
-                type='date'
-                value={training.expirationDate}
-                onChange={(e) =>
-                  updateTraining(index, 'expirationDate', e.target.value)
-                }
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-              />
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Certificate Number
+                </label>
+                <input
+                  type='text'
+                  value={training.certificateNumber}
+                  onChange={(e) =>
+                    updateTraining(index, 'certificateNumber', e.target.value)
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  placeholder='Enter certificate number'
+                />
+              </div>
+
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Expiration Date
+                </label>
+                <input
+                  type='date'
+                  value={training.expirationDate}
+                  onChange={(e) =>
+                    updateTraining(index, 'expirationDate', e.target.value)
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                />
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))}
 
       <div className='bg-blue-50 border border-blue-200 rounded-md p-4'>
         <h5 className='font-medium text-blue-900 mb-2'>
@@ -176,12 +201,28 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
 interface DrivingExperienceStepProps {
   data: DriverApplicationData['drivingExperience']
   onChange: (data: Partial<DriverApplicationData['drivingExperience']>) => void
+  validation?: ValidationResult
 }
 
 export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
   data,
   onChange,
+  validation,
 }) => {
+  const [localValidation, setLocalValidation] = useState<ValidationResult>({
+    isValid: true,
+    errors: [],
+    warnings: [],
+  })
+
+  // Validate on data change
+  useEffect(() => {
+    const { validateDrivingExperience } = require('@/lib/validation')
+    const validationResult = validateDrivingExperience(data)
+    setLocalValidation(validationResult)
+  }, [data])
+
+  const currentValidation = validation || localValidation
   const addSpecializedEquipment = () => {
     const newEquipment = {
       type: '',
@@ -231,6 +272,9 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
 
   return (
     <div className='space-y-8'>
+      {/* Validation Summary */}
+      <ErrorDisplay validation={currentValidation} />
+
       {/* Equipment Types */}
       <div>
         <h4 className='text-md font-medium text-gray-900 mb-6'>
@@ -551,12 +595,28 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
 interface SafetyComplianceStepProps {
   data: DriverApplicationData['safetyCompliance']
   onChange: (data: Partial<DriverApplicationData['safetyCompliance']>) => void
+  validation?: ValidationResult
 }
 
 export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
   data,
   onChange,
+  validation,
 }) => {
+  const [localValidation, setLocalValidation] = useState<ValidationResult>({
+    isValid: true,
+    errors: [],
+    warnings: [],
+  })
+
+  // Validate on data change
+  useEffect(() => {
+    const { validateSafetyCompliance } = require('@/lib/validation')
+    const validationResult = validateSafetyCompliance(data)
+    setLocalValidation(validationResult)
+  }, [data])
+
+  const currentValidation = validation || localValidation
   const addAccident = () => {
     const newAccident = {
       date: '',
@@ -612,6 +672,9 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
 
   return (
     <div className='space-y-8'>
+      {/* Validation Summary */}
+      <ErrorDisplay validation={currentValidation} />
+
       {/* Accidents */}
       <div>
         <div className='flex justify-between items-center mb-4'>
@@ -979,12 +1042,28 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
 interface ReferencesStepProps {
   data: DriverApplicationData['references']
   onChange: (data: DriverApplicationData['references']) => void
+  validation?: ValidationResult
 }
 
 export const ReferencesStep: React.FC<ReferencesStepProps> = ({
   data,
   onChange,
+  validation,
 }) => {
+  const [localValidation, setLocalValidation] = useState<ValidationResult>({
+    isValid: true,
+    errors: [],
+    warnings: [],
+  })
+
+  // Validate on data change
+  useEffect(() => {
+    const { validateReferences } = require('@/lib/validation')
+    const validationResult = validateReferences(data)
+    setLocalValidation(validationResult)
+  }, [data])
+
+  const currentValidation = validation || localValidation
   const addReference = () => {
     const newReference = {
       name: '',
@@ -1009,6 +1088,9 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
 
   return (
     <div className='space-y-6'>
+      {/* Validation Summary */}
+      <ErrorDisplay validation={currentValidation} />
+
       <div className='flex justify-between items-center'>
         <h4 className='text-md font-medium text-gray-900'>
           Personal & Professional References
@@ -1029,104 +1111,107 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
         </div>
       )}
 
-      {data.map((reference, index) => (
-        <div key={index} className='border border-gray-200 rounded-lg p-4'>
-          <div className='flex justify-between items-center mb-4'>
-            <h5 className='font-medium text-gray-900'>
-              Reference #{index + 1}
-            </h5>
-            <button
-              type='button'
-              onClick={() => removeReference(index)}
-              className='text-red-600 hover:text-red-800 text-sm'
-            >
-              Remove
-            </button>
-          </div>
-
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Full Name *
-              </label>
-              <input
-                type='text'
-                value={reference.name}
-                onChange={(e) => updateReference(index, 'name', e.target.value)}
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                placeholder='Enter reference name'
-              />
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Relationship *
-              </label>
-              <select
-                value={reference.relationship}
-                onChange={(e) =>
-                  updateReference(index, 'relationship', e.target.value)
-                }
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+      {Array.isArray(data) &&
+        data.map((reference, index) => (
+          <div key={index} className='border border-gray-200 rounded-lg p-4'>
+            <div className='flex justify-between items-center mb-4'>
+              <h5 className='font-medium text-gray-900'>
+                Reference #{index + 1}
+              </h5>
+              <button
+                type='button'
+                onClick={() => removeReference(index)}
+                className='text-red-600 hover:text-red-800 text-sm'
               >
-                <option value=''>Select relationship</option>
-                <option value='Former Supervisor'>Former Supervisor</option>
-                <option value='Former Colleague'>Former Colleague</option>
-                <option value='Personal Friend'>Personal Friend</option>
-                <option value='Family Member'>Family Member</option>
-                <option value='Neighbor'>Neighbor</option>
-                <option value='Teacher/Instructor'>Teacher/Instructor</option>
-                <option value='Other'>Other</option>
-              </select>
+                Remove
+              </button>
             </div>
 
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Phone Number *
-              </label>
-              <input
-                type='tel'
-                value={reference.phone}
-                onChange={(e) =>
-                  updateReference(index, 'phone', e.target.value)
-                }
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                placeholder='(XXX) XXX-XXXX'
-              />
-            </div>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Full Name *
+                </label>
+                <input
+                  type='text'
+                  value={reference.name}
+                  onChange={(e) =>
+                    updateReference(index, 'name', e.target.value)
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  placeholder='Enter reference name'
+                />
+              </div>
 
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Email Address
-              </label>
-              <input
-                type='email'
-                value={reference.email}
-                onChange={(e) =>
-                  updateReference(index, 'email', e.target.value)
-                }
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                placeholder='Enter email address'
-              />
-            </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Relationship *
+                </label>
+                <select
+                  value={reference.relationship}
+                  onChange={(e) =>
+                    updateReference(index, 'relationship', e.target.value)
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                >
+                  <option value=''>Select relationship</option>
+                  <option value='Former Supervisor'>Former Supervisor</option>
+                  <option value='Former Colleague'>Former Colleague</option>
+                  <option value='Personal Friend'>Personal Friend</option>
+                  <option value='Family Member'>Family Member</option>
+                  <option value='Neighbor'>Neighbor</option>
+                  <option value='Teacher/Instructor'>Teacher/Instructor</option>
+                  <option value='Other'>Other</option>
+                </select>
+              </div>
 
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Years Known *
-              </label>
-              <input
-                type='text'
-                value={reference.yearsKnown}
-                onChange={(e) =>
-                  updateReference(index, 'yearsKnown', e.target.value)
-                }
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                placeholder='e.g., 3, 5, 10+'
-              />
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Phone Number *
+                </label>
+                <input
+                  type='tel'
+                  value={reference.phone}
+                  onChange={(e) =>
+                    updateReference(index, 'phone', e.target.value)
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  placeholder='(XXX) XXX-XXXX'
+                />
+              </div>
+
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Email Address
+                </label>
+                <input
+                  type='email'
+                  value={reference.email}
+                  onChange={(e) =>
+                    updateReference(index, 'email', e.target.value)
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  placeholder='Enter email address'
+                />
+              </div>
+
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Years Known *
+                </label>
+                <input
+                  type='text'
+                  value={reference.yearsKnown}
+                  onChange={(e) =>
+                    updateReference(index, 'yearsKnown', e.target.value)
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  placeholder='e.g., 3, 5, 10+'
+                />
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))}
 
       <div className='bg-blue-50 border border-blue-200 rounded-md p-4'>
         <h5 className='font-medium text-blue-900 mb-2'>

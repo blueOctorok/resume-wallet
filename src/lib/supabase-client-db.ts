@@ -172,11 +172,42 @@ export async function saveDriverApplicationClient(
   const supabase = createClient()
 
   try {
-    // First, check if an application already exists for this user
+    // First, get or create the user
+    let { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('wallet_address', userAddress)
+      .maybeSingle()
+
+    // If user doesn't exist, create them
+    if (!userData) {
+      console.log(
+        '👤 Driver App DB: Creating new user for wallet:',
+        userAddress
+      )
+      const { data: newUser, error: createError } = await supabase
+        .from('users')
+        .insert({
+          wallet_address: userAddress,
+          is_active: true,
+        })
+        .select('id')
+        .single()
+
+      if (createError || !newUser) {
+        console.error('❌ Driver App DB: Error creating user:', createError)
+        throw new Error(`Failed to create user: ${createError?.message}`)
+      }
+
+      userData = newUser
+      console.log('✅ Driver App DB: User created successfully')
+    }
+
+    // Check if an application already exists for this user
     const { data: existingApp, error: fetchError } = await supabase
       .from('driver_applications')
       .select('*')
-      .eq('user_address', userAddress)
+      .eq('user_id', userData.id)
       .single()
 
     if (fetchError && fetchError.code !== 'PGRST116') {
@@ -201,7 +232,7 @@ export async function saveDriverApplicationClient(
           current_step: currentStep,
           updated_at: new Date().toISOString(),
         })
-        .eq('user_address', userAddress)
+        .eq('user_id', userData.id)
         .select()
         .single()
 
@@ -217,7 +248,7 @@ export async function saveDriverApplicationClient(
       const { data, error } = await supabase
         .from('driver_applications')
         .insert({
-          user_address: userAddress,
+          user_id: userData.id,
           application_data: applicationData,
           current_step: currentStep,
           is_complete: false,
@@ -257,20 +288,33 @@ export async function getDriverApplicationClient(
   const supabase = createClient()
 
   try {
+    // First, get the user_id from the wallet address
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('wallet_address', userAddress)
+      .maybeSingle()
+
+    if (!userData) {
+      console.log('📖 Driver App DB: User not found')
+      return null
+    }
+
     const { data, error } = await supabase
       .from('driver_applications')
       .select('*')
-      .eq('user_address', userAddress)
-      .single()
+      .eq('user_id', userData.id)
+      .maybeSingle()
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        // No application found - this is normal for new users
-        console.log('📖 Driver App DB: No application found for user')
-        return null
-      }
       console.error('❌ Driver App DB: Error fetching application:', error)
       throw new Error(`Failed to fetch application: ${error.message}`)
+    }
+
+    if (!data) {
+      // No application found - this is normal for new users
+      console.log('📖 Driver App DB: No application found for user')
+      return null
     }
 
     console.log('✅ Driver App DB: Application fetched successfully:', {
@@ -291,7 +335,8 @@ export async function getDriverApplicationClient(
  */
 export async function completeDriverApplicationClient(
   userAddress: string,
-  applicationData: DriverApplicationData
+  applicationData: DriverApplicationData,
+  ipfsHash?: string
 ): Promise<{
   success: boolean
   error?: string
@@ -309,14 +354,26 @@ export async function completeDriverApplicationClient(
       10 // Final step
     )
 
-    // Then mark as complete
+    // Get user_id for the update (user should exist at this point from saveDriverApplicationClient)
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('wallet_address', userAddress)
+      .maybeSingle()
+
+    if (!userData) {
+      throw new Error(`User not found for wallet address: ${userAddress}`)
+    }
+
+    // Then mark as complete and add IPFS hash
     const { data, error } = await supabase
       .from('driver_applications')
       .update({
         is_complete: true,
+        ipfs_hash: ipfsHash || null,
         updated_at: new Date().toISOString(),
       })
-      .eq('user_address', userAddress)
+      .eq('user_id', userData.id)
       .select()
       .single()
 
@@ -362,10 +419,22 @@ export async function getAllDriverApplicationsClient(
   const supabase = createClient()
 
   try {
+    // Get user_id from wallet address
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('wallet_address', userAddress)
+      .maybeSingle()
+
+    if (!userData) {
+      console.log('📖 Driver App DB: User not found')
+      return []
+    }
+
     const { data, error } = await supabase
       .from('driver_applications')
       .select('*')
-      .eq('user_address', userAddress)
+      .eq('user_id', userData.id)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -401,10 +470,21 @@ export async function deleteDriverApplicationClient(
   const supabase = createClient()
 
   try {
+    // Get user_id from wallet address
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('wallet_address', userAddress)
+      .maybeSingle()
+
+    if (!userData) {
+      throw new Error(`User not found for wallet address: ${userAddress}`)
+    }
+
     const { error } = await supabase
       .from('driver_applications')
       .delete()
-      .eq('user_address', userAddress)
+      .eq('user_id', userData.id)
       .eq('id', applicationId)
 
     if (error) {

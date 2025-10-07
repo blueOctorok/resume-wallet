@@ -28,6 +28,12 @@ import {
   getDriverApplicationClient,
   completeDriverApplicationClient,
 } from '@/lib/supabase-client-db'
+import { validateCompleteApplication, ValidationResult } from '@/lib/validation'
+import {
+  getDriverContractService,
+  generateApplicationHashAsync,
+  uploadDriverApplicationToIPFS,
+} from '@/lib/driver-contract'
 import AutoCompletePanel from './driver-application/AutoCompletePanel'
 
 const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
@@ -131,12 +137,54 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [showAutoComplete, setShowAutoComplete] = useState(false)
+  const [isCompleted, setIsCompleted] = useState(false)
+  const [blockchainApplicationId, setBlockchainApplicationId] = useState<
+    number | null
+  >(null)
+  const [blockchainStatus, setBlockchainStatus] = useState<
+    'pending' | 'submitted' | 'verified' | 'rejected' | 'error'
+  >('pending')
+  const [ipfsHash, setIpfsHash] = useState<string | null>(null)
+  const [validation, setValidation] = useState<ValidationResult>({
+    isValid: true,
+    errors: [],
+    warnings: [],
+  })
 
   useEffect(() => {
     if (user?.address) {
       loadExistingApplication()
+      checkBlockchainApplications()
     }
   }, [user?.address])
+
+  const checkBlockchainApplications = async () => {
+    try {
+      const contractService = getDriverContractService()
+      const applications = await contractService.getUserApplications(
+        user!.address
+      )
+
+      if (applications.length > 0) {
+        // Get the most recent application
+        const latestAppId = applications[applications.length - 1]
+        const app = await contractService.getApplication(latestAppId)
+
+        setBlockchainApplicationId(latestAppId)
+
+        if (app.isVerified) {
+          setBlockchainStatus('verified')
+        } else if (app.isRejected) {
+          setBlockchainStatus('rejected')
+        } else {
+          setBlockchainStatus('submitted')
+        }
+      }
+    } catch (error) {
+      console.log('Could not check blockchain applications:', error)
+      // Not critical - just means no blockchain apps or wallet not connected
+    }
+  }
 
   const loadExistingApplication = async () => {
     try {
@@ -162,10 +210,30 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
     section: keyof DriverApplicationData,
     data: any
   ) => {
-    setApplicationData((prev) => ({
-      ...prev,
-      [section]: { ...prev[section], ...data },
-    }))
+    setApplicationData((prev) => {
+      // Handle array fields differently
+      if (
+        section === 'references' ||
+        section === 'employmentHistory' ||
+        section === 'trainingRecords'
+      ) {
+        return {
+          ...prev,
+          [section]: data, // Direct assignment for arrays
+        }
+      }
+
+      // Handle object fields with spread syntax
+      return {
+        ...prev,
+        [section]: { ...prev[section], ...data },
+      }
+    })
+
+    // Clear error message when user starts making changes
+    if (error) {
+      setError(null)
+    }
   }
 
   const handleAutoFillData = (data: Partial<DriverApplicationData>) => {
@@ -205,10 +273,86 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
   }
 
   const nextStep = () => {
+    // Validate current step before proceeding
+    const currentValidation = validateCurrentStep()
+    setValidation(currentValidation)
+
+    if (!currentValidation.isValid) {
+      const errorCount = currentValidation.errors.length
+      const errorText = errorCount === 1 ? 'error' : 'errors'
+      setError(
+        `Please fix ${errorCount} ${errorText} before proceeding to the next step.`
+      )
+      return
+    }
+
     if (currentStep < STEPS.length) {
       setCurrentStep(currentStep + 1)
       saveApplication()
     }
+  }
+
+  const validateCurrentStep = (): ValidationResult => {
+    // Import validation functions as needed
+    const {
+      validatePersonalInfo,
+      validateCDLInfo,
+      validateEmploymentHistory,
+      validateDrivingRecord,
+      validateMedicalInfo,
+      validateDrugAlcoholTesting,
+      validateTrainingRecords,
+      validateDrivingExperience,
+      validateSafetyCompliance,
+      validateReferences,
+    } = require('@/lib/validation')
+
+    let result: ValidationResult
+
+    switch (currentStep) {
+      case 1:
+        result = validatePersonalInfo(applicationData.personalInfo)
+        break
+      case 2:
+        result = validateCDLInfo(applicationData.cdlInfo)
+        break
+      case 3:
+        result = validateEmploymentHistory(applicationData.employmentHistory)
+        break
+      case 4:
+        result = validateDrivingRecord(applicationData.drivingRecord)
+        break
+      case 5:
+        result = validateMedicalInfo(applicationData.medicalInfo)
+        break
+      case 6:
+        result = validateDrugAlcoholTesting(applicationData.drugAlcoholTesting)
+        break
+      case 7:
+        result = validateTrainingRecords(applicationData.trainingRecords)
+        break
+      case 8:
+        result = validateDrivingExperience(applicationData.drivingExperience)
+        break
+      case 9:
+        result = validateSafetyCompliance(applicationData.safetyCompliance)
+        break
+      case 10:
+        result = validateReferences(applicationData.references)
+        break
+      default:
+        result = { isValid: true, errors: [], warnings: [] }
+    }
+
+    // Debug logging for all steps
+    console.log(`🔍 Step ${currentStep} Validation:`, {
+      step: currentStep,
+      isValid: result.isValid,
+      errors: result.errors,
+      warnings: result.warnings,
+    })
+
+    return result
   }
 
   const prevStep = () => {
@@ -218,12 +362,33 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
   }
 
   const completeApplication = async () => {
+    // Prevent duplicate submissions
+    if (isLoading || isCompleted) {
+      console.log(
+        '🔄 Application completion already in progress or completed, skipping...'
+      )
+      return
+    }
+
     try {
       setIsLoading(true)
       setError(null)
 
       if (!user?.address) {
         throw new Error('User not authenticated')
+      }
+
+      // Validate complete application
+      const completeValidation = validateCompleteApplication(applicationData)
+      setValidation(completeValidation)
+
+      if (!completeValidation.isValid) {
+        const errorCount = completeValidation.errors.length
+        const errorText = errorCount === 1 ? 'error' : 'errors'
+        setError(
+          `Please fix ${errorCount} ${errorText} before completing the application.`
+        )
+        return
       }
 
       // DOT Compliance Check
@@ -234,9 +399,109 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
         // Still allow completion but warn user
       }
 
-      await completeDriverApplicationClient(user.address, applicationData)
-      console.log('✅ Application completed successfully')
-      setSuccess('Application completed successfully!')
+      console.log('🎯 Starting application completion...')
+
+      // 1. Generate application hash
+      const applicationHash =
+        await generateApplicationHashAsync(applicationData)
+      console.log('🔐 Generated application hash:', applicationHash)
+
+      // 2. Check for duplicates
+      console.log('🔍 Checking for duplicate applications...')
+      const duplicateCheckResponse = await fetch(
+        '/api/driver-applications/check-duplicate-global',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userAddress: user.address,
+            applicationHash: applicationHash,
+          }),
+        }
+      )
+
+      if (!duplicateCheckResponse.ok) {
+        throw new Error('Failed to check for duplicates')
+      }
+
+      const duplicateCheck = await duplicateCheckResponse.json()
+      if (duplicateCheck.exists) {
+        setError(
+          `Duplicate application found (${duplicateCheck.duplicateType} level). This application has already been submitted. Please modify your application data before resubmitting.`
+        )
+        setIsLoading(false)
+        return
+      }
+
+      console.log('✅ No duplicates found, proceeding with submission')
+
+      // 3. Upload to IPFS
+      console.log('📤 Uploading application to IPFS...')
+      const ipfsHash = await uploadDriverApplicationToIPFS(applicationData)
+      console.log('✅ Application uploaded to IPFS:', ipfsHash)
+      setIpfsHash(ipfsHash)
+
+      // 4. Save to database with IPFS hash
+      await completeDriverApplicationClient(
+        user.address,
+        applicationData,
+        ipfsHash
+      )
+      console.log('✅ Application saved to database with IPFS hash')
+
+      // 5. Submit to blockchain via API route
+      try {
+        setBlockchainStatus('pending')
+        console.log('📝 Submitting to blockchain via API...')
+
+        const blockchainResponse = await fetch(
+          '/api/blockchain/submit-driver-application',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              applicationHash,
+              ipfsHash,
+            }),
+          }
+        )
+
+        const blockchainResult = await blockchainResponse.json()
+        console.log('📝 Blockchain API response:', blockchainResult)
+
+        if (!blockchainResponse.ok) {
+          console.error('❌ Blockchain API error details:', blockchainResult)
+          throw new Error(
+            blockchainResult.details ||
+              blockchainResult.error ||
+              'Blockchain API request failed'
+          )
+        }
+
+        console.log('✅ Blockchain submission result:', blockchainResult)
+
+        if (blockchainResult.success) {
+          setBlockchainApplicationId(blockchainResult.applicationId)
+          setBlockchainStatus('submitted')
+          setIsCompleted(true)
+          setSuccess(
+            `Application completed successfully! IPFS: ${ipfsHash}, Blockchain ID: ${blockchainResult.applicationId}`
+          )
+        } else {
+          throw new Error(
+            blockchainResult.error || 'Blockchain submission failed'
+          )
+        }
+      } catch (blockchainError) {
+        console.error('❌ Blockchain submission failed:', blockchainError)
+        setBlockchainStatus('error')
+
+        // Still mark as completed since database save succeeded
+        setIsCompleted(true)
+        setSuccess(
+          `Application completed and saved to database (IPFS: ${ipfsHash}). Blockchain submission failed - you can retry later.`
+        )
+      }
 
       // Clear success message after 5 seconds
       setTimeout(() => setSuccess(null), 5000)
@@ -285,6 +550,7 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
           <PersonalInfoStep
             data={applicationData.personalInfo}
             onChange={(data) => updateApplicationData('personalInfo', data)}
+            validation={validation}
           />
         )
       case 2:
@@ -308,6 +574,7 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
           <DrivingRecordStep
             data={applicationData.drivingRecord}
             onChange={(data) => updateApplicationData('drivingRecord', data)}
+            validation={validation}
           />
         )
       case 5:
@@ -315,6 +582,7 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
           <MedicalInfoStep
             data={applicationData.medicalInfo}
             onChange={(data) => updateApplicationData('medicalInfo', data)}
+            validation={validation}
           />
         )
       case 6:
@@ -324,6 +592,7 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
             onChange={(data) =>
               updateApplicationData('drugAlcoholTesting', data)
             }
+            validation={validation}
           />
         )
       case 7:
@@ -331,6 +600,7 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
           <TrainingRecordsStep
             data={applicationData.trainingRecords}
             onChange={(data) => updateApplicationData('trainingRecords', data)}
+            validation={validation}
           />
         )
       case 8:
@@ -340,6 +610,7 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
             onChange={(data) =>
               updateApplicationData('drivingExperience', data)
             }
+            validation={validation}
           />
         )
       case 9:
@@ -347,6 +618,7 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
           <SafetyComplianceStep
             data={applicationData.safetyCompliance}
             onChange={(data) => updateApplicationData('safetyCompliance', data)}
+            validation={validation}
           />
         )
       case 10:
@@ -354,6 +626,7 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
           <ReferencesStep
             data={applicationData.references}
             onChange={(data) => updateApplicationData('references', data)}
+            validation={validation}
           />
         )
       default:
@@ -462,13 +735,87 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
           </div>
 
           {currentStep === STEPS.length ? (
-            <button
-              onClick={completeApplication}
-              disabled={isLoading}
-              className='px-6 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed'
-            >
-              {isLoading ? 'Completing...' : 'Complete Application'}
-            </button>
+            <div>
+              <button
+                onClick={completeApplication}
+                disabled={isLoading || isCompleted}
+                className={`px-6 py-2 text-sm font-medium text-white border border-transparent rounded-md disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isCompleted
+                    ? 'bg-green-700 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                {isCompleted
+                  ? 'Application Completed!'
+                  : isLoading
+                    ? 'Completing...'
+                    : 'Complete Application'}
+              </button>
+
+              {/* Blockchain Status Indicator */}
+              {isCompleted && (
+                <div className='mt-4 p-4 bg-gray-50 rounded-lg border'>
+                  <h3 className='text-sm font-medium text-gray-900 mb-2'>
+                    Blockchain Status
+                  </h3>
+                  <div className='flex items-center space-x-2'>
+                    {blockchainStatus === 'pending' && (
+                      <>
+                        <div className='w-3 h-3 bg-yellow-400 rounded-full animate-pulse'></div>
+                        <span className='text-sm text-yellow-600'>
+                          Submitting to blockchain...
+                        </span>
+                      </>
+                    )}
+                    {blockchainStatus === 'submitted' && (
+                      <>
+                        <div className='w-3 h-3 bg-blue-500 rounded-full'></div>
+                        <span className='text-sm text-blue-600'>
+                          Submitted to blockchain (ID: {blockchainApplicationId}
+                          )
+                        </span>
+                      </>
+                    )}
+                    {blockchainStatus === 'verified' && (
+                      <>
+                        <div className='w-3 h-3 bg-green-500 rounded-full'></div>
+                        <span className='text-sm text-green-600'>
+                          Verified by DOT inspector
+                        </span>
+                      </>
+                    )}
+                    {blockchainStatus === 'rejected' && (
+                      <>
+                        <div className='w-3 h-3 bg-red-500 rounded-full'></div>
+                        <span className='text-sm text-red-600'>
+                          Rejected by DOT inspector
+                        </span>
+                      </>
+                    )}
+                    {blockchainStatus === 'error' && (
+                      <>
+                        <div className='w-3 h-3 bg-red-500 rounded-full'></div>
+                        <span className='text-sm text-red-600'>
+                          Blockchain submission failed
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  <p className='text-xs text-gray-500 mt-1'>
+                    Your application is stored immutably on the blockchain for
+                    verification.
+                    {ipfsHash && (
+                      <span className='block mt-1'>
+                        IPFS Hash:{' '}
+                        <code className='bg-gray-100 px-1 rounded text-xs'>
+                          {ipfsHash}
+                        </code>
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
           ) : (
             <button
               onClick={nextStep}

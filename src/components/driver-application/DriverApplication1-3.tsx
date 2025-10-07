@@ -1,212 +1,221 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { DriverApplicationData } from './types/driver-application.types'
+import { validatePersonalInfo, ValidationResult } from '@/lib/validation'
+import { FormInput, FormSelect } from './FormInput'
+import { ErrorDisplay } from './ErrorDisplay'
 
 // Personal Information Step Component
 interface PersonalInfoStepProps {
   data: DriverApplicationData['personalInfo']
   onChange: (data: Partial<DriverApplicationData['personalInfo']>) => void
+  validation?: ValidationResult
 }
 
 export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
   data,
   onChange,
+  validation,
 }) => {
+  const [localValidation, setLocalValidation] = useState<ValidationResult>({
+    isValid: true,
+    errors: [],
+    warnings: [],
+  })
+
+  // Validate on data change
+  useEffect(() => {
+    const validationResult = validatePersonalInfo(data)
+    setLocalValidation(validationResult)
+  }, [data])
+
+  const currentValidation = validation || localValidation
+
+  const stateOptions = [
+    { value: 'AL', label: 'Alabama' },
+    { value: 'AK', label: 'Alaska' },
+    { value: 'AZ', label: 'Arizona' },
+    { value: 'AR', label: 'Arkansas' },
+    { value: 'CA', label: 'California' },
+    { value: 'CO', label: 'Colorado' },
+    { value: 'CT', label: 'Connecticut' },
+    { value: 'DE', label: 'Delaware' },
+    { value: 'FL', label: 'Florida' },
+    { value: 'GA', label: 'Georgia' },
+    { value: 'HI', label: 'Hawaii' },
+    { value: 'ID', label: 'Idaho' },
+    { value: 'IL', label: 'Illinois' },
+    { value: 'IN', label: 'Indiana' },
+    { value: 'IA', label: 'Iowa' },
+    { value: 'KS', label: 'Kansas' },
+    { value: 'KY', label: 'Kentucky' },
+    { value: 'LA', label: 'Louisiana' },
+    { value: 'ME', label: 'Maine' },
+    { value: 'MD', label: 'Maryland' },
+    { value: 'MA', label: 'Massachusetts' },
+    { value: 'MI', label: 'Michigan' },
+    { value: 'MN', label: 'Minnesota' },
+    { value: 'MS', label: 'Mississippi' },
+    { value: 'MO', label: 'Missouri' },
+    { value: 'MT', label: 'Montana' },
+    { value: 'NE', label: 'Nebraska' },
+    { value: 'NV', label: 'Nevada' },
+    { value: 'NH', label: 'New Hampshire' },
+    { value: 'NJ', label: 'New Jersey' },
+    { value: 'NM', label: 'New Mexico' },
+    { value: 'NY', label: 'New York' },
+    { value: 'NC', label: 'North Carolina' },
+    { value: 'ND', label: 'North Dakota' },
+    { value: 'OH', label: 'Ohio' },
+    { value: 'OK', label: 'Oklahoma' },
+    { value: 'OR', label: 'Oregon' },
+    { value: 'PA', label: 'Pennsylvania' },
+    { value: 'RI', label: 'Rhode Island' },
+    { value: 'SC', label: 'South Carolina' },
+    { value: 'SD', label: 'South Dakota' },
+    { value: 'TN', label: 'Tennessee' },
+    { value: 'TX', label: 'Texas' },
+    { value: 'UT', label: 'Utah' },
+    { value: 'VT', label: 'Vermont' },
+    { value: 'VA', label: 'Virginia' },
+    { value: 'WA', label: 'Washington' },
+    { value: 'WV', label: 'West Virginia' },
+    { value: 'WI', label: 'Wisconsin' },
+    { value: 'WY', label: 'Wyoming' },
+  ]
   return (
     <div className='space-y-6'>
+      {/* Validation Summary */}
+      <ErrorDisplay validation={currentValidation} />
+
       <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            First Name *
-          </label>
-          <input
-            type='text'
-            value={data.firstName}
-            onChange={(e) => onChange({ firstName: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            placeholder='Enter your first name'
-          />
-        </div>
+        <FormInput
+          label='First Name'
+          name='firstName'
+          type='text'
+          value={data.firstName}
+          onChange={(value) => onChange({ firstName: value })}
+          placeholder='Enter your first name'
+          required
+          validation={currentValidation}
+        />
 
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            Last Name *
-          </label>
-          <input
-            type='text'
-            value={data.lastName}
-            onChange={(e) => onChange({ lastName: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            placeholder='Enter your last name'
-          />
-        </div>
+        <FormInput
+          label='Last Name'
+          name='lastName'
+          type='text'
+          value={data.lastName}
+          onChange={(value) => onChange({ lastName: value })}
+          placeholder='Enter your last name'
+          required
+          validation={currentValidation}
+        />
 
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            Middle Name
-          </label>
-          <input
-            type='text'
-            value={data.middleName}
-            onChange={(e) => onChange({ middleName: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            placeholder='Enter your middle name'
-          />
-        </div>
+        <FormInput
+          label='Middle Name'
+          name='middleName'
+          type='text'
+          value={data.middleName}
+          onChange={(value) => onChange({ middleName: value })}
+          placeholder='Enter your middle name'
+          validation={currentValidation}
+        />
 
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            Social Security Number *
-          </label>
-          <input
-            type='text'
-            value={data.ssn}
-            onChange={(e) => onChange({ ssn: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            placeholder='XXX-XX-XXXX'
-          />
-        </div>
+        <FormInput
+          label='Social Security Number'
+          name='ssn'
+          type='text'
+          value={data.ssn}
+          onChange={(value) => onChange({ ssn: value })}
+          placeholder='XXX-XX-XXXX'
+          required
+          validation={currentValidation}
+          helpText='Format: XXX-XX-XXXX'
+        />
 
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            Date of Birth *
-          </label>
-          <input
-            type='date'
-            value={data.dateOfBirth}
-            onChange={(e) => onChange({ dateOfBirth: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-          />
-        </div>
+        <FormInput
+          label='Date of Birth'
+          name='dateOfBirth'
+          type='date'
+          value={data.dateOfBirth}
+          onChange={(value) => onChange({ dateOfBirth: value })}
+          required
+          validation={currentValidation}
+          helpText='Must be at least 18 years old'
+        />
 
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            Phone Number *
-          </label>
-          <input
-            type='tel'
-            value={data.phone}
-            onChange={(e) => onChange({ phone: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            placeholder='(XXX) XXX-XXXX'
-          />
-        </div>
+        <FormInput
+          label='Phone Number'
+          name='phone'
+          type='tel'
+          value={data.phone}
+          onChange={(value) => onChange({ phone: value })}
+          placeholder='(XXX) XXX-XXXX'
+          required
+          validation={currentValidation}
+          helpText='Format: (XXX) XXX-XXXX'
+        />
 
         <div className='md:col-span-2'>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            Email Address *
-          </label>
-          <input
+          <FormInput
+            label='Email Address'
+            name='email'
             type='email'
             value={data.email}
-            onChange={(e) => onChange({ email: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            onChange={(value) => onChange({ email: value })}
             placeholder='Enter your email address'
+            required
+            validation={currentValidation}
           />
         </div>
 
         <div className='md:col-span-2'>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            Address *
-          </label>
-          <input
+          <FormInput
+            label='Address'
+            name='address'
             type='text'
             value={data.address}
-            onChange={(e) => onChange({ address: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            onChange={(value) => onChange({ address: value })}
             placeholder='Enter your street address'
+            required
+            validation={currentValidation}
           />
         </div>
 
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            City *
-          </label>
-          <input
-            type='text'
-            value={data.city}
-            onChange={(e) => onChange({ city: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            placeholder='Enter your city'
-          />
-        </div>
+        <FormInput
+          label='City'
+          name='city'
+          type='text'
+          value={data.city}
+          onChange={(value) => onChange({ city: value })}
+          placeholder='Enter your city'
+          required
+          validation={currentValidation}
+        />
 
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            State *
-          </label>
-          <select
-            value={data.state}
-            onChange={(e) => onChange({ state: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-          >
-            <option value=''>Select state</option>
-            <option value='AL'>Alabama</option>
-            <option value='AK'>Alaska</option>
-            <option value='AZ'>Arizona</option>
-            <option value='AR'>Arkansas</option>
-            <option value='CA'>California</option>
-            <option value='CO'>Colorado</option>
-            <option value='CT'>Connecticut</option>
-            <option value='DE'>Delaware</option>
-            <option value='FL'>Florida</option>
-            <option value='GA'>Georgia</option>
-            <option value='HI'>Hawaii</option>
-            <option value='ID'>Idaho</option>
-            <option value='IL'>Illinois</option>
-            <option value='IN'>Indiana</option>
-            <option value='IA'>Iowa</option>
-            <option value='KS'>Kansas</option>
-            <option value='KY'>Kentucky</option>
-            <option value='LA'>Louisiana</option>
-            <option value='ME'>Maine</option>
-            <option value='MD'>Maryland</option>
-            <option value='MA'>Massachusetts</option>
-            <option value='MI'>Michigan</option>
-            <option value='MN'>Minnesota</option>
-            <option value='MS'>Mississippi</option>
-            <option value='MO'>Missouri</option>
-            <option value='MT'>Montana</option>
-            <option value='NE'>Nebraska</option>
-            <option value='NV'>Nevada</option>
-            <option value='NH'>New Hampshire</option>
-            <option value='NJ'>New Jersey</option>
-            <option value='NM'>New Mexico</option>
-            <option value='NY'>New York</option>
-            <option value='NC'>North Carolina</option>
-            <option value='ND'>North Dakota</option>
-            <option value='OH'>Ohio</option>
-            <option value='OK'>Oklahoma</option>
-            <option value='OR'>Oregon</option>
-            <option value='PA'>Pennsylvania</option>
-            <option value='RI'>Rhode Island</option>
-            <option value='SC'>South Carolina</option>
-            <option value='SD'>South Dakota</option>
-            <option value='TN'>Tennessee</option>
-            <option value='TX'>Texas</option>
-            <option value='UT'>Utah</option>
-            <option value='VT'>Vermont</option>
-            <option value='VA'>Virginia</option>
-            <option value='WA'>Washington</option>
-            <option value='WV'>West Virginia</option>
-            <option value='WI'>Wisconsin</option>
-            <option value='WY'>Wyoming</option>
-          </select>
-        </div>
+        <FormSelect
+          label='State'
+          name='state'
+          value={data.state}
+          onChange={(value) => onChange({ state: value })}
+          options={stateOptions}
+          placeholder='Select state'
+          required
+          validation={currentValidation}
+        />
 
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            ZIP Code *
-          </label>
-          <input
-            type='text'
-            value={data.zipCode}
-            onChange={(e) => onChange({ zipCode: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            placeholder='XXXXX'
-          />
-        </div>
+        <FormInput
+          label='ZIP Code'
+          name='zipCode'
+          type='text'
+          value={data.zipCode}
+          onChange={(value) => onChange({ zipCode: value })}
+          placeholder='XXXXX'
+          required
+          validation={currentValidation}
+          helpText='Format: XXXXX or XXXXX-XXXX'
+        />
       </div>
 
       {/* Emergency Contact */}
@@ -215,65 +224,60 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           Emergency Contact
         </h4>
         <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-2'>
-              Contact Name *
-            </label>
-            <input
-              type='text'
-              value={data.emergencyContact.name}
-              onChange={(e) =>
-                onChange({
-                  emergencyContact: {
-                    ...data.emergencyContact,
-                    name: e.target.value,
-                  },
-                })
-              }
-              className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-              placeholder='Enter emergency contact name'
-            />
-          </div>
+          <FormInput
+            label='Contact Name'
+            name='emergencyContact.name'
+            type='text'
+            value={data.emergencyContact.name}
+            onChange={(value) =>
+              onChange({
+                emergencyContact: {
+                  ...data.emergencyContact,
+                  name: value,
+                },
+              })
+            }
+            placeholder='Enter emergency contact name'
+            required
+            validation={currentValidation}
+          />
 
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-2'>
-              Relationship *
-            </label>
-            <input
-              type='text'
-              value={data.emergencyContact.relationship}
-              onChange={(e) =>
-                onChange({
-                  emergencyContact: {
-                    ...data.emergencyContact,
-                    relationship: e.target.value,
-                  },
-                })
-              }
-              className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-              placeholder='e.g., Spouse, Parent, Sibling'
-            />
-          </div>
+          <FormInput
+            label='Relationship'
+            name='emergencyContact.relationship'
+            type='text'
+            value={data.emergencyContact.relationship}
+            onChange={(value) =>
+              onChange({
+                emergencyContact: {
+                  ...data.emergencyContact,
+                  relationship: value,
+                },
+              })
+            }
+            placeholder='e.g., Spouse, Parent, Sibling'
+            required
+            validation={currentValidation}
+          />
 
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-2'>
-              Contact Phone *
-            </label>
-            <input
-              type='tel'
-              value={data.emergencyContact.phone}
-              onChange={(e) =>
-                onChange({
-                  emergencyContact: {
-                    ...data.emergencyContact,
-                    phone: e.target.value,
-                  },
-                })
-              }
-              className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-              placeholder='(XXX) XXX-XXXX'
-            />
-          </div>
+          <FormInput
+            label='Contact Phone'
+            name='emergencyContact.phone'
+            type='tel'
+            value={data.emergencyContact.phone}
+            onChange={(value) =>
+              onChange({
+                emergencyContact: {
+                  ...data.emergencyContact,
+                  phone: value,
+                },
+              })
+            }
+            placeholder='(XXX) XXX-XXXX'
+            required
+            validation={currentValidation}
+            helpText='Format: (XXX) XXX-XXXX'
+          />
         </div>
       </div>
     </div>
@@ -525,142 +529,143 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
         </div>
       )}
 
-      {data.map((employment, index) => (
-        <div key={index} className='border border-gray-200 rounded-lg p-4'>
-          <div className='flex justify-between items-center mb-4'>
-            <h5 className='font-medium text-gray-900'>
-              Employment #{index + 1}
-            </h5>
-            <button
-              type='button'
-              onClick={() => removeEmployment(index)}
-              className='text-red-600 hover:text-red-800 text-sm'
-            >
-              Remove
-            </button>
+      {Array.isArray(data) &&
+        data.map((employment, index) => (
+          <div key={index} className='border border-gray-200 rounded-lg p-4'>
+            <div className='flex justify-between items-center mb-4'>
+              <h5 className='font-medium text-gray-900'>
+                Employment #{index + 1}
+              </h5>
+              <button
+                type='button'
+                onClick={() => removeEmployment(index)}
+                className='text-red-600 hover:text-red-800 text-sm'
+              >
+                Remove
+              </button>
+            </div>
+
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Company Name *
+                </label>
+                <input
+                  type='text'
+                  value={employment.company}
+                  onChange={(e) =>
+                    updateEmployment(index, 'company', e.target.value)
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  placeholder='Enter company name'
+                />
+              </div>
+
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Position *
+                </label>
+                <input
+                  type='text'
+                  value={employment.position}
+                  onChange={(e) =>
+                    updateEmployment(index, 'position', e.target.value)
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  placeholder='Enter position title'
+                />
+              </div>
+
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Start Date *
+                </label>
+                <input
+                  type='date'
+                  value={employment.startDate}
+                  onChange={(e) =>
+                    updateEmployment(index, 'startDate', e.target.value)
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                />
+              </div>
+
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  End Date
+                </label>
+                <input
+                  type='date'
+                  value={employment.endDate}
+                  onChange={(e) =>
+                    updateEmployment(index, 'endDate', e.target.value)
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                />
+              </div>
+
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Supervisor Name
+                </label>
+                <input
+                  type='text'
+                  value={employment.supervisorName}
+                  onChange={(e) =>
+                    updateEmployment(index, 'supervisorName', e.target.value)
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  placeholder='Enter supervisor name'
+                />
+              </div>
+
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Supervisor Phone
+                </label>
+                <input
+                  type='tel'
+                  value={employment.supervisorPhone}
+                  onChange={(e) =>
+                    updateEmployment(index, 'supervisorPhone', e.target.value)
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  placeholder='(XXX) XXX-XXXX'
+                />
+              </div>
+
+              <div className='md:col-span-2'>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Reason for Leaving
+                </label>
+                <input
+                  type='text'
+                  value={employment.reasonForLeaving}
+                  onChange={(e) =>
+                    updateEmployment(index, 'reasonForLeaving', e.target.value)
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  placeholder='Enter reason for leaving'
+                />
+              </div>
+
+              <div className='md:col-span-2'>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Job Duties
+                </label>
+                <textarea
+                  value={employment.duties}
+                  onChange={(e) =>
+                    updateEmployment(index, 'duties', e.target.value)
+                  }
+                  rows={3}
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  placeholder='Describe your job duties and responsibilities'
+                />
+              </div>
+            </div>
           </div>
-
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Company Name *
-              </label>
-              <input
-                type='text'
-                value={employment.company}
-                onChange={(e) =>
-                  updateEmployment(index, 'company', e.target.value)
-                }
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                placeholder='Enter company name'
-              />
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Position *
-              </label>
-              <input
-                type='text'
-                value={employment.position}
-                onChange={(e) =>
-                  updateEmployment(index, 'position', e.target.value)
-                }
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                placeholder='Enter position title'
-              />
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Start Date *
-              </label>
-              <input
-                type='date'
-                value={employment.startDate}
-                onChange={(e) =>
-                  updateEmployment(index, 'startDate', e.target.value)
-                }
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-              />
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                End Date
-              </label>
-              <input
-                type='date'
-                value={employment.endDate}
-                onChange={(e) =>
-                  updateEmployment(index, 'endDate', e.target.value)
-                }
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-              />
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Supervisor Name
-              </label>
-              <input
-                type='text'
-                value={employment.supervisorName}
-                onChange={(e) =>
-                  updateEmployment(index, 'supervisorName', e.target.value)
-                }
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                placeholder='Enter supervisor name'
-              />
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Supervisor Phone
-              </label>
-              <input
-                type='tel'
-                value={employment.supervisorPhone}
-                onChange={(e) =>
-                  updateEmployment(index, 'supervisorPhone', e.target.value)
-                }
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                placeholder='(XXX) XXX-XXXX'
-              />
-            </div>
-
-            <div className='md:col-span-2'>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Reason for Leaving
-              </label>
-              <input
-                type='text'
-                value={employment.reasonForLeaving}
-                onChange={(e) =>
-                  updateEmployment(index, 'reasonForLeaving', e.target.value)
-                }
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                placeholder='Enter reason for leaving'
-              />
-            </div>
-
-            <div className='md:col-span-2'>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Job Duties
-              </label>
-              <textarea
-                value={employment.duties}
-                onChange={(e) =>
-                  updateEmployment(index, 'duties', e.target.value)
-                }
-                rows={3}
-                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                placeholder='Describe your job duties and responsibilities'
-              />
-            </div>
-          </div>
-        </div>
-      ))}
+        ))}
 
       <div className='bg-blue-50 border border-blue-200 rounded-md p-4'>
         <h5 className='font-medium text-blue-900 mb-2'>DOT Requirements</h5>

@@ -10,8 +10,9 @@
         "settings": {
           "optimizer": {
             "enabled": true,
-            "runs": 200
+            "runs": 1
           },
+          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -51,8 +52,9 @@
         "settings": {
           "optimizer": {
             "enabled": true,
-            "runs": 200
+            "runs": 1
           },
+          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -89,8 +91,9 @@
         "settings": {
           "optimizer": {
             "enabled": true,
-            "runs": 200
+            "runs": 1
           },
+          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -125,8 +128,9 @@
         "settings": {
           "optimizer": {
             "enabled": true,
-            "runs": 200
+            "runs": 1
           },
+          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -163,8 +167,9 @@
         "settings": {
           "optimizer": {
             "enabled": true,
-            "runs": 200
+            "runs": 1
           },
+          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -203,8 +208,9 @@
         "settings": {
           "optimizer": {
             "enabled": true,
-            "runs": 200
+            "runs": 1
           },
+          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -239,8 +245,9 @@
         "settings": {
           "optimizer": {
             "enabled": true,
-            "runs": 200
+            "runs": 1
           },
+          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -277,8 +284,9 @@
         "settings": {
           "optimizer": {
             "enabled": true,
-            "runs": 200
+            "runs": 1
           },
+          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -313,8 +321,9 @@
         "settings": {
           "optimizer": {
             "enabled": true,
-            "runs": 200
+            "runs": 1
           },
+          "viaIR": true,
           "evmVersion": "paris",
           "outputSelection": {
             "*": {
@@ -338,6 +347,47 @@
       ],
       "artifacts": [
         "IERC165"
+      ]
+    },
+    "C:\\Users\\blaha\\Desktop\\resume-wallet\\contracts\\ProductionDriverRegistry.sol": {
+      "lastModificationDate": 1759855874415,
+      "contentHash": "dd8c17c7f1bb75c3b014bcc235810068",
+      "sourceName": "contracts/ProductionDriverRegistry.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/access/AccessControl.sol",
+        "@openzeppelin/contracts/utils/Pausable.sol",
+        "@openzeppelin/contracts/utils/ReentrancyGuard.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "ProductionDriverRegistry"
       ]
     }
   }

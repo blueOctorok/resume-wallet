@@ -1,18 +1,37 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { DriverApplicationData } from './types/driver-application.types'
+import { validateMedicalInfo, ValidationResult } from '@/lib/validation'
+import { FormInput, FormSelect } from './FormInput'
+import { ErrorDisplay } from './ErrorDisplay'
 
 // Driving Record Step Component
 interface DrivingRecordStepProps {
   data: DriverApplicationData['drivingRecord']
   onChange: (data: DriverApplicationData['drivingRecord']) => void
+  validation?: ValidationResult
 }
 
 export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
   data,
   onChange,
+  validation,
 }) => {
+  const [localValidation, setLocalValidation] = useState<ValidationResult>({
+    isValid: true,
+    errors: [],
+    warnings: [],
+  })
+
+  // Validate on data change
+  useEffect(() => {
+    const { validateDrivingRecord } = require('@/lib/validation')
+    const validationResult = validateDrivingRecord(data)
+    setLocalValidation(validationResult)
+  }, [data])
+
+  const currentValidation = validation || localValidation
   const addViolation = () => {
     const newViolation = {
       date: '',
@@ -65,6 +84,9 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
 
   return (
     <div className='space-y-8'>
+      {/* Validation Summary */}
+      <ErrorDisplay validation={currentValidation} />
+
       {/* Traffic Violations Section */}
       <div>
         <div className='flex justify-between items-center mb-4'>
@@ -327,66 +349,78 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
 interface MedicalInfoStepProps {
   data: DriverApplicationData['medicalInfo']
   onChange: (data: Partial<DriverApplicationData['medicalInfo']>) => void
+  validation?: ValidationResult
 }
 
 export const MedicalInfoStep: React.FC<MedicalInfoStepProps> = ({
   data,
   onChange,
+  validation,
 }) => {
+  const [localValidation, setLocalValidation] = useState<ValidationResult>({
+    isValid: true,
+    errors: [],
+    warnings: [],
+  })
+
+  // Validate on data change
+  useEffect(() => {
+    const validationResult = validateMedicalInfo(data)
+    setLocalValidation(validationResult)
+  }, [data])
+
+  const currentValidation = validation || localValidation
+
   return (
     <div className='space-y-6'>
+      {/* Validation Summary */}
+      <ErrorDisplay validation={currentValidation} />
+
       <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            Medical Exam Date *
-          </label>
-          <input
-            type='date'
-            value={data.medicalExamDate}
-            onChange={(e) => onChange({ medicalExamDate: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-          />
-        </div>
+        <FormInput
+          label='Medical Exam Date'
+          name='medicalExamDate'
+          type='date'
+          value={data.medicalExamDate}
+          onChange={(value) => onChange({ medicalExamDate: value })}
+          required
+          validation={currentValidation}
+          helpText='Date of your most recent DOT medical examination'
+        />
 
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            Medical Exam Expiration *
-          </label>
-          <input
-            type='date'
-            value={data.medicalExamExpiration}
-            onChange={(e) =>
-              onChange({ medicalExamExpiration: e.target.value })
-            }
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-          />
-        </div>
+        <FormInput
+          label='Medical Exam Expiration'
+          name='medicalExamExpiration'
+          type='date'
+          value={data.medicalExamExpiration}
+          onChange={(value) => onChange({ medicalExamExpiration: value })}
+          required
+          validation={currentValidation}
+          helpText='Expiration date of your medical certificate'
+        />
 
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            Medical Examiner Name
-          </label>
-          <input
-            type='text'
-            value={data.medicalExaminerName}
-            onChange={(e) => onChange({ medicalExaminerName: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            placeholder='Enter examiner name'
-          />
-        </div>
+        <FormInput
+          label='Medical Examiner Name'
+          name='medicalExaminerName'
+          type='text'
+          value={data.medicalExaminerName}
+          onChange={(value) => onChange({ medicalExaminerName: value })}
+          placeholder='Enter examiner name'
+          required
+          validation={currentValidation}
+        />
 
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            Medical Examiner Phone
-          </label>
-          <input
-            type='tel'
-            value={data.medicalExaminerPhone}
-            onChange={(e) => onChange({ medicalExaminerPhone: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            placeholder='(XXX) XXX-XXXX'
-          />
-        </div>
+        <FormInput
+          label='Medical Examiner Phone'
+          name='medicalExaminerPhone'
+          type='tel'
+          value={data.medicalExaminerPhone}
+          onChange={(value) => onChange({ medicalExaminerPhone: value })}
+          placeholder='(XXX) XXX-XXXX'
+          required
+          validation={currentValidation}
+          helpText='Format: (XXX) XXX-XXXX'
+        />
       </div>
 
       {/* Vision Test */}
@@ -506,69 +540,83 @@ export const MedicalInfoStep: React.FC<MedicalInfoStepProps> = ({
 interface DrugAlcoholTestingStepProps {
   data: DriverApplicationData['drugAlcoholTesting']
   onChange: (data: Partial<DriverApplicationData['drugAlcoholTesting']>) => void
+  validation?: ValidationResult
 }
 
 export const DrugAlcoholTestingStep: React.FC<DrugAlcoholTestingStepProps> = ({
   data,
   onChange,
+  validation,
 }) => {
+  const [localValidation, setLocalValidation] = useState<ValidationResult>({
+    isValid: true,
+    errors: [],
+    warnings: [],
+  })
+
+  // Validate on data change
+  useEffect(() => {
+    const { validateDrugAlcoholTesting } = require('@/lib/validation')
+    const validationResult = validateDrugAlcoholTesting(data)
+    setLocalValidation(validationResult)
+  }, [data])
+
+  const currentValidation = validation || localValidation
+
   return (
     <div className='space-y-6'>
+      {/* Validation Summary */}
+      <ErrorDisplay validation={currentValidation} />
+
       <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            Last Test Date *
-          </label>
-          <input
-            type='date'
-            value={data.lastTestDate}
-            onChange={(e) => onChange({ lastTestDate: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-          />
-        </div>
+        <FormInput
+          label='Last Test Date'
+          name='lastTestDate'
+          type='date'
+          value={data.lastTestDate}
+          onChange={(value) => onChange({ lastTestDate: value })}
+          required
+          validation={currentValidation}
+          helpText='Date of your most recent DOT drug/alcohol test'
+        />
 
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            Test Result *
-          </label>
-          <select
-            value={data.testResult}
-            onChange={(e) => onChange({ testResult: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-          >
-            <option value=''>Select result</option>
-            <option value='Negative'>Negative</option>
-            <option value='Positive'>Positive</option>
-            <option value='Refused'>Refused</option>
-            <option value='Other'>Other</option>
-          </select>
-        </div>
+        <FormSelect
+          label='Test Result'
+          name='testResult'
+          value={data.testResult}
+          onChange={(value) => onChange({ testResult: value })}
+          options={[
+            { value: 'Negative', label: 'Negative' },
+            { value: 'Positive', label: 'Positive' },
+            { value: 'Refused', label: 'Refused' },
+            { value: 'Other', label: 'Other' },
+          ]}
+          placeholder='Select result'
+          required
+          validation={currentValidation}
+        />
 
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            Testing Company
-          </label>
-          <input
-            type='text'
-            value={data.testingCompany}
-            onChange={(e) => onChange({ testingCompany: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            placeholder='Enter testing company name'
-          />
-        </div>
+        <FormInput
+          label='Testing Company'
+          name='testingCompany'
+          type='text'
+          value={data.testingCompany}
+          onChange={(value) => onChange({ testingCompany: value })}
+          placeholder='Enter testing company name'
+          required
+          validation={currentValidation}
+        />
 
-        <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            Testing Company Phone
-          </label>
-          <input
-            type='tel'
-            value={data.testingCompanyPhone}
-            onChange={(e) => onChange({ testingCompanyPhone: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-            placeholder='(XXX) XXX-XXXX'
-          />
-        </div>
+        <FormInput
+          label='Testing Company Phone'
+          name='testingCompanyPhone'
+          type='tel'
+          value={data.testingCompanyPhone}
+          onChange={(value) => onChange({ testingCompanyPhone: value })}
+          placeholder='(XXX) XXX-XXXX'
+          validation={currentValidation}
+          helpText='Format: (XXX) XXX-XXXX'
+        />
       </div>
 
       <div className='bg-red-50 border border-red-200 rounded-md p-4'>
