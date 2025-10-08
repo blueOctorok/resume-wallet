@@ -1,1 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap');
 @import 'tailwindcss';
+
+/* Custom CSS Variables for Brand Colors */
+:root {
+  /* Light theme colors - Green Sage Palette */
+  --brand-sage: #818f81;
+  --brand-sage-light: #adc2a9;
+  --brand-mint: #d3e4cd;
+  --brand-cream: #fef5ed;
+
+  /* Primary font */
+  --primary-font: 'Quicksand', system-ui, -apple-system, sans-serif;
+}
+
+/* Dark theme colors - INVERTED using same 4 colors */
+.dark {
+  --brand-sage: #fef5ed; /* Cream becomes text (light) */
+  --brand-sage-light: #d3e4cd; /* Mint becomes secondary text */
+  --brand-mint: #adc2a9; /* Light sage becomes accents */
+  --brand-cream: #818f81; /* Dark sage becomes background */
+}
+
+/* Base Styles */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--primary-font);
+  background-color: var(--brand-cream);
+  color: var(--brand-sage);
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--brand-cream);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--brand-mint);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-sage-light);
+}

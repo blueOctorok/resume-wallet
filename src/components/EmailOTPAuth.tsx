@@ -296,7 +296,7 @@ export default function MultiMethodAuth({
   // Show authenticated state
   if (isConnected && user) {
     return (
-      <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
+      <div className='bg-brand-cream p-6 rounded-lg shadow-sm border border-brand-mint/20'>
         {/* Session Warning */}
         {showSessionWarning && (
           <div className='bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4'>
@@ -403,7 +403,7 @@ export default function MultiMethodAuth({
       <p className='text-gray-600 mb-4'>{content.subtitle}</p>
 
       {/* Use Alchemy's AuthCard component for proper multi-method authentication */}
-      <div className='flex flex-row p-4 bg-white border border-gray-200 rounded-lg'>
+      <div className='flex flex-row p-4 bg-brand-cream border border-brand-mint/20 rounded-lg'>
         <AuthCard />
       </div>
 

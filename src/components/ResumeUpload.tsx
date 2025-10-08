@@ -180,7 +180,7 @@ export default function ResumeUpload({ user }: ResumeUploadProps) {
   }
 
   return (
-    <div className='w-full max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-sm border border-gray-200'>
+    <div className='w-full max-w-2xl mx-auto p-6 bg-brand-cream rounded-lg shadow-sm border border-brand-mint/20'>
       <div className='mb-6'>
         <h2 className='text-2xl font-semibold text-gray-900 mb-2'>
           Upload Resume
@@ -330,7 +330,7 @@ export default function ResumeUpload({ user }: ResumeUploadProps) {
             <button
               type='button'
               onClick={resetForm}
-              className='px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+              className='px-4 py-2 border border-brand-mint/30 rounded-md shadow-sm text-sm font-medium text-brand-sage bg-brand-cream hover:bg-brand-mint/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-mint'
             >
               Upload Another
             </button>

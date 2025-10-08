@@ -6,12 +6,12 @@ const ResumeUploadWithVerification = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
+      <div className='bg-brand-cream p-6 rounded-xl shadow-lg border border-brand-mint/20'>
         <div className='animate-pulse'>
-          <div className='h-6 bg-gray-200 rounded mb-4'></div>
-          <div className='h-4 bg-gray-200 rounded mb-4'></div>
-          <div className='h-10 bg-gray-200 rounded mb-4'></div>
-          <div className='h-32 bg-gray-200 rounded'></div>
+          <div className='h-6 bg-brand-mint/20 rounded mb-4'></div>
+          <div className='h-4 bg-brand-mint/20 rounded mb-4'></div>
+          <div className='h-10 bg-brand-mint/20 rounded mb-4'></div>
+          <div className='h-32 bg-brand-mint/20 rounded'></div>
         </div>
       </div>
     ),
@@ -26,11 +26,11 @@ import DriverApplication from '@/components/DriverApplication'
 const MultiMethodAuth = dynamic(() => import('@/components/EmailOTPAuth'), {
   ssr: false,
   loading: () => (
-    <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
+    <div className='bg-brand-cream p-6 rounded-xl shadow-lg border border-brand-mint/20'>
       <div className='animate-pulse'>
-        <div className='h-6 bg-gray-200 rounded mb-4'></div>
-        <div className='h-4 bg-gray-200 rounded mb-4'></div>
-        <div className='h-10 bg-gray-200 rounded'></div>
+        <div className='h-6 bg-brand-mint/20 rounded mb-4'></div>
+        <div className='h-4 bg-brand-mint/20 rounded mb-4'></div>
+        <div className='h-10 bg-brand-mint/20 rounded'></div>
       </div>
     </div>
   ),
@@ -42,6 +42,7 @@ import TransactionHistory from '@/components/TransactionHistory'
 import SimulationAPITest from '@/components/SimulationAPITest'
 import WebhookTest from '@/components/WebhookTest'
 import QuickStats from '@/components/QuickStats'
+import ThemeToggle from '@/components/ThemeToggle'
 
 const Home = () => {
   const [user, setUser] = useState<any>(null)
@@ -53,18 +54,24 @@ const Home = () => {
   }, [])
 
   return (
-    <div className='min-h-screen bg-gray-50'>
+    <div className='min-h-screen bg-brand-cream'>
       {/* Header */}
-      <header className='bg-white shadow-sm border-b border-gray-200'>
+      <header className='bg-brand-cream dark:bg-brand-sage shadow-lg border-b-2 border-brand-mint dark:border-brand-mint/50'>
         <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-          <div className='flex justify-between items-center py-6'>
+          <div className='flex justify-between items-center py-8'>
             <div>
-              <h1 className='text-3xl font-bold text-gray-900'>
+              <h1 className='text-4xl font-bold bg-gradient-to-r from-brand-sage to-brand-sage-light bg-clip-text text-transparent'>
                 DriverAppChain
               </h1>
-              <p className='text-gray-600'>
+              <p className='text-brand-sage-light dark:text-brand-sage-light text-lg font-medium'>
                 AI-powered, blockchain-verified employment platform
               </p>
+            </div>
+            <div className='hidden md:flex items-center space-x-4'>
+              <ThemeToggle />
+              <div className='w-12 h-12 bg-gradient-to-br from-brand-mint to-brand-sage-light rounded-full flex items-center justify-center'>
+                <span className='text-white font-bold text-xl'>DA</span>
+              </div>
             </div>
           </div>
         </div>
@@ -81,19 +88,20 @@ const Home = () => {
             {/* User-specific Stats (only shown when logged in) */}
             <QuickStats userAddress={user?.address} />
 
-            <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
-              <h3 className='text-lg font-medium text-gray-900 mb-4'>
+            <div className='bg-brand-cream dark:bg-brand-sage p-6 rounded-xl shadow-lg border border-brand-mint/20 dark:border-brand-mint/10'>
+              <h3 className='text-lg font-semibold text-brand-sage dark:text-brand-sage mb-4 flex items-center'>
+                <span className='w-2 h-2 bg-brand-mint rounded-full mr-2'></span>
                 Quick Actions
               </h3>
               <div className='space-y-3'>
-                <button className='w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md'>
-                  View My Resumes
+                <button className='w-full text-left px-4 py-3 text-sm text-brand-sage dark:text-brand-sage hover:bg-brand-cream dark:hover:bg-brand-cream rounded-lg transition-colors duration-200 border border-transparent hover:border-brand-mint/30 dark:hover:border-brand-mint/20'>
+                  📄 View My Resumes
                 </button>
-                <button className='w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md'>
-                  Update Profile
+                <button className='w-full text-left px-4 py-3 text-sm text-brand-sage dark:text-brand-sage hover:bg-brand-cream dark:hover:bg-brand-cream rounded-lg transition-colors duration-200 border border-transparent hover:border-brand-mint/30 dark:hover:border-brand-mint/20'>
+                  👤 Update Profile
                 </button>
-                <button className='w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md'>
-                  Browse Jobs
+                <button className='w-full text-left px-4 py-3 text-sm text-brand-sage dark:text-brand-sage hover:bg-brand-cream dark:hover:bg-brand-cream rounded-lg transition-colors duration-200 border border-transparent hover:border-brand-mint/30 dark:hover:border-brand-mint/20'>
+                  🔍 Browse Jobs
                 </button>
               </div>
             </div>
@@ -101,14 +109,28 @@ const Home = () => {
 
           {/* Main Content Area */}
           <div className='lg:col-span-2'>
-            <div className='mb-6'>
-              <h2 className='text-2xl font-bold text-gray-900 mb-2'>
-                Welcome to DriverAppChain
+            <div className='mb-8 p-6 bg-gradient-to-r from-brand-cream/90 to-brand-sage-light/80 dark:from-brand-mint/5 dark:to-brand-cream/10 rounded-xl border border-brand-cream/50 dark:border-brand-mint/10'>
+              <h2 className='text-3xl font-bold text-brand-sage dark:text-brand-sage mb-3'>
+                Welcome to DriverAppChain 🚛
               </h2>
-              <p className='text-gray-600'>
+              <p className='text-brand-sage-light dark:text-brand-sage-light text-lg'>
                 Upload your resume to get started with AI-powered job matching
                 and blockchain verification.
               </p>
+              <div className='mt-4 flex items-center space-x-4 text-sm text-brand-sage-light dark:text-brand-sage-light'>
+                <span className='flex items-center'>
+                  <span className='w-2 h-2 bg-brand-mint rounded-full mr-2'></span>
+                  AI-Powered Matching
+                </span>
+                <span className='flex items-center'>
+                  <span className='w-2 h-2 bg-brand-mint rounded-full mr-2'></span>
+                  Blockchain Verified
+                </span>
+                <span className='flex items-center'>
+                  <span className='w-2 h-2 bg-brand-mint rounded-full mr-2'></span>
+                  Secure & Private
+                </span>
+              </div>
             </div>
 
             {/* Resume Upload with Full Verification */}

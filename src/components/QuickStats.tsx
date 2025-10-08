@@ -73,7 +73,7 @@ export default function QuickStats({ userAddress }: QuickStatsProps) {
 
   if (loading && !stats) {
     return (
-      <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
+      <div className='bg-brand-cream p-6 rounded-lg shadow-sm border border-brand-mint/20'>
         <h3 className='text-lg font-medium text-gray-900 mb-4'>Your Stats</h3>
         <div className='space-y-3'>
           {[...Array(3)].map((_, i) => (
@@ -89,7 +89,7 @@ export default function QuickStats({ userAddress }: QuickStatsProps) {
 
   if (error) {
     return (
-      <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
+      <div className='bg-brand-cream p-6 rounded-lg shadow-sm border border-brand-mint/20'>
         <h3 className='text-lg font-medium text-gray-900 mb-4'>Your Stats</h3>
         <div className='text-center py-4'>
           <p className='text-red-600 text-sm mb-2'>Failed to load stats</p>
