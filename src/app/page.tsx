@@ -46,6 +46,7 @@ import ThemeToggle from '@/components/ThemeToggle'
 
 const Home = () => {
   const [user, setUser] = useState<any>(null)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   // Stable callback to prevent infinite loops
   const handleAuthSuccess = useCallback((userData: any) => {
@@ -56,35 +57,67 @@ const Home = () => {
   return (
     <div className='min-h-screen bg-brand-cream'>
       {/* Header */}
-      <header className='fixed top-6 left-1/2 transform -translate-x-1/2 w-full max-w-5xl mx-4 z-50'>
+      <header className='fixed top-3 sm:top-6 left-1/2 transform -translate-x-1/2 w-full max-w-sm sm:max-w-2xl lg:max-w-5xl mx-3 sm:mx-4 z-50'>
         <nav className='bg-brand-cream/80 dark:bg-brand-sage/80 backdrop-blur-md rounded-2xl shadow-xl border border-brand-mint/30 dark:border-brand-mint/20'>
-          <div className='px-6 py-4'>
-            <div className='flex justify-between items-center'>
-              <div>
-                <h1 className='text-4xl font-extralight bg-gradient-to-r from-brand-sage to-brand-sage-light bg-clip-text'>
+          <div className='px-3 sm:px-4 lg:px-6 py-3 sm:py-4'>
+            <div className='flex items-center justify-between w-full'>
+              <div className='flex-1'>
+                <h1 className='text-xl sm:text-2xl lg:text-4xl font-extralight bg-gradient-to-r from-brand-sage to-brand-sage-light bg-clip-text'>
                   Veree
                 </h1>
               </div>
+
+              {/* Desktop Navigation */}
               <div className='hidden md:flex items-center space-x-4'>
                 <ThemeToggle />
               </div>
+
+              {/* Mobile Menu Button */}
+              <button
+                className='md:hidden p-2 rounded-lg hover:bg-brand-mint/20 transition-colors bg-brand-sage/20 dark:bg-brand-sage/30'
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                aria-label='Toggle mobile menu'
+              >
+                <div className='w-5 h-5 flex flex-col justify-center space-y-1'>
+                  <div
+                    className={`w-full h-0.5 bg-brand-sage dark:bg-brand-sage-light transition-transform duration-200 ${isMobileMenuOpen ? 'rotate-45 translate-y-1' : ''}`}
+                  ></div>
+                  <div
+                    className={`w-full h-0.5 bg-brand-sage dark:bg-brand-sage-light transition-opacity duration-200 ${isMobileMenuOpen ? 'opacity-0' : ''}`}
+                  ></div>
+                  <div
+                    className={`w-full h-0.5 bg-brand-sage dark:bg-brand-sage-light transition-transform duration-200 ${isMobileMenuOpen ? '-rotate-45 -translate-y-1' : ''}`}
+                  ></div>
+                </div>
+              </button>
             </div>
+
+            {/* Mobile Menu Dropdown */}
+            {isMobileMenuOpen && (
+              <div className='md:hidden mt-4 pt-4 border-t border-brand-mint/20 dark:border-brand-mint/10'>
+                <div className='flex flex-col space-y-3'>
+                  <div className='flex items-center justify-center'>
+                    <ThemeToggle />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </nav>
       </header>
 
       {/* Main Content */}
-      <main className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'>
-        <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
+      <main className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8'>
+        <div className='grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8'>
           {/* Left Sidebar - Stats & Quick Actions */}
-          <div className='lg:col-span-1 space-y-6 pt-32'>
+          <div className='lg:col-span-1 space-y-4 sm:space-y-6 pt-16 sm:pt-20 lg:pt-32'>
             {/* Multi-Method Authentication */}
             <MultiMethodAuth mode='general' onAuthSuccess={handleAuthSuccess} />
 
             {/* User-specific Stats (only shown when logged in) */}
             <QuickStats userAddress={user?.address} />
 
-            <div className='bg-brand-cream dark:bg-brand-sage p-6 rounded-xl shadow-lg border border-brand-mint/20 dark:border-brand-mint/10'>
+            <div className='bg-brand-cream dark:bg-brand-sage p-4 sm:p-6 rounded-xl shadow-lg border border-brand-mint/20 dark:border-brand-mint/10'>
               <h3 className='text-lg font-semibold text-brand-sage dark:text-brand-sage mb-4 flex items-center'>
                 <span className='w-2 h-2 bg-brand-mint rounded-full mr-2'></span>
                 Quick Actions
@@ -104,14 +137,14 @@ const Home = () => {
           </div>
 
           {/* Main Content Area */}
-          <div className='lg:col-span-2 pt-32'>
+          <div className='lg:col-span-2 pt-16 sm:pt-20 lg:pt-32'>
             {/* Resume Upload with Full Verification */}
-            <div className='mb-8'>
+            <div className='mb-4 sm:mb-8'>
               <ResumeUploadWithVerification user={user} />
             </div>
 
             {/* Driver Application */}
-            <div className='mt-8'>
+            <div className='mt-4 sm:mt-8'>
               <DriverApplication user={user} />
             </div>
 
