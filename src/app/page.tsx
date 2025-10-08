@@ -56,32 +56,28 @@ const Home = () => {
   return (
     <div className='min-h-screen bg-brand-cream'>
       {/* Header */}
-      <header className='bg-brand-cream dark:bg-brand-sage shadow-lg border-b-2 border-brand-mint dark:border-brand-mint/50'>
-        <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-          <div className='flex justify-between items-center py-8'>
-            <div>
-              <h1 className='text-4xl font-bold bg-gradient-to-r from-brand-sage to-brand-sage-light bg-clip-text text-transparent'>
-                DriverAppChain
-              </h1>
-              <p className='text-brand-sage-light dark:text-brand-sage-light text-lg font-medium'>
-                AI-powered, blockchain-verified employment platform
-              </p>
-            </div>
-            <div className='hidden md:flex items-center space-x-4'>
-              <ThemeToggle />
-              <div className='w-12 h-12 bg-gradient-to-br from-brand-mint to-brand-sage-light rounded-full flex items-center justify-center'>
-                <span className='text-white font-bold text-xl'>DA</span>
+      <header className='fixed top-6 left-1/2 transform -translate-x-1/2 w-full max-w-5xl mx-4 z-50'>
+        <nav className='bg-brand-cream/80 dark:bg-brand-sage/80 backdrop-blur-md rounded-2xl shadow-xl border border-brand-mint/30 dark:border-brand-mint/20'>
+          <div className='px-6 py-4'>
+            <div className='flex justify-between items-center'>
+              <div>
+                <h1 className='text-4xl font-extralight bg-gradient-to-r from-brand-sage to-brand-sage-light bg-clip-text'>
+                  Veree
+                </h1>
+              </div>
+              <div className='hidden md:flex items-center space-x-4'>
+                <ThemeToggle />
               </div>
             </div>
           </div>
-        </div>
+        </nav>
       </header>
 
       {/* Main Content */}
       <main className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'>
         <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
           {/* Left Sidebar - Stats & Quick Actions */}
-          <div className='lg:col-span-1 space-y-6'>
+          <div className='lg:col-span-1 space-y-6 pt-32'>
             {/* Multi-Method Authentication */}
             <MultiMethodAuth mode='general' onAuthSuccess={handleAuthSuccess} />
 
@@ -108,31 +104,7 @@ const Home = () => {
           </div>
 
           {/* Main Content Area */}
-          <div className='lg:col-span-2'>
-            <div className='mb-8 p-6 bg-gradient-to-r from-brand-cream/90 to-brand-sage-light/80 dark:from-brand-mint/5 dark:to-brand-cream/10 rounded-xl border border-brand-cream/50 dark:border-brand-mint/10'>
-              <h2 className='text-3xl font-bold text-brand-sage dark:text-brand-sage mb-3'>
-                Welcome to DriverAppChain 🚛
-              </h2>
-              <p className='text-brand-sage-light dark:text-brand-sage-light text-lg'>
-                Upload your resume to get started with AI-powered job matching
-                and blockchain verification.
-              </p>
-              <div className='mt-4 flex items-center space-x-4 text-sm text-brand-sage-light dark:text-brand-sage-light'>
-                <span className='flex items-center'>
-                  <span className='w-2 h-2 bg-brand-mint rounded-full mr-2'></span>
-                  AI-Powered Matching
-                </span>
-                <span className='flex items-center'>
-                  <span className='w-2 h-2 bg-brand-mint rounded-full mr-2'></span>
-                  Blockchain Verified
-                </span>
-                <span className='flex items-center'>
-                  <span className='w-2 h-2 bg-brand-mint rounded-full mr-2'></span>
-                  Secure & Private
-                </span>
-              </div>
-            </div>
-
+          <div className='lg:col-span-2 pt-32'>
             {/* Resume Upload with Full Verification */}
             <div className='mb-8'>
               <ResumeUploadWithVerification user={user} />
