@@ -342,9 +342,11 @@ export default function MultiMethodAuth({
         </div>
 
         <div className='space-y-3'>
-          <div className='bg-green-50 p-4 rounded-lg'>
-            <p className='text-green-800 font-medium'>{user.email}</p>
-            <p className='text-green-600 text-sm'>
+          <div className='bg-green-50 dark:bg-brand-mint/10 p-4 rounded-lg'>
+            <p className='text-green-800 dark:text-brand-cream font-medium'>
+              {user.email}
+            </p>
+            <p className='text-green-600 dark:text-brand-cream/70 text-sm'>
               {account?.address
                 ? `${account.address.slice(0, 6)}...${account.address.slice(-4)}`
                 : 'Wallet address loading...'}
@@ -352,15 +354,17 @@ export default function MultiMethodAuth({
           </div>
 
           {/* USDC Balance Display */}
-          <div className='bg-blue-50 p-4 rounded-lg border border-blue-200'>
+          <div className='bg-blue-50 dark:bg-brand-mint/10 p-4 rounded-lg border border-blue-200 dark:border-brand-mint/20'>
             <div className='flex items-center justify-between'>
               <div className='flex items-center space-x-2'>
-                <span className='text-blue-600'>💰</span>
-                <span className='font-medium text-blue-900'>USDC Balance:</span>
-                <span className='font-bold text-blue-900'>
+                <span className='text-blue-600 dark:text-brand-cream'>💰</span>
+                <span className='font-medium text-blue-900 dark:text-brand-cream'>
+                  USDC Balance:
+                </span>
+                <span className='font-bold text-blue-900 dark:text-brand-cream'>
                   {balanceLoading ? (
                     <span className='flex items-center space-x-1'>
-                      <div className='animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600'></div>
+                      <div className='animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 dark:border-brand-sage'></div>
                       <span>Loading...</span>
                     </span>
                   ) : (
@@ -372,17 +376,19 @@ export default function MultiMethodAuth({
                 onClick={() =>
                   account?.address && fetchUSDCBalance(account.address)
                 }
-                className='text-xs text-blue-600 hover:text-blue-800 underline'
+                className='text-xs text-blue-600 dark:text-brand-cream hover:text-blue-800 dark:hover:text-brand-cream underline'
                 title='Refresh balance'
                 disabled={balanceLoading}
               >
                 🔄 Refresh
               </button>
             </div>
-            <p className='text-xs text-blue-600 mt-1'>Base Sepolia Testnet</p>
+            <p className='text-xs text-blue-600 dark:text-brand-cream mt-1'>
+              Base Sepolia Testnet
+            </p>
           </div>
 
-          <div className='text-sm text-gray-600'>
+          <div className='text-sm text-brand-sage/70 dark:text-brand-cream/70'>
             <p>✅ Email verified</p>
             <p>✅ Wallet created automatically</p>
             <p>✅ Ready for transactions</p>
@@ -396,28 +402,36 @@ export default function MultiMethodAuth({
 
   // Show Alchemy AuthCard with all authentication methods
   return (
-    <div className='bg-white dark:bg-brand-sage p-6 rounded-lg shadow-sm border border-brand-mint/20 dark:border-brand-mint/10'>
-      <h3 className='text-lg font-medium text-brand-sage dark:text-brand-sage-light mb-2'>
+    <div className='bg-brand-sage-light dark:bg-brand-sage p-6 rounded-lg shadow-sm border border-brand-mint/20 dark:border-brand-mint/10'>
+      <h3 className='text-lg font-medium text-brand-sage dark:text-brand-cream mb-2'>
         {content.title}
       </h3>
-      <p className='text-brand-sage/70 dark:text-brand-sage-light/70 mb-4'>
+      <p className='text-brand-sage/70 dark:text-brand-cream/70 mb-4'>
         {content.subtitle}
       </p>
 
       {/* Use Alchemy's AuthCard component for proper multi-method authentication */}
-      <div className='p-4 bg-brand-cream border border-brand-mint/20 rounded-lg w-full overflow-hidden'>
+      <div className='p-4 bg-brand-cream dark:bg-brand-sage border border-brand-mint/20 rounded-lg w-full overflow-hidden'>
         <AuthCard />
       </div>
 
       {/* Debug info */}
-      <div className='mt-4 p-3 bg-gray-50 rounded text-xs'>
-        <p className='font-medium'>Debug Info:</p>
-        <p>Status: {status}</p>
-        <p>Connected: {isConnected ? 'Yes' : 'No'}</p>
-        <p>User: {user ? 'Authenticated' : 'Not authenticated'}</p>
+      <div className='mt-4 p-3 bg-gray-50 dark:bg-brand-sage/30 rounded text-xs'>
+        <p className='font-medium text-brand-sage dark:text-brand-cream'>
+          Debug Info:
+        </p>
+        <p className='text-brand-sage/70 dark:text-brand-cream/70'>
+          Status: {status}
+        </p>
+        <p className='text-brand-sage/70 dark:text-brand-cream/70'>
+          Connected: {isConnected ? 'Yes' : 'No'}
+        </p>
+        <p className='text-brand-sage/70 dark:text-brand-cream/70'>
+          User: {user ? 'Authenticated' : 'Not authenticated'}
+        </p>
       </div>
 
-      <div className='mt-4 text-xs text-gray-500'>
+      <div className='mt-4 text-xs text-brand-sage/60 dark:text-brand-cream/60'>
         <p>{content.description}</p>
         <p className='mt-1'>
           ✅ No passwords • ✅ Secure verification • ✅ Professional platform

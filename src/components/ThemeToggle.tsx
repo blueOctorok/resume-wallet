@@ -1,10 +1,33 @@
 'use client'
 
-import { useTheme } from '@/contexts/ThemeContext'
+import { useTheme } from 'next-themes'
 import { Sun, Moon, Monitor } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 export default function ThemeToggle() {
   const { theme, setTheme, resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return (
+      <div className='flex items-center space-x-1 bg-brand-cream dark:bg-brand-sage/20 rounded-lg p-1 border border-brand-mint/20 dark:border-brand-mint/10'>
+        <div className='p-2 rounded-md'>
+          <Sun size={16} />
+        </div>
+        <div className='p-2 rounded-md'>
+          <Moon size={16} />
+        </div>
+        <div className='p-2 rounded-md'>
+          <Monitor size={16} />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className='flex items-center space-x-1 bg-brand-cream dark:bg-brand-sage/20 rounded-lg p-1 border border-brand-mint/20 dark:border-brand-mint/10'>
