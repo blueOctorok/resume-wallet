@@ -405,7 +405,7 @@ export default function MultiMethodAuth({
       </p>
 
       {/* Use Alchemy's AuthCard component for proper multi-method authentication */}
-      <div className='flex flex-row p-4 bg-brand-cream border border-brand-mint/20 rounded-lg'>
+      <div className='p-4 bg-brand-cream border border-brand-mint/20 rounded-lg w-full overflow-hidden'>
         <AuthCard />
       </div>
 
