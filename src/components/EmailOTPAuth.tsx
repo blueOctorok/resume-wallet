@@ -396,11 +396,13 @@ export default function MultiMethodAuth({
 
   // Show Alchemy AuthCard with all authentication methods
   return (
-    <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
-      <h3 className='text-lg font-medium text-gray-900 mb-2'>
+    <div className='bg-white dark:bg-brand-sage p-6 rounded-lg shadow-sm border border-brand-mint/20 dark:border-brand-mint/10'>
+      <h3 className='text-lg font-medium text-brand-sage dark:text-brand-sage-light mb-2'>
         {content.title}
       </h3>
-      <p className='text-gray-600 mb-4'>{content.subtitle}</p>
+      <p className='text-brand-sage/70 dark:text-brand-sage-light/70 mb-4'>
+        {content.subtitle}
+      </p>
 
       {/* Use Alchemy's AuthCard component for proper multi-method authentication */}
       <div className='flex flex-row p-4 bg-brand-cream border border-brand-mint/20 rounded-lg'>
