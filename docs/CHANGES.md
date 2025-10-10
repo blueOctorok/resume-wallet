@@ -42,6 +42,16 @@ This file tracks major modifications made to the ResumeWallet codebase.
   - Restored Tailwind v4 configuration
   - Fixed PostCSS setup
   - Maintained all brand colors and design system
+- **✅ Animated Background with tsParticles** - Star-like floating bubbles
+  - Uses `react-tsparticles` with slim bundle for reliable, proven particle system
+  - 30 small circular particles (3-8px) that float upward like stars
+  - Random drift and movement with opacity fade animations
+  - Brand colors only: sage-light (#adc2a9), mint (#c9d9c3), cream (#fef5ed)
+  - Soft shadow/glow effect around each particle
+  - 60 FPS limit for smooth performance
+  - Density-aware particle count (adjusts to screen size)
+  - Particles respawn at bottom when they float off the top
+  - Mobile-optimized and retina-ready
 
 ## 🎨 **PREVIOUS: CHAKRA UI MIGRATION (REVERTED)** 🔄
 

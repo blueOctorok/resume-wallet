@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import Navigation from '@/components/Navigation'
+import AnimatedBackground from '@/components/AnimatedBackground'
 
 // Dynamic imports to avoid SSR issues with Alchemy hooks
 const ResumeUploadWithVerification = dynamic(
@@ -91,7 +92,10 @@ const Home = () => {
   }
 
   return (
-    <div className='min-h-screen bg-brand-sage overflow-x-hidden'>
+    <div className='min-h-screen bg-brand-sage overflow-x-hidden relative'>
+      {/* Animated Background */}
+      <AnimatedBackground />
+
       {/* Navigation */}
       <Navigation />
 
