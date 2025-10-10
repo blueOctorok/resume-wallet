@@ -243,16 +243,6 @@ export default function AlchemyAuth({
         <div>
           <AuthCard />
         </div>
-
-        {/* Additional info for users */}
-        <div className='text-center mt-6'>
-          <p className='text-xs sm:text-sm text-brand-cream/50 leading-relaxed'>
-            By signing in, you agree to our terms of service and privacy policy.
-            {mode === 'driver' && ' Resume verification costs $5 USDC.'}
-            {mode === 'employer' &&
-              ' Driver verification checks cost $2 USDC each.'}
-          </p>
-        </div>
       </div>
     </div>
   )

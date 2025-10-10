@@ -26,7 +26,7 @@ if (!ALCHEMY_POLICY_ID) {
 const uiConfig: AlchemyAccountsUIConfig = {
   illustrationStyle: 'outline',
   auth: {
-    header: 'Welcome to Veree',
+    header: 'Sign In',
     hideSignInText: true,
     sections: [
       [
