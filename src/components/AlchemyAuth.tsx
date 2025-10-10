@@ -179,7 +179,7 @@ export default function AlchemyAuth({
                 />
               </svg>
             </div>
-            <h2 className='text-xl font-semibold text-brand-cream mb-2 drop-shadow-sm'>
+            <h2 className='text-xl font-semibold text-brand-cream mb-2'>
               {content.welcomeMessage}
             </h2>
           </div>
@@ -239,21 +239,14 @@ export default function AlchemyAuth({
       <div className='absolute -inset-[1px] rounded-3xl bg-gradient-to-b from-brand-mint/20 to-transparent opacity-50 blur-sm -z-10' />
 
       <div className='relative'>
-        <div className='text-center mb-6'>
-          <h1 className='text-2xl sm:text-3xl font-semibold text-brand-cream mb-2 drop-shadow-sm'>
-            {content.title}
-          </h1>
-          <p className='text-brand-cream/70'>{content.subtitle}</p>
-        </div>
-
         {/* Alchemy AuthCard - handles all the authentication logic */}
-        <div className='mb-6'>
+        <div>
           <AuthCard />
         </div>
 
         {/* Additional info for users */}
-        <div className='text-center'>
-          <p className='text-xs text-brand-cream/60'>
+        <div className='text-center mt-6'>
+          <p className='text-xs sm:text-sm text-brand-cream/50 leading-relaxed'>
             By signing in, you agree to our terms of service and privacy policy.
             {mode === 'driver' && ' Resume verification costs $5 USDC.'}
             {mode === 'employer' &&

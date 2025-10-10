@@ -2,10 +2,24 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
-## 🎉 **LATEST STATUS: ENHANCED UI WITH DEPTH & SHADOWS!** ✨
+## 🎉 **LATEST STATUS: ALCHEMY THEMING INTEGRATION!** ✨
 
 **MAJOR UI/UX ENHANCEMENTS (October 2025):**
 
+- **✅ Alchemy Tailwind Plugin Integration** - Proper theming with official Alchemy components
+  - Wrapped Tailwind config with `withAccountKitUi()` from `@account-kit/react/tailwind`
+  - Used `createColorSet()` for proper light/dark mode color configuration
+  - Configured all brand colors through Alchemy's official API:
+    - Button colors: `btn-primary`, `btn-secondary`, `btn-auth` using mint/sage-light
+    - Text colors: `fg-primary`, `fg-secondary`, `fg-tertiary` using cream/sage-light
+    - Background colors: `bg-surface-default`, `bg-surface-subtle`, `bg-surface-inset` using sage
+    - Border colors: `active` (mint), `static` (sage-light) for proper input focus states
+  - Set `borderRadius: 'md'` (16px) for modern rounded corners
+- **✅ Alchemy UI Configuration** - Customized authentication experience
+  - Added `illustrationStyle: 'outline'` for clean icon styling
+  - Set custom header: "Welcome to Veree" with `hideSignInText: true`
+  - Maintained email OTP and Google social login sections
+  - Proper authentication method configuration with custom labels and placeholders
 - **✅ Navigation Bar with Deep Shadows** - Multi-layered shadow effects with depth
   - `shadow-2xl` outer shadow + inset shadow for inner depth
   - Outer glow with gradient blur effect

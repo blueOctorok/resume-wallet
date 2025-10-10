@@ -24,7 +24,10 @@ if (!ALCHEMY_POLICY_ID) {
 
 // UI Configuration for Simple Authentication Options
 const uiConfig: AlchemyAccountsUIConfig = {
+  illustrationStyle: 'outline',
   auth: {
+    header: 'Welcome to Veree',
+    hideSignInText: true,
     sections: [
       [
         {

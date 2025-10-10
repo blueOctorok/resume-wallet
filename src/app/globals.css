@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap');
 
 @import 'tailwindcss';
+@config '../../tailwind.config.ts';
 
 /* Set dark mode as default */
 :root {
@@ -33,4 +34,24 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #c9d9c3;
+}
+
+/* ===== BRAND CUSTOMIZATIONS ===== */
+/* Minimal customizations - most styling handled by Alchemy Tailwind plugin */
+
+/* Force Quicksand font everywhere */
+* {
+  font-family:
+    'Quicksand',
+    system-ui,
+    -apple-system,
+    sans-serif !important;
+}
+
+/* Ensure our brand colors are available */
+:root {
+  --brand-sage: #697469;
+  --brand-sage-light: #adc2a9;
+  --brand-mint: #c9d9c3;
+  --brand-cream: #fef5ed;
 }
