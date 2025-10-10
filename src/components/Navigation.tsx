@@ -2,7 +2,15 @@
 
 import { useState } from 'react'
 
-export default function Navigation() {
+interface NavigationProps {
+  isAuthenticated?: boolean
+  onStatusClick?: () => void
+}
+
+export default function Navigation({
+  isAuthenticated = false,
+  onStatusClick,
+}: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const toggleMobileMenu = () => {
@@ -20,8 +28,29 @@ export default function Navigation() {
 
         <div className='relative px-6 sm:px-8 py-5 sm:py-6'>
           <div className='flex items-center justify-between'>
-            {/* Spacer for mobile to balance the layout */}
-            <div className='w-10 md:hidden' />
+            {/* User Status Indicator - Left */}
+            <div className='w-20'>
+              {isAuthenticated && (
+                <button
+                  onClick={onStatusClick}
+                  className='relative group flex flex-col items-center space-y-1.5 p-2.5 rounded-xl bg-brand-sage/60 backdrop-blur-sm hover:bg-brand-sage/80 hover:border-brand-mint/70 transition-all duration-300 shadow-lg hover:shadow-xl border border-transparent'
+                  aria-label='View account status'
+                >
+                  {/* Blinking green dot */}
+                  <div className='w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50' />
+
+                  {/* "Logged in" text */}
+                  <span className='text-xs text-brand-cream/90 font-medium'>
+                    Logged in
+                  </span>
+
+                  {/* Tooltip */}
+                  <div className='absolute left-0 top-full mt-2 px-3 py-1.5 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
+                    Click to view account
+                  </div>
+                </button>
+              )}
+            </div>
 
             {/* Logo - Center */}
             <div className='flex-1 flex justify-center md:justify-center'>

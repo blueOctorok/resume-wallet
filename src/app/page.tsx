@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import Navigation from '@/components/Navigation'
 import AnimatedBackground from '@/components/AnimatedBackground'
+import UserStatusModal from '@/components/UserStatusModal'
 
 // Dynamic imports to avoid SSR issues with Alchemy hooks
 const ResumeUploadWithVerification = dynamic(
@@ -72,6 +73,7 @@ const WalletTransactions = dynamic(
 
 const Home = () => {
   const [user, setUser] = useState<any>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   // Debug: Log user state changes
   useEffect(() => {
@@ -85,6 +87,24 @@ const Home = () => {
     console.log('🎯 [HOME] User state updated')
   }, [])
 
+  // Modal handlers
+  const openModal = useCallback(() => {
+    setIsModalOpen(true)
+  }, [])
+
+  const closeModal = useCallback(() => {
+    setIsModalOpen(false)
+  }, [])
+
+  // Logout handler
+  const handleLogout = useCallback(() => {
+    // Call the Alchemy logout function if available
+    if ((window as any).__alchemyLogout) {
+      ;(window as any).__alchemyLogout()
+    }
+    setUser(null)
+  }, [])
+
   // Quick action handlers
   const handleQuickAction = (action: string) => {
     console.log(`Quick action: ${action}`)
@@ -96,20 +116,39 @@ const Home = () => {
       {/* Animated Background */}
       <AnimatedBackground />
 
-      {/* Navigation */}
-      <Navigation />
+      {/* Navigation with status indicator */}
+      <Navigation isAuthenticated={!!user} onStatusClick={openModal} />
+
+      {/* User Status Modal */}
+      <UserStatusModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        onLogout={handleLogout}
+        user={{
+          email: user?.email,
+          address: user?.address,
+          chain: user?.chain,
+        }}
+      />
 
       {/* Main Content */}
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-3'>
         {/* Main Grid */}
         <div className='grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8'>
-          {/* Left Column - Authentication */}
-          <div className='lg:col-span-1 space-y-6'>
-            <AlchemyAuth onAuthSuccess={handleAuthSuccess} />
-          </div>
+          {/* Left Column - Auth (only when not signed in) */}
+          {!user && (
+            <div className='lg:col-span-1 space-y-6'>
+              <AlchemyAuth
+                onAuthSuccess={handleAuthSuccess}
+                onLogoutSuccess={() => setUser(null)}
+              />
+            </div>
+          )}
 
-          {/* Right Column - Resume and Features */}
-          <div className='lg:col-span-2 space-y-6'>
+          {/* Right Column - Main Content */}
+          <div
+            className={`${!user ? 'lg:col-span-2' : 'lg:col-span-3'} space-y-6`}
+          >
             {/* Resume Upload */}
             <ResumeUploadWithVerification />
 

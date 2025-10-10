@@ -22,6 +22,7 @@ import {
 
 interface AlchemyAuthProps {
   onAuthSuccess?: (user: any) => void
+  onLogoutSuccess?: () => void
   title?: string
   subtitle?: string
   mode?: 'driver' | 'employer' | 'general'
@@ -29,6 +30,7 @@ interface AlchemyAuthProps {
 
 export default function AlchemyAuth({
   onAuthSuccess,
+  onLogoutSuccess,
   title,
   subtitle,
   mode = 'general',
@@ -128,11 +130,22 @@ export default function AlchemyAuth({
       await logout()
       setUserInfo(null)
       lastCalledAddressRef.current = null // Reset so callback works on next login
+      if (onLogoutSuccess) {
+        onLogoutSuccess()
+      }
       console.log('👋 User logged out')
     } catch (error) {
       console.error('❌ Logout error:', error)
     }
   }
+
+  // Export logout function for use in other components
+  useEffect(() => {
+    if (onLogoutSuccess && handleLogout) {
+      // Store the logout function reference for external use
+      ;(window as any).__alchemyLogout = handleLogout
+    }
+  }, [onLogoutSuccess])
 
   // Loading state
   if (isInitializing) {
