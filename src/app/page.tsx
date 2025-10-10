@@ -99,10 +99,13 @@ const Home = () => {
   // Logout handler
   const handleLogout = useCallback(() => {
     // Call the Alchemy logout function if available
+    // This will handle both Alchemy logout AND call onLogoutSuccess which sets user to null
     if ((window as any).__alchemyLogout) {
       ;(window as any).__alchemyLogout()
+    } else {
+      // Fallback if Alchemy logout is not available
+      setUser(null)
     }
-    setUser(null)
   }, [])
 
   // Quick action handlers

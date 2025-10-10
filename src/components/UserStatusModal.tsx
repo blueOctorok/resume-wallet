@@ -22,6 +22,13 @@ export default function UserStatusModal({
     onClose()
   }
 
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    // Only close if clicking the backdrop itself, not the modal
+    if (e.target === e.currentTarget) {
+      onClose()
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -29,20 +36,23 @@ export default function UserStatusModal({
       {/* Backdrop */}
       <div
         className='fixed inset-0 bg-black/50 backdrop-blur-sm z-[100]'
-        onClick={onClose}
+        onClick={handleBackdropClick}
       />
 
       {/* Modal */}
-      <div className='fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[101] w-full max-w-md mx-4'>
-        <div className='relative bg-brand-sage-light/20 backdrop-blur-xl rounded-3xl shadow-2xl border border-brand-mint/30 p-8'>
+      <div
+        className='fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[101] w-[90vw] max-w-[340px] sm:max-w-sm md:max-w-md'
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className='relative bg-brand-sage-light/20 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl border border-brand-mint/30 p-4 sm:p-6 md:p-8'>
           {/* Close Button */}
           <button
             onClick={onClose}
-            className='absolute top-4 right-4 p-2 rounded-xl bg-brand-sage/60 backdrop-blur-sm hover:bg-brand-sage/80 hover:border-brand-mint/70 transition-all duration-300 shadow-lg hover:shadow-xl border border-transparent'
+            className='absolute top-3 right-3 sm:top-4 sm:right-4 p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-brand-sage/60 backdrop-blur-sm hover:bg-brand-sage/80 hover:border-brand-mint/70 transition-all duration-300 shadow-lg hover:shadow-xl border border-transparent'
             aria-label='Close modal'
           >
             <svg
-              className='w-4 h-4 text-brand-cream'
+              className='w-3 h-3 sm:w-4 sm:h-4 text-brand-cream'
               fill='none'
               stroke='currentColor'
               viewBox='0 0 24 24'
@@ -64,10 +74,10 @@ export default function UserStatusModal({
 
           <div className='relative'>
             {/* Success Icon */}
-            <div className='flex justify-center mb-6'>
-              <div className='w-20 h-20 bg-brand-mint/30 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg'>
+            <div className='flex justify-center mb-4 sm:mb-6'>
+              <div className='w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-brand-mint/30 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg'>
                 <svg
-                  className='w-10 h-10 text-brand-cream drop-shadow-sm'
+                  className='w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 text-brand-cream drop-shadow-sm'
                   fill='none'
                   stroke='currentColor'
                   viewBox='0 0 24 24'
@@ -83,24 +93,26 @@ export default function UserStatusModal({
             </div>
 
             {/* Title */}
-            <h2 className='text-2xl font-semibold text-brand-cream text-center mb-6'>
-              Welcome to the resume verification platform!
+            <h2 className='text-lg sm:text-xl md:text-2xl font-semibold text-brand-cream text-center mb-4 sm:mb-6 px-2'>
+              Welcome to Veree!
             </h2>
 
             {/* User Info Card */}
-            <div className='bg-brand-sage/30 backdrop-blur-sm rounded-2xl p-6 border border-brand-mint/20 shadow-lg mb-6'>
-              <div className='space-y-4 text-sm'>
+            <div className='bg-brand-sage/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 border border-brand-mint/20 shadow-lg mb-4 sm:mb-6'>
+              <div className='space-y-2 sm:space-y-3 md:space-y-4 text-xs sm:text-sm'>
                 {user.email && (
-                  <div className='flex justify-between items-center'>
-                    <span className='font-medium text-brand-cream/70'>
+                  <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0'>
+                    <span className='font-medium text-brand-cream/70 text-xs sm:text-sm'>
                       Email:
                     </span>
-                    <span className='text-brand-cream'>{user.email}</span>
+                    <span className='text-brand-cream text-xs sm:text-sm break-all sm:break-normal'>
+                      {user.email}
+                    </span>
                   </div>
                 )}
                 {user.address && (
-                  <div className='flex justify-between items-center'>
-                    <span className='font-medium text-brand-cream/70'>
+                  <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0'>
+                    <span className='font-medium text-brand-cream/70 text-xs sm:text-sm'>
                       Wallet:
                     </span>
                     <span className='text-brand-cream font-mono text-xs'>
@@ -109,11 +121,13 @@ export default function UserStatusModal({
                   </div>
                 )}
                 {user.chain && (
-                  <div className='flex justify-between items-center'>
-                    <span className='font-medium text-brand-cream/70'>
+                  <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0'>
+                    <span className='font-medium text-brand-cream/70 text-xs sm:text-sm'>
                       Network:
                     </span>
-                    <span className='text-brand-cream'>{user.chain}</span>
+                    <span className='text-brand-cream text-xs sm:text-sm'>
+                      {user.chain}
+                    </span>
                   </div>
                 )}
               </div>
@@ -122,7 +136,7 @@ export default function UserStatusModal({
             {/* Sign Out Button */}
             <button
               onClick={handleLogout}
-              className='w-full px-6 py-4 text-brand-sage font-semibold bg-brand-mint rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl'
+              className='w-full px-4 sm:px-6 py-3 sm:py-4 text-brand-sage font-semibold bg-brand-mint rounded-lg sm:rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl text-sm sm:text-base'
             >
               Sign Out
             </button>

@@ -32,7 +32,10 @@ export default function Navigation({
             <div className='w-20'>
               {isAuthenticated && (
                 <button
-                  onClick={onStatusClick}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onStatusClick?.()
+                  }}
                   className='relative group flex flex-col items-center space-y-1.5 p-2.5 rounded-xl bg-brand-sage/60 backdrop-blur-sm hover:bg-brand-sage/80 hover:border-brand-mint/70 transition-all duration-300 shadow-lg hover:shadow-xl border border-transparent'
                   aria-label='View account status'
                 >
