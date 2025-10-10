@@ -1,25 +1,8 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import dynamic from 'next/dynamic'
-import {
-  Box,
-  Container,
-  Grid,
-  GridItem,
-  VStack,
-  HStack,
-  Text,
-  Heading,
-  Icon,
-  Spacer,
-  Skeleton,
-  SkeletonText,
-} from '@chakra-ui/react'
-import { FileText, User, Search, ChevronRight } from 'lucide-react'
 import Navigation from '@/components/Navigation'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 
 // Dynamic imports to avoid SSR issues with Alchemy hooks
 const ResumeUploadWithVerification = dynamic(
@@ -27,85 +10,78 @@ const ResumeUploadWithVerification = dynamic(
   {
     ssr: false,
     loading: () => (
-      <Card variant='elevated' size='lg'>
-        <VStack gap={4} align='stretch'>
-          <Skeleton height='24px' />
-          <Skeleton height='16px' />
-          <Skeleton height='40px' />
-          <Skeleton height='128px' />
-        </VStack>
-      </Card>
+      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
+        <div className='space-y-4 animate-pulse'>
+          <div className='h-6 bg-brand-sage-light/20 rounded w-48' />
+          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
+          <div className='h-4 bg-brand-sage-light/20 rounded w-3/4' />
+        </div>
+      </div>
     ),
   }
 )
 
-const MultiMethodAuth = dynamic(() => import('@/components/EmailOTPAuth'), {
-  ssr: false,
-  loading: () => (
-    <Card variant='elevated' size='md'>
-      <VStack gap={4} align='stretch'>
-        <Skeleton height='24px' />
-        <Skeleton height='16px' />
-        <Skeleton height='40px' />
-      </VStack>
-    </Card>
-  ),
-})
-
-const DriverApplication = dynamic(
-  () => import('@/components/DriverApplication'),
+const AlchemyAuth = dynamic(
+  () => import('@/components/AlchemyAuth').then((mod) => mod.default),
   {
     ssr: false,
     loading: () => (
-      <Card variant='elevated' size='lg'>
-        <VStack gap={4} align='stretch'>
-          <Skeleton height='32px' />
-          <SkeletonText noOfLines={4} />
-          <Skeleton height='200px' />
-        </VStack>
-      </Card>
+      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
+        <div className='space-y-4 animate-pulse'>
+          <div className='h-6 bg-brand-sage-light/20 rounded w-32' />
+          <div className='h-10 bg-brand-sage-light/20 rounded w-full' />
+        </div>
+      </div>
+    ),
+  }
+)
+
+const DriverApplication = dynamic(
+  () => import('@/components/DriverApplication').then((mod) => mod.default),
+  {
+    ssr: false,
+    loading: () => (
+      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
+        <div className='space-y-4 animate-pulse'>
+          <div className='h-6 bg-brand-sage-light/20 rounded w-40' />
+          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
+        </div>
+      </div>
     ),
   }
 )
 
 const WalletTransactions = dynamic(
   () =>
-    import('@/components/WalletTransactions').then((mod) => ({
-      default: mod.WalletTransactions,
-    })),
+    import('@/components/WalletTransactions').then(
+      (mod) => mod.WalletTransactions
+    ),
   {
     ssr: false,
     loading: () => (
-      <Card variant='elevated' size='md'>
-        <VStack gap={4} align='stretch'>
-          <Skeleton height='24px' />
-          <Skeleton height='120px' />
-        </VStack>
-      </Card>
+      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
+        <div className='space-y-4 animate-pulse'>
+          <div className='h-6 bg-brand-sage-light/20 rounded w-48' />
+          <div className='h-20 bg-brand-sage-light/20 rounded w-full' />
+        </div>
+      </div>
     ),
   }
 )
 
-const QuickStats = dynamic(() => import('@/components/QuickStats'), {
-  ssr: false,
-  loading: () => (
-    <Card variant='elevated' size='md'>
-      <VStack gap={3} align='stretch'>
-        <Skeleton height='20px' />
-        <Skeleton height='16px' />
-        <Skeleton height='16px' />
-      </VStack>
-    </Card>
-  ),
-})
-
 const Home = () => {
   const [user, setUser] = useState<any>(null)
 
+  // Debug: Log user state changes
+  useEffect(() => {
+    console.log('🎯 [HOME] User state changed:', user)
+  }, [user])
+
   // Stable callback to prevent infinite loops
   const handleAuthSuccess = useCallback((userData: any) => {
-    console.log('✅ Multi-method authentication successful:', userData)
+    console.log('🎯 [HOME] handleAuthSuccess called with:', userData)
     setUser(userData)
+    console.log('🎯 [HOME] User state updated')
   }, [])
 
   // Quick action handlers
@@ -115,143 +91,33 @@ const Home = () => {
   }
 
   return (
-    <Box minH='100vh' bg='bg.primary' overflowX='hidden'>
+    <div className='min-h-screen bg-brand-sage overflow-x-hidden'>
       {/* Navigation */}
       <Navigation />
 
       {/* Main Content */}
-      <Container
-        maxW='7xl'
-        px={{ base: 4, md: 6, lg: 8 }}
-        py={{ base: 4, md: 8 }}
-        mt={3}
-      >
-        <Grid
-          templateColumns={{ base: '1fr', lg: '1fr 2fr' }}
-          gap={{ base: 6, lg: 8 }}
-          w='full'
-        >
-          {/* Left Sidebar */}
-          <GridItem>
-            <VStack gap={6} align='stretch' pt={{ base: 16, md: 20, lg: 32 }}>
-              {/* Authentication Card */}
-              <MultiMethodAuth
-                mode='general'
-                onAuthSuccess={handleAuthSuccess}
-              />
+      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-3'>
+        {/* Main Grid */}
+        <div className='grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8'>
+          {/* Left Column - Authentication */}
+          <div className='lg:col-span-1 space-y-6'>
+            <AlchemyAuth onAuthSuccess={handleAuthSuccess} />
+          </div>
 
-              {/* User Stats (only shown when logged in) */}
-              {user && <QuickStats userAddress={user?.address} />}
+          {/* Right Column - Resume and Features */}
+          <div className='lg:col-span-2 space-y-6'>
+            {/* Resume Upload */}
+            <ResumeUploadWithVerification />
 
-              {/* Quick Actions Card */}
-              <Card variant='elevated' size='md'>
-                <VStack gap={4} align='stretch'>
-                  <HStack gap={2}>
-                    <Box w={2} h={2} bg='interactive.primary' rounded='full' />
-                    <Heading size='md' textStyle='brand.heading'>
-                      Quick Actions
-                    </Heading>
-                  </HStack>
+            {/* Driver Application */}
+            <DriverApplication user={user} />
 
-                  <VStack gap={2} align='stretch'>
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      justifyContent='flex-start'
-                      onClick={() => handleQuickAction('resumes')}
-                    >
-                      <HStack gap={3} w='full'>
-                        <Icon as={FileText} boxSize={4} />
-                        <Text>View My Resumes</Text>
-                        <Spacer />
-                        <Icon as={ChevronRight} boxSize={4} />
-                      </HStack>
-                    </Button>
-
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      justifyContent='flex-start'
-                      onClick={() => handleQuickAction('profile')}
-                    >
-                      <HStack gap={3} w='full'>
-                        <Icon as={User} boxSize={4} />
-                        <Text>Update Profile</Text>
-                        <Spacer />
-                        <Icon as={ChevronRight} boxSize={4} />
-                      </HStack>
-                    </Button>
-
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      justifyContent='flex-start'
-                      onClick={() => handleQuickAction('jobs')}
-                    >
-                      <HStack gap={3} w='full'>
-                        <Icon as={Search} boxSize={4} />
-                        <Text>Browse Jobs</Text>
-                        <Spacer />
-                        <Icon as={ChevronRight} boxSize={4} />
-                      </HStack>
-                    </Button>
-                  </VStack>
-                </VStack>
-              </Card>
-            </VStack>
-          </GridItem>
-
-          {/* Main Content Area */}
-          <GridItem>
-            <VStack gap={8} align='stretch' pt={{ base: 16, md: 20, lg: 32 }}>
-              {/* Authentication Required Alert */}
-              {!user && (
-                <Card
-                  variant='outline'
-                  size='md'
-                  bg='yellow.50'
-                  borderColor='yellow.200'
-                >
-                  <HStack gap={3}>
-                    <Box
-                      w={6}
-                      h={6}
-                      bg='yellow.400'
-                      rounded='full'
-                      display='flex'
-                      alignItems='center'
-                      justifyContent='center'
-                    >
-                      <Text fontSize='sm' color='white'>
-                        !
-                      </Text>
-                    </Box>
-                    <VStack align='start' gap={1}>
-                      <Text fontWeight='semibold' color='yellow.800'>
-                        Authentication Required
-                      </Text>
-                      <Text fontSize='sm' color='yellow.700'>
-                        Please log in to access the driver application and other
-                        features.
-                      </Text>
-                    </VStack>
-                  </HStack>
-                </Card>
-              )}
-
-              {/* Resume Upload */}
-              <ResumeUploadWithVerification user={user} />
-
-              {/* Driver Application */}
-              <DriverApplication user={user} />
-
-              {/* Wallet Transactions */}
-              {user && <WalletTransactions />}
-            </VStack>
-          </GridItem>
-        </Grid>
-      </Container>
-    </Box>
+            {/* Wallet Transactions */}
+            {user && <WalletTransactions />}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 

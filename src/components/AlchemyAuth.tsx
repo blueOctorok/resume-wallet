@@ -10,7 +10,7 @@
  * - Perfect for drivers and employers
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   useAuthModal,
   useSignerStatus,
@@ -40,6 +40,14 @@ export default function AlchemyAuth({
   const { logout } = useLogout()
 
   const [userInfo, setUserInfo] = useState<any>(null)
+
+  // Use ref to store callback and track the last address we called it for
+  const onAuthSuccessRef = useRef(onAuthSuccess)
+  const lastCalledAddressRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    onAuthSuccessRef.current = onAuthSuccess
+  }, [onAuthSuccess])
 
   // Get mode-specific content
   const getContent = () => {
@@ -85,10 +93,25 @@ export default function AlchemyAuth({
         chainId: 84532, // Base Sepolia chain ID
       }
 
-      setUserInfo(authData)
+      // Check if this is a new address (first login or address changed)
+      const isNewAddress = lastCalledAddressRef.current !== authData.address
 
-      if (onAuthSuccess) {
-        onAuthSuccess(authData)
+      // Update user info state
+      setUserInfo((prev) => {
+        if (prev?.address === authData.address) {
+          return prev // Don't update if it's the same
+        }
+        return authData
+      })
+
+      // Call the callback only for new addresses
+      if (isNewAddress && onAuthSuccessRef.current) {
+        console.log(
+          '🔔 Calling onAuthSuccess callback for new address:',
+          authData.address
+        )
+        onAuthSuccessRef.current(authData)
+        lastCalledAddressRef.current = authData.address
       }
 
       console.log('✅ Alchemy Smart Wallet authentication successful:', {
@@ -97,13 +120,14 @@ export default function AlchemyAuth({
         chain: 'Base Sepolia',
       })
     }
-  }, [isConnected, user, account, onAuthSuccess])
+  }, [isConnected, user, account]) // Removed onAuthSuccess from dependencies
 
   // Handle logout
   const handleLogout = async () => {
     try {
       await logout()
       setUserInfo(null)
+      lastCalledAddressRef.current = null // Reset so callback works on next login
       console.log('👋 User logged out')
     } catch (error) {
       console.error('❌ Logout error:', error)
@@ -113,10 +137,16 @@ export default function AlchemyAuth({
   // Loading state
   if (isInitializing) {
     return (
-      <div className='flex items-center justify-center p-8'>
-        <div className='text-center'>
-          <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4'></div>
-          <p className='text-gray-600'>Initializing authentication...</p>
+      <div className='relative bg-brand-sage-light/20 backdrop-blur-xl rounded-3xl shadow-2xl border border-brand-mint/30 p-8'>
+        {/* Inner shadow for depth */}
+        <div className='absolute inset-0 rounded-3xl shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)] pointer-events-none' />
+
+        {/* Outer glow */}
+        <div className='absolute -inset-[1px] rounded-3xl bg-gradient-to-b from-brand-mint/20 to-transparent opacity-50 blur-sm -z-10' />
+
+        <div className='relative text-center'>
+          <div className='animate-spin rounded-full h-10 w-10 border-b-2 border-brand-mint mx-auto mb-4'></div>
+          <p className='text-brand-cream/80'>Initializing authentication...</p>
         </div>
       </div>
     )
@@ -125,60 +155,74 @@ export default function AlchemyAuth({
   // Authenticated state
   if (isConnected && userInfo) {
     return (
-      <div className='bg-white rounded-lg shadow-lg p-6 max-w-md mx-auto'>
-        <div className='text-center mb-6'>
-          <div className='w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4'>
-            <svg
-              className='w-8 h-8 text-green-600'
-              fill='none'
-              stroke='currentColor'
-              viewBox='0 0 24 24'
-            >
-              <path
-                strokeLinecap='round'
-                strokeLinejoin='round'
-                strokeWidth={2}
-                d='M5 13l4 4L19 7'
-              />
-            </svg>
-          </div>
-          <h2 className='text-xl font-bold text-gray-900 mb-2'>
-            {content.welcomeMessage}
-          </h2>
-        </div>
+      <div className='relative bg-brand-sage-light/20 backdrop-blur-xl rounded-3xl shadow-2xl border border-brand-mint/30 p-6'>
+        {/* Inner shadow for depth */}
+        <div className='absolute inset-0 rounded-3xl shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)] pointer-events-none' />
 
-        <div className='space-y-4'>
-          {/* User Info */}
-          <div className='bg-gray-50 rounded-lg p-4'>
-            <div className='space-y-2 text-sm'>
-              {userInfo.email && (
-                <div>
-                  <span className='font-medium text-gray-700'>Email:</span>
-                  <span className='ml-2 text-gray-900'>{userInfo.email}</span>
+        {/* Outer glow */}
+        <div className='absolute -inset-[1px] rounded-3xl bg-gradient-to-b from-brand-mint/20 to-transparent opacity-50 blur-sm -z-10' />
+
+        <div className='relative'>
+          <div className='text-center mb-6'>
+            <div className='w-16 h-16 bg-brand-mint/30 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg'>
+              <svg
+                className='w-8 h-8 text-brand-cream drop-shadow-sm'
+                fill='none'
+                stroke='currentColor'
+                viewBox='0 0 24 24'
+              >
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth={2}
+                  d='M5 13l4 4L19 7'
+                />
+              </svg>
+            </div>
+            <h2 className='text-xl font-semibold text-brand-cream mb-2 drop-shadow-sm'>
+              {content.welcomeMessage}
+            </h2>
+          </div>
+
+          <div className='space-y-4'>
+            {/* User Info */}
+            <div className='bg-brand-sage/30 backdrop-blur-sm rounded-2xl p-4 border border-brand-mint/20 shadow-lg'>
+              <div className='space-y-3 text-sm'>
+                {userInfo.email && (
+                  <div className='flex justify-between items-center'>
+                    <span className='font-medium text-brand-cream/70'>
+                      Email:
+                    </span>
+                    <span className='text-brand-cream'>{userInfo.email}</span>
+                  </div>
+                )}
+                <div className='flex justify-between items-center'>
+                  <span className='font-medium text-brand-cream/70'>
+                    Wallet:
+                  </span>
+                  <span className='text-brand-cream font-mono text-xs'>
+                    {userInfo.address?.slice(0, 8)}...
+                    {userInfo.address?.slice(-6)}
+                  </span>
                 </div>
-              )}
-              <div>
-                <span className='font-medium text-gray-700'>Wallet:</span>
-                <span className='ml-2 text-gray-900 font-mono text-xs'>
-                  {userInfo.address?.slice(0, 8)}...
-                  {userInfo.address?.slice(-6)}
-                </span>
-              </div>
-              <div>
-                <span className='font-medium text-gray-700'>Network:</span>
-                <span className='ml-2 text-gray-900'>{userInfo.chain}</span>
+                <div className='flex justify-between items-center'>
+                  <span className='font-medium text-brand-cream/70'>
+                    Network:
+                  </span>
+                  <span className='text-brand-cream'>{userInfo.chain}</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Actions */}
-          <div className='flex gap-3'>
-            <button
-              onClick={handleLogout}
-              className='flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors'
-            >
-              Sign Out
-            </button>
+            {/* Actions */}
+            <div className='flex gap-3'>
+              <button
+                onClick={handleLogout}
+                className='flex-1 px-4 py-3 text-brand-sage font-medium bg-brand-mint rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl'
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -187,25 +231,35 @@ export default function AlchemyAuth({
 
   // Authentication form
   return (
-    <div className='max-w-md mx-auto'>
-      <div className='text-center mb-6'>
-        <h1 className='text-2xl font-bold text-gray-900 mb-2'>
-          {content.title}
-        </h1>
-        <p className='text-gray-600'>{content.subtitle}</p>
-      </div>
+    <div className='relative bg-brand-sage-light/20 backdrop-blur-xl rounded-3xl shadow-2xl border border-brand-mint/30 p-6 sm:p-8'>
+      {/* Inner shadow for depth */}
+      <div className='absolute inset-0 rounded-3xl shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)] pointer-events-none' />
 
-      {/* Alchemy AuthCard - handles all the authentication logic */}
-      <AuthCard />
+      {/* Outer glow */}
+      <div className='absolute -inset-[1px] rounded-3xl bg-gradient-to-b from-brand-mint/20 to-transparent opacity-50 blur-sm -z-10' />
 
-      {/* Additional info for users */}
-      <div className='mt-6 text-center'>
-        <p className='text-xs text-gray-500'>
-          By signing in, you agree to our terms of service and privacy policy.
-          {mode === 'driver' && ' Resume verification costs $5 USDC.'}
-          {mode === 'employer' &&
-            ' Driver verification checks cost $2 USDC each.'}
-        </p>
+      <div className='relative'>
+        <div className='text-center mb-6'>
+          <h1 className='text-2xl sm:text-3xl font-semibold text-brand-cream mb-2 drop-shadow-sm'>
+            {content.title}
+          </h1>
+          <p className='text-brand-cream/70'>{content.subtitle}</p>
+        </div>
+
+        {/* Alchemy AuthCard - handles all the authentication logic */}
+        <div className='mb-6'>
+          <AuthCard />
+        </div>
+
+        {/* Additional info for users */}
+        <div className='text-center'>
+          <p className='text-xs text-brand-cream/60'>
+            By signing in, you agree to our terms of service and privacy policy.
+            {mode === 'driver' && ' Resume verification costs $5 USDC.'}
+            {mode === 'employer' &&
+              ' Driver verification checks cost $2 USDC each.'}
+          </p>
+        </div>
       </div>
     </div>
   )
