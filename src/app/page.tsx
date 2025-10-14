@@ -115,7 +115,7 @@ const Home = () => {
   }
 
   return (
-    <div className='min-h-screen bg-brand-sage overflow-x-hidden relative'>
+    <div className='min-h-screen overflow-x-hidden relative'>
       {/* Animated Background */}
       <AnimatedBackground />
 

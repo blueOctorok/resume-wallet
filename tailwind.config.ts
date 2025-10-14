@@ -13,6 +13,7 @@ const config: Config = withAccountKitUi(
         colors: {
           // Brand colors - Dark theme palette
           'brand-sage': '#697469',
+          'brand-sage-dark': '#4a5249', // Darker sage for gradient
           'brand-sage-light': '#adc2a9',
           'brand-mint': '#c9d9c3',
           'brand-cream': '#fef5ed',

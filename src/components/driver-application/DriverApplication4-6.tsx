@@ -90,7 +90,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
       {/* Traffic Violations Section */}
       <div>
         <div className='flex justify-between items-center mb-4'>
-          <h4 className='text-md font-medium text-gray-900'>
+          <h4 className='text-md font-medium text-brand-cream'>
             Traffic Violations (Last 3 Years)
           </h4>
           <button
@@ -103,7 +103,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
         </div>
 
         {data.violations.length === 0 && (
-          <div className='text-center py-4 text-gray-500 border border-gray-200 rounded-md'>
+          <div className='text-center py-4 text-brand-cream/50 border border-gray-200 rounded-md'>
             <p>No violations to report.</p>
             <p className='text-sm'>
               If you have violations, click "Add Violation" above.
@@ -117,7 +117,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
             className='border border-gray-200 rounded-lg p-4 mb-4'
           >
             <div className='flex justify-between items-center mb-4'>
-              <h5 className='font-medium text-gray-900'>
+              <h5 className='font-medium text-brand-cream'>
                 Violation #{index + 1}
               </h5>
               <button
@@ -131,7 +131,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Violation Date *
                 </label>
                 <input
@@ -145,7 +145,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Violation Type *
                 </label>
                 <input
@@ -160,7 +160,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Location
                 </label>
                 <input
@@ -175,7 +175,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Fine Amount
                 </label>
                 <input
@@ -190,7 +190,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Points
                 </label>
                 <input
@@ -211,7 +211,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
       {/* Accidents Section */}
       <div>
         <div className='flex justify-between items-center mb-4'>
-          <h4 className='text-md font-medium text-gray-900'>
+          <h4 className='text-md font-medium text-brand-cream'>
             Accidents (Last 5 Years)
           </h4>
           <button
@@ -224,7 +224,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
         </div>
 
         {data.accidents.length === 0 && (
-          <div className='text-center py-4 text-gray-500 border border-gray-200 rounded-md'>
+          <div className='text-center py-4 text-brand-cream/50 border border-gray-200 rounded-md'>
             <p>No accidents to report.</p>
             <p className='text-sm'>
               If you have accidents, click "Add Accident" above.
@@ -238,7 +238,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
             className='border border-gray-200 rounded-lg p-4 mb-4'
           >
             <div className='flex justify-between items-center mb-4'>
-              <h5 className='font-medium text-gray-900'>
+              <h5 className='font-medium text-brand-cream'>
                 Accident #{index + 1}
               </h5>
               <button
@@ -252,7 +252,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Accident Date *
                 </label>
                 <input
@@ -266,7 +266,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Fatalities
                 </label>
                 <input
@@ -281,7 +281,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Injuries
                 </label>
                 <input
@@ -296,7 +296,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Property Damage
                 </label>
                 <input
@@ -311,7 +311,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
               </div>
 
               <div className='md:col-span-2'>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Description *
                 </label>
                 <textarea
@@ -425,10 +425,12 @@ export const MedicalInfoStep: React.FC<MedicalInfoStepProps> = ({
 
       {/* Vision Test */}
       <div className='border-t pt-6'>
-        <h4 className='text-md font-medium text-gray-900 mb-4'>Vision Test</h4>
+        <h4 className='text-md font-medium text-brand-cream mb-4'>
+          Vision Test
+        </h4>
         <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-2'>
+            <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
               Left Eye
             </label>
             <input
@@ -445,7 +447,7 @@ export const MedicalInfoStep: React.FC<MedicalInfoStepProps> = ({
           </div>
 
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-2'>
+            <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
               Right Eye
             </label>
             <input
@@ -462,7 +464,7 @@ export const MedicalInfoStep: React.FC<MedicalInfoStepProps> = ({
           </div>
 
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-2'>
+            <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
               Both Eyes
             </label>
             <input
@@ -482,10 +484,12 @@ export const MedicalInfoStep: React.FC<MedicalInfoStepProps> = ({
 
       {/* Hearing Test */}
       <div className='border-t pt-6'>
-        <h4 className='text-md font-medium text-gray-900 mb-4'>Hearing Test</h4>
+        <h4 className='text-md font-medium text-brand-cream mb-4'>
+          Hearing Test
+        </h4>
         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-2'>
+            <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
               Left Ear
             </label>
             <input
@@ -502,7 +506,7 @@ export const MedicalInfoStep: React.FC<MedicalInfoStepProps> = ({
           </div>
 
           <div>
-            <label className='block text-sm font-medium text-gray-700 mb-2'>
+            <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
               Right Ear
             </label>
             <input

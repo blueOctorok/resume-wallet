@@ -14,7 +14,9 @@ body {
     system-ui,
     -apple-system,
     sans-serif;
-  background-color: #697469;
+  background: linear-gradient(to bottom, #697469 0%, #4a5249 100%);
+  background-attachment: fixed; /* Keeps gradient fixed while scrolling */
+  min-height: 100vh;
   color: #fef5ed;
 }
 
@@ -51,6 +53,7 @@ body {
 /* Ensure our brand colors are available */
 :root {
   --brand-sage: #697469;
+  --brand-sage-dark: #4a5249;
   --brand-sage-light: #adc2a9;
   --brand-mint: #c9d9c3;
   --brand-cream: #fef5ed;

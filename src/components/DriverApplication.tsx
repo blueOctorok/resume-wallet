@@ -638,9 +638,9 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
     return (
       <div className='flex items-center justify-center min-h-screen'>
         <div className='text-center'>
-          <div className='w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4'>
+          <div className='w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm border border-red-500/30'>
             <svg
-              className='w-8 h-8 text-red-600'
+              className='w-8 h-8 text-red-300'
               fill='none'
               stroke='currentColor'
               viewBox='0 0 24 24'
@@ -653,10 +653,10 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
               />
             </svg>
           </div>
-          <h3 className='text-lg font-medium text-gray-900 mb-2'>
+          <h3 className='text-lg font-medium text-brand-cream mb-2'>
             Authentication Required
           </h3>
-          <p className='text-gray-600'>
+          <p className='text-brand-cream/70'>
             Please log in to access the driver application.
           </p>
         </div>
@@ -668,8 +668,8 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
     return (
       <div className='flex items-center justify-center min-h-screen'>
         <div className='text-center'>
-          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4'></div>
-          <p className='text-gray-600'>Loading application...</p>
+          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-brand-mint mx-auto mb-4'></div>
+          <p className='text-brand-cream/70'>Loading application...</p>
         </div>
       </div>
     )
@@ -677,201 +677,212 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
 
   return (
     <div className='max-w-4xl mx-auto p-6'>
-      {/* Header */}
-      <div className='text-center mb-8'>
-        <h1 className='text-3xl font-bold text-gray-900 mb-2'>
-          DOT Driver Application
-        </h1>
-        <p className='text-gray-600'>
-          Complete all sections to submit your commercial driver application
-        </p>
-      </div>
+      {/* Application Container with Border */}
+      <div className='bg-brand-sage-light/10 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-brand-cream/30 p-6 sm:p-8'>
+        {/* Inner shadow for depth */}
+        <div className='absolute inset-0 rounded-3xl shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)] pointer-events-none' />
 
-      {/* Progress Bar */}
-      <div className='mb-8'>
-        <div className='flex items-center justify-between mb-2'>
-          <span className='text-sm font-medium text-gray-700'>
-            Step {currentStep} of {STEPS.length}
-          </span>
-          <span className='text-sm text-gray-500'>
-            {Math.round((currentStep / STEPS.length) * 100)}% Complete
-          </span>
+        {/* Outer glow */}
+        <div className='absolute -inset-[2px] rounded-3xl bg-gradient-to-b from-brand-cream/20 to-transparent opacity-50 blur-sm -z-10' />
+
+        {/* Header */}
+        <div className='text-center mb-8 relative'>
+          <h1 className='text-3xl font-bold text-brand-cream mb-2'>
+            DOT Driver Application
+          </h1>
+          <p className='text-brand-cream/70'>
+            Complete all sections to submit your commercial driver application
+          </p>
         </div>
-        <div className='w-full bg-gray-200 rounded-full h-2'>
-          <div
-            className='bg-blue-600 h-2 rounded-full transition-all duration-300'
-            style={{ width: `${(currentStep / STEPS.length) * 100}%` }}
-          ></div>
-        </div>
-      </div>
 
-      {/* Step Navigation */}
-      <div className='mb-8'>
-        <div className='flex items-center justify-between'>
-          <button
-            onClick={prevStep}
-            disabled={currentStep === 1}
-            className='px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed'
-          >
-            Previous
-          </button>
-
-          <div className='flex space-x-2'>
-            {STEPS.map((step) => (
-              <button
-                key={step.id}
-                onClick={() => setCurrentStep(step.id)}
-                className={`w-8 h-8 rounded-full text-sm font-medium ${
-                  currentStep === step.id
-                    ? 'bg-blue-600 text-white'
-                    : currentStep > step.id
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-200 text-gray-600'
-                }`}
-              >
-                {step.id}
-              </button>
-            ))}
+        {/* Progress Bar */}
+        <div className='mb-8'>
+          <div className='flex items-center justify-between mb-2'>
+            <span className='text-sm font-medium text-brand-cream'>
+              Step {currentStep} of {STEPS.length}
+            </span>
+            <span className='text-sm text-brand-cream/70'>
+              {Math.round((currentStep / STEPS.length) * 100)}% Complete
+            </span>
           </div>
+          <div className='w-full bg-brand-sage-light/20 rounded-full h-2'>
+            <div
+              className='bg-brand-mint h-2 rounded-full transition-all duration-300'
+              style={{ width: `${(currentStep / STEPS.length) * 100}%` }}
+            ></div>
+          </div>
+        </div>
 
-          {currentStep === STEPS.length ? (
-            <div>
-              <button
-                onClick={completeApplication}
-                disabled={isLoading || isCompleted}
-                className={`px-6 py-2 text-sm font-medium text-white border border-transparent rounded-md disabled:opacity-50 disabled:cursor-not-allowed ${
-                  isCompleted
-                    ? 'bg-green-700 cursor-not-allowed'
-                    : 'bg-green-600 hover:bg-green-700'
-                }`}
-              >
-                {isCompleted
-                  ? 'Application Completed!'
-                  : isLoading
-                    ? 'Completing...'
-                    : 'Complete Application'}
-              </button>
-
-              {/* Blockchain Status Indicator */}
-              {isCompleted && (
-                <div className='mt-4 p-4 bg-gray-50 rounded-lg border'>
-                  <h3 className='text-sm font-medium text-gray-900 mb-2'>
-                    Blockchain Status
-                  </h3>
-                  <div className='flex items-center space-x-2'>
-                    {blockchainStatus === 'pending' && (
-                      <>
-                        <div className='w-3 h-3 bg-yellow-400 rounded-full animate-pulse'></div>
-                        <span className='text-sm text-yellow-600'>
-                          Submitting to blockchain...
-                        </span>
-                      </>
-                    )}
-                    {blockchainStatus === 'submitted' && (
-                      <>
-                        <div className='w-3 h-3 bg-blue-500 rounded-full'></div>
-                        <span className='text-sm text-blue-600'>
-                          Submitted to blockchain (ID: {blockchainApplicationId}
-                          )
-                        </span>
-                      </>
-                    )}
-                    {blockchainStatus === 'verified' && (
-                      <>
-                        <div className='w-3 h-3 bg-green-500 rounded-full'></div>
-                        <span className='text-sm text-green-600'>
-                          Verified by DOT inspector
-                        </span>
-                      </>
-                    )}
-                    {blockchainStatus === 'rejected' && (
-                      <>
-                        <div className='w-3 h-3 bg-red-500 rounded-full'></div>
-                        <span className='text-sm text-red-600'>
-                          Rejected by DOT inspector
-                        </span>
-                      </>
-                    )}
-                    {blockchainStatus === 'error' && (
-                      <>
-                        <div className='w-3 h-3 bg-red-500 rounded-full'></div>
-                        <span className='text-sm text-red-600'>
-                          Blockchain submission failed
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  <p className='text-xs text-gray-500 mt-1'>
-                    Your application is stored immutably on the blockchain for
-                    verification.
-                    {ipfsHash && (
-                      <span className='block mt-1'>
-                        IPFS Hash:{' '}
-                        <code className='bg-gray-100 px-1 rounded text-xs'>
-                          {ipfsHash}
-                        </code>
-                      </span>
-                    )}
-                  </p>
-                </div>
-              )}
-            </div>
-          ) : (
+        {/* Step Navigation */}
+        <div className='mb-8'>
+          <div className='flex items-center justify-between'>
             <button
-              onClick={nextStep}
-              disabled={isLoading}
-              className='px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed'
+              onClick={prevStep}
+              disabled={currentStep === 1}
+              className='px-6 py-3 text-sm font-semibold text-brand-cream bg-brand-sage-light/20 border border-brand-mint/30 rounded-xl hover:bg-brand-sage-light/30 hover:border-brand-mint/50 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed'
             >
-              Next
+              Previous
             </button>
-          )}
+
+            <div className='flex space-x-2'>
+              {STEPS.map((step) => (
+                <button
+                  key={step.id}
+                  onClick={() => setCurrentStep(step.id)}
+                  className={`w-8 h-8 rounded-full text-sm font-medium transition-all duration-300 ${
+                    currentStep === step.id
+                      ? 'bg-brand-cream text-brand-sage shadow-lg shadow-brand-cream/30'
+                      : currentStep > step.id
+                        ? 'bg-brand-mint text-brand-sage'
+                        : 'bg-brand-sage-light/30 text-brand-cream/50 border border-brand-cream/20'
+                  }`}
+                >
+                  {step.id}
+                </button>
+              ))}
+            </div>
+
+            {currentStep === STEPS.length ? (
+              <div>
+                <button
+                  onClick={completeApplication}
+                  disabled={isLoading || isCompleted}
+                  className={`px-6 py-3 text-sm font-semibold border border-transparent rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl ${
+                    isCompleted
+                      ? 'bg-brand-cream text-brand-sage cursor-not-allowed shadow-brand-cream/30'
+                      : 'bg-brand-mint text-brand-sage hover:bg-brand-mint/80'
+                  }`}
+                >
+                  {isCompleted
+                    ? 'Application Completed!'
+                    : isLoading
+                      ? 'Completing...'
+                      : 'Complete Application'}
+                </button>
+
+                {/* Blockchain Status Indicator */}
+                {isCompleted && (
+                  <div className='mt-4 p-4 bg-brand-sage-light/10 rounded-xl border border-brand-mint/20 backdrop-blur-sm'>
+                    <h3 className='text-sm font-medium text-brand-cream mb-2'>
+                      Blockchain Status
+                    </h3>
+                    <div className='flex items-center space-x-2'>
+                      {blockchainStatus === 'pending' && (
+                        <>
+                          <div className='w-3 h-3 bg-yellow-400 rounded-full animate-pulse'></div>
+                          <span className='text-sm text-yellow-300'>
+                            Submitting to blockchain...
+                          </span>
+                        </>
+                      )}
+                      {blockchainStatus === 'submitted' && (
+                        <>
+                          <div className='w-3 h-3 bg-brand-mint rounded-full'></div>
+                          <span className='text-sm text-brand-mint'>
+                            Submitted to blockchain (ID:{' '}
+                            {blockchainApplicationId})
+                          </span>
+                        </>
+                      )}
+                      {blockchainStatus === 'verified' && (
+                        <>
+                          <div className='w-3 h-3 bg-green-400 rounded-full'></div>
+                          <span className='text-sm text-green-300'>
+                            Verified by DOT inspector
+                          </span>
+                        </>
+                      )}
+                      {blockchainStatus === 'rejected' && (
+                        <>
+                          <div className='w-3 h-3 bg-red-400 rounded-full'></div>
+                          <span className='text-sm text-red-300'>
+                            Rejected by DOT inspector
+                          </span>
+                        </>
+                      )}
+                      {blockchainStatus === 'error' && (
+                        <>
+                          <div className='w-3 h-3 bg-red-400 rounded-full'></div>
+                          <span className='text-sm text-red-300'>
+                            Blockchain submission failed
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    <p className='text-xs text-brand-cream/70 mt-1'>
+                      Your application is stored immutably on the blockchain for
+                      verification.
+                      {ipfsHash && (
+                        <span className='block mt-1'>
+                          IPFS Hash:{' '}
+                          <code className='bg-brand-sage/30 px-2 py-1 rounded text-xs text-brand-cream font-mono'>
+                            {ipfsHash}
+                          </code>
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={nextStep}
+                disabled={isLoading}
+                className='px-6 py-3 text-sm font-semibold text-brand-sage bg-brand-mint border border-transparent rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed'
+              >
+                Next
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Current Step Title */}
-      <div className='mb-6'>
-        <h2 className='text-xl font-semibold text-gray-900'>
-          {STEPS[currentStep - 1].title}
-        </h2>
-        <p className='text-gray-600'>{STEPS[currentStep - 1].description}</p>
-      </div>
-
-      {/* Error/Success Messages */}
-      {error && (
-        <div className='mb-6 p-4 bg-red-50 border border-red-200 rounded-md'>
-          <p className='text-red-800'>{error}</p>
+        {/* Current Step Title */}
+        <div className='mb-6'>
+          <h2 className='text-xl font-semibold text-brand-cream'>
+            {STEPS[currentStep - 1].title}
+          </h2>
+          <p className='text-brand-cream/70'>
+            {STEPS[currentStep - 1].description}
+          </p>
         </div>
-      )}
 
-      {success && (
-        <div className='mb-6 p-4 bg-green-50 border border-green-200 rounded-md'>
-          <p className='text-green-800'>{success}</p>
+        {/* Error/Success Messages */}
+        {error && (
+          <div className='mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl backdrop-blur-sm'>
+            <p className='text-red-300 font-medium'>{error}</p>
+          </div>
+        )}
+
+        {success && (
+          <div className='mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-xl backdrop-blur-sm'>
+            <p className='text-green-300 font-medium'>{success}</p>
+          </div>
+        )}
+
+        {/* Step Content */}
+        <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-6 mb-8 shadow-xl'>
+          {renderStep()}
         </div>
-      )}
 
-      {/* Step Content */}
-      <div className='bg-white border border-gray-200 rounded-lg p-6 mb-8'>
-        {renderStep()}
+        {/* Save Button */}
+        <div className='text-center'>
+          <button
+            onClick={saveApplication}
+            disabled={isLoading}
+            className='px-6 py-3 text-sm font-semibold text-brand-cream bg-brand-sage-light/20 border border-brand-mint/30 rounded-xl hover:bg-brand-sage-light/30 hover:border-brand-mint/50 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed'
+          >
+            {isLoading ? 'Saving...' : 'Save Progress'}
+          </button>
+        </div>
+
+        {/* Auto-Complete Panel */}
+        <AutoCompletePanel
+          onFillData={handleAutoFillData}
+          currentStep={currentStep}
+          isVisible={showAutoComplete}
+          onToggle={() => setShowAutoComplete(!showAutoComplete)}
+        />
       </div>
-
-      {/* Save Button */}
-      <div className='text-center'>
-        <button
-          onClick={saveApplication}
-          disabled={isLoading}
-          className='px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed'
-        >
-          {isLoading ? 'Saving...' : 'Save Progress'}
-        </button>
-      </div>
-
-      {/* Auto-Complete Panel */}
-      <AutoCompletePanel
-        onFillData={handleAutoFillData}
-        currentStep={currentStep}
-        isVisible={showAutoComplete}
-        onToggle={() => setShowAutoComplete(!showAutoComplete)}
-      />
     </div>
   )
 }

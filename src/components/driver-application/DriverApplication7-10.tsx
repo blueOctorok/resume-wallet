@@ -60,7 +60,7 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
       <ErrorDisplay validation={currentValidation} />
 
       <div className='flex justify-between items-center'>
-        <h4 className='text-md font-medium text-gray-900'>
+        <h4 className='text-md font-medium text-brand-cream'>
           Training Records & Certifications
         </h4>
         <button
@@ -73,7 +73,7 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
       </div>
 
       {data.length === 0 && (
-        <div className='text-center py-8 text-gray-500'>
+        <div className='text-center py-8 text-brand-cream/50'>
           <p>No training records added yet.</p>
           <p className='text-sm'>Click "Add Training" to get started.</p>
         </div>
@@ -83,7 +83,7 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
         data.map((training, index) => (
           <div key={index} className='border border-gray-200 rounded-lg p-4'>
             <div className='flex justify-between items-center mb-4'>
-              <h5 className='font-medium text-gray-900'>
+              <h5 className='font-medium text-brand-cream'>
                 Training #{index + 1}
               </h5>
               <button
@@ -97,7 +97,7 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Training Type *
                 </label>
                 <select
@@ -120,7 +120,7 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Training Date *
                 </label>
                 <input
@@ -134,7 +134,7 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Training Company
                 </label>
                 <input
@@ -149,7 +149,7 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Certificate Number
                 </label>
                 <input
@@ -164,7 +164,7 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Expiration Date
                 </label>
                 <input
@@ -277,17 +277,19 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
 
       {/* Equipment Types */}
       <div>
-        <h4 className='text-md font-medium text-gray-900 mb-6'>
+        <h4 className='text-md font-medium text-brand-cream mb-6'>
           Equipment Experience
         </h4>
 
         <div className='space-y-6'>
           {/* Straight Truck */}
           <div className='border border-gray-200 rounded-lg p-4'>
-            <h5 className='font-medium text-gray-900 mb-4'>Straight Truck</h5>
+            <h5 className='font-medium text-brand-cream mb-4'>
+              Straight Truck
+            </h5>
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
                   Years of Experience
                 </label>
                 <input
@@ -310,7 +312,7 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
                   Total Miles
                 </label>
                 <input
@@ -337,10 +339,12 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
 
           {/* Tractor-Trailer */}
           <div className='border border-gray-200 rounded-lg p-4'>
-            <h5 className='font-medium text-gray-900 mb-4'>Tractor-Trailer</h5>
+            <h5 className='font-medium text-brand-cream mb-4'>
+              Tractor-Trailer
+            </h5>
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
                   Years of Experience
                 </label>
                 <input
@@ -363,7 +367,7 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
                   Total Miles
                 </label>
                 <input
@@ -390,12 +394,12 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
 
           {/* Tractor with Two Trailers */}
           <div className='border border-gray-200 rounded-lg p-4'>
-            <h5 className='font-medium text-gray-900 mb-4'>
+            <h5 className='font-medium text-brand-cream mb-4'>
               Tractor with Two Trailers
             </h5>
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
                   Years of Experience
                 </label>
                 <input
@@ -418,7 +422,7 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
                   Total Miles
                 </label>
                 <input
@@ -446,7 +450,7 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
           {/* Specialized Equipment */}
           <div className='border border-gray-200 rounded-lg p-4'>
             <div className='flex justify-between items-center mb-4'>
-              <h5 className='font-medium text-gray-900'>
+              <h5 className='font-medium text-brand-cream'>
                 Specialized Equipment
               </h5>
               <button
@@ -459,7 +463,7 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
             </div>
 
             {data.equipmentTypes.specializedEquipment.length === 0 && (
-              <div className='text-center py-4 text-gray-500'>
+              <div className='text-center py-4 text-brand-cream/50'>
                 <p>No specialized equipment added yet.</p>
                 <p className='text-sm'>Click "Add Equipment" to get started.</p>
               </div>
@@ -472,7 +476,7 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                   className='border border-gray-200 rounded p-3 mb-3'
                 >
                   <div className='flex justify-between items-center mb-3'>
-                    <h6 className='font-medium text-gray-800'>
+                    <h6 className='font-medium text-brand-cream'>
                       Equipment #{index + 1}
                     </h6>
                     <button
@@ -485,7 +489,7 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                   </div>
                   <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
                     <div>
-                      <label className='block text-sm font-medium text-gray-700 mb-1'>
+                      <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                         Equipment Type
                       </label>
                       <input
@@ -503,7 +507,7 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                       />
                     </div>
                     <div>
-                      <label className='block text-sm font-medium text-gray-700 mb-1'>
+                      <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                         Years
                       </label>
                       <input
@@ -521,7 +525,7 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                       />
                     </div>
                     <div>
-                      <label className='block text-sm font-medium text-gray-700 mb-1'>
+                      <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                         Miles
                       </label>
                       <input
@@ -548,7 +552,7 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
 
       {/* Special Skills */}
       <div>
-        <h4 className='text-md font-medium text-gray-900 mb-4'>
+        <h4 className='text-md font-medium text-brand-cream mb-4'>
           Special Skills
         </h4>
         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
@@ -568,7 +572,7 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                 }
                 className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
               />
-              <span className='text-sm text-gray-700 capitalize'>
+              <span className='text-sm text-brand-cream/70 capitalize'>
                 {skill.replace(/([A-Z])/g, ' $1').trim()}
               </span>
             </label>
@@ -678,7 +682,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
       {/* Accidents */}
       <div>
         <div className='flex justify-between items-center mb-4'>
-          <h4 className='text-md font-medium text-gray-900'>
+          <h4 className='text-md font-medium text-brand-cream'>
             Accident History (Last 5 Years)
           </h4>
           <button
@@ -691,7 +695,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
         </div>
 
         {data.accidents.length === 0 && (
-          <div className='text-center py-4 text-gray-500 border border-gray-200 rounded-md'>
+          <div className='text-center py-4 text-brand-cream/50 border border-gray-200 rounded-md'>
             <p>No accidents to report.</p>
             <p className='text-sm'>
               If you have accidents, click "Add Accident" above.
@@ -705,7 +709,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
             className='border border-gray-200 rounded-lg p-4 mb-4'
           >
             <div className='flex justify-between items-center mb-4'>
-              <h5 className='font-medium text-gray-900'>
+              <h5 className='font-medium text-brand-cream'>
                 Accident #{index + 1}
               </h5>
               <button
@@ -719,7 +723,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
                   Accident Date *
                 </label>
                 <input
@@ -733,7 +737,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
                   Accident Type *
                 </label>
                 <select
@@ -750,7 +754,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
                   Commercial Vehicle
                 </label>
                 <select
@@ -770,7 +774,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
                   DOT Recordable
                 </label>
                 <select
@@ -790,7 +794,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
                   At Fault
                 </label>
                 <select
@@ -806,7 +810,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
                   Citation Issued
                 </label>
                 <select
@@ -826,7 +830,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
               </div>
 
               <div className='md:col-span-2'>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
                   Description *
                 </label>
                 <textarea
@@ -847,7 +851,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
       {/* Violations */}
       <div>
         <div className='flex justify-between items-center mb-4'>
-          <h4 className='text-md font-medium text-gray-900'>
+          <h4 className='text-md font-medium text-brand-cream'>
             Traffic Violations (Last 3 Years)
           </h4>
           <button
@@ -860,7 +864,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
         </div>
 
         {data.violations.length === 0 && (
-          <div className='text-center py-4 text-gray-500 border border-gray-200 rounded-md'>
+          <div className='text-center py-4 text-brand-cream/50 border border-gray-200 rounded-md'>
             <p>No violations to report.</p>
             <p className='text-sm'>
               If you have violations, click "Add Violation" above.
@@ -874,7 +878,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
             className='border border-gray-200 rounded-lg p-4 mb-4'
           >
             <div className='flex justify-between items-center mb-4'>
-              <h5 className='font-medium text-gray-900'>
+              <h5 className='font-medium text-brand-cream'>
                 Violation #{index + 1}
               </h5>
               <button
@@ -888,7 +892,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
                   Violation Date *
                 </label>
                 <input
@@ -902,7 +906,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
                   Charge *
                 </label>
                 <input
@@ -917,7 +921,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
                   State *
                 </label>
                 <input
@@ -932,7 +936,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
                   Commercial Vehicle
                 </label>
                 <select
@@ -952,7 +956,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
                   Fine Amount
                 </label>
                 <input
@@ -973,7 +977,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
                   License Impact
                 </label>
                 <input
@@ -993,7 +997,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
 
       {/* Compliance Questions */}
       <div>
-        <h4 className='text-md font-medium text-gray-900 mb-4'>
+        <h4 className='text-md font-medium text-brand-cream mb-4'>
           Compliance Questions
         </h4>
         <div className='space-y-4'>
@@ -1013,7 +1017,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
                 }
                 className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-1'
               />
-              <span className='text-sm text-gray-700'>
+              <span className='text-sm text-brand-cream/70'>
                 {question
                   .replace(/([A-Z])/g, ' $1')
                   .replace(/^./, (str) => str.toUpperCase())}
@@ -1092,20 +1096,20 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
       <ErrorDisplay validation={currentValidation} />
 
       <div className='flex justify-between items-center'>
-        <h4 className='text-md font-medium text-gray-900'>
+        <h4 className='text-md font-medium text-brand-cream'>
           Personal & Professional References
         </h4>
         <button
           type='button'
           onClick={addReference}
-          className='px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700'
+          className='px-4 py-2 text-sm font-semibold text-brand-sage bg-brand-mint rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl'
         >
           Add Reference
         </button>
       </div>
 
       {data.length === 0 && (
-        <div className='text-center py-8 text-gray-500'>
+        <div className='text-center py-8 text-brand-cream/50'>
           <p>No references added yet.</p>
           <p className='text-sm'>Click "Add Reference" to get started.</p>
         </div>
@@ -1113,15 +1117,18 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
 
       {Array.isArray(data) &&
         data.map((reference, index) => (
-          <div key={index} className='border border-gray-200 rounded-lg p-4'>
+          <div
+            key={index}
+            className='border border-brand-cream/30 rounded-lg p-4 bg-brand-sage-light/5'
+          >
             <div className='flex justify-between items-center mb-4'>
-              <h5 className='font-medium text-gray-900'>
+              <h5 className='font-medium text-brand-cream'>
                 Reference #{index + 1}
               </h5>
               <button
                 type='button'
                 onClick={() => removeReference(index)}
-                className='text-red-600 hover:text-red-800 text-sm'
+                className='text-red-400 hover:text-red-300 text-sm font-medium transition-colors duration-200'
               >
                 Remove
               </button>
@@ -1129,7 +1136,7 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Full Name *
                 </label>
                 <input
@@ -1144,7 +1151,7 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Relationship *
                 </label>
                 <select
@@ -1166,7 +1173,7 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Phone Number *
                 </label>
                 <input
@@ -1181,7 +1188,7 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Email Address
                 </label>
                 <input
@@ -1196,7 +1203,7 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Years Known *
                 </label>
                 <input

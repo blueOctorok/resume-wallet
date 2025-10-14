@@ -220,7 +220,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
 
       {/* Emergency Contact */}
       <div className='border-t pt-6'>
-        <h4 className='text-md font-medium text-gray-900 mb-4'>
+        <h4 className='text-md font-medium text-brand-cream mb-4'>
           Emergency Contact
         </h4>
         <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
@@ -299,7 +299,7 @@ export const CDLInfoStep: React.FC<CDLInfoStepProps> = ({ data, onChange }) => {
     <div className='space-y-6'>
       <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
         <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
+          <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
             CDL Number *
           </label>
           <input
@@ -312,7 +312,7 @@ export const CDLInfoStep: React.FC<CDLInfoStepProps> = ({ data, onChange }) => {
         </div>
 
         <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
+          <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
             CDL State *
           </label>
           <select
@@ -375,7 +375,7 @@ export const CDLInfoStep: React.FC<CDLInfoStepProps> = ({ data, onChange }) => {
         </div>
 
         <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
+          <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
             CDL Expiration Date *
           </label>
           <input
@@ -387,7 +387,7 @@ export const CDLInfoStep: React.FC<CDLInfoStepProps> = ({ data, onChange }) => {
         </div>
 
         <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
+          <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
             CDL Class *
           </label>
           <select
@@ -407,7 +407,7 @@ export const CDLInfoStep: React.FC<CDLInfoStepProps> = ({ data, onChange }) => {
 
       {/* Endorsements */}
       <div>
-        <label className='block text-sm font-medium text-gray-700 mb-3'>
+        <label className='block text-sm font-medium text-brand-cream/70 mb-3'>
           Endorsements
         </label>
         <div className='grid grid-cols-3 md:grid-cols-6 gap-3'>
@@ -431,7 +431,9 @@ export const CDLInfoStep: React.FC<CDLInfoStepProps> = ({ data, onChange }) => {
                 }}
                 className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
               />
-              <span className='ml-2 text-sm text-gray-700'>{endorsement}</span>
+              <span className='ml-2 text-sm text-brand-cream/70'>
+                {endorsement}
+              </span>
             </label>
           ))}
         </div>
@@ -439,7 +441,7 @@ export const CDLInfoStep: React.FC<CDLInfoStepProps> = ({ data, onChange }) => {
 
       {/* Restrictions */}
       <div>
-        <label className='block text-sm font-medium text-gray-700 mb-3'>
+        <label className='block text-sm font-medium text-brand-cream/70 mb-3'>
           Restrictions
         </label>
         <div className='grid grid-cols-3 md:grid-cols-6 gap-3'>
@@ -463,7 +465,9 @@ export const CDLInfoStep: React.FC<CDLInfoStepProps> = ({ data, onChange }) => {
                 }}
                 className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
               />
-              <span className='ml-2 text-sm text-gray-700'>{restriction}</span>
+              <span className='ml-2 text-sm text-brand-cream/70'>
+                {restriction}
+              </span>
             </label>
           ))}
         </div>
@@ -510,7 +514,7 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
   return (
     <div className='space-y-6'>
       <div className='flex justify-between items-center'>
-        <h4 className='text-md font-medium text-gray-900'>
+        <h4 className='text-md font-medium text-brand-cream'>
           Employment History (Last 3 Years Required)
         </h4>
         <button
@@ -523,7 +527,7 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
       </div>
 
       {data.length === 0 && (
-        <div className='text-center py-8 text-gray-500'>
+        <div className='text-center py-8 text-brand-cream/50'>
           <p>No employment history added yet.</p>
           <p className='text-sm'>Click "Add Employment" to get started.</p>
         </div>
@@ -533,7 +537,7 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
         data.map((employment, index) => (
           <div key={index} className='border border-gray-200 rounded-lg p-4'>
             <div className='flex justify-between items-center mb-4'>
-              <h5 className='font-medium text-gray-900'>
+              <h5 className='font-medium text-brand-cream'>
                 Employment #{index + 1}
               </h5>
               <button
@@ -547,7 +551,7 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Company Name *
                 </label>
                 <input
@@ -562,7 +566,7 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Position *
                 </label>
                 <input
@@ -577,7 +581,7 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Start Date *
                 </label>
                 <input
@@ -591,7 +595,7 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   End Date
                 </label>
                 <input
@@ -605,7 +609,7 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Supervisor Name
                 </label>
                 <input
@@ -620,7 +624,7 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Supervisor Phone
                 </label>
                 <input
@@ -635,7 +639,7 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
               </div>
 
               <div className='md:col-span-2'>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Reason for Leaving
                 </label>
                 <input
@@ -650,7 +654,7 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
               </div>
 
               <div className='md:col-span-2'>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
                   Job Duties
                 </label>
                 <textarea

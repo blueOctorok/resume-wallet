@@ -7,9 +7,9 @@ import { loadSlim } from 'tsparticles-slim'
 /**
  * Animated Background with tsParticles
  *
- * Creates floating bubble particles that drift like stars
- * - Brand colors: sage-light, mint, cream
- * - Slow, subtle movement
+ * Creates cream-colored floating bubble particles that rise upward
+ * - Cream bubbles against sage-to-dark-sage gradient background
+ * - Slow, subtle rising movement
  * - Interactive on hover and click
  */
 
@@ -36,7 +36,7 @@ export default function AnimatedBackground() {
         fpsLimit: 60,
         particles: {
           number: {
-            value: 30,
+            value: 40,
             density: {
               enable: true,
               value_area: 800,
@@ -46,25 +46,25 @@ export default function AnimatedBackground() {
             type: 'circle',
           },
           color: {
-            value: ['#adc2a9', '#c9d9c3', '#fef5ed'], // sage-light, mint, cream
+            value: ['#fef5ed', '#fef5ed', '#c9d9c3', '#fef5ed'], // Mostly cream with some mint
           },
           opacity: {
-            value: 0.5,
+            value: 0.4,
             random: true,
             anim: {
               enable: true,
-              speed: 0.5,
-              opacity_min: 0.2,
+              speed: 0.3,
+              opacity_min: 0.15,
               sync: false,
             },
           },
           size: {
-            value: 5,
+            value: 4,
             random: true,
             anim: {
               enable: true,
-              speed: 1.5,
-              size_min: 2,
+              speed: 1,
+              size_min: 1.5,
               sync: false,
             },
           },
