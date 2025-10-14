@@ -185,7 +185,7 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
 
           <button
             onClick={handleFillCurrentStep}
-            className='w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors'
+            className='w-full px-4 py-2 text-brand-sage bg-brand-mint rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl'
           >
             Fill Current Step ({getStepName(currentStep)})
           </button>

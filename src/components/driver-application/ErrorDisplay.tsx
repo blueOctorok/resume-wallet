@@ -36,7 +36,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
               </svg>
             </div>
             <div className='ml-3'>
-              <h3 className='text-sm font-medium text-red-800'>
+              <h3 className='text-sm font-medium text-red-300'>
                 Please fix the following errors:
               </h3>
               <ul className='mt-2 text-sm text-red-700 list-disc list-inside space-y-1'>
@@ -67,10 +67,10 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
               </svg>
             </div>
             <div className='ml-3'>
-              <h3 className='text-sm font-medium text-yellow-800'>
+              <h3 className='text-sm font-medium text-yellow-300'>
                 Please review the following warnings:
               </h3>
-              <ul className='mt-2 text-sm text-yellow-700 list-disc list-inside space-y-1'>
+              <ul className='mt-2 text-sm text-yellow-300/80 list-disc list-inside space-y-1'>
                 {validation.warnings.map((warning, index) => (
                   <li key={index}>{warning.message}</li>
                 ))}
@@ -106,7 +106,7 @@ export const FieldError: React.FC<FieldErrorProps> = ({
   return (
     <div className={`mt-1 space-y-1 ${className}`}>
       {fieldErrors.map((error, index) => (
-        <p key={index} className='text-sm text-red-600 flex items-center'>
+        <p key={index} className='text-sm text-red-300 flex items-center'>
           <svg
             className='h-4 w-4 text-red-400 mr-1'
             viewBox='0 0 20 20'
@@ -122,7 +122,7 @@ export const FieldError: React.FC<FieldErrorProps> = ({
         </p>
       ))}
       {fieldWarnings.map((warning, index) => (
-        <p key={index} className='text-sm text-yellow-600 flex items-center'>
+        <p key={index} className='text-sm text-yellow-300 flex items-center'>
           <svg
             className='h-4 w-4 text-yellow-400 mr-1'
             viewBox='0 0 20 20'
@@ -195,8 +195,8 @@ export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
             <h3
               className={`text-sm font-medium ${
                 validation.errors.length > 0
-                  ? 'text-red-800'
-                  : 'text-yellow-800'
+                  ? 'text-red-300'
+                  : 'text-yellow-300'
               }`}
             >
               {validation.errors.length > 0
@@ -205,7 +205,7 @@ export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
             </h3>
             {validation.warnings.length > 0 &&
               validation.errors.length === 0 && (
-                <p className='text-sm text-yellow-700 mt-1'>
+                <p className='text-sm text-yellow-300/80 mt-1'>
                   You can proceed, but please review the warnings below.
                 </p>
               )}
@@ -214,7 +214,7 @@ export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
         {onDismiss && (
           <button
             onClick={onDismiss}
-            className='text-gray-400 hover:text-gray-600'
+            className='text-brand-cream/50 hover:text-brand-cream/70'
           >
             <svg className='h-5 w-5' viewBox='0 0 20 20' fill='currentColor'>
               <path

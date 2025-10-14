@@ -66,7 +66,7 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
         <button
           type='button'
           onClick={addTraining}
-          className='px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700'
+          className='px-3 py-1 text-sm px-4 py-2 text-sm font-semibold text-brand-sage bg-brand-mint rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl'
         >
           Add Training
         </button>
@@ -89,7 +89,7 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
               <button
                 type='button'
                 onClick={() => removeTraining(index)}
-                className='text-red-600 hover:text-red-800 text-sm'
+                className='text-red-400 hover:text-red-300 text-sm font-medium transition-colors duration-200'
               >
                 Remove
               </button>
@@ -180,11 +180,11 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
           </div>
         ))}
 
-      <div className='bg-blue-50 border border-blue-200 rounded-md p-4'>
-        <h5 className='font-medium text-blue-900 mb-2'>
+      <div className='bg-brand-sage-light/10 border border-brand-mint/30 rounded-xl p-4 backdrop-blur-sm'>
+        <h5 className='font-medium text-brand-cream mb-2'>
           Training Requirements
         </h5>
-        <ul className='text-sm text-blue-800 space-y-1'>
+        <ul className='text-sm text-brand-cream/70 space-y-1'>
           <li>
             • Entry-Level Driver Training (ELDT) required for new CDL holders
           </li>
@@ -456,7 +456,7 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
               <button
                 type='button'
                 onClick={addSpecializedEquipment}
-                className='px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700'
+                className='px-3 py-1 text-sm px-4 py-2 text-sm font-semibold text-brand-sage bg-brand-mint rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl'
               >
                 Add Equipment
               </button>
@@ -482,7 +482,7 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                     <button
                       type='button'
                       onClick={() => removeSpecializedEquipment(index)}
-                      className='text-red-600 hover:text-red-800 text-sm'
+                      className='text-red-400 hover:text-red-300 text-sm font-medium transition-colors duration-200'
                     >
                       Remove
                     </button>
@@ -580,11 +580,11 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
         </div>
       </div>
 
-      <div className='bg-blue-50 border border-blue-200 rounded-md p-4'>
-        <h5 className='font-medium text-blue-900 mb-2'>
+      <div className='bg-brand-sage-light/10 border border-brand-mint/30 rounded-xl p-4 backdrop-blur-sm'>
+        <h5 className='font-medium text-brand-cream mb-2'>
           Experience Requirements
         </h5>
-        <ul className='text-sm text-blue-800 space-y-1'>
+        <ul className='text-sm text-brand-cream/70 space-y-1'>
           <li>• Be honest about your experience level</li>
           <li>• Include all relevant equipment experience</li>
           <li>• Special skills can increase job opportunities</li>
@@ -688,7 +688,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
           <button
             type='button'
             onClick={addAccident}
-            className='px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700'
+            className='px-3 py-1 text-sm px-4 py-2 text-sm font-semibold text-brand-sage bg-brand-mint rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl'
           >
             Add Accident
           </button>
@@ -715,7 +715,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
               <button
                 type='button'
                 onClick={() => removeAccident(index)}
-                className='text-red-600 hover:text-red-800 text-sm'
+                className='text-red-400 hover:text-red-300 text-sm font-medium transition-colors duration-200'
               >
                 Remove
               </button>
@@ -857,7 +857,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
           <button
             type='button'
             onClick={addViolation}
-            className='px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700'
+            className='px-3 py-1 text-sm px-4 py-2 text-sm font-semibold text-brand-sage bg-brand-mint rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl'
           >
             Add Violation
           </button>
@@ -884,7 +884,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
               <button
                 type='button'
                 onClick={() => removeViolation(index)}
-                className='text-red-600 hover:text-red-800 text-sm'
+                className='text-red-400 hover:text-red-300 text-sm font-medium transition-colors duration-200'
               >
                 Remove
               </button>
@@ -1027,11 +1027,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
         </div>
       </div>
 
-      <div className='bg-red-50 border border-red-200 rounded-md p-4'>
-        <h5 className='font-medium text-red-900 mb-2'>
+      <div className='bg-red-500/10 border border-red-500/30 rounded-xl p-4 backdrop-blur-sm'>
+        <h5 className='font-medium text-red-300 mb-2'>
           Compliance Requirements
         </h5>
-        <ul className='text-sm text-red-800 space-y-1'>
+        <ul className='text-sm text-red-300/80 space-y-1'>
           <li>• Answer all questions truthfully</li>
           <li>• False information can result in disqualification</li>
           <li>• DOT violations may affect eligibility</li>
@@ -1220,11 +1220,11 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
           </div>
         ))}
 
-      <div className='bg-blue-50 border border-blue-200 rounded-md p-4'>
-        <h5 className='font-medium text-blue-900 mb-2'>
+      <div className='bg-brand-sage-light/10 border border-brand-mint/30 rounded-xl p-4 backdrop-blur-sm'>
+        <h5 className='font-medium text-brand-cream mb-2'>
           Reference Requirements
         </h5>
-        <ul className='text-sm text-blue-800 space-y-1'>
+        <ul className='text-sm text-brand-cream/70 space-y-1'>
           <li>• Provide at least 3 professional references</li>
           <li>• Include contact information for verification</li>
           <li>• Choose references who can speak to your character</li>

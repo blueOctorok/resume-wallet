@@ -74,6 +74,9 @@ const WalletTransactions = dynamic(
 const Home = () => {
   const [user, setUser] = useState<any>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [currentPage, setCurrentPage] = useState<
+    'signin' | 'resume' | 'dotapp' | null
+  >(null)
 
   // Debug: Log user state changes
   useEffect(() => {
@@ -108,11 +111,14 @@ const Home = () => {
     }
   }, [])
 
-  // Quick action handlers
-  const handleQuickAction = (action: string) => {
-    console.log(`Quick action: ${action}`)
-    // TODO: Implement navigation to respective pages
-  }
+  // Navigation handler
+  const handleNavigation = useCallback(
+    (page: 'signin' | 'resume' | 'dotapp') => {
+      console.log(`Navigating to: ${page}`)
+      setCurrentPage(page)
+    },
+    []
+  )
 
   return (
     <div className='min-h-screen overflow-x-hidden relative'>
@@ -120,7 +126,11 @@ const Home = () => {
       <AnimatedBackground />
 
       {/* Navigation with status indicator */}
-      <Navigation isAuthenticated={!!user} onStatusClick={openModal} />
+      <Navigation
+        isAuthenticated={!!user}
+        onStatusClick={openModal}
+        onNavigate={handleNavigation}
+      />
 
       {/* User Status Modal */}
       <UserStatusModal
@@ -136,32 +146,58 @@ const Home = () => {
 
       {/* Main Content */}
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-3'>
-        {/* Main Grid */}
-        <div className='grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8'>
-          {/* Left Column - Auth (only when not signed in) */}
-          {!user && (
-            <div className='lg:col-span-1 space-y-6'>
-              <AlchemyAuth
-                onAuthSuccess={handleAuthSuccess}
-                onLogoutSuccess={() => setUser(null)}
-              />
-            </div>
-          )}
+        {/* Conditional Content Based on Navigation */}
+        {currentPage === 'signin' && !user && (
+          <div className='max-w-md mx-auto'>
+            <AlchemyAuth
+              onAuthSuccess={handleAuthSuccess}
+              onLogoutSuccess={() => setUser(null)}
+            />
+          </div>
+        )}
 
-          {/* Right Column - Main Content */}
-          <div
-            className={`${!user ? 'lg:col-span-2' : 'lg:col-span-3'} space-y-6`}
-          >
-            {/* Resume Upload */}
+        {currentPage === 'resume' && (
+          <div className='max-w-4xl mx-auto space-y-6'>
             <ResumeUploadWithVerification />
-
-            {/* Driver Application */}
-            <DriverApplication user={user} />
-
-            {/* Wallet Transactions */}
             {user && <WalletTransactions />}
           </div>
-        </div>
+        )}
+
+        {currentPage === 'dotapp' && (
+          <div className='max-w-4xl mx-auto'>
+            <DriverApplication user={user} />
+          </div>
+        )}
+
+        {/* Welcome message when no page is selected */}
+        {!currentPage && (
+          <div className='max-w-2xl mx-auto text-center py-16'>
+            <h2 className='text-4xl sm:text-5xl font-light text-brand-cream mb-6'>
+              Welcome to Veree
+            </h2>
+            <p className='text-brand-cream/70 text-lg mb-8'>
+              Click on Veree above to get started
+            </p>
+            <div className='flex flex-col sm:flex-row gap-4 justify-center'>
+              <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-6 text-center'>
+                <h3 className='text-brand-cream font-semibold mb-2'>
+                  Resume Verification
+                </h3>
+                <p className='text-brand-cream/60 text-sm'>
+                  Upload and verify your professional resume on the blockchain
+                </p>
+              </div>
+              <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-6 text-center'>
+                <h3 className='text-brand-cream font-semibold mb-2'>
+                  DOT Application
+                </h3>
+                <p className='text-brand-cream/60 text-sm'>
+                  Complete your Department of Transportation driver application
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

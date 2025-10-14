@@ -59,9 +59,9 @@ export const FormInput: React.FC<FormInputProps> = ({
 
   return (
     <div className='space-y-1'>
-      <label className='block text-sm font-medium text-gray-700'>
+      <label className='block text-sm font-medium text-brand-cream'>
         {label}
-        {required && <span className='text-red-500 ml-1'>*</span>}
+        {required && <span className='text-red-400 ml-1'>*</span>}
       </label>
       <input
         type={type}
@@ -76,7 +76,7 @@ export const FormInput: React.FC<FormInputProps> = ({
         max={max}
         step={step}
       />
-      {helpText && <p className='text-xs text-gray-500'>{helpText}</p>}
+      {helpText && <p className='text-xs text-brand-cream/50'>{helpText}</p>}
       {validation && <FieldError field={name} validation={validation} />}
     </div>
   )
@@ -129,9 +129,9 @@ export const FormSelect: React.FC<FormSelectProps> = ({
 
   return (
     <div className='space-y-1'>
-      <label className='block text-sm font-medium text-gray-700'>
+      <label className='block text-sm font-medium text-brand-cream'>
         {label}
-        {required && <span className='text-red-500 ml-1'>*</span>}
+        {required && <span className='text-red-400 ml-1'>*</span>}
       </label>
       <select
         name={name}
@@ -147,7 +147,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
           </option>
         ))}
       </select>
-      {helpText && <p className='text-xs text-gray-500'>{helpText}</p>}
+      {helpText && <p className='text-xs text-brand-cream/50'>{helpText}</p>}
       {validation && <FieldError field={name} validation={validation} />}
     </div>
   )
@@ -202,9 +202,9 @@ export const FormTextarea: React.FC<FormTextareaProps> = ({
 
   return (
     <div className='space-y-1'>
-      <label className='block text-sm font-medium text-gray-700'>
+      <label className='block text-sm font-medium text-brand-cream'>
         {label}
-        {required && <span className='text-red-500 ml-1'>*</span>}
+        {required && <span className='text-red-400 ml-1'>*</span>}
       </label>
       <textarea
         name={name}
@@ -216,7 +216,7 @@ export const FormTextarea: React.FC<FormTextareaProps> = ({
         maxLength={maxLength}
         className={textareaClasses}
       />
-      {helpText && <p className='text-xs text-gray-500'>{helpText}</p>}
+      {helpText && <p className='text-xs text-brand-cream/50'>{helpText}</p>}
       {validation && <FieldError field={name} validation={validation} />}
     </div>
   )
@@ -263,9 +263,11 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
             ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
           `.trim()}
         />
-        <span className='ml-2 text-sm text-gray-700'>{label}</span>
+        <span className='ml-2 text-sm text-brand-cream'>{label}</span>
       </label>
-      {helpText && <p className='text-xs text-gray-500 ml-6'>{helpText}</p>}
+      {helpText && (
+        <p className='text-xs text-brand-cream/50 ml-6'>{helpText}</p>
+      )}
       {validation && <FieldError field={name} validation={validation} />}
     </div>
   )
@@ -314,8 +316,10 @@ export const FormCheckboxGroup: React.FC<FormCheckboxGroupProps> = ({
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <label className='block text-sm font-medium text-gray-700'>{label}</label>
-      {helpText && <p className='text-xs text-gray-500'>{helpText}</p>}
+      <label className='block text-sm font-medium text-brand-cream'>
+        {label}
+      </label>
+      {helpText && <p className='text-xs text-brand-cream/50'>{helpText}</p>}
       <div className={`grid ${gridCols[columns]} gap-3`}>
         {options.map((option) => (
           <FormCheckbox

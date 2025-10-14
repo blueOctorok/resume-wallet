@@ -96,7 +96,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
           <button
             type='button'
             onClick={addViolation}
-            className='px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700'
+            className='px-3 py-1 text-sm px-4 py-2 text-sm font-semibold text-brand-sage bg-brand-mint rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl'
           >
             Add Violation
           </button>
@@ -123,7 +123,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
               <button
                 type='button'
                 onClick={() => removeViolation(index)}
-                className='text-red-600 hover:text-red-800 text-sm'
+                className='text-red-400 hover:text-red-300 text-sm font-medium transition-colors duration-200'
               >
                 Remove
               </button>
@@ -217,7 +217,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
           <button
             type='button'
             onClick={addAccident}
-            className='px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700'
+            className='px-3 py-1 text-sm px-4 py-2 text-sm font-semibold text-brand-sage bg-brand-mint rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl'
           >
             Add Accident
           </button>
@@ -244,7 +244,7 @@ export const DrivingRecordStep: React.FC<DrivingRecordStepProps> = ({
               <button
                 type='button'
                 onClick={() => removeAccident(index)}
-                className='text-red-600 hover:text-red-800 text-sm'
+                className='text-red-400 hover:text-red-300 text-sm font-medium transition-colors duration-200'
               >
                 Remove
               </button>
@@ -623,9 +623,9 @@ export const DrugAlcoholTestingStep: React.FC<DrugAlcoholTestingStepProps> = ({
         />
       </div>
 
-      <div className='bg-red-50 border border-red-200 rounded-md p-4'>
-        <h5 className='font-medium text-red-900 mb-2'>DOT Requirements</h5>
-        <ul className='text-sm text-red-800 space-y-1'>
+      <div className='bg-red-500/10 border border-red-500/30 rounded-xl p-4 backdrop-blur-sm'>
+        <h5 className='font-medium text-red-300 mb-2'>DOT Requirements</h5>
+        <ul className='text-sm text-red-300/80 space-y-1'>
           <li>• Drug test must be negative for employment</li>
           <li>• Random testing is required while employed</li>
           <li>• Refusal to test is treated as positive result</li>

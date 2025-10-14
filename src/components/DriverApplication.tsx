@@ -676,9 +676,9 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
   }
 
   return (
-    <div className='max-w-4xl mx-auto p-6'>
+    <div className='max-w-6xl mx-auto p-3 sm:p-6'>
       {/* Application Container with Border */}
-      <div className='bg-brand-sage-light/10 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-brand-cream/30 p-6 sm:p-8'>
+      <div className='bg-brand-sage-light/10 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-brand-cream/30 p-4 sm:p-6 lg:p-8'>
         {/* Inner shadow for depth */}
         <div className='absolute inset-0 rounded-3xl shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)] pointer-events-none' />
 
@@ -686,11 +686,11 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
         <div className='absolute -inset-[2px] rounded-3xl bg-gradient-to-b from-brand-cream/20 to-transparent opacity-50 blur-sm -z-10' />
 
         {/* Header */}
-        <div className='text-center mb-8 relative'>
-          <h1 className='text-3xl font-bold text-brand-cream mb-2'>
+        <div className='text-center mb-6 sm:mb-8 relative'>
+          <h1 className='text-2xl sm:text-3xl font-bold text-brand-cream mb-2'>
             DOT Driver Application
           </h1>
-          <p className='text-brand-cream/70'>
+          <p className='text-sm sm:text-base text-brand-cream/70'>
             Complete all sections to submit your commercial driver application
           </p>
         </div>
@@ -715,39 +715,45 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
 
         {/* Step Navigation */}
         <div className='mb-8'>
-          <div className='flex items-center justify-between'>
+          {/* Mobile: Stack Previous/Next above step buttons */}
+          <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
+            {/* Previous Button */}
             <button
               onClick={prevStep}
               disabled={currentStep === 1}
-              className='px-6 py-3 text-sm font-semibold text-brand-cream bg-brand-sage-light/20 border border-brand-mint/30 rounded-xl hover:bg-brand-sage-light/30 hover:border-brand-mint/50 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed'
+              className='px-4 py-2 sm:px-6 sm:py-3 text-sm font-semibold text-brand-cream bg-brand-sage-light/20 border border-brand-mint/30 rounded-xl hover:bg-brand-sage-light/30 hover:border-brand-mint/50 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto'
             >
               Previous
             </button>
 
-            <div className='flex space-x-2'>
-              {STEPS.map((step) => (
-                <button
-                  key={step.id}
-                  onClick={() => setCurrentStep(step.id)}
-                  className={`w-8 h-8 rounded-full text-sm font-medium transition-all duration-300 ${
-                    currentStep === step.id
-                      ? 'bg-brand-cream text-brand-sage shadow-lg shadow-brand-cream/30'
-                      : currentStep > step.id
-                        ? 'bg-brand-mint text-brand-sage'
-                        : 'bg-brand-sage-light/30 text-brand-cream/50 border border-brand-cream/20'
-                  }`}
-                >
-                  {step.id}
-                </button>
-              ))}
+            {/* Step Buttons - Mobile optimized */}
+            <div className='flex justify-center'>
+              <div className='flex flex-wrap justify-center gap-1 sm:gap-2 max-w-full'>
+                {STEPS.map((step) => (
+                  <button
+                    key={step.id}
+                    onClick={() => setCurrentStep(step.id)}
+                    className={`w-10 h-10 sm:w-8 sm:h-8 rounded-full text-sm font-medium transition-all duration-300 ${
+                      currentStep === step.id
+                        ? 'bg-brand-cream text-brand-sage shadow-lg shadow-brand-cream/30'
+                        : currentStep > step.id
+                          ? 'bg-brand-mint text-brand-sage'
+                          : 'bg-brand-sage-light/30 text-brand-cream/50 border border-brand-cream/20'
+                    }`}
+                  >
+                    {step.id}
+                  </button>
+                ))}
+              </div>
             </div>
 
+            {/* Next/Complete Button */}
             {currentStep === STEPS.length ? (
               <div>
                 <button
                   onClick={completeApplication}
                   disabled={isLoading || isCompleted}
-                  className={`px-6 py-3 text-sm font-semibold border border-transparent rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl ${
+                  className={`px-4 py-2 sm:px-6 sm:py-3 text-sm font-semibold border border-transparent rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl w-full sm:w-auto ${
                     isCompleted
                       ? 'bg-brand-cream text-brand-sage cursor-not-allowed shadow-brand-cream/30'
                       : 'bg-brand-mint text-brand-sage hover:bg-brand-mint/80'
@@ -828,7 +834,7 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
               <button
                 onClick={nextStep}
                 disabled={isLoading}
-                className='px-6 py-3 text-sm font-semibold text-brand-sage bg-brand-mint border border-transparent rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed'
+                className='px-4 py-2 sm:px-6 sm:py-3 text-sm font-semibold text-brand-sage bg-brand-mint border border-transparent rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto'
               >
                 Next
               </button>

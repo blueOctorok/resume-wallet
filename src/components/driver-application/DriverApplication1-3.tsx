@@ -520,7 +520,7 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
         <button
           type='button'
           onClick={addEmployment}
-          className='px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700'
+          className='px-4 py-2 text-sm font-semibold text-brand-sage bg-brand-mint rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl'
         >
           Add Employment
         </button>
@@ -543,7 +543,7 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
               <button
                 type='button'
                 onClick={() => removeEmployment(index)}
-                className='text-red-600 hover:text-red-800 text-sm'
+                className='text-red-400 hover:text-red-300 text-sm font-medium transition-colors duration-200'
               >
                 Remove
               </button>
@@ -671,9 +671,9 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
           </div>
         ))}
 
-      <div className='bg-blue-50 border border-blue-200 rounded-md p-4'>
-        <h5 className='font-medium text-blue-900 mb-2'>DOT Requirements</h5>
-        <ul className='text-sm text-blue-800 space-y-1'>
+      <div className='bg-brand-sage-light/10 border border-brand-mint/30 rounded-xl p-4 backdrop-blur-sm'>
+        <h5 className='font-medium text-brand-cream mb-2'>DOT Requirements</h5>
+        <ul className='text-sm text-brand-cream/70 space-y-1'>
           <li>• Minimum 3 years of employment history required</li>
           <li>• All employment gaps over 30 days must be explained</li>
           <li>• Include all employers, even non-driving positions</li>
