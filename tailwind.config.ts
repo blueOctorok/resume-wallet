@@ -8,15 +8,29 @@ const config: Config = withAccountKitUi(
       './src/components/**/*.{js,ts,jsx,tsx,mdx}',
       './src/app/**/*.{js,ts,jsx,tsx,mdx}',
     ],
+    darkMode: ['class', '[data-theme="dark"]'],
     theme: {
       extend: {
         colors: {
-          // Brand colors - Dark theme palette
-          'brand-sage': '#697469',
-          'brand-sage-dark': '#4a5249', // Darker sage for gradient
+          // Brand colors - Theme-aware palette
+          'brand-sage': {
+            DEFAULT: '#697469', // Original sage color
+            light: '#697469', // Light mode sage
+            dark: '#4a5249', // Darker sage for gradients
+          },
+          'brand-mint': {
+            DEFAULT: '#c9d9c3', // Original mint color
+            light: '#697469', // Light mode uses sage for mint
+          },
+          'brand-cream': {
+            DEFAULT: '#fef5ed', // Original cream color
+            light: '#fef5ed', // Light mode background
+            dark: '#fef5ed', // Original cream for dark mode
+          },
+
+          // Legacy color support (will be replaced gradually)
           'brand-sage-light': '#adc2a9',
-          'brand-mint': '#c9d9c3',
-          'brand-cream': '#fef5ed',
+          'brand-sage-dark': '#4a5249',
         },
         fontFamily: {
           quicksand: ['Quicksand', 'system-ui', '-apple-system', 'sans-serif'],

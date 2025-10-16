@@ -33,6 +33,68 @@ This file tracks major modifications made to the ResumeWallet codebase.
   - **Validation Headers**: Changed red-800/yellow-800 to red-300/yellow-300
   - **Dismiss Buttons**: Updated from gray-400 to brand-cream/50 with hover states
 
+- **✅ Technical Documentation Created** - Comprehensive smart contract architecture guide
+  - **Purpose**: Documentation for cohort testimonial demonstrating blockchain development success
+  - **Coverage**: Both smart contracts (ResumeRegistry & ProductionDriverRegistry) with detailed explanations
+  - **Integration Details**: Complete frontend-to-blockchain connection flow
+  - **Architecture Benefits**: Hybrid on-chain/off-chain approach rationale
+  - **Technology Stack**: Full stack overview with security considerations
+  - **Developer Notes**: Testing, deployment, and environment setup instructions
+  - **Location**: `docs/SMART_CONTRACTS_OVERVIEW.md`
+
+- **✅ Wallet Card & Button Integration** - Enhanced navigation with wallet display
+  - **Desktop**: Wallet card positioned in top-left corner, outside navigation bar
+  - **Mobile**: Wallet button positioned left of Resume button within navigation
+  - **Features**: Address visibility toggle, copy to clipboard, network display
+  - **Styling**: Consistent with brand colors and glassmorphism design
+  - **Layout**: Fixed positioning for desktop, integrated button for mobile
+  - **Integration**: Both wallet card and button open the same user status modal
+  - **Files**: Created `src/components/WalletCard.tsx`, updated Navigation and page components
+
+- **✅ Light/Dark Mode Theme System** - Complete theme switching capability
+  - **Theme Toggle**: Sun/Moon icon button in navigation for easy switching
+  - **Light Mode**: Cream background with sage buttons and borders as requested
+  - **Dark Mode**: Original sage background with mint accents (default)
+  - **Persistence**: Theme preference saved to localStorage
+  - **Smooth Transitions**: 0.3s ease transitions between themes
+  - **Theme-Aware Components**: All components automatically adapt to theme
+  - **Scrollbar Styling**: Custom scrollbars for both light and dark modes
+  - **Background Gradients**: Different gradients for each theme mode
+  - **Files**: Created ThemeContext, ThemeToggle, ThemeAware components
+  - **Integration**: Added ThemeProvider to layout, updated Tailwind config
+  - **Contrast Fixes**: Improved light mode readability with proper text colors
+  - **Navigation**: Theme-aware styling for all navigation elements
+  - **Cards**: Updated welcome cards and content areas for both themes
+  - **Particles Fix**: Sage-colored bubbles in light mode, cream bubbles in dark mode
+  - **Wallet Card**: Complete theme-aware styling for both desktop and mobile versions
+  - **Background**: Darker cream gradient for better contrast in light mode
+  - **DOT Application**: Complete theme-aware styling for all form elements
+  - **Progress Bar**: Theme-aware progress indicators and step buttons
+  - **Form Buttons**: Previous/Next/Complete buttons with proper light mode styling
+  - **Status Panels**: Blockchain status and completion indicators themed
+  - **Form Components**: All form inputs, selects, textareas, and checkboxes themed
+  - **Error Display**: Theme-aware error and warning messages
+  - **Auto-Complete Panel**: Theme-aware styling for the test data panel
+  - **Form Step Labels**: All section headers and field labels now properly themed
+  - **Employment History**: Complete theme-aware styling for all employment form fields
+  - **Driving Record**: Theme-aware styling for violations and accidents sections
+  - **Medical Information**: Theme-aware styling for medical exam and test sections
+  - **Training Records**: Theme-aware styling for training and certification sections
+  - **Driving Experience**: Theme-aware styling for equipment experience and skills
+  - **Safety & Compliance**: Theme-aware styling for accident history and violations (Page 9)
+  - **References**: Theme-aware styling for personal and professional references
+  - **Step Titles**: Fixed "Personal Information" and all step titles to be theme-aware (dark gray in light mode)
+  - **Save Button**: Fixed hard-to-read cream text in light mode - now uses white text on sage background
+  - **Loading States**: Authentication required and loading messages now theme-aware
+  - **Blockchain Status**: IPFS hash and status text now theme-aware
+  - **Step Content Container**: Background and border colors now theme-aware
+  - **DOT Requirements Boxes**: All requirement panels (yellow, green, red) now theme-aware with proper contrast
+  - **Consistent Color Scheme**: Standardized requirement boxes with blue for informational, red for compliance warnings
+  - **Default Light Mode**: Set light mode as the default theme for better real-world usability
+  - **Improved Dark Mode Contrast**: Enhanced dark mode with darker gray background (#2d3748 to #1a202c) and white text for better readability while preserving original brand colors
+  - **Theme-Aware Authentication**: AlchemyAuth component now adapts to light/dark themes with proper contrast and styling consistency
+  - **Unified AuthCard Styling**: Use beautiful dark mode styling for both light and dark themes - consistent sage/mint background with proper contrast
+
 - **✅ Menu-Based Navigation System** - Clean, space-efficient interface
   - Navigation options always visible on desktop for discoverability
   - Mobile: Hamburger menu toggles navigation links

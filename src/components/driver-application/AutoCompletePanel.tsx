@@ -8,6 +8,7 @@ import {
   AUTO_COMPLETE_DATA_NEW_DRIVER,
   QuickFill,
 } from './auto-complete'
+import { useTheme } from '@/contexts/ThemeContext'
 
 interface AutoCompletePanelProps {
   onFillData: (data: Partial<DriverApplicationData>) => void
@@ -22,6 +23,7 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
   isVisible,
   onToggle,
 }) => {
+  const { theme } = useTheme()
   const [selectedPreset, setSelectedPreset] = useState<
     'clean' | 'with-issues' | 'new-driver'
   >('clean')
@@ -113,7 +115,11 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
     return (
       <button
         onClick={onToggle}
-        className='fixed bottom-4 right-4 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors z-50'
+        className={`fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg transition-colors z-50 ${
+          theme === 'light'
+            ? 'bg-brand-sage hover:bg-brand-sage-dark text-white'
+            : 'bg-purple-600 hover:bg-purple-700 text-white'
+        }`}
         title='Show Auto-Complete Panel'
       >
         <svg
@@ -134,12 +140,28 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
   }
 
   return (
-    <div className='fixed bottom-4 right-4 bg-white border border-gray-200 rounded-lg shadow-xl p-4 w-80 z-50'>
+    <div
+      className={`fixed bottom-4 right-4 border rounded-lg shadow-xl p-4 w-80 z-50 ${
+        theme === 'light'
+          ? 'bg-white border-gray-200'
+          : 'bg-brand-sage-light/10 border-brand-mint/30'
+      }`}
+    >
       <div className='flex items-center justify-between mb-4'>
-        <h3 className='text-lg font-semibold text-gray-900'>Auto-Complete</h3>
+        <h3
+          className={`text-lg font-semibold ${
+            theme === 'light' ? 'text-gray-900' : 'text-brand-cream'
+          }`}
+        >
+          Auto-Complete
+        </h3>
         <button
           onClick={onToggle}
-          className='text-gray-400 hover:text-gray-600'
+          className={`${
+            theme === 'light'
+              ? 'text-gray-400 hover:text-gray-600'
+              : 'text-brand-cream/70 hover:text-brand-cream'
+          }`}
         >
           <svg
             className='w-5 h-5'
@@ -160,13 +182,21 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
       <div className='space-y-4'>
         {/* Preset Selection */}
         <div>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
+          <label
+            className={`block text-sm font-medium mb-2 ${
+              theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+            }`}
+          >
             Test Data Preset
           </label>
           <select
             value={selectedPreset}
             onChange={(e) => setSelectedPreset(e.target.value as any)}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500'
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+              theme === 'light'
+                ? 'border-gray-300 focus:ring-brand-sage'
+                : 'border-gray-300 focus:ring-purple-500'
+            }`}
           >
             <option value='clean'>Clean Driver (No Issues)</option>
             <option value='with-issues'>Driver with Compliance Issues</option>
@@ -178,21 +208,33 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
         <div className='space-y-2'>
           <button
             onClick={handleFillAll}
-            className='w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors'
+            className={`w-full px-4 py-2 text-white rounded-md transition-colors ${
+              theme === 'light'
+                ? 'bg-brand-sage hover:bg-brand-sage-dark'
+                : 'bg-purple-600 hover:bg-purple-700'
+            }`}
           >
             Fill All Steps
           </button>
 
           <button
             onClick={handleFillCurrentStep}
-            className='w-full px-4 py-2 text-brand-sage bg-brand-mint rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl'
+            className={`w-full px-4 py-2 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl ${
+              theme === 'light'
+                ? 'text-white bg-brand-sage hover:bg-brand-sage-dark'
+                : 'text-brand-sage bg-brand-mint hover:bg-brand-mint/80'
+            }`}
           >
             Fill Current Step ({getStepName(currentStep)})
           </button>
         </div>
 
         {/* Preset Descriptions */}
-        <div className='text-xs text-gray-600 space-y-1'>
+        <div
+          className={`text-xs space-y-1 ${
+            theme === 'light' ? 'text-gray-600' : 'text-brand-cream/60'
+          }`}
+        >
           <div>
             <strong>Clean Driver:</strong> Experienced driver with good record
           </div>
@@ -206,8 +248,16 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
         </div>
 
         {/* Current Step Info */}
-        <div className='bg-gray-50 rounded-md p-3'>
-          <div className='text-sm text-gray-700'>
+        <div
+          className={`rounded-md p-3 ${
+            theme === 'light' ? 'bg-gray-50' : 'bg-brand-sage/20'
+          }`}
+        >
+          <div
+            className={`text-sm ${
+              theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+            }`}
+          >
             <strong>Current Step:</strong> {currentStep}/10 -{' '}
             {getStepName(currentStep)}
           </div>

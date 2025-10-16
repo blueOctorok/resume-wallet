@@ -5,6 +5,7 @@ import { DriverApplicationData } from './types/driver-application.types'
 import { validatePersonalInfo, ValidationResult } from '@/lib/validation'
 import { FormInput, FormSelect } from './FormInput'
 import { ErrorDisplay } from './ErrorDisplay'
+import { useTheme } from '@/contexts/ThemeContext'
 
 // Personal Information Step Component
 interface PersonalInfoStepProps {
@@ -18,6 +19,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
   onChange,
   validation,
 }) => {
+  const { theme } = useTheme()
   const [localValidation, setLocalValidation] = useState<ValidationResult>({
     isValid: true,
     errors: [],
@@ -219,8 +221,16 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
       </div>
 
       {/* Emergency Contact */}
-      <div className='border-t pt-6'>
-        <h4 className='text-md font-medium text-brand-cream mb-4'>
+      <div
+        className={`border-t pt-6 ${
+          theme === 'light' ? 'border-gray-200' : 'border-brand-mint/20'
+        }`}
+      >
+        <h4
+          className={`text-md font-medium mb-4 ${
+            theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+          }`}
+        >
           Emergency Contact
         </h4>
         <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
@@ -291,6 +301,7 @@ interface CDLInfoStepProps {
 }
 
 export const CDLInfoStep: React.FC<CDLInfoStepProps> = ({ data, onChange }) => {
+  const { theme } = useTheme()
   const cdlClasses = ['A', 'B', 'C']
   const endorsements = ['H', 'N', 'P', 'S', 'T', 'X']
   const restrictions = ['E', 'K', 'L', 'M', 'N', 'O', 'P', 'V', 'Z']
@@ -299,26 +310,42 @@ export const CDLInfoStep: React.FC<CDLInfoStepProps> = ({ data, onChange }) => {
     <div className='space-y-6'>
       <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
         <div>
-          <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+          <label
+            className={`block text-sm font-medium mb-2 ${
+              theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+            }`}
+          >
             CDL Number *
           </label>
           <input
             type='text'
             value={data.cdlNumber}
             onChange={(e) => onChange({ cdlNumber: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+              theme === 'light'
+                ? 'border-gray-300 focus:ring-brand-sage'
+                : 'border-gray-300 focus:ring-blue-500'
+            }`}
             placeholder='Enter your CDL number'
           />
         </div>
 
         <div>
-          <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+          <label
+            className={`block text-sm font-medium mb-2 ${
+              theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+            }`}
+          >
             CDL State *
           </label>
           <select
             value={data.cdlState}
             onChange={(e) => onChange({ cdlState: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+              theme === 'light'
+                ? 'border-gray-300 focus:ring-brand-sage'
+                : 'border-gray-300 focus:ring-blue-500'
+            }`}
           >
             <option value=''>Select state</option>
             <option value='AL'>Alabama</option>
@@ -375,25 +402,41 @@ export const CDLInfoStep: React.FC<CDLInfoStepProps> = ({ data, onChange }) => {
         </div>
 
         <div>
-          <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+          <label
+            className={`block text-sm font-medium mb-2 ${
+              theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+            }`}
+          >
             CDL Expiration Date *
           </label>
           <input
             type='date'
             value={data.cdlExpiration}
             onChange={(e) => onChange({ cdlExpiration: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+              theme === 'light'
+                ? 'border-gray-300 focus:ring-brand-sage'
+                : 'border-gray-300 focus:ring-blue-500'
+            }`}
           />
         </div>
 
         <div>
-          <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+          <label
+            className={`block text-sm font-medium mb-2 ${
+              theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+            }`}
+          >
             CDL Class *
           </label>
           <select
             value={data.cdlClass}
             onChange={(e) => onChange({ cdlClass: e.target.value })}
-            className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+              theme === 'light'
+                ? 'border-gray-300 focus:ring-brand-sage'
+                : 'border-gray-300 focus:ring-blue-500'
+            }`}
           >
             <option value=''>Select CDL class</option>
             {cdlClasses.map((cls) => (
@@ -407,7 +450,11 @@ export const CDLInfoStep: React.FC<CDLInfoStepProps> = ({ data, onChange }) => {
 
       {/* Endorsements */}
       <div>
-        <label className='block text-sm font-medium text-brand-cream/70 mb-3'>
+        <label
+          className={`block text-sm font-medium mb-3 ${
+            theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+          }`}
+        >
           Endorsements
         </label>
         <div className='grid grid-cols-3 md:grid-cols-6 gap-3'>
@@ -429,9 +476,17 @@ export const CDLInfoStep: React.FC<CDLInfoStepProps> = ({ data, onChange }) => {
                     })
                   }
                 }}
-                className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
+                className={`h-4 w-4 focus:ring-2 border-gray-300 rounded ${
+                  theme === 'light'
+                    ? 'text-brand-sage focus:ring-brand-sage'
+                    : 'text-blue-600 focus:ring-blue-500'
+                }`}
               />
-              <span className='ml-2 text-sm text-brand-cream/70'>
+              <span
+                className={`ml-2 text-sm ${
+                  theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                }`}
+              >
                 {endorsement}
               </span>
             </label>
@@ -441,7 +496,11 @@ export const CDLInfoStep: React.FC<CDLInfoStepProps> = ({ data, onChange }) => {
 
       {/* Restrictions */}
       <div>
-        <label className='block text-sm font-medium text-brand-cream/70 mb-3'>
+        <label
+          className={`block text-sm font-medium mb-3 ${
+            theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+          }`}
+        >
           Restrictions
         </label>
         <div className='grid grid-cols-3 md:grid-cols-6 gap-3'>
@@ -463,9 +522,17 @@ export const CDLInfoStep: React.FC<CDLInfoStepProps> = ({ data, onChange }) => {
                     })
                   }
                 }}
-                className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
+                className={`h-4 w-4 focus:ring-2 border-gray-300 rounded ${
+                  theme === 'light'
+                    ? 'text-brand-sage focus:ring-brand-sage'
+                    : 'text-blue-600 focus:ring-blue-500'
+                }`}
               />
-              <span className='ml-2 text-sm text-brand-cream/70'>
+              <span
+                className={`ml-2 text-sm ${
+                  theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                }`}
+              >
                 {restriction}
               </span>
             </label>
@@ -486,6 +553,7 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
   data,
   onChange,
 }) => {
+  const { theme } = useTheme()
   const addEmployment = () => {
     const newEmployment = {
       company: '',
@@ -514,20 +582,32 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
   return (
     <div className='space-y-6'>
       <div className='flex justify-between items-center'>
-        <h4 className='text-md font-medium text-brand-cream'>
+        <h4
+          className={`text-md font-medium ${
+            theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+          }`}
+        >
           Employment History (Last 3 Years Required)
         </h4>
         <button
           type='button'
           onClick={addEmployment}
-          className='px-4 py-2 text-sm font-semibold text-brand-sage bg-brand-mint rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl'
+          className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl ${
+            theme === 'light'
+              ? 'text-white bg-brand-sage hover:bg-brand-sage-dark'
+              : 'text-brand-sage bg-brand-mint hover:bg-brand-mint/80'
+          }`}
         >
           Add Employment
         </button>
       </div>
 
       {data.length === 0 && (
-        <div className='text-center py-8 text-brand-cream/50'>
+        <div
+          className={`text-center py-8 ${
+            theme === 'light' ? 'text-gray-500' : 'text-brand-cream/50'
+          }`}
+        >
           <p>No employment history added yet.</p>
           <p className='text-sm'>Click "Add Employment" to get started.</p>
         </div>
@@ -535,9 +615,18 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
 
       {Array.isArray(data) &&
         data.map((employment, index) => (
-          <div key={index} className='border border-gray-200 rounded-lg p-4'>
+          <div
+            key={index}
+            className={`border rounded-lg p-4 ${
+              theme === 'light' ? 'border-gray-200 bg-white' : 'border-gray-200'
+            }`}
+          >
             <div className='flex justify-between items-center mb-4'>
-              <h5 className='font-medium text-brand-cream'>
+              <h5
+                className={`font-medium ${
+                  theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+                }`}
+              >
                 Employment #{index + 1}
               </h5>
               <button
@@ -551,7 +640,11 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Company Name *
                 </label>
                 <input
@@ -560,13 +653,21 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
                   onChange={(e) =>
                     updateEmployment(index, 'company', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                   placeholder='Enter company name'
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Position *
                 </label>
                 <input
@@ -575,13 +676,21 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
                   onChange={(e) =>
                     updateEmployment(index, 'position', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                   placeholder='Enter position title'
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Start Date *
                 </label>
                 <input
@@ -590,12 +699,20 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
                   onChange={(e) =>
                     updateEmployment(index, 'startDate', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   End Date
                 </label>
                 <input
@@ -604,12 +721,20 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
                   onChange={(e) =>
                     updateEmployment(index, 'endDate', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Supervisor Name
                 </label>
                 <input
@@ -618,13 +743,21 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
                   onChange={(e) =>
                     updateEmployment(index, 'supervisorName', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                   placeholder='Enter supervisor name'
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Supervisor Phone
                 </label>
                 <input
@@ -633,13 +766,21 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
                   onChange={(e) =>
                     updateEmployment(index, 'supervisorPhone', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                   placeholder='(XXX) XXX-XXXX'
                 />
               </div>
 
               <div className='md:col-span-2'>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Reason for Leaving
                 </label>
                 <input
@@ -648,13 +789,21 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
                   onChange={(e) =>
                     updateEmployment(index, 'reasonForLeaving', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                   placeholder='Enter reason for leaving'
                 />
               </div>
 
               <div className='md:col-span-2'>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Job Duties
                 </label>
                 <textarea
@@ -663,7 +812,11 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
                     updateEmployment(index, 'duties', e.target.value)
                   }
                   rows={3}
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                   placeholder='Describe your job duties and responsibilities'
                 />
               </div>
@@ -671,9 +824,25 @@ export const EmploymentHistoryStep: React.FC<EmploymentHistoryStepProps> = ({
           </div>
         ))}
 
-      <div className='bg-brand-sage-light/10 border border-brand-mint/30 rounded-xl p-4 backdrop-blur-sm'>
-        <h5 className='font-medium text-brand-cream mb-2'>DOT Requirements</h5>
-        <ul className='text-sm text-brand-cream/70 space-y-1'>
+      <div
+        className={`border rounded-xl p-4 backdrop-blur-sm ${
+          theme === 'light'
+            ? 'bg-gray-50 border-gray-200'
+            : 'bg-brand-sage-light/10 border-brand-mint/30'
+        }`}
+      >
+        <h5
+          className={`font-medium mb-2 ${
+            theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+          }`}
+        >
+          DOT Requirements
+        </h5>
+        <ul
+          className={`text-sm space-y-1 ${
+            theme === 'light' ? 'text-gray-600' : 'text-brand-cream/70'
+          }`}
+        >
           <li>• Minimum 3 years of employment history required</li>
           <li>• All employment gaps over 30 days must be explained</li>
           <li>• Include all employers, even non-driving positions</li>

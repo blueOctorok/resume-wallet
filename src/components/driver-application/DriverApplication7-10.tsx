@@ -5,6 +5,7 @@ import { DriverApplicationData } from './types/driver-application.types'
 import { ValidationResult } from '@/lib/validation'
 import { FormInput, FormSelect, FormTextarea, FormCheckbox } from './FormInput'
 import { ErrorDisplay } from './ErrorDisplay'
+import { useTheme } from '@/contexts/ThemeContext'
 
 // Training Records Step Component
 interface TrainingRecordsStepProps {
@@ -18,6 +19,7 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
   onChange,
   validation,
 }) => {
+  const { theme } = useTheme()
   const [localValidation, setLocalValidation] = useState<ValidationResult>({
     isValid: true,
     errors: [],
@@ -60,20 +62,32 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
       <ErrorDisplay validation={currentValidation} />
 
       <div className='flex justify-between items-center'>
-        <h4 className='text-md font-medium text-brand-cream'>
+        <h4
+          className={`text-md font-medium ${
+            theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+          }`}
+        >
           Training Records & Certifications
         </h4>
         <button
           type='button'
           onClick={addTraining}
-          className='px-3 py-1 text-sm px-4 py-2 text-sm font-semibold text-brand-sage bg-brand-mint rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl'
+          className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl ${
+            theme === 'light'
+              ? 'text-white bg-brand-sage hover:bg-brand-sage-dark'
+              : 'text-brand-sage bg-brand-mint hover:bg-brand-mint/80'
+          }`}
         >
           Add Training
         </button>
       </div>
 
       {data.length === 0 && (
-        <div className='text-center py-8 text-brand-cream/50'>
+        <div
+          className={`text-center py-8 ${
+            theme === 'light' ? 'text-gray-500' : 'text-brand-cream/50'
+          }`}
+        >
           <p>No training records added yet.</p>
           <p className='text-sm'>Click "Add Training" to get started.</p>
         </div>
@@ -83,7 +97,11 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
         data.map((training, index) => (
           <div key={index} className='border border-gray-200 rounded-lg p-4'>
             <div className='flex justify-between items-center mb-4'>
-              <h5 className='font-medium text-brand-cream'>
+              <h5
+                className={`font-medium ${
+                  theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+                }`}
+              >
                 Training #{index + 1}
               </h5>
               <button
@@ -97,7 +115,11 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Training Type *
                 </label>
                 <select
@@ -105,7 +127,11 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
                   onChange={(e) =>
                     updateTraining(index, 'trainingType', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 >
                   <option value=''>Select training type</option>
                   <option value='Defensive Driving'>Defensive Driving</option>
@@ -120,7 +146,11 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Training Date *
                 </label>
                 <input
@@ -129,12 +159,20 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
                   onChange={(e) =>
                     updateTraining(index, 'trainingDate', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Training Company
                 </label>
                 <input
@@ -143,13 +181,21 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
                   onChange={(e) =>
                     updateTraining(index, 'trainingCompany', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                   placeholder='Enter training company name'
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Certificate Number
                 </label>
                 <input
@@ -158,13 +204,21 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
                   onChange={(e) =>
                     updateTraining(index, 'certificateNumber', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                   placeholder='Enter certificate number'
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Expiration Date
                 </label>
                 <input
@@ -173,18 +227,36 @@ export const TrainingRecordsStep: React.FC<TrainingRecordsStepProps> = ({
                   onChange={(e) =>
                     updateTraining(index, 'expirationDate', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 />
               </div>
             </div>
           </div>
         ))}
 
-      <div className='bg-brand-sage-light/10 border border-brand-mint/30 rounded-xl p-4 backdrop-blur-sm'>
-        <h5 className='font-medium text-brand-cream mb-2'>
+      <div
+        className={`border rounded-xl p-4 backdrop-blur-sm ${
+          theme === 'light'
+            ? 'bg-blue-50 border-blue-200'
+            : 'bg-brand-sage-light/10 border-brand-mint/30'
+        }`}
+      >
+        <h5
+          className={`font-medium mb-2 ${
+            theme === 'light' ? 'text-blue-900' : 'text-brand-cream'
+          }`}
+        >
           Training Requirements
         </h5>
-        <ul className='text-sm text-brand-cream/70 space-y-1'>
+        <ul
+          className={`text-sm space-y-1 ${
+            theme === 'light' ? 'text-blue-800' : 'text-brand-cream/70'
+          }`}
+        >
           <li>
             • Entry-Level Driver Training (ELDT) required for new CDL holders
           </li>
@@ -209,6 +281,7 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
   onChange,
   validation,
 }) => {
+  const { theme } = useTheme()
   const [localValidation, setLocalValidation] = useState<ValidationResult>({
     isValid: true,
     errors: [],
@@ -277,19 +350,31 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
 
       {/* Equipment Types */}
       <div>
-        <h4 className='text-md font-medium text-brand-cream mb-6'>
+        <h4
+          className={`text-md font-medium mb-6 ${
+            theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+          }`}
+        >
           Equipment Experience
         </h4>
 
         <div className='space-y-6'>
           {/* Straight Truck */}
           <div className='border border-gray-200 rounded-lg p-4'>
-            <h5 className='font-medium text-brand-cream mb-4'>
+            <h5
+              className={`font-medium mb-4 ${
+                theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+              }`}
+            >
               Straight Truck
             </h5>
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Years of Experience
                 </label>
                 <input
@@ -308,11 +393,19 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                       },
                     })
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Total Miles
                 </label>
                 <input
@@ -331,7 +424,11 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                       },
                     })
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 />
               </div>
             </div>
@@ -339,12 +436,20 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
 
           {/* Tractor-Trailer */}
           <div className='border border-gray-200 rounded-lg p-4'>
-            <h5 className='font-medium text-brand-cream mb-4'>
+            <h5
+              className={`font-medium mb-4 ${
+                theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+              }`}
+            >
               Tractor-Trailer
             </h5>
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Years of Experience
                 </label>
                 <input
@@ -363,11 +468,19 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                       },
                     })
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Total Miles
                 </label>
                 <input
@@ -386,7 +499,11 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                       },
                     })
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 />
               </div>
             </div>
@@ -394,12 +511,20 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
 
           {/* Tractor with Two Trailers */}
           <div className='border border-gray-200 rounded-lg p-4'>
-            <h5 className='font-medium text-brand-cream mb-4'>
+            <h5
+              className={`font-medium mb-4 ${
+                theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+              }`}
+            >
               Tractor with Two Trailers
             </h5>
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Years of Experience
                 </label>
                 <input
@@ -418,11 +543,19 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                       },
                     })
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Total Miles
                 </label>
                 <input
@@ -441,7 +574,11 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                       },
                     })
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 />
               </div>
             </div>
@@ -450,13 +587,21 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
           {/* Specialized Equipment */}
           <div className='border border-gray-200 rounded-lg p-4'>
             <div className='flex justify-between items-center mb-4'>
-              <h5 className='font-medium text-brand-cream'>
+              <h5
+                className={`font-medium ${
+                  theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+                }`}
+              >
                 Specialized Equipment
               </h5>
               <button
                 type='button'
                 onClick={addSpecializedEquipment}
-                className='px-3 py-1 text-sm px-4 py-2 text-sm font-semibold text-brand-sage bg-brand-mint rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl'
+                className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl ${
+                  theme === 'light'
+                    ? 'text-white bg-brand-sage hover:bg-brand-sage-dark'
+                    : 'text-brand-sage bg-brand-mint hover:bg-brand-mint/80'
+                }`}
               >
                 Add Equipment
               </button>
@@ -476,7 +621,11 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                   className='border border-gray-200 rounded p-3 mb-3'
                 >
                   <div className='flex justify-between items-center mb-3'>
-                    <h6 className='font-medium text-brand-cream'>
+                    <h6
+                      className={`font-medium ${
+                        theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+                      }`}
+                    >
                       Equipment #{index + 1}
                     </h6>
                     <button
@@ -489,7 +638,13 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                   </div>
                   <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
                     <div>
-                      <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                      <label
+                        className={`block text-sm font-medium mb-1 ${
+                          theme === 'light'
+                            ? 'text-gray-700'
+                            : 'text-brand-cream/70'
+                        }`}
+                      >
                         Equipment Type
                       </label>
                       <input
@@ -502,12 +657,22 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                             e.target.value
                           )
                         }
-                        className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                          theme === 'light'
+                            ? 'border-gray-300 focus:ring-brand-sage'
+                            : 'border-gray-300 focus:ring-blue-500'
+                        }`}
                         placeholder='e.g., Flatbed, Reefer, Tanker'
                       />
                     </div>
                     <div>
-                      <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                      <label
+                        className={`block text-sm font-medium mb-1 ${
+                          theme === 'light'
+                            ? 'text-gray-700'
+                            : 'text-brand-cream/70'
+                        }`}
+                      >
                         Years
                       </label>
                       <input
@@ -521,11 +686,21 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                             parseInt(e.target.value) || 0
                           )
                         }
-                        className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                          theme === 'light'
+                            ? 'border-gray-300 focus:ring-brand-sage'
+                            : 'border-gray-300 focus:ring-blue-500'
+                        }`}
                       />
                     </div>
                     <div>
-                      <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                      <label
+                        className={`block text-sm font-medium mb-1 ${
+                          theme === 'light'
+                            ? 'text-gray-700'
+                            : 'text-brand-cream/70'
+                        }`}
+                      >
                         Miles
                       </label>
                       <input
@@ -539,7 +714,11 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                             parseInt(e.target.value) || 0
                           )
                         }
-                        className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                          theme === 'light'
+                            ? 'border-gray-300 focus:ring-brand-sage'
+                            : 'border-gray-300 focus:ring-blue-500'
+                        }`}
                       />
                     </div>
                   </div>
@@ -552,7 +731,11 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
 
       {/* Special Skills */}
       <div>
-        <h4 className='text-md font-medium text-brand-cream mb-4'>
+        <h4
+          className={`text-md font-medium mb-4 ${
+            theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+          }`}
+        >
           Special Skills
         </h4>
         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
@@ -570,9 +753,17 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
                     },
                   })
                 }
-                className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
+                className={`h-4 w-4 focus:ring-2 border-gray-300 rounded ${
+                  theme === 'light'
+                    ? 'text-brand-sage focus:ring-brand-sage'
+                    : 'text-blue-600 focus:ring-blue-500'
+                }`}
               />
-              <span className='text-sm text-brand-cream/70 capitalize'>
+              <span
+                className={`text-sm capitalize ${
+                  theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                }`}
+              >
                 {skill.replace(/([A-Z])/g, ' $1').trim()}
               </span>
             </label>
@@ -580,11 +771,25 @@ export const DrivingExperienceStep: React.FC<DrivingExperienceStepProps> = ({
         </div>
       </div>
 
-      <div className='bg-brand-sage-light/10 border border-brand-mint/30 rounded-xl p-4 backdrop-blur-sm'>
-        <h5 className='font-medium text-brand-cream mb-2'>
+      <div
+        className={`border rounded-xl p-4 backdrop-blur-sm ${
+          theme === 'light'
+            ? 'bg-blue-50 border-blue-200'
+            : 'bg-brand-sage-light/10 border-brand-mint/30'
+        }`}
+      >
+        <h5
+          className={`font-medium mb-2 ${
+            theme === 'light' ? 'text-blue-900' : 'text-brand-cream'
+          }`}
+        >
           Experience Requirements
         </h5>
-        <ul className='text-sm text-brand-cream/70 space-y-1'>
+        <ul
+          className={`text-sm space-y-1 ${
+            theme === 'light' ? 'text-blue-800' : 'text-brand-cream/70'
+          }`}
+        >
           <li>• Be honest about your experience level</li>
           <li>• Include all relevant equipment experience</li>
           <li>• Special skills can increase job opportunities</li>
@@ -607,6 +812,7 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
   onChange,
   validation,
 }) => {
+  const { theme } = useTheme()
   const [localValidation, setLocalValidation] = useState<ValidationResult>({
     isValid: true,
     errors: [],
@@ -682,20 +888,32 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
       {/* Accidents */}
       <div>
         <div className='flex justify-between items-center mb-4'>
-          <h4 className='text-md font-medium text-brand-cream'>
+          <h4
+            className={`text-md font-medium ${
+              theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+            }`}
+          >
             Accident History (Last 5 Years)
           </h4>
           <button
             type='button'
             onClick={addAccident}
-            className='px-3 py-1 text-sm px-4 py-2 text-sm font-semibold text-brand-sage bg-brand-mint rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl'
+            className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl ${
+              theme === 'light'
+                ? 'text-white bg-brand-sage hover:bg-brand-sage-dark'
+                : 'text-brand-sage bg-brand-mint hover:bg-brand-mint/80'
+            }`}
           >
             Add Accident
           </button>
         </div>
 
         {data.accidents.length === 0 && (
-          <div className='text-center py-4 text-brand-cream/50 border border-gray-200 rounded-md'>
+          <div
+            className={`text-center py-4 border border-gray-200 rounded-md ${
+              theme === 'light' ? 'text-gray-500' : 'text-brand-cream/50'
+            }`}
+          >
             <p>No accidents to report.</p>
             <p className='text-sm'>
               If you have accidents, click "Add Accident" above.
@@ -709,7 +927,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
             className='border border-gray-200 rounded-lg p-4 mb-4'
           >
             <div className='flex justify-between items-center mb-4'>
-              <h5 className='font-medium text-brand-cream'>
+              <h5
+                className={`font-medium ${
+                  theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+                }`}
+              >
                 Accident #{index + 1}
               </h5>
               <button
@@ -723,7 +945,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Accident Date *
                 </label>
                 <input
@@ -732,12 +958,20 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
                   onChange={(e) =>
                     updateAccident(index, 'date', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Accident Type *
                 </label>
                 <select
@@ -745,7 +979,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
                   onChange={(e) =>
                     updateAccident(index, 'type', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 >
                   <option value='non-injury'>Non-Injury</option>
                   <option value='injury'>Injury</option>
@@ -754,7 +992,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Commercial Vehicle
                 </label>
                 <select
@@ -766,7 +1008,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
                       e.target.value === 'true'
                     )
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 >
                   <option value='false'>No</option>
                   <option value='true'>Yes</option>
@@ -774,7 +1020,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   DOT Recordable
                 </label>
                 <select
@@ -786,7 +1036,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
                       e.target.value === 'true'
                     )
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 >
                   <option value='false'>No</option>
                   <option value='true'>Yes</option>
@@ -794,7 +1048,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   At Fault
                 </label>
                 <select
@@ -802,7 +1060,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
                   onChange={(e) =>
                     updateAccident(index, 'atFault', e.target.value === 'true')
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 >
                   <option value='false'>No</option>
                   <option value='true'>Yes</option>
@@ -810,7 +1072,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Citation Issued
                 </label>
                 <select
@@ -822,7 +1088,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
                       e.target.value === 'true'
                     )
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 >
                   <option value='false'>No</option>
                   <option value='true'>Yes</option>
@@ -830,7 +1100,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
               </div>
 
               <div className='md:col-span-2'>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Description *
                 </label>
                 <textarea
@@ -839,7 +1113,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
                     updateAccident(index, 'description', e.target.value)
                   }
                   rows={3}
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                   placeholder='Describe what happened in the accident'
                 />
               </div>
@@ -851,20 +1129,32 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
       {/* Violations */}
       <div>
         <div className='flex justify-between items-center mb-4'>
-          <h4 className='text-md font-medium text-brand-cream'>
+          <h4
+            className={`text-md font-medium ${
+              theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+            }`}
+          >
             Traffic Violations (Last 3 Years)
           </h4>
           <button
             type='button'
             onClick={addViolation}
-            className='px-3 py-1 text-sm px-4 py-2 text-sm font-semibold text-brand-sage bg-brand-mint rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl'
+            className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl ${
+              theme === 'light'
+                ? 'text-white bg-brand-sage hover:bg-brand-sage-dark'
+                : 'text-brand-sage bg-brand-mint hover:bg-brand-mint/80'
+            }`}
           >
             Add Violation
           </button>
         </div>
 
         {data.violations.length === 0 && (
-          <div className='text-center py-4 text-brand-cream/50 border border-gray-200 rounded-md'>
+          <div
+            className={`text-center py-4 border border-gray-200 rounded-md ${
+              theme === 'light' ? 'text-gray-500' : 'text-brand-cream/50'
+            }`}
+          >
             <p>No violations to report.</p>
             <p className='text-sm'>
               If you have violations, click "Add Violation" above.
@@ -878,7 +1168,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
             className='border border-gray-200 rounded-lg p-4 mb-4'
           >
             <div className='flex justify-between items-center mb-4'>
-              <h5 className='font-medium text-brand-cream'>
+              <h5
+                className={`font-medium ${
+                  theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+                }`}
+              >
                 Violation #{index + 1}
               </h5>
               <button
@@ -892,7 +1186,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Violation Date *
                 </label>
                 <input
@@ -901,12 +1199,20 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
                   onChange={(e) =>
                     updateViolation(index, 'date', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Charge *
                 </label>
                 <input
@@ -915,13 +1221,21 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
                   onChange={(e) =>
                     updateViolation(index, 'charge', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                   placeholder='e.g., Speeding, Red Light, etc.'
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   State *
                 </label>
                 <input
@@ -930,13 +1244,21 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
                   onChange={(e) =>
                     updateViolation(index, 'state', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                   placeholder='State abbreviation'
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Commercial Vehicle
                 </label>
                 <select
@@ -948,7 +1270,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
                       e.target.value === 'true'
                     )
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 >
                   <option value='false'>No</option>
                   <option value='true'>Yes</option>
@@ -956,7 +1282,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Fine Amount
                 </label>
                 <input
@@ -971,13 +1301,21 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
                       parseFloat(e.target.value) || 0
                     )
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                   placeholder='0.00'
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   License Impact
                 </label>
                 <input
@@ -986,7 +1324,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
                   onChange={(e) =>
                     updateViolation(index, 'licenseImpact', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                   placeholder='e.g., None, Suspended, etc.'
                 />
               </div>
@@ -997,7 +1339,11 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
 
       {/* Compliance Questions */}
       <div>
-        <h4 className='text-md font-medium text-brand-cream mb-4'>
+        <h4
+          className={`text-md font-medium mb-4 ${
+            theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+          }`}
+        >
           Compliance Questions
         </h4>
         <div className='space-y-4'>
@@ -1015,9 +1361,17 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
                     },
                   })
                 }
-                className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-1'
+                className={`h-4 w-4 focus:ring-2 border-gray-300 rounded mt-1 ${
+                  theme === 'light'
+                    ? 'text-brand-sage focus:ring-brand-sage'
+                    : 'text-blue-600 focus:ring-blue-500'
+                }`}
               />
-              <span className='text-sm text-brand-cream/70'>
+              <span
+                className={`text-sm ${
+                  theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                }`}
+              >
                 {question
                   .replace(/([A-Z])/g, ' $1')
                   .replace(/^./, (str) => str.toUpperCase())}
@@ -1027,11 +1381,25 @@ export const SafetyComplianceStep: React.FC<SafetyComplianceStepProps> = ({
         </div>
       </div>
 
-      <div className='bg-red-500/10 border border-red-500/30 rounded-xl p-4 backdrop-blur-sm'>
-        <h5 className='font-medium text-red-300 mb-2'>
+      <div
+        className={`border rounded-xl p-4 backdrop-blur-sm ${
+          theme === 'light'
+            ? 'bg-red-50 border-red-200'
+            : 'bg-red-500/10 border-red-500/30'
+        }`}
+      >
+        <h5
+          className={`font-medium mb-2 ${
+            theme === 'light' ? 'text-red-800' : 'text-red-300'
+          }`}
+        >
           Compliance Requirements
         </h5>
-        <ul className='text-sm text-red-300/80 space-y-1'>
+        <ul
+          className={`text-sm space-y-1 ${
+            theme === 'light' ? 'text-red-700' : 'text-red-300/80'
+          }`}
+        >
           <li>• Answer all questions truthfully</li>
           <li>• False information can result in disqualification</li>
           <li>• DOT violations may affect eligibility</li>
@@ -1054,6 +1422,7 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
   onChange,
   validation,
 }) => {
+  const { theme } = useTheme()
   const [localValidation, setLocalValidation] = useState<ValidationResult>({
     isValid: true,
     errors: [],
@@ -1096,20 +1465,32 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
       <ErrorDisplay validation={currentValidation} />
 
       <div className='flex justify-between items-center'>
-        <h4 className='text-md font-medium text-brand-cream'>
+        <h4
+          className={`text-md font-medium ${
+            theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+          }`}
+        >
           Personal & Professional References
         </h4>
         <button
           type='button'
           onClick={addReference}
-          className='px-4 py-2 text-sm font-semibold text-brand-sage bg-brand-mint rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl'
+          className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl ${
+            theme === 'light'
+              ? 'text-white bg-brand-sage hover:bg-brand-sage-dark'
+              : 'text-brand-sage bg-brand-mint hover:bg-brand-mint/80'
+          }`}
         >
           Add Reference
         </button>
       </div>
 
       {data.length === 0 && (
-        <div className='text-center py-8 text-brand-cream/50'>
+        <div
+          className={`text-center py-8 ${
+            theme === 'light' ? 'text-gray-500' : 'text-brand-cream/50'
+          }`}
+        >
           <p>No references added yet.</p>
           <p className='text-sm'>Click "Add Reference" to get started.</p>
         </div>
@@ -1122,7 +1503,11 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
             className='border border-brand-cream/30 rounded-lg p-4 bg-brand-sage-light/5'
           >
             <div className='flex justify-between items-center mb-4'>
-              <h5 className='font-medium text-brand-cream'>
+              <h5
+                className={`font-medium ${
+                  theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+                }`}
+              >
                 Reference #{index + 1}
               </h5>
               <button
@@ -1136,7 +1521,11 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Full Name *
                 </label>
                 <input
@@ -1145,13 +1534,21 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
                   onChange={(e) =>
                     updateReference(index, 'name', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                   placeholder='Enter reference name'
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Relationship *
                 </label>
                 <select
@@ -1159,7 +1556,11 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
                   onChange={(e) =>
                     updateReference(index, 'relationship', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 >
                   <option value=''>Select relationship</option>
                   <option value='Former Supervisor'>Former Supervisor</option>
@@ -1173,7 +1574,11 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Phone Number *
                 </label>
                 <input
@@ -1182,13 +1587,21 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
                   onChange={(e) =>
                     updateReference(index, 'phone', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                   placeholder='(XXX) XXX-XXXX'
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Email Address
                 </label>
                 <input
@@ -1197,13 +1610,21 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
                   onChange={(e) =>
                     updateReference(index, 'email', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                   placeholder='Enter email address'
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-brand-cream/70 mb-1'>
+                <label
+                  className={`block text-sm font-medium mb-1 ${
+                    theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+                  }`}
+                >
                   Years Known *
                 </label>
                 <input
@@ -1212,7 +1633,11 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
                   onChange={(e) =>
                     updateReference(index, 'yearsKnown', e.target.value)
                   }
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                    theme === 'light'
+                      ? 'border-gray-300 focus:ring-brand-sage'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                   placeholder='e.g., 3, 5, 10+'
                 />
               </div>
@@ -1220,11 +1645,25 @@ export const ReferencesStep: React.FC<ReferencesStepProps> = ({
           </div>
         ))}
 
-      <div className='bg-brand-sage-light/10 border border-brand-mint/30 rounded-xl p-4 backdrop-blur-sm'>
-        <h5 className='font-medium text-brand-cream mb-2'>
+      <div
+        className={`border rounded-xl p-4 backdrop-blur-sm ${
+          theme === 'light'
+            ? 'bg-blue-50 border-blue-200'
+            : 'bg-brand-sage-light/10 border-brand-mint/30'
+        }`}
+      >
+        <h5
+          className={`font-medium mb-2 ${
+            theme === 'light' ? 'text-blue-900' : 'text-brand-cream'
+          }`}
+        >
           Reference Requirements
         </h5>
-        <ul className='text-sm text-brand-cream/70 space-y-1'>
+        <ul
+          className={`text-sm space-y-1 ${
+            theme === 'light' ? 'text-blue-800' : 'text-brand-cream/70'
+          }`}
+        >
           <li>• Provide at least 3 professional references</li>
           <li>• Include contact information for verification</li>
           <li>• Choose references who can speak to your character</li>

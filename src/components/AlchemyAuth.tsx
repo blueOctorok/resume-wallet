@@ -19,6 +19,7 @@ import {
   useAccount,
   useLogout,
 } from '@account-kit/react'
+import { useTheme } from '@/contexts/ThemeContext'
 
 interface AlchemyAuthProps {
   onAuthSuccess?: (user: any) => void
@@ -35,6 +36,7 @@ export default function AlchemyAuth({
   subtitle,
   mode = 'general',
 }: AlchemyAuthProps) {
+  const { theme } = useTheme()
   const { openAuthModal } = useAuthModal()
   const { isConnected, isInitializing } = useSignerStatus()
   const user = useUser()
@@ -150,16 +152,32 @@ export default function AlchemyAuth({
   // Loading state
   if (isInitializing) {
     return (
-      <div className='relative bg-brand-sage-light/20 backdrop-blur-xl rounded-3xl shadow-2xl border border-brand-mint/30 p-8'>
+      <div
+        className={`relative backdrop-blur-xl rounded-3xl shadow-2xl border p-8 bg-brand-sage-light/20 border-brand-mint/30`}
+      >
         {/* Inner shadow for depth */}
-        <div className='absolute inset-0 rounded-3xl shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)] pointer-events-none' />
+        <div
+          className={`absolute inset-0 rounded-3xl pointer-events-none shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)]`}
+        />
 
         {/* Outer glow */}
-        <div className='absolute -inset-[1px] rounded-3xl bg-gradient-to-b from-brand-mint/20 to-transparent opacity-50 blur-sm -z-10' />
+        <div
+          className={`absolute -inset-[1px] rounded-3xl opacity-50 blur-sm -z-10 bg-gradient-to-b from-brand-mint/20 to-transparent`}
+        />
 
         <div className='relative text-center'>
-          <div className='animate-spin rounded-full h-10 w-10 border-b-2 border-brand-mint mx-auto mb-4'></div>
-          <p className='text-brand-cream/80'>Initializing authentication...</p>
+          <div
+            className={`animate-spin rounded-full h-10 w-10 border-b-2 mx-auto mb-4 ${
+              theme === 'light' ? 'border-brand-sage' : 'border-brand-mint'
+            }`}
+          ></div>
+          <p
+            className={`${
+              theme === 'light' ? 'text-gray-600' : 'text-brand-cream/80'
+            }`}
+          >
+            Initializing authentication...
+          </p>
         </div>
       </div>
     )
@@ -168,18 +186,30 @@ export default function AlchemyAuth({
   // Authenticated state
   if (isConnected && userInfo) {
     return (
-      <div className='relative bg-brand-sage-light/20 backdrop-blur-xl rounded-3xl shadow-2xl border border-brand-mint/30 p-6'>
+      <div
+        className={`relative backdrop-blur-xl rounded-3xl shadow-2xl border p-6 bg-brand-sage-light/20 border-brand-mint/30`}
+      >
         {/* Inner shadow for depth */}
-        <div className='absolute inset-0 rounded-3xl shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)] pointer-events-none' />
+        <div
+          className={`absolute inset-0 rounded-3xl pointer-events-none shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)]`}
+        />
 
         {/* Outer glow */}
-        <div className='absolute -inset-[1px] rounded-3xl bg-gradient-to-b from-brand-mint/20 to-transparent opacity-50 blur-sm -z-10' />
+        <div
+          className={`absolute -inset-[1px] rounded-3xl opacity-50 blur-sm -z-10 bg-gradient-to-b from-brand-mint/20 to-transparent`}
+        />
 
         <div className='relative'>
           <div className='text-center mb-6'>
-            <div className='w-16 h-16 bg-brand-mint/30 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg'>
+            <div
+              className={`w-16 h-16 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg ${
+                theme === 'light' ? 'bg-brand-sage/20' : 'bg-brand-mint/30'
+              }`}
+            >
               <svg
-                className='w-8 h-8 text-brand-cream drop-shadow-sm'
+                className={`w-8 h-8 drop-shadow-sm ${
+                  theme === 'light' ? 'text-brand-sage' : 'text-brand-cream'
+                }`}
                 fill='none'
                 stroke='currentColor'
                 viewBox='0 0 24 24'
@@ -192,37 +222,81 @@ export default function AlchemyAuth({
                 />
               </svg>
             </div>
-            <h2 className='text-xl font-semibold text-brand-cream mb-2'>
+            <h2
+              className={`text-xl font-semibold mb-2 ${
+                theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+              }`}
+            >
               {content.welcomeMessage}
             </h2>
           </div>
 
           <div className='space-y-4'>
             {/* User Info */}
-            <div className='bg-brand-sage/30 backdrop-blur-sm rounded-2xl p-4 border border-brand-mint/20 shadow-lg'>
+            <div
+              className={`backdrop-blur-sm rounded-2xl p-4 border shadow-lg ${
+                theme === 'light'
+                  ? 'bg-white/80 border-brand-sage/30'
+                  : 'bg-brand-sage/30 border-brand-mint/20'
+              }`}
+            >
               <div className='space-y-3 text-sm'>
                 {userInfo.email && (
                   <div className='flex justify-between items-center'>
-                    <span className='font-medium text-brand-cream/70'>
+                    <span
+                      className={`font-medium ${
+                        theme === 'light'
+                          ? 'text-gray-600'
+                          : 'text-brand-cream/70'
+                      }`}
+                    >
                       Email:
                     </span>
-                    <span className='text-brand-cream'>{userInfo.email}</span>
+                    <span
+                      className={`${
+                        theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+                      }`}
+                    >
+                      {userInfo.email}
+                    </span>
                   </div>
                 )}
                 <div className='flex justify-between items-center'>
-                  <span className='font-medium text-brand-cream/70'>
+                  <span
+                    className={`font-medium ${
+                      theme === 'light'
+                        ? 'text-gray-600'
+                        : 'text-brand-cream/70'
+                    }`}
+                  >
                     Wallet:
                   </span>
-                  <span className='text-brand-cream font-mono text-xs'>
+                  <span
+                    className={`font-mono text-xs ${
+                      theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+                    }`}
+                  >
                     {userInfo.address?.slice(0, 8)}...
                     {userInfo.address?.slice(-6)}
                   </span>
                 </div>
                 <div className='flex justify-between items-center'>
-                  <span className='font-medium text-brand-cream/70'>
+                  <span
+                    className={`font-medium ${
+                      theme === 'light'
+                        ? 'text-gray-600'
+                        : 'text-brand-cream/70'
+                    }`}
+                  >
                     Network:
                   </span>
-                  <span className='text-brand-cream'>{userInfo.chain}</span>
+                  <span
+                    className={`${
+                      theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+                    }`}
+                  >
+                    {userInfo.chain}
+                  </span>
                 </div>
               </div>
             </div>
@@ -231,7 +305,11 @@ export default function AlchemyAuth({
             <div className='flex gap-3'>
               <button
                 onClick={handleLogout}
-                className='flex-1 px-4 py-3 text-brand-sage font-medium bg-brand-mint rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl'
+                className={`flex-1 px-4 py-3 font-medium rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl ${
+                  theme === 'light'
+                    ? 'text-white bg-brand-sage hover:bg-brand-sage-dark'
+                    : 'text-brand-sage bg-brand-mint hover:bg-brand-mint/80'
+                }`}
               >
                 Sign Out
               </button>
@@ -244,12 +322,18 @@ export default function AlchemyAuth({
 
   // Authentication form
   return (
-    <div className='relative bg-brand-sage-light/20 backdrop-blur-xl rounded-3xl shadow-2xl border border-brand-mint/30 p-6 sm:p-8'>
+    <div
+      className={`relative backdrop-blur-xl rounded-3xl shadow-2xl border p-6 sm:p-8 bg-brand-sage-light/20 border-brand-mint/30`}
+    >
       {/* Inner shadow for depth */}
-      <div className='absolute inset-0 rounded-3xl shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)] pointer-events-none' />
+      <div
+        className={`absolute inset-0 rounded-3xl pointer-events-none shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)]`}
+      />
 
       {/* Outer glow */}
-      <div className='absolute -inset-[1px] rounded-3xl bg-gradient-to-b from-brand-mint/20 to-transparent opacity-50 blur-sm -z-10' />
+      <div
+        className={`absolute -inset-[1px] rounded-3xl opacity-50 blur-sm -z-10 bg-gradient-to-b from-brand-mint/20 to-transparent`}
+      />
 
       <div className='relative'>
         {/* Alchemy AuthCard - handles all the authentication logic */}

@@ -3,9 +3,17 @@
 @import 'tailwindcss';
 @config '../../tailwind.config.ts';
 
-/* Set dark mode as default */
+/* Theme-aware styling */
 :root {
   color-scheme: dark;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
 }
 
 body {
@@ -14,28 +22,56 @@ body {
     system-ui,
     -apple-system,
     sans-serif;
-  background: linear-gradient(to bottom, #697469 0%, #4a5249 100%);
   background-attachment: fixed; /* Keeps gradient fixed while scrolling */
   min-height: 100vh;
-  color: #fef5ed;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
-/* Custom scrollbar for dark theme */
+/* Dark mode styles */
+[data-theme='dark'] body {
+  background: linear-gradient(to bottom, #2d3748 0%, #1a202c 100%);
+  color: #ffffff;
+}
+
+/* Light mode styles */
+[data-theme='light'] body {
+  background: linear-gradient(to bottom, #f5f0e8 0%, #ebe6dd 100%);
+  color: #2d3748;
+}
+
+/* Theme-aware scrollbar */
 ::-webkit-scrollbar {
   width: 12px;
 }
 
-::-webkit-scrollbar-track {
-  background: #697469;
+/* Dark mode scrollbar */
+[data-theme='dark'] ::-webkit-scrollbar-track {
+  background: #2d3748;
 }
 
-::-webkit-scrollbar-thumb {
+[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 6px;
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
+  background: #718096;
+}
+
+/* Light mode scrollbar */
+[data-theme='light'] ::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+
+[data-theme='light'] ::-webkit-scrollbar-thumb {
   background: #adc2a9;
   border-radius: 6px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #c9d9c3;
+[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
+  background: #697469;
 }
 
 /* ===== BRAND CUSTOMIZATIONS ===== */
@@ -57,4 +93,36 @@ body {
   --brand-sage-light: #adc2a9;
   --brand-mint: #c9d9c3;
   --brand-cream: #fef5ed;
+}
+
+/* Alchemy AuthCard theme overrides */
+[data-theme='light'] .akui-header-title,
+[data-theme='light'] [data-testid='header-title'],
+[data-theme='light'] .akui-header h1,
+[data-theme='light'] .akui-header h2,
+[data-theme='light'] .akui-header h3 {
+  color: #2d3748 !important; /* Dark gray for light mode */
+}
+
+[data-theme='dark'] .akui-header-title,
+[data-theme='dark'] [data-testid='header-title'],
+[data-theme='dark'] .akui-header h1,
+[data-theme='dark'] .akui-header h2,
+[data-theme='dark'] .akui-header h3 {
+  color: #fef5ed !important; /* Cream for dark mode */
+}
+
+/* Fix "powered by alchemy" and other footer text */
+[data-theme='light'] .akui-text-tertiary,
+[data-theme='light'] .akui-text-tertiary *,
+[data-theme='light'] .akui-footer,
+[data-theme='light'] .akui-footer *,
+[data-theme='light'] .akui-auth-footer,
+[data-theme='light'] .akui-auth-footer * {
+  color: #4a5568 !important; /* Dark gray for readability */
+}
+
+[data-theme='light'] .akui-btn-secondary,
+[data-theme='light'] .akui-btn-secondary * {
+  color: #2d3748 !important;
 }

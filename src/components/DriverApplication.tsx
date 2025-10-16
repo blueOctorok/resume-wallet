@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { useTheme } from '@/contexts/ThemeContext'
 import {
   DriverApplicationData,
   DriverApplicationRecord,
@@ -38,6 +39,7 @@ import AutoCompletePanel from './driver-application/AutoCompletePanel'
 
 const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
   const [currentStep, setCurrentStep] = useState(1)
+  const { theme } = useTheme()
   const [applicationData, setApplicationData] = useState<DriverApplicationData>(
     {
       personalInfo: {
@@ -653,10 +655,18 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
               />
             </svg>
           </div>
-          <h3 className='text-lg font-medium text-brand-cream mb-2'>
+          <h3
+            className={`text-lg font-medium mb-2 ${
+              theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+            }`}
+          >
             Authentication Required
           </h3>
-          <p className='text-brand-cream/70'>
+          <p
+            className={`${
+              theme === 'light' ? 'text-gray-600' : 'text-brand-cream/70'
+            }`}
+          >
             Please log in to access the driver application.
           </p>
         </div>
@@ -669,7 +679,13 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
       <div className='flex items-center justify-center min-h-screen'>
         <div className='text-center'>
           <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-brand-mint mx-auto mb-4'></div>
-          <p className='text-brand-cream/70'>Loading application...</p>
+          <p
+            className={`${
+              theme === 'light' ? 'text-gray-600' : 'text-brand-cream/70'
+            }`}
+          >
+            Loading application...
+          </p>
         </div>
       </div>
     )
@@ -678,19 +694,45 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
   return (
     <div className='max-w-6xl mx-auto p-3 sm:p-6'>
       {/* Application Container with Border */}
-      <div className='bg-brand-sage-light/10 backdrop-blur-xl rounded-3xl shadow-2xl border-2 border-brand-cream/30 p-4 sm:p-6 lg:p-8'>
+      <div
+        className={`backdrop-blur-xl rounded-3xl shadow-2xl border-2 p-4 sm:p-6 lg:p-8 relative ${
+          theme === 'light'
+            ? 'bg-white/90 border-brand-sage/40'
+            : 'bg-brand-sage-light/10 border-brand-cream/30'
+        }`}
+      >
         {/* Inner shadow for depth */}
-        <div className='absolute inset-0 rounded-3xl shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)] pointer-events-none' />
+        <div
+          className={`absolute inset-0 rounded-3xl pointer-events-none ${
+            theme === 'light'
+              ? 'shadow-[inset_0_2px_20px_rgba(0,0,0,0.1)]'
+              : 'shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)]'
+          }`}
+        />
 
         {/* Outer glow */}
-        <div className='absolute -inset-[2px] rounded-3xl bg-gradient-to-b from-brand-cream/20 to-transparent opacity-50 blur-sm -z-10' />
+        <div
+          className={`absolute -inset-[2px] rounded-3xl opacity-50 blur-sm -z-10 ${
+            theme === 'light'
+              ? 'bg-gradient-to-b from-brand-sage/20 to-transparent'
+              : 'bg-gradient-to-b from-brand-cream/20 to-transparent'
+          }`}
+        />
 
         {/* Header */}
         <div className='text-center mb-6 sm:mb-8 relative'>
-          <h1 className='text-2xl sm:text-3xl font-bold text-brand-cream mb-2'>
+          <h1
+            className={`text-2xl sm:text-3xl font-bold mb-2 ${
+              theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+            }`}
+          >
             DOT Driver Application
           </h1>
-          <p className='text-sm sm:text-base text-brand-cream/70'>
+          <p
+            className={`text-sm sm:text-base ${
+              theme === 'light' ? 'text-gray-600' : 'text-brand-cream/70'
+            }`}
+          >
             Complete all sections to submit your commercial driver application
           </p>
         </div>
@@ -698,16 +740,30 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
         {/* Progress Bar */}
         <div className='mb-8'>
           <div className='flex items-center justify-between mb-2'>
-            <span className='text-sm font-medium text-brand-cream'>
+            <span
+              className={`text-sm font-medium ${
+                theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+              }`}
+            >
               Step {currentStep} of {STEPS.length}
             </span>
-            <span className='text-sm text-brand-cream/70'>
+            <span
+              className={`text-sm ${
+                theme === 'light' ? 'text-gray-600' : 'text-brand-cream/70'
+              }`}
+            >
               {Math.round((currentStep / STEPS.length) * 100)}% Complete
             </span>
           </div>
-          <div className='w-full bg-brand-sage-light/20 rounded-full h-2'>
+          <div
+            className={`w-full rounded-full h-2 ${
+              theme === 'light' ? 'bg-gray-200' : 'bg-brand-sage-light/20'
+            }`}
+          >
             <div
-              className='bg-brand-mint h-2 rounded-full transition-all duration-300'
+              className={`h-2 rounded-full transition-all duration-300 ${
+                theme === 'light' ? 'bg-brand-sage' : 'bg-brand-mint'
+              }`}
               style={{ width: `${(currentStep / STEPS.length) * 100}%` }}
             ></div>
           </div>
@@ -721,7 +777,11 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
             <button
               onClick={prevStep}
               disabled={currentStep === 1}
-              className='px-4 py-2 sm:px-6 sm:py-3 text-sm font-semibold text-brand-cream bg-brand-sage-light/20 border border-brand-mint/30 rounded-xl hover:bg-brand-sage-light/30 hover:border-brand-mint/50 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto'
+              className={`px-4 py-2 sm:px-6 sm:py-3 text-sm font-semibold rounded-xl border transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto ${
+                theme === 'light'
+                  ? 'text-white bg-brand-sage border-brand-sage hover:bg-brand-sage-dark hover:border-brand-sage-dark'
+                  : 'text-brand-cream bg-brand-sage-light/20 border-brand-mint/30 hover:bg-brand-sage-light/30 hover:border-brand-mint/50'
+              }`}
             >
               Previous
             </button>
@@ -735,10 +795,16 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
                     onClick={() => setCurrentStep(step.id)}
                     className={`w-10 h-10 sm:w-8 sm:h-8 rounded-full text-sm font-medium transition-all duration-300 ${
                       currentStep === step.id
-                        ? 'bg-brand-cream text-brand-sage shadow-lg shadow-brand-cream/30'
+                        ? theme === 'light'
+                          ? 'bg-brand-sage text-white shadow-lg shadow-brand-sage/30'
+                          : 'bg-brand-cream text-brand-sage shadow-lg shadow-brand-cream/30'
                         : currentStep > step.id
-                          ? 'bg-brand-mint text-brand-sage'
-                          : 'bg-brand-sage-light/30 text-brand-cream/50 border border-brand-cream/20'
+                          ? theme === 'light'
+                            ? 'bg-brand-sage text-white'
+                            : 'bg-brand-mint text-brand-sage'
+                          : theme === 'light'
+                            ? 'bg-gray-200 text-gray-600 border border-gray-300'
+                            : 'bg-brand-sage-light/30 text-brand-cream/50 border border-brand-cream/20'
                     }`}
                   >
                     {step.id}
@@ -755,8 +821,12 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
                   disabled={isLoading || isCompleted}
                   className={`px-4 py-2 sm:px-6 sm:py-3 text-sm font-semibold border border-transparent rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl w-full sm:w-auto ${
                     isCompleted
-                      ? 'bg-brand-cream text-brand-sage cursor-not-allowed shadow-brand-cream/30'
-                      : 'bg-brand-mint text-brand-sage hover:bg-brand-mint/80'
+                      ? theme === 'light'
+                        ? 'bg-brand-sage text-white cursor-not-allowed shadow-brand-sage/30'
+                        : 'bg-brand-cream text-brand-sage cursor-not-allowed shadow-brand-cream/30'
+                      : theme === 'light'
+                        ? 'bg-brand-sage text-white hover:bg-brand-sage-dark'
+                        : 'bg-brand-mint text-brand-sage hover:bg-brand-mint/80'
                   }`}
                 >
                   {isCompleted
@@ -768,23 +838,51 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
 
                 {/* Blockchain Status Indicator */}
                 {isCompleted && (
-                  <div className='mt-4 p-4 bg-brand-sage-light/10 rounded-xl border border-brand-mint/20 backdrop-blur-sm'>
-                    <h3 className='text-sm font-medium text-brand-cream mb-2'>
+                  <div
+                    className={`mt-4 p-4 rounded-xl border backdrop-blur-sm ${
+                      theme === 'light'
+                        ? 'bg-gray-50 border-brand-sage/30'
+                        : 'bg-brand-sage-light/10 border-brand-mint/20'
+                    }`}
+                  >
+                    <h3
+                      className={`text-sm font-medium mb-2 ${
+                        theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+                      }`}
+                    >
                       Blockchain Status
                     </h3>
                     <div className='flex items-center space-x-2'>
                       {blockchainStatus === 'pending' && (
                         <>
                           <div className='w-3 h-3 bg-yellow-400 rounded-full animate-pulse'></div>
-                          <span className='text-sm text-yellow-300'>
+                          <span
+                            className={`text-sm ${
+                              theme === 'light'
+                                ? 'text-yellow-600'
+                                : 'text-yellow-300'
+                            }`}
+                          >
                             Submitting to blockchain...
                           </span>
                         </>
                       )}
                       {blockchainStatus === 'submitted' && (
                         <>
-                          <div className='w-3 h-3 bg-brand-mint rounded-full'></div>
-                          <span className='text-sm text-brand-mint'>
+                          <div
+                            className={`w-3 h-3 rounded-full ${
+                              theme === 'light'
+                                ? 'bg-brand-sage'
+                                : 'bg-brand-mint'
+                            }`}
+                          ></div>
+                          <span
+                            className={`text-sm ${
+                              theme === 'light'
+                                ? 'text-brand-sage'
+                                : 'text-brand-mint'
+                            }`}
+                          >
                             Submitted to blockchain (ID:{' '}
                             {blockchainApplicationId})
                           </span>
@@ -815,13 +913,25 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
                         </>
                       )}
                     </div>
-                    <p className='text-xs text-brand-cream/70 mt-1'>
+                    <p
+                      className={`text-xs mt-1 ${
+                        theme === 'light'
+                          ? 'text-gray-500'
+                          : 'text-brand-cream/70'
+                      }`}
+                    >
                       Your application is stored immutably on the blockchain for
                       verification.
                       {ipfsHash && (
                         <span className='block mt-1'>
                           IPFS Hash:{' '}
-                          <code className='bg-brand-sage/30 px-2 py-1 rounded text-xs text-brand-cream font-mono'>
+                          <code
+                            className={`px-2 py-1 rounded text-xs font-mono ${
+                              theme === 'light'
+                                ? 'bg-brand-sage/20 text-gray-700'
+                                : 'bg-brand-sage/30 text-brand-cream'
+                            }`}
+                          >
                             {ipfsHash}
                           </code>
                         </span>
@@ -834,7 +944,11 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
               <button
                 onClick={nextStep}
                 disabled={isLoading}
-                className='px-4 py-2 sm:px-6 sm:py-3 text-sm font-semibold text-brand-sage bg-brand-mint border border-transparent rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto'
+                className={`px-4 py-2 sm:px-6 sm:py-3 text-sm font-semibold border border-transparent rounded-xl hover:transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto ${
+                  theme === 'light'
+                    ? 'text-white bg-brand-sage hover:bg-brand-sage-dark'
+                    : 'text-brand-sage bg-brand-mint hover:bg-brand-mint/80'
+                }`}
               >
                 Next
               </button>
@@ -844,10 +958,18 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
 
         {/* Current Step Title */}
         <div className='mb-6'>
-          <h2 className='text-xl font-semibold text-brand-cream'>
+          <h2
+            className={`text-xl font-semibold ${
+              theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+            }`}
+          >
             {STEPS[currentStep - 1].title}
           </h2>
-          <p className='text-brand-cream/70'>
+          <p
+            className={`${
+              theme === 'light' ? 'text-gray-600' : 'text-brand-cream/70'
+            }`}
+          >
             {STEPS[currentStep - 1].description}
           </p>
         </div>
@@ -866,7 +988,13 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
         )}
 
         {/* Step Content */}
-        <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-6 mb-8 shadow-xl'>
+        <div
+          className={`backdrop-blur-sm border rounded-2xl p-6 mb-8 shadow-xl ${
+            theme === 'light'
+              ? 'bg-white/90 border-brand-sage/30'
+              : 'bg-brand-sage-light/10 border-brand-mint/20'
+          }`}
+        >
           {renderStep()}
         </div>
 
@@ -875,7 +1003,11 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
           <button
             onClick={saveApplication}
             disabled={isLoading}
-            className='px-6 py-3 text-sm font-semibold text-brand-cream bg-brand-sage-light/20 border border-brand-mint/30 rounded-xl hover:bg-brand-sage-light/30 hover:border-brand-mint/50 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed'
+            className={`px-6 py-3 text-sm font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed ${
+              theme === 'light'
+                ? 'text-white bg-brand-sage border border-brand-sage hover:bg-brand-sage-dark hover:border-brand-sage-dark'
+                : 'text-brand-cream bg-brand-sage-light/20 border border-brand-mint/30 hover:bg-brand-sage-light/30 hover:border-brand-mint/50'
+            }`}
           >
             {isLoading ? 'Saving...' : 'Save Progress'}
           </button>

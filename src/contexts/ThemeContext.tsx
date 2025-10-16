@@ -2,69 +2,43 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 
-type Theme = 'light' | 'dark' | 'system'
+type Theme = 'light' | 'dark'
 
 interface ThemeContextType {
   theme: Theme
+  toggleTheme: () => void
   setTheme: (theme: Theme) => void
-  resolvedTheme: 'light' | 'dark'
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('system')
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light')
+  const [theme, setThemeState] = useState<Theme>('light') // Default to light mode
 
+  // Load theme from localStorage on mount
   useEffect(() => {
-    // Get initial theme from localStorage or system preference
-    const savedTheme = localStorage.getItem('theme') as Theme
-    if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
-      setTheme(savedTheme)
+    const savedTheme = localStorage.getItem('veree-theme') as Theme
+    if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
+      setThemeState(savedTheme)
     }
   }, [])
 
+  // Apply theme to document and save to localStorage
   useEffect(() => {
-    // Apply theme changes
-    const root = document.documentElement
-
-    if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
-        .matches
-        ? 'dark'
-        : 'light'
-      setResolvedTheme(systemTheme)
-      root.classList.remove('light', 'dark')
-      root.classList.add(systemTheme)
-    } else {
-      setResolvedTheme(theme)
-      root.classList.remove('light', 'dark')
-      root.classList.add(theme)
-    }
-
-    // Save to localStorage
-    localStorage.setItem('theme', theme)
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('veree-theme', theme)
   }, [theme])
 
-  useEffect(() => {
-    // Listen for system theme changes
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+  const toggleTheme = () => {
+    setThemeState((prev) => (prev === 'light' ? 'dark' : 'light'))
+  }
 
-    const handleChange = () => {
-      if (theme === 'system') {
-        const systemTheme = mediaQuery.matches ? 'dark' : 'light'
-        setResolvedTheme(systemTheme)
-        document.documentElement.classList.remove('light', 'dark')
-        document.documentElement.classList.add(systemTheme)
-      }
-    }
-
-    mediaQuery.addEventListener('change', handleChange)
-    return () => mediaQuery.removeEventListener('change', handleChange)
-  }, [theme])
+  const setTheme = (newTheme: Theme) => {
+    setThemeState(newTheme)
+  }
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   )

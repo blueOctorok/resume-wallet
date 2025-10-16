@@ -1,71 +1,29 @@
 'use client'
 
-import { useTheme } from 'next-themes'
-import { Sun, Moon, Monitor } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Sun, Moon } from 'lucide-react'
+import { useTheme } from '@/contexts/ThemeContext'
 
 export default function ThemeToggle() {
-  const { theme, setTheme, resolvedTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-
-  // Prevent hydration mismatch
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) {
-    return (
-      <div className='flex items-center space-x-1 bg-brand-cream dark:bg-brand-sage/20 rounded-lg p-1 border border-brand-mint/20 dark:border-brand-mint/10'>
-        <div className='p-2 rounded-md'>
-          <Sun size={16} />
-        </div>
-        <div className='p-2 rounded-md'>
-          <Moon size={16} />
-        </div>
-        <div className='p-2 rounded-md'>
-          <Monitor size={16} />
-        </div>
-      </div>
-    )
-  }
+  const { theme, toggleTheme } = useTheme()
 
   return (
-    <div className='flex items-center space-x-1 bg-brand-cream dark:bg-brand-sage/20 rounded-lg p-1 border border-brand-mint/20 dark:border-brand-mint/10'>
-      <button
-        onClick={() => setTheme('light')}
-        className={`p-2 rounded-md transition-colors ${
-          theme === 'light'
-            ? 'bg-brand-mint text-white'
-            : 'text-brand-sage-light hover:bg-brand-mint/20'
-        }`}
-        title='Light mode'
-      >
-        <Sun size={16} />
-      </button>
+    <button
+      onClick={toggleTheme}
+      className='relative group p-2.5 rounded-xl bg-brand-sage/60 backdrop-blur-sm hover:bg-brand-sage/80 hover:border-brand-mint/70 transition-all duration-300 shadow-lg hover:shadow-xl border border-transparent'
+      aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+    >
+      <div className='w-5 h-5 flex items-center justify-center'>
+        {theme === 'light' ? (
+          <Moon className='w-4 h-4 text-brand-cream transition-transform duration-300' />
+        ) : (
+          <Sun className='w-4 h-4 text-brand-cream transition-transform duration-300' />
+        )}
+      </div>
 
-      <button
-        onClick={() => setTheme('dark')}
-        className={`p-2 rounded-md transition-colors ${
-          theme === 'dark'
-            ? 'bg-brand-mint text-white'
-            : 'text-brand-sage-light hover:bg-brand-mint/20'
-        }`}
-        title='Dark mode'
-      >
-        <Moon size={16} />
-      </button>
-
-      <button
-        onClick={() => setTheme('system')}
-        className={`p-2 rounded-md transition-colors ${
-          theme === 'system'
-            ? 'bg-brand-mint text-white'
-            : 'text-brand-sage-light hover:bg-brand-mint/20'
-        }`}
-        title='System preference'
-      >
-        <Monitor size={16} />
-      </button>
-    </div>
+      {/* Tooltip */}
+      <div className='absolute right-0 top-full mt-2 px-3 py-1.5 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
+        Switch to {theme === 'light' ? 'dark' : 'light'} mode
+      </div>
+    </button>
   )
 }

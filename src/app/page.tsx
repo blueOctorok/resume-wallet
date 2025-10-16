@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic'
 import Navigation from '@/components/Navigation'
 import AnimatedBackground from '@/components/AnimatedBackground'
 import UserStatusModal from '@/components/UserStatusModal'
+import WalletCard from '@/components/WalletCard'
+import { useTheme } from '@/contexts/ThemeContext'
 
 // Dynamic imports to avoid SSR issues with Alchemy hooks
 const ResumeUploadWithVerification = dynamic(
@@ -77,6 +79,7 @@ const Home = () => {
   const [currentPage, setCurrentPage] = useState<
     'signin' | 'resume' | 'dotapp' | null
   >(null)
+  const { theme } = useTheme()
 
   // Debug: Log user state changes
   useEffect(() => {
@@ -97,6 +100,11 @@ const Home = () => {
 
   const closeModal = useCallback(() => {
     setIsModalOpen(false)
+  }, [])
+
+  // Wallet modal handler (same as status modal for now)
+  const handleWalletClick = useCallback(() => {
+    setIsModalOpen(true)
   }, [])
 
   // Logout handler
@@ -125,10 +133,23 @@ const Home = () => {
       {/* Animated Background */}
       <AnimatedBackground />
 
+      {/* Wallet Card - Desktop Top Left */}
+      {user && (
+        <div className='hidden md:block fixed top-4 left-4 z-40'>
+          <WalletCard
+            user={user}
+            onClick={handleWalletClick}
+            isMobile={false}
+          />
+        </div>
+      )}
+
       {/* Navigation with status indicator */}
       <Navigation
         isAuthenticated={!!user}
+        user={user}
         onStatusClick={openModal}
+        onWalletClick={handleWalletClick}
         onNavigate={handleNavigation}
       />
 
@@ -172,26 +193,62 @@ const Home = () => {
         {/* Welcome message when no page is selected */}
         {!currentPage && (
           <div className='max-w-2xl mx-auto text-center py-16'>
-            <h2 className='text-4xl sm:text-5xl font-light text-brand-cream mb-6'>
+            <h2
+              className={`text-4xl sm:text-5xl font-light mb-6 ${
+                theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+              }`}
+            >
               Welcome to Veree
             </h2>
-            <p className='text-brand-cream/70 text-lg mb-8'>
+            <p
+              className={`text-lg mb-8 ${
+                theme === 'light' ? 'text-gray-600' : 'text-brand-cream/70'
+              }`}
+            >
               Click on Veree above to get started
             </p>
             <div className='flex flex-col sm:flex-row gap-4 justify-center'>
-              <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-6 text-center'>
-                <h3 className='text-brand-cream font-semibold mb-2'>
+              <div
+                className={`backdrop-blur-sm border rounded-2xl p-6 text-center ${
+                  theme === 'light'
+                    ? 'bg-white/80 border-brand-sage/30'
+                    : 'bg-brand-sage-light/10 border-brand-mint/20'
+                }`}
+              >
+                <h3
+                  className={`font-semibold mb-2 ${
+                    theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+                  }`}
+                >
                   Resume Verification
                 </h3>
-                <p className='text-brand-cream/60 text-sm'>
+                <p
+                  className={`text-sm ${
+                    theme === 'light' ? 'text-gray-600' : 'text-brand-cream/60'
+                  }`}
+                >
                   Upload and verify your professional resume on the blockchain
                 </p>
               </div>
-              <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-6 text-center'>
-                <h3 className='text-brand-cream font-semibold mb-2'>
+              <div
+                className={`backdrop-blur-sm border rounded-2xl p-6 text-center ${
+                  theme === 'light'
+                    ? 'bg-white/80 border-brand-sage/30'
+                    : 'bg-brand-sage-light/10 border-brand-mint/20'
+                }`}
+              >
+                <h3
+                  className={`font-semibold mb-2 ${
+                    theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+                  }`}
+                >
                   DOT Application
                 </h3>
-                <p className='text-brand-cream/60 text-sm'>
+                <p
+                  className={`text-sm ${
+                    theme === 'light' ? 'text-gray-600' : 'text-brand-cream/60'
+                  }`}
+                >
                   Complete your Department of Transportation driver application
                 </p>
               </div>

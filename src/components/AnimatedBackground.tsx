@@ -3,6 +3,7 @@
 import { useCallback } from 'react'
 import Particles from 'react-tsparticles'
 import { loadSlim } from 'tsparticles-slim'
+import { useTheme } from '@/contexts/ThemeContext'
 
 /**
  * Animated Background with tsParticles
@@ -14,10 +15,18 @@ import { loadSlim } from 'tsparticles-slim'
  */
 
 export default function AnimatedBackground() {
+  const { theme } = useTheme()
+
   const particlesInit = useCallback(async (engine: any) => {
     console.log('🎨 Initializing tsParticles v2')
     await loadSlim(engine)
   }, [])
+
+  // Theme-aware particle colors
+  const particleColors =
+    theme === 'light'
+      ? ['#697469', '#697469', '#adc2a9', '#697469'] // Sage colors for light mode
+      : ['#fef5ed', '#fef5ed', '#c9d9c3', '#fef5ed'] // Cream colors for dark mode
 
   return (
     <Particles
@@ -46,7 +55,7 @@ export default function AnimatedBackground() {
             type: 'circle',
           },
           color: {
-            value: ['#fef5ed', '#fef5ed', '#c9d9c3', '#fef5ed'], // Mostly cream with some mint
+            value: particleColors,
           },
           opacity: {
             value: 0.4,
