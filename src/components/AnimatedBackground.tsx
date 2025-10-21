@@ -35,7 +35,7 @@ export default function AnimatedBackground() {
       options={{
         fullScreen: {
           enable: true,
-          zIndex: 0,
+          zIndex: -1,
         },
         background: {
           color: {
@@ -91,27 +91,12 @@ export default function AnimatedBackground() {
           detect_on: 'canvas',
           events: {
             onhover: {
-              enable: true,
-              mode: 'bubble',
+              enable: false,
             },
             onclick: {
-              enable: true,
-              mode: 'repulse',
+              enable: false,
             },
             resize: true,
-          },
-          modes: {
-            bubble: {
-              distance: 150,
-              size: 8,
-              duration: 2,
-              opacity: 0.6,
-              speed: 3,
-            },
-            repulse: {
-              distance: 200,
-              duration: 0.4,
-            },
           },
         },
         retina_detect: true,

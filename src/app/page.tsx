@@ -40,8 +40,47 @@ const AlchemyAuth = dynamic(
   }
 )
 
-const DriverApplication = dynamic(
-  () => import('@/components/DriverApplication').then((mod) => mod.default),
+const PersonalinfoForm1 = dynamic(
+  () =>
+    import('@/components/driver-application/PersonalinfoForm1').then(
+      (mod) => mod.default
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
+        <div className='space-y-4 animate-pulse'>
+          <div className='h-6 bg-brand-sage-light/20 rounded w-40' />
+          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
+        </div>
+      </div>
+    ),
+  }
+)
+
+const PersonalInfoForm2 = dynamic(
+  () =>
+    import('@/components/driver-application/PersonalInfoForm2').then(
+      (mod) => mod.default
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
+        <div className='space-y-4 animate-pulse'>
+          <div className='h-6 bg-brand-sage-light/20 rounded w-40' />
+          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
+        </div>
+      </div>
+    ),
+  }
+)
+
+const PersonalInfoForm3 = dynamic(
+  () =>
+    import('@/components/driver-application/PersonalInfoForm3').then(
+      (mod) => mod.default
+    ),
   {
     ssr: false,
     loading: () => (
@@ -79,6 +118,7 @@ const Home = () => {
   const [currentPage, setCurrentPage] = useState<
     'signin' | 'resume' | 'dotapp' | null
   >(null)
+  const [currentForm, setCurrentForm] = useState(1)
   const { theme } = useTheme()
 
   // Debug: Log user state changes
@@ -127,6 +167,79 @@ const Home = () => {
     },
     []
   )
+
+  // Form navigation handler
+  const handleFormNavigation = useCallback((formNumber: number) => {
+    setCurrentForm(formNumber)
+  }, [])
+
+  // Render form content based on current form
+  const renderFormContent = () => {
+    switch (currentForm) {
+      case 1:
+        return <PersonalinfoForm1 />
+      case 2:
+        return <PersonalInfoForm2 />
+      case 3:
+        return <PersonalInfoForm3 />
+      default:
+        return <PersonalinfoForm1 />
+    }
+  }
+
+  // Render form navigation buttons
+  const renderFormNavigation = () => {
+    if (currentPage !== 'dotapp') return null
+
+    return (
+      <div className='flex justify-center mb-8'>
+        <div className='flex space-x-4'>
+          <button
+            onClick={() => handleFormNavigation(1)}
+            className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
+              currentForm === 1
+                ? theme === 'dark'
+                  ? 'bg-brand-mint text-white shadow-lg'
+                  : 'bg-brand-sage text-white shadow-lg'
+                : theme === 'dark'
+                  ? 'bg-gray-700 text-white hover:bg-gray-600 border-2 border-gray-600'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-300'
+            }`}
+          >
+            Form 1: Personal Info
+          </button>
+          <button
+            onClick={() => handleFormNavigation(2)}
+            className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
+              currentForm === 2
+                ? theme === 'dark'
+                  ? 'bg-brand-mint text-white shadow-lg'
+                  : 'bg-brand-sage text-white shadow-lg'
+                : theme === 'dark'
+                  ? 'bg-gray-700 text-white hover:bg-gray-600 border-2 border-gray-600'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-300'
+            }`}
+          >
+            Form 2: Driving & Records
+          </button>
+          <button
+            onClick={() => handleFormNavigation(3)}
+            className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
+              currentForm === 3
+                ? theme === 'dark'
+                  ? 'bg-brand-mint text-white shadow-lg'
+                  : 'bg-brand-sage text-white shadow-lg'
+                : theme === 'dark'
+                  ? 'bg-gray-700 text-white hover:bg-gray-600 border-2 border-gray-600'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-300'
+            }`}
+          >
+            Form 3: Employment & Signature
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className='min-h-screen overflow-x-hidden relative'>
@@ -185,9 +298,10 @@ const Home = () => {
         )}
 
         {currentPage === 'dotapp' && (
-          <div className='max-w-4xl mx-auto'>
-            <DriverApplication user={user} />
-          </div>
+          <>
+            {renderFormNavigation()}
+            {renderFormContent()}
+          </>
         )}
 
         {/* Welcome message when no page is selected */}
