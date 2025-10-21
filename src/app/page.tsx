@@ -40,9 +40,9 @@ const AlchemyAuth = dynamic(
   }
 )
 
-const PersonalinfoForm1 = dynamic(
+const PersonalInfoForm1 = dynamic(
   () =>
-    import('@/components/driver-application/PersonalinfoForm1').then(
+    import('@/components/driver-application/PersonalInfoForm1').then(
       (mod) => mod.default
     ),
   {
@@ -177,13 +177,13 @@ const Home = () => {
   const renderFormContent = () => {
     switch (currentForm) {
       case 1:
-        return <PersonalinfoForm1 />
+        return <PersonalInfoForm1 />
       case 2:
         return <PersonalInfoForm2 />
       case 3:
         return <PersonalInfoForm3 />
       default:
-        return <PersonalinfoForm1 />
+        return <PersonalInfoForm1 />
     }
   }
 
