@@ -18,6 +18,7 @@ This file tracks major modifications made to the ResumeWallet codebase.
   - **Fixed Case-Sensitive Import**: Corrected `PersonalinfoForm1` to `PersonalInfoForm1` for Linux deployment (Vercel)
   - **Fixed Font Loading**: Replaced Geist fonts with proper Next.js Quicksand font optimization in `layout.tsx`
   - **Dark Mode Default**: Changed default theme from light to dark mode in `ThemeContext.tsx`
+  - **Cream Forms in Dark Mode**: Updated all forms to use cream background (`bg-brand-cream`) in dark mode for better contrast and brand consistency
 
 - **✅ Mobile-First DOT Application** - Dramatically improved mobile experience
   - **Expanded Form Width**: Increased from max-w-4xl to max-w-6xl for more horizontal space

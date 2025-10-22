@@ -167,12 +167,12 @@ export default function PersonalInfoForm3() {
     <div className='space-y-8'>
       <div className='text-center'>
         <h2
-          className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+          className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
         >
           EMPLOYMENT HISTORY
         </h2>
         <p
-          className={`text-sm ${theme === 'dark' ? 'text-brand-cream/80' : 'text-brand-sage/80'}`}
+          className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'}`}
         >
           The Federal Motor Carrier Safety Regulations (49 CFR 391.21) require
           that all applicants wishing to drive a commercial vehicle list all
@@ -183,7 +183,7 @@ export default function PersonalInfoForm3() {
           explained.
         </p>
         <p
-          className={`text-sm ${theme === 'dark' ? 'text-brand-cream/80' : 'text-brand-sage/80'}`}
+          className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'}`}
         >
           Start with the last or current position, including any military
           experience, and work backwards (attach separate sheets if necessary).
@@ -195,7 +195,7 @@ export default function PersonalInfoForm3() {
       {formData.employers.map((employer, index) => (
         <div key={index} className='space-y-6'>
           <h3
-            className={`text-xl font-semibold ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+            className={`text-xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
           >
             {index === 0
               ? 'CURRENT (MOST RECENT) EMPLOYER'
@@ -208,7 +208,7 @@ export default function PersonalInfoForm3() {
           <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
             <div className='md:col-span-2'>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
                 NAME
               </label>
@@ -224,14 +224,14 @@ export default function PersonalInfoForm3() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
             </div>
             <div>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
                 PHONE
               </label>
@@ -247,7 +247,7 @@ export default function PersonalInfoForm3() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -257,7 +257,7 @@ export default function PersonalInfoForm3() {
           {/* Address */}
           <div>
             <label
-              className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+              className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
             >
               ADDRESS
             </label>
@@ -273,7 +273,7 @@ export default function PersonalInfoForm3() {
               rows={3}
               className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                 theme === 'dark'
-                  ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                  ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
                   : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
               }`}
             />
@@ -283,7 +283,7 @@ export default function PersonalInfoForm3() {
           <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
             <div>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
                 POSITION HELD
               </label>
@@ -299,14 +299,14 @@ export default function PersonalInfoForm3() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
             </div>
             <div>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
                 FROM (MO/YR)
               </label>
@@ -323,14 +323,14 @@ export default function PersonalInfoForm3() {
                 placeholder='MM/YYYY'
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
             </div>
             <div>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
                 TO (MO/YR)
               </label>
@@ -347,7 +347,7 @@ export default function PersonalInfoForm3() {
                 placeholder='MM/YYYY'
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -358,7 +358,7 @@ export default function PersonalInfoForm3() {
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
             <div>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
                 REASON FOR LEAVING
               </label>
@@ -374,14 +374,14 @@ export default function PersonalInfoForm3() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
             </div>
             <div>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
                 SALARY
               </label>
@@ -397,7 +397,7 @@ export default function PersonalInfoForm3() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -407,7 +407,7 @@ export default function PersonalInfoForm3() {
           {/* Gaps in Employment */}
           <div>
             <label
-              className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+              className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
             >
               EXPLAIN ANY GAPS IN EMPLOYMENT (Include month/year & reason)
             </label>
@@ -423,7 +423,7 @@ export default function PersonalInfoForm3() {
               rows={3}
               className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                 theme === 'dark'
-                  ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                  ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
                   : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
               }`}
             />
@@ -433,7 +433,7 @@ export default function PersonalInfoForm3() {
           <div className='space-y-4'>
             <div className='space-y-3'>
               <label
-                className={`block text-sm font-medium ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-800' : 'text-brand-sage'}`}
               >
                 While employed here, were you subject to the Federal Motor
                 Carrier Safety Regulations?
@@ -452,10 +452,10 @@ export default function PersonalInfoForm3() {
                         index
                       )
                     }
-                    className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`}
+                    className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
                   />
                   <span
-                    className={`${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                    className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
                   >
                     YES
                   </span>
@@ -473,10 +473,10 @@ export default function PersonalInfoForm3() {
                         index
                       )
                     }
-                    className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`}
+                    className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
                   />
                   <span
-                    className={`${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                    className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
                   >
                     NO
                   </span>
@@ -486,7 +486,7 @@ export default function PersonalInfoForm3() {
 
             <div className='space-y-3'>
               <label
-                className={`block text-sm font-medium ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-800' : 'text-brand-sage'}`}
               >
                 Was the job designated as a safety-sensitive function in any
                 Department of Transportation-regulated mode subject to alcohol
@@ -507,10 +507,10 @@ export default function PersonalInfoForm3() {
                         index
                       )
                     }
-                    className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`}
+                    className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
                   />
                   <span
-                    className={`${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                    className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
                   >
                     YES
                   </span>
@@ -528,10 +528,10 @@ export default function PersonalInfoForm3() {
                         index
                       )
                     }
-                    className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`}
+                    className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
                   />
                   <span
-                    className={`${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                    className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
                   >
                     NO
                   </span>
@@ -548,7 +548,7 @@ export default function PersonalInfoForm3() {
     <div className='space-y-8'>
       <div className='text-center'>
         <h2
-          className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+          className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
         >
           EDUCATION
         </h2>
@@ -557,14 +557,14 @@ export default function PersonalInfoForm3() {
       {formData.education.map((edu, index) => (
         <div key={index} className='space-y-4'>
           <h3
-            className={`text-lg font-semibold ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+            className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
           >
             {edu.school.toUpperCase()}
           </h3>
           <div className='grid grid-cols-1 md:grid-cols-6 gap-4'>
             <div className='md:col-span-2'>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
                 NAME & LOCATION
               </label>
@@ -580,14 +580,14 @@ export default function PersonalInfoForm3() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
             </div>
             <div>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
                 COURSE OF STUDY
               </label>
@@ -603,14 +603,14 @@ export default function PersonalInfoForm3() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
             </div>
             <div>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
                 YEARS COMPLETED
               </label>
@@ -626,14 +626,14 @@ export default function PersonalInfoForm3() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
             </div>
             <div>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
                 GRADUATE (Y/N)
               </label>
@@ -651,10 +651,10 @@ export default function PersonalInfoForm3() {
                         index
                       )
                     }
-                    className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`}
+                    className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
                   />
                   <span
-                    className={`text-sm ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                    className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
                   >
                     Y
                   </span>
@@ -672,10 +672,10 @@ export default function PersonalInfoForm3() {
                         index
                       )
                     }
-                    className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`}
+                    className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
                   />
                   <span
-                    className={`text-sm ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                    className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
                   >
                     N
                   </span>
@@ -684,7 +684,7 @@ export default function PersonalInfoForm3() {
             </div>
             <div>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
                 DETAILS
               </label>
@@ -700,7 +700,7 @@ export default function PersonalInfoForm3() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -712,12 +712,12 @@ export default function PersonalInfoForm3() {
       {/* Other Qualifications */}
       <div className='space-y-4'>
         <h3
-          className={`text-lg font-semibold ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+          className={`text-lg font-semibold ${theme === 'dark' ? 'text-gray-800' : 'text-brand-sage'}`}
         >
           OTHER QUALIFICATIONS
         </h3>
         <p
-          className={`text-sm ${theme === 'dark' ? 'text-brand-cream/80' : 'text-brand-sage/80'}`}
+          className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'}`}
         >
           Please list any other qualifications that you have and which you
           believe should be considered.
@@ -742,7 +742,7 @@ export default function PersonalInfoForm3() {
     <div className='space-y-8'>
       <div className='text-center'>
         <h2
-          className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+          className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
         >
           TO BE READ AND SIGNED BY APPLICANT
         </h2>
@@ -751,12 +751,12 @@ export default function PersonalInfoForm3() {
       <div
         className={`p-6 rounded-lg border-2 ${
           theme === 'dark'
-            ? 'bg-gray-800 border-gray-600'
+            ? 'bg-white border-gray-300'
             : 'bg-gray-50 border-gray-200'
         }`}
       >
         <div
-          className={`text-sm space-y-4 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+          className={`text-sm space-y-4 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
         >
           <p>
             I authorize you to make investigations (including contacting current
@@ -812,7 +812,7 @@ export default function PersonalInfoForm3() {
         <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
           <div>
             <label
-              className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+              className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
             >
               Applicant Signature
             </label>
@@ -825,14 +825,14 @@ export default function PersonalInfoForm3() {
               placeholder='Type your full name as signature'
               className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                 theme === 'dark'
-                  ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                  ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
                   : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
               }`}
             />
           </div>
           <div>
             <label
-              className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+              className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
             >
               Date
             </label>
@@ -844,7 +844,7 @@ export default function PersonalInfoForm3() {
               }
               className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                 theme === 'dark'
-                  ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                  ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
                   : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
               }`}
             />
@@ -853,7 +853,7 @@ export default function PersonalInfoForm3() {
 
         <div>
           <label
-            className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'}`}
+            className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
           >
             Applicant Name (printed)
           </label>
@@ -879,7 +879,7 @@ export default function PersonalInfoForm3() {
     <div
       className={`max-w-4xl mx-auto rounded-lg shadow-xl border-t-4 ${
         theme === 'dark'
-          ? 'bg-gray-900 border-brand-mint'
+          ? 'bg-gray-800 border-brand-mint'
           : 'bg-white border-t-brand-sage border-gray-200'
       }`}
     >
@@ -891,21 +891,21 @@ export default function PersonalInfoForm3() {
       >
         <h1
           className={`text-3xl font-bold mb-2 ${
-            theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'
+            theme === 'dark' ? 'text-white' : 'text-brand-sage'
           }`}
         >
           DRIVER EMPLOYMENT APPLICATION
         </h1>
         <p
           className={`text-lg ${
-            theme === 'dark' ? 'text-brand-cream/80' : 'text-brand-sage/80'
+            theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'
           }`}
         >
           [COMPANY NAME, ADDRESS, PHONE NUMBER, AND EMAIL]
         </p>
         <p
           className={`text-sm ${
-            theme === 'dark' ? 'text-brand-cream/60' : 'text-brand-sage/60'
+            theme === 'dark' ? 'text-gray-400' : 'text-brand-sage/60'
           }`}
         >
           An Equal Opportunity Employer
@@ -924,14 +924,14 @@ export default function PersonalInfoForm3() {
         <div className='flex items-center justify-between mb-4'>
           <div
             className={`text-sm font-medium ${
-              theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'
+              theme === 'dark' ? 'text-white' : 'text-brand-sage'
             }`}
           >
             Step {currentStep} of {STEPS.length}
           </div>
           <div
             className={`text-sm ${
-              theme === 'dark' ? 'text-brand-cream/80' : 'text-brand-sage/80'
+              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'
             }`}
           >
             {Math.round((currentStep / STEPS.length) * 100)}% Complete
