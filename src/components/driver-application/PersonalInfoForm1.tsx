@@ -46,28 +46,10 @@ export default function PersonalInfoForm1() {
       zipCode: '',
       yearsAtAddress: '',
     },
-    previousAddresses: [
-      { street: '', city: '', state: '', zipCode: '', yearsAtAddress: '' },
-      { street: '', city: '', state: '', zipCode: '', yearsAtAddress: '' },
-      { street: '', city: '', state: '', zipCode: '', yearsAtAddress: '' },
-    ],
+    previousAddresses: [],
 
     // License Information
-    currentLicense: {
-      state: '',
-      licenseNumber: '',
-      typeClass: '',
-      endorsements: '',
-      expirationDate: '',
-    },
-    previousLicenses: [
-      {
-        state: '',
-        licenseNumber: '',
-        typeClass: '',
-        endorsements: '',
-        expirationDate: '',
-      },
+    currentLicenses: [
       {
         state: '',
         licenseNumber: '',
@@ -76,6 +58,7 @@ export default function PersonalInfoForm1() {
         expirationDate: '',
       },
     ],
+    previousLicenses: [],
   })
 
   const handleInputChange = (field: string, value: any, index?: number) => {
@@ -127,6 +110,69 @@ export default function PersonalInfoForm1() {
     }
   }
 
+  const addPreviousAddress = () => {
+    setFormData((prev) => ({
+      ...prev,
+      previousAddresses: [
+        ...prev.previousAddresses,
+        { street: '', city: '', state: '', zipCode: '', yearsAtAddress: '' },
+      ],
+    }))
+  }
+
+  const removePreviousAddress = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      previousAddresses: prev.previousAddresses.filter((_, i) => i !== index),
+    }))
+  }
+
+  const addCurrentLicense = () => {
+    setFormData((prev) => ({
+      ...prev,
+      currentLicenses: [
+        ...prev.currentLicenses,
+        {
+          state: '',
+          licenseNumber: '',
+          typeClass: '',
+          endorsements: '',
+          expirationDate: '',
+        },
+      ],
+    }))
+  }
+
+  const removeCurrentLicense = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      currentLicenses: prev.currentLicenses.filter((_, i) => i !== index),
+    }))
+  }
+
+  const addPreviousLicense = () => {
+    setFormData((prev) => ({
+      ...prev,
+      previousLicenses: [
+        ...prev.previousLicenses,
+        {
+          state: '',
+          licenseNumber: '',
+          typeClass: '',
+          endorsements: '',
+          expirationDate: '',
+        },
+      ],
+    }))
+  }
+
+  const removePreviousLicense = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      previousLicenses: prev.previousLicenses.filter((_, i) => i !== index),
+    }))
+  }
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
@@ -169,7 +215,7 @@ export default function PersonalInfoForm1() {
             onChange={(e) => handleInputChange('firstName', e.target.value)}
             className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
               theme === 'dark'
-                ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                 : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
             }`}
           />
@@ -186,7 +232,7 @@ export default function PersonalInfoForm1() {
             onChange={(e) => handleInputChange('middleName', e.target.value)}
             className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
               theme === 'dark'
-                ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                 : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
             }`}
           />
@@ -203,7 +249,7 @@ export default function PersonalInfoForm1() {
             onChange={(e) => handleInputChange('lastName', e.target.value)}
             className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
               theme === 'dark'
-                ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                 : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
             }`}
           />
@@ -224,7 +270,7 @@ export default function PersonalInfoForm1() {
             onChange={(e) => handleInputChange('phone', e.target.value)}
             className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
               theme === 'dark'
-                ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                 : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
             }`}
           />
@@ -241,7 +287,7 @@ export default function PersonalInfoForm1() {
             onChange={(e) => handleInputChange('email', e.target.value)}
             className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
               theme === 'dark'
-                ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                 : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
             }`}
           />
@@ -262,7 +308,7 @@ export default function PersonalInfoForm1() {
             onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
             className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
               theme === 'dark'
-                ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                 : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
             }`}
           />
@@ -282,7 +328,7 @@ export default function PersonalInfoForm1() {
             placeholder='XXX-XX-XXXX'
             className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
               theme === 'dark'
-                ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                 : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
             }`}
           />
@@ -305,26 +351,7 @@ export default function PersonalInfoForm1() {
             }
             className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
               theme === 'dark'
-                ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
-                : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-            }`}
-          />
-        </div>
-        <div>
-          <label
-            className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-          >
-            POSITION APPLIED FOR
-          </label>
-          <input
-            type='text'
-            value={formData.positionAppliedFor}
-            onChange={(e) =>
-              handleInputChange('positionAppliedFor', e.target.value)
-            }
-            className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-              theme === 'dark'
-                ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                 : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
             }`}
           />
@@ -343,7 +370,7 @@ export default function PersonalInfoForm1() {
             }
             className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
               theme === 'dark'
-                ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                 : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
             }`}
           />
@@ -437,7 +464,7 @@ export default function PersonalInfoForm1() {
               }
               className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                 theme === 'dark'
-                  ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                  ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
                   : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
               }`}
             />
@@ -459,7 +486,7 @@ export default function PersonalInfoForm1() {
               }
               className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                 theme === 'dark'
-                  ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                  ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
                   : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
               }`}
             />
@@ -481,7 +508,7 @@ export default function PersonalInfoForm1() {
               }
               className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                 theme === 'dark'
-                  ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                  ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
                   : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
               }`}
             />
@@ -503,7 +530,7 @@ export default function PersonalInfoForm1() {
               }
               className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                 theme === 'dark'
-                  ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                  ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
                   : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
               }`}
             />
@@ -527,7 +554,7 @@ export default function PersonalInfoForm1() {
               }
               className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                 theme === 'dark'
-                  ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                  ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
                   : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
               }`}
             />
@@ -538,11 +565,24 @@ export default function PersonalInfoForm1() {
       {/* Previous Addresses */}
       {formData.previousAddresses.map((address, index) => (
         <div key={index} className='space-y-4'>
-          <h3
-            className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
-          >
-            PREVIOUS {index + 1}
-          </h3>
+          <div className='flex justify-between items-center'>
+            <h3
+              className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
+            >
+              PREVIOUS {index + 1}
+            </h3>
+            <button
+              type='button'
+              onClick={() => removePreviousAddress(index)}
+              className={`px-3 py-1 text-sm rounded-md font-medium transition-all duration-200 ${
+                theme === 'dark'
+                  ? 'bg-red-600 text-white hover:bg-red-700'
+                  : 'bg-red-500 text-white hover:bg-red-600'
+              }`}
+            >
+              Remove
+            </button>
+          </div>
           <div className='grid grid-cols-1 md:grid-cols-5 gap-4'>
             <div className='md:col-span-2'>
               <label
@@ -562,7 +602,7 @@ export default function PersonalInfoForm1() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -585,7 +625,7 @@ export default function PersonalInfoForm1() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -608,7 +648,7 @@ export default function PersonalInfoForm1() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -631,7 +671,7 @@ export default function PersonalInfoForm1() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -656,7 +696,7 @@ export default function PersonalInfoForm1() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -664,6 +704,21 @@ export default function PersonalInfoForm1() {
           </div>
         </div>
       ))}
+
+      {/* Add More Button */}
+      <div className='flex justify-center pt-4'>
+        <button
+          type='button'
+          onClick={addPreviousAddress}
+          className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
+            theme === 'dark'
+              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
+              : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
+          }`}
+        >
+          + Add Previous Address
+        </button>
+      </div>
     </div>
   )
 
@@ -686,141 +741,186 @@ export default function PersonalInfoForm1() {
         </p>
       </div>
 
-      {/* Current License */}
-      <div className='space-y-4'>
-        <h3
-          className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
-        >
-          CURRENT LICENSE
-        </h3>
-        <div className='grid grid-cols-1 md:grid-cols-5 gap-4'>
-          <div>
-            <label
-              className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+      {/* Current Licenses */}
+      {formData.currentLicenses.map((license, index) => (
+        <div key={index} className='space-y-4'>
+          <div className='flex justify-between items-center'>
+            <h3
+              className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
             >
-              STATE
-            </label>
-            <input
-              type='text'
-              value={formData.currentLicense.state}
-              onChange={(e) =>
-                handleInputChange('currentLicense', {
-                  ...formData.currentLicense,
-                  state: e.target.value,
-                })
-              }
-              className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                theme === 'dark'
-                  ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
-                  : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-              }`}
-            />
+              CURRENT LICENSE {index + 1}
+            </h3>
+            {formData.currentLicenses.length > 1 && (
+              <button
+                type='button'
+                onClick={() => removeCurrentLicense(index)}
+                className={`px-3 py-1 text-sm rounded-md font-medium transition-all duration-200 ${
+                  theme === 'dark'
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'bg-red-500 text-white hover:bg-red-600'
+                }`}
+              >
+                Remove
+              </button>
+            )}
           </div>
-          <div>
-            <label
-              className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-            >
-              LICENSE #
-            </label>
-            <input
-              type='text'
-              value={formData.currentLicense.licenseNumber}
-              onChange={(e) =>
-                handleInputChange('currentLicense', {
-                  ...formData.currentLicense,
-                  licenseNumber: e.target.value,
-                })
-              }
-              className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                theme === 'dark'
-                  ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
-                  : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-              }`}
-            />
-          </div>
-          <div>
-            <label
-              className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-            >
-              TYPE/CLASS
-            </label>
-            <input
-              type='text'
-              value={formData.currentLicense.typeClass}
-              onChange={(e) =>
-                handleInputChange('currentLicense', {
-                  ...formData.currentLicense,
-                  typeClass: e.target.value,
-                })
-              }
-              className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                theme === 'dark'
-                  ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
-                  : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-              }`}
-            />
-          </div>
-          <div>
-            <label
-              className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-            >
-              ENDORSEMENTS
-            </label>
-            <input
-              type='text'
-              value={formData.currentLicense.endorsements}
-              onChange={(e) =>
-                handleInputChange('currentLicense', {
-                  ...formData.currentLicense,
-                  endorsements: e.target.value,
-                })
-              }
-              className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                theme === 'dark'
-                  ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
-                  : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-              }`}
-            />
-          </div>
-          <div>
-            <label
-              className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-            >
-              EXPIRATION DATE
-            </label>
-            <input
-              type='date'
-              value={formData.currentLicense.expirationDate}
-              onChange={(e) =>
-                handleInputChange('currentLicense', {
-                  ...formData.currentLicense,
-                  expirationDate: e.target.value,
-                })
-              }
-              className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                theme === 'dark'
-                  ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
-                  : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-              }`}
-            />
+          <div className='grid grid-cols-1 md:grid-cols-5 gap-4'>
+            <div>
+              <label
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+              >
+                STATE
+              </label>
+              <input
+                type='text'
+                value={license.state}
+                onChange={(e) =>
+                  handleInputChange(
+                    'currentLicenses',
+                    { state: e.target.value },
+                    index
+                  )
+                }
+                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                  theme === 'dark'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                }`}
+              />
+            </div>
+            <div>
+              <label
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+              >
+                LICENSE #
+              </label>
+              <input
+                type='text'
+                value={license.licenseNumber}
+                onChange={(e) =>
+                  handleInputChange(
+                    'currentLicenses',
+                    { licenseNumber: e.target.value },
+                    index
+                  )
+                }
+                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                  theme === 'dark'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                }`}
+              />
+            </div>
+            <div>
+              <label
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+              >
+                TYPE/CLASS
+              </label>
+              <input
+                type='text'
+                value={license.typeClass}
+                onChange={(e) =>
+                  handleInputChange(
+                    'currentLicenses',
+                    { typeClass: e.target.value },
+                    index
+                  )
+                }
+                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                  theme === 'dark'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                }`}
+              />
+            </div>
+            <div>
+              <label
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+              >
+                ENDORSEMENTS
+              </label>
+              <input
+                type='text'
+                value={license.endorsements}
+                onChange={(e) =>
+                  handleInputChange(
+                    'currentLicenses',
+                    { endorsements: e.target.value },
+                    index
+                  )
+                }
+                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                  theme === 'dark'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                }`}
+              />
+            </div>
+            <div>
+              <label
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+              >
+                EXPIRATION DATE
+              </label>
+              <input
+                type='date'
+                value={license.expirationDate}
+                onChange={(e) =>
+                  handleInputChange(
+                    'currentLicenses',
+                    { expirationDate: e.target.value },
+                    index
+                  )
+                }
+                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                  theme === 'dark'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                }`}
+              />
+            </div>
           </div>
         </div>
+      ))}
+
+      {/* Add Current License Button */}
+      <div className='flex justify-center pt-4'>
+        <button
+          type='button'
+          onClick={addCurrentLicense}
+          className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
+            theme === 'dark'
+              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
+              : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
+          }`}
+        >
+          + Add Current License
+        </button>
       </div>
 
       {/* Previously Held Licenses */}
       <div className='space-y-4'>
-        <h3
-          className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
-        >
-          PREVIOUSLY HELD LICENSES
-        </h3>
         {formData.previousLicenses.map((license, index) => (
           <div key={index} className='space-y-4'>
-            <h4
-              className={`text-md font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'}`}
-            >
-              PREVIOUS LICENSE {index + 1}
-            </h4>
+            <div className='flex justify-between items-center'>
+              <h3
+                className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
+              >
+                PREVIOUS LICENSE {index + 1}
+              </h3>
+              <button
+                type='button'
+                onClick={() => removePreviousLicense(index)}
+                className={`px-3 py-1 text-sm rounded-md font-medium transition-all duration-200 ${
+                  theme === 'dark'
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'bg-red-500 text-white hover:bg-red-600'
+                }`}
+              >
+                Remove
+              </button>
+            </div>
             <div className='grid grid-cols-1 md:grid-cols-5 gap-4'>
               <div>
                 <label
@@ -941,15 +1041,30 @@ export default function PersonalInfoForm1() {
           </div>
         ))}
       </div>
+
+      {/* Add Previous License Button */}
+      <div className='flex justify-center pt-4'>
+        <button
+          type='button'
+          onClick={addPreviousLicense}
+          className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
+            theme === 'dark'
+              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
+              : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
+          }`}
+        >
+          + Add Previous License
+        </button>
+      </div>
     </div>
   )
 
   return (
     <div
-      className={`max-w-4xl mx-auto rounded-lg shadow-xl border-t-4 ${
+      className={`max-w-4xl mx-auto rounded-lg shadow-xl border-t-4 relative z-10 ${
         theme === 'dark'
-          ? 'bg-gray-800 border-brand-mint'
-          : 'bg-white border-t-brand-sage border-gray-200'
+          ? 'bg-brand-sage-light/20 backdrop-blur-xl border-brand-mint'
+          : 'bg-white/80 backdrop-blur-xl border-t-brand-sage border-gray-200'
       }`}
     >
       {/* Header */}
@@ -1064,16 +1179,13 @@ export default function PersonalInfoForm1() {
 
         <button
           onClick={nextStep}
-          disabled={currentStep === STEPS.length}
           className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
-            currentStep === STEPS.length
-              ? 'opacity-50 cursor-not-allowed'
-              : theme === 'dark'
-                ? 'bg-brand-mint text-white hover:bg-brand-mint/90 shadow-lg'
-                : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
+            theme === 'dark'
+              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
+              : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
           }`}
         >
-          {currentStep === STEPS.length ? 'Complete' : 'Next'}
+          {currentStep === STEPS.length ? 'Continue to Form 2' : 'Next'}
         </button>
       </div>
     </div>

@@ -39,55 +39,14 @@ export default function PersonalInfoForm3() {
         gapsInEmployment: '',
         subjectToFMCSR: '',
         safetySensitiveFunction: '',
-      },
-      {
-        name: '',
-        phone: '',
-        address: '',
-        positionHeld: '',
-        fromDate: '',
-        toDate: '',
-        reasonForLeaving: '',
-        salary: '',
-        gapsInEmployment: '',
-        subjectToFMCSR: '',
-        safetySensitiveFunction: '',
-      },
-      {
-        name: '',
-        phone: '',
-        address: '',
-        positionHeld: '',
-        fromDate: '',
-        toDate: '',
-        reasonForLeaving: '',
-        salary: '',
-        gapsInEmployment: '',
-        subjectToFMCSR: '',
-        safetySensitiveFunction: '',
+        isUnemployment: false,
       },
     ],
 
     // Education
     education: [
       {
-        school: 'High School',
-        nameAndLocation: '',
-        courseOfStudy: '',
-        yearsCompleted: '',
-        graduated: '',
-        details: '',
-      },
-      {
-        school: 'College',
-        nameAndLocation: '',
-        courseOfStudy: '',
-        yearsCompleted: '',
-        graduated: '',
-        details: '',
-      },
-      {
-        school: 'Other',
+        schoolType: '',
         nameAndLocation: '',
         courseOfStudy: '',
         yearsCompleted: '',
@@ -150,6 +109,60 @@ export default function PersonalInfoForm3() {
     }
   }
 
+  const addEmployer = () => {
+    setFormData((prev) => ({
+      ...prev,
+      employers: [
+        ...prev.employers,
+        {
+          name: '',
+          phone: '',
+          address: '',
+          positionHeld: '',
+          fromDate: '',
+          toDate: '',
+          reasonForLeaving: '',
+          salary: '',
+          gapsInEmployment: '',
+          subjectToFMCSR: '',
+          safetySensitiveFunction: '',
+          isUnemployment: false,
+        },
+      ],
+    }))
+  }
+
+  const removeEmployer = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      employers: prev.employers.filter((_, i) => i !== index),
+    }))
+  }
+
+  const addEducation = () => {
+    setFormData((prev) => ({
+      ...prev,
+      education: [
+        ...prev.education,
+        {
+          schoolType: '',
+          nameAndLocation: '',
+          courseOfStudy: '',
+          yearsCompleted: '',
+          graduated: '',
+          details: '',
+        },
+      ],
+    }))
+  }
+
+  const removeEducation = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      education: prev.education.filter((_, i) => i !== index),
+    }))
+  }
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
@@ -171,38 +184,96 @@ export default function PersonalInfoForm3() {
         >
           EMPLOYMENT HISTORY
         </h2>
+        <div
+          className={`p-4 rounded-lg border-2 ${
+            theme === 'dark'
+              ? 'bg-brand-mint/10 border-brand-mint/30'
+              : 'bg-brand-sage/10 border-brand-sage/30'
+          }`}
+        >
+          <p
+            className={`text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
+          >
+            ⚠️ IMPORTANT: 3-Year Verification Requirement
+          </p>
+          <p
+            className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'}`}
+          >
+            <strong>
+              You must provide 10 years of employment history total:
+            </strong>
+          </p>
+          <ul
+            className={`text-sm mt-2 space-y-1 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'}`}
+          >
+            <li>
+              • <strong>Last 3 years:</strong> Must be verified by employers
+              (complete contact info required)
+            </li>
+            <li>
+              • <strong>Years 4-10:</strong> Self-reported (employers will not
+              be contacted for verification)
+            </li>
+            <li>• Any gaps in employment over 1 month must be explained</li>
+          </ul>
+        </div>
         <p
           className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'}`}
         >
-          The Federal Motor Carrier Safety Regulations (49 CFR 391.21) require
-          that all applicants wishing to drive a commercial vehicle list all
-          employment for the last three (3) years. In addition, if you have
-          driven a commercial vehicle previously, you must provide employment
-          history for an additional seven (7) years (for a total of ten (10)
-          years). Any gaps in employment in excess of one (1) month must be
-          explained.
-        </p>
-        <p
-          className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'}`}
-        >
-          Start with the last or current position, including any military
-          experience, and work backwards (attach separate sheets if necessary).
-          You are required to list the complete mailing address, including
-          street number, city, state, zip; and complete all other information.
+          Start with your most recent position and work backwards. Include
+          complete mailing addresses with street number, city, state, zip for
+          all entries.
         </p>
       </div>
 
       {formData.employers.map((employer, index) => (
         <div key={index} className='space-y-6'>
-          <h3
-            className={`text-xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
-          >
-            {index === 0
-              ? 'CURRENT (MOST RECENT) EMPLOYER'
-              : index === 1
-                ? 'SECOND (MOST RECENT) EMPLOYER'
-                : 'THIRD (MOST RECENT) EMPLOYER'}
-          </h3>
+          <div className='flex justify-between items-center'>
+            <div className='flex items-center space-x-3'>
+              <h3
+                className={`text-xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
+              >
+                {index === 0
+                  ? 'CURRENT (MOST RECENT) EMPLOYER'
+                  : `EMPLOYER ${index + 1}`}
+              </h3>
+              {index < 3 && (
+                <span
+                  className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                    theme === 'dark'
+                      ? 'bg-brand-mint text-gray-900'
+                      : 'bg-brand-sage text-white'
+                  }`}
+                >
+                  VERIFICATION REQUIRED
+                </span>
+              )}
+              {index >= 3 && (
+                <span
+                  className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                    theme === 'dark'
+                      ? 'bg-gray-600 text-gray-300'
+                      : 'bg-gray-400 text-gray-700'
+                  }`}
+                >
+                  SELF-REPORTED
+                </span>
+              )}
+            </div>
+            {formData.employers.length > 1 && (
+              <button
+                type='button'
+                onClick={() => removeEmployer(index)}
+                className={`px-3 py-1 text-sm rounded-md font-medium transition-all duration-200 ${
+                  theme === 'dark'
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'bg-red-500 text-white hover:bg-red-600'
+                }`}
+              >
+                Remove
+              </button>
+            )}
+          </div>
 
           {/* Company Name and Phone */}
           <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
@@ -224,7 +295,7 @@ export default function PersonalInfoForm3() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -247,11 +318,34 @@ export default function PersonalInfoForm3() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
             </div>
+          </div>
+
+          {/* Unemployment Checkbox */}
+          <div className='flex items-center space-x-3'>
+            <input
+              type='checkbox'
+              id={`isUnemployment-${index}`}
+              checked={employer.isUnemployment}
+              onChange={(e) =>
+                handleInputChange(
+                  'employers',
+                  { isUnemployment: e.target.checked },
+                  index
+                )
+              }
+              className={`w-4 h-4 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
+            />
+            <label
+              htmlFor={`isUnemployment-${index}`}
+              className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+            >
+              Check this box if this period was unemployment
+            </label>
           </div>
 
           {/* Address */}
@@ -273,7 +367,7 @@ export default function PersonalInfoForm3() {
               rows={3}
               className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                 theme === 'dark'
-                  ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                  ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
                   : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
               }`}
             />
@@ -299,7 +393,7 @@ export default function PersonalInfoForm3() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -323,7 +417,7 @@ export default function PersonalInfoForm3() {
                 placeholder='MM/YYYY'
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -347,7 +441,7 @@ export default function PersonalInfoForm3() {
                 placeholder='MM/YYYY'
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -374,7 +468,7 @@ export default function PersonalInfoForm3() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -397,7 +491,7 @@ export default function PersonalInfoForm3() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -423,7 +517,7 @@ export default function PersonalInfoForm3() {
               rows={3}
               className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                 theme === 'dark'
-                  ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                  ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
                   : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
               }`}
             />
@@ -433,7 +527,7 @@ export default function PersonalInfoForm3() {
           <div className='space-y-4'>
             <div className='space-y-3'>
               <label
-                className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-800' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
                 While employed here, were you subject to the Federal Motor
                 Carrier Safety Regulations?
@@ -486,7 +580,7 @@ export default function PersonalInfoForm3() {
 
             <div className='space-y-3'>
               <label
-                className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-800' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
                 Was the job designated as a safety-sensitive function in any
                 Department of Transportation-regulated mode subject to alcohol
@@ -541,6 +635,21 @@ export default function PersonalInfoForm3() {
           </div>
         </div>
       ))}
+
+      {/* Add More Button */}
+      <div className='flex justify-center pt-4'>
+        <button
+          type='button'
+          onClick={addEmployer}
+          className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
+            theme === 'dark'
+              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
+              : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
+          }`}
+        >
+          + Add Employer
+        </button>
+      </div>
     </div>
   )
 
@@ -556,12 +665,58 @@ export default function PersonalInfoForm3() {
 
       {formData.education.map((edu, index) => (
         <div key={index} className='space-y-4'>
-          <h3
-            className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
-          >
-            {edu.school.toUpperCase()}
-          </h3>
+          <div className='flex justify-between items-center'>
+            <h3
+              className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
+            >
+              EDUCATION {index + 1}
+            </h3>
+            {formData.education.length > 1 && (
+              <button
+                type='button'
+                onClick={() => removeEducation(index)}
+                className={`px-3 py-1 text-sm rounded-md font-medium transition-all duration-200 ${
+                  theme === 'dark'
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'bg-red-500 text-white hover:bg-red-600'
+                }`}
+              >
+                Remove
+              </button>
+            )}
+          </div>
           <div className='grid grid-cols-1 md:grid-cols-6 gap-4'>
+            <div>
+              <label
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+              >
+                SCHOOL TYPE
+              </label>
+              <select
+                value={edu.schoolType}
+                onChange={(e) =>
+                  handleInputChange(
+                    'education',
+                    { schoolType: e.target.value },
+                    index
+                  )
+                }
+                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                  theme === 'dark'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                }`}
+              >
+                <option value=''>Select school type...</option>
+                <option value='HIGH SCHOOL'>High School</option>
+                <option value='COLLEGE'>College</option>
+                <option value='UNIVERSITY'>University</option>
+                <option value='TRADE SCHOOL'>Trade School</option>
+                <option value='VOCATIONAL'>Vocational</option>
+                <option value='CERTIFICATION'>Certification Program</option>
+                <option value='OTHER'>Other</option>
+              </select>
+            </div>
             <div className='md:col-span-2'>
               <label
                 className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
@@ -580,7 +735,7 @@ export default function PersonalInfoForm3() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -603,7 +758,7 @@ export default function PersonalInfoForm3() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -612,7 +767,7 @@ export default function PersonalInfoForm3() {
               <label
                 className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
-                YEARS COMPLETED
+                YEARS
               </label>
               <input
                 type='text'
@@ -626,7 +781,7 @@ export default function PersonalInfoForm3() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -682,37 +837,54 @@ export default function PersonalInfoForm3() {
                 </label>
               </div>
             </div>
-            <div>
-              <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-              >
-                DETAILS
-              </label>
-              <input
-                type='text'
-                value={edu.details}
-                onChange={(e) =>
-                  handleInputChange(
-                    'education',
-                    { details: e.target.value },
-                    index
-                  )
-                }
-                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  theme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
-                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-                }`}
-              />
-            </div>
+          </div>
+
+          {/* Details field - full width */}
+          <div>
+            <label
+              className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+            >
+              DETAILS
+            </label>
+            <input
+              type='text'
+              value={edu.details}
+              onChange={(e) =>
+                handleInputChange(
+                  'education',
+                  { details: e.target.value },
+                  index
+                )
+              }
+              className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                theme === 'dark'
+                  ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
+                  : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+              }`}
+            />
           </div>
         </div>
       ))}
 
+      {/* Add More Button */}
+      <div className='flex justify-center pt-4'>
+        <button
+          type='button'
+          onClick={addEducation}
+          className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
+            theme === 'dark'
+              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
+              : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
+          }`}
+        >
+          + Add Education
+        </button>
+      </div>
+
       {/* Other Qualifications */}
       <div className='space-y-4'>
         <h3
-          className={`text-lg font-semibold ${theme === 'dark' ? 'text-gray-800' : 'text-brand-sage'}`}
+          className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
         >
           OTHER QUALIFICATIONS
         </h3>
@@ -730,7 +902,7 @@ export default function PersonalInfoForm3() {
           rows={6}
           className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
             theme === 'dark'
-              ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+              ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
               : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
           }`}
         />
@@ -756,7 +928,7 @@ export default function PersonalInfoForm3() {
         }`}
       >
         <div
-          className={`text-sm space-y-4 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+          className={`text-sm space-y-4 ${theme === 'dark' ? 'text-gray-900' : 'text-gray-800'}`}
         >
           <p>
             I authorize you to make investigations (including contacting current
@@ -825,7 +997,7 @@ export default function PersonalInfoForm3() {
               placeholder='Type your full name as signature'
               className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                 theme === 'dark'
-                  ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                  ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
                   : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
               }`}
             />
@@ -844,7 +1016,7 @@ export default function PersonalInfoForm3() {
               }
               className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                 theme === 'dark'
-                  ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                  ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
                   : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
               }`}
             />
@@ -866,7 +1038,7 @@ export default function PersonalInfoForm3() {
             placeholder='Print your full name'
             className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
               theme === 'dark'
-                ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
                 : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
             }`}
           />
@@ -877,10 +1049,10 @@ export default function PersonalInfoForm3() {
 
   return (
     <div
-      className={`max-w-4xl mx-auto rounded-lg shadow-xl border-t-4 ${
+      className={`max-w-4xl mx-auto rounded-lg shadow-xl border-t-4 relative z-10 ${
         theme === 'dark'
-          ? 'bg-gray-800 border-brand-mint'
-          : 'bg-white border-t-brand-sage border-gray-200'
+          ? 'bg-brand-sage-light/20 backdrop-blur-xl border-brand-mint'
+          : 'bg-white/80 backdrop-blur-xl border-t-brand-sage border-gray-200'
       }`}
     >
       {/* Header */}
@@ -995,13 +1167,10 @@ export default function PersonalInfoForm3() {
 
         <button
           onClick={nextStep}
-          disabled={currentStep === STEPS.length}
           className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
-            currentStep === STEPS.length
-              ? 'opacity-50 cursor-not-allowed'
-              : theme === 'dark'
-                ? 'bg-brand-mint text-white hover:bg-brand-mint/90 shadow-lg'
-                : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
+            theme === 'dark'
+              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
+              : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
           }`}
         >
           {currentStep === STEPS.length ? 'Complete Application' : 'Next'}

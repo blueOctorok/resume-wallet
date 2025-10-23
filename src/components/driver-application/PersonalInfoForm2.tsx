@@ -28,39 +28,8 @@ export default function PersonalInfoForm2() {
     // Driving Experience
     drivingExperience: [
       {
-        equipmentClass: 'STRAIGHT TRUCK',
         equipmentType: '',
-        dateFrom: '',
-        dateTo: '',
-        milesTotal: '',
-      },
-      {
-        equipmentClass: 'TRACTOR & SEMI-TRAILER',
-        equipmentType: '',
-        dateFrom: '',
-        dateTo: '',
-        milesTotal: '',
-      },
-      {
-        equipmentClass: 'TRACTOR & 2 TRAILERS',
-        equipmentType: '',
-        dateFrom: '',
-        dateTo: '',
-        milesTotal: '',
-      },
-      {
-        equipmentClass: 'TRACTOR & TANKER',
-        equipmentType: '',
-        dateFrom: '',
-        dateTo: '',
-        milesTotal: '',
-      },
-      {
-        equipmentClass: 'OTHER',
-        equipmentType: '',
-        dateFrom: '',
-        dateTo: '',
-        milesTotal: '',
+        yearsOfExperience: '',
       },
     ],
 
@@ -72,38 +41,13 @@ export default function PersonalInfoForm2() {
         fatalities: '',
         injuries: '',
         chemicalSpills: '',
-      },
-      {
-        date: '',
-        nature: '',
-        fatalities: '',
-        injuries: '',
-        chemicalSpills: '',
-      },
-      {
-        date: '',
-        nature: '',
-        fatalities: '',
-        injuries: '',
-        chemicalSpills: '',
+        atFault: '',
       },
     ],
     hasNoAccidents: false,
 
     // Traffic Convictions
     convictions: [
-      {
-        dateConvicted: '',
-        violation: '',
-        stateOfViolation: '',
-        penalty: '',
-      },
-      {
-        dateConvicted: '',
-        violation: '',
-        stateOfViolation: '',
-        penalty: '',
-      },
       {
         dateConvicted: '',
         violation: '',
@@ -163,6 +107,72 @@ export default function PersonalInfoForm2() {
     }
   }
 
+  const addDrivingExperience = () => {
+    setFormData((prev) => ({
+      ...prev,
+      drivingExperience: [
+        ...prev.drivingExperience,
+        {
+          equipmentType: '',
+          yearsOfExperience: '',
+        },
+      ],
+    }))
+  }
+
+  const removeDrivingExperience = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      drivingExperience: prev.drivingExperience.filter((_, i) => i !== index),
+    }))
+  }
+
+  const addAccident = () => {
+    setFormData((prev) => ({
+      ...prev,
+      accidents: [
+        ...prev.accidents,
+        {
+          date: '',
+          nature: '',
+          fatalities: '',
+          injuries: '',
+          chemicalSpills: '',
+          atFault: '',
+        },
+      ],
+    }))
+  }
+
+  const removeAccident = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      accidents: prev.accidents.filter((_, i) => i !== index),
+    }))
+  }
+
+  const addConviction = () => {
+    setFormData((prev) => ({
+      ...prev,
+      convictions: [
+        ...prev.convictions,
+        {
+          dateConvicted: '',
+          violation: '',
+          stateOfViolation: '',
+          penalty: '',
+        },
+      ],
+    }))
+  }
+
+  const removeConviction = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      convictions: prev.convictions.filter((_, i) => i !== index),
+    }))
+  }
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
@@ -188,20 +198,32 @@ export default function PersonalInfoForm2() {
 
       {formData.drivingExperience.map((experience, index) => (
         <div key={index} className='space-y-4'>
-          <h3
-            className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
-          >
-            {experience.equipmentClass}
-          </h3>
-          <div className='grid grid-cols-1 md:grid-cols-5 gap-4'>
-            <div className='md:col-span-2'>
+          <div className='flex justify-between items-center'>
+            <h3
+              className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
+            >
+              EXPERIENCE {index + 1}
+            </h3>
+            <button
+              type='button'
+              onClick={() => removeDrivingExperience(index)}
+              className={`px-3 py-1 text-sm rounded-md font-medium transition-all duration-200 ${
+                theme === 'dark'
+                  ? 'bg-red-600 text-white hover:bg-red-700'
+                  : 'bg-red-500 text-white hover:bg-red-600'
+              }`}
+            >
+              Remove
+            </button>
+          </div>
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+            <div>
               <label
                 className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
-                TYPE OF EQUIPMENT (VAN, TANK, FLAT, ETC.)
+                TYPE OF EQUIPMENT
               </label>
-              <input
-                type='text'
+              <select
                 value={experience.equipmentType}
                 onChange={(e) =>
                   handleInputChange(
@@ -212,76 +234,45 @@ export default function PersonalInfoForm2() {
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
-              />
+              >
+                <option value=''>Select equipment type...</option>
+                <option value='STRAIGHT TRUCK'>Straight Truck</option>
+                <option value='TRACTOR & SEMI-TRAILER'>
+                  Tractor & Semi-Trailer
+                </option>
+                <option value='TRACTOR & 2 TRAILERS'>
+                  Tractor & 2 Trailers
+                </option>
+                <option value='TRACTOR & TANKER'>Tractor & Tanker</option>
+                <option value='BUS'>Bus</option>
+                <option value='MOTORCOACH'>Motorcoach</option>
+                <option value='SCHOOL BUS'>School Bus</option>
+                <option value='OTHER'>Other</option>
+              </select>
             </div>
             <div>
               <label
                 className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
-                DATE FROM
-              </label>
-              <input
-                type='date'
-                value={experience.dateFrom}
-                onChange={(e) =>
-                  handleInputChange(
-                    'drivingExperience',
-                    { dateFrom: e.target.value },
-                    index
-                  )
-                }
-                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  theme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
-                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-                }`}
-              />
-            </div>
-            <div>
-              <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-              >
-                DATE TO
-              </label>
-              <input
-                type='date'
-                value={experience.dateTo}
-                onChange={(e) =>
-                  handleInputChange(
-                    'drivingExperience',
-                    { dateTo: e.target.value },
-                    index
-                  )
-                }
-                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  theme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
-                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-                }`}
-              />
-            </div>
-            <div>
-              <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-              >
-                APPROX # OF MILES (TOTAL)
+                YEARS OF EXPERIENCE
               </label>
               <input
                 type='text'
-                value={experience.milesTotal}
+                value={experience.yearsOfExperience}
                 onChange={(e) =>
                   handleInputChange(
                     'drivingExperience',
-                    { milesTotal: e.target.value },
+                    { yearsOfExperience: e.target.value },
                     index
                   )
                 }
+                placeholder='e.g., 2.5, 5, 10+'
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -289,6 +280,21 @@ export default function PersonalInfoForm2() {
           </div>
         </div>
       ))}
+
+      {/* Add More Button */}
+      <div className='flex justify-center pt-4'>
+        <button
+          type='button'
+          onClick={addDrivingExperience}
+          className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
+            theme === 'dark'
+              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
+              : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
+          }`}
+        >
+          + Add Driving Experience
+        </button>
+      </div>
     </div>
   )
 
@@ -331,17 +337,32 @@ export default function PersonalInfoForm2() {
         <div className='space-y-6'>
           {formData.accidents.map((accident, index) => (
             <div key={index} className='space-y-4'>
-              <h3
-                className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
-              >
-                ACCIDENT {index + 1}
-              </h3>
+              <div className='flex justify-between items-center'>
+                <h3
+                  className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
+                >
+                  ACCIDENT {index + 1}
+                </h3>
+                {formData.accidents.length > 1 && (
+                  <button
+                    type='button'
+                    onClick={() => removeAccident(index)}
+                    className={`px-3 py-1 text-sm rounded-md font-medium transition-all duration-200 ${
+                      theme === 'dark'
+                        ? 'bg-red-600 text-white hover:bg-red-700'
+                        : 'bg-red-500 text-white hover:bg-red-600'
+                    }`}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
               <div className='grid grid-cols-1 md:grid-cols-5 gap-4'>
                 <div>
                   <label
                     className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
                   >
-                    DATES (List most recent first)
+                    DATE
                   </label>
                   <input
                     type='date'
@@ -355,7 +376,7 @@ export default function PersonalInfoForm2() {
                     }
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       theme === 'dark'
-                        ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                         : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                     }`}
                   />
@@ -379,7 +400,7 @@ export default function PersonalInfoForm2() {
                     placeholder='Head-on, rear-end, upset, etc.'
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       theme === 'dark'
-                        ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                         : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                     }`}
                   />
@@ -402,7 +423,7 @@ export default function PersonalInfoForm2() {
                     }
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       theme === 'dark'
-                        ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                         : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                     }`}
                   />
@@ -425,7 +446,7 @@ export default function PersonalInfoForm2() {
                     }
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       theme === 'dark'
-                        ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                         : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                     }`}
                   />
@@ -448,14 +469,82 @@ export default function PersonalInfoForm2() {
                     }
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       theme === 'dark'
-                        ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                         : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                     }`}
                   />
                 </div>
               </div>
+
+              {/* At Fault Radio Buttons */}
+              <div className='space-y-3'>
+                <label
+                  className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                >
+                  Were you at fault for this accident?
+                </label>
+                <div className='flex space-x-6'>
+                  <label className='flex items-center'>
+                    <input
+                      type='radio'
+                      name={`atFault-${index}`}
+                      value='yes'
+                      checked={accident.atFault === 'yes'}
+                      onChange={(e) =>
+                        handleInputChange(
+                          'accidents',
+                          { atFault: e.target.value },
+                          index
+                        )
+                      }
+                      className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
+                    />
+                    <span
+                      className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                    >
+                      YES
+                    </span>
+                  </label>
+                  <label className='flex items-center'>
+                    <input
+                      type='radio'
+                      name={`atFault-${index}`}
+                      value='no'
+                      checked={accident.atFault === 'no'}
+                      onChange={(e) =>
+                        handleInputChange(
+                          'accidents',
+                          { atFault: e.target.value },
+                          index
+                        )
+                      }
+                      className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
+                    />
+                    <span
+                      className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                    >
+                      NO
+                    </span>
+                  </label>
+                </div>
+              </div>
             </div>
           ))}
+
+          {/* Add More Button */}
+          <div className='flex justify-center pt-4'>
+            <button
+              type='button'
+              onClick={addAccident}
+              className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
+                theme === 'dark'
+                  ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
+                  : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
+              }`}
+            >
+              + Add Accident
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -505,17 +594,32 @@ export default function PersonalInfoForm2() {
         <div className='space-y-6'>
           {formData.convictions.map((conviction, index) => (
             <div key={index} className='space-y-4'>
-              <h3
-                className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
-              >
-                CONVICTION {index + 1}
-              </h3>
+              <div className='flex justify-between items-center'>
+                <h3
+                  className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
+                >
+                  CONVICTION {index + 1}
+                </h3>
+                {formData.convictions.length > 1 && (
+                  <button
+                    type='button'
+                    onClick={() => removeConviction(index)}
+                    className={`px-3 py-1 text-sm rounded-md font-medium transition-all duration-200 ${
+                      theme === 'dark'
+                        ? 'bg-red-600 text-white hover:bg-red-700'
+                        : 'bg-red-500 text-white hover:bg-red-600'
+                    }`}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
               <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
                 <div>
                   <label
                     className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
                   >
-                    DATE CONVICTED (Month/Year)
+                    DATE CONVICTED
                   </label>
                   <input
                     type='text'
@@ -530,7 +634,7 @@ export default function PersonalInfoForm2() {
                     placeholder='MM/YYYY'
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       theme === 'dark'
-                        ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                         : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                     }`}
                   />
@@ -553,7 +657,7 @@ export default function PersonalInfoForm2() {
                     }
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       theme === 'dark'
-                        ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                         : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                     }`}
                   />
@@ -576,7 +680,7 @@ export default function PersonalInfoForm2() {
                     }
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       theme === 'dark'
-                        ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                         : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                     }`}
                   />
@@ -600,7 +704,7 @@ export default function PersonalInfoForm2() {
                     placeholder='Forfeited bond, collateral and/or points'
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       theme === 'dark'
-                        ? 'bg-gray-800 border-gray-600 text-white focus:ring-brand-mint'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                         : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                     }`}
                   />
@@ -608,6 +712,21 @@ export default function PersonalInfoForm2() {
               </div>
             </div>
           ))}
+
+          {/* Add More Button */}
+          <div className='flex justify-center pt-4'>
+            <button
+              type='button'
+              onClick={addConviction}
+              className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
+                theme === 'dark'
+                  ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
+                  : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
+              }`}
+            >
+              + Add Conviction
+            </button>
+          </div>
         </div>
       )}
 
@@ -671,7 +790,7 @@ export default function PersonalInfoForm2() {
                 rows={3}
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -737,7 +856,7 @@ export default function PersonalInfoForm2() {
                 rows={3}
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-brand-mint'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
@@ -750,10 +869,10 @@ export default function PersonalInfoForm2() {
 
   return (
     <div
-      className={`max-w-4xl mx-auto rounded-lg shadow-xl border-t-4 ${
+      className={`max-w-4xl mx-auto rounded-lg shadow-xl border-t-4 relative z-10 ${
         theme === 'dark'
-          ? 'bg-gray-800 border-brand-mint'
-          : 'bg-white border-t-brand-sage border-gray-200'
+          ? 'bg-brand-sage-light/20 backdrop-blur-xl border-brand-mint'
+          : 'bg-white/80 backdrop-blur-xl border-t-brand-sage border-gray-200'
       }`}
     >
       {/* Header */}
@@ -868,16 +987,13 @@ export default function PersonalInfoForm2() {
 
         <button
           onClick={nextStep}
-          disabled={currentStep === STEPS.length}
           className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
-            currentStep === STEPS.length
-              ? 'opacity-50 cursor-not-allowed'
-              : theme === 'dark'
-                ? 'bg-brand-mint text-white hover:bg-brand-mint/90 shadow-lg'
-                : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
+            theme === 'dark'
+              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
+              : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
           }`}
         >
-          {currentStep === STEPS.length ? 'Complete' : 'Next'}
+          {currentStep === STEPS.length ? 'Continue to Form 3' : 'Next'}
         </button>
       </div>
     </div>
