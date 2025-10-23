@@ -192,7 +192,7 @@ const Home = () => {
     if (currentPage !== 'dotapp') return null
 
     return (
-      <div className='flex justify-center mb-8'>
+      <div className='flex justify-center mb-8 px-4'>
         <div className='flex space-x-4'>
           <button
             onClick={() => handleFormNavigation(1)}
@@ -206,7 +206,10 @@ const Home = () => {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-300'
             }`}
           >
-            Form 1: Personal Info
+            <div className='text-center'>
+              <div className='font-bold text-base'>Form 1</div>
+              <div className='text-sm opacity-90'>Personal Info</div>
+            </div>
           </button>
           <button
             onClick={() => handleFormNavigation(2)}
@@ -220,7 +223,10 @@ const Home = () => {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-300'
             }`}
           >
-            Form 2: Driving & Records
+            <div className='text-center'>
+              <div className='font-bold text-base'>Form 2</div>
+              <div className='text-sm opacity-90'>Driving & Records</div>
+            </div>
           </button>
           <button
             onClick={() => handleFormNavigation(3)}
@@ -234,7 +240,10 @@ const Home = () => {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-300'
             }`}
           >
-            Form 3: Employment & Signature
+            <div className='text-center'>
+              <div className='font-bold text-base'>Form 3</div>
+              <div className='text-sm opacity-90'>Employment & Signature</div>
+            </div>
           </button>
         </div>
       </div>

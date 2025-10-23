@@ -950,14 +950,14 @@ export default function PersonalInfoForm2() {
 
       {/* Navigation */}
       <div
-        className={`flex justify-between items-center px-6 py-6 border-t-2 ${
+        className={`flex justify-between items-center px-6 py-8 border-t-2 ${
           theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
         }`}
       >
         <button
           onClick={prevStep}
           disabled={currentStep === 1}
-          className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
+          className={`px-4 py-2 rounded-md font-semibold transition-all duration-200 ${
             currentStep === 1
               ? 'opacity-50 cursor-not-allowed'
               : theme === 'dark'
@@ -968,7 +968,7 @@ export default function PersonalInfoForm2() {
           Previous
         </button>
 
-        <div className='flex space-x-2'>
+        <div className='flex space-x-2 mx-8'>
           {STEPS.map((step) => (
             <div
               key={step.id}
@@ -987,7 +987,7 @@ export default function PersonalInfoForm2() {
 
         <button
           onClick={nextStep}
-          className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
+          className={`px-4 py-2 rounded-md font-semibold transition-all duration-200 ${
             theme === 'dark'
               ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
               : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
