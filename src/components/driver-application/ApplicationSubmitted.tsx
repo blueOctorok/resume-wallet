@@ -1,0 +1,305 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useTheme } from '@/contexts/ThemeContext'
+
+interface ApplicationSubmittedProps {
+  onNavigateToSafetyForm: () => void
+}
+
+const ApplicationSubmitted = ({
+  onNavigateToSafetyForm,
+}: ApplicationSubmittedProps) => {
+  const { theme } = useTheme()
+  const [isVerifying, setIsVerifying] = useState(true)
+  const [verificationStatus, setVerificationStatus] = useState<
+    'pending' | 'verified' | 'error'
+  >('pending')
+  const [transactionHash, setTransactionHash] = useState<string>('')
+  const [blockNumber, setBlockNumber] = useState<number>(0)
+
+  // Simulate blockchain verification process
+  useEffect(() => {
+    const verifyApplication = async () => {
+      // Simulate API call to submit application to blockchain
+      try {
+        setIsVerifying(true)
+
+        // Simulate blockchain transaction
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+
+        // Mock successful verification
+        setVerificationStatus('verified')
+        setTransactionHash('0x1234567890abcdef1234567890abcdef12345678')
+        setBlockNumber(12345678)
+        setIsVerifying(false)
+      } catch (error) {
+        setVerificationStatus('error')
+        setIsVerifying(false)
+      }
+    }
+
+    verifyApplication()
+  }, [])
+
+  return (
+    <div
+      className={`max-w-4xl mx-auto p-6 ${
+        theme === 'dark'
+          ? 'bg-brand-sage-light/20 backdrop-blur-xl'
+          : 'bg-white/80 backdrop-blur-xl'
+      } rounded-2xl shadow-2xl relative z-10 border-t-4 ${
+        theme === 'dark' ? 'border-brand-mint' : 'border-brand-sage'
+      }`}
+    >
+      {/* Header */}
+      <div className='text-center mb-8'>
+        <div className='mb-6'>
+          {isVerifying ? (
+            <div className='flex justify-center mb-4'>
+              <div className='animate-spin rounded-full h-16 w-16 border-b-2 border-brand-mint'></div>
+            </div>
+          ) : verificationStatus === 'verified' ? (
+            <div className='flex justify-center mb-4'>
+              <div className='rounded-full h-16 w-16 bg-green-500 flex items-center justify-center'>
+                <svg
+                  className='h-8 w-8 text-white'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M5 13l4 4L19 7'
+                  />
+                </svg>
+              </div>
+            </div>
+          ) : (
+            <div className='flex justify-center mb-4'>
+              <div className='rounded-full h-16 w-16 bg-red-500 flex items-center justify-center'>
+                <svg
+                  className='h-8 w-8 text-white'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M6 18L18 6M6 6l12 12'
+                  />
+                </svg>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <h1
+          className={`text-3xl font-bold mb-2 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}
+        >
+          {isVerifying
+            ? 'Submitting Application...'
+            : verificationStatus === 'verified'
+              ? 'Application Submitted Successfully!'
+              : 'Submission Failed'}
+        </h1>
+
+        <p
+          className={`text-lg ${
+            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+          }`}
+        >
+          {isVerifying
+            ? 'Your driver application is being submitted to the blockchain for verification.'
+            : verificationStatus === 'verified'
+              ? 'Your application has been recorded on the blockchain and is ready for DOT verification.'
+              : 'There was an error submitting your application. Please try again.'}
+        </p>
+      </div>
+
+      {/* Verification Status */}
+      {verificationStatus === 'verified' && (
+        <div className='mb-8'>
+          <div
+            className={`p-6 rounded-lg border-2 ${
+              theme === 'dark'
+                ? 'bg-green-900/20 border-green-500/50'
+                : 'bg-green-50 border-green-200'
+            }`}
+          >
+            <h2
+              className={`text-xl font-semibold mb-4 ${
+                theme === 'dark' ? 'text-green-400' : 'text-green-800'
+              }`}
+            >
+              ✅ Blockchain Verification Complete
+            </h2>
+
+            <div className='space-y-3'>
+              <div className='flex justify-between items-center'>
+                <span
+                  className={`font-medium ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                  }`}
+                >
+                  Transaction Hash:
+                </span>
+                <span
+                  className={`font-mono text-sm ${
+                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  }`}
+                >
+                  {transactionHash.slice(0, 10)}...{transactionHash.slice(-8)}
+                </span>
+              </div>
+
+              <div className='flex justify-between items-center'>
+                <span
+                  className={`font-medium ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                  }`}
+                >
+                  Block Number:
+                </span>
+                <span
+                  className={`font-mono text-sm ${
+                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  }`}
+                >
+                  {blockNumber.toLocaleString()}
+                </span>
+              </div>
+
+              <div className='flex justify-between items-center'>
+                <span
+                  className={`font-medium ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                  }`}
+                >
+                  Status:
+                </span>
+                <span
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    theme === 'dark'
+                      ? 'bg-green-500/20 text-green-400'
+                      : 'bg-green-100 text-green-800'
+                  }`}
+                >
+                  Pending DOT Verification
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Next Steps */}
+      {verificationStatus === 'verified' && (
+        <div className='mb-8'>
+          <h2
+            className={`text-xl font-semibold mb-4 ${
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}
+          >
+            Next Steps
+          </h2>
+
+          <div className='space-y-4'>
+            <div
+              className={`p-4 rounded-lg ${
+                theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+              }`}
+            >
+              <h3
+                className={`font-semibold mb-2 ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`}
+              >
+                1. DOT Verification
+              </h3>
+              <p
+                className={`text-sm ${
+                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                }`}
+              >
+                Your application will be reviewed by DOT inspectors. This
+                process typically takes 3-5 business days.
+              </p>
+            </div>
+
+            <div
+              className={`p-4 rounded-lg ${
+                theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+              }`}
+            >
+              <h3
+                className={`font-semibold mb-2 ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`}
+              >
+                2. Employment Verification
+              </h3>
+              <p
+                className={`text-sm ${
+                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                }`}
+              >
+                Complete the employment verification form to have your previous
+                employers verify your work history.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div className='flex flex-col sm:flex-row gap-4 justify-center'>
+        {verificationStatus === 'verified' && (
+          <button
+            onClick={onNavigateToSafetyForm}
+            className={`px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 ${
+              theme === 'dark'
+                ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
+                : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+            }`}
+          >
+            Complete Employment Verification
+          </button>
+        )}
+
+        {verificationStatus === 'error' && (
+          <button
+            onClick={() => window.location.reload()}
+            className={`px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 ${
+              theme === 'dark'
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'bg-red-500 text-white hover:bg-red-600'
+            }`}
+          >
+            Try Again
+          </button>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className='text-center mt-8'>
+        <p
+          className={`text-sm ${
+            theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+          }`}
+        >
+          Your application data is securely stored on the blockchain and cannot
+          be tampered with.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+export default ApplicationSubmitted

@@ -94,6 +94,24 @@ const PersonalInfoForm3 = dynamic(
   }
 )
 
+const ApplicationSubmitted = dynamic(
+  () =>
+    import('@/components/driver-application/ApplicationSubmitted').then(
+      (mod) => mod.default
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
+        <div className='space-y-4 animate-pulse'>
+          <div className='h-6 bg-brand-sage-light/20 rounded w-48' />
+          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
+        </div>
+      </div>
+    ),
+  }
+)
+
 const EmploymentVerificationForm = dynamic(
   () =>
     import('@/components/driver-application/EmploymentVerificationForm').then(
@@ -138,6 +156,8 @@ const Home = () => {
   >(null)
   const [currentForm, setCurrentForm] = useState(1)
   const [isDriverApplicationCompleted, setIsDriverApplicationCompleted] =
+    useState(false)
+  const [showEmploymentVerification, setShowEmploymentVerification] =
     useState(false)
   const { theme } = useTheme()
 
@@ -198,10 +218,25 @@ const Home = () => {
     setCurrentForm(formNumber)
   }, [])
 
+  // Handler for navigating to employment verification
+  const handleNavigateToEmploymentVerification = useCallback(() => {
+    console.log('🎯 [HOME] Navigating to employment verification')
+    setShowEmploymentVerification(true)
+  }, [])
+
   // Render form content based on current form
   const renderFormContent = () => {
-    // If driver application is completed, show employment verification form
-    if (isDriverApplicationCompleted) {
+    // If driver application is completed, show application submitted page
+    if (isDriverApplicationCompleted && !showEmploymentVerification) {
+      return (
+        <ApplicationSubmitted
+          onNavigateToSafetyForm={handleNavigateToEmploymentVerification}
+        />
+      )
+    }
+
+    // If employment verification is requested, show the form
+    if (isDriverApplicationCompleted && showEmploymentVerification) {
       return <EmploymentVerificationForm />
     }
 
@@ -224,8 +259,8 @@ const Home = () => {
   const renderFormNavigation = () => {
     if (currentPage !== 'dotapp') return null
 
-    // Hide navigation when employment verification form is shown
-    if (isDriverApplicationCompleted) return null
+    // Hide navigation when driver application is completed or employment verification is shown
+    if (isDriverApplicationCompleted || showEmploymentVerification) return null
 
     return (
       <div className='flex justify-center mb-8 px-4'>
