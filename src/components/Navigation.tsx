@@ -66,9 +66,9 @@ export default function Navigation({
           <div className='flex flex-col gap-4'>
             {/* Top Row: Logo and Status */}
             <div className='flex items-center justify-between'>
-              {/* User Status Indicator - Left (always takes space to center logo) */}
+              {/* User Status Indicator or Sign In Button - Left (always takes space to center logo) */}
               <div className='w-20 flex justify-start'>
-                {isAuthenticated && (
+                {isAuthenticated ? (
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
@@ -89,6 +89,17 @@ export default function Navigation({
                     <div className='absolute left-0 top-full mt-2 px-3 py-1.5 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
                       Click to view account
                     </div>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleNavigation('signin')}
+                    className={`px-4 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 ${
+                      theme === 'light'
+                        ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark'
+                        : 'text-brand-cream bg-brand-mint/20 hover:bg-brand-mint/30 border-brand-mint/40 hover:border-brand-mint/60'
+                    }`}
+                  >
+                    Sign In
                   </button>
                 )}
               </div>
@@ -148,19 +159,6 @@ export default function Navigation({
                   onClick={onWalletClick}
                   isMobile={true}
                 />
-              )}
-
-              {!isAuthenticated && (
-                <button
-                  onClick={() => handleNavigation('signin')}
-                  className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 ${
-                    theme === 'light'
-                      ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark'
-                      : 'text-brand-cream bg-brand-mint/20 hover:bg-brand-mint/30 border-brand-mint/40 hover:border-brand-mint/60'
-                  }`}
-                >
-                  Sign In
-                </button>
               )}
               <button
                 onClick={() => isAuthenticated && handleNavigation('resume')}

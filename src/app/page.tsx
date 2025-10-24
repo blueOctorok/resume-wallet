@@ -94,6 +94,24 @@ const PersonalInfoForm3 = dynamic(
   }
 )
 
+const EmploymentVerificationForm = dynamic(
+  () =>
+    import('@/components/driver-application/EmploymentVerificationForm').then(
+      (mod) => mod.default
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
+        <div className='space-y-4 animate-pulse'>
+          <div className='h-6 bg-brand-sage-light/20 rounded w-48' />
+          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
+        </div>
+      </div>
+    ),
+  }
+)
+
 const WalletTransactions = dynamic(
   () =>
     import('@/components/WalletTransactions').then(
@@ -119,6 +137,8 @@ const Home = () => {
     'signin' | 'resume' | 'dotapp' | null
   >(null)
   const [currentForm, setCurrentForm] = useState(1)
+  const [isDriverApplicationCompleted, setIsDriverApplicationCompleted] =
+    useState(false)
   const { theme } = useTheme()
 
   // Debug: Log user state changes
@@ -168,28 +188,44 @@ const Home = () => {
     []
   )
 
-  // Form navigation handler
+  // Handler for when driver application is completed
+  const handleDriverApplicationCompleted = useCallback(() => {
+    setIsDriverApplicationCompleted(true)
+  }, [])
+
+  // Handler for form navigation
   const handleFormNavigation = useCallback((formNumber: number) => {
     setCurrentForm(formNumber)
   }, [])
 
   // Render form content based on current form
   const renderFormContent = () => {
+    // If driver application is completed, show employment verification form
+    if (isDriverApplicationCompleted) {
+      return <EmploymentVerificationForm />
+    }
+
+    // Otherwise show the driver application forms
     switch (currentForm) {
       case 1:
-        return <PersonalInfoForm1 />
+        return <PersonalInfoForm1 onNavigateToForm={handleFormNavigation} />
       case 2:
-        return <PersonalInfoForm2 />
+        return <PersonalInfoForm2 onNavigateToForm={handleFormNavigation} />
       case 3:
-        return <PersonalInfoForm3 />
+        return (
+          <PersonalInfoForm3 onComplete={handleDriverApplicationCompleted} />
+        )
       default:
-        return <PersonalInfoForm1 />
+        return <PersonalInfoForm1 onNavigateToForm={handleFormNavigation} />
     }
   }
 
   // Render form navigation buttons
   const renderFormNavigation = () => {
     if (currentPage !== 'dotapp') return null
+
+    // Hide navigation when employment verification form is shown
+    if (isDriverApplicationCompleted) return null
 
     return (
       <div className='flex justify-center mb-8 px-4'>

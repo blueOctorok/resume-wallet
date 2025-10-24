@@ -21,7 +21,13 @@ const STEPS = [
   },
 ]
 
-export default function PersonalInfoForm1() {
+interface PersonalInfoForm1Props {
+  onNavigateToForm?: (formNumber: number) => void
+}
+
+export default function PersonalInfoForm1({
+  onNavigateToForm,
+}: PersonalInfoForm1Props) {
   const { theme } = useTheme()
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState({
@@ -101,6 +107,9 @@ export default function PersonalInfoForm1() {
   const nextStep = () => {
     if (currentStep < STEPS.length) {
       setCurrentStep(currentStep + 1)
+    } else {
+      // Form is completed, navigate to Form 2
+      onNavigateToForm?.(2)
     }
   }
 

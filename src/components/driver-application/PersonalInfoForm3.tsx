@@ -21,7 +21,13 @@ const STEPS = [
   },
 ]
 
-export default function PersonalInfoForm3() {
+interface PersonalInfoForm3Props {
+  onComplete?: () => void
+}
+
+export default function PersonalInfoForm3({
+  onComplete,
+}: PersonalInfoForm3Props) {
   const { theme } = useTheme()
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState({
@@ -100,6 +106,9 @@ export default function PersonalInfoForm3() {
   const nextStep = () => {
     if (currentStep < STEPS.length) {
       setCurrentStep(currentStep + 1)
+    } else {
+      // Form is completed, call onComplete callback
+      onComplete?.()
     }
   }
 
