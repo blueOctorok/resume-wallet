@@ -112,6 +112,24 @@ const ApplicationSubmitted = dynamic(
   }
 )
 
+const DriverDashboard = dynamic(
+  () =>
+    import('@/components/driver-application/DriverDashboard').then(
+      (mod) => mod.default
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
+        <div className='space-y-4 animate-pulse'>
+          <div className='h-6 bg-brand-sage-light/20 rounded w-48' />
+          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
+        </div>
+      </div>
+    ),
+  }
+)
+
 const EmploymentVerificationForm = dynamic(
   () =>
     import('@/components/driver-application/EmploymentVerificationForm').then(
@@ -159,6 +177,7 @@ const Home = () => {
     useState(false)
   const [showEmploymentVerification, setShowEmploymentVerification] =
     useState(false)
+  const [showDashboard, setShowDashboard] = useState(false)
   const { theme } = useTheme()
 
   // Debug: Log user state changes
@@ -224,13 +243,42 @@ const Home = () => {
     setShowEmploymentVerification(true)
   }, [])
 
+  // Handler for navigating to dashboard
+  const handleNavigateToDashboard = useCallback(() => {
+    console.log('🎯 [HOME] Navigating to dashboard')
+    setShowDashboard(true)
+    setShowEmploymentVerification(false)
+  }, [])
+
+  // Handler for navigating back from dashboard
+  const handleBackFromDashboard = useCallback(() => {
+    console.log('🎯 [HOME] Going back from dashboard')
+    setShowDashboard(false)
+  }, [])
+
   // Render form content based on current form
   const renderFormContent = () => {
+    // If dashboard is shown, show dashboard
+    if (showDashboard && isDriverApplicationCompleted) {
+      return (
+        <DriverDashboard
+          onCompleteEmploymentVerification={
+            handleNavigateToEmploymentVerification
+          }
+        />
+      )
+    }
+
     // If driver application is completed, show application submitted page
-    if (isDriverApplicationCompleted && !showEmploymentVerification) {
+    if (
+      isDriverApplicationCompleted &&
+      !showEmploymentVerification &&
+      !showDashboard
+    ) {
       return (
         <ApplicationSubmitted
           onNavigateToSafetyForm={handleNavigateToEmploymentVerification}
+          onNavigateToDashboard={handleNavigateToDashboard}
         />
       )
     }
@@ -260,7 +308,12 @@ const Home = () => {
     if (currentPage !== 'dotapp') return null
 
     // Hide navigation when driver application is completed or employment verification is shown
-    if (isDriverApplicationCompleted || showEmploymentVerification) return null
+    if (
+      isDriverApplicationCompleted ||
+      showEmploymentVerification ||
+      showDashboard
+    )
+      return null
 
     return (
       <div className='flex justify-center mb-8 px-4'>

@@ -5,10 +5,12 @@ import { useTheme } from '@/contexts/ThemeContext'
 
 interface ApplicationSubmittedProps {
   onNavigateToSafetyForm: () => void
+  onNavigateToDashboard?: () => void
 }
 
 const ApplicationSubmitted = ({
   onNavigateToSafetyForm,
+  onNavigateToDashboard,
 }: ApplicationSubmittedProps) => {
   const { theme } = useTheme()
   const [isVerifying, setIsVerifying] = useState(true)
@@ -261,16 +263,31 @@ const ApplicationSubmitted = ({
       {/* Action Buttons */}
       <div className='flex flex-col sm:flex-row gap-4 justify-center'>
         {verificationStatus === 'verified' && (
-          <button
-            onClick={onNavigateToSafetyForm}
-            className={`px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 ${
-              theme === 'dark'
-                ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                : 'bg-brand-sage text-white hover:bg-brand-sage/90'
-            }`}
-          >
-            Complete Employment Verification
-          </button>
+          <>
+            <button
+              onClick={onNavigateToSafetyForm}
+              className={`px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 ${
+                theme === 'dark'
+                  ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
+                  : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+              }`}
+            >
+              Complete Employment Verification
+            </button>
+
+            {onNavigateToDashboard && (
+              <button
+                onClick={onNavigateToDashboard}
+                className={`px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 ${
+                  theme === 'dark'
+                    ? 'bg-gray-700 text-white hover:bg-gray-600'
+                    : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                }`}
+              >
+                View Dashboard
+              </button>
+            )}
+          </>
         )}
 
         {verificationStatus === 'error' && (
