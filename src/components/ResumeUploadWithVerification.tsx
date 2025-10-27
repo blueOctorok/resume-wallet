@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { useAccount, useSmartAccountClient } from '@account-kit/react'
 import { encodeFunctionData } from 'viem'
 import { calculateFileHash, validateFile } from '@/lib/hash-utils'
+import { useTheme } from '@/contexts/ThemeContext'
 
 interface UploadStep {
   id: string
@@ -20,6 +21,8 @@ interface ResumeUploadWithVerificationProps {
 export default function ResumeUploadWithVerification({
   user,
 }: ResumeUploadWithVerificationProps) {
+  const { theme } = useTheme()
+
   // Add error boundary for Alchemy hooks
   let account: any = null
   let hookError = false
@@ -291,11 +294,25 @@ export default function ResumeUploadWithVerification({
   // Authentication guard
   if (!user?.address) {
     return (
-      <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
+      <div
+        className={`max-w-4xl mx-auto p-6 ${
+          theme === 'dark'
+            ? 'bg-brand-sage-light/20 backdrop-blur-xl'
+            : 'bg-white/80 backdrop-blur-xl'
+        } rounded-2xl shadow-2xl relative z-10 border-t-4 ${
+          theme === 'dark' ? 'border-brand-mint' : 'border-brand-sage'
+        }`}
+      >
         <div className='text-center py-8'>
-          <div className='w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4'>
+          <div
+            className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
+              theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'
+            }`}
+          >
             <svg
-              className='w-8 h-8 text-blue-600'
+              className={`w-8 h-8 ${
+                theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+              }`}
               fill='none'
               stroke='currentColor'
               viewBox='0 0 24 24'
@@ -308,10 +325,18 @@ export default function ResumeUploadWithVerification({
               />
             </svg>
           </div>
-          <h3 className='text-lg font-medium text-gray-900 mb-2'>
+          <h3
+            className={`text-3xl font-bold mb-2 ${
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}
+          >
             Authentication Required
           </h3>
-          <p className='text-gray-600'>
+          <p
+            className={`text-lg ${
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+            }`}
+          >
             Please sign in to upload and verify your resume.
           </p>
         </div>
@@ -320,25 +345,49 @@ export default function ResumeUploadWithVerification({
   }
 
   return (
-    <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
-      <h3 className='text-lg font-medium text-gray-900 mb-4'>
+    <div
+      className={`max-w-4xl mx-auto p-6 ${
+        theme === 'dark'
+          ? 'bg-brand-sage-light/20 backdrop-blur-xl'
+          : 'bg-white/80 backdrop-blur-xl'
+      } rounded-2xl shadow-2xl relative z-10 border-t-4 ${
+        theme === 'dark' ? 'border-brand-mint' : 'border-brand-sage'
+      }`}
+    >
+      <h3
+        className={`text-3xl font-bold mb-6 ${
+          theme === 'dark' ? 'text-white' : 'text-gray-900'
+        }`}
+      >
         📄 Resume Upload with Full Verification
       </h3>
 
       {/* File Selection */}
       <div className='mb-6'>
-        <label className='block text-sm font-medium text-gray-700 mb-2'>
+        <label
+          className={`block text-sm font-medium mb-2 ${
+            theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+          }`}
+        >
           Select Resume (PDF only)
         </label>
         <input
           type='file'
           accept='.pdf'
           onChange={handleFileChange}
-          className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+          className={`w-full px-4 py-3 rounded-lg ${
+            theme === 'dark'
+              ? 'bg-brand-cream border-gray-300 text-gray-900'
+              : 'bg-white border-gray-300 text-gray-900'
+          } border focus:outline-none focus:ring-2 focus:ring-brand-mint`}
           disabled={uploading}
         />
         {file && (
-          <p className='text-sm text-gray-600 mt-1'>
+          <p
+            className={`text-sm mt-1 ${
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+            }`}
+          >
             Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
           </p>
         )}
@@ -348,30 +397,55 @@ export default function ResumeUploadWithVerification({
       <button
         onClick={uploadResume}
         disabled={!file || !account?.address || uploading}
-        className='w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed mb-6'
+        className={`w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed mb-6 ${
+          theme === 'dark'
+            ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
+            : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+        }`}
       >
         {uploading ? 'Uploading...' : 'Upload Resume (Hash-First Process)'}
       </button>
 
       {/* Progress Steps */}
-      <div className='space-y-4'>
+      <div className='space-y-4 mb-6'>
         {steps.map((step, index) => (
-          <div key={step.id} className='border rounded-lg p-4'>
+          <div
+            key={step.id}
+            className={`rounded-lg p-4 border-2 ${
+              theme === 'dark'
+                ? 'bg-gray-800 border-gray-700'
+                : 'bg-gray-50 border-gray-200'
+            }`}
+          >
             <div className='flex items-center justify-between mb-2'>
               <div className='flex items-center space-x-2'>
                 <span className='text-lg'>{getStatusIcon(step.status)}</span>
-                <span className={`font-medium ${getStatusColor(step.status)}`}>
+                <span
+                  className={`font-medium ${
+                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  } ${getStatusColor(step.status)}`}
+                >
                   Step {index + 1}: {step.name}
                 </span>
               </div>
-              <span className={`text-sm ${getStatusColor(step.status)}`}>
+              <span
+                className={`text-sm font-semibold ${getStatusColor(
+                  step.status
+                )}`}
+              >
                 {step.status.toUpperCase()}
               </span>
             </div>
 
             {/* Step Details */}
             {step.data && (
-              <div className='bg-gray-50 p-3 rounded text-sm'>
+              <div
+                className={`p-3 rounded text-sm ${
+                  theme === 'dark'
+                    ? 'bg-gray-900 text-gray-300'
+                    : 'bg-gray-100 text-gray-700'
+                }`}
+              >
                 <pre className='whitespace-pre-wrap text-xs'>
                   {JSON.stringify(step.data, null, 2)}
                 </pre>
@@ -379,7 +453,13 @@ export default function ResumeUploadWithVerification({
             )}
 
             {step.error && (
-              <div className='bg-red-50 p-3 rounded text-sm text-red-700'>
+              <div
+                className={`p-3 rounded text-sm ${
+                  theme === 'dark'
+                    ? 'bg-red-900/20 text-red-400'
+                    : 'bg-red-50 text-red-700'
+                }`}
+              >
                 Error: {step.error}
               </div>
             )}
@@ -388,11 +468,25 @@ export default function ResumeUploadWithVerification({
       </div>
 
       {/* Cost Breakdown */}
-      <div className='mt-4 bg-blue-50 p-4 rounded-lg border border-blue-200'>
-        <h4 className='font-medium text-blue-800 mb-2'>
+      <div
+        className={`mt-4 p-4 rounded-lg border-2 mb-6 ${
+          theme === 'dark'
+            ? 'bg-blue-900/20 border-blue-500/50'
+            : 'bg-blue-50 border-blue-200'
+        }`}
+      >
+        <h4
+          className={`font-medium mb-2 ${
+            theme === 'dark' ? 'text-blue-400' : 'text-blue-800'
+          }`}
+        >
           💰 Cost Breakdown (Hash-First Flow)
         </h4>
-        <div className='text-sm text-blue-700 space-y-1'>
+        <div
+          className={`text-sm space-y-1 ${
+            theme === 'dark' ? 'text-blue-300' : 'text-blue-700'
+          }`}
+        >
           <div>
             🔢 File hash calculation:{' '}
             <span className='font-semibold text-green-600'>FREE</span>
@@ -424,11 +518,25 @@ export default function ResumeUploadWithVerification({
 
       {/* Final Result */}
       {finalResult && (
-        <div className='mt-6 bg-green-50 p-4 rounded-lg border border-green-200'>
-          <h4 className='font-medium text-green-800 mb-3'>
+        <div
+          className={`mt-6 p-4 rounded-lg border-2 mb-6 ${
+            theme === 'dark'
+              ? 'bg-green-900/20 border-green-500/50'
+              : 'bg-green-50 border-green-200'
+          }`}
+        >
+          <h4
+            className={`font-medium mb-3 ${
+              theme === 'dark' ? 'text-green-400' : 'text-green-800'
+            }`}
+          >
             🎉 Upload Complete!
           </h4>
-          <div className='space-y-2 text-sm'>
+          <div
+            className={`space-y-2 text-sm ${
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+            }`}
+          >
             <div>
               <strong>IPFS:</strong>{' '}
               <a
@@ -486,7 +594,11 @@ export default function ResumeUploadWithVerification({
       )}
 
       {/* Wallet Status */}
-      <div className='mt-4 text-sm text-gray-600'>
+      <div
+        className={`mt-4 text-sm ${
+          theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+        }`}
+      >
         {account?.address ? (
           <p>
             ✅ Wallet connected: {account.address.slice(0, 6)}...

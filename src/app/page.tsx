@@ -186,11 +186,19 @@ const Home = () => {
   }, [user])
 
   // Stable callback to prevent infinite loops
-  const handleAuthSuccess = useCallback((userData: any) => {
-    console.log('🎯 [HOME] handleAuthSuccess called with:', userData)
-    setUser(userData)
-    console.log('🎯 [HOME] User state updated')
-  }, [])
+  const handleAuthSuccess = useCallback(
+    (userData: any) => {
+      console.log('🎯 [HOME] handleAuthSuccess called with:', userData)
+      setUser(userData)
+      console.log('🎯 [HOME] User state updated')
+      // Auto-navigate to resume page after login
+      if (!currentPage || currentPage === 'signin') {
+        console.log('🎯 [HOME] Auto-navigating to resume page after login')
+        setCurrentPage('resume')
+      }
+    },
+    [currentPage]
+  )
 
   // Modal handlers
   const openModal = useCallback(() => {
@@ -425,7 +433,7 @@ const Home = () => {
 
         {currentPage === 'resume' && (
           <div className='max-w-4xl mx-auto space-y-6'>
-            <ResumeUploadWithVerification />
+            <ResumeUploadWithVerification user={user} />
             {user && <WalletTransactions />}
           </div>
         )}

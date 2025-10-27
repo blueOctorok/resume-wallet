@@ -33,6 +33,7 @@ export default function Navigation({
   }
 
   const handleNavigation = (page: 'signin' | 'resume' | 'dotapp') => {
+    console.log(`🔗 [NAVIGATION] handleNavigation called with page:`, page)
     setIsMenuOpen(false)
     onNavigate?.(page)
   }
@@ -161,7 +162,11 @@ export default function Navigation({
                 />
               )}
               <button
-                onClick={() => isAuthenticated && handleNavigation('resume')}
+                onClick={() => {
+                  if (isAuthenticated) {
+                    handleNavigation('resume')
+                  }
+                }}
                 disabled={!isAuthenticated}
                 className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 ${
                   isAuthenticated
@@ -176,7 +181,11 @@ export default function Navigation({
                 Resume
               </button>
               <button
-                onClick={() => isAuthenticated && handleNavigation('dotapp')}
+                onClick={() => {
+                  if (isAuthenticated) {
+                    handleNavigation('dotapp')
+                  }
+                }}
                 disabled={!isAuthenticated}
                 className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 ${
                   isAuthenticated
