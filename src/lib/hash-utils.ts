@@ -44,3 +44,16 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
 
   return { valid: true }
 }
+
+// Hash JSON data for blockchain submission
+export async function hashJson(payload: unknown): Promise<string> {
+  const json = JSON.stringify(payload)
+  const encoder = new TextEncoder()
+  const view = encoder.encode(json)
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    view.buffer as ArrayBuffer
+  )
+  const bytes = Array.from(new Uint8Array(digest))
+  return bytes.map((b) => b.toString(16).padStart(2, '0')).join('')
+}

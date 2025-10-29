@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 
 const STEPS = [
@@ -23,13 +23,16 @@ const STEPS = [
 
 interface PersonalInfoForm2Props {
   onNavigateToForm?: (formNumber: number) => void
+  onDataChange?: (data: any) => void
 }
 
 export default function PersonalInfoForm2({
   onNavigateToForm,
+  onDataChange,
 }: PersonalInfoForm2Props) {
   const { theme } = useTheme()
   const [currentStep, setCurrentStep] = useState(1)
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState({
     // Driving Experience
     drivingExperience: [
@@ -101,12 +104,65 @@ export default function PersonalInfoForm2({
     })
   }
 
+  // Sync form data to parent component
+  useEffect(() => {
+    onDataChange?.(formData)
+  }, [formData, onDataChange])
+
+  const validateStep = (step: number): boolean => {
+    const newErrors: Record<string, string> = {}
+
+    if (step === 1) {
+      // Driving Experience validation
+      formData.drivingExperience.forEach((exp, index) => {
+        if (!exp.equipmentType.trim())
+          newErrors[`drivingExp${index}Equipment`] =
+            'Equipment type is required'
+        if (!exp.yearsOfExperience.trim())
+          newErrors[`drivingExp${index}Years`] =
+            'Years of experience is required'
+      })
+    } else if (step === 2) {
+      // Accident Record validation
+      if (!formData.hasNoAccidents) {
+        formData.accidents.forEach((accident, index) => {
+          if (accident.date.trim() || accident.nature.trim()) {
+            if (!accident.date.trim())
+              newErrors[`accident${index}Date`] = 'Accident date is required'
+            if (!accident.nature.trim())
+              newErrors[`accident${index}Nature`] =
+                'Accident nature is required'
+            if (!accident.atFault)
+              newErrors[`accident${index}AtFault`] =
+                'Please specify if at fault'
+          }
+        })
+      }
+    } else if (step === 3) {
+      // Traffic Convictions validation
+      formData.convictions.forEach((conviction, index) => {
+        if (conviction.dateConvicted?.trim() || conviction.violation?.trim()) {
+          if (!conviction.dateConvicted?.trim())
+            newErrors[`conviction${index}Date`] = 'Conviction date is required'
+          if (!conviction.violation?.trim())
+            newErrors[`conviction${index}Violation`] =
+              'Violation description is required'
+        }
+      })
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const nextStep = () => {
-    if (currentStep < STEPS.length) {
-      setCurrentStep(currentStep + 1)
-    } else {
-      // Form is completed, navigate to Form 3
-      onNavigateToForm?.(3)
+    if (validateStep(currentStep)) {
+      if (currentStep < STEPS.length) {
+        setCurrentStep(currentStep + 1)
+      } else {
+        // Form is completed, navigate to Form 3
+        onNavigateToForm?.(3)
+      }
     }
   }
 
@@ -180,6 +236,46 @@ export default function PersonalInfoForm2({
       ...prev,
       convictions: prev.convictions.filter((_, i) => i !== index),
     }))
+  }
+
+  const fillTestData = () => {
+    setFormData({
+      drivingExperience: [
+        {
+          equipmentType: 'TRACTOR & SEMI-TRAILER',
+          yearsOfExperience: '5',
+        },
+        {
+          equipmentType: 'STRAIGHT TRUCK',
+          yearsOfExperience: '2',
+        },
+      ],
+      accidents: [
+        {
+          date: '2022-06-15',
+          nature: 'Rear-end collision',
+          fatalities: '0',
+          injuries: '1',
+          chemicalSpills: 'N',
+          atFault: 'no',
+        },
+      ],
+      hasNoAccidents: false,
+      convictions: [
+        {
+          dateConvicted: '03/2023',
+          violation: 'Speeding - 15 mph over limit',
+          stateOfViolation: 'OH',
+          penalty: 'Fine $150, 2 points',
+        },
+      ],
+      hasNoConvictions: false,
+      deniedLicense: 'no',
+      deniedLicenseExplain: '',
+      suspendedLicense: 'no',
+      suspendedLicenseExplain: '',
+    })
+    setErrors({})
   }
 
   const renderStepContent = () => {
@@ -918,6 +1014,23 @@ export default function PersonalInfoForm2({
         >
           COMPLETE IN FULL OR IT WILL NOT BE CONSIDERED.
         </p>
+
+        {/* Test Data Button */}
+        <div className='mt-4'>
+          <button
+            type='button'
+            onClick={fillTestData}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow hover:shadow-md ${
+              theme === 'dark'
+                ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-300'
+                : 'bg-yellow-500 text-white hover:bg-yellow-400'
+            }`}
+            title='Fill test data'
+          >
+            <span>⚡</span>
+            <span>Fill Test Data</span>
+          </button>
+        </div>
       </div>
 
       {/* Progress Bar */}

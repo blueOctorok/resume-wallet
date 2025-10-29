@@ -99,6 +99,159 @@ const EmploymentVerificationForm = () => {
     attempts: [{ date: '', method: '', contactPerson: '', result: '' }],
   })
 
+  // Submission state and result
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [txHash, setTxHash] = useState<string | null>(null)
+  const [explorerUrl, setExplorerUrl] = useState<string | null>(null)
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof EmploymentVerificationData, string>>
+  >({})
+
+  async function hashJson(payload: unknown): Promise<string> {
+    const json = JSON.stringify(payload)
+    const encoder = new TextEncoder()
+    const view = encoder.encode(json)
+    const digest = await crypto.subtle.digest(
+      'SHA-256',
+      view.buffer as ArrayBuffer
+    )
+    const bytes = Array.from(new Uint8Array(digest))
+    return bytes.map((b) => b.toString(16).padStart(2, '0')).join('')
+  }
+
+  const validateForm = (): Partial<
+    Record<keyof EmploymentVerificationData, string>
+  > => {
+    const e: Partial<Record<keyof EmploymentVerificationData, string>> = {}
+    const required: Array<keyof EmploymentVerificationData> = [
+      'driverName',
+      'previousEmployer',
+      'employerAddress',
+      'employmentDatesFrom',
+      'employmentDatesTo',
+      'positionHeld',
+      'driverSignature',
+      'signatureDate',
+      'companyName',
+      'companyAddress',
+      'phone',
+      'personCompletingForm',
+      'title',
+      'completionDate',
+    ]
+
+    required.forEach((field) => {
+      const value = (formData as any)[field]
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        e[field] = 'This field is required.'
+      }
+    })
+
+    if (
+      formData.employmentDatesFrom &&
+      formData.employmentDatesTo &&
+      formData.employmentDatesFrom > formData.employmentDatesTo
+    ) {
+      e.employmentDatesTo = 'End date must be after start date.'
+    }
+
+    return e
+  }
+
+  const fillTestData = () => {
+    setFormData({
+      driverName: 'Jane Doe',
+      ssn: '***-**-1234',
+      dateOfBirth: '1990-05-12',
+      previousEmployer: 'Acme Logistics LLC',
+      employerAddress: '123 Industrial Way, Columbus, OH 43004',
+      employmentDatesFrom: '2022-01-01',
+      employmentDatesTo: '2024-09-30',
+      positionHeld: 'CDL-A Driver',
+      driverSignature: 'Jane Doe',
+      signatureDate: new Date().toISOString().slice(0, 10),
+      companyName: 'Acme Logistics LLC',
+      companyAddress: '123 Industrial Way, Columbus, OH 43004',
+      phone: '(555) 123-4567',
+      personCompletingForm: 'John Manager',
+      title: 'Safety Manager',
+      completionDate: new Date().toISOString().slice(0, 10),
+      verificationEmploymentFrom: '2022-01-01',
+      verificationEmploymentTo: '2024-09-30',
+      positionsHeld: 'CDL-A Regional Driver',
+      eligibleForRehire: 'yes',
+      reasonForLeaving: 'Relocation',
+      accidents: [
+        {
+          date: '2023-03-10',
+          location: 'I-70, OH',
+          injuries: '0',
+          fatalities: '0',
+          hazmatSpill: 'No',
+          comments: 'Minor fender bender, not at fault',
+        },
+      ],
+      noAccidentsReported: false,
+      employerSignature: 'John Manager',
+      printedName: 'John Manager',
+      employerTitle: 'Safety Manager',
+      certificationDate: new Date().toISOString().slice(0, 10),
+      attempts: [
+        {
+          date: new Date().toISOString().slice(0, 10),
+          method: 'Phone',
+          contactPerson: 'HR Desk',
+          result: 'Completed',
+        },
+      ],
+    })
+    setErrors({})
+  }
+
+  const handleSubmitToBlockchain = async () => {
+    try {
+      setSubmitting(true)
+      setSubmitError(null)
+      setTxHash(null)
+      setExplorerUrl(null)
+
+      const validation = validateForm()
+      setErrors(validation)
+      if (Object.keys(validation).length > 0) {
+        setSubmitError('Please fix the highlighted fields before submitting.')
+        setSubmitting(false)
+        return
+      }
+
+      // Create deterministic hash of the DOT Employment Verification form data
+      const applicationHash = await hashJson(formData)
+
+      // For now, use the same hash placeholder for ipfsHash until IPFS storage is added
+      const ipfsHash = applicationHash
+
+      const res = await fetch('/api/blockchain/submit-driver-application', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicationHash, ipfsHash }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err?.error || 'Failed to submit application')
+      }
+
+      const data = await res.json()
+      setTxHash(data.transactionHash)
+      setExplorerUrl(data.explorerUrl)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Unknown error'
+      setSubmitError(message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const handleInputChange = (
     field: keyof EmploymentVerificationData,
     value: any
@@ -194,6 +347,23 @@ const EmploymentVerificationForm = () => {
         >
           Required by 49 CFR § 391.23
         </p>
+
+        {/* Test Data (Lightning) */}
+        <div className='mt-4'>
+          <button
+            type='button'
+            onClick={fillTestData}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow hover:shadow-md ${
+              theme === 'dark'
+                ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-300'
+                : 'bg-yellow-500 text-white hover:bg-yellow-400'
+            }`}
+            title='Fill test data'
+          >
+            <span>⚡</span>
+            <span>Fill Test Data</span>
+          </button>
+        </div>
       </div>
 
       {/* Section 1 - Driver/Applicant Authorization */}
@@ -1255,6 +1425,73 @@ const EmploymentVerificationForm = () => {
         >
           Form complies with 49 CFR § 391.23 — Revised 2025 Edition.
         </p>
+      </div>
+
+      {/* Submit to Blockchain */}
+      <div className='mt-8'>
+        <div
+          className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+        >
+          <h3 className='text-xl font-semibold'>Submit to Blockchain</h3>
+          <p
+            className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}
+          >
+            We store a SHA-256 hash of this form on Base Sepolia for
+            tamper-proof verification. No personal details are stored on-chain.
+          </p>
+        </div>
+
+        <div className='flex flex-col sm:flex-row gap-4 items-start sm:items-center'>
+          <button
+            type='button'
+            onClick={handleSubmitToBlockchain}
+            disabled={submitting}
+            className={`px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${
+              theme === 'dark'
+                ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
+                : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+            }`}
+          >
+            {submitting ? 'Submitting…' : 'Submit Verification Hash'}
+          </button>
+
+          {txHash && (
+            <div
+              className={`px-4 py-3 rounded-lg border ${
+                theme === 'dark'
+                  ? 'border-green-500/50 bg-green-900/20 text-green-300'
+                  : 'border-green-200 bg-green-50 text-green-800'
+              }`}
+            >
+              <div className='font-semibold'>Submitted!</div>
+              <div className='text-sm break-all'>Tx: {txHash}</div>
+              {explorerUrl && (
+                <a
+                  href={explorerUrl}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  className={`${
+                    theme === 'dark' ? 'text-blue-300' : 'text-blue-700'
+                  } underline text-sm`}
+                >
+                  View on BaseScan
+                </a>
+              )}
+            </div>
+          )}
+
+          {submitError && (
+            <div
+              className={`px-4 py-3 rounded-lg border ${
+                theme === 'dark'
+                  ? 'border-red-500/50 bg-red-900/20 text-red-300'
+                  : 'border-red-200 bg-red-50 text-red-700'
+              }`}
+            >
+              {submitError}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

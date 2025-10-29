@@ -406,6 +406,61 @@ export async function completeDriverApplicationClient(
 }
 
 /**
+ * Check if an application hash already exists for a user (duplicate detection)
+ */
+export async function checkDuplicateApplicationHash(
+  userAddress: string,
+  applicationHash: string
+): Promise<{ exists: boolean; existingApplication?: DriverApplicationRecord }> {
+  console.log('🔍 Driver App DB: Checking for duplicate hash:', applicationHash)
+  
+  const supabase = createClient()
+
+  try {
+    // Get user_id from wallet address
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('wallet_address', userAddress)
+      .maybeSingle()
+
+    if (!userData) {
+      // User doesn't exist yet, so no duplicate
+      console.log('🔍 Driver App DB: User not found, no duplicate possible')
+      return { exists: false }
+    }
+
+    // Check if application with this hash exists for this user
+    const { data, error } = await supabase
+      .from('driver_applications')
+      .select('*')
+      .eq('user_id', userData.id)
+      .eq('application_hash', applicationHash)
+      .maybeSingle()
+
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116 means not found, which is fine
+      console.error('❌ Driver App DB: Error checking duplicate:', error)
+      throw new Error(`Failed to check duplicate: ${error.message}`)
+    }
+
+    if (data) {
+      console.log('⚠️ Driver App DB: Duplicate application hash found:', {
+        id: data.id,
+        created_at: data.created_at,
+      })
+      return { exists: true, existingApplication: data }
+    }
+
+    console.log('✅ Driver App DB: No duplicate found')
+    return { exists: false }
+  } catch (error) {
+    console.error('❌ Driver App DB: Failed to check duplicate:', error)
+    throw error
+  }
+}
+
+/**
  * Get all applications for a user (for admin purposes)
  */
 export async function getAllDriverApplicationsClient(

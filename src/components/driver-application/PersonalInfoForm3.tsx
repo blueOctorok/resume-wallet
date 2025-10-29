@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 
 const STEPS = [
@@ -23,13 +23,16 @@ const STEPS = [
 
 interface PersonalInfoForm3Props {
   onComplete?: () => void
+  onDataChange?: (data: any) => void
 }
 
 export default function PersonalInfoForm3({
   onComplete,
+  onDataChange,
 }: PersonalInfoForm3Props) {
   const { theme } = useTheme()
   const [currentStep, setCurrentStep] = useState(1)
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState({
     // Employment History
     employers: [
@@ -103,12 +106,65 @@ export default function PersonalInfoForm3({
     })
   }
 
+  // Sync form data to parent component
+  useEffect(() => {
+    onDataChange?.(formData)
+  }, [formData, onDataChange])
+
+  const validateStep = (step: number): boolean => {
+    const newErrors: Record<string, string> = {}
+
+    if (step === 1) {
+      // Employment History validation
+      formData.employers.forEach((employer, index) => {
+        if (!employer.isUnemployment) {
+          if (!employer.name.trim())
+            newErrors[`employer${index}Name`] = 'Employer name is required'
+          if (!employer.positionHeld.trim())
+            newErrors[`employer${index}Position`] = 'Position held is required'
+          if (!employer.fromDate)
+            newErrors[`employer${index}FromDate`] = 'Start date is required'
+          if (!employer.toDate)
+            newErrors[`employer${index}ToDate`] = 'End date is required'
+          if (!employer.subjectToFMCSR)
+            newErrors[`employer${index}FMCSR`] =
+              'Please specify FMCSR compliance'
+          if (!employer.safetySensitiveFunction)
+            newErrors[`employer${index}Safety`] =
+              'Please specify safety-sensitive function'
+        }
+      })
+    } else if (step === 2) {
+      // Education validation
+      formData.education.forEach((edu, index) => {
+        if (edu.schoolType?.trim() || edu.nameAndLocation?.trim()) {
+          if (!edu.schoolType?.trim())
+            newErrors[`education${index}Type`] = 'School type is required'
+          if (!edu.nameAndLocation?.trim())
+            newErrors[`education${index}Name`] =
+              'School name and location is required'
+        }
+      })
+    } else if (step === 3) {
+      // Signature validation
+      if (!formData.applicantSignature?.trim())
+        newErrors.applicantSignature = 'Signature is required'
+      if (!formData.signatureDate)
+        newErrors.signatureDate = 'Signature date is required'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const nextStep = () => {
-    if (currentStep < STEPS.length) {
-      setCurrentStep(currentStep + 1)
-    } else {
-      // Form is completed, call onComplete callback
-      onComplete?.()
+    if (validateStep(currentStep)) {
+      if (currentStep < STEPS.length) {
+        setCurrentStep(currentStep + 1)
+      } else {
+        // Form is completed, call onComplete callback
+        onComplete?.()
+      }
     }
   }
 
@@ -170,6 +226,65 @@ export default function PersonalInfoForm3({
       ...prev,
       education: prev.education.filter((_, i) => i !== index),
     }))
+  }
+
+  const fillTestData = () => {
+    setFormData({
+      employers: [
+        {
+          name: 'ABC Trucking Company',
+          phone: '(555) 123-4567',
+          address: '123 Highway Road, Columbus, OH 43215',
+          positionHeld: 'Commercial Driver',
+          fromDate: '01/2022',
+          toDate: 'Present',
+          reasonForLeaving: '',
+          salary: '$55,000',
+          gapsInEmployment: 'None',
+          subjectToFMCSR: 'yes',
+          safetySensitiveFunction: 'yes',
+          isUnemployment: false,
+        },
+        {
+          name: 'XYZ Logistics',
+          phone: '(555) 987-6543',
+          address: '456 Freight Lane, Cleveland, OH 44101',
+          positionHeld: 'Delivery Driver',
+          fromDate: '06/2019',
+          toDate: '12/2021',
+          reasonForLeaving: 'Better opportunity',
+          salary: '$48,000',
+          gapsInEmployment: 'None',
+          subjectToFMCSR: 'yes',
+          safetySensitiveFunction: 'yes',
+          isUnemployment: false,
+        },
+      ],
+      education: [
+        {
+          schoolType: 'HIGH SCHOOL',
+          nameAndLocation: 'Central High School, Columbus, OH',
+          courseOfStudy: 'General Education',
+          yearsCompleted: '4',
+          graduated: 'yes',
+          details: 'High School Diploma',
+        },
+        {
+          schoolType: 'TRADE SCHOOL',
+          nameAndLocation: 'Ohio Commercial Driving Academy, Columbus, OH',
+          courseOfStudy: 'CDL Training',
+          yearsCompleted: '0.5',
+          graduated: 'yes',
+          details: 'CDL-A Certification',
+        },
+      ],
+      otherQualifications:
+        'Certified in Hazardous Materials Transportation, First Aid/CPR Certified',
+      applicantSignature: 'John Michael Doe',
+      signatureDate: new Date().toISOString().slice(0, 10),
+      applicantNamePrinted: 'John Michael Doe',
+    })
+    setErrors({})
   }
 
   const renderStepContent = () => {
@@ -1098,6 +1213,23 @@ export default function PersonalInfoForm3({
         >
           COMPLETE IN FULL OR IT WILL NOT BE CONSIDERED.
         </p>
+
+        {/* Test Data Button */}
+        <div className='mt-4'>
+          <button
+            type='button'
+            onClick={fillTestData}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow hover:shadow-md ${
+              theme === 'dark'
+                ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-300'
+                : 'bg-yellow-500 text-white hover:bg-yellow-400'
+            }`}
+            title='Fill test data'
+          >
+            <span>⚡</span>
+            <span>Fill Test Data</span>
+          </button>
+        </div>
       </div>
 
       {/* Progress Bar */}

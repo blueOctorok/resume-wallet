@@ -2,7 +2,40 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
-## 🎉 **LATEST STATUS: DRIVER DASHBOARD IMPLEMENTED!** ✨
+## 🎉 **LATEST STATUS: DUPLICATE PREVENTION & LOADING STATES IMPLEMENTED!** ✨
+
+**MAJOR SECURITY & UX ENHANCEMENTS (October 2025):**
+
+- **✅ Duplicate Detection System** - Comprehensive duplicate prevention at multiple layers
+  - **Database Layer (Primary)**: Checks application hash before blockchain submission
+    - New `checkDuplicateApplicationHash()` function in `supabase-client-db.ts`
+    - Checks if hash already exists for the user before any blockchain interaction
+    - Uses unique constraint on `(user_address, application_hash)` from database schema
+    - Returns existing application details if duplicate found
+  - **Server-Side API Check**: Backup duplicate check in blockchain API route
+    - Checks database before submitting to blockchain (prevents wasted gas)
+    - Returns 409 Conflict status if duplicate detected
+    - Includes details about existing application (ID, creation date, tx hash)
+  - **Client-Side Prevention**: Early return if duplicate detected
+    - Shows user-friendly error message: "This application has already been submitted"
+    - Prevents unnecessary blockchain transaction attempts
+  - **Database Persistence**: Saves application hash to database after successful blockchain submission
+    - Links blockchain transaction hash and application ID to database record
+    - Updates `verification_status` to 'VERIFIED' after successful submission
+
+- **✅ Loading States & User Feedback** - Improved submission experience
+  - **Loading Screen**: Shows animated spinner during blockchain submission
+    - Displays "Submitting Application to Blockchain..." message
+    - Explains submission to Base Sepolia network
+    - Replaces form content to prevent user interaction during submission
+    - Matches existing design with mint border and sage background
+  - **Duplicate Prevention**: Prevents multiple simultaneous submissions
+    - `isSubmitting` state flag prevents double-clicks
+    - Early return if already submitting
+    - Console logging for debugging submission flow
+  - **Error Handling**: Proper cleanup on submission failure
+    - Loading state resets even if submission fails
+    - User can retry after error
 
 **MAJOR UI/UX ENHANCEMENTS (October 2025):**
 
@@ -36,6 +69,26 @@ This file tracks major modifications made to the ResumeWallet codebase.
   - **Consistent Styling**: Matches existing form design with cream inputs and dark mode support
   - **Form Navigation**: Automatically hides driver application navigation when verification form is shown
   - **Completion Logic**: Only triggers when Form 3 (Employment & Signature) is completed
+  - **Blockchain Submission**: Added SHA-256 hashing + on-chain submit on Base Sepolia via `/api/blockchain/submit-driver-application`
+  - **UI Feedback**: Shows transaction hash and BaseScan link after successful submit
+  - **Client-Side Validation**: Required field validation with inline error messages
+  - **Test Data Button**: Lightning bolt button to fill realistic sample data for testing
+
+- **✅ Multi-Page Driver Application Validation** - Complete form validation system
+  - **PersonalInfoForm1**: Added validation for personal info, residency history, and license information
+    - Required fields: name, contact info, dates, addresses, license details
+    - Inline error messages for missing required fields
+    - Test data button with realistic sample data
+  - **PersonalInfoForm2**: Added validation for driving experience, accidents, and traffic convictions
+    - Equipment type and years validation for driving experience
+    - Accident details validation (when not marked as "no accidents")
+    - Traffic conviction validation for filled entries
+  - **PersonalInfoForm3**: Added validation for employment history, education, and signature
+    - Employer details validation (excluding unemployment periods)
+    - Education validation for filled entries
+    - Signature and date validation for completion
+  - **Step Progression Control**: Users cannot advance to next step with validation errors
+  - **Error State Management**: Clear error messages reset when fields are corrected
 
 **PREVIOUS ENHANCEMENTS:**
 

@@ -6,43 +6,33 @@ import { useTheme } from '@/contexts/ThemeContext'
 interface ApplicationSubmittedProps {
   onNavigateToSafetyForm: () => void
   onNavigateToDashboard?: () => void
+  blockchainData?: {
+    transactionHash: string
+    blockNumber: number
+    applicationId: number | null
+  } | null
 }
 
 const ApplicationSubmitted = ({
   onNavigateToSafetyForm,
   onNavigateToDashboard,
+  blockchainData,
 }: ApplicationSubmittedProps) => {
   const { theme } = useTheme()
-  const [isVerifying, setIsVerifying] = useState(true)
+  const [isVerifying, setIsVerifying] = useState(!blockchainData)
   const [verificationStatus, setVerificationStatus] = useState<
     'pending' | 'verified' | 'error'
-  >('pending')
-  const [transactionHash, setTransactionHash] = useState<string>('')
-  const [blockNumber, setBlockNumber] = useState<number>(0)
+  >(blockchainData ? 'verified' : 'pending')
 
-  // Simulate blockchain verification process
   useEffect(() => {
-    const verifyApplication = async () => {
-      // Simulate API call to submit application to blockchain
-      try {
-        setIsVerifying(true)
-
-        // Simulate blockchain transaction
-        await new Promise((resolve) => setTimeout(resolve, 2000))
-
-        // Mock successful verification
-        setVerificationStatus('verified')
-        setTransactionHash('0x1234567890abcdef1234567890abcdef12345678')
-        setBlockNumber(12345678)
-        setIsVerifying(false)
-      } catch (error) {
-        setVerificationStatus('error')
-        setIsVerifying(false)
-      }
+    if (blockchainData) {
+      setIsVerifying(false)
+      setVerificationStatus('verified')
+    } else {
+      setIsVerifying(true)
+      setVerificationStatus('pending')
     }
-
-    verifyApplication()
-  }, [])
+  }, [blockchainData])
 
   return (
     <div
@@ -152,13 +142,27 @@ const ApplicationSubmitted = ({
                 >
                   Transaction Hash:
                 </span>
-                <span
-                  className={`font-mono text-sm ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
-                  }`}
-                >
-                  {transactionHash.slice(0, 10)}...{transactionHash.slice(-8)}
-                </span>
+                {blockchainData?.transactionHash ? (
+                  <a
+                    href={`https://sepolia.basescan.org/tx/${blockchainData.transactionHash}`}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className={`font-mono text-sm hover:underline ${
+                      theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                    }`}
+                  >
+                    {blockchainData.transactionHash.slice(0, 10)}...
+                    {blockchainData.transactionHash.slice(-8)}
+                  </a>
+                ) : (
+                  <span
+                    className={`font-mono text-sm ${
+                      theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                    }`}
+                  >
+                    Pending...
+                  </span>
+                )}
               </div>
 
               <div className='flex justify-between items-center'>
@@ -174,9 +178,30 @@ const ApplicationSubmitted = ({
                     theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
                   }`}
                 >
-                  {blockNumber.toLocaleString()}
+                  {blockchainData?.blockNumber
+                    ? blockchainData.blockNumber.toLocaleString()
+                    : 'Pending...'}
                 </span>
               </div>
+
+              {blockchainData?.applicationId && (
+                <div className='flex justify-between items-center'>
+                  <span
+                    className={`font-medium ${
+                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                    }`}
+                  >
+                    Application ID:
+                  </span>
+                  <span
+                    className={`font-mono text-sm ${
+                      theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                    }`}
+                  >
+                    #{blockchainData.applicationId}
+                  </span>
+                </div>
+              )}
 
               <div className='flex justify-between items-center'>
                 <span

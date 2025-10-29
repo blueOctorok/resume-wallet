@@ -1,37 +1,91 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 
 interface DriverDashboardProps {
   onCompleteEmploymentVerification?: () => void
+  userAddress?: string
+  blockchainData?: {
+    transactionHash: string
+    blockNumber: number
+    applicationId: number | null
+  } | null
 }
 
 const DriverDashboard = ({
   onCompleteEmploymentVerification,
+  userAddress,
+  blockchainData,
 }: DriverDashboardProps) => {
   const { theme } = useTheme()
   const [showShareLink, setShowShareLink] = useState(false)
+  const [dashboardData, setDashboardData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
-  // Mock data - will be replaced with real data from database/blockchain
-  const mockData = {
+  // Fetch real data from database
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!userAddress) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        // Use blockchain data if available, otherwise fetch from database
+        const dashboardInfo: any = {
+          status: 'PENDING DOT REVIEW',
+          submittedDate: new Date().toLocaleDateString(),
+          estimatedReviewTime: '3-5 business days',
+          driverApplicationVerified: true,
+          employmentVerified: false,
+          dotApproved: false,
+        }
+
+        // Add blockchain data if available
+        if (blockchainData) {
+          dashboardInfo.blockchainTxHash = blockchainData.transactionHash
+          dashboardInfo.blockNumber = blockchainData.blockNumber
+          dashboardInfo.applicationId = blockchainData.applicationId
+        }
+
+        setDashboardData(dashboardInfo)
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [userAddress, blockchainData])
+
+  // Use dashboard data or fallback to basic info
+  const data = dashboardData || {
     status: 'PENDING DOT REVIEW',
-    submittedDate: 'Jan 15, 2024',
+    submittedDate: new Date().toLocaleDateString(),
     estimatedReviewTime: '3-5 business days',
-    blockchainTxHash: '0x1234567890abcdef1234567890abcdef12345678',
-    blockNumber: 12345678,
-    ipfsHash: 'QmXyz1234567890abcdef',
-    applicationId: 42,
     driverApplicationVerified: true,
     employmentVerified: false,
     dotApproved: false,
-    name: 'John Doe',
+    name: 'Driver',
     cdlClass: 'Class A',
-    yearsExperience: 5,
+    yearsExperience: 0,
     accidentCount: 0,
     convictionCount: 0,
-    employmentHistory: 3,
+    employmentHistory: 0,
     shareLink: 'https://driverappchain.com/verify/abc123',
+  }
+
+  if (loading) {
+    return (
+      <div className='max-w-6xl mx-auto p-6 text-center'>
+        <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-brand-mint mx-auto'></div>
+        <p className={`mt-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+          Loading dashboard data...
+        </p>
+      </div>
+    )
   }
 
   return (
@@ -78,7 +132,7 @@ const DriverDashboard = ({
                   theme === 'dark' ? 'text-yellow-400' : 'text-yellow-800'
                 }`}
               >
-                ⏳ {mockData.status}
+                ⏳ {data.status}
               </h2>
             </div>
             <span
@@ -106,7 +160,7 @@ const DriverDashboard = ({
                   theme === 'dark' ? 'text-white' : 'text-gray-900'
                 }`}
               >
-                {mockData.submittedDate}
+                {data.submittedDate}
               </p>
             </div>
 
@@ -123,7 +177,7 @@ const DriverDashboard = ({
                   theme === 'dark' ? 'text-white' : 'text-gray-900'
                 }`}
               >
-                {mockData.estimatedReviewTime}
+                {data.estimatedReviewTime}
               </p>
             </div>
 
@@ -140,7 +194,7 @@ const DriverDashboard = ({
                   theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
                 }`}
               >
-                #{mockData.applicationId}
+                {data.applicationId ? `#${data.applicationId}` : 'N/A'}
               </p>
             </div>
           </div>
@@ -165,7 +219,7 @@ const DriverDashboard = ({
             }`}
           >
             <div className='flex items-center space-x-3'>
-              {mockData.driverApplicationVerified ? (
+              {data.driverApplicationVerified ? (
                 <div className='w-6 h-6 rounded-full bg-green-500 flex items-center justify-center'>
                   <svg
                     className='h-4 w-4 text-white'
@@ -210,7 +264,7 @@ const DriverDashboard = ({
             }`}
           >
             <div className='flex items-center space-x-3'>
-              {mockData.employmentVerified ? (
+              {data.employmentVerified ? (
                 <div className='w-6 h-6 rounded-full bg-green-500 flex items-center justify-center'>
                   <svg
                     className='h-4 w-4 text-white'
@@ -255,7 +309,7 @@ const DriverDashboard = ({
             }`}
           >
             <div className='flex items-center space-x-3'>
-              {mockData.dotApproved ? (
+              {data.dotApproved ? (
                 <div className='w-6 h-6 rounded-full bg-green-500 flex items-center justify-center'>
                   <svg
                     className='h-4 w-4 text-white'
@@ -319,52 +373,66 @@ const DriverDashboard = ({
               >
                 Transaction Hash:
               </span>
-              <a
-                href={`https://sepolia.basescan.org/tx/${mockData.blockchainTxHash}`}
-                target='_blank'
-                rel='noopener noreferrer'
-                className={`font-mono text-sm hover:underline ${
-                  theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
-                }`}
-              >
-                {mockData.blockchainTxHash.slice(0, 10)}...
-                {mockData.blockchainTxHash.slice(-8)}
-              </a>
+              {data.blockchainTxHash ? (
+                <a
+                  href={`https://sepolia.basescan.org/tx/${data.blockchainTxHash}`}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  className={`font-mono text-sm hover:underline ${
+                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  }`}
+                >
+                  {data.blockchainTxHash.slice(0, 10)}...
+                  {data.blockchainTxHash.slice(-8)}
+                </a>
+              ) : (
+                <span
+                  className={`font-mono text-sm ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  }`}
+                >
+                  Not available
+                </span>
+              )}
             </div>
 
-            <div className='flex justify-between items-center'>
-              <span
-                className={`font-medium ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                }`}
-              >
-                Block Number:
-              </span>
-              <span
-                className={`font-mono text-sm ${
-                  theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
-                }`}
-              >
-                {mockData.blockNumber.toLocaleString()}
-              </span>
-            </div>
+            {data.blockNumber && (
+              <div className='flex justify-between items-center'>
+                <span
+                  className={`font-medium ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                  }`}
+                >
+                  Block Number:
+                </span>
+                <span
+                  className={`font-mono text-sm ${
+                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  }`}
+                >
+                  {data.blockNumber.toLocaleString()}
+                </span>
+              </div>
+            )}
 
-            <div className='flex justify-between items-center'>
-              <span
-                className={`font-medium ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                }`}
-              >
-                IPFS Hash:
-              </span>
-              <span
-                className={`font-mono text-sm ${
-                  theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
-                }`}
-              >
-                {mockData.ipfsHash.slice(0, 10)}...{mockData.ipfsHash.slice(-8)}
-              </span>
-            </div>
+            {data.ipfsHash && (
+              <div className='flex justify-between items-center'>
+                <span
+                  className={`font-medium ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                  }`}
+                >
+                  IPFS Hash:
+                </span>
+                <span
+                  className={`font-mono text-sm ${
+                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  }`}
+                >
+                  {data.ipfsHash.slice(0, 10)}...{data.ipfsHash.slice(-8)}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -397,7 +465,7 @@ const DriverDashboard = ({
                 theme === 'dark' ? 'text-white' : 'text-gray-900'
               }`}
             >
-              {mockData.cdlClass}
+              {data.cdlClass}
             </p>
           </div>
 
@@ -418,7 +486,7 @@ const DriverDashboard = ({
                 theme === 'dark' ? 'text-white' : 'text-gray-900'
               }`}
             >
-              {mockData.yearsExperience} yrs
+              {data.yearsExperience} yrs
             </p>
           </div>
 
@@ -439,7 +507,7 @@ const DriverDashboard = ({
                 theme === 'dark' ? 'text-green-400' : 'text-green-600'
               }`}
             >
-              {mockData.accidentCount}
+              {data.accidentCount}
             </p>
           </div>
 
@@ -460,7 +528,7 @@ const DriverDashboard = ({
                 theme === 'dark' ? 'text-green-400' : 'text-green-600'
               }`}
             >
-              {mockData.convictionCount}
+              {data.convictionCount}
             </p>
           </div>
         </div>
@@ -477,7 +545,7 @@ const DriverDashboard = ({
         </h2>
 
         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-          {!mockData.employmentVerified && onCompleteEmploymentVerification && (
+          {!data.employmentVerified && onCompleteEmploymentVerification && (
             <button
               onClick={onCompleteEmploymentVerification}
               className={`p-6 rounded-lg text-left transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 ${
@@ -553,7 +621,7 @@ const DriverDashboard = ({
             <div className='flex items-center space-x-2'>
               <input
                 type='text'
-                value={mockData.shareLink}
+                value={data.shareLink}
                 readOnly
                 className={`flex-1 px-4 py-2 rounded-lg font-mono text-sm ${
                   theme === 'dark'
@@ -563,7 +631,7 @@ const DriverDashboard = ({
               />
               <button
                 onClick={() =>
-                  navigator.clipboard.writeText(mockData.shareLink)
+                  navigator.clipboard.writeText(data.shareLink)
                 }
                 className={`px-4 py-2 rounded-lg font-semibold ${
                   theme === 'dark'

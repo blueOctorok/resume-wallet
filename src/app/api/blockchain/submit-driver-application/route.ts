@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ethers } from 'ethers'
+import { createClient } from '@/utils/supabase/server'
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_DRIVER_APP_CONTRACT_ADDRESS!
 const PRIVATE_KEY = process.env.PRIVATE_KEY!
@@ -15,17 +16,96 @@ const CONTRACT_ABI = [
 
 export async function POST(request: NextRequest) {
   try {
-    const { applicationHash, ipfsHash } = await request.json()
+    const { applicationHash, ipfsHash, userAddress } = await request.json()
 
     console.log('📝 Blockchain API: Submitting driver application...')
     console.log('📝 Application Hash:', applicationHash)
     console.log('📝 IPFS Hash:', ipfsHash)
+    console.log('📝 User Address:', userAddress)
+
+    // Validate required environment variables
+    if (!CONTRACT_ADDRESS) {
+      console.error('❌ Blockchain API: CONTRACT_ADDRESS not set')
+      return NextResponse.json(
+        { 
+          error: 'Server configuration error',
+          details: 'Contract address not configured. Please check environment variables.',
+        },
+        { status: 500 }
+      )
+    }
+
+    if (!PRIVATE_KEY) {
+      console.error('❌ Blockchain API: PRIVATE_KEY not set')
+      return NextResponse.json(
+        { 
+          error: 'Server configuration error',
+          details: 'Private key not configured. Please check environment variables.',
+        },
+        { status: 500 }
+      )
+    }
+
+    if (!ALCHEMY_API_KEY) {
+      console.error('❌ Blockchain API: ALCHEMY_API_KEY not set')
+      return NextResponse.json(
+        { 
+          error: 'Server configuration error',
+          details: 'Alchemy API key not configured. Please check environment variables.',
+        },
+        { status: 500 }
+      )
+    }
 
     if (!applicationHash || !ipfsHash) {
       return NextResponse.json(
-        { error: 'Missing applicationHash or ipfsHash' },
+        { 
+          error: 'Missing required fields',
+          details: 'Missing applicationHash or ipfsHash',
+        },
         { status: 400 }
       )
+    }
+
+    // Check database for duplicate BEFORE submitting to blockchain (server-side check)
+    if (userAddress) {
+      console.log('🔍 Blockchain API: Checking database for duplicate hash...')
+      const supabase = await createClient()
+      
+      // Get user_id from wallet address
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('wallet_address', userAddress)
+        .maybeSingle()
+
+      if (userData) {
+        // Check if application with this hash already exists
+        const { data: existingApp } = await supabase
+          .from('driver_applications')
+          .select('id, created_at, blockchain_tx_hash')
+          .eq('user_id', userData.id)
+          .eq('application_hash', applicationHash)
+          .maybeSingle()
+
+        if (existingApp) {
+          console.log('⚠️ Blockchain API: Duplicate application hash found in database')
+          return NextResponse.json(
+            {
+              error: 'Duplicate application detected',
+              details: 'This application hash has already been submitted. Please modify your application data before resubmitting.',
+              existingApplication: {
+                id: existingApp.id,
+                createdAt: existingApp.created_at,
+                txHash: existingApp.blockchain_tx_hash,
+              },
+            },
+            { status: 409 } // 409 Conflict
+          )
+        }
+      }
+      
+      console.log('✅ Blockchain API: No duplicate found, proceeding with blockchain submission')
     }
 
     // Initialize provider and wallet
@@ -45,6 +125,32 @@ export async function POST(request: NextRequest) {
       throw new Error(
         'Deployer wallet has no ETH for gas. Please fund the wallet at: ' +
           wallet.address
+      )
+    }
+
+    // Preflight: estimate gas to detect on-chain duplicate (revert with "Hash used")
+    try {
+      await contract.submitApplication.estimateGas(applicationHash)
+    } catch (preflightError: any) {
+      const reason = preflightError?.reason || preflightError?.shortMessage || preflightError?.message
+      console.error('⚠️ Preflight revert detected:', reason)
+      if (reason?.toLowerCase()?.includes('hash used')) {
+        return NextResponse.json(
+          {
+            error: 'Duplicate application detected on-chain',
+            details:
+              'This application hash has already been recorded on the blockchain. Please modify your application data before resubmitting.',
+          },
+          { status: 409 }
+        )
+      }
+      // Unknown preflight error - return as server error with details
+      return NextResponse.json(
+        {
+          error: 'Blockchain preflight failed',
+          details: reason || 'Unknown error during gas estimation',
+        },
+        { status: 500 }
       )
     }
 
@@ -79,10 +185,35 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('❌ Blockchain API Error:', error)
+    console.error('❌ Error Stack:', error.stack)
+    console.error('❌ Error Details:', {
+      message: error.message,
+      code: error.code,
+      reason: error.reason,
+      data: error.data,
+    })
+    
+    // Provide more helpful error messages
+    let errorMessage = error.message || 'Failed to submit to blockchain'
+    let errorDetails = error.message
+
+    // Check for common error types
+    if (error.code === 'NETWORK_ERROR' || error.message?.includes('network')) {
+      errorMessage = 'Network error connecting to blockchain'
+      errorDetails = 'Unable to connect to Base Sepolia. Please check your network connection.'
+    } else if (error.message?.includes('insufficient funds') || error.message?.includes('balance')) {
+      errorMessage = 'Insufficient funds for transaction'
+      errorDetails = 'The deployer wallet does not have enough ETH to pay for gas fees.'
+    } else if (error.message?.includes('contract') || error.message?.includes('address')) {
+      errorMessage = 'Contract address error'
+      errorDetails = 'There was an error with the contract address. Please check configuration.'
+    }
+
     return NextResponse.json(
       {
-        error: 'Failed to submit to blockchain',
-        details: error.message,
+        error: errorMessage,
+        details: errorDetails,
+        rawError: process.env.NODE_ENV === 'development' ? error.message : undefined, // Only in dev
       },
       { status: 500 }
     )

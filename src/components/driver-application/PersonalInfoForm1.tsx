@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 
 const STEPS = [
@@ -23,13 +23,16 @@ const STEPS = [
 
 interface PersonalInfoForm1Props {
   onNavigateToForm?: (formNumber: number) => void
+  onDataChange?: (data: any) => void
 }
 
 export default function PersonalInfoForm1({
   onNavigateToForm,
+  onDataChange,
 }: PersonalInfoForm1Props) {
   const { theme } = useTheme()
   const [currentStep, setCurrentStep] = useState(1)
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState({
     // Applicant Information
     firstName: '',
@@ -104,12 +107,131 @@ export default function PersonalInfoForm1({
     })
   }
 
+  // Sync form data to parent component
+  useEffect(() => {
+    onDataChange?.(formData)
+  }, [formData, onDataChange])
+
+  const validateStep = (step: number): boolean => {
+    const newErrors: Record<string, string> = {}
+
+    if (step === 1) {
+      // Personal Information validation
+      if (!formData.firstName.trim())
+        newErrors.firstName = 'First name is required'
+      if (!formData.lastName.trim())
+        newErrors.lastName = 'Last name is required'
+      if (!formData.phone.trim()) newErrors.phone = 'Phone number is required'
+      if (!formData.email.trim()) newErrors.email = 'Email is required'
+      if (!formData.dateOfBirth)
+        newErrors.dateOfBirth = 'Date of birth is required'
+      if (!formData.socialSecurity.trim())
+        newErrors.socialSecurity = 'Social Security Number is required'
+      if (!formData.dateOfApplication)
+        newErrors.dateOfApplication = 'Application date is required'
+      if (!formData.dateAvailableForWork)
+        newErrors.dateAvailableForWork = 'Available date is required'
+      if (!formData.hasLegalRightToWork)
+        newErrors.hasLegalRightToWork = 'Please specify work authorization'
+    } else if (step === 2) {
+      // Residency History validation
+      if (!formData.currentMailing?.street?.trim())
+        newErrors.currentMailingStreet = 'Current street address is required'
+      if (!formData.currentMailing?.city?.trim())
+        newErrors.currentMailingCity = 'Current city is required'
+      if (!formData.currentMailing?.state?.trim())
+        newErrors.currentMailingState = 'Current state is required'
+      if (!formData.currentMailing?.zipCode?.trim())
+        newErrors.currentMailingZip = 'Current ZIP code is required'
+      if (!formData.currentMailing?.yearsAtAddress?.trim())
+        newErrors.currentMailingYears = 'Years at address is required'
+
+      // Validate previous addresses
+      formData.previousAddresses?.forEach((addr, index) => {
+        if (
+          addr.street?.trim() ||
+          addr.city?.trim() ||
+          addr.state?.trim() ||
+          addr.zipCode?.trim()
+        ) {
+          if (!addr.street?.trim())
+            newErrors[`previousAddress${index}Street`] =
+              'Street address is required'
+          if (!addr.city?.trim())
+            newErrors[`previousAddress${index}City`] = 'City is required'
+          if (!addr.state?.trim())
+            newErrors[`previousAddress${index}State`] = 'State is required'
+          if (!addr.zipCode?.trim())
+            newErrors[`previousAddress${index}Zip`] = 'ZIP code is required'
+          if (!addr.yearsAtAddress?.trim())
+            newErrors[`previousAddress${index}Years`] =
+              'Years at address is required'
+        }
+      })
+
+      // Validate total years must be at least 3
+      const currentYears = parseFloat(formData.currentMailing?.yearsAtAddress || '0') || 0
+      const previousYears = formData.previousAddresses?.reduce((total, addr) => {
+        const years = parseFloat(addr.yearsAtAddress || '0') || 0
+        return total + years
+      }, 0) || 0
+      
+      const totalYears = currentYears + previousYears
+      
+      // Only error if less than 3 years (more than 3 is acceptable)
+      if (totalYears > 0 && totalYears < 3) {
+        newErrors.totalYears = `You must provide at least 3 years of residency history. Currently showing ${totalYears.toFixed(1)} years total.`
+      }
+    } else if (step === 3) {
+      // License Information validation - validate all current licenses
+      formData.currentLicenses?.forEach((license, index) => {
+        if (!license.state?.trim())
+          newErrors[`currentLicense${index}State`] = 'License state is required'
+        if (!license.licenseNumber?.trim())
+          newErrors[`currentLicense${index}Number`] =
+            'License number is required'
+        if (!license.typeClass?.trim())
+          newErrors[`currentLicense${index}Class`] = 'License class is required'
+        if (!license.expirationDate?.trim())
+          newErrors[`currentLicense${index}ExpirationDate`] =
+            'Expiration date is required'
+      })
+
+      // Validate previous licenses
+      formData.previousLicenses?.forEach((license, index) => {
+        if (
+          license.licenseNumber?.trim() ||
+          license.state?.trim() ||
+          license.typeClass?.trim()
+        ) {
+          if (!license.state?.trim())
+            newErrors[`previousLicense${index}State`] =
+              'License state is required'
+          if (!license.licenseNumber?.trim())
+            newErrors[`previousLicense${index}Number`] =
+              'License number is required'
+          if (!license.typeClass?.trim())
+            newErrors[`previousLicense${index}Class`] =
+              'License class is required'
+          if (!license.expirationDate?.trim())
+            newErrors[`previousLicense${index}ExpirationDate`] =
+              'Expiration date is required'
+        }
+      })
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const nextStep = () => {
-    if (currentStep < STEPS.length) {
-      setCurrentStep(currentStep + 1)
-    } else {
-      // Form is completed, navigate to Form 2
-      onNavigateToForm?.(2)
+    if (validateStep(currentStep)) {
+      if (currentStep < STEPS.length) {
+        setCurrentStep(currentStep + 1)
+      } else {
+        // Form is completed, navigate to Form 2
+        onNavigateToForm?.(2)
+      }
     }
   }
 
@@ -182,6 +304,57 @@ export default function PersonalInfoForm1({
     }))
   }
 
+  const fillTestData = () => {
+    setFormData({
+      firstName: 'John',
+      middleName: 'Michael',
+      lastName: 'Doe',
+      phone: '(555) 123-4567',
+      email: 'john.doe@email.com',
+      dateOfBirth: '1985-03-15',
+      socialSecurity: '123-45-6789',
+      dateOfApplication: new Date().toISOString().slice(0, 10),
+      positionAppliedFor: 'Commercial Driver',
+      dateAvailableForWork: new Date().toISOString().slice(0, 10),
+      hasLegalRightToWork: 'yes',
+      currentMailing: {
+        street: '123 Main Street',
+        city: 'Columbus',
+        state: 'OH',
+        zipCode: '43215',
+        yearsAtAddress: '3',
+      },
+      previousAddresses: [
+        {
+          street: '456 Oak Avenue',
+          city: 'Cleveland',
+          state: 'OH',
+          zipCode: '44101',
+          yearsAtAddress: '2',
+        },
+      ],
+      currentLicenses: [
+        {
+          state: 'OH',
+          licenseNumber: 'DL123456789',
+          typeClass: 'CDL-A',
+          endorsements: 'H, N',
+          expirationDate: '2026-01-15',
+        },
+      ],
+      previousLicenses: [
+        {
+          state: 'PA',
+          licenseNumber: 'DL987654321',
+          typeClass: 'CDL-B',
+          endorsements: '',
+          expirationDate: '2020-01-14',
+        },
+      ],
+    })
+    setErrors({})
+  }
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
@@ -208,6 +381,23 @@ export default function PersonalInfoForm1({
         >
           Complete in full or it will not be considered
         </p>
+
+        {/* Test Data Button */}
+        <div className='mt-4'>
+          <button
+            type='button'
+            onClick={fillTestData}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow hover:shadow-md ${
+              theme === 'dark'
+                ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-300'
+                : 'bg-yellow-500 text-white hover:bg-yellow-400'
+            }`}
+            title='Fill test data'
+          >
+            <span>⚡</span>
+            <span>Fill Test Data</span>
+          </button>
+        </div>
       </div>
 
       {/* Name Section */}
@@ -228,6 +418,9 @@ export default function PersonalInfoForm1({
                 : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
             }`}
           />
+          {errors.firstName && (
+            <p className='mt-1 text-sm text-red-600'>{errors.firstName}</p>
+          )}
         </div>
         <div>
           <label
@@ -262,6 +455,9 @@ export default function PersonalInfoForm1({
                 : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
             }`}
           />
+          {errors.lastName && (
+            <p className='mt-1 text-sm text-red-600'>{errors.lastName}</p>
+          )}
         </div>
       </div>
 
@@ -571,8 +767,61 @@ export default function PersonalInfoForm1({
         </div>
       </div>
 
+      {/* Total Years Validation Message */}
+      {(() => {
+        const currentYears = parseFloat(formData.currentMailing?.yearsAtAddress || '0') || 0
+        const previousYears = formData.previousAddresses?.reduce((total, addr) => {
+          const years = parseFloat(addr.yearsAtAddress || '0') || 0
+          return total + years
+        }, 0) || 0
+        const totalYears = currentYears + previousYears
+        
+        if (formData.currentMailing?.yearsAtAddress || formData.previousAddresses?.some(addr => addr.yearsAtAddress)) {
+          // Show success if >= 3, warning if < 3
+          const isValid = totalYears >= 3
+          return (
+            <div className={`p-4 rounded-lg border-2 ${
+              isValid
+                ? theme === 'dark'
+                  ? 'bg-green-900/20 border-green-500/50'
+                  : 'bg-green-50 border-green-200'
+                : theme === 'dark'
+                  ? 'bg-yellow-900/20 border-yellow-500/50'
+                  : 'bg-yellow-50 border-yellow-200'
+            }`}>
+              <p className={`text-sm font-medium ${
+                isValid
+                  ? theme === 'dark' ? 'text-green-400' : 'text-green-800'
+                  : theme === 'dark' ? 'text-yellow-400' : 'text-yellow-800'
+              }`}>
+                {isValid
+                  ? `✓ Total residency history: ${totalYears.toFixed(1)} years (meets 3+ year requirement)`
+                  : `⚠ Total residency history: ${totalYears.toFixed(1)} years. You need at least 3 years total.`
+                }
+              </p>
+            </div>
+          )
+        }
+        return null
+      })()}
+
+      {/* Total Years Error Message */}
+      {errors.totalYears && (
+        <div className={`p-4 rounded-lg border-2 ${
+          theme === 'dark'
+            ? 'bg-red-900/20 border-red-500/50'
+            : 'bg-red-50 border-red-200'
+        }`}>
+          <p className={`text-sm font-medium ${
+            theme === 'dark' ? 'text-red-400' : 'text-red-800'
+          }`}>
+            {errors.totalYears}
+          </p>
+        </div>
+      )}
+
       {/* Previous Addresses */}
-      {formData.previousAddresses.map((address, index) => (
+      {formData.previousAddresses?.map((address, index) => (
         <div key={index} className='space-y-4'>
           <div className='flex justify-between items-center'>
             <h3
@@ -751,7 +1000,7 @@ export default function PersonalInfoForm1({
       </div>
 
       {/* Current Licenses */}
-      {formData.currentLicenses.map((license, index) => (
+      {formData.currentLicenses?.map((license, index) => (
         <div key={index} className='space-y-4'>
           <div className='flex justify-between items-center'>
             <h3
@@ -910,7 +1159,7 @@ export default function PersonalInfoForm1({
 
       {/* Previously Held Licenses */}
       <div className='space-y-4'>
-        {formData.previousLicenses.map((license, index) => (
+        {formData.previousLicenses?.map((license, index) => (
           <div key={index} className='space-y-4'>
             <div className='flex justify-between items-center'>
               <h3
