@@ -7,6 +7,7 @@ import AnimatedBackground from '@/components/AnimatedBackground'
 import UserStatusModal from '@/components/UserStatusModal'
 import WalletCard from '@/components/WalletCard'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useSendUserOperation, useSmartAccountClient } from '@account-kit/react'
 
 // Dynamic imports to avoid SSR issues with Alchemy hooks
 const ResumeUploadWithVerification = dynamic(
@@ -166,7 +167,12 @@ const WalletTransactions = dynamic(
   }
 )
 
-const Home = () => {
+// Inner component that uses Alchemy hooks (must be inside provider)
+const HomeContent = () => {
+  // Alchemy Account Kit hooks for sending transactions
+  const { client } = useSmartAccountClient({ type: 'LightAccount' })
+  const { sendUserOperationAsync, isSendingUserOperation } = useSendUserOperation({ client })
+  
   const [user, setUser] = useState<any>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState<
@@ -300,11 +306,15 @@ const Home = () => {
       )
 
       if (duplicateCheck.exists) {
-        console.error('❌ [HOME] Duplicate application hash found in database')
-        setIsSubmitting(false)
-        alert(
+        console.warn('⚠️ [HOME] Duplicate application hash found in database')
+        setSubmissionError(
           'This application has already been submitted. Please modify your application data before resubmitting.'
         )
+        setCurrentForm(1)
+        if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        }
+        setIsSubmitting(false)
         return
       }
 
@@ -313,79 +323,124 @@ const Home = () => {
       // For now, use a placeholder IPFS hash (we can add IPFS upload later)
       const ipfsHash = 'placeholder_ipfs_hash_' + Date.now()
 
-      console.log('📝 [HOME] Submitting to blockchain:', {
-        applicationHash,
-        ipfsHash,
+      // Preflight with server (DB + on-chain hash)
+      console.log('📝 [HOME] Preflight via API')
+      const preflightRes = await fetch('/api/blockchain/preflight-driver-application', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicationHash, userAddress: user.address }),
       })
+      const preflightJson = await preflightRes.json().catch(() => ({}))
+      if (!preflightRes.ok || preflightJson?.error) {
+        setSubmissionError(preflightJson?.details || preflightJson?.error || 'Preflight failed')
+        setIsSubmitting(false)
+        return
+      }
 
-      // Submit to blockchain
-      const response = await fetch(
-        '/api/blockchain/submit-driver-application',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            applicationHash,
-            ipfsHash,
-            userAddress: user.address, // Pass user address for server-side duplicate check
-          }),
-        }
-      )
+      // Submit to chain from user's Base smart wallet using Alchemy Account Kit
+      console.log('📝 [HOME] Submitting transaction from user smart wallet via Alchemy SDK')
+      
+      if (!client) {
+        setSubmissionError('Wallet client not ready. Please log in with your Alchemy Smart Wallet.')
+        setIsSubmitting(false)
+        return
+      }
+      
+      const contractAddress = process.env.NEXT_PUBLIC_DRIVER_APP_CONTRACT_ADDRESS as string
+      const { abi } = await import('../../artifacts/contracts/ProductionDriverRegistry.sol/ProductionDriverRegistry.json')
+      const { encodeFunctionData } = await import('viem')
+      
+      // Encode the contract call
+      const callData = encodeFunctionData({
+        abi: abi as any,
+        functionName: 'submitApplication',
+        args: [applicationHash],
+      })
+      
+      console.log('🔍 [HOME] Sending user operation to contract:', contractAddress)
+      console.log('🔍 [HOME] Client available:', !!client)
+      console.log('🔍 [HOME] sendUserOperationAsync available:', !!sendUserOperationAsync)
+      
+      if (!sendUserOperationAsync) {
+        throw new Error('sendUserOperationAsync function not available. Ensure you are logged in with Alchemy Smart Wallet.')
+      }
+      
+      // Send user operation via Alchemy SDK
+      const result = await sendUserOperationAsync({
+        uo: {
+          target: contractAddress as `0x${string}`,
+          data: callData as `0x${string}`,
+          value: 0n,
+        },
+      })
+      
+      console.log('📦 [HOME] User operation result:', result)
+      
+      if (!result) {
+        throw new Error('Failed to send user operation - no result returned')
+      }
+      
+      // The result should be a user operation hash
+      const userOpHash = typeof result === 'string' ? result : result.hash
+      
+      if (!userOpHash) {
+        console.error('❌ [HOME] Invalid result from sendUserOperation:', result)
+        throw new Error('Failed to get user operation hash from result')
+      }
+      
+      console.log('⏳ [HOME] Waiting for transaction receipt for userOp:', userOpHash)
+      
+      // Wait for the transaction to be mined
+      const txHash = await client.waitForUserOperationTransaction({ hash: userOpHash as `0x${string}` })
+      
+      console.log('✅ [HOME] Transaction confirmed:', txHash)
+      
+      // Get transaction receipt to parse events
+      const { createPublicClient, http } = await import('viem')
+      const { baseSepolia } = await import('viem/chains')
+      const publicClient = createPublicClient({
+        chain: baseSepolia,
+        transport: http(`https://base-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`),
+      })
+      
+      const receipt = await publicClient.getTransactionReceipt({ hash: txHash })
 
-      // Robust parse of response body
-      let result: any = null
-      let rawBody = ''
+      // Parse ApplicationSubmitted event
+      let applicationId: number | null = null
       try {
-        rawBody = await response.text()
-        result = rawBody ? JSON.parse(rawBody) : null
-      } catch {
-        // Non-JSON body; keep rawBody for logging
-      }
-
-      // Better error handling - check status code first, then result.success
-      if (!response.ok) {
-        console.warn('⚠️ [HOME] API Error Response:', {
-          status: response.status,
-          statusText: response.statusText,
-          result,
-          rawBody,
+        const { decodeEventLog } = await import('viem')
+        const submittedEvent = receipt.logs.find((log: any) => {
+          try {
+            const decoded = decodeEventLog({
+              abi: abi as any,
+              data: log.data,
+              topics: log.topics,
+            })
+            return decoded.eventName === 'ApplicationSubmitted'
+          } catch {
+            return false
+          }
         })
-
-        // Friendly duplicate message for 409 Conflict
-        if (response.status === 409) {
-          setSubmissionError(
-            (result && (result.error || result.details)) ||
-              'Duplicate application detected. This hash has already been submitted.'
-          )
-          setIsSubmitting(false)
-          return
+        
+        if (submittedEvent) {
+          const decoded = decodeEventLog({
+            abi: abi as any,
+            data: submittedEvent.data,
+            topics: submittedEvent.topics,
+          })
+          applicationId = Number((decoded.args as any).applicationId || (decoded.args as any)[0])
         }
-
-        // For other errors, show UI message and stop without throwing
-        setSubmissionError(
-          (result && (result.error || result.details)) ||
-            `Blockchain submission failed (${response.status}: ${response.statusText})`
-        )
-        setIsSubmitting(false)
-        return
+      } catch (e) {
+        console.warn('⚠️ [HOME] Could not parse application ID from event:', e)
       }
 
-      // Check for success field only if response was OK
-      if (result.success === false) {
-        console.warn('⚠️ [HOME] API returned success: false:', result)
-        setSubmissionError(result.error || result.details || 'Blockchain submission failed')
-        setIsSubmitting(false)
-        return
+      const txData = {
+        transactionHash: receipt.transactionHash,
+        blockNumber: Number(receipt.blockNumber),
+        applicationId,
       }
-
-      console.log('✅ [HOME] Blockchain submission successful:', result)
-
-      // Store blockchain data
-      setBlockchainData({
-        transactionHash: result.transactionHash,
-        blockNumber: result.blockNumber,
-        applicationId: result.applicationId,
-      })
+      
+      setBlockchainData(txData)
 
       // Save to database with application hash and blockchain data
       console.log('💾 [HOME] Saving application to database...')
@@ -413,23 +468,27 @@ const Home = () => {
           .single()
 
         if (userData && dbResult.application) {
-          await supabase
-            .from('driver_applications')
-            .update({
-              application_hash: applicationHash,
-              blockchain_tx_hash: result.transactionHash,
-              blockchain_application_id: result.applicationId?.toString() || null,
-              verification_status: 'VERIFIED',
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', dbResult.application.id)
-          
+          await fetch('/api/blockchain/persist-driver-application', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userAddress: user.address,
+              applicationHash,
+              ipfsHash,
+              transactionHash: txData.transactionHash,
+              applicationId: txData.applicationId,
+              blockNumber: txData.blockNumber,
+            }),
+          })
           console.log('✅ [HOME] Database updated with blockchain data')
         }
       }
 
-      // Mark as completed
+      // Mark as completed and show the submission confirmation screen
+      // User will click button to proceed to Employment Verification
       setIsDriverApplicationCompleted(true)
+      setShowEmploymentVerification(false)
+      setShowDashboard(false)
     } catch (error: any) {
       console.warn('⚠️ [HOME] Failed to submit to blockchain:', error)
       setSubmissionError(error?.message || 'Failed to submit application')
@@ -441,6 +500,9 @@ const Home = () => {
   // Handler for form navigation
   const handleFormNavigation = useCallback((formNumber: number) => {
     setCurrentForm(formNumber)
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
   }, [])
 
   // Handler for navigating to employment verification
@@ -547,7 +609,14 @@ const Home = () => {
 
     // If employment verification is requested, show the form
     if (isDriverApplicationCompleted && showEmploymentVerification) {
-      return <EmploymentVerificationForm />
+      return (
+        <EmploymentVerificationForm
+          onComplete={() => {
+            setShowEmploymentVerification(false)
+            setShowDashboard(true)
+          }}
+        />
+      )
     }
 
     // Otherwise show the driver application forms
@@ -557,6 +626,7 @@ const Home = () => {
           <PersonalInfoForm1
             onNavigateToForm={handleFormNavigation}
             onDataChange={setForm1Data}
+            initialData={form1Data}
           />
         )
       case 2:
@@ -564,6 +634,7 @@ const Home = () => {
           <PersonalInfoForm2
             onNavigateToForm={handleFormNavigation}
             onDataChange={setForm2Data}
+            initialData={form2Data}
           />
         )
       case 3:
@@ -571,6 +642,7 @@ const Home = () => {
           <PersonalInfoForm3
             onComplete={handleDriverApplicationCompleted}
             onDataChange={setForm3Data}
+            initialData={form3Data}
           />
         )
       default:
@@ -578,6 +650,7 @@ const Home = () => {
           <PersonalInfoForm1
             onNavigateToForm={handleFormNavigation}
             onDataChange={setForm1Data}
+            initialData={form1Data}
           />
         )
     }
@@ -796,6 +869,26 @@ const Home = () => {
       </div>
     </div>
   )
+}
+
+// Wrapper component to ensure Alchemy provider is mounted
+const Home = () => {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Don't render content until client-side provider is ready
+  if (!mounted) {
+    return (
+      <div className='min-h-screen bg-gradient-to-br from-brand-sage to-brand-mint flex items-center justify-center'>
+        <div className='text-white text-xl'>Loading...</div>
+      </div>
+    )
+  }
+
+  return <HomeContent />
 }
 
 export default Home

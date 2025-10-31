@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 
 const STEPS = [
@@ -24,11 +24,13 @@ const STEPS = [
 interface PersonalInfoForm3Props {
   onComplete?: () => void
   onDataChange?: (data: any) => void
+  initialData?: any
 }
 
 export default function PersonalInfoForm3({
   onComplete,
   onDataChange,
+  initialData,
 }: PersonalInfoForm3Props) {
   const { theme } = useTheme()
   const [currentStep, setCurrentStep] = useState(1)
@@ -111,6 +113,16 @@ export default function PersonalInfoForm3({
     onDataChange?.(formData)
   }, [formData, onDataChange])
 
+  // Initialize/restore from parent once to avoid loops
+  const hasHydratedRef = useRef(false)
+  useEffect(() => {
+    if (hasHydratedRef.current) return
+    if (initialData && Object.keys(initialData).length > 0) {
+      hasHydratedRef.current = true
+      setFormData((prev) => ({ ...prev, ...initialData }))
+    }
+  }, [initialData])
+
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {}
 
@@ -161,6 +173,9 @@ export default function PersonalInfoForm3({
     if (validateStep(currentStep)) {
       if (currentStep < STEPS.length) {
         setCurrentStep(currentStep + 1)
+        if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        }
       } else {
         // Form is completed, call onComplete callback
         onComplete?.()
@@ -171,6 +186,9 @@ export default function PersonalInfoForm3({
   const prevStep = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1)
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
     }
   }
 

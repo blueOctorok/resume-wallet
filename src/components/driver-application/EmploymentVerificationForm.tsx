@@ -57,7 +57,11 @@ interface EmploymentVerificationData {
   }>
 }
 
-const EmploymentVerificationForm = () => {
+interface EmploymentVerificationFormProps {
+  onComplete?: () => void
+}
+
+const EmploymentVerificationForm = ({ onComplete }: EmploymentVerificationFormProps) => {
   const { theme } = useTheme()
   const [formData, setFormData] = useState<EmploymentVerificationData>({
     driverName: '',
@@ -244,6 +248,8 @@ const EmploymentVerificationForm = () => {
       const data = await res.json()
       setTxHash(data.transactionHash)
       setExplorerUrl(data.explorerUrl)
+      // Notify parent that employment verification is complete
+      onComplete?.()
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error'
       setSubmitError(message)

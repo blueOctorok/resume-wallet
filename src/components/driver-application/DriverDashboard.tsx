@@ -32,21 +32,57 @@ const DriverDashboard = ({
       }
 
       try {
-        // Use blockchain data if available, otherwise fetch from database
-        const dashboardInfo: any = {
-          status: 'PENDING DOT REVIEW',
-          submittedDate: new Date().toLocaleDateString(),
-          estimatedReviewTime: '3-5 business days',
-          driverApplicationVerified: true,
-          employmentVerified: false,
-          dotApproved: false,
+        const { createClient } = await import('@/utils/supabase/client')
+        const supabase = createClient()
+
+        // Get user id by wallet address
+        const { data: userRow, error: userErr } = await supabase
+          .from('users')
+          .select('id')
+          .eq('wallet_address', userAddress)
+          .single()
+
+        if (userErr || !userRow) {
+          setDashboardData(null)
+          return
         }
 
-        // Add blockchain data if available
-        if (blockchainData) {
-          dashboardInfo.blockchainTxHash = blockchainData.transactionHash
-          dashboardInfo.blockNumber = blockchainData.blockNumber
-          dashboardInfo.applicationId = blockchainData.applicationId
+        // Get latest driver application for user
+        const { data: appRows } = await supabase
+          .from('driver_applications')
+          .select(
+            'id, created_at, application_hash, blockchain_tx_hash, blockchain_application_id, verification_status'
+          )
+          .eq('user_id', userRow.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+
+        const latest = appRows && appRows.length > 0 ? appRows[0] : null
+
+        // Prefer a fresh submission date if this view follows an immediate chain tx
+        const submittedDate = blockchainData
+          ? new Date()
+          : latest?.created_at
+            ? new Date(latest.created_at)
+            : new Date()
+
+        const dashboardInfo: any = {
+          status: latest?.verification_status || 'PENDING',
+          submittedDate: submittedDate.toLocaleDateString(),
+          estimatedReviewTime: '3-5 business days',
+          driverApplicationVerified: !!latest?.blockchain_tx_hash,
+          employmentVerified: false, // Update when employment verification stored
+          dotApproved: false,
+          blockchainTxHash: latest?.blockchain_tx_hash || blockchainData?.transactionHash,
+          blockNumber: blockchainData?.blockNumber,
+          applicationId: latest?.blockchain_application_id
+            ? Number(latest.blockchain_application_id)
+            : blockchainData?.applicationId ?? null,
+          ipfsHash: latest?.application_hash || undefined,
+          shareLink:
+            (latest?.blockchain_tx_hash || blockchainData?.transactionHash)
+              ? `https://sepolia.basescan.org/tx/${latest?.blockchain_tx_hash || blockchainData?.transactionHash}`
+              : '',
         }
 
         setDashboardData(dashboardInfo)
@@ -65,7 +101,7 @@ const DriverDashboard = ({
     status: 'PENDING DOT REVIEW',
     submittedDate: new Date().toLocaleDateString(),
     estimatedReviewTime: '3-5 business days',
-    driverApplicationVerified: true,
+    driverApplicationVerified: false,
     employmentVerified: false,
     dotApproved: false,
     name: 'Driver',
@@ -74,8 +110,24 @@ const DriverDashboard = ({
     accidentCount: 0,
     convictionCount: 0,
     employmentHistory: 0,
-    shareLink: 'https://driverappchain.com/verify/abc123',
+    shareLink: '',
   }
+
+  // Status display mapping
+  const normalizedStatus = (data.status || '').toString().toUpperCase()
+  const statusDisplay = (() => {
+    switch (normalizedStatus) {
+      case 'VERIFIED':
+        return { label: 'Verified', tone: 'success' as const }
+      case 'REJECTED':
+      case 'FAILED':
+        return { label: 'Failed', tone: 'danger' as const }
+      case 'PENDING DOT REVIEW':
+      case 'PENDING':
+      default:
+        return { label: 'Pending', tone: 'warning' as const }
+    }
+  })()
 
   if (loading) {
     return (
@@ -120,29 +172,49 @@ const DriverDashboard = ({
       <div className='mb-8'>
         <div
           className={`p-6 rounded-lg border-2 ${
-            theme === 'dark'
-              ? 'bg-yellow-900/20 border-yellow-500/50'
-              : 'bg-yellow-50 border-yellow-200'
+            statusDisplay.tone === 'success'
+              ? theme === 'dark'
+                ? 'bg-green-900/20 border-green-500/50'
+                : 'bg-green-50 border-green-200'
+              : statusDisplay.tone === 'danger'
+                ? theme === 'dark'
+                  ? 'bg-red-900/20 border-red-500/50'
+                  : 'bg-red-50 border-red-200'
+                : theme === 'dark'
+                  ? 'bg-yellow-900/20 border-yellow-500/50'
+                  : 'bg-yellow-50 border-yellow-200'
           }`}
         >
           <div className='flex items-center justify-between mb-4'>
             <div>
               <h2
                 className={`text-xl font-semibold ${
-                  theme === 'dark' ? 'text-yellow-400' : 'text-yellow-800'
+                  statusDisplay.tone === 'success'
+                    ? theme === 'dark' ? 'text-green-400' : 'text-green-800'
+                    : statusDisplay.tone === 'danger'
+                      ? theme === 'dark' ? 'text-red-400' : 'text-red-800'
+                      : theme === 'dark' ? 'text-yellow-400' : 'text-yellow-800'
                 }`}
               >
-                ⏳ {data.status}
+                {statusDisplay.tone === 'success' ? '✅' : statusDisplay.tone === 'danger' ? '❌' : '⏳'} {data.status}
               </h2>
             </div>
             <span
               className={`px-4 py-2 rounded-full text-sm font-medium ${
-                theme === 'dark'
-                  ? 'bg-yellow-500/20 text-yellow-400'
-                  : 'bg-yellow-100 text-yellow-800'
+                statusDisplay.tone === 'success'
+                  ? theme === 'dark'
+                    ? 'bg-green-500/20 text-green-400'
+                    : 'bg-green-100 text-green-800'
+                  : statusDisplay.tone === 'danger'
+                    ? theme === 'dark'
+                      ? 'bg-red-500/20 text-red-400'
+                      : 'bg-red-100 text-red-800'
+                    : theme === 'dark'
+                      ? 'bg-yellow-500/20 text-yellow-400'
+                      : 'bg-yellow-100 text-yellow-800'
               }`}
             >
-              Pending
+              {statusDisplay.label}
             </span>
           </div>
 
@@ -565,10 +637,12 @@ const DriverDashboard = ({
           )}
 
           <button
-            className={`p-6 rounded-lg text-left transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 ${
+            disabled
+            title='Coming soon'
+            className={`p-6 rounded-lg text-left transition-all duration-200 shadow-lg ${
               theme === 'dark'
-                ? 'bg-gray-800 text-white hover:bg-gray-700'
-                : 'bg-gray-50 text-gray-900 hover:bg-gray-100'
+                ? 'bg-gray-800 text-white opacity-60 cursor-not-allowed'
+                : 'bg-gray-50 text-gray-900 opacity-60 cursor-not-allowed'
             }`}
           >
             <div className='text-3xl mb-2'>👁️</div>
@@ -579,10 +653,12 @@ const DriverDashboard = ({
           </button>
 
           <button
-            className={`p-6 rounded-lg text-left transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 ${
+            disabled
+            title='Coming soon'
+            className={`p-6 rounded-lg text-left transition-all duration-200 shadow-lg ${
               theme === 'dark'
-                ? 'bg-gray-800 text-white hover:bg-gray-700'
-                : 'bg-gray-50 text-gray-900 hover:bg-gray-100'
+                ? 'bg-gray-800 text-white opacity-60 cursor-not-allowed'
+                : 'bg-gray-50 text-gray-900 opacity-60 cursor-not-allowed'
             }`}
           >
             <div className='text-3xl mb-2'>📄</div>
@@ -618,30 +694,40 @@ const DriverDashboard = ({
             >
               Share this link with employers:
             </p>
-            <div className='flex items-center space-x-2'>
-              <input
-                type='text'
-                value={data.shareLink}
-                readOnly
-                className={`flex-1 px-4 py-2 rounded-lg font-mono text-sm ${
+            {data.shareLink ? (
+              <div className='flex items-center space-x-2'>
+                <input
+                  type='text'
+                  value={data.shareLink}
+                  readOnly
+                  className={`flex-1 px-4 py-2 rounded-lg font-mono text-sm ${
+                    theme === 'dark'
+                      ? 'bg-gray-800 text-white'
+                      : 'bg-white text-gray-900'
+                  }`}
+                />
+                <button
+                  onClick={() => navigator.clipboard.writeText(data.shareLink)}
+                  className={`px-4 py-2 rounded-lg font-semibold ${
+                    theme === 'dark'
+                      ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
+                      : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+                  }`}
+                >
+                  Copy
+                </button>
+              </div>
+            ) : (
+              <div
+                className={`px-4 py-2 rounded-lg text-sm ${
                   theme === 'dark'
-                    ? 'bg-gray-800 text-white'
-                    : 'bg-white text-gray-900'
-                }`}
-              />
-              <button
-                onClick={() =>
-                  navigator.clipboard.writeText(data.shareLink)
-                }
-                className={`px-4 py-2 rounded-lg font-semibold ${
-                  theme === 'dark'
-                    ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                    : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+                    ? 'bg-gray-800 text-gray-300'
+                    : 'bg-gray-100 text-gray-700'
                 }`}
               >
-                Copy
-              </button>
-            </div>
+                No shareable link available yet. Submit an application to get a link.
+              </div>
+            )}
           </div>
         )}
       </div>

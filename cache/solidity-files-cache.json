@@ -350,8 +350,8 @@
       ]
     },
     "C:\\Users\\blaha\\Desktop\\resume-wallet\\contracts\\ProductionDriverRegistry.sol": {
-      "lastModificationDate": 1759855874415,
-      "contentHash": "dd8c17c7f1bb75c3b014bcc235810068",
+      "lastModificationDate": 1761829932694,
+      "contentHash": "3bd75bcb4993557786cfbcb2f3b14c1d",
       "sourceName": "contracts/ProductionDriverRegistry.sol",
       "solcConfig": {
         "version": "0.8.24",

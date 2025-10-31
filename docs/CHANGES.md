@@ -2,7 +2,31 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
-## 🎉 **LATEST STATUS: DUPLICATE PREVENTION & LOADING STATES IMPLEMENTED!** ✨
+## 🎉 **LATEST STATUS: ALCHEMY SDK CLIENT-SIDE SUBMISSION IMPLEMENTED!** ✨
+
+**CRITICAL BLOCKCHAIN FIX (October 31, 2025):**
+
+- **✅ Client-Side Transaction Submission via Alchemy SDK** - Fixed wallet provider selection
+  - **Problem**: MetaMask popup was appearing during submission, even though user was logged in with Alchemy Smart Wallet
+    - Multiple EIP-1193 providers injected in browser (MetaMask, Base Wallet extension, Alchemy SDK)
+    - Previous logic tried to select correct provider from `window.ethereum.providers` but Alchemy SDK doesn't inject itself there
+    - Resulted in MetaMask being selected and prompting for permissions
+  - **Solution**: Use Alchemy Account Kit hooks directly (`useSendUserOperation`, `useSmartAccountClient`)
+    - Import `@account-kit/react` hooks in `src/app/page.tsx`
+    - Use `client.sendUserOperation()` to submit transactions from user's smart wallet
+    - Use `viem` to encode contract calls and parse events (instead of `ethers.js`)
+    - Create public client to fetch transaction receipt and decode events
+  - **Benefits**:
+    - ✅ No more MetaMask popups - transaction sent directly from Alchemy Smart Wallet
+    - ✅ Correct `msg.sender` on blockchain (user's smart wallet address, not deployer wallet)
+    - ✅ Consistent user experience - transaction originates from logged-in wallet
+    - ✅ Gas sponsorship support (Alchemy SDK handles paymaster integration)
+  - **Files Updated**:
+    - `src/app/page.tsx`: Replaced `window.ethereum` logic with Alchemy SDK hooks
+    - Uses `encodeFunctionData` from `viem` to encode contract calls
+    - Uses `decodeEventLog` from `viem` to parse ApplicationSubmitted events
+    - Transaction receipt fetched via `viem` public client
+    - Split into `HomeContent` (uses hooks) and `Home` (wrapper) to ensure provider is mounted before hooks are called
 
 **MAJOR SECURITY & UX ENHANCEMENTS (October 2025):**
 

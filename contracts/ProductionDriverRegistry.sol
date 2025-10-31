@@ -23,6 +23,7 @@ contract ProductionDriverRegistry is AccessControl, Pausable, ReentrancyGuard {
     // Roles
     bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant RELAYER_ROLE = keccak256("RELAYER_ROLE");
     
     // State
     mapping(uint256 => Application) public applications;
@@ -30,8 +31,9 @@ contract ProductionDriverRegistry is AccessControl, Pausable, ReentrancyGuard {
     mapping(string => bool) public usedHashes;
     
     uint256 public applicationCount;
-    uint256 public constant MAX_APPLICATIONS_PER_USER = 10;
-    uint256 public constant APPLICATION_EXPIRY_DAYS = 90;
+    // Configurable limits (were constants before). Initialized in constructor.
+    uint256 public maxApplicationsPerUser;
+    uint256 public applicationExpiryDays;
     
     // Events
     event ApplicationSubmitted(uint256 indexed applicationId, address indexed owner, string applicationHash);
@@ -43,6 +45,11 @@ contract ProductionDriverRegistry is AccessControl, Pausable, ReentrancyGuard {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ADMIN_ROLE, msg.sender);
         _grantRole(VERIFIER_ROLE, msg.sender);
+        _grantRole(RELAYER_ROLE, msg.sender);
+
+        // Defaults: increased for testing; can be changed later by admin
+        maxApplicationsPerUser = 1000;
+        applicationExpiryDays = 90;
     }
     
     function submitApplication(string memory _applicationHash) 
@@ -53,7 +60,7 @@ contract ProductionDriverRegistry is AccessControl, Pausable, ReentrancyGuard {
     {
         require(bytes(_applicationHash).length > 0, "Hash required");
         require(!usedHashes[_applicationHash], "Hash used");
-        require(userApplications[msg.sender].length < MAX_APPLICATIONS_PER_USER, "Max apps reached");
+        require(userApplications[msg.sender].length < maxApplicationsPerUser, "Max apps reached");
         
         applicationCount++;
         uint256 applicationId = applicationCount;
@@ -72,6 +79,42 @@ contract ProductionDriverRegistry is AccessControl, Pausable, ReentrancyGuard {
         usedHashes[_applicationHash] = true;
         
         emit ApplicationSubmitted(applicationId, msg.sender, _applicationHash);
+        return applicationId;
+    }
+
+    /**
+     * @notice Relayed submission that credits the application to a specific user address
+     * @dev Callable only by RELAYER_ROLE (e.g., a server/relayer)
+     */
+    function submitApplicationFor(address _user, string memory _applicationHash)
+        external
+        whenNotPaused
+        nonReentrant
+        onlyRole(RELAYER_ROLE)
+        returns (uint256)
+    {
+        require(_user != address(0), "User required");
+        require(bytes(_applicationHash).length > 0, "Hash required");
+        require(!usedHashes[_applicationHash], "Hash used");
+        require(userApplications[_user].length < maxApplicationsPerUser, "Max apps reached");
+
+        applicationCount++;
+        uint256 applicationId = applicationCount;
+
+        applications[applicationId] = Application({
+            owner: _user,
+            applicationHash: _applicationHash,
+            isVerified: false,
+            isRejected: false,
+            timestamp: block.timestamp,
+            lastUpdated: block.timestamp,
+            rejectionReason: ""
+        });
+
+        userApplications[_user].push(applicationId);
+        usedHashes[_applicationHash] = true;
+
+        emit ApplicationSubmitted(applicationId, _user, _applicationHash);
         return applicationId;
     }
     
@@ -230,6 +273,22 @@ contract ProductionDriverRegistry is AccessControl, Pausable, ReentrancyGuard {
     
     // Internal functions
     function _isApplicationExpired(Application memory _app) internal view returns (bool) {
-        return block.timestamp > _app.timestamp + (APPLICATION_EXPIRY_DAYS * 1 days);
+        return block.timestamp > _app.timestamp + (applicationExpiryDays * 1 days);
+    }
+
+    // Admin configuration functions
+    function setMaxApplicationsPerUser(uint256 _max) external onlyRole(ADMIN_ROLE) {
+        require(_max > 0, "Invalid max");
+        maxApplicationsPerUser = _max;
+    }
+
+    function setApplicationExpiryDays(uint256 _days) external onlyRole(ADMIN_ROLE) {
+        require(_days > 0, "Invalid days");
+        applicationExpiryDays = _days;
+    }
+
+    // Convenience view helpers
+    function getUserApplicationsCount(address _user) external view returns (uint256) {
+        return userApplications[_user].length;
     }
 }
