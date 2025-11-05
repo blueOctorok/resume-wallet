@@ -14,7 +14,11 @@ const T_BACKEND_BASE_URL = process.env.T_BACKEND_BASE_URL
  * Call T Backend AI to extract structured data from a resume
  * Input: IPFS CID or direct URL
  * Output: Mapped form data for all 3 driver application forms
+ * 
+ * Note: This route may take 20-30 seconds. Requires Vercel Pro plan for 60s timeout.
  */
+export const maxDuration = 60 // 60 seconds (Pro plan max)
+
 export async function POST(request: NextRequest) {
   try {
     // Check API key is configured

@@ -112,13 +112,21 @@ export default function ResumeUploadWithPrefill({
 
       if (!prefillResponse.ok) {
         let errorData
+        const errorText = await prefillResponse.text()
         try {
-          errorData = await prefillResponse.json()
+          errorData = JSON.parse(errorText)
         } catch {
-          errorData = { error: 'Server error', detail: await prefillResponse.text() }
+          errorData = { error: 'Server error', detail: errorText }
         }
         console.error('❌ [PREFILL] API Error Response:', errorData)
-        throw new Error(errorData.error || 'Failed to extract data from resume')
+        console.error('   Status:', prefillResponse.status, prefillResponse.statusText)
+        
+        // Handle timeout specifically
+        if (prefillResponse.status === 504 || prefillResponse.status === 408) {
+          throw new Error('AI processing timed out. This may take 20-30 seconds. Please try again or contact support if the issue persists.')
+        }
+        
+        throw new Error(errorData.error || errorData.detail || 'Failed to extract data from resume')
       }
 
       const prefillData = await prefillResponse.json()
