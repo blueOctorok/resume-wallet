@@ -247,61 +247,86 @@ export default function PersonalInfoForm3({
   }
 
   const fillTestData = () => {
-    setFormData({
-      employers: [
-        {
-          name: 'ABC Trucking Company',
-          phone: '(555) 123-4567',
-          address: '123 Highway Road, Columbus, OH 43215',
-          positionHeld: 'Commercial Driver',
-          fromDate: '01/2022',
-          toDate: 'Present',
-          reasonForLeaving: '',
-          salary: '$55,000',
-          gapsInEmployment: 'None',
-          subjectToFMCSR: 'yes',
-          safetySensitiveFunction: 'yes',
-          isUnemployment: false,
-        },
-        {
-          name: 'XYZ Logistics',
-          phone: '(555) 987-6543',
-          address: '456 Freight Lane, Cleveland, OH 44101',
-          positionHeld: 'Delivery Driver',
-          fromDate: '06/2019',
-          toDate: '12/2021',
-          reasonForLeaving: 'Better opportunity',
-          salary: '$48,000',
-          gapsInEmployment: 'None',
-          subjectToFMCSR: 'yes',
-          safetySensitiveFunction: 'yes',
-          isUnemployment: false,
-        },
-      ],
-      education: [
-        {
-          schoolType: 'HIGH SCHOOL',
-          nameAndLocation: 'Central High School, Columbus, OH',
-          courseOfStudy: 'General Education',
-          yearsCompleted: '4',
-          graduated: 'yes',
-          details: 'High School Diploma',
-        },
-        {
-          schoolType: 'TRADE SCHOOL',
-          nameAndLocation: 'Ohio Commercial Driving Academy, Columbus, OH',
-          courseOfStudy: 'CDL Training',
-          yearsCompleted: '0.5',
-          graduated: 'yes',
-          details: 'CDL-A Certification',
-        },
-      ],
-      otherQualifications:
-        'Certified in Hazardous Materials Transportation, First Aid/CPR Certified',
-      applicantSignature: 'John Michael Doe',
-      signatureDate: new Date().toISOString().slice(0, 10),
-      applicantNamePrinted: 'John Michael Doe',
-    })
+    // Smart fill: only fill EMPTY fields, preserve existing data (especially AI-extracted employment history)
+    setFormData((prev) => ({
+      // Employment History - preserve if exists, especially from AI
+      employers: prev.employers?.length > 0 && prev.employers.some(emp => emp.name || emp.positionHeld)
+        ? prev.employers.map((employer) => ({
+            // Fill missing fields within existing employers
+            name: employer.name || '',
+            phone: employer.phone || '',
+            address: employer.address || '',
+            positionHeld: employer.positionHeld || '',
+            fromDate: employer.fromDate || '',
+            toDate: employer.toDate || '',
+            reasonForLeaving: employer.reasonForLeaving || '',
+            salary: employer.salary || '',
+            gapsInEmployment: employer.gapsInEmployment || '',
+            subjectToFMCSR: employer.subjectToFMCSR || 'yes',
+            safetySensitiveFunction: employer.safetySensitiveFunction || 'yes',
+            isUnemployment: employer.isUnemployment ?? false,
+          }))
+        : [
+            {
+              name: 'ABC Trucking Company',
+              phone: '(555) 123-4567',
+              address: '123 Highway Road, Columbus, OH 43215',
+              positionHeld: 'Commercial Driver',
+              fromDate: '01/2022',
+              toDate: 'Present',
+              reasonForLeaving: '',
+              salary: '$55,000',
+              gapsInEmployment: 'None',
+              subjectToFMCSR: 'yes',
+              safetySensitiveFunction: 'yes',
+              isUnemployment: false,
+            },
+            {
+              name: 'XYZ Logistics',
+              phone: '(555) 987-6543',
+              address: '456 Freight Lane, Cleveland, OH 44101',
+              positionHeld: 'Delivery Driver',
+              fromDate: '06/2019',
+              toDate: '12/2021',
+              reasonForLeaving: 'Better opportunity',
+              salary: '$48,000',
+              gapsInEmployment: 'None',
+              subjectToFMCSR: 'yes',
+              safetySensitiveFunction: 'yes',
+              isUnemployment: false,
+            },
+          ],
+      
+      // Education - add test data only if empty
+      education: prev.education?.length > 0 && prev.education.some(edu => edu.nameAndLocation || edu.courseOfStudy)
+        ? prev.education
+        : [
+            {
+              schoolType: 'HIGH SCHOOL',
+              nameAndLocation: 'Central High School, Columbus, OH',
+              courseOfStudy: 'General Education',
+              yearsCompleted: '4',
+              graduated: 'yes',
+              details: 'High School Diploma',
+            },
+            {
+              schoolType: 'TRADE SCHOOL',
+              nameAndLocation: 'Ohio Commercial Driving Academy, Columbus, OH',
+              courseOfStudy: 'CDL Training',
+              yearsCompleted: '0.5',
+              graduated: 'yes',
+              details: 'CDL-A Certification',
+            },
+          ],
+      
+      // Qualifications - only fill if empty
+      otherQualifications: prev.otherQualifications || 'Certified in Hazardous Materials Transportation, First Aid/CPR Certified',
+      
+      // Signature - use AI-extracted name if available, otherwise test data
+      applicantSignature: prev.applicantSignature || 'John Michael Doe',
+      signatureDate: prev.signatureDate || new Date().toISOString().slice(0, 10),
+      applicantNamePrinted: prev.applicantNamePrinted || 'John Michael Doe',
+    }))
     setErrors({})
   }
 

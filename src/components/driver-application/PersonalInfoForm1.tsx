@@ -323,53 +323,75 @@ export default function PersonalInfoForm1({
   }
 
   const fillTestData = () => {
-    setFormData({
-      firstName: 'John',
-      middleName: 'Michael',
-      lastName: 'Doe',
-      phone: '(555) 123-4567',
-      email: 'john.doe@email.com',
-      dateOfBirth: '1985-03-15',
-      socialSecurity: '123-45-6789',
-      dateOfApplication: new Date().toISOString().slice(0, 10),
-      positionAppliedFor: 'Commercial Driver',
-      dateAvailableForWork: new Date().toISOString().slice(0, 10),
-      hasLegalRightToWork: 'yes',
+    // Smart fill: only fill EMPTY fields, preserve AI-extracted data
+    setFormData((prev) => ({
+      // Personal Information - only fill if empty
+      firstName: prev.firstName || 'John',
+      middleName: prev.middleName || 'Michael',
+      lastName: prev.lastName || 'Doe',
+      phone: prev.phone || '(555) 123-4567',
+      email: prev.email || 'john.doe@email.com',
+      dateOfBirth: prev.dateOfBirth || '1985-03-15',
+      socialSecurity: prev.socialSecurity || '123-45-6789',
+      dateOfApplication: prev.dateOfApplication || new Date().toISOString().slice(0, 10),
+      positionAppliedFor: prev.positionAppliedFor || 'Commercial Driver',
+      dateAvailableForWork: prev.dateAvailableForWork || new Date().toISOString().slice(0, 10),
+      hasLegalRightToWork: prev.hasLegalRightToWork || 'yes',
+      
+      // Current Mailing - only fill empty fields within the object
       currentMailing: {
-        street: '123 Main Street',
-        city: 'Columbus',
-        state: 'OH',
-        zipCode: '43215',
-        yearsAtAddress: '3',
+        street: prev.currentMailing?.street || '123 Main Street',
+        city: prev.currentMailing?.city || 'Columbus',
+        state: prev.currentMailing?.state || 'OH',
+        zipCode: prev.currentMailing?.zipCode || '43215',
+        yearsAtAddress: prev.currentMailing?.yearsAtAddress || '3',
       },
-      previousAddresses: [
-        {
-          street: '456 Oak Avenue',
-          city: 'Cleveland',
-          state: 'OH',
-          zipCode: '44101',
-          yearsAtAddress: '2',
-        },
-      ],
-      currentLicenses: [
-        {
-          state: 'OH',
-          licenseNumber: 'DL123456789',
-          typeClass: 'CDL-A',
-          endorsements: 'H, N',
-          expirationDate: '2026-01-15',
-        },
-      ],
-      previousLicenses: [
-        {
-          state: 'PA',
-          licenseNumber: 'DL987654321',
-          typeClass: 'CDL-B',
-          endorsements: '',
-          expirationDate: '2020-01-14',
-        },
-      ],
-    })
+      
+      // Previous Addresses - add test address only if none exist
+      previousAddresses: prev.previousAddresses?.length > 0 
+        ? prev.previousAddresses 
+        : [
+            {
+              street: '456 Oak Avenue',
+              city: 'Cleveland',
+              state: 'OH',
+              zipCode: '44101',
+              yearsAtAddress: '2',
+            },
+          ],
+      
+      // Current Licenses - fill missing fields in existing licenses, or add test license
+      currentLicenses: prev.currentLicenses?.length > 0
+        ? prev.currentLicenses.map((license) => ({
+            state: license.state || 'OH',
+            licenseNumber: license.licenseNumber || 'DL123456789',
+            typeClass: license.typeClass || 'CDL-A',
+            endorsements: license.endorsements || 'H, N',
+            expirationDate: license.expirationDate || '2026-01-15',
+          }))
+        : [
+            {
+              state: 'OH',
+              licenseNumber: 'DL123456789',
+              typeClass: 'CDL-A',
+              endorsements: 'H, N',
+              expirationDate: '2026-01-15',
+            },
+          ],
+      
+      // Previous Licenses - add test license only if none exist
+      previousLicenses: prev.previousLicenses?.length > 0
+        ? prev.previousLicenses
+        : [
+            {
+              state: 'PA',
+              licenseNumber: 'DL987654321',
+              typeClass: 'CDL-B',
+              endorsements: '',
+              expirationDate: '2020-01-14',
+            },
+          ],
+    }))
     setErrors({})
   }
 

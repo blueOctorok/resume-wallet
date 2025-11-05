@@ -257,42 +257,56 @@ export default function PersonalInfoForm2({
   }
 
   const fillTestData = () => {
-    setFormData({
-      drivingExperience: [
-        {
-          equipmentType: 'TRACTOR & SEMI-TRAILER',
-          yearsOfExperience: '5',
-        },
-        {
-          equipmentType: 'STRAIGHT TRUCK',
-          yearsOfExperience: '2',
-        },
-      ],
-      accidents: [
-        {
-          date: '2022-06-15',
-          nature: 'Rear-end collision',
-          fatalities: '0',
-          injuries: '1',
-          chemicalSpills: 'N',
-          atFault: 'no',
-        },
-      ],
-      hasNoAccidents: false,
-      convictions: [
-        {
-          dateConvicted: '03/2023',
-          violation: 'Speeding - 15 mph over limit',
-          stateOfViolation: 'OH',
-          penalty: 'Fine $150, 2 points',
-        },
-      ],
-      hasNoConvictions: false,
-      deniedLicense: 'no',
-      deniedLicenseExplain: '',
-      suspendedLicense: 'no',
-      suspendedLicenseExplain: '',
-    })
+    // Smart fill: only fill EMPTY fields, preserve existing data
+    setFormData((prev) => ({
+      // Driving Experience - add test data only if empty
+      drivingExperience: prev.drivingExperience?.length > 0 && prev.drivingExperience.some(exp => exp.equipmentType || exp.yearsOfExperience)
+        ? prev.drivingExperience
+        : [
+            {
+              equipmentType: 'TRACTOR & SEMI-TRAILER',
+              yearsOfExperience: '5',
+            },
+            {
+              equipmentType: 'STRAIGHT TRUCK',
+              yearsOfExperience: '2',
+            },
+          ],
+      
+      // Accidents - add test data only if empty
+      accidents: prev.accidents?.length > 0 && prev.accidents.some(acc => acc.date || acc.nature)
+        ? prev.accidents
+        : [
+            {
+              date: '2022-06-15',
+              nature: 'Rear-end collision',
+              fatalities: '0',
+              injuries: '1',
+              chemicalSpills: 'N',
+              atFault: 'no',
+            },
+          ],
+      hasNoAccidents: prev.hasNoAccidents ?? false,
+      
+      // Convictions - add test data only if empty
+      convictions: prev.convictions?.length > 0 && prev.convictions.some(conv => conv.dateConvicted || conv.violation)
+        ? prev.convictions
+        : [
+            {
+              dateConvicted: '03/2023',
+              violation: 'Speeding - 15 mph over limit',
+              stateOfViolation: 'OH',
+              penalty: 'Fine $150, 2 points',
+            },
+          ],
+      hasNoConvictions: prev.hasNoConvictions ?? false,
+      
+      // License denial/suspension - only fill if empty
+      deniedLicense: prev.deniedLicense || 'no',
+      deniedLicenseExplain: prev.deniedLicenseExplain || '',
+      suspendedLicense: prev.suspendedLicense || 'no',
+      suspendedLicenseExplain: prev.suspendedLicenseExplain || '',
+    }))
     setErrors({})
   }
 

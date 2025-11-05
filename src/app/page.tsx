@@ -149,6 +149,21 @@ const EmploymentVerificationForm = dynamic(
   }
 )
 
+const ResumeUploadWithPrefill = dynamic(
+  () => import('@/components/ResumeUploadWithPrefill'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
+        <div className='space-y-4 animate-pulse'>
+          <div className='h-6 bg-brand-sage-light/20 rounded w-48' />
+          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
+        </div>
+      </div>
+    ),
+  }
+)
+
 const WalletTransactions = dynamic(
   () =>
     import('@/components/WalletTransactions').then(
@@ -197,6 +212,10 @@ const HomeContent = () => {
   const [form1Data, setForm1Data] = useState<any>(null)
   const [form2Data, setForm2Data] = useState<any>(null)
   const [form3Data, setForm3Data] = useState<any>(null)
+  
+  // Track if user has used AI prefill
+  const [hasPrefilled, setHasPrefilled] = useState(false)
+  const [showPrefillUpload, setShowPrefillUpload] = useState(true)
 
   // Debug: Log user state changes
   useEffect(() => {
@@ -252,6 +271,41 @@ const HomeContent = () => {
     },
     []
   )
+
+  // Handler for AI prefill success
+  const handlePrefillSuccess = useCallback(
+    (prefillData: {
+      form1Data: any
+      form2Data: any
+      form3Data: any
+      stats: any
+    }) => {
+      console.log('✅ [HOME] Prefill successful, populating forms')
+      console.log(`   Fields extracted: ${prefillData.stats.extracted}/${prefillData.stats.total}`)
+      
+      // Populate form data
+      setForm1Data(prefillData.form1Data)
+      setForm2Data(prefillData.form2Data)
+      setForm3Data(prefillData.form3Data)
+      
+      // Mark as prefilled and hide upload component
+      setHasPrefilled(true)
+      setShowPrefillUpload(false)
+      
+      // Reset submission error if any
+      setSubmissionError(null)
+      
+      // Start on Form 1
+      setCurrentForm(1)
+    },
+    []
+  )
+
+  // Handler for AI prefill error
+  const handlePrefillError = useCallback((error: string) => {
+    console.error('❌ [HOME] Prefill error:', error)
+    setSubmissionError(`AI Prefill Error: ${error}`)
+  }, [])
 
   // Handler for when driver application is completed
   const handleDriverApplicationCompleted = useCallback(async () => {
@@ -796,8 +850,62 @@ const HomeContent = () => {
                 {submissionError}
               </div>
             )}
-            {renderFormNavigation()}
-            {renderFormContent()}
+            
+            {/* AI Prefill Upload - Show before forms or if manually shown */}
+            {showPrefillUpload && !isDriverApplicationCompleted && (
+              <div className='mb-8'>
+                <ResumeUploadWithPrefill
+                  onPrefillSuccess={handlePrefillSuccess}
+                  onPrefillError={handlePrefillError}
+                />
+                
+                {/* Option to skip prefill */}
+                <div className='text-center mt-6'>
+                  <button
+                    onClick={() => {
+                      setShowPrefillUpload(false)
+                      setCurrentForm(1)
+                    }}
+                    className={`text-sm underline transition-colors ${
+                      theme === 'dark'
+                        ? 'text-gray-400 hover:text-gray-300'
+                        : 'text-gray-600 hover:text-gray-800'
+                    }`}
+                  >
+                    Skip AI prefill and fill manually
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {/* Show forms and navigation after prefill or skip */}
+            {!showPrefillUpload && (
+              <>
+                {/* Success banner if prefilled */}
+                {hasPrefilled && !isDriverApplicationCompleted && (
+                  <div
+                    className={`max-w-4xl mx-auto mb-6 px-4 py-3 rounded-lg border flex items-center justify-between ${
+                      theme === 'dark'
+                        ? 'bg-green-900/20 border-green-500/50 text-green-300'
+                        : 'bg-green-50 border-green-200 text-green-800'
+                    }`}
+                  >
+                    <span>✨ Forms prefilled with AI! Review and complete any missing fields.</span>
+                    <button
+                      onClick={() => setShowPrefillUpload(true)}
+                      className={`text-xs underline ml-4 ${
+                        theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                      }`}
+                    >
+                      Upload different resume
+                    </button>
+                  </div>
+                )}
+                
+                {renderFormNavigation()}
+                {renderFormContent()}
+              </>
+            )}
           </>
         )}
 
