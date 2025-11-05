@@ -6,7 +6,7 @@
     "src/app/api/**/*.ts": {
       "maxDuration": 30
     },
-    "src/app/api/ai/prefill-resume/route.ts": {
+    "api/ai/prefill-resume": {
       "maxDuration": 60
     }
   }
