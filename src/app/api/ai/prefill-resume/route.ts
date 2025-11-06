@@ -6,7 +6,7 @@ import {
 } from '@/lib/ai-prefill-mapper'
 
 const T_BACKEND_API_KEY = process.env.T_BACKEND_API_KEY
-const T_BACKEND_BASE_URL = process.env.T_BACKEND_BASE_URL
+const T_BACKEND_BASE_URL = process.env.T_BACKEND_BASE_URL || 'https://api-v2.fluxpointstudios.com'
 
 /**
  * POST /api/ai/prefill-resume
@@ -21,8 +21,8 @@ const T_BACKEND_BASE_URL = process.env.T_BACKEND_BASE_URL
 export async function POST(request: NextRequest) {
   try {
     // Check API key is configured
-    if (!T_BACKEND_API_KEY || !T_BACKEND_BASE_URL) {
-      console.error('❌ T Backend API not configured')
+    if (!T_BACKEND_API_KEY) {
+      console.error('❌ T Backend API not configured: Missing T_BACKEND_API_KEY')
       return NextResponse.json(
         { error: 'AI service not configured' },
         { status: 500 }
@@ -112,14 +112,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse successful response
-    const tBackendData: TBackendPrefillResponse = await tBackendResponse.json()
+    let tBackendData: TBackendPrefillResponse = await tBackendResponse.json()
     
     console.log('✅ [AI PREFILL] T Backend response received')
     console.log('   Full T Backend response:', JSON.stringify(tBackendData, null, 2))
     console.log('   Vector Store ID:', tBackendData.vector_store_id)
     console.log('   File ID:', tBackendData.file_id)
-    console.log('   Application data:', tBackendData.application)
-    console.log('   Raw text:', tBackendData.raw)
+    console.log('   Application data:', JSON.stringify(tBackendData.application, null, 2))
+    console.log('   Raw text length:', tBackendData.raw?.length || 0)
+    console.log('   Raw text preview:', tBackendData.raw?.substring(0, 200) || 'N/A')
     
     // Check if application data is all null/empty
     const app = tBackendData.application
@@ -137,8 +138,57 @@ export async function POST(request: NextRequest) {
     
     if (!hasData) {
       console.warn('⚠️ [AI PREFILL] T Backend returned empty application data')
-      console.warn('   This might mean: scanned PDF, empty file, or parsing issue')
-      console.warn('   Raw response:', JSON.stringify(app, null, 2))
+      console.warn('   This might mean:')
+      console.warn('   1. Duplicate file (already processed) - T Backend may return empty for duplicates')
+      console.warn('   2. Scanned PDF (no extractable text)')
+      console.warn('   3. Empty file or parsing issue')
+      console.warn('   Application object:', JSON.stringify(app, null, 2))
+      console.warn('   Raw text available:', !!tBackendData.raw)
+      
+      // If raw text exists but application is empty, it's likely a parsing issue
+      if (tBackendData.raw && tBackendData.raw.length > 0) {
+        console.warn('   ⚠️ Raw text exists but application data is empty - parsing may have failed')
+      }
+
+      // Retry once using a public gateway URL to bypass potential CID duplicate handling
+      if (cid) {
+        try {
+          const fallbackUrl = `https://ipfs.io/ipfs/${cid}?nocache=${Date.now()}`
+          console.log('   🔁 [AI PREFILL] Retrying with resume_url fallback:', fallbackUrl)
+          const retryResp = await fetch(tBackendUrl, {
+            method: 'POST',
+            headers: {
+              'api-key': T_BACKEND_API_KEY,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ resume_url: fallbackUrl }),
+          })
+          if (retryResp.ok) {
+            const retryData: TBackendPrefillResponse = await retryResp.json()
+            const retryApp = retryData.application
+            const retryHasData = retryApp && (
+              retryApp.fullName ||
+              retryApp.email ||
+              retryApp.phone ||
+              retryApp.address ||
+              retryApp.dateOfBirth ||
+              retryApp.licenseNumber ||
+              retryApp.licenseState ||
+              (retryApp.endorsements && retryApp.endorsements.length > 0) ||
+              (retryApp.workHistory && retryApp.workHistory.length > 0)
+            )
+            console.log('   🔁 [AI PREFILL] Retry response (has data?):', retryHasData)
+            if (retryHasData) {
+              tBackendData = retryData
+            }
+          } else {
+            const retryText = await retryResp.text().catch(() => '')
+            console.warn('   🔁 [AI PREFILL] Retry failed:', retryResp.status, retryText)
+          }
+        } catch (retryErr) {
+          console.warn('   🔁 [AI PREFILL] Retry error:', retryErr)
+        }
+      }
     }
 
     // Map T Backend response to our form structure

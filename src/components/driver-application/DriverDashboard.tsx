@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import ComplianceReview from './ComplianceReview'
 import { useTheme } from '@/contexts/ThemeContext'
 
 interface DriverDashboardProps {
@@ -419,6 +420,28 @@ const DriverDashboard = ({
             </span>
           </div>
         </div>
+      </div>
+
+      {/* AI Compliance Review */}
+      <div className='mb-8'>
+        <h2
+          className={`text-xl font-semibold mb-4 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}
+        >
+          🤖 AI Compliance Review
+        </h2>
+        <ComplianceReview
+          applicationSummary={
+            (() => {
+              const parts: string[] = []
+              if (data.applicationId) parts.push(`Application ID: ${data.applicationId}`)
+              if (data.blockchainTxHash) parts.push(`Tx: ${data.blockchainTxHash}`)
+              if (data.submittedDate) parts.push(`Submitted: ${data.submittedDate}`)
+              return parts.join(' | ')
+            })()
+          }
+        />
       </div>
 
       {/* Blockchain Verification */}

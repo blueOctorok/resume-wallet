@@ -90,6 +90,7 @@ export default function ResumeUploadWithPrefill({
       // Step 2: Call AI prefill API
       setUploadStatus('extracting')
       console.log('🤖 [PREFILL] Step 2: Extracting data with AI...')
+      const startTime = Date.now()
 
       // Try CID first (T Backend can fetch from IPFS directly)
       // Fallback to public gateway URL if needed
@@ -110,6 +111,9 @@ export default function ResumeUploadWithPrefill({
         }),
       })
 
+      const processingTime = ((Date.now() - startTime) / 1000).toFixed(1)
+      console.log(`   ⏱️ Processing time: ${processingTime}s`)
+
       if (!prefillResponse.ok) {
         let errorData
         const errorText = await prefillResponse.text()
@@ -123,7 +127,11 @@ export default function ResumeUploadWithPrefill({
         
         // Handle timeout specifically
         if (prefillResponse.status === 504 || prefillResponse.status === 408) {
-          throw new Error('AI processing timed out. This may take 20-30 seconds. Please try again or contact support if the issue persists.')
+          throw new Error(
+            `AI processing timed out after ${processingTime}s. ` +
+            `T Backend processing can take 20-40 seconds depending on resume complexity. ` +
+            `Please try again - it may work on the next attempt.`
+          )
         }
         
         throw new Error(errorData.error || errorData.detail || 'Failed to extract data from resume')
@@ -136,6 +144,38 @@ export default function ResumeUploadWithPrefill({
       console.log(`   Fields: ${prefillData.stats.fieldNames.join(', ')}`)
       console.log('   Form1 Data:', prefillData.form1Data)
       console.log('   Form2 Data:', prefillData.form2Data)
+      console.log('   Raw text available:', !!prefillData.metadata?.raw)
+
+      // Check if extraction returned empty data
+      const hasRawText = prefillData.metadata?.raw && prefillData.metadata.raw.length > 0
+      const extractedCount = prefillData.stats?.extracted || 0
+
+      if (extractedCount === 0) {
+        if (!hasRawText) {
+          // No text extracted - likely duplicate or scanned PDF
+          const duplicateWarning = 
+            '⚠️ No data extracted. This might be because:\n' +
+            '• This resume was already processed (duplicate detection)\n' +
+            '• The file is a scanned PDF (no extractable text)\n' +
+            '• Try uploading a different file or rename the current one'
+          
+          console.warn('⚠️ [PREFILL]', duplicateWarning)
+          setErrorMessage(duplicateWarning)
+          setUploadStatus('error')
+          
+          if (onPrefillError) {
+            onPrefillError(duplicateWarning)
+          }
+          return
+        } else {
+          // Text extracted but no fields parsed - parsing issue
+          console.warn('⚠️ [PREFILL] Text extracted but no fields parsed - parsing may have failed')
+          setErrorMessage(
+            'Text extracted but no fields found. The resume format might not be recognized. ' +
+            'You can still fill the forms manually.'
+          )
+        }
+      }
 
       setExtractedStats(prefillData.stats)
       setUploadStatus('success')
@@ -185,7 +225,7 @@ export default function ResumeUploadWithPrefill({
       case 'extracting':
         return {
           icon: <Brain className='w-5 h-5 animate-pulse' />,
-          text: '🤖 AI is reading your resume...',
+          text: '🤖 AI is reading your resume... This may take 20-40 seconds.',
           color: 'text-purple-600',
         }
       case 'success':

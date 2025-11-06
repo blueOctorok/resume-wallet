@@ -2,7 +2,66 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
-## 🤖 **LATEST STATUS: AI RESUME PREFILL INTEGRATED!** ✨
+## 🤖 **LATEST STATUS: AI CHAT ASSISTANT ADDED!** ✨
+
+**FEATURE (November 6, 2025):**
+
+- ✅ AI Chat Assistant - Floating chat accessible from anywhere
+  - What it does: Provides AI-powered chat assistance for driver application questions, DOT compliance, form guidance, and general Q&A
+  - Always accessible: Floating chat button (bottom-right) available on all pages
+  - Session management: Uses wallet address as session ID for context persistence
+  - T Backend integration: Proxies to T Backend `/chat` endpoint
+  - Files Created/Updated:
+    - `src/app/api/ai/chat/route.ts` (API route proxying to T Backend)
+    - `src/components/ChatAssistant.tsx` (Floating chat component)
+    - `src/app/layout.tsx` (Added chat to layout for global access)
+  - Features:
+    - Floating button (bottom-right, always visible)
+    - Expandable chat window (600px height, 384px width)
+    - Message history with timestamps
+    - Loading states and error handling
+    - Session persistence (per user wallet address)
+    - Welcome message on first open
+    - Theme-aware styling (dark/light mode)
+  - Env Vars: `T_BACKEND_API_KEY` (required), `T_BACKEND_BASE_URL` (optional; defaults to `https://api-v2.fluxpointstudios.com`)
+  - Next: Add context awareness (reference user's application data), document search (vector stores)
+
+**FEATURE (November 6, 2025):**
+
+- ✅ AI Compliance Review (MVP) using T Backend background tasks
+  - What it does: Runs a DOT compliance analysis on the submitted application and returns a concise report (Summary, Missing/Invalid Fields, Potential Issues, Recommendations)
+  - Minimal UX: Button on the Driver Dashboard to start review and show results when complete
+  - Background-safe: Uses T’s `/background/create` + `/background/{id}` polling to avoid timeouts
+  - Files Created/Updated:
+    - `src/app/api/ai/compliance-review/start/route.ts` (start background task)
+    - `src/app/api/ai/compliance-review/status/route.ts` (poll status)
+    - `src/components/driver-application/ComplianceReview.tsx` (start/poll UI)
+    - `src/components/driver-application/DriverDashboard.tsx` (wired component)
+  - Env Vars: `T_BACKEND_API_KEY` (required), `T_BACKEND_BASE_URL` (optional; defaults to `https://api-v2.fluxpointstudios.com`)
+  - Next: Persist review output to Supabase, attach to application record, and show history
+
+## 🤖 **AI RESUME PREFILL INTEGRATED!** ✨
+
+**DOCUMENTATION UPDATE (November 5, 2025):**
+
+- **✅ T Backend API Documentation Updated** - Complete endpoint list and schema verification
+  - **What Changed**: Updated `docs/T_BACKEND_API.md` with all endpoints from official OpenAPI spec
+  - **Complete Endpoint List**: Added all 50+ endpoints across all categories:
+    - Chat & AI Assistant (1 endpoint)
+    - File Management (8 endpoints)
+    - Background Tasks (7 endpoints)
+    - Image Generation & Editing (8 endpoints)
+    - Knowledge Graphs (17 endpoints)
+    - Token Analysis (1 endpoint)
+    - Masumi Inference (3 endpoints)
+    - Payments (4 endpoints)
+    - System (3 endpoints)
+  - **Schema Verification**: Added instructions to fetch `/openapi.json` for exact request/response formats
+  - **Interactive Docs**: Added links to `/docs` (Swagger) and `/redoc` (ReDoc)
+  - **Available Schemas**: Listed all 20+ schemas from OpenAPI spec
+  - **Important Warnings**: Added notes that examples are approximations and must be verified
+  - **Base URL Clarification**: Noted that some endpoints may use `api.fluxpointstudios.com` vs `api-v2.fluxpointstudios.com`
+  - **Why This Matters**: Previous documentation had assumed request/response formats. Now developers know to verify with OpenAPI spec before implementing.
 
 **MAJOR AI FEATURE (November 5, 2025):**
 
