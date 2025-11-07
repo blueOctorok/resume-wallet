@@ -2,7 +2,80 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
-## 🤖 **LATEST STATUS: AI CHAT ASSISTANT ADDED!** ✨
+## 🤖 **LATEST STATUS: T BACKEND VECTOR STORE & KNOWLEDGE GRAPH SETUP!** ✨
+
+**MAJOR FEATURE (November 6, 2025):**
+
+- ✅ T Backend Vector Store & Knowledge Graph Setup - Make T More Directed
+  - What it does: Allows you to initialize T Backend with trucking-specific knowledge (vector stores for documents, knowledge graphs for structured facts)
+  - Key-scoped: All operations are isolated to your API key, won't affect other clients
+  - Vector Store: Create and manage a "trucking-knowledge" vector store for driving regulations, CDL guides, employer SOPs
+  - Knowledge Graph: Seed with structured facts about CDL requirements, DOT regulations, endorsements, state-specific compliance
+  - Automatic Integration: T automatically uses your vector stores and knowledge graphs when answering questions via `/chat`
+  - Files Created:
+    - `src/lib/t-backend-vector-store.ts` (Vector store management utilities)
+    - `src/lib/t-backend-knowledge-graph.ts` (Knowledge graph management utilities)
+    - `src/app/api/t-backend/setup-vector-store/route.ts` (Vector store setup API)
+    - `src/app/api/t-backend/setup-knowledge-graph/route.ts` (Knowledge graph setup API)
+    - `src/app/api/t-backend/admin/setup/route.ts` (One-click complete setup API)
+    - `src/components/admin/TBackendSetup.tsx` (Admin UI component)
+    - `src/app/admin/page.tsx` (Admin page)
+  - Features:
+    - Create/get "trucking-knowledge" vector store
+    - Upload documents (PDFs, DOCX) to vector store from URLs
+    - List files in vector store
+    - Seed knowledge graph with 15+ trucking facts (CDL-A/B requirements, DOT medical certification, endorsements, hours of service, state-specific compliance)
+    - Map chat sessions to knowledge graphs
+    - One-click setup via admin panel
+    - Status checking (see current vector store and knowledge graph status)
+  - Usage:
+    1. Navigate to `/admin` page
+    2. Click "Run Setup" to initialize vector store and knowledge graph
+    3. T will automatically use these when answering questions
+    4. Optional: Upload DOT regulation PDFs, CDL manuals via API
+  - Benefits:
+    - T becomes more accurate and specific for driver employment questions
+    - T can reference actual DOT regulations and CDL requirements
+    - T knows about endorsements, medical certification, hours of service rules
+    - T provides state-specific guidance when relevant
+    - All knowledge is key-scoped and private to your API key
+  - Next: Upload sample DOT documents, add more facts to knowledge graph, integrate with T Assistant chat
+
+**FEATURE (November 6, 2025):**
+
+- ✅ T Assistant - Central guide for entire employment process
+  - What it does: T is now the centerpiece of the application - a friendly AI guide that walks users through the entire driver employment process from start to finish
+  - Vision: T guides users step-by-step through the entire process (wallet creation → resume upload → form completion → submission)
+  - Centerpiece: T Assistant is prominently displayed in the middle of the screen, always visible
+  - Step-by-step guidance: T knows where users are in the process and guides them to the next step
+  - Context-aware: T knows if user is logged in, has uploaded resume, has started forms, etc.
+  - Application data aware: T can read user's application data (form1Data, form2Data, form3Data) to provide personalized guidance
+  - Friendly guide: Acts as a friend/guide, not just a chatbot
+  - Files Created/Updated:
+    - `src/components/TAssistant.tsx` (Central T Assistant component)
+    - `src/app/page.tsx` (Integrated T as centerpiece, passes form data to T)
+  - Features:
+    - Always visible in center of screen
+    - Step indicators (Welcome, Wallet Created, Resume Uploaded, Forms, Submitted, Complete)
+    - Context-aware messages based on current step
+    - Action suggestions (sign in, upload resume, start forms)
+    - Chat interface for questions
+    - Session management (per user wallet address)
+    - Theme-aware styling (dark/light mode)
+    - Reads user's application data for personalized responses
+  - Steps:
+    - **Welcome**: Guides new users to log in
+    - **Wallet**: Confirms wallet creation, guides to resume upload
+    - **Resume**: Guides to upload resume, offers AI prefill
+    - **Forms**: Guides through form completion, answers questions
+    - **Submission**: Confirms submission, guides to next steps
+    - **Complete**: Celebrates completion, offers help
+  - Integration:
+    - Integrates with wallet creation flow
+    - Integrates with resume upload flow
+    - Integrates with form completion flow
+    - Integrates with submission flow
+  - Env Vars: `T_BACKEND_API_KEY` (required), `T_BACKEND_BASE_URL` (optional; defaults to `https://api-v2.fluxpointstudios.com`)
 
 **FEATURE (November 6, 2025):**
 

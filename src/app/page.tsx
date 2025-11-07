@@ -182,6 +182,21 @@ const WalletTransactions = dynamic(
   }
 )
 
+const TAssistant = dynamic(
+  () => import('@/components/TAssistant').then((mod) => mod.default),
+  {
+    ssr: false,
+    loading: () => (
+      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
+        <div className='space-y-4 animate-pulse'>
+          <div className='h-6 bg-brand-sage-light/20 rounded w-48' />
+          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
+        </div>
+      </div>
+    ),
+  }
+)
+
 // Inner component that uses Alchemy hooks (must be inside provider)
 const HomeContent = () => {
   // Alchemy Account Kit hooks for sending transactions
@@ -216,6 +231,35 @@ const HomeContent = () => {
   // Track if user has used AI prefill
   const [hasPrefilled, setHasPrefilled] = useState(false)
   const [showPrefillUpload, setShowPrefillUpload] = useState(true)
+
+  // Determine current step for T Assistant
+  const getCurrentStep = useCallback((): 'welcome' | 'wallet' | 'resume' | 'forms' | 'submission' | 'complete' => {
+    if (showDashboard) return 'complete'
+    if (isDriverApplicationCompleted) return 'submission'
+    if (currentPage === 'dotapp' && !showPrefillUpload) return 'forms'
+    if (currentPage === 'resume' || hasPrefilled) return 'resume'
+    if (user) return 'wallet'
+    return 'welcome'
+  }, [user, currentPage, hasPrefilled, showPrefillUpload, isDriverApplicationCompleted, showDashboard])
+
+  // T Assistant action handler
+  const handleTAssistantAction = useCallback((action: string) => {
+    console.log('🎯 [HOME] T Assistant action:', action)
+    switch (action) {
+      case 'signin':
+        setCurrentPage('signin')
+        break
+      case 'resume':
+        setCurrentPage('resume')
+        break
+      case 'forms':
+        setCurrentPage('dotapp')
+        setShowPrefillUpload(false)
+        break
+      default:
+        break
+    }
+  }, [])
 
   // Debug: Log user state changes
   useEffect(() => {
@@ -820,6 +864,20 @@ const HomeContent = () => {
 
       {/* Main Content */}
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-3'>
+        {/* T Assistant - Centerpiece */}
+        <div className='mb-8'>
+          <TAssistant
+            currentStep={getCurrentStep()}
+            onAction={handleTAssistantAction}
+            userAddress={user?.address}
+            hasResume={hasPrefilled}
+            hasForms={!showPrefillUpload && currentPage === 'dotapp'}
+            form1Data={form1Data}
+            form2Data={form2Data}
+            form3Data={form3Data}
+          />
+        </div>
+
         {/* Conditional Content Based on Navigation */}
         {currentPage === 'signin' && !user && (
           <div className='max-w-md mx-auto'>
