@@ -71,8 +71,25 @@ export default function TBackendSetup() {
 
       if (data.success) {
         setSetupResults(data)
-        // Refresh status
+
+        // Optimistically update status with latest counts so UI reflects additions immediately
+        if (data.vectorStore || data.knowledgeGraph) {
+          setStatus((prev: any) => ({
+            vectorStore: data.vectorStore ?? prev?.vectorStore ?? null,
+            vectorStoreError: prev?.vectorStoreError ?? null,
+            knowledgeGraph: data.knowledgeGraph ?? prev?.knowledgeGraph ?? null,
+            knowledgeGraphError: prev?.knowledgeGraphError ?? null,
+          }))
+        }
+ 
+        // Wait a moment for T Backend to process
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        // Refresh status (try multiple times to ensure facts are persisted)
         await checkStatus()
+        // Wait and check again to ensure UI updates
+        setTimeout(async () => {
+          await checkStatus()
+        }, 2000)
         // Refresh file list
         await loadFiles()
       } else {

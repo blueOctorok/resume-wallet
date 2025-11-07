@@ -69,27 +69,29 @@ export async function createTruckingVectorStore(): Promise<VectorStore> {
 export async function getOrCreateTruckingVectorStore(): Promise<VectorStore> {
   try {
     // Try to find existing store by name
-    try {
-      const stores = await listVectorStores()
-      const existingStore = stores.find((store) => store.name === 'trucking-knowledge')
-      
-      if (existingStore) {
-        return existingStore
-      }
-    } catch (listError: any) {
-      // If listing fails (e.g., validation error), try to create anyway
-      // Only log if it's not a known validation error (to reduce noise)
-      const isValidationError = listError.message?.includes('validation error') || 
-                                listError.message?.includes('VectorStoreResponse')
-      if (!isValidationError) {
-        console.warn('Failed to list vector stores, will try to create:', listError.message)
-      }
+    // listVectorStores() now handles 504/502/503 errors silently (returns [])
+    const stores = await listVectorStores()
+    const existingStore = stores.find((store) => store.name === 'trucking-knowledge')
+    
+    if (existingStore) {
+      return existingStore
     }
     
-    // Create new store if not found or if listing failed
+    // Create new store if not found (or if listing returned empty due to timeout)
     return await createTruckingVectorStore()
-  } catch (error) {
-    console.error('Error getting or creating vector store:', error)
+  } catch (error: any) {
+    // Check if it's a server error (502, 503, 504)
+    const isServerError = error.message?.includes('502') ||
+                         error.message?.includes('503') ||
+                         error.message?.includes('504') ||
+                         error.message?.includes('Gateway Timeout') ||
+                         error.message?.includes('Bad Gateway') ||
+                         error.message?.includes('Service Unavailable')
+    
+    // Only log non-server errors
+    if (!isServerError) {
+      console.error('Error getting or creating vector store:', error)
+    }
     throw error
   }
 }
@@ -112,21 +114,21 @@ export async function listVectorStores(): Promise<VectorStore[]> {
 
     if (!response.ok) {
       const errorText = await response.text()
-      // If it's a validation error on T Backend's side, try to parse the response anyway
-      if (response.status === 500 && errorText.includes('validation error')) {
-        console.warn('T Backend validation error, attempting to parse response anyway')
-        // Try to get the raw response body
-        try {
-          const rawData = await response.json().catch(() => null)
-          if (rawData) {
-            // Try to extract stores from the error response
-            return []
-          }
-        } catch {
-          // If we can't parse it, return empty array
-          return []
-        }
+      
+      // Handle server timeout/availability errors (502, 503, 504)
+      if (response.status === 502 || response.status === 503 || response.status === 504) {
+        // Don't log as error - these are server availability issues, not app errors
+        // Return empty array to allow fallback behavior
+        return []
       }
+      
+      // If it's a validation error on T Backend's side (500 with validation error message)
+      if (response.status === 500 && errorText.includes('validation error')) {
+        // Don't log - this is a known T Backend issue that we handle gracefully
+        return []
+      }
+      
+      // For other errors, throw (but this will be caught by outer catch)
       throw new Error(`Failed to list vector stores: ${response.status} ${errorText}`)
     }
 
@@ -163,14 +165,25 @@ export async function listVectorStores(): Promise<VectorStore[]> {
       file_counts: store.file_counts,
     }))
   } catch (error: any) {
-    // If listing fails (e.g., T Backend validation error), return empty array
-    // This allows getOrCreateTruckingVectorStore to fall back to creating a new store
-    // Only log if it's not a known validation error (to reduce noise)
+    // Check for server timeout/availability errors
+    const isServerError = error.message?.includes('502') ||
+                         error.message?.includes('503') ||
+                         error.message?.includes('504') ||
+                         error.message?.includes('Gateway Timeout') ||
+                         error.message?.includes('Bad Gateway') ||
+                         error.message?.includes('Service Unavailable')
+    
+    // Check for validation errors
     const isValidationError = error.message?.includes('validation error') || 
                               error.message?.includes('VectorStoreResponse')
-    if (!isValidationError) {
+    
+    // Only log unexpected errors (not server timeouts or validation errors)
+    // Server errors are handled silently because they're expected when T Backend is slow/down
+    if (!isServerError && !isValidationError) {
       console.warn('Failed to list vector stores:', error.message)
     }
+    
+    // Return empty array for all errors (allows fallback to create new store)
     return []
   }
 }

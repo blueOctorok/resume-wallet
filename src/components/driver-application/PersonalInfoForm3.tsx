@@ -128,24 +128,80 @@ export default function PersonalInfoForm3({
 
     if (step === 1) {
       // Employment History validation
+      let totalYearsCovered = 0
+      const today = new Date()
+      const tenYearsAgo = new Date(today.getFullYear() - 10, today.getMonth(), today.getDate())
+
       formData.employers.forEach((employer, index) => {
         if (!employer.isUnemployment) {
+          // DOT § 383.35(c) Requirements
           if (!employer.name.trim())
-            newErrors[`employer${index}Name`] = 'Employer name is required'
+            newErrors[`employer${index}Name`] = 'Employer name is required (DOT § 383.35)'
+          if (!employer.address.trim()) {
+            // Address is especially critical for last 3 years (verification required)
+            if (index < 3) {
+              newErrors[`employer${index}Address`] = 'Employer address is required for verification (DOT § 383.35)'
+            } else {
+              newErrors[`employer${index}Address`] = 'Employer address is required (DOT § 383.35)'
+            }
+          }
+          if (!employer.fromDate)
+            newErrors[`employer${index}FromDate`] = 'Start date is required (DOT § 383.35)'
+          if (!employer.toDate)
+            newErrors[`employer${index}ToDate`] = 'End date is required (DOT § 383.35)'
+          if (!employer.reasonForLeaving.trim())
+            newErrors[`employer${index}Reason`] = 'Reason for leaving is required (DOT § 383.35(c)(3))'
           if (!employer.positionHeld.trim())
             newErrors[`employer${index}Position`] = 'Position held is required'
-          if (!employer.fromDate)
-            newErrors[`employer${index}FromDate`] = 'Start date is required'
-          if (!employer.toDate)
-            newErrors[`employer${index}ToDate`] = 'End date is required'
           if (!employer.subjectToFMCSR)
             newErrors[`employer${index}FMCSR`] =
               'Please specify FMCSR compliance'
           if (!employer.safetySensitiveFunction)
             newErrors[`employer${index}Safety`] =
               'Please specify safety-sensitive function'
+
+          // Calculate years covered (only if dates are valid)
+          // Parse MM/YYYY format dates
+          if (employer.fromDate && employer.toDate) {
+            const parseDate = (dateStr: string): Date | null => {
+              if (!dateStr || dateStr === 'Present') return today
+              // Handle MM/YYYY format
+              const parts = dateStr.split('/')
+              if (parts.length === 2) {
+                const month = parseInt(parts[0]) - 1 // Month is 0-indexed
+                const year = parseInt(parts[1])
+                if (!isNaN(month) && !isNaN(year) && month >= 0 && month < 12) {
+                  return new Date(year, month, 1)
+                }
+              }
+              // Try ISO format as fallback
+              const isoDate = new Date(dateStr)
+              return isNaN(isoDate.getTime()) ? null : isoDate
+            }
+
+            const fromDate = parseDate(employer.fromDate)
+            const toDate = parseDate(employer.toDate)
+            
+            if (fromDate && toDate) {
+              // Only count years within the 10-year window
+              const periodStart = fromDate > tenYearsAgo ? fromDate : tenYearsAgo
+              const periodEnd = toDate < today ? toDate : today
+              
+              if (periodStart <= periodEnd) {
+                const years = (periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+                totalYearsCovered += Math.max(0, years)
+              }
+            }
+          }
         }
       })
+
+      // DOT § 383.35: Must cover 10 years
+      if (totalYearsCovered < 10) {
+        const yearsMissing = (10 - totalYearsCovered).toFixed(1)
+        newErrors.employmentYearsCoverage = 
+          `DOT § 383.35 requires 10 years of employment history. You currently have ${totalYearsCovered.toFixed(1)} years covered. Please add ${yearsMissing} more years.`
+      }
     } else if (step === 2) {
       // Education validation
       formData.education.forEach((edu, index) => {
@@ -361,13 +417,13 @@ export default function PersonalInfoForm3({
           <p
             className={`text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
           >
-            ⚠️ IMPORTANT: 3-Year Verification Requirement
+            ⚠️ DOT § 383.35 - 10-Year Employment History Requirement
           </p>
           <p
             className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'}`}
           >
             <strong>
-              You must provide 10 years of employment history total:
+              Federal regulation requires 10 years of employment history:
             </strong>
           </p>
           <ul
@@ -375,17 +431,99 @@ export default function PersonalInfoForm3({
           >
             <li>
               • <strong>Last 3 years:</strong> Must be verified by employers
-              (complete contact info required)
+              (complete contact info and address required)
             </li>
             <li>
               • <strong>Years 4-10:</strong> Self-reported (employers will not
               be contacted for verification)
             </li>
+            <li>• <strong>Required for each employer:</strong> Name, address, dates, reason for leaving (DOT § 383.35(c))</li>
             <li>• Any gaps in employment over 1 month must be explained</li>
           </ul>
         </div>
+        {/* Years Covered Indicator - shows real-time progress */}
+        {(() => {
+          const calculateYearsCovered = () => {
+            let totalYears = 0
+            const today = new Date()
+            const tenYearsAgo = new Date(today.getFullYear() - 10, today.getMonth(), today.getDate())
+            
+            formData.employers.forEach((employer) => {
+              if (!employer.isUnemployment && employer.fromDate && employer.toDate) {
+                const parseDate = (dateStr: string): Date | null => {
+                  if (!dateStr || dateStr === 'Present') return today
+                  const parts = dateStr.split('/')
+                  if (parts.length === 2) {
+                    const month = parseInt(parts[0]) - 1
+                    const year = parseInt(parts[1])
+                    if (!isNaN(month) && !isNaN(year) && month >= 0 && month < 12) {
+                      return new Date(year, month, 1)
+                    }
+                  }
+                  const isoDate = new Date(dateStr)
+                  return isNaN(isoDate.getTime()) ? null : isoDate
+                }
+                
+                const fromDate = parseDate(employer.fromDate)
+                const toDate = parseDate(employer.toDate)
+                
+                if (fromDate && toDate) {
+                  const periodStart = fromDate > tenYearsAgo ? fromDate : tenYearsAgo
+                  const periodEnd = toDate < today ? toDate : today
+                  if (periodStart <= periodEnd) {
+                    const years = (periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+                    totalYears += Math.max(0, years)
+                  }
+                }
+              }
+            })
+            return totalYears
+          }
+          
+          const yearsCovered = calculateYearsCovered()
+          const isComplete = yearsCovered >= 10
+          
+          if (formData.employers.some(e => e.fromDate || e.toDate)) {
+            return (
+              <div className={`mt-4 p-4 rounded-lg border-2 ${
+                isComplete
+                  ? theme === 'dark'
+                    ? 'bg-green-900/20 border-green-500/50'
+                    : 'bg-green-50 border-green-200'
+                  : theme === 'dark'
+                    ? 'bg-yellow-900/20 border-yellow-500/50'
+                    : 'bg-yellow-50 border-yellow-200'
+              }`}>
+                <p className={`text-sm font-medium ${
+                  isComplete
+                    ? theme === 'dark' ? 'text-green-400' : 'text-green-800'
+                    : theme === 'dark' ? 'text-yellow-400' : 'text-yellow-800'
+                }`}>
+                  {isComplete
+                    ? `✓ ${yearsCovered.toFixed(1)} years covered (meets DOT § 383.35 requirement)`
+                    : `⚠ ${yearsCovered.toFixed(1)} of 10 years covered. Add ${(10 - yearsCovered).toFixed(1)} more years to meet DOT § 383.35 requirement.`
+                  }
+                </p>
+              </div>
+            )
+          }
+          return null
+        })()}
+        {errors.employmentYearsCoverage && (
+          <div className={`mt-2 p-4 rounded-lg border-2 ${
+            theme === 'dark'
+              ? 'bg-red-900/20 border-red-500/50'
+              : 'bg-red-50 border-red-200'
+          }`}>
+            <p className={`text-sm font-medium ${
+              theme === 'dark' ? 'text-red-400' : 'text-red-800'
+            }`}>
+              {errors.employmentYearsCoverage}
+            </p>
+          </div>
+        )}
         <p
-          className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'}`}
+          className={`text-sm mt-4 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'}`}
         >
           Start with your most recent position and work backwards. Include
           complete mailing addresses with street number, city, state, zip for
@@ -569,7 +707,7 @@ export default function PersonalInfoForm3({
               <label
                 className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
-                FROM (MO/YR)
+                FROM (MO/YR) <span className="text-red-500">*</span>
               </label>
               <input
                 type='text'
@@ -583,17 +721,22 @@ export default function PersonalInfoForm3({
                 }
                 placeholder='MM/YYYY'
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  theme === 'dark'
+                  errors[`employer${index}FromDate`]
+                    ? 'border-red-500'
+                    : theme === 'dark'
                     ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
+              {errors[`employer${index}FromDate`] && (
+                <p className="mt-1 text-sm text-red-600">{errors[`employer${index}FromDate`]}</p>
+              )}
             </div>
             <div>
               <label
                 className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
-                TO (MO/YR)
+                TO (MO/YR) <span className="text-red-500">*</span>
               </label>
               <input
                 type='text'
@@ -605,13 +748,18 @@ export default function PersonalInfoForm3({
                     index
                   )
                 }
-                placeholder='MM/YYYY'
+                placeholder='MM/YYYY or "Present"'
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  theme === 'dark'
+                  errors[`employer${index}ToDate`]
+                    ? 'border-red-500'
+                    : theme === 'dark'
                     ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
+              {errors[`employer${index}ToDate`] && (
+                <p className="mt-1 text-sm text-red-600">{errors[`employer${index}ToDate`]}</p>
+              )}
             </div>
           </div>
 
@@ -621,7 +769,8 @@ export default function PersonalInfoForm3({
               <label
                 className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
               >
-                REASON FOR LEAVING
+                REASON FOR LEAVING <span className="text-red-500">*</span>
+                <span className="text-xs ml-2 text-gray-500">(DOT § 383.35(c)(3))</span>
               </label>
               <input
                 type='text'
@@ -634,11 +783,16 @@ export default function PersonalInfoForm3({
                   )
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  theme === 'dark'
-                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
+                  errors[`employer${index}Reason`]
+                    ? 'border-red-500'
+                    : theme === 'dark'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
                     : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                 }`}
               />
+              {errors[`employer${index}Reason`] && (
+                <p className="mt-1 text-sm text-red-600">{errors[`employer${index}Reason`]}</p>
+              )}
             </div>
             <div>
               <label

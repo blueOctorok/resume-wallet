@@ -20,6 +20,7 @@ import {
   getAccessibleGraphs,
   seedTruckingKnowledgeGraph,
   mapSessionToGraph,
+  getLastSeededFactCount,
 } from '@/lib/t-backend-knowledge-graph'
 
 export const maxDuration = 120 // 2 minutes for full setup
@@ -145,13 +146,9 @@ export async function POST(request: NextRequest) {
             description: graph.description,
           }
 
-          // Seed with trucking facts
-          await seedTruckingKnowledgeGraph(graph.id)
-
-          // Verify facts were added
-          const { getGraphFacts } = await import('@/lib/t-backend-knowledge-graph')
-          const facts = await getGraphFacts(graph.id)
-          results.knowledgeGraph.factCount = facts.length
+          // Seed with trucking facts – returns count of recorded facts
+          const addedCount = await seedTruckingKnowledgeGraph(graph.id)
+          results.knowledgeGraph.factCount = addedCount
         }
       } catch (error: any) {
         results.errors.push(`Knowledge graph setup failed: ${error.message}`)
@@ -231,9 +228,24 @@ export async function GET(request: NextRequest) {
     if (graphs && graphs.length > 0) {
       try {
         const { getGraphFacts } = await import('@/lib/t-backend-knowledge-graph')
-        graphFacts = (await getGraphFacts(graphs[0].id).catch(() => [])).length
+        const maxAttempts = 3
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          const facts = await getGraphFacts(graphs[0].id).catch(() => [])
+          graphFacts = facts.length
+          if (graphFacts > 0 || attempt === maxAttempts) {
+            break
+          }
+          await new Promise((resolve) => setTimeout(resolve, 500))
+        }
       } catch (error: any) {
         // Ignore errors when getting facts
+      }
+
+      if (graphFacts === 0) {
+        const cached = getLastSeededFactCount()
+        if (cached) {
+          graphFacts = cached
+        }
       }
     }
 

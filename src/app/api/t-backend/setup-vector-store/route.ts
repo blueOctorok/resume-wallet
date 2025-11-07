@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Try to get or create vector store
-    // If listing fails, try creating a new one
+    // listVectorStores() handles 504/502/503 errors silently, so this should work smoothly
     let vectorStore
     let error: any = null
     
@@ -102,25 +102,30 @@ export async function GET(request: NextRequest) {
       vectorStore = await getOrCreateTruckingVectorStore()
     } catch (getError: any) {
       error = getError
-      console.warn('⚠️ [VECTOR STORE] Failed to get/create store, trying direct create:', getError.message)
       
-      // Check if it's a server error
+      // Check if it's a server error (502, 503, 504)
       const isServerError = getError.message?.includes('502') || 
                             getError.message?.includes('503') || 
                             getError.message?.includes('504') ||
-                            getError.message?.includes('Bad Gateway')
+                            getError.message?.includes('Bad Gateway') ||
+                            getError.message?.includes('Gateway Timeout') ||
+                            getError.message?.includes('Service Unavailable')
       
       if (isServerError) {
         // Don't try to create if server is down - return helpful error
+        // Don't log - server errors are expected when T Backend is slow/down
         return NextResponse.json(
           {
             success: false,
-            error: 'T Backend server is currently unavailable (502 Bad Gateway). Please try again later or contact T Backend support.',
+            error: 'T Backend server is currently unavailable or timing out. Please try again later.',
             serverError: true,
           },
           { status: 502 }
         )
       }
+      
+      // Only log non-server errors
+      console.warn('⚠️ [VECTOR STORE] Failed to get/create store, trying direct create:', getError.message)
       
       // Try creating directly as fallback
       try {
@@ -131,13 +136,15 @@ export async function GET(request: NextRequest) {
         const isCreateServerError = createError.message?.includes('502') || 
                                     createError.message?.includes('503') || 
                                     createError.message?.includes('504') ||
-                                    createError.message?.includes('Bad Gateway')
+                                    createError.message?.includes('Bad Gateway') ||
+                                    createError.message?.includes('Gateway Timeout') ||
+                                    createError.message?.includes('Service Unavailable')
         
         if (isCreateServerError) {
           return NextResponse.json(
             {
               success: false,
-              error: 'T Backend server is currently unavailable (502 Bad Gateway). Please try again later or contact T Backend support.',
+              error: 'T Backend server is currently unavailable or timing out. Please try again later.',
               serverError: true,
             },
             { status: 502 }
@@ -173,19 +180,24 @@ export async function GET(request: NextRequest) {
       files,
     })
   } catch (error: any) {
-    console.error('❌ [VECTOR STORE] Error getting vector store:', error)
-    
-    // Check if it's a server error
+    // Check if it's a server error (502, 503, 504)
     const isServerError = error.message?.includes('502') || 
                           error.message?.includes('503') || 
                           error.message?.includes('504') ||
-                          error.message?.includes('Bad Gateway')
+                          error.message?.includes('Bad Gateway') ||
+                          error.message?.includes('Gateway Timeout') ||
+                          error.message?.includes('Service Unavailable')
+    
+    // Only log non-server errors (server errors are expected when T Backend is slow/down)
+    if (!isServerError) {
+      console.error('❌ [VECTOR STORE] Error getting vector store:', error)
+    }
     
     return NextResponse.json(
       {
         success: false,
         error: isServerError 
-          ? 'T Backend server is currently unavailable (502 Bad Gateway). Please try again later or contact T Backend support.'
+          ? 'T Backend server is currently unavailable or timing out. Please try again later.'
           : error.message || 'Failed to get vector store',
         serverError: isServerError,
       },
