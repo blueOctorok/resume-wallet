@@ -73,6 +73,22 @@ export default function PersonalInfoForm3({
     applicantSignature: '',
     signatureDate: '',
     applicantNamePrinted: '',
+    safetyPerformanceHistoryAcknowledgement: false,
+    safetyPerformanceInquiryConsent: false,
+    roadTestAcknowledgement: false,
+    hasPreviousRoadTest: '',
+    previousRoadTestDetails: '',
+    hasValidCDL: '',
+    roadTestCertificateFiles: [],
+    medicalCertificateFiles: [],
+    dqFileAcknowledgement: false,
+    dqHasApplicationComplete: '',
+    dqHasRoadTestDocs: '',
+    dqHasMedicalDocs: '',
+    dqUnderstandsRetention: '',
+    dqInvestigationConsent: false,
+    dqHasInvestigationRecords: '',
+    dqUnderstandsAccessControls: '',
   })
 
   const handleInputChange = (field: string, value: any, index?: number) => {
@@ -219,6 +235,32 @@ export default function PersonalInfoForm3({
         newErrors.applicantSignature = 'Signature is required'
       if (!formData.signatureDate)
         newErrors.signatureDate = 'Signature date is required'
+      if (!formData.safetyPerformanceHistoryAcknowledgement) {
+        newErrors.safetyPerformanceHistoryAcknowledgement =
+          'You must acknowledge the safety performance history investigation (49 CFR 391.21(d)).'
+      }
+      if (!formData.safetyPerformanceInquiryConsent) {
+        newErrors.safetyPerformanceInquiryConsent =
+          'Consent is required so we can contact prior DOT-regulated employers under 49 CFR 391.23.'
+      }
+      if (!formData.roadTestAcknowledgement) {
+        newErrors.roadTestAcknowledgement =
+          'Please acknowledge the road test requirement under 49 CFR 391.31.'
+      }
+      if (!formData.hasPreviousRoadTest) {
+        newErrors.hasPreviousRoadTest =
+          'Let us know if you already completed a compliant road test.'
+      } else if (
+        formData.hasPreviousRoadTest === 'yes' &&
+        !formData.previousRoadTestDetails.trim()
+      ) {
+        newErrors.previousRoadTestDetails =
+          'Provide details about the prior road test so we can document the certificate.'
+      }
+      if (!formData.hasValidCDL) {
+        newErrors.hasValidCDL =
+          'Indicate whether you hold a CDL that covers the vehicle type you will drive.'
+      }
     }
 
     setErrors(newErrors)
@@ -382,6 +424,33 @@ export default function PersonalInfoForm3({
       applicantSignature: prev.applicantSignature || 'John Michael Doe',
       signatureDate: prev.signatureDate || new Date().toISOString().slice(0, 10),
       applicantNamePrinted: prev.applicantNamePrinted || 'John Michael Doe',
+      safetyPerformanceHistoryAcknowledgement:
+        prev.safetyPerformanceHistoryAcknowledgement ?? true,
+      safetyPerformanceInquiryConsent:
+        prev.safetyPerformanceInquiryConsent ?? true,
+      roadTestAcknowledgement: prev.roadTestAcknowledgement ?? true,
+      hasPreviousRoadTest:
+        prev.hasPreviousRoadTest || 'yes',
+      previousRoadTestDetails:
+        prev.previousRoadTestDetails ||
+        'Completed road test with XYZ Logistics on 01/15/2024 (tractor-trailer, 15 miles).',
+      hasValidCDL: prev.hasValidCDL || 'yes',
+      roadTestCertificateFiles: prev.roadTestCertificateFiles || [],
+      medicalCertificateFiles: prev.medicalCertificateFiles || [],
+      dqFileAcknowledgement: prev.dqFileAcknowledgement ?? true,
+      dqHasApplicationComplete:
+        prev.dqHasApplicationComplete || 'yes',
+      dqHasRoadTestDocs:
+        prev.dqHasRoadTestDocs || 'yes',
+      dqHasMedicalDocs:
+        prev.dqHasMedicalDocs || 'yes',
+      dqUnderstandsRetention:
+        prev.dqUnderstandsRetention || 'yes',
+      dqInvestigationConsent: prev.dqInvestigationConsent ?? true,
+      dqHasInvestigationRecords:
+        prev.dqHasInvestigationRecords || 'yes',
+      dqUnderstandsAccessControls:
+        prev.dqUnderstandsAccessControls || 'yes',
     }))
     setErrors({})
   }
@@ -1291,21 +1360,569 @@ export default function PersonalInfoForm3({
           </ul>
 
           <p>
+            I understand these inquiries include motor vehicle records from each
+            licensing State covering the previous three years, DOT safety
+            performance history (accidents, employment verification, and
+            drug/alcohol testing program data), and Drug &amp; Alcohol
+            Clearinghouse queries where required. Results and good-faith contact
+            attempts will be kept on file for compliance with 49 CFR 391.23(b)-(g).
+          </p>
+
+          <p>
             This certifies that I completed this application, and that all
             entries on it and information in it are true and complete to the
             best of my knowledge. Note: A motor carrier may require an applicant
             to provide more information than that required by the Federal Motor
             Carrier Safety Regulations.
           </p>
+
+          <div
+            className={`mt-4 p-4 rounded-lg border ${
+              theme === 'dark'
+                ? 'bg-brand-mint/10 border-brand-mint/30 text-gray-900'
+                : 'bg-brand-sage/10 border-brand-sage/30 text-brand-sage'
+            }`}
+          >
+            <p className='text-sm font-semibold'>Reminder: 49 CFR 391.41 Medical Qualification</p>
+            <p className='text-sm mt-2'>
+              Motor carriers must verify that your medical certificate is current, retain it in your driver qualification file, and keep any variance documentation on hand. Please ensure the medical information you provided is accurate so we can stay compliant.
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Signature Fields */}
+      <div
+        className={`p-4 rounded-lg border-2 ${
+          theme === 'dark'
+            ? 'bg-brand-mint/10 border-brand-mint/30'
+            : 'bg-brand-sage/10 border-brand-sage/30'
+        }`}
+      >
+        <p
+          className={`text-sm font-medium mb-3 ${
+            theme === 'dark' ? 'text-gray-900' : 'text-brand-sage'
+          }`}
+        >
+          49 CFR 391.21(d) Disclosure — Safety Performance History Investigation
+        </p>
+        <p
+          className={`text-sm mb-4 ${
+            theme === 'dark' ? 'text-gray-800' : 'text-brand-sage/80'
+          }`}
+        >
+          The motor carrier will use the employment information you provide to investigate your safety performance history under 49 CFR 391.23. We must also remind you of your due-process rights (review, correct, and rebut) regarding any information obtained.
+        </p>
+        <label className='flex items-start gap-3'>
+          <input
+            type='checkbox'
+            checked={Boolean(formData.safetyPerformanceHistoryAcknowledgement)}
+            onChange={(e) =>
+              handleInputChange('safetyPerformanceHistoryAcknowledgement', e.target.checked)
+            }
+            className={`mt-1 h-5 w-5 rounded border-2 ${
+              theme === 'dark'
+                ? 'border-brand-mint bg-transparent accent-brand-mint'
+                : 'border-brand-sage bg-white accent-brand-sage'
+            }`}
+          />
+          <span
+            className={`text-sm ${
+              theme === 'dark' ? 'text-gray-900' : 'text-gray-800'
+            }`}
+          >
+            I acknowledge that my safety performance history will be investigated and that I have been notified of my rights under 49 CFR 391.23(i).
+          </span>
+        </label>
+        {errors.safetyPerformanceHistoryAcknowledgement && (
+          <p className='mt-2 text-sm text-red-600'>
+            {errors.safetyPerformanceHistoryAcknowledgement}
+          </p>
+        )}
+      </div>
+
+      <div
+        className={`p-4 rounded-lg border-2 ${
+          theme === 'dark'
+            ? 'bg-brand-mint/10 border-brand-mint/30'
+            : 'bg-brand-sage/10 border-brand-sage/30'
+        }`}
+      >
+        <p
+          className={`text-sm font-medium mb-3 ${
+            theme === 'dark' ? 'text-gray-900' : 'text-brand-sage'
+          }`}
+        >
+          49 CFR 391.23 Consent — Previous Employer &amp; Clearinghouse Investigations
+        </p>
+        <p
+          className={`text-sm mb-4 ${
+            theme === 'dark' ? 'text-gray-800' : 'text-brand-sage/80'
+          }`}
+        >
+          By granting consent, you authorize us to request motor vehicle records, contact prior DOT-regulated employers about accidents and drug/alcohol program results, and query the FMCSA Drug &amp; Alcohol Clearinghouse as required. We will only use the information for hiring decisions and protect it as mandated by 49 CFR 391.23(k).
+        </p>
+        <label className='flex items-start gap-3'>
+          <input
+            type='checkbox'
+            checked={Boolean(formData.safetyPerformanceInquiryConsent)}
+            onChange={(e) =>
+              handleInputChange('safetyPerformanceInquiryConsent', e.target.checked)
+            }
+            className={`mt-1 h-5 w-5 rounded border-2 ${
+              theme === 'dark'
+                ? 'border-brand-mint bg-transparent accent-brand-mint'
+                : 'border-brand-sage bg-white accent-brand-sage'
+            }`}
+          />
+          <span
+            className={`text-sm ${
+              theme === 'dark' ? 'text-gray-900' : 'text-gray-800'
+            }`}
+          >
+            I authorize the prospective motor carrier to investigate my driving record, prior DOT employment safety performance, drug/alcohol program history, and the FMCSA Clearinghouse as required by 49 CFR 391.23.
+          </span>
+        </label>
+        {errors.safetyPerformanceInquiryConsent && (
+          <p className='mt-2 text-sm text-red-600'>
+            {errors.safetyPerformanceInquiryConsent}
+          </p>
+        )}
+      </div>
+
+      <div
+        className={`p-4 rounded-lg border-2 ${
+          theme === 'dark'
+            ? 'bg-brand-mint/10 border-brand-mint/30'
+            : 'bg-brand-sage/10 border-brand-sage/30'
+        }`}
+      >
+        <p
+          className={`text-sm font-medium mb-3 ${
+            theme === 'dark' ? 'text-gray-900' : 'text-brand-sage'
+          }`}
+        >
+          49 CFR 391.31 Road Test Requirement
+        </p>
+        <p
+          className={`text-sm ${
+            theme === 'dark' ? 'text-gray-800' : 'text-brand-sage/80'
+          }`}
+        >
+          You must successfully complete a carrier-administered road test covering pre-trip inspections, coupling, vehicle control, traffic operations, turning, braking, and backing. We'll document the results and issue the required certificate before you operate equipment for us.
+        </p>
+
+        <label className='flex items-start gap-3 mt-4 mb-4'>
+          <input
+            type='checkbox'
+            checked={Boolean(formData.roadTestAcknowledgement)}
+            onChange={(e) =>
+              handleInputChange('roadTestAcknowledgement', e.target.checked)
+            }
+            className={`mt-1 h-5 w-5 rounded border-2 ${
+              theme === 'dark'
+                ? 'border-brand-mint bg-transparent accent-brand-mint'
+                : 'border-brand-sage bg-white accent-brand-sage'
+            }`}
+          />
+          <span
+            className={`text-sm ${
+              theme === 'dark' ? 'text-gray-900' : 'text-gray-800'
+            }`}
+          >
+            I acknowledge that I must pass the road test described in 49 CFR 391.31 before driving for this carrier.
+          </span>
+        </label>
+        {errors.roadTestAcknowledgement && (
+          <p className='-mt-2 mb-2 text-sm text-red-600'>
+            {errors.roadTestAcknowledgement}
+          </p>
+        )}
+
+        <div className='space-y-3'>
+          <p
+            className={`text-sm font-medium ${
+              theme === 'dark' ? 'text-gray-900' : 'text-brand-sage'
+            }`}
+          >
+            Have you already completed a road test (with certificate) that meets FMCSA requirements in the past 12 months?
+          </p>
+          <div className='flex flex-wrap gap-6'>
+            {['yes', 'no'].map((value) => (
+              <label key={value} className='flex items-center gap-2'>
+                <input
+                  type='radio'
+                  name='hasPreviousRoadTest'
+                  value={value}
+                  checked={formData.hasPreviousRoadTest === value}
+                  onChange={(e) =>
+                    handleInputChange('hasPreviousRoadTest', e.target.value)
+                  }
+                  className={`mr-1 ${
+                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  } accent-brand-mint`}
+                />
+                <span
+                  className={`${
+                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                  }`}
+                >
+                  {value.toUpperCase()}
+                </span>
+              </label>
+            ))}
+          </div>
+          {errors.hasPreviousRoadTest && (
+            <p className='text-sm text-red-600'>{errors.hasPreviousRoadTest}</p>
+          )}
+        </div>
+
+        {formData.hasPreviousRoadTest === 'yes' && (
+          <div className='mt-4'>
+            <label
+              className={`block text-sm font-medium mb-2 ${
+                theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+              }`}
+            >
+              Provide details about the prior road test (date, examiner, equipment type, miles, certificate location)
+            </label>
+            <textarea
+              value={formData.previousRoadTestDetails}
+              onChange={(e) =>
+                handleInputChange('previousRoadTestDetails', e.target.value)
+              }
+              className={`w-full min-h-[100px] px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                errors.previousRoadTestDetails
+                  ? 'border-red-500'
+                  : theme === 'dark'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+              }`}
+            />
+            {errors.previousRoadTestDetails && (
+              <p className='mt-1 text-sm text-red-600'>
+                {errors.previousRoadTestDetails}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div
+        className={`mt-6 p-4 rounded-lg border-2 ${
+          theme === 'dark'
+            ? 'bg-brand-mint/10 border-brand-mint/30'
+            : 'bg-brand-sage/10 border-brand-sage/30'
+        }`}
+      >
+        <p
+          className={`text-sm font-medium mb-3 ${
+            theme === 'dark' ? 'text-gray-900' : 'text-brand-sage'
+          }`}
+        >
+          Road Test Equivalent (49 CFR 391.33)
+        </p>
+        <p
+          className={`text-sm mb-4 ${
+            theme === 'dark' ? 'text-gray-800' : 'text-brand-sage/80'
+          }`}
+        >
+          If you already hold a valid CDL for the assigned vehicle class or have a road test certificate issued in the last 3 years, we can accept that documentation instead of retesting. Upload clear copies so we can retain them in your driver qualification file per § 391.33(b).
+        </p>
+
+        <div className='space-y-3'>
+          <p
+            className={`text-sm font-medium ${
+              theme === 'dark' ? 'text-gray-900' : 'text-brand-sage'
+            }`}
+          >
+            Do you currently hold a CDL that covers the equipment we'll assign?
+          </p>
+          <div className='flex flex-wrap gap-6'>
+            {['yes', 'no'].map((value) => (
+              <label key={value} className='flex items-center gap-2'>
+                <input
+                  type='radio'
+                  name='hasValidCDL'
+                  value={value}
+                  checked={formData.hasValidCDL === value}
+                  onChange={(e) => handleInputChange('hasValidCDL', e.target.value)}
+                  className={`mr-1 ${
+                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  } accent-brand-mint`}
+                />
+                <span
+                  className={`${
+                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                  }`}
+                >
+                  {value.toUpperCase()}
+                </span>
+              </label>
+            ))}
+          </div>
+          {errors.hasValidCDL && (
+            <p className='text-sm text-red-600'>{errors.hasValidCDL}</p>
+          )}
+        </div>
+
+        <div className='mt-4 space-y-2'>
+          <label
+            className={`block text-sm font-medium ${
+              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+            }`}
+          >
+            Upload CDL copy or most recent road test certificate (PDF or image)
+          </label>
+          <input
+            type='file'
+            accept='.pdf,.jpg,.jpeg,.png'
+            multiple
+            onChange={(e) => {
+              const files = Array.from(e.target.files || [])
+              handleInputChange('roadTestCertificateFiles', files)
+            }}
+            className={`block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold ${
+              theme === 'dark'
+                ? 'file:bg-brand-mint file:text-gray-900'
+                : 'file:bg-brand-sage file:text-white'
+            }`}
+          />
+          {formData.roadTestCertificateFiles?.length ? (
+            <ul className='text-sm text-gray-600 dark:text-gray-300 list-disc list-inside'>
+              {formData.roadTestCertificateFiles.map((file: File, index: number) => (
+                <li key={`${file.name}-${index}`}>{file.name}</li>
+              ))}
+            </ul>
+          ) : null}
+          <p
+            className={`text-xs ${
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+            }`}
+          >
+            We'll store these documents securely to satisfy § 391.33(b). If you prefer to provide them later, let us know during onboarding.
+          </p>
+        </div>
+      </div>
+
+      <div
+        className={`mt-6 p-4 rounded-lg border-2 ${
+          theme === 'dark'
+            ? 'bg-brand-mint/10 border-brand-mint/30'
+            : 'bg-brand-sage/10 border-brand-sage/30'
+        }`}
+      >
+        <p
+          className={`text-sm font-medium mb-2 ${
+            theme === 'dark' ? 'text-gray-900' : 'text-brand-sage'
+          }`}
+        >
+          Driver Qualification File Checklist (49 CFR 391.51)
+        </p>
+        <p
+          className={`text-sm mb-4 ${
+            theme === 'dark' ? 'text-gray-800' : 'text-brand-sage/80'
+          }`}
+        >
+          We must maintain a complete driver qualification file. Confirm each item below so we can log compliance and follow up if anything is missing.
+        </p>
+
+        <label className='flex items-start gap-3 mb-4'>
+          <input
+            type='checkbox'
+            checked={Boolean(formData.dqFileAcknowledgement)}
+            onChange={(e) =>
+              handleInputChange('dqFileAcknowledgement', e.target.checked)
+            }
+            className={`mt-1 h-5 w-5 rounded border-2 ${
+              theme === 'dark'
+                ? 'border-brand-mint bg-transparent accent-brand-mint'
+                : 'border-brand-sage bg-white accent-brand-sage'
+            }`}
+          />
+          <span
+            className={`text-sm ${
+              theme === 'dark' ? 'text-gray-900' : 'text-gray-800'
+            }`}
+          >
+            I acknowledge the carrier will maintain my driver qualification file and that I will provide requested documents promptly.
+          </span>
+        </label>
+        {errors.dqFileAcknowledgement && (
+          <p className='-mt-3 mb-3 text-sm text-red-600'>
+            {errors.dqFileAcknowledgement}
+          </p>
+        )}
+
+        <div className='space-y-3'>
+          <div>
+            <p
+              className={`text-sm font-medium ${
+                theme === 'dark' ? 'text-gray-900' : 'text-brand-sage'
+              }`}
+            >
+              Employment application and background (391.51(b)(1)-(5))
+            </p>
+            <div className='flex gap-6 mt-1'>
+              {['yes', 'no'].map((value) => (
+                <label key={value} className='flex items-center gap-2'>
+                  <input
+                    type='radio'
+                    name='dqHasApplicationComplete'
+                    value={value}
+                    checked={formData.dqHasApplicationComplete === value}
+                    onChange={(e) =>
+                      handleInputChange('dqHasApplicationComplete', e.target.value)
+                    }
+                    className={`mr-1 ${
+                      theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                    } accent-brand-mint`}
+                  />
+                  <span
+                    className={`${
+                      theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                    }`}
+                  >
+                    {value.toUpperCase()}
+                  </span>
+                </label>
+              ))}
+            </div>
+            {errors.dqHasApplicationComplete && (
+              <p className='text-sm text-red-600'>
+                {errors.dqHasApplicationComplete}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <p
+              className={`text-sm font-medium ${
+                theme === 'dark' ? 'text-gray-900' : 'text-brand-sage'
+              }`}
+            >
+              Road test, CDL, or equivalent documents (391.51(b)(3))
+            </p>
+            <div className='flex gap-6 mt-1'>
+              {['yes', 'no'].map((value) => (
+                <label key={value} className='flex items-center gap-2'>
+                  <input
+                    type='radio'
+                    name='dqHasRoadTestDocs'
+                    value={value}
+                    checked={formData.dqHasRoadTestDocs === value}
+                    onChange={(e) =>
+                      handleInputChange('dqHasRoadTestDocs', e.target.value)
+                    }
+                    className={`mr-1 ${
+                      theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                    } accent-brand-mint`}
+                  />
+                  <span
+                    className={`${
+                      theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                    }`}
+                  >
+                    {value.toUpperCase()}
+                  </span>
+                </label>
+              ))}
+            </div>
+            {errors.dqHasRoadTestDocs && (
+              <p className='text-sm text-red-600'>
+                {errors.dqHasRoadTestDocs}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <p
+              className={`text-sm font-medium ${
+                theme === 'dark' ? 'text-gray-900' : 'text-brand-sage'
+              }`}
+            >
+              Medical certificates, variances, and examiner verification (391.51(b)(6)-(8))
+            </p>
+            <div className='flex gap-6 mt-1'>
+              {['yes', 'no'].map((value) => (
+                <label key={value} className='flex items-center gap-2'>
+                  <input
+                    type='radio'
+                    name='dqHasMedicalDocs'
+                    value={value}
+                    checked={formData.dqHasMedicalDocs === value}
+                    onChange={(e) =>
+                      handleInputChange('dqHasMedicalDocs', e.target.value)
+                    }
+                    className={`mr-1 ${
+                      theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                    } accent-brand-mint`}
+                  />
+                  <span
+                    className={`${
+                      theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                    }`}
+                  >
+                    {value.toUpperCase()}
+                  </span>
+                </label>
+              ))}
+            </div>
+            {errors.dqHasMedicalDocs && (
+              <p className='text-sm text-red-600'>
+                {errors.dqHasMedicalDocs}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <p
+              className={`text-sm font-medium ${
+                theme === 'dark' ? 'text-gray-900' : 'text-brand-sage'
+              }`}
+            >
+              I understand records stay on file during employment plus 3 years (391.51(c)-(d))
+            </p>
+            <div className='flex gap-6 mt-1'>
+              {['yes', 'no'].map((value) => (
+                <label key={value} className='flex items-center gap-2'>
+                  <input
+                    type='radio'
+                    name='dqUnderstandsRetention'
+                    value={value}
+                    checked={formData.dqUnderstandsRetention === value}
+                    onChange={(e) =>
+                      handleInputChange('dqUnderstandsRetention', e.target.value)
+                    }
+                    className={`mr-1 ${
+                      theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                    } accent-brand-mint`}
+                  />
+                  <span
+                    className={`${
+                      theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                    }`}
+                  >
+                    {value.toUpperCase()}
+                  </span>
+                </label>
+              ))}
+            </div>
+            {errors.dqUnderstandsRetention && (
+              <p className='text-sm text-red-600'>
+                {errors.dqUnderstandsRetention}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className='space-y-6'>
         <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
           <div>
             <label
-              className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+              className={`block text-sm font-medium mb-2 ${
+                theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+              }`}
             >
               Applicant Signature
             </label>
@@ -1325,16 +1942,16 @@ export default function PersonalInfoForm3({
           </div>
           <div>
             <label
-              className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+              className={`block text-sm font-medium mb-2 ${
+                theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+              }`}
             >
               Date
             </label>
             <input
               type='date'
               value={formData.signatureDate}
-              onChange={(e) =>
-                handleInputChange('signatureDate', e.target.value)
-              }
+              onChange={(e) => handleInputChange('signatureDate', e.target.value)}
               className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                 theme === 'dark'
                   ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
@@ -1346,7 +1963,9 @@ export default function PersonalInfoForm3({
 
         <div>
           <label
-            className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+            className={`block text-sm font-medium mb-2 ${
+              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+            }`}
           >
             Applicant Name (printed)
           </label>

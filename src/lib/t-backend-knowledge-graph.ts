@@ -285,6 +285,90 @@ export async function seedTruckingKnowledgeGraph(graphId: string): Promise<numbe
     'DOT § 383.35(d): Applicant must certify that all employment history information furnished is true and complete',
     'DOT § 383.35(f): Before submitting application, employer must inform applicant that employment history information may be used and previous employers may be contacted for work history investigation',
     'DOT § 383.35(e): Employers may require applicants to provide additional employment information beyond the minimum required by regulation',
+
+    // DOT § 383.37 - Employer prohibitions
+    '49 CFR 383.37(a): Employers must not allow a driver to operate a CMV without a current CLP/CDL of the proper class and endorsements, or if the driver violates any license restriction',
+    '49 CFR 383.37(b): Employers must not allow a driver to operate a CMV if the driver has a disqualified or revoked CLP/CDL, or has lost the right to operate a CMV',
+    '49 CFR 383.37(c): Employers must not allow a driver who has more than one CLP or CDL to operate a CMV',
+    '49 CFR 383.37(d): Employers must not permit operation of a CMV when the driver, vehicle, or carrier is under an out-of-service order',
+    '49 CFR 383.37(e): Employers must not require or allow a driver to violate railroad-highway grade crossing laws or regulations',
+
+    // DOT § 383.91 and Subpart G - Vehicle groups and knowledge requirements
+    '49 CFR 383.91(a)(1): CDL Group A (Combination Vehicle) covers combinations with GCWR ≥ 26,001 lbs and towed units > 10,000 lbs GVWR',
+    '49 CFR 383.91(a)(2): CDL Group B (Heavy Straight Vehicle) covers single vehicles with GVWR ≥ 26,001 lbs or such vehicles towing ≤ 10,000 lbs',
+    '49 CFR 383.91(a)(3): CDL Group C (Small Vehicle) covers vehicles not in Group A or B that carry 16+ passengers or transport hazardous materials',
+    '49 CFR 383.91(b): A representative vehicle for the driving test must meet the definition of the vehicle group being tested',
+    '49 CFR 383.91(c): Drivers moving to a new vehicle group must pass the knowledge and skills tests for that group, except Group A holders may operate Groups B and C, and Group B holders may operate Group C with proper endorsements',
+    '49 CFR Part 383 Subpart G: CDL applicants must demonstrate knowledge and skills specific to the vehicle group and required endorsements',
+
+    // DOT § 383.93 - Endorsements
+    '49 CFR 383.93(a)(1): Drivers must pass specialized knowledge and skills tests, in addition to Subpart G tests, to obtain each CDL endorsement',
+    '49 CFR 383.93(a)(2): CLPs may only carry passenger (P), school bus (S), or tank vehicle (N) endorsements',
+    '49 CFR 383.93(a)(3): States must use the endorsement codes defined in 49 CFR 383.153 on CLPs and CDLs',
+    '49 CFR 383.93(b): CDL endorsements are required for double/triple trailers, passenger vehicles, tank vehicles, hazardous materials, and school buses',
+    '49 CFR 383.93(c): Required tests by endorsement—Doubles/Triples (knowledge), Passenger (knowledge & skills), Tank (knowledge), Hazmat (knowledge), School bus (knowledge & skills)',
+
+    // DOT § 383.95 - Restrictions
+    '49 CFR 383.95(a): Failing the air brake knowledge test or testing in a vehicle without air brakes results in an air-brake restriction on the CLP/CDL',
+    '49 CFR 383.95(b): Testing in an air-over-hydraulic vehicle triggers a restriction from operating full air-brake CMVs',
+    '49 CFR 383.95(c): Testing in an automatic transmission vehicle requires a manual transmission restriction on the CDL',
+    '49 CFR 383.95(d): Testing Group A in a pintle-hook/non-fifth-wheel combination restricts the driver from operating fifth-wheel tractor-trailer combinations',
+    '49 CFR 383.95(e): Passenger endorsement skills tests in Group B vehicles restrict the driver from Group A passenger vehicles',
+    '49 CFR 383.95(f): Passenger endorsement skills tests in Group C vehicles restrict the driver from Group A or B passenger vehicles',
+    '49 CFR 383.95(g): Medical variance notifications add restriction code “V” to the CDL indicating a medical variance exists in CDLIS; drivers with code V cannot operate in Canada',
+
+    // 49 CFR 391.11 - General qualifications of drivers
+    '49 CFR 391.11(a): A driver and motor carrier must ensure the driver is qualified before operating a commercial motor vehicle',
+    '49 CFR 391.11(b)(1): Drivers must be at least 21 years old to operate a commercial motor vehicle in interstate commerce',
+    '49 CFR 391.11(b)(2): Drivers must read and speak English sufficiently to converse, understand traffic signs, respond to inquiries, and complete reports',
+    '49 CFR 391.11(b)(3): Drivers must have the experience or training necessary to safely operate the type of CMV they drive',
+    '49 CFR 391.11(b)(4): Drivers must meet the physical qualification requirements in Subpart E of Part 391',
+    '49 CFR 391.11(b)(5): Drivers must hold a single valid CMV operator’s license issued by one State or jurisdiction',
+    '49 CFR 391.11(b)(6): Drivers must not be disqualified under 49 CFR 391.15',
+    '49 CFR 391.11(b)(7): Drivers must complete and document a road test (or equivalent) under 49 CFR 391.31/391.33',
+
+    // 49 CFR 391.13 - Responsibilities of drivers
+    '49 CFR 391.13(a): Drivers must be able to determine whether cargo is properly located, distributed, and secured before operating',
+    '49 CFR 391.13(b): Drivers must know the methods and procedures for securing cargo on the commercial motor vehicle they operate',
+
+    // 49 CFR 391.15 - Disqualification of drivers
+    '49 CFR 391.15(a): Disqualified drivers may not operate CMVs and motor carriers cannot permit disqualified drivers to drive',
+    '49 CFR 391.15(b)(1): Drivers are disqualified while their CDL is revoked, suspended, withdrawn, or denied until privileges are restored',
+    '49 CFR 391.15(b)(2): Drivers must notify their motor carrier by the next business day after learning their driving privileges were revoked or suspended',
+    '49 CFR 391.15(c)(2): Disqualifying offenses include DUI, controlled substance violations, leaving the scene, and felonies involving a CMV',
+    '49 CFR 391.15(d)(2): Violating an out-of-service order triggers 90-day to 5-year disqualification depending on prior offenses and cargo type',
+    '49 CFR 391.15(e)-(f): Multiple convictions for texting or hand-held phone use while driving a CMV cause 60- to 120-day disqualifications',
+    '49 CFR 391.21(a): Drivers must complete and submit a motor carrier employment application before operating a CMV',
+    '49 CFR 391.21(b)(1): Every application must show the employing motor carrier’s name and address',
+    '49 CFR 391.21(b)(2)-(5): Applications must capture the applicant’s contact info, 3-year address history, submission date, and license details with issuing authority and expiration',
+    '49 CFR 391.21(b)(6)-(8): Applications must list driving experience by equipment type, accidents for the past 3 years, and traffic violations for the past 3 years',
+    '49 CFR 391.21(b)(9)-(11): Applications must document license denials or suspensions plus 3- and 10-year employment histories with reasons for leaving and FMCSR/safety-sensitive designations',
+    '49 CFR 391.21(b)(12): Application must include the certification statement signed and dated by the applicant',
+    '49 CFR 391.21(d): Motor carriers must inform applicants their safety performance history will be investigated and outline their due-process rights under § 391.23(i)',
+    '49 CFR 391.23(a): Motor carriers must pull 3-year motor vehicle records and investigate DOT safety performance history within 30 days of a driver’s start date',
+    '49 CFR 391.23(b)-(c): Motor vehicle records and safety performance responses (or good-faith attempt documentation) must be filed within 30 days',
+    '49 CFR 391.23(d)-(e): Previous employers must provide accident details and drug/alcohol program violations from the prior 3 years, including Clearinghouse compliance',
+    '49 CFR 391.23(f): Prospective employers need the driver’s written consent to obtain drug and alcohol history and cannot hire without it',
+    '49 CFR 391.23(g): Previous employers must respond within 30 days, ensure accuracy, and retain investigation records for one year',
+    '49 CFR 391.23(i)-(j): Drivers have rights to review, correct, and rebut safety performance history data within defined timelines',
+    '49 CFR 391.23(m): Carriers must verify medical certification status via CDLIS and retain the medical examiner’s certificate before permitting CMV operation',
+    '49 CFR 391.31(a): Drivers must pass a road test and receive a certificate before operating a CMV for a carrier',
+    '49 CFR 391.31(c): Road tests must cover pre-trip inspection, coupling, vehicle control, traffic operation, turns, braking, and backing/parking',
+    '49 CFR 391.31(d)-(g): Carriers must document road test results, issue a certificate, and retain the signed test form and certificate in the driver’s qualification file',
+    '49 CFR 391.33(a): A carrier may accept a valid CDL or a prior road-test certificate (within 3 years) in place of administering a new road test',
+    '49 CFR 391.33(b)-(c): Carriers must retain copies of accepted licenses/certificates and may still require a road test at their discretion',
+    '49 CFR 391.41(a): Drivers must hold a current medical examiner’s certificate (or qualifying CDL record) and carry required variance documents while on duty',
+    '49 CFR 391.41(a)(2): CDL/CLP holders who filed their medical card with the state do not need to carry the paper certificate after the grace period, but variances must always be carried',
+    '49 CFR 391.41(b)(1)-(13): Physical qualification standards cover limbs, diabetes, cardiac, respiratory, neurological, vision, hearing, drug use, and alcoholism',
+    '49 CFR 391.43(a)-(c): DOT medical exams must be performed by National Registry examiners (with limited specialist exceptions) who follow FMCSA protocols',
+    '49 CFR 391.43(e)-(g): Medical examiners must record results on MCSA-5875/5876, provide certificates, and report pending/failed determinations to FMCSA',
+    '49 CFR 391.43(f)-(h): Examiners must sign the Medical Examination Report, furnish certificates, and submit examination results electronically via the National Registry',
+    '49 CFR 391.51(a)-(b): Carriers must keep a driver qualification file with the application, MVRs, road-test proof or equivalents, annual reviews, and medical documents',
+    '49 CFR 391.51(b)(6)-(8): DQ files must include current medical certification evidence, variance documents, and notes verifying examiner registry listing',
+    '49 CFR 391.51(c)-(d): DQ files are retained for the employment term plus 3 years, with certain records removable after 3 years',
+    '49 CFR 391.53(a): Carriers must maintain a secure driver investigation history file with limited access and hiring-only usage',
+    '49 CFR 391.53(b): Investigation history file must contain driver consent and employer responses or documented good-faith attempts',
+    '49 CFR 391.53(c)-(d): Investigation history records are retained for employment plus 3 years and must be produced promptly to FMCSA or authorized agents',
   ]
 
   console.log(`Seeding ${truckingFacts.length} facts into knowledge graph ${graphId}...`)

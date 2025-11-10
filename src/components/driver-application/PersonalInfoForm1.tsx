@@ -3,6 +3,15 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 
+const DEFAULT_CARRIER_INFO = {
+  name: process.env.NEXT_PUBLIC_CARRIER_NAME ?? 'Your Motor Carrier Name',
+  address:
+    process.env.NEXT_PUBLIC_CARRIER_ADDRESS ??
+    '1234 Logistics Way, City, ST 00000',
+  phone: process.env.NEXT_PUBLIC_CARRIER_PHONE ?? '(000) 000-0000',
+  email: process.env.NEXT_PUBLIC_CARRIER_EMAIL ?? 'hr@example.com',
+}
+
 const STEPS = [
   {
     id: 1,
@@ -36,6 +45,12 @@ export default function PersonalInfoForm1({
   const [currentStep, setCurrentStep] = useState(1)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState({
+    employingCarrier: {
+      name: DEFAULT_CARRIER_INFO.name,
+      address: DEFAULT_CARRIER_INFO.address,
+      phone: DEFAULT_CARRIER_INFO.phone,
+      email: DEFAULT_CARRIER_INFO.email,
+    },
     // Applicant Information
     firstName: '',
     middleName: '',
@@ -70,6 +85,32 @@ export default function PersonalInfoForm1({
       },
     ],
     previousLicenses: [],
+    disqualificationHistory: {
+      hasLicenseSuspension: '',
+      licenseSuspensionDetails: '',
+      hasDisqualifyingOffense: '',
+      disqualifyingOffenseDetails: '',
+      hasOutOfServiceViolation: '',
+      outOfServiceViolationDetails: '',
+      hasMobileDeviceViolation: '',
+      mobileDeviceViolationDetails: '',
+    },
+    medicalQualification: {
+      hasValidMedicalCertificate: '',
+      medicalCertificateExpiration: '',
+      hasFiledWithState: '',
+      hasMedicalVariance: '',
+      medicalVarianceDetails: '',
+      hasChronicConditions: '',
+      chronicConditionsDetails: '',
+      visionHearingCompliance: '',
+      medicationDisclosure: '',
+      medicalExamDate: '',
+      medicalExaminerName: '',
+      medicalExaminerPhone: '',
+      medicalExaminerRegistryId: '',
+      medicalExaminerType: '',
+    },
   })
 
   const handleInputChange = (field: string, value: any, index?: number) => {
@@ -128,6 +169,14 @@ export default function PersonalInfoForm1({
     const newErrors: Record<string, string> = {}
 
     if (step === 1) {
+      // Employing Motor Carrier info (49 CFR 391.21(b)(1))
+      if (!formData.employingCarrier?.name?.trim()) {
+        newErrors.employingCarrierName = 'Motor carrier name is required (49 CFR 391.21(b)(1)).'
+      }
+      if (!formData.employingCarrier?.address?.trim()) {
+        newErrors.employingCarrierAddress = 'Motor carrier mailing address is required (49 CFR 391.21(b)(1)).'
+      }
+
       // Personal Information validation
       if (!formData.firstName.trim())
         newErrors.firstName = 'First name is required'
@@ -135,8 +184,25 @@ export default function PersonalInfoForm1({
         newErrors.lastName = 'Last name is required'
       if (!formData.phone.trim()) newErrors.phone = 'Phone number is required'
       if (!formData.email.trim()) newErrors.email = 'Email is required'
-      if (!formData.dateOfBirth)
+      if (!formData.dateOfBirth) {
         newErrors.dateOfBirth = 'Date of birth is required'
+      } else {
+        const dob = new Date(formData.dateOfBirth)
+        if (Number.isNaN(dob.getTime())) {
+          newErrors.dateOfBirth = 'Please enter a valid date of birth'
+        } else {
+          const now = new Date()
+          let age = now.getFullYear() - dob.getFullYear()
+          const monthDiff = now.getMonth() - dob.getMonth()
+          const dayDiff = now.getDate() - dob.getDate()
+          if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+            age -= 1
+          }
+          if (age < 21) {
+            newErrors.dateOfBirthAge = 'Driver must be at least 21 years old (49 CFR 391.11).'
+          }
+        }
+      }
       if (!formData.socialSecurity.trim())
         newErrors.socialSecurity = 'Social Security Number is required'
       if (!formData.dateOfApplication)
@@ -230,6 +296,118 @@ export default function PersonalInfoForm1({
               'Expiration date is required'
         }
       })
+
+      // DOT 49 CFR 391.15 disclosures
+      const history = formData.disqualificationHistory || {}
+
+      if (!history.hasLicenseSuspension) {
+        newErrors.hasLicenseSuspension =
+          'Please confirm if your CDL has ever been suspended or revoked'
+      } else if (history.hasLicenseSuspension === 'yes' && !history.licenseSuspensionDetails.trim()) {
+        newErrors.licenseSuspensionDetails =
+          'Provide details for any license suspension, revocation, withdrawal, or denial'
+      }
+
+      if (!history.hasDisqualifyingOffense) {
+        newErrors.hasDisqualifyingOffense =
+          'Please state whether you have any disqualifying offense convictions'
+      } else if (history.hasDisqualifyingOffense === 'yes' && !history.disqualifyingOffenseDetails.trim()) {
+        newErrors.disqualifyingOffenseDetails =
+          'Describe the disqualifying offense(s) and resolution'
+      }
+
+      if (!history.hasOutOfServiceViolation) {
+        newErrors.hasOutOfServiceViolation =
+          'Please confirm if you have violated an out-of-service order'
+      } else if (
+        history.hasOutOfServiceViolation === 'yes' &&
+        !history.outOfServiceViolationDetails.trim()
+      ) {
+        newErrors.outOfServiceViolationDetails =
+          'Describe any out-of-service order violations'
+      }
+
+      if (!history.hasMobileDeviceViolation) {
+        newErrors.hasMobileDeviceViolation =
+          'Please confirm if you have texting or hand-held mobile violations in a CMV'
+      } else if (
+        history.hasMobileDeviceViolation === 'yes' &&
+        !history.mobileDeviceViolationDetails.trim()
+      ) {
+        newErrors.mobileDeviceViolationDetails =
+          'Describe the mobile device violation(s)'
+      }
+
+      const medical = formData.medicalQualification || {}
+
+      if (!medical.hasValidMedicalCertificate) {
+        newErrors.hasValidMedicalCertificate =
+          "Confirm whether you hold a current DOT medical examiner's certificate"
+      } else if (medical.hasValidMedicalCertificate === 'yes') {
+        if (!medical.medicalCertificateExpiration) {
+          newErrors.medicalCertificateExpiration =
+            'Provide the medical certificate expiration date'
+        }
+        if (!medical.hasFiledWithState) {
+          newErrors.hasFiledWithState =
+            'Tell us if your medical card has been filed with your licensing state'
+        }
+        if (!medical.medicalExamDate) {
+          newErrors.medicalExamDate =
+            'Provide the date of your most recent DOT medical examination'
+        }
+        if (!medical.medicalExaminerName?.trim()) {
+          newErrors.medicalExaminerName =
+            "Enter the medical examiner's name so we can verify registry status"
+        }
+        if (!medical.medicalExaminerType) {
+          newErrors.medicalExaminerType =
+            'Select the type of medical examiner who performed the exam'
+        }
+        if (
+          medical.medicalExaminerType === 'registry' &&
+          !medical.medicalExaminerRegistryId?.trim()
+        ) {
+          newErrors.medicalExaminerRegistryId =
+            "Provide the examiner's National Registry ID for verification"
+        }
+        if (medical.medicalExaminerPhone && !/^[+\d().\-\s]{7,}$/.test(medical.medicalExaminerPhone)) {
+          newErrors.medicalExaminerPhone =
+            'Enter a valid phone number for the medical examiner'
+        }
+      }
+
+      if (!medical.hasMedicalVariance) {
+        newErrors.hasMedicalVariance =
+          'Let us know if you have any FMCSA medical variances or exemptions'
+      } else if (
+        medical.hasMedicalVariance === 'yes' &&
+        !medical.medicalVarianceDetails.trim()
+      ) {
+        newErrors.medicalVarianceDetails =
+          'Describe the variance or exemption so we can verify documentation'
+      }
+
+      if (!medical.hasChronicConditions) {
+        newErrors.hasChronicConditions =
+          'Please indicate if you have chronic conditions we should monitor'
+      } else if (
+        medical.hasChronicConditions === 'yes' &&
+        !medical.chronicConditionsDetails.trim()
+      ) {
+        newErrors.chronicConditionsDetails =
+          'Share details about chronic conditions to ensure ongoing qualification'
+      }
+
+      if (!medical.visionHearingCompliance) {
+        newErrors.visionHearingCompliance =
+          "Confirm you meet the DOT vision and hearing standards or have a waiver"
+      }
+
+      if (!medical.medicationDisclosure?.trim()) {
+        newErrors.medicationDisclosure =
+          'List prescribed medications or state that none impact safe driving'
+      }
     }
 
     setErrors(newErrors)
@@ -325,6 +503,12 @@ export default function PersonalInfoForm1({
   const fillTestData = () => {
     // Smart fill: only fill EMPTY fields, preserve AI-extracted data
     setFormData((prev) => ({
+      employingCarrier: {
+        name: prev.employingCarrier?.name || DEFAULT_CARRIER_INFO.name,
+        address: prev.employingCarrier?.address || DEFAULT_CARRIER_INFO.address,
+        phone: prev.employingCarrier?.phone || DEFAULT_CARRIER_INFO.phone,
+        email: prev.employingCarrier?.email || DEFAULT_CARRIER_INFO.email,
+      },
       // Personal Information - only fill if empty
       firstName: prev.firstName || 'John',
       middleName: prev.middleName || 'Michael',
@@ -391,6 +575,59 @@ export default function PersonalInfoForm1({
               expirationDate: '2020-01-14',
             },
           ],
+
+      // Disqualification History - default to compliant "no" responses
+      disqualificationHistory: {
+        hasLicenseSuspension:
+          prev.disqualificationHistory?.hasLicenseSuspension || 'no',
+        licenseSuspensionDetails:
+          prev.disqualificationHistory?.licenseSuspensionDetails || '',
+        hasDisqualifyingOffense:
+          prev.disqualificationHistory?.hasDisqualifyingOffense || 'no',
+        disqualifyingOffenseDetails:
+          prev.disqualificationHistory?.disqualifyingOffenseDetails || '',
+        hasOutOfServiceViolation:
+          prev.disqualificationHistory?.hasOutOfServiceViolation || 'no',
+        outOfServiceViolationDetails:
+          prev.disqualificationHistory?.outOfServiceViolationDetails || '',
+        hasMobileDeviceViolation:
+          prev.disqualificationHistory?.hasMobileDeviceViolation || 'no',
+        mobileDeviceViolationDetails:
+          prev.disqualificationHistory?.mobileDeviceViolationDetails || '',
+      },
+      medicalQualification: {
+        hasValidMedicalCertificate:
+          prev.medicalQualification?.hasValidMedicalCertificate || 'yes',
+        medicalCertificateExpiration:
+          prev.medicalQualification?.medicalCertificateExpiration ||
+          new Date(new Date().setFullYear(new Date().getFullYear() + 1))
+            .toISOString()
+            .slice(0, 10),
+        hasFiledWithState:
+          prev.medicalQualification?.hasFiledWithState || 'yes',
+        hasMedicalVariance:
+          prev.medicalQualification?.hasMedicalVariance || 'no',
+        medicalVarianceDetails:
+          prev.medicalQualification?.medicalVarianceDetails || '',
+        hasChronicConditions:
+          prev.medicalQualification?.hasChronicConditions || 'no',
+        chronicConditionsDetails:
+          prev.medicalQualification?.chronicConditionsDetails || '',
+        visionHearingCompliance:
+          prev.medicalQualification?.visionHearingCompliance || 'yes',
+        medicationDisclosure:
+          prev.medicalQualification?.medicationDisclosure || 'No medications that impair safe driving.',
+        medicalExamDate:
+          prev.medicalQualification?.medicalExamDate || new Date().toISOString().slice(0, 10),
+        medicalExaminerName:
+          prev.medicalQualification?.medicalExaminerName || 'Dr. Alex Carpenter, MD',
+        medicalExaminerPhone:
+          prev.medicalQualification?.medicalExaminerPhone || '(555) 987-6543',
+        medicalExaminerRegistryId:
+          prev.medicalQualification?.medicalExaminerRegistryId || '1234567890',
+        medicalExaminerType:
+          prev.medicalQualification?.medicalExaminerType || 'registry',
+      },
     }))
     setErrors({})
   }
@@ -437,6 +674,148 @@ export default function PersonalInfoForm1({
             <span>⚡</span>
             <span>Fill Test Data</span>
           </button>
+        </div>
+      </div>
+
+      {/* Employing Motor Carrier (49 CFR 391.21) */}
+      <div
+        className={`p-6 rounded-lg border-2 space-y-4 ${
+          theme === 'dark'
+            ? 'bg-brand-mint/10 border-brand-mint/30'
+            : 'bg-brand-sage/10 border-brand-sage/30'
+        }`}
+      >
+        <div className='space-y-2'>
+          <h3
+            className={`text-lg font-semibold ${
+              theme === 'dark' ? 'text-white' : 'text-brand-sage'
+            }`}
+          >
+            EMPLOYING MOTOR CARRIER
+          </h3>
+          <p
+            className={`text-sm ${
+              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'
+            }`}
+          >
+            Federal rules (49 CFR 391.21) require the application to list the motor carrier's name and mailing address. Update the details below if this application is being used for a different carrier.
+          </p>
+        </div>
+
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+          <div>
+            <label
+              className={`block text-sm font-medium mb-2 ${
+                theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+              }`}
+            >
+              MOTOR CARRIER NAME
+            </label>
+            <input
+              type='text'
+              value={formData.employingCarrier.name}
+              onChange={(e) =>
+                handleInputChange('employingCarrier', {
+                  ...formData.employingCarrier,
+                  name: e.target.value,
+                })
+              }
+              className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                errors.employingCarrierName
+                  ? 'border-red-500'
+                  : theme === 'dark'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+              }`}
+            />
+            {errors.employingCarrierName && (
+              <p className='mt-1 text-sm text-red-600'>
+                {errors.employingCarrierName}
+              </p>
+            )}
+          </div>
+          <div>
+            <label
+              className={`block text-sm font-medium mb-2 ${
+                theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+              }`}
+            >
+              MOTOR CARRIER PHONE
+            </label>
+            <input
+              type='tel'
+              value={formData.employingCarrier.phone}
+              onChange={(e) =>
+                handleInputChange('employingCarrier', {
+                  ...formData.employingCarrier,
+                  phone: e.target.value,
+                })
+              }
+              className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                theme === 'dark'
+                  ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                  : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+              }`}
+            />
+          </div>
+        </div>
+
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+          <div className='md:col-span-2'>
+            <label
+              className={`block text-sm font-medium mb-2 ${
+                theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+              }`}
+            >
+              MOTOR CARRIER MAILING ADDRESS
+            </label>
+            <textarea
+              value={formData.employingCarrier.address}
+              onChange={(e) =>
+                handleInputChange('employingCarrier', {
+                  ...formData.employingCarrier,
+                  address: e.target.value,
+                })
+              }
+              rows={3}
+              className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                errors.employingCarrierAddress
+                  ? 'border-red-500'
+                  : theme === 'dark'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+              }`}
+            />
+            {errors.employingCarrierAddress && (
+              <p className='mt-1 text-sm text-red-600'>
+                {errors.employingCarrierAddress}
+              </p>
+            )}
+          </div>
+          <div>
+            <label
+              className={`block text-sm font-medium mb-2 ${
+                theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+              }`}
+            >
+              MOTOR CARRIER EMAIL
+            </label>
+            <input
+              type='email'
+              value={formData.employingCarrier.email}
+              onChange={(e) =>
+                handleInputChange('employingCarrier', {
+                  ...formData.employingCarrier,
+                  email: e.target.value,
+                })
+              }
+              className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                theme === 'dark'
+                  ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                  : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+              }`}
+            />
+          </div>
         </div>
       </div>
 
@@ -557,6 +936,12 @@ export default function PersonalInfoForm1({
                 : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
             }`}
           />
+          {errors.dateOfBirth && (
+            <p className='mt-1 text-sm text-red-600'>{errors.dateOfBirth}</p>
+          )}
+          {errors.dateOfBirthAge && (
+            <p className='mt-1 text-sm text-red-600'>{errors.dateOfBirthAge}</p>
+          )}
         </div>
         <div>
           <label
@@ -1354,6 +1739,846 @@ export default function PersonalInfoForm1({
           + Add Previous License
         </button>
       </div>
+
+      <div className='space-y-6 mt-8'>
+        <h3
+          className={`text-xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
+        >
+          DISQUALIFICATION HISTORY (49 CFR 391.15)
+        </h3>
+        <p
+          className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'}`}
+        >
+          These questions help us confirm you meet federal disqualification rules. Answer truthfully; if you select "Yes," provide the required details so compliance can review your record.
+        </p>
+
+        {/* License suspension or revocation */}
+        <div className='space-y-3'>
+          <label
+            className={`block text-sm font-medium ${
+              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+            }`}
+          >
+            Have you ever had your CDL or driving privileges revoked, suspended, withdrawn, or denied?
+          </label>
+          <div className='flex space-x-6'>
+            {['yes', 'no'].map((value) => (
+              <label key={value} className='flex items-center gap-2'>
+                <input
+                  type='radio'
+                  name='hasLicenseSuspension'
+                  value={value}
+                  checked={formData.disqualificationHistory.hasLicenseSuspension === value}
+                  onChange={(e) =>
+                    handleInputChange('disqualificationHistory', {
+                      hasLicenseSuspension: e.target.value,
+                      licenseSuspensionDetails:
+                        e.target.value === 'no'
+                          ? ''
+                          : formData.disqualificationHistory.licenseSuspensionDetails,
+                    })
+                  }
+                  className={`mr-1 ${
+                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  } accent-brand-mint`}
+                />
+                <span className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                  {value.toUpperCase()}
+                </span>
+              </label>
+            ))}
+          </div>
+          {errors.hasLicenseSuspension && (
+            <p className='text-sm text-red-600'>{errors.hasLicenseSuspension}</p>
+          )}
+          {formData.disqualificationHistory.hasLicenseSuspension === 'yes' && (
+            <div>
+              <label
+                className={`block text-sm font-medium mb-2 ${
+                  theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                }`}
+              >
+                Describe the suspension, revocation, withdrawal, or denial (include dates and issuing state)
+              </label>
+              <textarea
+                value={formData.disqualificationHistory.licenseSuspensionDetails}
+                onChange={(e) =>
+                  handleInputChange('disqualificationHistory', {
+                    licenseSuspensionDetails: e.target.value,
+                  })
+                }
+                className={`w-full min-h-[100px] px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                  theme === 'dark'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                }`}
+              />
+              {errors.licenseSuspensionDetails && (
+                <p className='mt-1 text-sm text-red-600'>{errors.licenseSuspensionDetails}</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Disqualifying offenses */}
+        <div className='space-y-3'>
+          <label
+            className={`block text-sm font-medium ${
+              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+            }`}
+          >
+            Have you ever been convicted of a disqualifying offense (DUI in a CMV, controlled substances, leaving an accident, or a felony involving a CMV)?
+          </label>
+          <div className='flex space-x-6'>
+            {['yes', 'no'].map((value) => (
+              <label key={value} className='flex items-center gap-2'>
+                <input
+                  type='radio'
+                  name='hasDisqualifyingOffense'
+                  value={value}
+                  checked={formData.disqualificationHistory.hasDisqualifyingOffense === value}
+                  onChange={(e) =>
+                    handleInputChange('disqualificationHistory', {
+                      hasDisqualifyingOffense: e.target.value,
+                      disqualifyingOffenseDetails:
+                        e.target.value === 'no'
+                          ? ''
+                          : formData.disqualificationHistory.disqualifyingOffenseDetails,
+                    })
+                  }
+                  className={`mr-1 ${
+                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  } accent-brand-mint`}
+                />
+                <span className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                  {value.toUpperCase()}
+                </span>
+              </label>
+            ))}
+          </div>
+          {errors.hasDisqualifyingOffense && (
+            <p className='text-sm text-red-600'>{errors.hasDisqualifyingOffense}</p>
+          )}
+          {formData.disqualificationHistory.hasDisqualifyingOffense === 'yes' && (
+            <div>
+              <label
+                className={`block text-sm font-medium mb-2 ${
+                  theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                }`}
+              >
+                Provide offense details, including dates, locations, and outcomes
+              </label>
+              <textarea
+                value={formData.disqualificationHistory.disqualifyingOffenseDetails}
+                onChange={(e) =>
+                  handleInputChange('disqualificationHistory', {
+                    disqualifyingOffenseDetails: e.target.value,
+                  })
+                }
+                className={`w-full min-h-[100px] px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                  theme === 'dark'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                }`}
+              />
+              {errors.disqualifyingOffenseDetails && (
+                <p className='mt-1 text-sm text-red-600'>{errors.disqualifyingOffenseDetails}</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Out-of-service violations */}
+        <div className='space-y-3'>
+          <label
+            className={`block text-sm font-medium ${
+              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+            }`}
+          >
+            Have you ever been cited for violating an out-of-service order while operating a CMV?
+          </label>
+          <div className='flex space-x-6'>
+            {['yes', 'no'].map((value) => (
+              <label key={value} className='flex items-center gap-2'>
+                <input
+                  type='radio'
+                  name='hasOutOfServiceViolation'
+                  value={value}
+                  checked={formData.disqualificationHistory.hasOutOfServiceViolation === value}
+                  onChange={(e) =>
+                    handleInputChange('disqualificationHistory', {
+                      hasOutOfServiceViolation: e.target.value,
+                      outOfServiceViolationDetails:
+                        e.target.value === 'no'
+                          ? ''
+                          : formData.disqualificationHistory.outOfServiceViolationDetails,
+                    })
+                  }
+                  className={`mr-1 ${
+                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  } accent-brand-mint`}
+                />
+                <span className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                  {value.toUpperCase()}
+                </span>
+              </label>
+            ))}
+          </div>
+          {errors.hasOutOfServiceViolation && (
+            <p className='text-sm text-red-600'>{errors.hasOutOfServiceViolation}</p>
+          )}
+          {formData.disqualificationHistory.hasOutOfServiceViolation === 'yes' && (
+            <div>
+              <label
+                className={`block text-sm font-medium mb-2 ${
+                  theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                }`}
+              >
+                Describe the out-of-service violation(s), including dates, locations, and cargo type if applicable
+              </label>
+              <textarea
+                value={formData.disqualificationHistory.outOfServiceViolationDetails}
+                onChange={(e) =>
+                  handleInputChange('disqualificationHistory', {
+                    outOfServiceViolationDetails: e.target.value,
+                  })
+                }
+                className={`w-full min-h-[100px] px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                  theme === 'dark'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                }`}
+              />
+              {errors.outOfServiceViolationDetails && (
+                <p className='mt-1 text-sm text-red-600'>{errors.outOfServiceViolationDetails}</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Mobile device violations */}
+        <div className='space-y-3'>
+          <label
+            className={`block text-sm font-medium ${
+              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+            }`}
+          >
+            Have you been convicted of texting or using a hand-held mobile phone while driving a CMV in the past 3 years?
+          </label>
+          <div className='flex space-x-6'>
+            {['yes', 'no'].map((value) => (
+              <label key={value} className='flex items-center gap-2'>
+                <input
+                  type='radio'
+                  name='hasMobileDeviceViolation'
+                  value={value}
+                  checked={formData.disqualificationHistory.hasMobileDeviceViolation === value}
+                  onChange={(e) =>
+                    handleInputChange('disqualificationHistory', {
+                      hasMobileDeviceViolation: e.target.value,
+                      mobileDeviceViolationDetails:
+                        e.target.value === 'no'
+                          ? ''
+                          : formData.disqualificationHistory.mobileDeviceViolationDetails,
+                    })
+                  }
+                  className={`mr-1 ${
+                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  } accent-brand-mint`}
+                />
+                <span className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                  {value.toUpperCase()}
+                </span>
+              </label>
+            ))}
+          </div>
+          {errors.hasMobileDeviceViolation && (
+            <p className='text-sm text-red-600'>{errors.hasMobileDeviceViolation}</p>
+          )}
+          {formData.disqualificationHistory.hasMobileDeviceViolation === 'yes' && (
+            <div>
+              <label
+                className={`block text-sm font-medium mb-2 ${
+                  theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                }`}
+              >
+                Describe the violation(s), including citation dates and jurisdictions
+              </label>
+              <textarea
+                value={formData.disqualificationHistory.mobileDeviceViolationDetails}
+                onChange={(e) =>
+                  handleInputChange('disqualificationHistory', {
+                    mobileDeviceViolationDetails: e.target.value,
+                  })
+                }
+                className={`w-full min-h-[100px] px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                  theme === 'dark'
+                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                }`}
+              />
+              {errors.mobileDeviceViolationDetails && (
+                <p className='mt-1 text-sm text-red-600'>{errors.mobileDeviceViolationDetails}</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div
+        className={`mt-8 p-4 rounded-lg border-2 ${
+          theme === 'dark'
+            ? 'bg-brand-mint/10 border-brand-mint/30'
+            : 'bg-brand-sage/10 border-brand-sage/30'
+        }`}
+      >
+        <h3
+          className={`text-lg font-semibold mb-2 ${
+            theme === 'dark' ? 'text-white' : 'text-brand-sage'
+          }`}
+        >
+          MEDICAL QUALIFICATION (49 CFR 391.41)
+        </h3>
+        <p
+          className={`text-sm mb-4 ${
+            theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'
+          }`}
+        >
+          DOT requires drivers to maintain a current medical examiner's certificate, meet specific physical standards, and carry variance documentation when applicable. Provide details so we can confirm your qualification status.
+        </p>
+
+        <div className='space-y-3'>
+          <label
+            className={`block text-sm font-medium ${
+              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+            }`}
+          >
+            Do you currently hold a valid DOT medical examiner's certificate?
+          </label>
+          <div className='flex gap-6'>
+            {['yes', 'no'].map((value) => (
+              <label key={value} className='flex items-center gap-2'>
+                <input
+                  type='radio'
+                  name='hasValidMedicalCertificate'
+                  value={value}
+                  checked={
+                    formData.medicalQualification.hasValidMedicalCertificate === value
+                  }
+                  onChange={(e) =>
+                    handleInputChange('medicalQualification', {
+                      ...formData.medicalQualification,
+                      hasValidMedicalCertificate: e.target.value,
+                    })
+                  }
+                  className={`mr-1 ${
+                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  } accent-brand-mint`}
+                />
+                <span
+                  className={`${
+                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                  }`}
+                >
+                  {value.toUpperCase()}
+                </span>
+              </label>
+            ))}
+          </div>
+          {errors.hasValidMedicalCertificate && (
+            <p className='text-sm text-red-600'>
+              {errors.hasValidMedicalCertificate}
+            </p>
+          )}
+        </div>
+
+        {formData.medicalQualification.hasValidMedicalCertificate === 'yes' && (
+          <div className='space-y-4 mt-4'>
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+              <div>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                  }`}
+                >
+                  Last DOT Medical Exam Date
+                </label>
+                <input
+                  type='date'
+                  value={formData.medicalQualification.medicalExamDate}
+                  onChange={(e) =>
+                    handleInputChange('medicalQualification', {
+                      ...formData.medicalQualification,
+                      medicalExamDate: e.target.value,
+                    })
+                  }
+                  className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                    errors.medicalExamDate
+                      ? 'border-red-500'
+                      : theme === 'dark'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                  }`}
+                />
+                {errors.medicalExamDate && (
+                  <p className='mt-1 text-sm text-red-600'>{errors.medicalExamDate}</p>
+                )}
+              </div>
+              <div>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                  }`}
+                >
+                  Medical Certificate Expiration Date
+                </label>
+                <input
+                  type='date'
+                  value={formData.medicalQualification.medicalCertificateExpiration}
+                  onChange={(e) =>
+                    handleInputChange('medicalQualification', {
+                      ...formData.medicalQualification,
+                      medicalCertificateExpiration: e.target.value,
+                    })
+                  }
+                  className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                    errors.medicalCertificateExpiration
+                      ? 'border-red-500'
+                      : theme === 'dark'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                  }`}
+                />
+                {errors.medicalCertificateExpiration && (
+                  <p className='mt-1 text-sm text-red-600'>
+                    {errors.medicalCertificateExpiration}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                  }`}
+                >
+                  Filed with home licensing State (CDL/CLP exception)
+                </label>
+                <div className='flex gap-6'>
+                  {['yes', 'no'].map((value) => (
+                    <label key={value} className='flex items-center gap-2'>
+                      <input
+                        type='radio'
+                        name='hasFiledWithState'
+                        value={value}
+                        checked={formData.medicalQualification.hasFiledWithState === value}
+                        onChange={(e) =>
+                          handleInputChange('medicalQualification', {
+                            ...formData.medicalQualification,
+                            hasFiledWithState: e.target.value,
+                          })
+                        }
+                        className={`mr-1 ${
+                          theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                        } accent-brand-mint`}
+                      />
+                      <span
+                        className={`${
+                          theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                        }`}
+                      >
+                        {value.toUpperCase()}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                {errors.hasFiledWithState && (
+                  <p className='mt-1 text-sm text-red-600'>
+                    {errors.hasFiledWithState}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+              <div className='md:col-span-2'>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                  }`}
+                >
+                  Medical examiner's name
+                </label>
+                <input
+                  type='text'
+                  value={formData.medicalQualification.medicalExaminerName}
+                  onChange={(e) =>
+                    handleInputChange('medicalQualification', {
+                      ...formData.medicalQualification,
+                      medicalExaminerName: e.target.value,
+                    })
+                  }
+                  className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                    errors.medicalExaminerName
+                      ? 'border-red-500'
+                      : theme === 'dark'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                  }`}
+                />
+                {errors.medicalExaminerName && (
+                  <p className='mt-1 text-sm text-red-600'>
+                    {errors.medicalExaminerName}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                  }`}
+                >
+                  Medical examiner phone
+                </label>
+                <input
+                  type='tel'
+                  value={formData.medicalQualification.medicalExaminerPhone}
+                  onChange={(e) =>
+                    handleInputChange('medicalQualification', {
+                      ...formData.medicalQualification,
+                      medicalExaminerPhone: e.target.value,
+                    })
+                  }
+                  className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                    errors.medicalExaminerPhone
+                      ? 'border-red-500'
+                      : theme === 'dark'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                  }`}
+                />
+                {errors.medicalExaminerPhone && (
+                  <p className='mt-1 text-sm text-red-600'>
+                    {errors.medicalExaminerPhone}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+              <div>
+                <label
+                  className={`block text-sm font-medium mb-2 ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                  }`}
+                >
+                  Examiner type
+                </label>
+                <select
+                  value={formData.medicalQualification.medicalExaminerType}
+                  onChange={(e) =>
+                    handleInputChange('medicalQualification', {
+                      ...formData.medicalQualification,
+                      medicalExaminerType: e.target.value,
+                      medicalExaminerRegistryId:
+                        e.target.value === 'registry'
+                          ? formData.medicalQualification.medicalExaminerRegistryId
+                          : '',
+                    })
+                  }
+                  className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                    errors.medicalExaminerType
+                      ? 'border-red-500'
+                      : theme === 'dark'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                  }`}
+                >
+                  <option value=''>Select examiner type…</option>
+                  <option value='registry'>National Registry medical examiner</option>
+                  <option value='ophthalmologist'>Ophthalmologist (vision only)</option>
+                  <option value='optometrist'>Optometrist (vision only)</option>
+                  <option value='va'>VA certified examiner</option>
+                  <option value='other'>Other specialist</option>
+                </select>
+                {errors.medicalExaminerType && (
+                  <p className='mt-1 text-sm text-red-600'>
+                    {errors.medicalExaminerType}
+                  </p>
+                )}
+              </div>
+              {formData.medicalQualification.medicalExaminerType === 'registry' && (
+                <div className='md:col-span-2'>
+                  <label
+                    className={`block text-sm font-medium mb-2 ${
+                      theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                    }`}
+                  >
+                    National Registry ID (10 digits)
+                  </label>
+                  <input
+                    type='text'
+                    value={formData.medicalQualification.medicalExaminerRegistryId}
+                    onChange={(e) =>
+                      handleInputChange('medicalQualification', {
+                        ...formData.medicalQualification,
+                        medicalExaminerRegistryId: e.target.value,
+                      })
+                    }
+                    maxLength={10}
+                    className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                      errors.medicalExaminerRegistryId
+                        ? 'border-red-500'
+                        : theme === 'dark'
+                          ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                          : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                    }`}
+                  />
+                  {errors.medicalExaminerRegistryId && (
+                    <p className='mt-1 text-sm text-red-600'>
+                      {errors.medicalExaminerRegistryId}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+            <p
+              className={`text-xs ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              }`}
+            >
+              Ensure your examiner is listed on the FMCSA National Registry unless a permitted specialist performed the applicable portion of the exam (49 CFR 391.43).
+            </p>
+          </div>
+        )}
+
+        <div className='mt-4 space-y-3'>
+          <label
+            className={`block text-sm font-medium ${
+              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+            }`}
+          >
+            Do you have any FMCSA medical variances/exemptions (e.g., insulin, SPE certificate)?
+          </label>
+          <div className='flex gap-6'>
+            {['yes', 'no'].map((value) => (
+              <label key={value} className='flex items-center gap-2'>
+                <input
+                  type='radio'
+                  name='hasMedicalVariance'
+                  value={value}
+                  checked={formData.medicalQualification.hasMedicalVariance === value}
+                  onChange={(e) =>
+                    handleInputChange('medicalQualification', {
+                      ...formData.medicalQualification,
+                      hasMedicalVariance: e.target.value,
+                      medicalVarianceDetails:
+                        e.target.value === 'no'
+                          ? ''
+                          : formData.medicalQualification.medicalVarianceDetails,
+                    })
+                  }
+                  className={`mr-1 ${
+                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  } accent-brand-mint`}
+                />
+                <span
+                  className={`${
+                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                  }`}
+                >
+                  {value.toUpperCase()}
+                </span>
+              </label>
+            ))}
+          </div>
+          {errors.hasMedicalVariance && (
+            <p className='text-sm text-red-600'>{errors.hasMedicalVariance}</p>
+          )}
+          {formData.medicalQualification.hasMedicalVariance === 'yes' && (
+            <div>
+              <label
+                className={`block text-sm font-medium mb-2 ${
+                  theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                }`}
+              >
+                Describe the variance and keep copies of your documentation with you while on duty
+              </label>
+              <textarea
+                value={formData.medicalQualification.medicalVarianceDetails}
+                onChange={(e) =>
+                  handleInputChange('medicalQualification', {
+                    ...formData.medicalQualification,
+                    medicalVarianceDetails: e.target.value,
+                  })
+                }
+                className={`w-full min-h-[80px] px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                  errors.medicalVarianceDetails
+                    ? 'border-red-500'
+                    : theme === 'dark'
+                      ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                      : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                }`}
+              />
+              {errors.medicalVarianceDetails && (
+                <p className='mt-1 text-sm text-red-600'>
+                  {errors.medicalVarianceDetails}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className='mt-4 space-y-3'>
+          <label
+            className={`block text-sm font-medium ${
+              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+            }`}
+          >
+            Do you have chronic conditions (cardiac, respiratory, neurological, etc.) that require monitoring?
+          </label>
+          <div className='flex gap-6'>
+            {['yes', 'no'].map((value) => (
+              <label key={value} className='flex items-center gap-2'>
+                <input
+                  type='radio'
+                  name='hasChronicConditions'
+                  value={value}
+                  checked={formData.medicalQualification.hasChronicConditions === value}
+                  onChange={(e) =>
+                    handleInputChange('medicalQualification', {
+                      ...formData.medicalQualification,
+                      hasChronicConditions: e.target.value,
+                      chronicConditionsDetails:
+                        e.target.value === 'no'
+                          ? ''
+                          : formData.medicalQualification.chronicConditionsDetails,
+                    })
+                  }
+                  className={`mr-1 ${
+                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  } accent-brand-mint`}
+                />
+                <span
+                  className={`${
+                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                  }`}
+                >
+                  {value.toUpperCase()}
+                </span>
+              </label>
+            ))}
+          </div>
+          {errors.hasChronicConditions && (
+            <p className='text-sm text-red-600'>{errors.hasChronicConditions}</p>
+          )}
+          {formData.medicalQualification.hasChronicConditions === 'yes' && (
+            <div>
+              <label
+                className={`block text-sm font-medium mb-2 ${
+                  theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                }`}
+              >
+                Provide details (diagnosis, treatment, monitoring frequency)
+              </label>
+              <textarea
+                value={formData.medicalQualification.chronicConditionsDetails}
+                onChange={(e) =>
+                  handleInputChange('medicalQualification', {
+                    ...formData.medicalQualification,
+                    chronicConditionsDetails: e.target.value,
+                  })
+                }
+                className={`w-full min-h-[80px] px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                  errors.chronicConditionsDetails
+                    ? 'border-red-500'
+                    : theme === 'dark'
+                      ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                      : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                }`}
+              />
+              {errors.chronicConditionsDetails && (
+                <p className='mt-1 text-sm text-red-600'>
+                  {errors.chronicConditionsDetails}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className='mt-4 space-y-3'>
+          <label
+            className={`block text-sm font-medium ${
+              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+            }`}
+          >
+            Do you meet the DOT vision and hearing standards or have an FMCSA waiver?
+          </label>
+          <div className='flex gap-6'>
+            {['yes', 'no'].map((value) => (
+              <label key={value} className='flex items-center gap-2'>
+                <input
+                  type='radio'
+                  name='visionHearingCompliance'
+                  value={value}
+                  checked={formData.medicalQualification.visionHearingCompliance === value}
+                  onChange={(e) =>
+                    handleInputChange('medicalQualification', {
+                      ...formData.medicalQualification,
+                      visionHearingCompliance: e.target.value,
+                    })
+                  }
+                  className={`mr-1 ${
+                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  } accent-brand-mint`}
+                />
+                <span
+                  className={`${
+                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+                  }`}
+                >
+                  {value.toUpperCase()}
+                </span>
+              </label>
+            ))}
+          </div>
+          {errors.visionHearingCompliance && (
+            <p className='text-sm text-red-600'>
+              {errors.visionHearingCompliance}
+            </p>
+          )}
+        </div>
+
+        <div className='mt-4'>
+          <label
+            className={`block text-sm font-medium mb-2 ${
+              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
+            }`}
+          >
+            List medications taken regularly (or state "None that impact safe driving")
+          </label>
+          <textarea
+            value={formData.medicalQualification.medicationDisclosure}
+            onChange={(e) =>
+              handleInputChange('medicalQualification', {
+                ...formData.medicalQualification,
+                medicationDisclosure: e.target.value,
+              })
+            }
+            className={`w-full min-h-[80px] px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+              errors.medicationDisclosure
+                ? 'border-red-500'
+                : theme === 'dark'
+                  ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                  : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+            }`}
+          />
+          {errors.medicationDisclosure && (
+            <p className='mt-1 text-sm text-red-600'>
+              {errors.medicationDisclosure}
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   )
 
@@ -1399,6 +2624,23 @@ export default function PersonalInfoForm1({
         >
           COMPLETE IN FULL OR IT WILL NOT BE CONSIDERED.
         </p>
+
+        {/* Test Data Button */}
+        <div className='mt-4'>
+          <button
+            type='button'
+            onClick={fillTestData}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow hover:shadow-md ${
+              theme === 'dark'
+                ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-300'
+                : 'bg-yellow-500 text-white hover:bg-yellow-400'
+            }`}
+            title='Fill test data'
+          >
+            <span>⚡</span>
+            <span>Fill Test Data</span>
+          </button>
+        </div>
       </div>
 
       {/* Progress Bar */}
