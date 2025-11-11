@@ -13,6 +13,9 @@ This file tracks major modifications made to the ResumeWallet codebase.
 - ✅ Stopped `/admin` from being prerendered during Vercel builds.
   - Marked the page as dynamic (`dynamic = 'force-dynamic'`, `revalidate = 0`) so it only renders when the Alchemy provider context is available.
   - Fixes the `AASDKError: useAlchemyAccountContext must be used within a AlchemyAccountProvider` build-time crash.
+- ✅ Split the `/admin` page into a server wrapper and client component so Next.js can handle the dynamic config without trying to revalidate on the client.
+  - New `AdminPageClient` holds the existing client-only logic; server `page.tsx` simply renders it.
+  - Resolves the build failure complaining about an “invalid revalidate value” during prerendering.
 
 **MAJOR FEATURE (November 6, 2025):**
 
