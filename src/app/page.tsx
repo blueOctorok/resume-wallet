@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import Navigation from '@/components/Navigation'
 import AnimatedBackground from '@/components/AnimatedBackground'
@@ -8,6 +8,14 @@ import UserStatusModal from '@/components/UserStatusModal'
 import WalletCard from '@/components/WalletCard'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useSendUserOperation, useSmartAccountClient } from '@account-kit/react'
+import { AssistantBridgeProvider } from '@/contexts/AssistantBridgeContext'
+import type {
+  AssistantHelpPayload,
+  AssistantHelpRequest,
+  DriverJourneyState,
+  JourneyStatus,
+  PrimerPrompt,
+} from '@/types/assistant'
 
 // Dynamic imports to avoid SSR issues with Alchemy hooks
 const ResumeUploadWithVerification = dynamic(
@@ -164,6 +172,21 @@ const ResumeUploadWithPrefill = dynamic(
   }
 )
 
+const ResumeDashboard = dynamic(
+  () => import('@/components/ResumeDashboard').then((mod) => mod.default),
+  {
+    ssr: false,
+    loading: () => (
+      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
+        <div className='space-y-4 animate-pulse'>
+          <div className='h-6 bg-brand-sage-light/20 rounded w-48' />
+          <div className='h-24 bg-brand-sage-light/20 rounded w-full' />
+        </div>
+      </div>
+    ),
+  }
+)
+
 const WalletTransactions = dynamic(
   () =>
     import('@/components/WalletTransactions').then(
@@ -197,12 +220,27 @@ const TAssistant = dynamic(
   }
 )
 
+const createInitialJourneyState = (): DriverJourneyState => {
+  const timestamp = new Date().toISOString()
+  return {
+    wallet: { status: 'pending', updatedAt: timestamp },
+    resume: { status: 'pending', updatedAt: timestamp },
+    forms: { status: 'pending', updatedAt: timestamp },
+    submission: { status: 'pending', updatedAt: timestamp },
+    currentFormStep: null,
+    lastCompletedForm: null,
+  }
+}
+
+type JourneyStageKey = 'wallet' | 'resume' | 'forms' | 'submission'
+
 // Inner component that uses Alchemy hooks (must be inside provider)
 const HomeContent = () => {
   // Alchemy Account Kit hooks for sending transactions
   const { client } = useSmartAccountClient({ type: 'LightAccount' })
-  const { sendUserOperationAsync, isSendingUserOperation } = useSendUserOperation({ client })
-  
+  const { sendUserOperationAsync, isSendingUserOperation } =
+    useSendUserOperation({ client })
+
   const [user, setUser] = useState<any>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState<
@@ -227,39 +265,374 @@ const HomeContent = () => {
   const [form1Data, setForm1Data] = useState<any>(null)
   const [form2Data, setForm2Data] = useState<any>(null)
   const [form3Data, setForm3Data] = useState<any>(null)
-  
+  const [formResetKey, setFormResetKey] = useState(0)
+
   // Track if user has used AI prefill
   const [hasPrefilled, setHasPrefilled] = useState(false)
   const [showPrefillUpload, setShowPrefillUpload] = useState(true)
+  const [journeyState, setJourneyState] = useState<DriverJourneyState>(() =>
+    createInitialJourneyState()
+  )
+  const [helpRequest, setHelpRequest] = useState<AssistantHelpRequest | null>(
+    null
+  )
+  const [primerSeen, setPrimerSeen] = useState(false)
+  const [primerRequest, setPrimerRequest] = useState<PrimerPrompt | null>(null)
+  const [hasResume, setHasResume] = useState(false)
+  const primerTriggeredRef = useRef(false)
+
+  const updateJourneyStep = useCallback(
+    (step: JourneyStageKey, status: JourneyStatus) => {
+      setJourneyState((prev) => {
+        if (prev[step].status === status) {
+          return prev
+        }
+        const timestamp = new Date().toISOString()
+        return {
+          ...prev,
+          [step]: { status, updatedAt: timestamp },
+        }
+      })
+    },
+    []
+  )
+
+  const handleSetPrimerSeen = useCallback(
+    (value: boolean) => {
+      setPrimerSeen(value)
+      if (typeof window !== 'undefined' && user?.address) {
+        window.localStorage.setItem(
+          `journey-primer-${user.address}`,
+          value ? 'seen' : 'pending'
+        )
+      }
+    },
+    [user?.address]
+  )
+
+  const handleHelpRequest = useCallback((payload: AssistantHelpPayload) => {
+    const request: AssistantHelpRequest = {
+      ...payload,
+      id: `help-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    }
+    setHelpRequest(request)
+  }, [])
+
+  const resetApplicationProgress = useCallback(() => {
+    setForm1Data(null)
+    setForm2Data(null)
+    setForm3Data(null)
+    setHasPrefilled(false)
+    setShowPrefillUpload(true)
+    setCurrentForm(1)
+    setIsDriverApplicationCompleted(false)
+    setShowEmploymentVerification(false)
+    setShowDashboard(false)
+    setSubmissionError(null)
+    setHasResume(false)
+    setHelpRequest(null)
+    setPrimerRequest(null)
+    primerTriggeredRef.current = false
+    if (typeof window !== 'undefined' && user?.address) {
+      window.localStorage.removeItem(`forms-${user.address}`)
+      window.localStorage.removeItem(`journey-${user.address}`)
+    }
+    setJourneyState(createInitialJourneyState())
+    updateJourneyStep('wallet', 'complete')
+    setFormResetKey((key) => key + 1)
+  }, [updateJourneyStep, user?.address])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!user?.address) {
+      setJourneyState(createInitialJourneyState())
+      setHelpRequest(null)
+      setPrimerRequest(null)
+      primerTriggeredRef.current = false
+      setHasResume(false)
+      return
+    }
+
+    try {
+      const storedJourney = window.localStorage.getItem(
+        `journey-${user.address}`
+      )
+      if (storedJourney) {
+        const parsed = JSON.parse(storedJourney) as DriverJourneyState
+        setJourneyState({
+          ...createInitialJourneyState(),
+          ...parsed,
+        })
+        if (typeof parsed.currentFormStep === 'number') {
+          setCurrentForm(parsed.currentFormStep || 1)
+        }
+        if (parsed.resume?.status === 'complete') {
+          setHasResume(true)
+        }
+      } else {
+        setJourneyState(createInitialJourneyState())
+      }
+
+      const storedForms = window.localStorage.getItem(`forms-${user.address}`)
+      if (storedForms) {
+        const parsedForms = JSON.parse(storedForms) as {
+          form1Data?: unknown
+          form2Data?: unknown
+          form3Data?: unknown
+          currentForm?: number
+          isDriverApplicationCompleted?: boolean
+          hasPrefilled?: boolean
+          showPrefillUpload?: boolean
+        }
+        if (parsedForms.form1Data) setForm1Data(parsedForms.form1Data)
+        if (parsedForms.form2Data) setForm2Data(parsedForms.form2Data)
+        if (parsedForms.form3Data) setForm3Data(parsedForms.form3Data)
+        if (typeof parsedForms.currentForm === 'number') {
+          setCurrentForm(parsedForms.currentForm || 1)
+        }
+        if (typeof parsedForms.isDriverApplicationCompleted === 'boolean') {
+          setIsDriverApplicationCompleted(
+            parsedForms.isDriverApplicationCompleted
+          )
+        }
+        if (typeof parsedForms.hasPrefilled === 'boolean') {
+          setHasPrefilled(parsedForms.hasPrefilled)
+        }
+        if (typeof parsedForms.showPrefillUpload === 'boolean') {
+          setShowPrefillUpload(parsedForms.showPrefillUpload)
+        } else if (
+          parsedForms.form1Data ||
+          parsedForms.form2Data ||
+          parsedForms.form3Data
+        ) {
+          setShowPrefillUpload(false)
+        }
+      }
+
+      const storedPrimer = window.localStorage.getItem(
+        `journey-primer-${user.address}`
+      )
+      setPrimerSeen(storedPrimer === 'seen')
+      primerTriggeredRef.current = storedPrimer === 'seen'
+    } catch (error) {
+      console.error('⚠️ Failed to restore journey state from storage', error)
+    }
+  }, [user?.address])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !user?.address) return
+    try {
+      window.localStorage.setItem(
+        `journey-${user.address}`,
+        JSON.stringify(journeyState)
+      )
+    } catch (error) {
+      console.warn('⚠️ Failed to persist journey state', error)
+    }
+  }, [journeyState, user?.address])
+
+  useEffect(() => {
+    if (journeyState.resume.status === 'complete' && !hasResume) {
+      setHasResume(true)
+    }
+  }, [journeyState.resume.status, hasResume])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handler = (event: Event) => {
+      if (!user?.address) return
+      const detail = (event as CustomEvent).detail as {
+        walletAddress?: string
+      }
+      if (
+        detail?.walletAddress &&
+        detail.walletAddress.toLowerCase() === user.address.toLowerCase()
+      ) {
+        resetApplicationProgress()
+      }
+    }
+    window.addEventListener('wallet-data-reset', handler)
+    return () => {
+      window.removeEventListener('wallet-data-reset', handler)
+    }
+  }, [user?.address, resetApplicationProgress])
+
+  useEffect(() => {
+    if (user?.address) {
+      updateJourneyStep('wallet', 'complete')
+    }
+  }, [user?.address, updateJourneyStep])
+
+  useEffect(() => {
+    if (hasResume) {
+      updateJourneyStep('resume', 'complete')
+    } else if (user?.address && journeyState.resume.status !== 'pending') {
+      updateJourneyStep('resume', 'pending')
+    }
+  }, [hasResume, journeyState.resume.status, updateJourneyStep, user?.address])
+
+  useEffect(() => {
+    if (isDriverApplicationCompleted) {
+      updateJourneyStep('forms', 'complete')
+    } else if (
+      !showPrefillUpload ||
+      hasPrefilled ||
+      form1Data ||
+      form2Data ||
+      form3Data
+    ) {
+      updateJourneyStep('forms', 'in_progress')
+    }
+  }, [
+    isDriverApplicationCompleted,
+    showPrefillUpload,
+    hasPrefilled,
+    form1Data,
+    form2Data,
+    form3Data,
+    updateJourneyStep,
+  ])
+
+  useEffect(() => {
+    if (showDashboard && isDriverApplicationCompleted) {
+      updateJourneyStep('submission', 'complete')
+    } else if (isDriverApplicationCompleted) {
+      updateJourneyStep('submission', 'in_progress')
+    } else if (
+      !isDriverApplicationCompleted &&
+      journeyState.submission.status !== 'pending'
+    ) {
+      updateJourneyStep('submission', 'pending')
+    }
+  }, [
+    isDriverApplicationCompleted,
+    showDashboard,
+    journeyState.submission.status,
+    updateJourneyStep,
+  ])
+
+  useEffect(() => {
+    const nextStep = currentPage === 'dotapp' ? currentForm : null
+    setJourneyState((prev) =>
+      prev.currentFormStep === nextStep
+        ? prev
+        : {
+            ...prev,
+            currentFormStep: nextStep,
+          }
+    )
+  }, [currentForm, currentPage])
+
+  useEffect(() => {
+    if (isDriverApplicationCompleted) {
+      setJourneyState((prev) =>
+        prev.lastCompletedForm === 3
+          ? prev
+          : {
+              ...prev,
+              lastCompletedForm: 3,
+            }
+      )
+    } else {
+      setJourneyState((prev) => {
+        const completed = currentForm > 1 ? currentForm - 1 : null
+        if (!completed) return prev
+        if ((prev.lastCompletedForm ?? 0) >= completed) return prev
+        return {
+          ...prev,
+          lastCompletedForm: completed,
+        }
+      })
+    }
+  }, [currentForm, isDriverApplicationCompleted])
+
+  useEffect(() => {
+    if (
+      !primerSeen &&
+      journeyState.wallet.status === 'complete' &&
+      !primerTriggeredRef.current
+    ) {
+      setPrimerRequest({
+        id: `primer-${Date.now()}`,
+        message:
+          'Curious why DriverAppChain uses Base smart wallets? I can explain how it keeps your records portable and gas-free.',
+      })
+      primerTriggeredRef.current = true
+    }
+  }, [journeyState.wallet.status, primerSeen])
+
+  useEffect(() => {
+    if (primerSeen) {
+      setPrimerRequest(null)
+    }
+  }, [primerSeen])
 
   // Determine current step for T Assistant
-  const getCurrentStep = useCallback((): 'welcome' | 'wallet' | 'resume' | 'forms' | 'submission' | 'complete' => {
+  const getCurrentStep = useCallback(():
+    | 'welcome'
+    | 'wallet'
+    | 'resume'
+    | 'forms'
+    | 'submission'
+    | 'complete' => {
     if (showDashboard) return 'complete'
     if (isDriverApplicationCompleted) return 'submission'
     if (currentPage === 'dotapp' && !showPrefillUpload) return 'forms'
-    if (currentPage === 'resume' || hasPrefilled) return 'resume'
+    if (currentPage === 'resume' || hasPrefilled || hasResume) return 'resume'
     if (user) return 'wallet'
     return 'welcome'
-  }, [user, currentPage, hasPrefilled, showPrefillUpload, isDriverApplicationCompleted, showDashboard])
+  }, [
+    user,
+    currentPage,
+    hasPrefilled,
+    hasResume,
+    showPrefillUpload,
+    isDriverApplicationCompleted,
+    showDashboard,
+  ])
+
+  const handlePrimerAction = useCallback(
+    (action: 'primer:learn_more' | 'primer:skip') => {
+      handleSetPrimerSeen(true)
+      setPrimerRequest(null)
+      primerTriggeredRef.current = true
+      console.log('🎓 [HOME] Primer action:', action)
+    },
+    [handleSetPrimerSeen]
+  )
 
   // T Assistant action handler
-  const handleTAssistantAction = useCallback((action: string) => {
-    console.log('🎯 [HOME] T Assistant action:', action)
-    switch (action) {
-      case 'signin':
-        setCurrentPage('signin')
-        break
-      case 'resume':
-        setCurrentPage('resume')
-        break
-      case 'forms':
-        setCurrentPage('dotapp')
-        setShowPrefillUpload(false)
-        break
-      default:
-        break
-    }
-  }, [])
+  const handleTAssistantAction = useCallback(
+    (action: string) => {
+      console.log('🎯 [HOME] T Assistant action:', action)
+      switch (action) {
+        case 'signin':
+          setCurrentPage('signin')
+          break
+        case 'resume':
+          setCurrentPage('resume')
+          break
+        case 'forms':
+          setCurrentPage('dotapp')
+          setShowPrefillUpload(false)
+          break
+        case 'dashboard':
+          setCurrentPage('dotapp')
+          setShowPrefillUpload(false)
+          setShowEmploymentVerification(false)
+          setShowDashboard(true)
+          break
+        case 'primer:learn_more':
+        case 'primer:skip':
+          handlePrimerAction(action as 'primer:learn_more' | 'primer:skip')
+          break
+        default:
+          break
+      }
+    },
+    [handlePrimerAction]
+  )
 
   // Debug: Log user state changes
   useEffect(() => {
@@ -325,20 +698,23 @@ const HomeContent = () => {
       stats: any
     }) => {
       console.log('✅ [HOME] Prefill successful, populating forms')
-      console.log(`   Fields extracted: ${prefillData.stats.extracted}/${prefillData.stats.total}`)
-      
+      console.log(
+        `   Fields extracted: ${prefillData.stats.extracted}/${prefillData.stats.total}`
+      )
+
       // Populate form data
       setForm1Data(prefillData.form1Data)
       setForm2Data(prefillData.form2Data)
       setForm3Data(prefillData.form3Data)
-      
+
       // Mark as prefilled and hide upload component
       setHasPrefilled(true)
       setShowPrefillUpload(false)
-      
+      setHasResume(true)
+
       // Reset submission error if any
       setSubmissionError(null)
-      
+
       // Start on Form 1
       setCurrentForm(1)
     },
@@ -396,7 +772,9 @@ const HomeContent = () => {
 
       // Check for duplicate in database BEFORE submitting to blockchain
       console.log('🔍 [HOME] Checking database for duplicate hash...')
-      const { checkDuplicateApplicationHash } = await import('@/lib/supabase-client-db')
+      const { checkDuplicateApplicationHash } = await import(
+        '@/lib/supabase-client-db'
+      )
 
       const duplicateCheck = await checkDuplicateApplicationHash(
         user.address,
@@ -423,46 +801,66 @@ const HomeContent = () => {
 
       // Preflight with server (DB + on-chain hash)
       console.log('📝 [HOME] Preflight via API')
-      const preflightRes = await fetch('/api/blockchain/preflight-driver-application', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ applicationHash, userAddress: user.address }),
-      })
+      const preflightRes = await fetch(
+        '/api/blockchain/preflight-driver-application',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ applicationHash, userAddress: user.address }),
+        }
+      )
       const preflightJson = await preflightRes.json().catch(() => ({}))
       if (!preflightRes.ok || preflightJson?.error) {
-        setSubmissionError(preflightJson?.details || preflightJson?.error || 'Preflight failed')
+        setSubmissionError(
+          preflightJson?.details || preflightJson?.error || 'Preflight failed'
+        )
         setIsSubmitting(false)
         return
       }
 
       // Submit to chain from user's Base smart wallet using Alchemy Account Kit
-      console.log('📝 [HOME] Submitting transaction from user smart wallet via Alchemy SDK')
-      
+      console.log(
+        '📝 [HOME] Submitting transaction from user smart wallet via Alchemy SDK'
+      )
+
       if (!client) {
-        setSubmissionError('Wallet client not ready. Please log in with your Alchemy Smart Wallet.')
+        setSubmissionError(
+          'Wallet client not ready. Please log in with your Alchemy Smart Wallet.'
+        )
         setIsSubmitting(false)
         return
       }
-      
-      const contractAddress = process.env.NEXT_PUBLIC_DRIVER_APP_CONTRACT_ADDRESS as string
-      const { abi } = await import('../../artifacts/contracts/ProductionDriverRegistry.sol/ProductionDriverRegistry.json')
+
+      const contractAddress = process.env
+        .NEXT_PUBLIC_DRIVER_APP_CONTRACT_ADDRESS as string
+      const { abi } = await import(
+        '../../artifacts/contracts/ProductionDriverRegistry.sol/ProductionDriverRegistry.json'
+      )
       const { encodeFunctionData } = await import('viem')
-      
+
       // Encode the contract call
       const callData = encodeFunctionData({
         abi: abi as any,
         functionName: 'submitApplication',
         args: [applicationHash],
       })
-      
-      console.log('🔍 [HOME] Sending user operation to contract:', contractAddress)
+
+      console.log(
+        '🔍 [HOME] Sending user operation to contract:',
+        contractAddress
+      )
       console.log('🔍 [HOME] Client available:', !!client)
-      console.log('🔍 [HOME] sendUserOperationAsync available:', !!sendUserOperationAsync)
-      
+      console.log(
+        '🔍 [HOME] sendUserOperationAsync available:',
+        !!sendUserOperationAsync
+      )
+
       if (!sendUserOperationAsync) {
-        throw new Error('sendUserOperationAsync function not available. Ensure you are logged in with Alchemy Smart Wallet.')
+        throw new Error(
+          'sendUserOperationAsync function not available. Ensure you are logged in with Alchemy Smart Wallet.'
+        )
       }
-      
+
       // Send user operation via Alchemy SDK
       const result = await sendUserOperationAsync({
         uo: {
@@ -471,36 +869,46 @@ const HomeContent = () => {
           value: 0n,
         },
       })
-      
+
       console.log('📦 [HOME] User operation result:', result)
-      
+
       if (!result) {
         throw new Error('Failed to send user operation - no result returned')
       }
-      
+
       // The result should be a user operation hash
       const userOpHash = typeof result === 'string' ? result : result.hash
-      
+
       if (!userOpHash) {
-        console.error('❌ [HOME] Invalid result from sendUserOperation:', result)
+        console.error(
+          '❌ [HOME] Invalid result from sendUserOperation:',
+          result
+        )
         throw new Error('Failed to get user operation hash from result')
       }
-      
-      console.log('⏳ [HOME] Waiting for transaction receipt for userOp:', userOpHash)
-      
+
+      console.log(
+        '⏳ [HOME] Waiting for transaction receipt for userOp:',
+        userOpHash
+      )
+
       // Wait for the transaction to be mined
-      const txHash = await client.waitForUserOperationTransaction({ hash: userOpHash as `0x${string}` })
-      
+      const txHash = await client.waitForUserOperationTransaction({
+        hash: userOpHash as `0x${string}`,
+      })
+
       console.log('✅ [HOME] Transaction confirmed:', txHash)
-      
+
       // Get transaction receipt to parse events
       const { createPublicClient, http } = await import('viem')
       const { baseSepolia } = await import('viem/chains')
       const publicClient = createPublicClient({
         chain: baseSepolia,
-        transport: http(`https://base-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`),
+        transport: http(
+          `https://base-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
+        ),
       })
-      
+
       const receipt = await publicClient.getTransactionReceipt({ hash: txHash })
 
       // Parse ApplicationSubmitted event
@@ -519,14 +927,16 @@ const HomeContent = () => {
             return false
           }
         })
-        
+
         if (submittedEvent) {
           const decoded = decodeEventLog({
             abi: abi as any,
             data: submittedEvent.data,
             topics: submittedEvent.topics,
           })
-          applicationId = Number((decoded.args as any).applicationId || (decoded.args as any)[0])
+          applicationId = Number(
+            (decoded.args as any).applicationId || (decoded.args as any)[0]
+          )
         }
       } catch (e) {
         console.warn('⚠️ [HOME] Could not parse application ID from event:', e)
@@ -537,13 +947,15 @@ const HomeContent = () => {
         blockNumber: Number(receipt.blockNumber),
         applicationId,
       }
-      
+
       setBlockchainData(txData)
 
       // Save to database with application hash and blockchain data
       console.log('💾 [HOME] Saving application to database...')
-      const { completeDriverApplicationClient } = await import('@/lib/supabase-client-db')
-      
+      const { completeDriverApplicationClient } = await import(
+        '@/lib/supabase-client-db'
+      )
+
       const dbResult = await completeDriverApplicationClient(
         user.address,
         combinedData,
@@ -557,7 +969,7 @@ const HomeContent = () => {
         // Update database with blockchain transaction hash and application ID
         const { createClient } = await import('@/utils/supabase/client')
         const supabase = createClient()
-        
+
         // Get user_id
         const { data: userData } = await supabase
           .from('users')
@@ -722,6 +1134,7 @@ const HomeContent = () => {
       case 1:
         return (
           <PersonalInfoForm1
+            key={`form1-${formResetKey}`}
             onNavigateToForm={handleFormNavigation}
             onDataChange={setForm1Data}
             initialData={form1Data}
@@ -730,6 +1143,7 @@ const HomeContent = () => {
       case 2:
         return (
           <PersonalInfoForm2
+            key={`form2-${formResetKey}`}
             onNavigateToForm={handleFormNavigation}
             onDataChange={setForm2Data}
             initialData={form2Data}
@@ -738,6 +1152,7 @@ const HomeContent = () => {
       case 3:
         return (
           <PersonalInfoForm3
+            key={`form3-${formResetKey}`}
             onComplete={handleDriverApplicationCompleted}
             onDataChange={setForm3Data}
             initialData={form3Data}
@@ -746,6 +1161,7 @@ const HomeContent = () => {
       default:
         return (
           <PersonalInfoForm1
+            key={`form1-${formResetKey}`}
             onNavigateToForm={handleFormNavigation}
             onDataChange={setForm1Data}
             initialData={form1Data}
@@ -826,214 +1242,168 @@ const HomeContent = () => {
   }
 
   return (
-    <div className='min-h-screen overflow-x-hidden relative'>
-      {/* Animated Background */}
-      <AnimatedBackground />
+    <AssistantBridgeProvider
+      journey={journeyState}
+      requestHelp={handleHelpRequest}
+      primerSeen={primerSeen}
+      setPrimerSeen={handleSetPrimerSeen}
+    >
+      <div className='min-h-screen overflow-x-hidden relative'>
+        {/* Animated Background */}
+        <AnimatedBackground />
 
-      {/* Wallet Card - Desktop Top Left */}
-      {user && (
-        <div className='hidden md:block fixed top-4 left-4 z-40'>
-          <WalletCard
-            user={user}
-            onClick={handleWalletClick}
-            isMobile={false}
-          />
-        </div>
-      )}
-
-      {/* Navigation with status indicator */}
-      <Navigation
-        isAuthenticated={!!user}
-        user={user}
-        onStatusClick={openModal}
-        onWalletClick={handleWalletClick}
-        onNavigate={handleNavigation}
-      />
-
-      {/* User Status Modal */}
-      <UserStatusModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        onLogout={handleLogout}
-        user={{
-          email: user?.email,
-          address: user?.address,
-          chain: user?.chain,
-        }}
-      />
-
-      {/* Main Content */}
-      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-3'>
-        {/* T Assistant - Centerpiece */}
-        <div className='mb-8'>
-          <TAssistant
-            currentStep={getCurrentStep()}
-            onAction={handleTAssistantAction}
-            userAddress={user?.address}
-            hasResume={hasPrefilled}
-            hasForms={!showPrefillUpload && currentPage === 'dotapp'}
-            form1Data={form1Data}
-            form2Data={form2Data}
-            form3Data={form3Data}
-          />
-        </div>
-
-        {/* Conditional Content Based on Navigation */}
-        {currentPage === 'signin' && !user && (
-          <div className='max-w-md mx-auto'>
-            <AlchemyAuth
-              onAuthSuccess={handleAuthSuccess}
-              onLogoutSuccess={() => setUser(null)}
+        {/* Wallet Card - Desktop Top Left */}
+        {user && (
+          <div className='hidden md:block fixed top-4 left-4 z-40'>
+            <WalletCard
+              user={user}
+              onClick={handleWalletClick}
+              isMobile={false}
             />
           </div>
         )}
 
-        {currentPage === 'resume' && (
-          <div className='max-w-4xl mx-auto space-y-6'>
-            <ResumeUploadWithVerification user={user} />
-            {user && <WalletTransactions />}
-          </div>
-        )}
+        {/* Navigation with status indicator */}
+        <Navigation
+          isAuthenticated={!!user}
+          user={user}
+          onStatusClick={openModal}
+          onWalletClick={handleWalletClick}
+          onNavigate={handleNavigation}
+        />
 
-        {currentPage === 'dotapp' && (
-          <>
-            {submissionError && (
-              <div
-                className={`max-w-4xl mx-auto mb-6 px-4 py-3 rounded-lg border ${
-                  theme === 'dark'
-                    ? 'bg-red-900/20 border-red-500/50 text-red-300'
-                    : 'bg-red-50 border-red-200 text-red-800'
-                }`}
-              >
-                {submissionError}
-              </div>
-            )}
-            
-            {/* AI Prefill Upload - Show before forms or if manually shown */}
-            {showPrefillUpload && !isDriverApplicationCompleted && (
-              <div className='mb-8'>
-                <ResumeUploadWithPrefill
-                  onPrefillSuccess={handlePrefillSuccess}
-                  onPrefillError={handlePrefillError}
-                />
-                
-                {/* Option to skip prefill */}
-                <div className='text-center mt-6'>
-                  <button
-                    onClick={() => {
-                      setShowPrefillUpload(false)
-                      setCurrentForm(1)
-                    }}
-                    className={`text-sm underline transition-colors ${
-                      theme === 'dark'
-                        ? 'text-gray-400 hover:text-gray-300'
-                        : 'text-gray-600 hover:text-gray-800'
-                    }`}
-                  >
-                    Skip AI prefill and fill manually
-                  </button>
+        {/* User Status Modal */}
+        <UserStatusModal
+          isOpen={isModalOpen}
+          onClose={closeModal}
+          onLogout={handleLogout}
+          user={{
+            email: user?.email,
+            address: user?.address,
+            chain: user?.chain,
+          }}
+        />
+
+        {/* Main Content */}
+        <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-3'>
+          {/* T Assistant - Centerpiece */}
+          <div className='mb-8'>
+            <TAssistant
+              currentStep={getCurrentStep()}
+              onAction={handleTAssistantAction}
+              userAddress={user?.address}
+              hasResume={hasResume}
+              hasForms={journeyState.forms.status !== 'pending'}
+              form1Data={form1Data}
+              form2Data={form2Data}
+              form3Data={form3Data}
+              journeyState={journeyState}
+              helpRequest={helpRequest}
+              primerRequest={primerRequest}
+            />
+          </div>
+
+          {/* Conditional Content Based on Navigation */}
+          {currentPage === 'signin' && !user && (
+            <div className='max-w-md mx-auto'>
+              <AlchemyAuth
+                onAuthSuccess={handleAuthSuccess}
+                onLogoutSuccess={() => setUser(null)}
+              />
+            </div>
+          )}
+
+          {currentPage === 'resume' && (
+            <div className='max-w-4xl mx-auto space-y-6'>
+              <ResumeUploadWithVerification
+                user={user}
+                onUploadComplete={() => setHasResume(true)}
+              />
+              <ResumeDashboard
+                user={user}
+                onResumesLoaded={(count) => setHasResume(count > 0)}
+              />
+              {user && <WalletTransactions />}
+            </div>
+          )}
+
+          {currentPage === 'dotapp' && (
+            <>
+              {submissionError && (
+                <div
+                  className={`max-w-4xl mx-auto mb-6 px-4 py-3 rounded-lg border ${
+                    theme === 'dark'
+                      ? 'bg-red-900/20 border-red-500/50 text-red-300'
+                      : 'bg-red-50 border-red-200 text-red-800'
+                  }`}
+                >
+                  {submissionError}
                 </div>
-              </div>
-            )}
-            
-            {/* Show forms and navigation after prefill or skip */}
-            {!showPrefillUpload && (
-              <>
-                {/* Success banner if prefilled */}
-                {hasPrefilled && !isDriverApplicationCompleted && (
-                  <div
-                    className={`max-w-4xl mx-auto mb-6 px-4 py-3 rounded-lg border flex items-center justify-between ${
-                      theme === 'dark'
-                        ? 'bg-green-900/20 border-green-500/50 text-green-300'
-                        : 'bg-green-50 border-green-200 text-green-800'
-                    }`}
-                  >
-                    <span>✨ Forms prefilled with AI! Review and complete any missing fields.</span>
+              )}
+
+              {/* AI Prefill Upload - Show before forms or if manually shown */}
+              {showPrefillUpload && !isDriverApplicationCompleted && (
+                <div className='mb-8'>
+                  <ResumeUploadWithPrefill
+                    onPrefillSuccess={handlePrefillSuccess}
+                    onPrefillError={handlePrefillError}
+                  />
+
+                  {/* Option to skip prefill */}
+                  <div className='text-center mt-6'>
                     <button
-                      onClick={() => setShowPrefillUpload(true)}
-                      className={`text-xs underline ml-4 ${
-                        theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                      onClick={() => {
+                        setShowPrefillUpload(false)
+                        setCurrentForm(1)
+                      }}
+                      className={`text-sm underline transition-colors ${
+                        theme === 'dark'
+                          ? 'text-gray-400 hover:text-gray-300'
+                          : 'text-gray-600 hover:text-gray-800'
                       }`}
                     >
-                      Upload different resume
+                      Skip AI prefill and fill manually
                     </button>
                   </div>
-                )}
-                
-                {renderFormNavigation()}
-                {renderFormContent()}
-              </>
-            )}
-          </>
-        )}
+                </div>
+              )}
 
-        {/* Welcome message when no page is selected */}
-        {!currentPage && (
-          <div className='max-w-2xl mx-auto text-center py-16'>
-            <h2
-              className={`text-4xl sm:text-5xl font-light mb-6 ${
-                theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
-              }`}
-            >
-              Welcome to Veree
-            </h2>
-            <p
-              className={`text-lg mb-8 ${
-                theme === 'light' ? 'text-gray-600' : 'text-brand-cream/70'
-              }`}
-            >
-              Click on Veree above to get started
-            </p>
-            <div className='flex flex-col sm:flex-row gap-4 justify-center'>
-              <div
-                className={`backdrop-blur-sm border rounded-2xl p-6 text-center ${
-                  theme === 'light'
-                    ? 'bg-white/80 border-brand-sage/30'
-                    : 'bg-brand-sage-light/10 border-brand-mint/20'
-                }`}
-              >
-                <h3
-                  className={`font-semibold mb-2 ${
-                    theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
-                  }`}
-                >
-                  Resume Verification
-                </h3>
-                <p
-                  className={`text-sm ${
-                    theme === 'light' ? 'text-gray-600' : 'text-brand-cream/60'
-                  }`}
-                >
-                  Upload and verify your professional resume on the blockchain
-                </p>
-              </div>
-              <div
-                className={`backdrop-blur-sm border rounded-2xl p-6 text-center ${
-                  theme === 'light'
-                    ? 'bg-white/80 border-brand-sage/30'
-                    : 'bg-brand-sage-light/10 border-brand-mint/20'
-                }`}
-              >
-                <h3
-                  className={`font-semibold mb-2 ${
-                    theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
-                  }`}
-                >
-                  DOT Application
-                </h3>
-                <p
-                  className={`text-sm ${
-                    theme === 'light' ? 'text-gray-600' : 'text-brand-cream/60'
-                  }`}
-                >
-                  Complete your Department of Transportation driver application
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+              {/* Show forms and navigation after prefill or skip */}
+              {!showPrefillUpload && (
+                <>
+                  {/* Success banner if prefilled */}
+                  {hasPrefilled && !isDriverApplicationCompleted && (
+                    <div
+                      className={`max-w-4xl mx-auto mb-6 px-4 py-3 rounded-lg border flex items-center justify-between ${
+                        theme === 'dark'
+                          ? 'bg-green-900/20 border-green-500/50 text-green-300'
+                          : 'bg-green-50 border-green-200 text-green-800'
+                      }`}
+                    >
+                      <span>
+                        ✨ Forms prefilled with AI! Review and complete any
+                        missing fields.
+                      </span>
+                      <button
+                        onClick={() => setShowPrefillUpload(true)}
+                        className={`text-xs underline ml-4 ${
+                          theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                        }`}
+                      >
+                        Upload different resume
+                      </button>
+                    </div>
+                  )}
+
+                  {renderFormNavigation()}
+                  {renderFormContent()}
+                </>
+              )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </AssistantBridgeProvider>
   )
 }
 

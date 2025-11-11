@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Wallet, Copy, Check, Eye, EyeOff } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 
@@ -23,6 +24,7 @@ export default function WalletCard({
   const [copied, setCopied] = useState(false)
   const [showFullAddress, setShowFullAddress] = useState(false)
   const { theme } = useTheme()
+  const showAdminTools = process.env.NODE_ENV !== 'production'
 
   const formatAddress = (address: string) => {
     if (!address) return ''
@@ -57,22 +59,37 @@ export default function WalletCard({
   if (isMobile) {
     // Mobile: Button style
     return (
-      <button
-        onClick={onClick}
-        className={`relative group flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 ${
-          theme === 'light'
-            ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark'
-            : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50'
-        }`}
-      >
-        <Wallet className='w-4 h-4' />
-        <span className='hidden sm:inline'>Wallet</span>
+      <div className='flex items-center gap-2'>
+        <button
+          onClick={onClick}
+          className={`relative group flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 ${
+            theme === 'light'
+              ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark'
+              : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50'
+          }`}
+        >
+          <Wallet className='w-4 h-4' />
+          <span className='hidden sm:inline'>Wallet</span>
 
-        {/* Tooltip */}
-        <div className='absolute left-0 top-full mt-2 px-3 py-1.5 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
-          View wallet details
-        </div>
-      </button>
+          {/* Tooltip */}
+          <div className='absolute left-0 top-full mt-2 px-3 py-1.5 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
+            View wallet details
+          </div>
+        </button>
+
+        {showAdminTools && (
+          <Link
+            href='/admin'
+            className={`rounded-xl px-3 py-2 text-xs font-semibold transition-all shadow hover:shadow-md ${
+              theme === 'light'
+                ? 'bg-white text-brand-sage border border-brand-sage/40 hover:bg-brand-sage/10'
+                : 'bg-brand-sage-light/30 text-brand-cream border border-brand-cream/40 hover:bg-brand-sage-light/40'
+            }`}
+          >
+            Admin
+          </Link>
+        )}
+      </div>
     )
   }
 
@@ -224,6 +241,22 @@ export default function WalletCard({
           </div>
         )}
       </div>
+
+      {showAdminTools && (
+        <div className='mt-4'>
+          <Link
+            href='/admin'
+            onClick={(event) => event.stopPropagation()}
+            className={`inline-flex items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
+              theme === 'light'
+                ? 'text-brand-sage border border-brand-sage/40 hover:bg-brand-sage/10'
+                : 'text-brand-cream border border-brand-cream/30 hover:bg-brand-sage-light/30'
+            }`}
+          >
+            Admin Tools
+          </Link>
+        </div>
+      )}
 
       {/* Hover Tooltip */}
       <div className='absolute left-0 top-full mt-2 px-3 py-1.5 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>

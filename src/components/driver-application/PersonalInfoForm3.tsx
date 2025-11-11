@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
 
 const STEPS = [
   {
@@ -33,6 +34,7 @@ export default function PersonalInfoForm3({
   initialData,
 }: PersonalInfoForm3Props) {
   const { theme } = useTheme()
+  const { requestHelp } = useAssistantBridge()
   const [currentStep, setCurrentStep] = useState(1)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState({
@@ -476,6 +478,30 @@ export default function PersonalInfoForm3({
         >
           EMPLOYMENT HISTORY
         </h2>
+        <div className='flex justify-end mb-4 text-left'>
+          <button
+            type='button'
+            onClick={() =>
+              requestHelp({
+                section: 'Form 3 – Employment History',
+                question:
+                  'What specifically must drivers include to satisfy the 10-year DOT employment history requirement?',
+                regulation: '49 CFR 391.21(b)(10) & 49 CFR 383.35',
+                context:
+                  'Driver is reviewing the employment history step in PersonalInfoForm3 and wants to ensure the provided timeline is complete.',
+                dataSnapshot: formData.employers,
+              })
+            }
+            className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors ${
+              theme === 'dark'
+                ? 'border-brand-mint/40 text-brand-mint hover:bg-brand-mint/10'
+                : 'border-brand-sage/40 text-brand-sage hover:bg-brand-sage/10'
+            }`}
+          >
+            <span>📋</span>
+            <span>Ask T about 10-year history</span>
+          </button>
+        </div>
         <div
           className={`p-4 rounded-lg border-2 ${
             theme === 'dark'
@@ -1308,6 +1334,38 @@ export default function PersonalInfoForm3({
         >
           TO BE READ AND SIGNED BY APPLICANT
         </h2>
+      </div>
+      <div className='flex justify-end mb-4 text-left'>
+        <button
+          type='button'
+          onClick={() =>
+            requestHelp({
+              section: 'Form 3 – Final Certifications',
+              question:
+                'Summarize what acknowledgements and consents the applicant must provide in the signature section and why they are required.',
+              regulation: '49 CFR 391.21(d) & 49 CFR 391.23',
+              context:
+                'Driver is on the final signature step of PersonalInfoForm3 and needs a plain-language explanation of the acknowledgements before signing.',
+              dataSnapshot: {
+                consents: {
+                  safetyPerformanceHistoryAcknowledgement:
+                    formData.safetyPerformanceHistoryAcknowledgement,
+                  safetyPerformanceInquiryConsent:
+                    formData.safetyPerformanceInquiryConsent,
+                  roadTestAcknowledgement: formData.roadTestAcknowledgement,
+                },
+              },
+            })
+          }
+          className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors ${
+            theme === 'dark'
+              ? 'border-brand-mint/40 text-brand-mint hover:bg-brand-mint/10'
+              : 'border-brand-sage/40 text-brand-sage hover:bg-brand-sage/10'
+          }`}
+        >
+          <span>✍️</span>
+          <span>Break down the acknowledgements</span>
+        </button>
       </div>
 
       <div

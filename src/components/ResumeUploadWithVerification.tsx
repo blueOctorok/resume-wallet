@@ -16,10 +16,23 @@ interface UploadStep {
 
 interface ResumeUploadWithVerificationProps {
   user?: any
+  onUploadComplete?: (payload: {
+    resume: any
+    finalResult: {
+      ipfsHash: string
+      ipfsUrl: string
+      databaseId: string
+      wasPaid: boolean
+      costUSDC: number
+      eligibility: any
+      blockchainData: any
+    }
+  }) => void
 }
 
 export default function ResumeUploadWithVerification({
   user,
+  onUploadComplete,
 }: ResumeUploadWithVerificationProps) {
   const { theme } = useTheme()
 
@@ -233,7 +246,7 @@ export default function ResumeUploadWithVerification({
       }
 
       // Set final result
-      setFinalResult({
+      const resultPayload = {
         ipfsHash: uploadData.resume.ipfsHash,
         ipfsUrl: uploadData.resume.ipfsUrl,
         databaseId: uploadData.resume.id,
@@ -245,6 +258,12 @@ export default function ResumeUploadWithVerification({
           steps.find((s) => s.id === 'blockchain')?.status === 'success'
             ? steps.find((s) => s.id === 'blockchain')?.data
             : null,
+      }
+
+      setFinalResult(resultPayload)
+      onUploadComplete?.({
+        resume: uploadData.resume,
+        finalResult: resultPayload,
       })
 
       console.log('🎉 Upload completed successfully!')

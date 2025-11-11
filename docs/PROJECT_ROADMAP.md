@@ -318,25 +318,15 @@ Users → Alchemy Smart Wallets → Alchemy RPC Infrastructure → Base Sepolia 
 - **Reliable architecture** - deploy once with Alchemy, use forever
 - **Scalable infrastructure** - handles high transaction volumes
 
-### 📊 Resume Management Dashboard
+### ✅ Resume Management Dashboard (Completed November 10, 2025)
 
-**Why This Matters:**
+**What Shipped:**
 
-- **User experience** - Users need to see their uploads
-- **Data visibility** - Show IPFS hashes and blockchain status
-- **Management** - Edit, delete, toggle visibility
-
-**What We'll Build:**
-
-1. **Resume List View**
-   - Grid/list toggle
-   - Search and filtering
-   - Status indicators
-
-2. **Resume Detail View**
-   - IPFS preview
-   - Blockchain verification status
-   - Edit capabilities
+- Resume list view with search + status filters (All, Verified, Pending, Failed)
+- Detailed panel showing IPFS metadata, blockchain transaction hash, resume ID, sharing state, payment tier
+- Direct links to IPFS gateway and BaseScan transaction explorer
+- Refresh control that works with Alchemy Smart Wallet sessions via `x-wallet-address` fallback
+- Stat summary (total uploads, verified, awaiting verification) with theme-aware styling
 
 ---
 

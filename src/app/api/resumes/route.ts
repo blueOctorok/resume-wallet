@@ -119,11 +119,20 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Authenticate the request using Base Account SDK
-    const user = await getUserFromRequest(request)
+    // Try to authenticate via full Base auth first
+    let walletAddress: string | null = null
 
-    // Get wallet address from verified signature
-    const walletAddress = user.address
+    try {
+      const user = await getUserFromRequest(request)
+      walletAddress = user.address
+    } catch (authError) {
+      // Fall back to simple wallet header when signature isn't available
+      const headerAddress = request.headers.get('x-wallet-address')
+      if (!headerAddress) {
+        throw authError
+      }
+      walletAddress = headerAddress
+    }
 
     if (!walletAddress) {
       return NextResponse.json(
@@ -144,7 +153,11 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching resumes:', error)
 
     // Handle authentication errors specifically
-    if (error instanceof Error && error.message.includes('authorization')) {
+    if (
+      error instanceof Error &&
+      (error.message.includes('authorization') ||
+        error.message.includes('Authentication failed'))
+    ) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }

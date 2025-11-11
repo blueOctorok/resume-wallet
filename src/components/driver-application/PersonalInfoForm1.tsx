@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
 
 const DEFAULT_CARRIER_INFO = {
   name: process.env.NEXT_PUBLIC_CARRIER_NAME ?? 'Your Motor Carrier Name',
@@ -42,6 +43,7 @@ export default function PersonalInfoForm1({
   initialData,
 }: PersonalInfoForm1Props) {
   const { theme } = useTheme()
+  const { requestHelp } = useAssistantBridge()
   const [currentStep, setCurrentStep] = useState(1)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState({
@@ -647,6 +649,40 @@ export default function PersonalInfoForm1({
 
   const renderApplicantInformation = () => (
     <div className='space-y-8'>
+      <div className='flex justify-end'>
+        <button
+          type='button'
+          onClick={() =>
+            requestHelp({
+              section: 'Form 1 – Personal Information',
+              question:
+                'What details are required for the personal information section of the FMCSA driver application and why does the carrier need them?',
+              regulation: '49 CFR 391.21',
+              context:
+                'Driver is completing PersonalInfoForm1 and wants clarity on the required personal details before proceeding.',
+              dataSnapshot: {
+                employingCarrier: formData.employingCarrier,
+                personalDetails: {
+                  firstName: formData.firstName,
+                  lastName: formData.lastName,
+                  phone: formData.phone,
+                  email: formData.email,
+                  dateOfBirth: formData.dateOfBirth,
+                },
+              },
+            })
+          }
+          className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-md border transition-colors ${
+            theme === 'dark'
+              ? 'border-brand-mint/40 text-brand-mint hover:bg-brand-mint/10'
+              : 'border-brand-sage/40 text-brand-sage hover:bg-brand-sage/10'
+          }`}
+        >
+          <span>🤔</span>
+          <span>Ask T about this section</span>
+        </button>
+      </div>
+
       <div className='text-center'>
         <h2
           className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
@@ -2039,6 +2075,30 @@ export default function PersonalInfoForm1({
         >
           MEDICAL QUALIFICATION (49 CFR 391.41)
         </h3>
+        <div className='flex justify-end'>
+          <button
+            type='button'
+            onClick={() =>
+              requestHelp({
+                section: 'Form 1 – Medical Qualification',
+                question:
+                  'Explain what evidence a driver must provide to document DOT medical qualification, including variances and examiner requirements.',
+                regulation: '49 CFR 391.41 & 391.43',
+                context:
+                  'Driver is completing the medical qualification card on PersonalInfoForm1 and wants to ensure they supply compliant documentation.',
+                dataSnapshot: formData.medicalQualification,
+              })
+            }
+            className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors ${
+              theme === 'dark'
+                ? 'border-brand-mint/40 text-brand-mint hover:bg-brand-mint/10'
+                : 'border-brand-sage/40 text-brand-sage hover:bg-brand-sage/10'
+            }`}
+          >
+            <span>🩺</span>
+            <span>Need help with medical docs?</span>
+          </button>
+        </div>
         <p
           className={`text-sm mb-4 ${
             theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'

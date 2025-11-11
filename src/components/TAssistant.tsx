@@ -1,8 +1,19 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { MessageCircle, Send, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
+import { MessageCircle, Send, Loader2 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
+import type {
+  AssistantHelpRequest,
+  DriverJourneyState,
+  PrimerPrompt,
+} from '@/types/assistant'
+
+interface MessageAction {
+  id: string
+  label: string
+  value: string
+}
 
 interface Message {
   id: string
@@ -10,6 +21,7 @@ interface Message {
   content: string
   timestamp: Date
   step?: string
+  actions?: MessageAction[]
 }
 
 interface TAssistantProps {
@@ -21,6 +33,9 @@ interface TAssistantProps {
   form1Data?: any
   form2Data?: any
   form3Data?: any
+  journeyState?: DriverJourneyState
+  helpRequest?: AssistantHelpRequest | null
+  primerRequest?: PrimerPrompt | null
 }
 
 // Wrapper component that safely handles SSR
@@ -33,15 +48,69 @@ function TAssistantContent({
   form1Data,
   form2Data,
   form3Data,
+  journeyState,
+  helpRequest,
+  primerRequest,
 }: TAssistantProps) {
   const { theme } = useTheme()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isProcessingHelp, setIsProcessingHelp] = useState(false)
   const [sessionId, setSessionId] = useState<string>(`user-${Date.now()}`)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const [mounted, setMounted] = useState(false)
+  const prevJourneyRef = useRef<DriverJourneyState | null>(null)
+  const helpRequestHandledRef = useRef<string | null>(null)
+  const primerRequestHandledRef = useRef<string | null>(null)
+  const messageCounterRef = useRef(0)
+
+  const nextMessageId = useCallback((prefix: string) => {
+    messageCounterRef.current += 1
+    return `${prefix}-${Date.now()}-${messageCounterRef.current}`
+  }, [])
+
+  const addAssistantMessage = useCallback(
+    (content: string, options?: { actions?: MessageAction[]; step?: string }) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: nextMessageId('assistant'),
+          role: 'assistant',
+          content,
+          timestamp: new Date(),
+          step: options?.step,
+          actions: options?.actions,
+        },
+      ])
+    },
+    [nextMessageId]
+  )
+
+  const buildApplicationSnapshot = useCallback(() => {
+    const stringify = (value: unknown) => {
+      try {
+        const serialized = JSON.stringify(value, null, 2)
+        if (!serialized || serialized === 'null') return 'Not provided'
+        return serialized
+      } catch {
+        return 'Not provided'
+      }
+    }
+
+    return [
+      form1Data
+        ? `Form 1 (Personal Info): ${stringify(form1Data)}`
+        : 'Form 1: Not started',
+      form2Data
+        ? `Form 2 (Driving & Records): ${stringify(form2Data)}`
+        : 'Form 2: Not started',
+      form3Data
+        ? `Form 3 (Employment & Signature): ${stringify(form3Data)}`
+        : 'Form 3: Not started',
+    ].join('\n')
+  }, [form1Data, form2Data, form3Data])
 
   // Only access after mount (client-side only)
   useEffect(() => {
@@ -80,21 +149,249 @@ function TAssistantContent({
       complete: "🎊 Amazing! You've completed the entire process!\n\nYour driver application is now:\n✅ Submitted to blockchain\n✅ Verified and secure\n✅ Ready for employer review\n\nIs there anything else I can help you with?",
     }
 
+    const welcomeActions: Record<string, MessageAction[] | undefined> = {
+      welcome: [
+        { id: 'welcome-signin', label: 'Sign In', value: 'signin' },
+      ],
+      wallet: [
+        { id: 'wallet-resume', label: 'Upload resume', value: 'resume' },
+        { id: 'wallet-forms', label: 'Start application', value: 'forms' },
+        { id: 'wallet-primer', label: 'Why blockchain?', value: 'primer:learn_more' },
+      ],
+      resume: [
+        { id: 'resume-forms', label: 'Continue to forms', value: 'forms' },
+      ],
+      forms: [
+        { id: 'forms-progress', label: 'Open DOT forms', value: 'forms' },
+      ],
+      submission: [
+        { id: 'submission-dashboard', label: 'View dashboard', value: 'dashboard' },
+      ],
+      complete: [
+        { id: 'complete-dashboard', label: 'Open dashboard', value: 'dashboard' },
+      ],
+    }
+
     const welcomeMessage: Message = {
-      id: 'welcome',
+      id: nextMessageId('assistant'),
       role: 'assistant',
       content: welcomeMessages[currentStep] || welcomeMessages.welcome,
       timestamp: new Date(),
       step: currentStep,
+      actions: welcomeActions[currentStep],
     }
 
     setMessages([welcomeMessage])
-  }, [mounted, currentStep, messages.length])
+  }, [mounted, currentStep, messages.length, nextMessageId])
 
-  // Scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    if (!mounted || !journeyState) return
+    if (!prevJourneyRef.current) {
+      prevJourneyRef.current = journeyState
+      return
+    }
+
+    const previous = prevJourneyRef.current
+    const walletChanged =
+      journeyState.wallet.status === 'complete' &&
+      previous.wallet.status !== 'complete'
+    if (walletChanged) {
+      addAssistantMessage(
+        '✅ Your Base smart wallet is active. Next up, upload your resume so I can prefill the DOT forms or jump straight into the application.',
+        {
+          step: 'wallet',
+          actions: [
+            { id: 'journey-wallet-resume', label: 'Upload resume', value: 'resume' },
+            { id: 'journey-wallet-forms', label: 'Start application', value: 'forms' },
+            { id: 'journey-wallet-primer', label: 'Why blockchain?', value: 'primer:learn_more' },
+          ],
+        }
+      )
+    }
+
+    const resumeChanged =
+      journeyState.resume.status === 'complete' &&
+      previous.resume.status !== 'complete'
+    if (resumeChanged) {
+      addAssistantMessage(
+        '📄 Got it—your resume is on file. I can now prefill the DOT application to save you time.',
+        {
+          step: 'resume',
+          actions: [
+            { id: 'journey-resume-forms', label: 'Continue to forms', value: 'forms' },
+          ],
+        }
+      )
+    }
+
+    const formsStarted =
+      journeyState.forms.status === 'in_progress' &&
+      previous.forms.status === 'pending'
+    if (formsStarted) {
+      const formLabel = journeyState.currentFormStep
+        ? `Form ${journeyState.currentFormStep}`
+        : 'the DOT application'
+      addAssistantMessage(
+        `📝 I'm tracking your DOT application. You're currently working on ${formLabel}. Ask me about any section if you get stuck.`,
+        { step: 'forms' }
+      )
+    }
+
+    const formsCompleted =
+      journeyState.forms.status === 'complete' &&
+      previous.forms.status !== 'complete'
+    if (formsCompleted) {
+      addAssistantMessage(
+        '✅ Application details captured. When you’re ready, we can submit everything to Base.',
+        { step: 'forms' }
+      )
+    }
+
+    const submissionStarted =
+      journeyState.submission.status === 'in_progress' &&
+      previous.submission.status !== 'in_progress'
+    if (submissionStarted) {
+      addAssistantMessage(
+        '🚚 Your application is heading to the blockchain now. Keep this tab open—I’ll confirm once it’s sealed.',
+        { step: 'submission' }
+      )
+    }
+
+    const submissionCompleted =
+      journeyState.submission.status === 'complete' &&
+      previous.submission.status !== 'complete'
+    if (submissionCompleted) {
+      addAssistantMessage(
+        '🎉 Application submitted! You can view your timeline and next steps from the dashboard whenever you like.',
+        {
+          step: 'complete',
+          actions: [
+            { id: 'journey-dashboard', label: 'Open dashboard', value: 'dashboard' },
+          ],
+        }
+      )
+    }
+
+    prevJourneyRef.current = journeyState
+  }, [journeyState, mounted, addAssistantMessage])
+
+  useEffect(() => {
+    if (!mounted || !primerRequest) return
+    if (primerRequestHandledRef.current === primerRequest.id) return
+    primerRequestHandledRef.current = primerRequest.id
+    addAssistantMessage(primerRequest.message, {
+      step: currentStep,
+      actions: [
+        { id: 'primer-learn', label: 'Tell me more', value: 'primer:learn_more' },
+        { id: 'primer-skip', label: 'Skip for now', value: 'primer:skip' },
+      ],
+    })
+  }, [primerRequest, mounted, addAssistantMessage, currentStep])
+
+  useEffect(() => {
+    if (!mounted || !helpRequest) return
+    if (helpRequestHandledRef.current === helpRequest.id) return
+    helpRequestHandledRef.current = helpRequest.id
+
+    const fetchHelp = async () => {
+      setIsProcessingHelp(true)
+      try {
+        const snapshot =
+          helpRequest.dataSnapshot !== undefined
+            ? (() => {
+                try {
+                  const json = JSON.stringify(helpRequest.dataSnapshot, null, 2)
+                  if (!json || json === 'null') return ''
+                  return json.length > 2000
+                    ? `${json.slice(0, 2000)}\n... (truncated)`
+                    : json
+                } catch {
+                  return ''
+                }
+              })()
+            : ''
+
+        const applicationSnapshot = buildApplicationSnapshot()
+
+        const helpPrompt = [
+          `You are T, a friendly DOT compliance assistant helping drivers complete FMCSA-required application forms.`,
+          `Current assistant step context: ${currentStep}`,
+          userAddress
+            ? `User wallet: ${userAddress} (Base smart wallet)`
+            : 'User not logged in yet.',
+          hasResume
+            ? 'A resume has been uploaded and is available for reference.'
+            : 'No resume data is available yet.',
+          hasForms
+            ? 'User has already started filling out DOT forms.'
+            : 'User has not started the DOT forms yet.',
+          helpRequest.context ? `User context: ${helpRequest.context}` : '',
+          helpRequest.regulation
+            ? `Relevant regulation to reference: ${helpRequest.regulation}`
+            : '',
+          snapshot ? `Section-specific data provided:\n${snapshot}` : '',
+          `Current application snapshot:\n${applicationSnapshot}`,
+          `User question: ${helpRequest.question}`,
+          `Provide a concise, plain-language answer with actionable guidance. Reference the regulation if one was supplied. Close with a suggested next step when appropriate.`,
+        ]
+          .filter(Boolean)
+          .join('\n\n')
+
+        const response = await fetch('/api/ai/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: helpPrompt,
+            session_id: sessionId,
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || 'Failed to fetch help response')
+        }
+
+        const data = await response.json()
+        addAssistantMessage(
+          data.reply ||
+            "Here's what to keep in mind:\n• Provide the required details clearly\n• Make sure the statement covers the full DOT requirement\n• Let me know if you'd like to review this together."
+        )
+      } catch (error) {
+        console.error('❌ [T ASSISTANT] Help request error:', error)
+        addAssistantMessage(
+          "Sorry, I couldn't pull those details just now. Try asking again or let me know what part is confusing so I can walk you through it."
+        )
+      } finally {
+        setIsProcessingHelp(false)
+      }
+    }
+
+    fetchHelp()
+  }, [
+    mounted,
+    helpRequest,
+    buildApplicationSnapshot,
+    currentStep,
+    userAddress,
+    hasResume,
+    hasForms,
+    sessionId,
+    addAssistantMessage,
+  ])
+
+  // Scroll to bottom when messages change within the assistant container only
+  useEffect(() => {
+    if (!mounted) return
+    const container = messagesContainerRef.current
+    if (container) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth',
+      })
+    }
+  }, [messages, mounted])
 
   // Focus input when component mounts
   useEffect(() => {
@@ -107,7 +404,7 @@ function TAssistantContent({
     if (!input.trim() || isLoading) return
 
     const userMessage: Message = {
-      id: `user-${Date.now()}`,
+      id: nextMessageId('user'),
       role: 'user',
       content: input.trim(),
       timestamp: new Date(),
@@ -119,6 +416,7 @@ function TAssistantContent({
 
     try {
       // Build context-aware prompt with application data
+      const applicationSnapshot = buildApplicationSnapshot()
       const contextPrompt = [
         `You are T, a friendly AI assistant guiding users through the driver employment application process.`,
         `Current step: ${currentStep}`,
@@ -127,9 +425,7 @@ function TAssistantContent({
         hasForms ? `User has started filling out forms` : `User has not started forms yet`,
         ``,
         `=== USER'S APPLICATION DATA ===`,
-        form1Data ? `Form 1 (Personal Info): ${JSON.stringify(form1Data, null, 2)}` : `Form 1: Not started`,
-        form2Data ? `Form 2 (Driving & Records): ${JSON.stringify(form2Data, null, 2)}` : `Form 2: Not started`,
-        form3Data ? `Form 3 (Employment & Signature): ${JSON.stringify(form3Data, null, 2)}` : `Form 3: Not started`,
+        applicationSnapshot,
         ``,
         `Be helpful, friendly, and guide them to the next step. You can reference their application data to provide personalized guidance.`,
         `User message: ${userMessage.content}`,
@@ -148,38 +444,47 @@ function TAssistantContent({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Failed to get AI response')
+        const errorMessage = errorData?.error || 'Failed to get AI response'
+        const detailMessage = errorData?.detail
+        const combinedMessage = detailMessage
+          ? `${errorMessage}: ${detailMessage}`
+          : errorMessage
+        const enrichedError = new Error(combinedMessage)
+        ;(enrichedError as any).status = response.status
+        throw enrichedError
       }
 
       const data = await response.json()
       
-      const assistantMessage: Message = {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content: data.reply || 'No response received',
-        timestamp: new Date(),
-      }
-
-      setMessages((prev) => [...prev, assistantMessage])
+      addAssistantMessage(data.reply || 'No response received')
 
       // Don't automatically trigger actions based on T's response
       // Actions should only be triggered by explicit user requests or buttons
       // This prevents accidental navigation when users are just asking questions
     } catch (error: any) {
       console.error('❌ [T ASSISTANT] Error sending message:', error)
-      
-      const errorMessage: Message = {
-        id: `error-${Date.now()}`,
-        role: 'assistant',
-        content: `Sorry, I encountered an error: ${error.message || 'Unknown error'}. Please try again.`,
-        timestamp: new Date(),
-      }
-
-      setMessages((prev) => [...prev, errorMessage])
+      const fallback =
+        error?.message ||
+        `An unexpected error occurred (status: ${error?.status ?? 'unknown'})`
+      addAssistantMessage(
+        `Sorry, I encountered an error: ${fallback}. Please try again or check the console logs for details.`
+      )
     } finally {
       setIsLoading(false)
     }
-  }, [input, isLoading, sessionId, currentStep, userAddress, hasResume, hasForms, form1Data, form2Data, form3Data, onAction])
+  }, [
+    input,
+    isLoading,
+    sessionId,
+    currentStep,
+    userAddress,
+    hasResume,
+    hasForms,
+    buildApplicationSnapshot,
+    addAssistantMessage,
+    nextMessageId,
+    onAction,
+  ])
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -187,6 +492,49 @@ function TAssistantContent({
       handleSend()
     }
   }
+
+  const handleMessageAction = useCallback(
+    (action: MessageAction) => {
+      switch (action.value) {
+        case 'primer:learn_more':
+          addAssistantMessage(
+            "Here’s the quick version:\n• Base smart wallets let drivers sign in with email—no seed phrases.\n• We can sponsor your gas fees so submitting DOT documents stays free for you.\n• Your resume + application live on-chain, so employers can trust they’re unchanged.\nI’ll keep everything guided, but shout if you want the deeper dive."
+          )
+          onAction?.(action.value)
+          break
+        case 'primer:skip':
+          addAssistantMessage(
+            'All good—we can revisit the blockchain basics whenever you’re curious.'
+          )
+          onAction?.(action.value)
+          break
+        default:
+          onAction?.(action.value)
+          break
+      }
+    },
+    [addAssistantMessage, onAction]
+  )
+
+  const statusIcon = (status: string) => {
+    switch (status) {
+      case 'complete':
+        return '✅'
+      case 'in_progress':
+        return '⏳'
+      default:
+        return '•'
+    }
+  }
+
+  const journeySummary = journeyState
+    ? [
+        `${statusIcon(journeyState.wallet.status)} Wallet`,
+        `${statusIcon(journeyState.resume.status)} Resume`,
+        `${statusIcon(journeyState.forms.status)} Forms`,
+        `${statusIcon(journeyState.submission.status)} Submission`,
+      ].join(' • ')
+    : ''
 
   if (!mounted) {
     return null
@@ -292,9 +640,21 @@ function TAssistantContent({
           )}
         </div>
       </div>
+      {journeyState && (
+        <div
+          className={`px-4 pb-2 text-xs ${
+            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+          }`}
+        >
+          Progress: {journeySummary}
+        </div>
+      )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto p-4 space-y-4"
+      >
         {messages.map((message) => (
           <div
             key={message.id}
@@ -330,10 +690,30 @@ function TAssistantContent({
                   minute: '2-digit',
                 })}
               </p>
+              {message.role === 'assistant' &&
+                message.actions &&
+                message.actions.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {message.actions.map((action) => (
+                      <button
+                        key={action.id}
+                        type="button"
+                        onClick={() => handleMessageAction(action)}
+                        className={`px-3 py-1 text-xs font-medium rounded-full border transition-all ${
+                          theme === 'dark'
+                            ? 'border-brand-mint/50 text-brand-mint hover:bg-brand-mint/10'
+                            : 'border-brand-sage/40 text-brand-sage hover:bg-brand-sage/10'
+                        }`}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
             </div>
           </div>
         ))}
-        {isLoading && (
+        {(isLoading || isProcessingHelp) && (
           <div className="flex justify-start">
             <div
               className={`rounded-lg px-4 py-2 ${
@@ -346,7 +726,6 @@ function TAssistantContent({
             </div>
           </div>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}

@@ -3,7 +3,6 @@ import { Quicksand } from 'next/font/google'
 import './globals.css'
 import AlchemyProvider from '@/components/AlchemyProvider'
 import { ThemeProvider } from '@/contexts/ThemeContext'
-import ChatAssistant from '@/components/ChatAssistant'
 
 const quicksand = Quicksand({
   variable: '--font-quicksand',
@@ -27,7 +26,6 @@ export default function RootLayout({
         <ThemeProvider>
           <AlchemyProvider>
             {children}
-            <ChatAssistant />
           </AlchemyProvider>
         </ThemeProvider>
       </body>

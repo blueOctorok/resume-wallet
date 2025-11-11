@@ -99,6 +99,24 @@ This file tracks major modifications made to the ResumeWallet codebase.
   - Env Vars: `T_BACKEND_API_KEY` (required), `T_BACKEND_BASE_URL` (optional; defaults to `https://api-v2.fluxpointstudios.com`)
   - Next: Add context awareness (reference user's application data), document search (vector stores)
 
+**FEATURE (November 10, 2025):**
+
+- ✅ Resume Management Dashboard - Complete driver-facing view of uploaded resumes
+  - What it does: Displays all IPFS-backed resumes for the signed-in wallet with verification status, blockchain metadata, and quick links
+  - Smart filters: Search by title/filename/hash and filter by status (All, Verified, Pending, Failed)
+  - Detail view: Shows file metadata, sharing state, BaseScan transaction URL, and IPFS link for the selected resume
+  - Refresh control: Pulls `/api/resumes` with wallet header fallback so Alchemy Smart Wallet users load data without extra signatures
+  - UI: Mirrors existing glassmorphism theme with stat summaries, responsive layout, and loading skeletons
+
+**POLISH (November 10, 2025):**
+
+- ✅ Removed floating ChatAssistant from layout so T Assistant remains the single conversational guide (avoids duplicate chat entry points)
+- ✅ Simplified landing state by removing the "Welcome to Veree" splash bubbles; users now see T Assistant immediately after navigation
+- ✅ T Assistant now tracks journey progress (wallet → resume → forms → submission), persists it per wallet, and surfaces targeted follow-up actions
+- ✅ Added optional Base smart wallet primer after login so non-crypto drivers can learn why the stack is blockchain-backed without friction
+- ✅ Wired “Ask T” buttons into DOT forms so drivers can request context-aware help on tricky compliance sections (employment history, medical, final acknowledgements)
+- ✅ Added admin-only `POST /api/admin/reset-wallet` endpoint (requires `ADMIN_API_KEY` + `SUPABASE_SERVICE_ROLE_KEY`) to purge a wallet’s `users`, `resumes`, and `driver_applications` rows for rapid testing without minting new emails
+
 **FEATURE (November 6, 2025):**
 
 - ✅ AI Compliance Review (MVP) using T Backend background tasks
