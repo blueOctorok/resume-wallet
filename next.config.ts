@@ -1,3 +1,4 @@
+import path from 'path'
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
@@ -7,6 +8,14 @@ const nextConfig: NextConfig = {
   // Temporarily disable TypeScript checking for deployment
   typescript: {
     ignoreBuildErrors: true,
+  },
+  webpack: (config) => {
+    config.resolve = config.resolve ?? {}
+    config.resolve.alias = {
+      ...(config.resolve.alias ?? {}),
+      'pino-pretty': path.resolve(process.cwd(), 'src/lib/shims/pino-pretty.ts'),
+    }
+    return config
   },
 }
 

@@ -4,6 +4,13 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ## 🤖 **LATEST STATUS: T BACKEND VECTOR STORE & KNOWLEDGE GRAPH SETUP!** ✨
 
+**FIX (November 11, 2025):**
+
+- ✅ Prevented Vercel production builds from failing on the optional `pino-pretty` dependency pulled in by WalletConnect's logger.
+  - Added a lightweight shim at `src/lib/shims/pino-pretty.ts` that returns a no-op transport.
+  - Updated `next.config.ts` to alias `'pino-pretty'` to the shim during bundling so Next.js no longer tries to resolve the dev-only package.
+  - This keeps local DX unchanged while allowing serverless builds to complete successfully.
+
 **MAJOR FEATURE (November 6, 2025):**
 
 - ✅ T Backend Vector Store & Knowledge Graph Setup - Make T More Directed
