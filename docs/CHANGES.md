@@ -10,6 +10,9 @@ This file tracks major modifications made to the ResumeWallet codebase.
   - Added a lightweight shim at `src/lib/shims/pino-pretty.ts` that returns a no-op transport.
   - Updated `next.config.ts` to alias `'pino-pretty'` to the shim during bundling so Next.js no longer tries to resolve the dev-only package.
   - This keeps local DX unchanged while allowing serverless builds to complete successfully.
+- ✅ Stopped `/admin` from being prerendered during Vercel builds.
+  - Marked the page as dynamic (`dynamic = 'force-dynamic'`, `revalidate = 0`) so it only renders when the Alchemy provider context is available.
+  - Fixes the `AASDKError: useAlchemyAccountContext must be used within a AlchemyAccountProvider` build-time crash.
 
 **MAJOR FEATURE (November 6, 2025):**
 
