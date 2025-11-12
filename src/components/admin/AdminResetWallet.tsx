@@ -79,11 +79,53 @@ export default function AdminResetWallet({
     }
   }
 
+  const handleClearFormData = () => {
+    if (typeof window !== 'undefined') {
+      const address = walletAddress.trim() || initialWalletAddress
+      if (!address) {
+        setError('Please enter a wallet address.')
+        return
+      }
+      
+      console.log('🧹 [ADMIN] Starting form data clear for:', address)
+      
+      // Clear all localStorage for this address
+      window.localStorage.removeItem(`forms-${address}`)
+      window.localStorage.removeItem(`journey-${address}`)
+      window.localStorage.removeItem(`journey-primer-${address}`)
+      console.log('✅ [ADMIN] Cleared localStorage items')
+      
+      // Dispatch event to trigger client-side form reset
+      const event = new CustomEvent('wallet-data-reset', {
+        detail: { walletAddress: address },
+      })
+      console.log('📢 [ADMIN] Dispatching wallet-data-reset event:', event.detail)
+      window.dispatchEvent(event)
+      console.log('✅ [ADMIN] Event dispatched')
+      
+      setResult({
+        success: true,
+        walletAddress: address,
+        message: 'Form data cleared. Navigate back to main page to see reset. Or use the button on the main page instead.',
+      })
+      
+      console.log('✅ [ADMIN] Clear form data complete')
+    }
+  }
+
   return (
-    <div className="rounded-2xl border border-brand-sage/30 bg-brand-sage-light/10 p-6 shadow-2xl">
+    <div className="rounded-2xl border border-brand-sage/30 bg-brand-sage-light/10 p-6 shadow-2xl space-y-6">
       <h2 className="text-xl font-semibold text-brand-sage mb-4">
-        Admin Reset Wallet Data
+        Admin Reset Tools
       </h2>
+      
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+        <p className="font-semibold mb-2">💡 Two Reset Options:</p>
+        <ul className="list-disc list-inside space-y-1">
+          <li><strong>Clear Form Data:</strong> Clears forms & browser cache (keeps Supabase data)</li>
+          <li><strong>Reset Wallet Data:</strong> Deletes everything from Supabase (resumes, apps, user)</li>
+        </ul>
+      </div>
       {!adminKey && (
         <div className="mb-4 space-y-2">
           <p className="text-sm text-brand-sage/70">
@@ -114,18 +156,29 @@ export default function AdminResetWallet({
           />
         </div>
 
-        <button
-          type="button"
-          onClick={handleReset}
-          disabled={
-            isLoading ||
-            !walletAddress.trim() ||
-            !(adminKey?.trim() || localAdminKey.trim())
-          }
-          className="inline-flex items-center justify-center rounded-md bg-brand-sage px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-brand-sage-dark disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isLoading ? 'Resetting…' : 'Reset Wallet Data'}
-        </button>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={handleClearFormData}
+            disabled={!walletAddress.trim() && !initialWalletAddress}
+            className="flex-1 inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            🧹 Clear Form Data
+          </button>
+          
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={
+              isLoading ||
+              !walletAddress.trim() ||
+              !(adminKey?.trim() || localAdminKey.trim())
+            }
+            className="flex-1 inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isLoading ? 'Resetting…' : '🗑️ Reset Wallet Data'}
+          </button>
+        </div>
 
         {error && (
           <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">

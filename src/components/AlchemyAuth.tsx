@@ -335,9 +335,10 @@ export default function AlchemyAuth({
         className={`absolute -inset-[1px] rounded-3xl opacity-50 blur-sm -z-10 bg-gradient-to-b from-brand-mint/20 to-transparent`}
       />
 
-      <div className='relative'>
+      <div className='relative overflow-hidden'>
         {/* Alchemy AuthCard - handles all the authentication logic */}
-        <div>
+        {/* overflow-hidden prevents Alchemy UI elements from causing flickering at certain breakpoints */}
+        <div className='overflow-hidden'>
           <AuthCard />
         </div>
       </div>

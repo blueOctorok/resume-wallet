@@ -15,6 +15,7 @@ import type {
   DriverJourneyState,
   JourneyStatus,
   PrimerPrompt,
+  ResumeUploadEvent,
 } from '@/types/assistant'
 
 // Dynamic imports to avoid SSR issues with Alchemy hooks
@@ -279,7 +280,10 @@ const HomeContent = () => {
   const [primerSeen, setPrimerSeen] = useState(false)
   const [primerRequest, setPrimerRequest] = useState<PrimerPrompt | null>(null)
   const [hasResume, setHasResume] = useState(false)
+  const [latestResumeIpfsHash, setLatestResumeIpfsHash] = useState<string | null>(null)
   const primerTriggeredRef = useRef(false)
+  const [resumeUploadEvent, setResumeUploadEvent] = useState<ResumeUploadEvent | null>(null)
+  const resetInProgressRef = useRef(false)
 
   const updateJourneyStep = useCallback(
     (step: JourneyStageKey, status: JourneyStatus) => {
@@ -319,10 +323,31 @@ const HomeContent = () => {
     setHelpRequest(request)
   }, [])
 
+  const handleResumeUploadEvent = useCallback((event: ResumeUploadEvent) => {
+    setResumeUploadEvent(event)
+    // Clear the event after a short delay to allow re-triggering of different events
+    setTimeout(() => {
+      setResumeUploadEvent(null)
+    }, 100)
+  }, [])
+
   const resetApplicationProgress = useCallback(() => {
+    console.log('🔄 [RESET] ==================== START RESET ====================')
+    console.log('🔄 [RESET] User address:', user?.address)
+    console.log('🔄 [RESET] Current form1Data:', form1Data)
+    console.log('🔄 [RESET] Current form2Data:', form2Data)
+    console.log('🔄 [RESET] Current form3Data:', form3Data)
+    
+    // Set flag to prevent localStorage from reloading stale data
+    resetInProgressRef.current = true
+    console.log('🔄 [RESET] Set resetInProgressRef to true')
+    
+    // Clear state first
+    console.log('🔄 [RESET] Setting form data to null...')
     setForm1Data(null)
     setForm2Data(null)
     setForm3Data(null)
+    console.log('🔄 [RESET] Form data set to null')
     setHasPrefilled(false)
     setShowPrefillUpload(true)
     setCurrentForm(1)
@@ -331,17 +356,50 @@ const HomeContent = () => {
     setShowDashboard(false)
     setSubmissionError(null)
     setHasResume(false)
+    setLatestResumeIpfsHash(null) // Clear stored IPFS hash
     setHelpRequest(null)
     setPrimerRequest(null)
     primerTriggeredRef.current = false
+    
+    // Clear localStorage
     if (typeof window !== 'undefined' && user?.address) {
+      console.log('🔄 [RESET] Clearing localStorage for:', user.address)
+      const beforeForms = window.localStorage.getItem(`forms-${user.address}`)
+      const beforeJourney = window.localStorage.getItem(`journey-${user.address}`)
+      console.log('🔄 [RESET] Before clear - forms:', beforeForms?.substring(0, 100))
+      console.log('🔄 [RESET] Before clear - journey:', beforeJourney?.substring(0, 100))
+      
+      // Clear all localStorage items for this user
       window.localStorage.removeItem(`forms-${user.address}`)
       window.localStorage.removeItem(`journey-${user.address}`)
+      window.localStorage.removeItem(`journey-primer-${user.address}`)
+      
+      const afterForms = window.localStorage.getItem(`forms-${user.address}`)
+      const afterJourney = window.localStorage.getItem(`journey-${user.address}`)
+      console.log('✅ [RESET] After clear - forms:', afterForms)
+      console.log('✅ [RESET] After clear - journey:', afterJourney)
+      console.log('✅ [RESET] Cleared localStorage for user:', user.address)
     }
+    
+    console.log('🔄 [RESET] Resetting journey state...')
     setJourneyState(createInitialJourneyState())
     updateJourneyStep('wallet', 'complete')
+    
+    // Force form components to remount with fresh state
+    const oldKey = formResetKey
     setFormResetKey((key) => key + 1)
-  }, [updateJourneyStep, user?.address])
+    console.log('🔄 [RESET] Incremented formResetKey from', oldKey, 'to', oldKey + 1)
+    
+    // Clear the reset flag after a brief delay to allow state updates to complete
+    setTimeout(() => {
+      resetInProgressRef.current = false
+      console.log('✅ [RESET] ==================== END RESET ====================')
+      console.log('✅ [RESET] Reset flag cleared')
+      console.log('✅ [RESET] form1Data should now be:', form1Data)
+      console.log('✅ [RESET] form2Data should now be:', form2Data)
+      console.log('✅ [RESET] form3Data should now be:', form3Data)
+    }, 100)
+  }, [updateJourneyStep, user?.address, formResetKey, form1Data, form2Data, form3Data])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -374,6 +432,12 @@ const HomeContent = () => {
         setJourneyState(createInitialJourneyState())
       }
 
+      // Don't load from localStorage if a reset is in progress
+      if (resetInProgressRef.current) {
+        console.log('⏸️ [RESET] Skipping localStorage load - reset in progress')
+        return
+      }
+      
       const storedForms = window.localStorage.getItem(`forms-${user.address}`)
       if (storedForms) {
         const parsedForms = JSON.parse(storedForms) as {
@@ -445,14 +509,19 @@ const HomeContent = () => {
       const detail = (event as CustomEvent).detail as {
         walletAddress?: string
       }
+      console.log('📢 [RESET] Received wallet-data-reset event:', detail)
       if (
         detail?.walletAddress &&
         detail.walletAddress.toLowerCase() === user.address.toLowerCase()
       ) {
+        console.log('✅ [RESET] Wallet address matches, triggering reset')
         resetApplicationProgress()
+      } else {
+        console.log('⚠️ [RESET] Wallet address mismatch, ignoring reset')
       }
     }
     window.addEventListener('wallet-data-reset', handler)
+    console.log('👂 [RESET] Listening for wallet-data-reset events')
     return () => {
       window.removeEventListener('wallet-data-reset', handler)
     }
@@ -616,6 +685,65 @@ const HomeContent = () => {
         case 'forms':
           setCurrentPage('dotapp')
           setShowPrefillUpload(false)
+          break
+        case 'resume:prefill':
+          // If we have an existing resume IPFS hash, automatically trigger prefill
+          if (latestResumeIpfsHash) {
+            // Automatically trigger prefill with existing resume
+            handleResumeUploadEvent({
+              type: 'analysis_ready',
+              step: 'prefill',
+              message: 'Perfect! I\'m using your uploaded resume to prefill your DOT application forms. This will take about 20-30 seconds...',
+            })
+            // Navigate to forms page
+            setCurrentPage('dotapp')
+            setShowPrefillUpload(false) // Don't show upload component, we're using existing resume
+            setShowEmploymentVerification(false)
+            setShowDashboard(false)
+            // Automatically trigger prefill API call
+            setTimeout(async () => {
+              try {
+                const prefillResponse = await fetch('/api/ai/prefill-resume', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    cid: latestResumeIpfsHash,
+                  }),
+                })
+                
+                if (prefillResponse.ok) {
+                  const prefillData = await prefillResponse.json()
+                  handlePrefillSuccess(prefillData)
+                } else {
+                  const errorData = await prefillResponse.json().catch(() => ({ error: 'Unknown error' }))
+                  handlePrefillError(errorData.error || 'Failed to prefill forms')
+                }
+              } catch (error) {
+                console.error('❌ Auto-prefill error:', error)
+                handlePrefillError(error instanceof Error ? error.message : 'Failed to prefill forms')
+              }
+            }, 500)
+          } else {
+            // No existing resume, show upload component
+            setCurrentPage('dotapp')
+            setShowPrefillUpload(true)
+            setShowEmploymentVerification(false)
+            setShowDashboard(false)
+            // Trigger a follow-up message from T after a brief delay to ensure navigation completes
+            setTimeout(() => {
+              handleResumeUploadEvent({
+                type: 'analysis_ready',
+                step: 'prefill',
+                message: 'Perfect! I\'ll help you prefill your DOT application. You can upload your resume in the form below, and I\'ll extract key information like your name, license details, and work history to automatically fill out the DOT forms. This will save you a lot of time!',
+              })
+            }, 300)
+          }
+          break
+        case 'resume:help':
+          // Stay on resume page, T will provide help via chat
+          setCurrentPage('resume')
           break
         case 'dashboard':
           setCurrentPage('dotapp')
@@ -1247,10 +1375,27 @@ const HomeContent = () => {
       requestHelp={handleHelpRequest}
       primerSeen={primerSeen}
       setPrimerSeen={handleSetPrimerSeen}
+      notifyResumeUploadEvent={handleResumeUploadEvent}
     >
       <div className='min-h-screen overflow-x-hidden relative'>
         {/* Animated Background */}
         <AnimatedBackground />
+
+        {/* Admin Quick Reset Button (Development Only) */}
+        {user && process.env.NODE_ENV === 'development' && (
+          <div className='fixed top-4 right-4 z-50'>
+            <button
+              onClick={() => {
+                console.log('🧹 [DEV] Quick reset triggered for:', user.address)
+                resetApplicationProgress()
+              }}
+              className='px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg shadow-lg text-sm font-semibold'
+              title='Development: Clear form data'
+            >
+              🧹 Clear Forms (Dev)
+            </button>
+          </div>
+        )}
 
         {/* Wallet Card - Desktop Top Left */}
         {user && (
@@ -1300,12 +1445,13 @@ const HomeContent = () => {
               journeyState={journeyState}
               helpRequest={helpRequest}
               primerRequest={primerRequest}
+              resumeUploadEvent={resumeUploadEvent}
             />
           </div>
 
           {/* Conditional Content Based on Navigation */}
           {currentPage === 'signin' && !user && (
-            <div className='max-w-md mx-auto'>
+            <div className='max-w-md mx-auto overflow-hidden'>
               <AlchemyAuth
                 onAuthSuccess={handleAuthSuccess}
                 onLogoutSuccess={() => setUser(null)}
@@ -1317,11 +1463,32 @@ const HomeContent = () => {
             <div className='max-w-4xl mx-auto space-y-6'>
               <ResumeUploadWithVerification
                 user={user}
-                onUploadComplete={() => setHasResume(true)}
+                onUploadComplete={(payload) => {
+                  setHasResume(true)
+                  // Store the IPFS hash for later prefill use
+                  if (payload?.finalResult?.ipfsHash) {
+                    setLatestResumeIpfsHash(payload.finalResult.ipfsHash)
+                  }
+                  // Trigger completion event after upload completes
+                  if (payload?.resume) {
+                    handleResumeUploadEvent({
+                      type: 'analysis_ready',
+                      step: 'upload',
+                      data: payload.resume,
+                      message: '🎉 Your resume is uploaded and verified! I can help you prefill your DOT application forms with information from your resume. Would you like me to do that now?',
+                    })
+                  }
+                }}
               />
               <ResumeDashboard
                 user={user}
-                onResumesLoaded={(count) => setHasResume(count > 0)}
+                onResumesLoaded={(count, latestResume) => {
+                  setHasResume(count > 0)
+                  // Store the latest resume's IPFS hash for prefill
+                  if (latestResume?.ipfs_hash) {
+                    setLatestResumeIpfsHash(latestResume.ipfs_hash)
+                  }
+                }}
               />
               {user && <WalletTransactions />}
             </div>

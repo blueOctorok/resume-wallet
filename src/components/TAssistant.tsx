@@ -7,6 +7,7 @@ import type {
   AssistantHelpRequest,
   DriverJourneyState,
   PrimerPrompt,
+  ResumeUploadEvent,
 } from '@/types/assistant'
 
 interface MessageAction {
@@ -36,6 +37,7 @@ interface TAssistantProps {
   journeyState?: DriverJourneyState
   helpRequest?: AssistantHelpRequest | null
   primerRequest?: PrimerPrompt | null
+  resumeUploadEvent?: ResumeUploadEvent | null
 }
 
 // Wrapper component that safely handles SSR
@@ -51,6 +53,7 @@ function TAssistantContent({
   journeyState,
   helpRequest,
   primerRequest,
+  resumeUploadEvent,
 }: TAssistantProps) {
   const { theme } = useTheme()
   const [messages, setMessages] = useState<Message[]>([])
@@ -64,6 +67,7 @@ function TAssistantContent({
   const prevJourneyRef = useRef<DriverJourneyState | null>(null)
   const helpRequestHandledRef = useRef<string | null>(null)
   const primerRequestHandledRef = useRef<string | null>(null)
+  const resumeUploadEventHandledRef = useRef<string | null>(null)
   const messageCounterRef = useRef(0)
 
   const nextMessageId = useCallback((prefix: string) => {
@@ -287,6 +291,35 @@ function TAssistantContent({
       ],
     })
   }, [primerRequest, mounted, addAssistantMessage, currentStep])
+
+  // Handle resume upload events
+  useEffect(() => {
+    if (!mounted || !resumeUploadEvent) return
+    
+    // Create a unique key for this event to prevent duplicates
+    // Use timestamp + type + step to ensure uniqueness while allowing same type/step combinations at different times
+    const eventKey = `${resumeUploadEvent.type}-${resumeUploadEvent.step}-${Date.now()}`
+    // Only prevent if it's the exact same event (same timestamp would be impossible, so this is just for safety)
+    if (resumeUploadEventHandledRef.current === eventKey) return
+    resumeUploadEventHandledRef.current = eventKey
+
+    // Display the message from the event
+    if (resumeUploadEvent.message) {
+      addAssistantMessage(resumeUploadEvent.message, {
+        step: 'resume',
+        actions: resumeUploadEvent.type === 'blockchain_complete' || resumeUploadEvent.type === 'analysis_ready'
+          ? [
+              { id: 'resume-prefill', label: 'Yes, prefill my forms', value: 'resume:prefill' },
+              { id: 'resume-continue', label: 'No, I\'ll fill manually', value: 'forms' },
+            ]
+          : resumeUploadEvent.type === 'upload_error'
+          ? [
+              { id: 'resume-help', label: 'Get help', value: 'resume:help' },
+            ]
+          : undefined,
+      })
+    }
+  }, [resumeUploadEvent, mounted, addAssistantMessage])
 
   useEffect(() => {
     if (!mounted || !helpRequest) return

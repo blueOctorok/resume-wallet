@@ -127,13 +127,78 @@ export default function PersonalInfoForm3({
   }
 
   // Sync form data to parent component
+  // Don't sync on initial mount if initialData is null (reset scenario)
+  // But DO sync after user makes any changes
+  const initialMountRef = useRef(true)
   useEffect(() => {
+    // On initial mount with no data, don't sync the empty form state
+    if (initialMountRef.current && (!initialData || Object.keys(initialData).length === 0)) {
+      initialMountRef.current = false
+      return
+    }
+    // After initial mount, or if we have initialData, always sync
+    initialMountRef.current = false
     onDataChange?.(formData)
-  }, [formData, onDataChange])
+  }, [formData, onDataChange, initialData])
 
   // Initialize/restore from parent once to avoid loops
   const hasHydratedRef = useRef(false)
+  const previousInitialDataRef = useRef<any>(null)
   useEffect(() => {
+    // If initialData becomes null/undefined after having data, reset the form
+    if (previousInitialDataRef.current && !initialData) {
+      hasHydratedRef.current = false
+      setFormData({
+        employers: [
+          {
+            name: '',
+            phone: '',
+            address: '',
+            positionHeld: '',
+            fromDate: '',
+            toDate: '',
+            reasonForLeaving: '',
+            salary: '',
+            gapsInEmployment: '',
+            subjectToFMCSR: '',
+            safetySensitiveFunction: '',
+            isUnemployment: false,
+          },
+        ],
+        education: [
+          {
+            schoolType: '',
+            nameAndLocation: '',
+            courseOfStudy: '',
+            yearsCompleted: '',
+            graduated: '',
+            details: '',
+          },
+        ],
+        otherQualifications: '',
+        applicantSignature: '',
+        signatureDate: '',
+        applicantNamePrinted: '',
+        safetyPerformanceHistoryAcknowledgement: false,
+        safetyPerformanceInquiryConsent: false,
+        roadTestAcknowledgement: false,
+        hasPreviousRoadTest: '',
+        previousRoadTestDetails: '',
+        hasValidCDL: '',
+        roadTestCertificateFiles: [],
+        medicalCertificateFiles: [],
+        dqFileAcknowledgement: false,
+        dqHasApplicationComplete: '',
+        dqHasRoadTestDocs: '',
+        dqHasMedicalDocs: '',
+        dqUnderstandsRetention: '',
+        dqInvestigationConsent: false,
+        dqHasInvestigationRecords: '',
+        dqUnderstandsAccessControls: '',
+      })
+    }
+    previousInitialDataRef.current = initialData
+    
     if (hasHydratedRef.current) return
     if (initialData && Object.keys(initialData).length > 0) {
       hasHydratedRef.current = true

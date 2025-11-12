@@ -153,13 +153,93 @@ export default function PersonalInfoForm1({
   }
 
   // Sync form data to parent component
+  // Don't sync on initial mount if initialData is null (reset scenario)
+  // But DO sync after user makes any changes
+  const initialMountRef = useRef(true)
   useEffect(() => {
+    // On initial mount with no data, don't sync the empty form state
+    if (initialMountRef.current && (!initialData || Object.keys(initialData).length === 0)) {
+      initialMountRef.current = false
+      return
+    }
+    // After initial mount, or if we have initialData, always sync
+    initialMountRef.current = false
     onDataChange?.(formData)
-  }, [formData, onDataChange])
+  }, [formData, onDataChange, initialData])
 
   // Initialize/restore from parent once to avoid loops
   const hasHydratedRef = useRef(false)
+  const previousInitialDataRef = useRef<any>(null)
   useEffect(() => {
+    // If initialData becomes null/undefined after having data, reset the form
+    if (previousInitialDataRef.current && !initialData) {
+      hasHydratedRef.current = false
+      setFormData({
+        employingCarrier: {
+          name: DEFAULT_CARRIER_INFO.name,
+          address: DEFAULT_CARRIER_INFO.address,
+          phone: DEFAULT_CARRIER_INFO.phone,
+          email: DEFAULT_CARRIER_INFO.email,
+        },
+        firstName: '',
+        middleName: '',
+        lastName: '',
+        phone: '',
+        email: '',
+        dateOfBirth: '',
+        socialSecurity: '',
+        dateOfApplication: '',
+        positionAppliedFor: '',
+        dateAvailableForWork: '',
+        hasLegalRightToWork: '',
+        currentMailing: {
+          street: '',
+          city: '',
+          state: '',
+          zipCode: '',
+          yearsAtAddress: '',
+        },
+        previousAddresses: [],
+        currentLicenses: [
+          {
+            state: '',
+            licenseNumber: '',
+            typeClass: '',
+            endorsements: '',
+            expirationDate: '',
+          },
+        ],
+        previousLicenses: [],
+        disqualificationHistory: {
+          hasLicenseSuspension: '',
+          licenseSuspensionDetails: '',
+          hasDisqualifyingOffense: '',
+          disqualifyingOffenseDetails: '',
+          hasOutOfServiceViolation: '',
+          outOfServiceViolationDetails: '',
+          hasMobileDeviceViolation: '',
+          mobileDeviceViolationDetails: '',
+        },
+        medicalQualification: {
+          hasValidMedicalCertificate: '',
+          medicalCertificateExpiration: '',
+          hasFiledWithState: '',
+          hasMedicalVariance: '',
+          medicalVarianceDetails: '',
+          hasChronicConditions: '',
+          chronicConditionsDetails: '',
+          visionHearingCompliance: '',
+          medicationDisclosure: '',
+          medicalExamDate: '',
+          medicalExaminerName: '',
+          medicalExaminerPhone: '',
+          medicalExaminerRegistryId: '',
+          medicalExaminerType: '',
+        },
+      })
+    }
+    previousInitialDataRef.current = initialData
+    
     if (hasHydratedRef.current) return
     if (initialData && Object.keys(initialData).length > 0) {
       hasHydratedRef.current = true

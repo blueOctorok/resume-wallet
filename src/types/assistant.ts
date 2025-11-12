@@ -32,3 +32,35 @@ export interface PrimerPrompt {
   message: string
 }
 
+export type ResumeUploadEventType =
+  | 'hash_start'
+  | 'hash_complete'
+  | 'upload_start'
+  | 'upload_complete'
+  | 'blockchain_start'
+  | 'blockchain_complete'
+  | 'upload_error'
+  | 'analysis_ready'
+
+export interface ResumeUploadEvent {
+  type: ResumeUploadEventType
+  step?: string
+  data?: any
+  error?: string
+  message?: string
+}
+
+export interface ResumeAnalysis {
+  extractedData?: {
+    name?: string
+    license?: string
+    experience?: string
+    endorsements?: string[]
+    medicalExpiration?: string
+    [key: string]: any
+  }
+  insights: string[]
+  missingFields: string[]
+  qualityScore: number
+}
+

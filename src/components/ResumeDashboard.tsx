@@ -23,7 +23,7 @@ interface ResumeDashboardProps {
   user?: {
     address?: string
   } | null
-  onResumesLoaded?: (count: number) => void
+  onResumesLoaded?: (count: number, latestResume?: ResumeRecord) => void
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -98,7 +98,8 @@ export default function ResumeDashboard({
 
       const data = ((await response.json()) as ResumeRecord[]) ?? []
       setResumes(data)
-      onResumesLoaded?.(data.length)
+      const latestResume = data.length > 0 ? data[0] : undefined
+      onResumesLoaded?.(data.length, latestResume)
       if (data?.length) {
         setSelectedResume((prev) => {
           if (!prev) return data[0]
@@ -122,11 +123,11 @@ export default function ResumeDashboard({
   useEffect(() => {
     if (user?.address) {
       fetchResumes(user.address)
-    } else {
-      setResumes([])
-      setSelectedResume(null)
-      onResumesLoaded?.(0)
-    }
+      } else {
+        setResumes([])
+        setSelectedResume(null)
+        onResumesLoaded?.(0, undefined)
+      }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.address])
 

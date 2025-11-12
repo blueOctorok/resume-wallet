@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type {
   AssistantHelpPayload,
   DriverJourneyState,
+  ResumeUploadEvent,
 } from '@/types/assistant'
 
 interface AssistantBridgeContextValue {
@@ -10,6 +11,7 @@ interface AssistantBridgeContextValue {
   requestHelp: (payload: AssistantHelpPayload) => void
   primerSeen: boolean
   setPrimerSeen: (value: boolean) => void
+  notifyResumeUploadEvent?: (event: ResumeUploadEvent) => void
 }
 
 const AssistantBridgeContext = createContext<AssistantBridgeContextValue | null>(

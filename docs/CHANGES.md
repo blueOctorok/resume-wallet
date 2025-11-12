@@ -2,7 +2,44 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
-## 🤖 **LATEST STATUS: T BACKEND VECTOR STORE & KNOWLEDGE GRAPH SETUP!** ✨
+## 🤖 **LATEST STATUS: T ASSISTANT RESUME UPLOAD INTEGRATION!** ✨
+
+**FIX (November 12, 2025):**
+
+- ✅ Fixed Alchemy UI Flickering at Specific Screen Widths (1477x1912)
+  - Problem: At certain breakpoints, a flickering line appeared on the right side of the wallet area due to Alchemy Account Kit's internal UI elements (OAuth iframes/modals) overflowing or clipping.
+  - Solution: Added `overflow-hidden` to the `AuthCard` wrapper and parent containers.
+  - Files Updated:
+    - `src/components/AlchemyAuth.tsx` (Added overflow control to prevent Alchemy UI overflow)
+    - `src/app/page.tsx` (Added overflow control to signin page wrapper)
+  - Impact: Eliminates visual flickering at all screen sizes, cleaner UI presentation
+
+**FEATURE (November 11, 2025):**
+
+- ✅ T Assistant Real-Time Resume Upload Integration
+  - What it does: T Assistant now provides live commentary and guidance throughout the entire resume upload process
+  - Real-time progress updates: T provides live messages during hash calculation, IPFS upload, and blockchain verification steps
+  - Error handling: T explains upload errors in plain language and suggests fixes (rate limits, payment issues, duplicates, etc.)
+  - Context-aware help: "Ask T" buttons on upload component for questions about IPFS, blockchain, and costs
+  - Post-upload analysis: T announces when resume analysis is ready and offers to prefill forms
+  - Files Updated:
+    - `src/components/ResumeUploadWithVerification.tsx` (Emits events, adds help buttons)
+    - `src/components/TAssistant.tsx` (Handles resume upload events, displays messages)
+    - `src/app/page.tsx` (Routes events from upload to T Assistant)
+    - `src/types/assistant.ts` (New types for resume upload events)
+    - `src/contexts/AssistantBridgeContext.tsx` (Extended to support upload events)
+  - Features:
+    - Live progress commentary: "Calculating your file hash locally (this is free)...", "Uploading to IPFS...", "Verifying on blockchain..."
+    - Smart error messages: Rate limit explanations, payment guidance, duplicate detection
+    - Help buttons: "Ask T about IPFS" and "Ask T about costs" buttons on upload component
+    - Action buttons: After successful upload, T offers "Prefill my forms" and "Continue to forms" actions
+    - Event-driven architecture: Upload component emits events that T Assistant listens to
+  - Benefits:
+    - Drivers understand what's happening at each step
+    - Clear error messages help troubleshoot issues
+    - Educational content about blockchain/IPFS when requested
+    - Seamless transition from upload to form prefilling
+  - Next: Resume analysis & insights (extract key data, show prefill preview)
 
 **FIX (November 11, 2025):**
 

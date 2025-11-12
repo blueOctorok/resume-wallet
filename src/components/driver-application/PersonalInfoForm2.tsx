@@ -107,13 +107,62 @@ export default function PersonalInfoForm2({
   }
 
   // Sync form data to parent component
+  // Don't sync on initial mount if initialData is null (reset scenario)
+  // But DO sync after user makes any changes
+  const initialMountRef = useRef(true)
   useEffect(() => {
+    // On initial mount with no data, don't sync the empty form state
+    if (initialMountRef.current && (!initialData || Object.keys(initialData).length === 0)) {
+      initialMountRef.current = false
+      return
+    }
+    // After initial mount, or if we have initialData, always sync
+    initialMountRef.current = false
     onDataChange?.(formData)
-  }, [formData, onDataChange])
+  }, [formData, onDataChange, initialData])
 
   // Initialize/restore from parent once to avoid loops
   const hasHydratedRef = useRef(false)
+  const previousInitialDataRef = useRef<any>(null)
   useEffect(() => {
+    // If initialData becomes null/undefined after having data, reset the form
+    if (previousInitialDataRef.current && !initialData) {
+      hasHydratedRef.current = false
+      setFormData({
+        drivingExperience: [
+          {
+            equipmentType: '',
+            yearsOfExperience: '',
+          },
+        ],
+        accidents: [
+          {
+            date: '',
+            nature: '',
+            fatalities: '',
+            injuries: '',
+            chemicalSpills: '',
+            atFault: '',
+          },
+        ],
+        hasNoAccidents: false,
+        convictions: [
+          {
+            dateConvicted: '',
+            violation: '',
+            stateOfViolation: '',
+            penalty: '',
+          },
+        ],
+        hasNoConvictions: false,
+        deniedLicense: '',
+        deniedLicenseExplain: '',
+        suspendedLicense: '',
+        suspendedLicenseExplain: '',
+      })
+    }
+    previousInitialDataRef.current = initialData
+    
     if (hasHydratedRef.current) return
     if (initialData && Object.keys(initialData).length > 0) {
       hasHydratedRef.current = true

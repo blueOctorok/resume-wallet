@@ -5,6 +5,7 @@ import { useAccount, useSmartAccountClient } from '@account-kit/react'
 import { encodeFunctionData } from 'viem'
 import { calculateFileHash, validateFile } from '@/lib/hash-utils'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
 
 interface UploadStep {
   id: string
@@ -35,6 +36,7 @@ export default function ResumeUploadWithVerification({
   onUploadComplete,
 }: ResumeUploadWithVerificationProps) {
   const { theme } = useTheme()
+  const { notifyResumeUploadEvent, requestHelp } = useAssistantBridge()
 
   // Add error boundary for Alchemy hooks
   let account: any = null
@@ -132,6 +134,11 @@ export default function ResumeUploadWithVerification({
     try {
       // Step 1: Calculate File Hash Locally (FREE)
       updateStep('hash', 'loading')
+      notifyResumeUploadEvent?.({
+        type: 'hash_start',
+        step: 'hash',
+        message: 'Calculating your file hash locally (this is free)...',
+      })
       console.log('🔄 Step 1: Calculating file hash locally...')
 
       // Validate file first
@@ -153,9 +160,20 @@ export default function ResumeUploadWithVerification({
         size: file.size,
         timestamp: new Date().toISOString(),
       })
+      notifyResumeUploadEvent?.({
+        type: 'hash_complete',
+        step: 'hash',
+        data: { hash: fileHash.substring(0, 16) + '...', size: file.size },
+        message: '✅ File hash calculated! Now uploading to IPFS...',
+      })
 
       // Step 2: Upload & Database Validation (Hash-First Flow)
       updateStep('upload', 'loading')
+      notifyResumeUploadEvent?.({
+        type: 'upload_start',
+        step: 'upload',
+        message: '📤 Uploading your resume to IPFS (decentralized storage)...',
+      })
       console.log('🔄 Step 2: Uploading file with hash-first validation...')
 
       const formData = new FormData()
@@ -191,6 +209,26 @@ export default function ResumeUploadWithVerification({
         // Show error in UI instead of throwing
         console.log('🚨 Upload error (showing in UI):', errorMessage)
         updateStep('upload', 'error', undefined, errorMessage)
+        
+        // Notify T Assistant about the error
+        let tMessage = 'Upload failed. '
+        if (uploadResponse.status === 429) {
+          tMessage = 'You\'ve hit the rate limit (3 uploads/week on free tier). Wait a day or upgrade to premium for unlimited uploads.'
+        } else if (uploadResponse.status === 402) {
+          tMessage = 'Payment required. This upload costs ~$0.12 (IPFS + blockchain verification).'
+        } else if (uploadResponse.status === 409) {
+          tMessage = 'This resume is already on file. Want to use the existing one instead?'
+        } else {
+          tMessage = `Upload failed: ${errorMessage}. Let me know if you need help troubleshooting.`
+        }
+        
+        notifyResumeUploadEvent?.({
+          type: 'upload_error',
+          step: 'upload',
+          error: errorMessage,
+          message: tMessage,
+        })
+        
         setUploading(false)
         return // Exit gracefully instead of throwing
       }
@@ -206,9 +244,25 @@ export default function ResumeUploadWithVerification({
         costUSDC: uploadData.resume.costUSDC,
         eligibility: uploadData.eligibility,
       })
+      notifyResumeUploadEvent?.({
+        type: 'upload_complete',
+        step: 'upload',
+        data: {
+          resumeId: uploadData.resume.id,
+          ipfsHash: uploadData.resume.ipfsHash,
+          wasPaid: uploadData.resume.wasPaid,
+          costUSDC: uploadData.resume.costUSDC,
+        },
+        message: '✅ Resume uploaded to IPFS! Now verifying on blockchain...',
+      })
 
       // Step 3: Blockchain Verification (Optional)
       updateStep('blockchain', 'loading')
+      notifyResumeUploadEvent?.({
+        type: 'blockchain_start',
+        step: 'blockchain',
+        message: '⛓️ Verifying your resume on the blockchain (almost done!)...',
+      })
       console.log('🔄 Step 3: Blockchain verification...')
 
       const blockchainResponse = await fetch('/api/blockchain/verify-resume', {
@@ -230,6 +284,12 @@ export default function ResumeUploadWithVerification({
           undefined,
           'Blockchain verification failed, but your resume was uploaded successfully'
         )
+        notifyResumeUploadEvent?.({
+          type: 'upload_error',
+          step: 'blockchain',
+          error: 'Blockchain verification failed',
+          message: '⚠️ Blockchain verification failed, but your resume was uploaded successfully. You can verify it later.',
+        })
       } else {
         const blockchainData = await blockchainResponse.json()
         console.log(
@@ -242,6 +302,15 @@ export default function ResumeUploadWithVerification({
           resumeId: blockchainData.resumeId,
           contractAddress: blockchainData.contractAddress,
           explorerUrl: blockchainData.explorerUrl,
+        })
+        notifyResumeUploadEvent?.({
+          type: 'blockchain_complete',
+          step: 'blockchain',
+          data: {
+            transactionHash: blockchainData.transactionHash,
+            resumeId: blockchainData.resumeId,
+          },
+          message: '🎉 All done! Your resume is now verified on the blockchain. I can help prefill your DOT application with this information!',
         })
       }
 
@@ -278,6 +347,12 @@ export default function ResumeUploadWithVerification({
 
       if (currentStep) {
         updateStep(currentStep.id, 'error', undefined, errorMessage)
+        notifyResumeUploadEvent?.({
+          type: 'upload_error',
+          step: currentStep.id,
+          error: errorMessage,
+          message: `❌ ${errorMessage}. Need help? Ask me anything about the upload process!`,
+        })
       }
     } finally {
       setUploading(false)
@@ -373,13 +448,53 @@ export default function ResumeUploadWithVerification({
         theme === 'dark' ? 'border-brand-mint' : 'border-brand-sage'
       }`}
     >
-      <h3
-        className={`text-3xl font-bold mb-6 ${
-          theme === 'dark' ? 'text-white' : 'text-gray-900'
-        }`}
-      >
-        📄 Resume Upload with Full Verification
-      </h3>
+      <div className='flex justify-between items-start mb-6'>
+        <h3
+          className={`text-3xl font-bold ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}
+        >
+          📄 Resume Upload with Full Verification
+        </h3>
+        <div className='flex gap-2'>
+          <button
+            type='button'
+            onClick={() =>
+              requestHelp({
+                section: 'Resume Upload - IPFS',
+                question: 'What is IPFS and why do we use it for storing resumes?',
+                context: 'User is uploading a resume and wants to understand IPFS storage.',
+              })
+            }
+            className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-md border transition-colors ${
+              theme === 'dark'
+                ? 'border-brand-mint/40 text-brand-mint hover:bg-brand-mint/10'
+                : 'border-brand-sage/40 text-brand-sage hover:bg-brand-sage/10'
+            }`}
+          >
+            <span>❓</span>
+            <span>Ask T about IPFS</span>
+          </button>
+          <button
+            type='button'
+            onClick={() =>
+              requestHelp({
+                section: 'Resume Upload - Blockchain',
+                question: 'What is blockchain verification and why does it matter?',
+                context: 'User is uploading a resume and wants to understand blockchain verification.',
+              })
+            }
+            className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-md border transition-colors ${
+              theme === 'dark'
+                ? 'border-brand-mint/40 text-brand-mint hover:bg-brand-mint/10'
+                : 'border-brand-sage/40 text-brand-sage hover:bg-brand-sage/10'
+            }`}
+          >
+            <span>❓</span>
+            <span>Ask T about costs</span>
+          </button>
+        </div>
+      </div>
 
       {/* File Selection */}
       <div className='mb-6'>
