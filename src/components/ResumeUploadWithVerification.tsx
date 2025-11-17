@@ -310,7 +310,7 @@ export default function ResumeUploadWithVerification({
             transactionHash: blockchainData.transactionHash,
             resumeId: blockchainData.resumeId,
           },
-          message: '🎉 All done! Your resume is now verified on the blockchain. I can help prefill your DOT application with this information!',
+          message: '🎉 All done! Your resume is now verified on the blockchain. Analyzing it now to extract key information...',
         })
       }
 
@@ -334,6 +334,20 @@ export default function ResumeUploadWithVerification({
         resume: uploadData.resume,
         finalResult: resultPayload,
       })
+
+      // Trigger analysis after upload completes
+      // This will extract data and show insights before prefilling
+      if (uploadData.resume.ipfsHash) {
+        notifyResumeUploadEvent?.({
+          type: 'analysis_ready',
+          step: 'analysis',
+          data: {
+            ipfsHash: uploadData.resume.ipfsHash,
+            resumeId: uploadData.resume.id,
+          },
+          message: '🔍 Analyzing your resume to extract key information...',
+        })
+      }
 
       console.log('🎉 Upload completed successfully!')
     } catch (error) {

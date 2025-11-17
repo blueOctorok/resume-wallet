@@ -27,7 +27,7 @@ interface Message {
 
 interface TAssistantProps {
   currentStep?: 'welcome' | 'wallet' | 'resume' | 'forms' | 'submission' | 'complete'
-  onAction?: (action: string) => void
+  onAction?: (action: string, data?: any) => void
   userAddress?: string | null
   hasResume?: boolean
   hasForms?: boolean
@@ -60,6 +60,8 @@ function TAssistantContent({
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isProcessingHelp, setIsProcessingHelp] = useState(false)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [analysisPreview, setAnalysisPreview] = useState<any>(null)
   const [sessionId, setSessionId] = useState<string>(`user-${Date.now()}`)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -303,14 +305,171 @@ function TAssistantContent({
     if (resumeUploadEventHandledRef.current === eventKey) return
     resumeUploadEventHandledRef.current = eventKey
 
-    // Display the message from the event
+    // Handle analysis_ready event - extract data and show preview
+    if (resumeUploadEvent.type === 'analysis_ready' && resumeUploadEvent.data) {
+      // Check if data is already extracted (from ResumeUploadWithPrefill)
+      if (resumeUploadEvent.data.prefillData) {
+        // Data already extracted, use it directly
+        const data = resumeUploadEvent.data.prefillData
+        setIsAnalyzing(false)
+        setAnalysisPreview(data)
+
+          // Build insights from extracted data
+          const insights: string[] = []
+          const stats = data.stats || { extracted: 0, total: 0 }
+
+          if (data.form1Data) {
+            if (data.form1Data.firstName || data.form1Data.lastName) {
+              insights.push(`✓ Found name: ${data.form1Data.firstName || ''} ${data.form1Data.lastName || ''}`.trim())
+            }
+            if (data.form1Data.email) insights.push(`✓ Found email: ${data.form1Data.email}`)
+            if (data.form1Data.phone) insights.push(`✓ Found phone: ${data.form1Data.phone}`)
+            if (data.form1Data.currentLicenses?.[0]?.licenseNumber) {
+              const license = data.form1Data.currentLicenses[0]
+              insights.push(`✓ Found license: ${license.licenseNumber} (${license.state || 'State'}) - ${license.typeClass || 'Class'}`)
+            }
+            if (data.form1Data.currentLicenses?.[0]?.endorsements) {
+              insights.push(`✓ Found endorsements: ${data.form1Data.currentLicenses[0].endorsements}`)
+            }
+            if (data.form1Data.medicalQualification?.medicalCertificateExpiration) {
+              insights.push(`✓ Found medical cert expiration: ${data.form1Data.medicalQualification.medicalCertificateExpiration}`)
+            }
+          }
+
+          if (data.form2Data?.workHistory && data.form2Data.workHistory.length > 0) {
+            insights.push(`✓ Found ${data.form2Data.workHistory.length} employment record(s)`)
+          }
+
+          const insightsText = insights.length > 0
+            ? `\n\n**Here's what I found:**\n${insights.join('\n')}\n\nI extracted ${stats.extracted} out of ${stats.total} fields. Would you like me to prefill your forms with this information?`
+            : `\n\nI extracted ${stats.extracted} out of ${stats.total} fields. Would you like me to prefill your forms with this information?`
+
+          // Automatically prefill after analysis - no confirmation needed
+          // User already uploaded resume, so just prefill it
+          console.log('✅ [T ASSISTANT] Analysis complete, auto-prefilling forms...')
+          addAssistantMessage(
+            `✅ Analysis complete!${insightsText}\n\nI'm prefilling your forms now...`,
+            {
+              step: 'resume',
+            }
+          )
+          
+          // Auto-prefill with the extracted data
+          setTimeout(() => {
+            onAction?.('resume:prefill:confirm', data)
+          }, 500)
+      } else if (resumeUploadEvent.data?.ipfsHash) {
+        // Need to extract data via API (from ResumeUploadWithVerification)
+        setIsAnalyzing(true)
+        addAssistantMessage('🔍 Analyzing your resume to extract key information...', {
+          step: 'resume',
+        })
+
+        // Call prefill API to extract data (but don't prefill yet)
+        fetch('/api/ai/prefill-resume', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cid: resumeUploadEvent.data.ipfsHash }),
+        })
+          .then(async (res) => {
+            if (!res.ok) {
+              const error = await res.json()
+              throw new Error(error.error || 'Analysis failed')
+            }
+            return res.json()
+          })
+          .then((data) => {
+            setIsAnalyzing(false)
+            setAnalysisPreview(data)
+            console.log('✅ [T ASSISTANT] Analysis complete, data received:', {
+              hasForm1Data: !!data.form1Data,
+              hasForm2Data: !!data.form2Data,
+              hasForm3Data: !!data.form3Data,
+              form1DataKeys: data.form1Data ? Object.keys(data.form1Data) : [],
+              stats: data.stats,
+            })
+
+            // Build insights from extracted data
+            const insights: string[] = []
+            const stats = data.stats || { extracted: 0, total: 0 }
+
+            if (data.form1Data) {
+              if (data.form1Data.firstName || data.form1Data.lastName) {
+                insights.push(`✓ Found name: ${data.form1Data.firstName || ''} ${data.form1Data.lastName || ''}`.trim())
+              }
+              if (data.form1Data.email) insights.push(`✓ Found email: ${data.form1Data.email}`)
+              if (data.form1Data.phone) insights.push(`✓ Found phone: ${data.form1Data.phone}`)
+              if (data.form1Data.currentLicenses?.[0]?.licenseNumber) {
+                const license = data.form1Data.currentLicenses[0]
+                insights.push(`✓ Found license: ${license.licenseNumber} (${license.state || 'State'}) - ${license.typeClass || 'Class'}`)
+              }
+              if (data.form1Data.currentLicenses?.[0]?.endorsements) {
+                insights.push(`✓ Found endorsements: ${data.form1Data.currentLicenses[0].endorsements}`)
+              }
+              if (data.form1Data.medicalQualification?.medicalCertificateExpiration) {
+                insights.push(`✓ Found medical cert expiration: ${data.form1Data.medicalQualification.medicalCertificateExpiration}`)
+              }
+            }
+
+            if (data.form2Data?.workHistory && data.form2Data.workHistory.length > 0) {
+              insights.push(`✓ Found ${data.form2Data.workHistory.length} employment record(s)`)
+            }
+
+            const insightsText = insights.length > 0
+              ? `\n\n**Here's what I found:**\n${insights.join('\n')}\n\nI extracted ${stats.extracted} out of ${stats.total} fields.`
+              : `\n\nI extracted ${stats.extracted} out of ${stats.total} fields.`
+
+            // Automatically prefill after analysis - no confirmation needed
+            // User already uploaded resume, so just prefill it
+            console.log('✅ [T ASSISTANT] Analysis complete, auto-prefilling forms...')
+            addAssistantMessage(
+              `✅ Analysis complete!${insightsText}\n\nI'm prefilling your forms now...`,
+              {
+                step: 'resume',
+              }
+            )
+            
+            // Auto-prefill with the extracted data
+            console.log('📤 [T ASSISTANT] About to trigger prefill with data:', {
+              hasForm1Data: !!data.form1Data,
+              hasForm2Data: !!data.form2Data,
+              hasForm3Data: !!data.form3Data,
+              form1DataSample: data.form1Data ? {
+                firstName: data.form1Data.firstName,
+                lastName: data.form1Data.lastName,
+                email: data.form1Data.email,
+              } : null,
+            })
+            setTimeout(() => {
+              console.log('📤 [T ASSISTANT] Calling onAction with prefill data')
+              onAction?.('resume:prefill:confirm', data)
+            }, 500)
+          })
+          .catch((error) => {
+            setIsAnalyzing(false)
+            console.error('❌ Analysis error:', error)
+            addAssistantMessage(
+              `⚠️ I couldn't analyze your resume: ${error.message}. You can still fill out the forms manually, or try uploading a different resume.`,
+              {
+                step: 'resume',
+                actions: [
+                  { id: 'resume-continue', label: 'Fill manually', value: 'forms' },
+                  { id: 'resume-help', label: 'Get help', value: 'resume:help' },
+                ],
+              }
+            )
+          })
+      }
+      return
+    }
+
+    // Display the message from other events
     if (resumeUploadEvent.message) {
       addAssistantMessage(resumeUploadEvent.message, {
         step: 'resume',
-        actions: resumeUploadEvent.type === 'blockchain_complete' || resumeUploadEvent.type === 'analysis_ready'
+        actions: resumeUploadEvent.type === 'blockchain_complete'
           ? [
-              { id: 'resume-prefill', label: 'Yes, prefill my forms', value: 'resume:prefill' },
-              { id: 'resume-continue', label: 'No, I\'ll fill manually', value: 'forms' },
+              { id: 'resume-wait', label: 'Wait for analysis...', value: 'resume:wait' },
             ]
           : resumeUploadEvent.type === 'upload_error'
           ? [
@@ -526,27 +685,96 @@ function TAssistantContent({
     }
   }
 
+  const buildPreviewMessage = useCallback((preview: any) => {
+    const lines: string[] = ['**Here\'s what I\'ll fill in:**\n']
+    
+    if (preview.form1Data) {
+      lines.push('**Form 1 - Personal Information:**')
+      if (preview.form1Data.firstName || preview.form1Data.lastName) {
+        lines.push(`• Name: ${preview.form1Data.firstName || ''} ${preview.form1Data.lastName || ''}`.trim())
+      }
+      if (preview.form1Data.email) lines.push(`• Email: ${preview.form1Data.email}`)
+      if (preview.form1Data.phone) lines.push(`• Phone: ${preview.form1Data.phone}`)
+      if (preview.form1Data.dateOfBirth) lines.push(`• Date of Birth: ${preview.form1Data.dateOfBirth}`)
+      if (preview.form1Data.currentMailing?.street) {
+        lines.push(`• Address: ${preview.form1Data.currentMailing.street}, ${preview.form1Data.currentMailing.city || ''}, ${preview.form1Data.currentMailing.state || ''}`)
+      }
+      if (preview.form1Data.currentLicenses?.[0]) {
+        const license = preview.form1Data.currentLicenses[0]
+        lines.push(`• License: ${license.licenseNumber || 'N/A'} (${license.state || 'State'}) - ${license.typeClass || 'Class'}`)
+        if (license.endorsements) lines.push(`• Endorsements: ${license.endorsements}`)
+      }
+      if (preview.form1Data.medicalQualification?.medicalCertificateExpiration) {
+        lines.push(`• Medical Cert Expiration: ${preview.form1Data.medicalQualification.medicalCertificateExpiration}`)
+      }
+      lines.push('')
+    }
+
+    if (preview.form2Data) {
+      if (preview.form2Data.workHistory && preview.form2Data.workHistory.length > 0) {
+        lines.push(`**Form 2 - Employment History:**`)
+        lines.push(`• ${preview.form2Data.workHistory.length} employment record(s) found`)
+        lines.push('')
+      }
+    }
+
+    const stats = preview.stats || { extracted: 0, total: 0 }
+    lines.push(`**Summary:** ${stats.extracted} out of ${stats.total} fields extracted`)
+    lines.push('\nReady to prefill your forms with this information?')
+
+    return lines.join('\n')
+  }, [])
+
   const handleMessageAction = useCallback(
     (action: MessageAction) => {
       switch (action.value) {
         case 'primer:learn_more':
           addAssistantMessage(
-            "Here’s the quick version:\n• Base smart wallets let drivers sign in with email—no seed phrases.\n• We can sponsor your gas fees so submitting DOT documents stays free for you.\n• Your resume + application live on-chain, so employers can trust they’re unchanged.\nI’ll keep everything guided, but shout if you want the deeper dive."
+            "Here's the quick version:\n• Base smart wallets let drivers sign in with email—no seed phrases.\n• We can sponsor your gas fees so submitting DOT documents stays free for you.\n• Your resume + application live on-chain, so employers can trust they're unchanged.\nI'll keep everything guided, but shout if you want the deeper dive."
           )
           onAction?.(action.value)
           break
         case 'primer:skip':
           addAssistantMessage(
-            'All good—we can revisit the blockchain basics whenever you’re curious.'
+            "All good—we can revisit the blockchain basics whenever you're curious."
           )
           onAction?.(action.value)
+          break
+        case 'resume:prefill:preview':
+          // Show preview of extracted data
+          if (analysisPreview) {
+            const preview = buildPreviewMessage(analysisPreview)
+            addAssistantMessage(preview, {
+              step: 'resume',
+              actions: [
+                { id: 'resume-prefill-confirm', label: 'Yes, use this data', value: 'resume:prefill:confirm' },
+                { id: 'resume-continue', label: 'No, I\'ll fill manually', value: 'forms' },
+              ],
+            })
+          } else {
+            addAssistantMessage('Sorry, I don\'t have the preview data. Please try uploading your resume again.')
+          }
+          break
+        case 'resume:prefill:confirm':
+          // Confirm and trigger prefill
+          addAssistantMessage('Perfect! I\'ll prefill your forms now. This will take just a moment...')
+          
+          // Pass the extracted data directly to the parent via the callback
+          // This avoids calling the API again (which fails for duplicates)
+          if (analysisPreview) {
+            console.log('📤 [T ASSISTANT] Passing prefill data directly:', analysisPreview)
+            onAction?.(action.value, analysisPreview)
+          } else {
+            // No data available, let parent handle it
+            onAction?.(action.value)
+          }
           break
         default:
           onAction?.(action.value)
           break
       }
     },
-    [addAssistantMessage, onAction]
+    [addAssistantMessage, onAction, analysisPreview, buildPreviewMessage]
   )
 
   const statusIcon = (status: string) => {

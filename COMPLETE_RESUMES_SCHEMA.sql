@@ -14,6 +14,7 @@ CREATE TABLE resumes (
   is_paid BOOLEAN DEFAULT false,            -- Payment tracking
   blockchain_tx_hash VARCHAR(66),           -- Blockchain transaction hash
   blockchain_resume_id TEXT,                -- Contract resume ID
+  extracted_data JSONB,                     -- Cached AI-extracted form data
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -21,6 +22,7 @@ CREATE TABLE resumes (
 CREATE INDEX idx_resumes_user_id ON resumes(user_id);
 CREATE INDEX idx_resumes_created_at ON resumes(created_at);
 CREATE INDEX idx_resumes_file_hash ON resumes(file_hash);
+CREATE INDEX idx_resumes_ipfs_hash ON resumes(ipfs_hash);
 CREATE INDEX idx_resumes_verification_status ON resumes(verification_status);
 CREATE INDEX idx_resumes_is_paid ON resumes(is_paid);
 
@@ -50,4 +52,5 @@ COMMENT ON COLUMN resumes.file_hash IS 'SHA-256 hash for duplicate detection';
 COMMENT ON COLUMN resumes.ipfs_hash IS 'IPFS hash from Pinata storage';
 COMMENT ON COLUMN resumes.verification_status IS 'PENDING, VERIFIED, FAILED - blockchain verification status';
 COMMENT ON COLUMN resumes.blockchain_resume_id IS 'Contract resume ID from ResumeRegistry';
+COMMENT ON COLUMN resumes.extracted_data IS 'Cached AI-extracted form data (form1Data, form2Data, form3Data) to avoid re-processing duplicates';
 

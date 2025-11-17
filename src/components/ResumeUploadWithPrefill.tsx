@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { uploadToIPFS } from '@/lib/ipfs'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
 
 interface ResumeUploadWithPrefillProps {
   onPrefillSuccess?: (formData: {
@@ -21,13 +22,16 @@ interface ResumeUploadWithPrefillProps {
     stats: any
   }) => void
   onPrefillError?: (error: string) => void
+  onIpfsHashReady?: (ipfsHash: string) => void // Callback to store IPFS hash in parent
 }
 
 export default function ResumeUploadWithPrefill({
   onPrefillSuccess,
   onPrefillError,
+  onIpfsHashReady,
 }: ResumeUploadWithPrefillProps) {
   const { theme } = useTheme()
+  const { notifyResumeUploadEvent } = useAssistantBridge()
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadStatus, setUploadStatus] = useState<
@@ -36,6 +40,7 @@ export default function ResumeUploadWithPrefill({
   const [errorMessage, setErrorMessage] = useState('')
   const [ipfsHash, setIpfsHash] = useState('')
   const [extractedStats, setExtractedStats] = useState<any>(null)
+  const [extractedData, setExtractedData] = useState<any>(null) // Store extracted data for preview
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
@@ -83,6 +88,11 @@ export default function ResumeUploadWithPrefill({
       console.log('📤 [PREFILL] Step 1: Uploading to IPFS...')
       const result = await uploadToIPFS(file)
       setIpfsHash(result.ipfsHash)
+      
+      // Notify parent to store IPFS hash for later prefill confirmation
+      if (onIpfsHashReady) {
+        onIpfsHashReady(result.ipfsHash)
+      }
 
       console.log('✅ [PREFILL] IPFS upload successful:', result.ipfsHash)
       console.log('   Gateway URL:', result.url)
@@ -163,6 +173,14 @@ export default function ResumeUploadWithPrefill({
           setErrorMessage(duplicateWarning)
           setUploadStatus('error')
           
+          // Notify T Assistant about the error
+          notifyResumeUploadEvent?.({
+            type: 'upload_error',
+            step: 'extraction',
+            error: duplicateWarning,
+            message: '⚠️ I couldn\'t extract data from your resume. This might be a duplicate or scanned PDF. You can still fill the forms manually!',
+          })
+          
           if (onPrefillError) {
             onPrefillError(duplicateWarning)
           }
@@ -177,18 +195,50 @@ export default function ResumeUploadWithPrefill({
         }
       }
 
+      // Store extracted data for preview (don't prefill immediately)
+      setExtractedData(prefillData)
       setExtractedStats(prefillData.stats)
       setUploadStatus('success')
 
-      // Notify parent component
-      if (onPrefillSuccess) {
-        onPrefillSuccess({
-          form1Data: prefillData.form1Data,
-          form2Data: prefillData.form2Data,
-          form3Data: prefillData.form3Data,
-          stats: prefillData.stats,
-        })
+      // Notify T Assistant about successful extraction with insights
+      const insights: string[] = []
+      if (prefillData.form1Data) {
+        if (prefillData.form1Data.firstName || prefillData.form1Data.lastName) {
+          insights.push(`✓ Found name: ${prefillData.form1Data.firstName || ''} ${prefillData.form1Data.lastName || ''}`.trim())
+        }
+        if (prefillData.form1Data.email) insights.push(`✓ Found email: ${prefillData.form1Data.email}`)
+        if (prefillData.form1Data.phone) insights.push(`✓ Found phone: ${prefillData.form1Data.phone}`)
+        if (prefillData.form1Data.currentLicenses?.[0]?.licenseNumber) {
+          const license = prefillData.form1Data.currentLicenses[0]
+          insights.push(`✓ Found license: ${license.licenseNumber} (${license.state || 'State'}) - ${license.typeClass || 'Class'}`)
+        }
+        if (prefillData.form1Data.currentLicenses?.[0]?.endorsements) {
+          insights.push(`✓ Found endorsements: ${prefillData.form1Data.currentLicenses[0].endorsements}`)
+        }
+        if (prefillData.form1Data.medicalQualification?.medicalCertificateExpiration) {
+          insights.push(`✓ Found medical cert expiration: ${prefillData.form1Data.medicalQualification.medicalCertificateExpiration}`)
+        }
       }
+      if (prefillData.form2Data?.workHistory && prefillData.form2Data.workHistory.length > 0) {
+        insights.push(`✓ Found ${prefillData.form2Data.workHistory.length} employment record(s)`)
+      }
+
+      const insightsText = insights.length > 0
+        ? `\n\n**Here's what I found:**\n${insights.join('\n')}\n\nI extracted ${prefillData.stats.extracted} out of ${prefillData.stats.total} fields.`
+        : `\n\nI extracted ${prefillData.stats.extracted} out of ${prefillData.stats.total} fields.`
+
+      notifyResumeUploadEvent?.({
+        type: 'analysis_ready',
+        step: 'prefill',
+        data: {
+          ipfsHash: result.ipfsHash,
+          prefillData: prefillData, // Pass full data for preview
+        },
+        message: `✅ Analysis complete!${insightsText} Ready to prefill your forms?`,
+      })
+
+      // Don't auto-prefill - wait for user confirmation via T Assistant
+      // The user will confirm through T Assistant, which will then call onPrefillSuccess
     } catch (error) {
       console.error('❌ [PREFILL] Error:', error)
       setUploadStatus('error')

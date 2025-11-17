@@ -4,6 +4,7 @@ import {
   countExtractedFields,
   type TBackendPrefillResponse,
 } from '@/lib/ai-prefill-mapper'
+import { createClient } from '@/utils/supabase/server'
 
 const T_BACKEND_API_KEY = process.env.T_BACKEND_API_KEY
 const T_BACKEND_BASE_URL = process.env.T_BACKEND_BASE_URL || 'https://api-v2.fluxpointstudios.com'
@@ -17,6 +18,8 @@ const T_BACKEND_BASE_URL = process.env.T_BACKEND_BASE_URL || 'https://api-v2.flu
  * 
  * Note: This route may take 20-30 seconds. Requires Vercel Pro plan for 60s timeout.
  * Timeout is configured in vercel.json
+ * 
+ * CACHING: Extracted data is cached in Supabase to avoid re-processing duplicates
  */
 export async function POST(request: NextRequest) {
   try {
@@ -43,10 +46,44 @@ export async function POST(request: NextRequest) {
     console.log('🤖 [AI PREFILL] Starting resume extraction...')
     console.log(`   Input: ${cid ? `CID=${cid}` : `URL=${resumeUrl}`}`)
 
+    // Check cache first (Supabase resumes table)
+    if (cid) {
+      console.log('📦 [AI PREFILL] Checking cache for IPFS hash:', cid)
+      const supabase = await createClient()
+      const { data: cachedResume, error: cacheError } = await supabase
+        .from('resumes')
+        .select('extracted_data')
+        .eq('ipfs_hash', cid)
+        .single()
+
+      if (!cacheError && cachedResume?.extracted_data) {
+        console.log('✅ [AI PREFILL] Cache hit! Returning cached data')
+        const cached = cachedResume.extracted_data as any
+        return NextResponse.json({
+          success: true,
+          form1Data: cached.form1Data,
+          form2Data: cached.form2Data,
+          form3Data: cached.form3Data,
+          stats: cached.stats,
+          metadata: {
+            cached: true,
+            vectorStoreId: cached.metadata?.vectorStoreId,
+            fileId: cached.metadata?.fileId,
+          },
+        })
+      } else {
+        console.log('📭 [AI PREFILL] Cache miss - will call T Backend')
+      }
+    }
+
     // Prepare request to T Backend
+    // Use Pinata gateway instead of public IPFS gateway for faster, more reliable downloads
     const tBackendPayload: any = {}
     if (cid) {
-      tBackendPayload.cid = cid
+      // Use Pinata's dedicated gateway (much faster than ipfs.io)
+      const pinataGateway = `https://gateway.pinata.cloud/ipfs/${cid}`
+      tBackendPayload.resume_url = pinataGateway
+      console.log('🔗 [AI PREFILL] Using Pinata gateway:', pinataGateway)
     } else {
       tBackendPayload.resume_url = resumeUrl
     }
@@ -115,82 +152,145 @@ export async function POST(request: NextRequest) {
     let tBackendData: TBackendPrefillResponse = await tBackendResponse.json()
     
     console.log('✅ [AI PREFILL] T Backend response received')
-    console.log('   Full T Backend response:', JSON.stringify(tBackendData, null, 2))
-    console.log('   Vector Store ID:', tBackendData.vector_store_id)
-    console.log('   File ID:', tBackendData.file_id)
-    console.log('   Application data:', JSON.stringify(tBackendData.application, null, 2))
-    console.log('   Raw text length:', tBackendData.raw?.length || 0)
-    console.log('   Raw text preview:', tBackendData.raw?.substring(0, 200) || 'N/A')
     
-    // Check if application data is all null/empty
+    // Helper function to check if application data exists
+    const checkHasData = (appData: any) => {
+      return appData && (
+        appData.fullName || 
+        appData.email || 
+        appData.phone || 
+        appData.address || 
+        appData.dateOfBirth || 
+        appData.licenseNumber || 
+        appData.licenseState || 
+        (appData.endorsements && appData.endorsements.length > 0) ||
+        (appData.workHistory && appData.workHistory.length > 0)
+      )
+    }
+    
     const app = tBackendData.application
-    const hasData = app && (
-      app.fullName || 
-      app.email || 
-      app.phone || 
-      app.address || 
-      app.dateOfBirth || 
-      app.licenseNumber || 
-      app.licenseState || 
-      (app.endorsements && app.endorsements.length > 0) ||
-      (app.workHistory && app.workHistory.length > 0)
-    )
+    const hasData = checkHasData(app)
     
-    if (!hasData) {
-      console.warn('⚠️ [AI PREFILL] T Backend returned empty application data')
-      console.warn('   This might mean:')
-      console.warn('   1. Duplicate file (already processed) - T Backend may return empty for duplicates')
-      console.warn('   2. Scanned PDF (no extractable text)')
-      console.warn('   3. Empty file or parsing issue')
-      console.warn('   Application object:', JSON.stringify(app, null, 2))
-      console.warn('   Raw text available:', !!tBackendData.raw)
+    // If first attempt returned no data, check cache again before retrying
+    // (Another parallel request may have just cached the data)
+    if (!hasData && cid) {
+      console.log('🔄 [AI PREFILL] First attempt returned no data, checking cache again...')
+      const supabase = await createClient()
+      const { data: recheck, error: recheckError } = await supabase
+        .from('resumes')
+        .select('extracted_data')
+        .eq('ipfs_hash', cid)
+        .single()
       
-      // If raw text exists but application is empty, it's likely a parsing issue
-      if (tBackendData.raw && tBackendData.raw.length > 0) {
-        console.warn('   ⚠️ Raw text exists but application data is empty - parsing may have failed')
+      if (!recheckError && recheck?.extracted_data) {
+        console.log('✅ [AI PREFILL] Cache hit on recheck! (Another request cached it)')
+        const cached = recheck.extracted_data as any
+        return NextResponse.json({
+          success: true,
+          form1Data: cached.form1Data,
+          form2Data: cached.form2Data,
+          form3Data: cached.form3Data,
+          stats: cached.stats,
+          metadata: {
+            cached: true,
+            vectorStoreId: cached.metadata?.vectorStoreId,
+            fileId: cached.metadata?.fileId,
+          },
+        })
       }
-
-      // Retry once using a public gateway URL to bypass potential CID duplicate handling
-      if (cid) {
-        try {
-          const fallbackUrl = `https://ipfs.io/ipfs/${cid}?nocache=${Date.now()}`
-          console.log('   🔁 [AI PREFILL] Retrying with resume_url fallback:', fallbackUrl)
-          const retryResp = await fetch(tBackendUrl, {
-            method: 'POST',
-            headers: {
-              'api-key': T_BACKEND_API_KEY,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ resume_url: fallbackUrl }),
-          })
-          if (retryResp.ok) {
-            const retryData: TBackendPrefillResponse = await retryResp.json()
-            const retryApp = retryData.application
-            const retryHasData = retryApp && (
-              retryApp.fullName ||
-              retryApp.email ||
-              retryApp.phone ||
-              retryApp.address ||
-              retryApp.dateOfBirth ||
-              retryApp.licenseNumber ||
-              retryApp.licenseState ||
-              (retryApp.endorsements && retryApp.endorsements.length > 0) ||
-              (retryApp.workHistory && retryApp.workHistory.length > 0)
-            )
-            console.log('   🔁 [AI PREFILL] Retry response (has data?):', retryHasData)
-            if (retryHasData) {
-              tBackendData = retryData
-            }
-          } else {
-            const retryText = await retryResp.text().catch(() => '')
-            console.warn('   🔁 [AI PREFILL] Retry failed:', retryResp.status, retryText)
+      
+      // Still no cache hit, try retry with nocache parameter
+      console.log('🔄 [AI PREFILL] Cache still empty, retrying with nocache parameter...')
+      try {
+        const fallbackUrl = `https://gateway.pinata.cloud/ipfs/${cid}?nocache=${Date.now()}`
+        const retryResp = await fetch(tBackendUrl, {
+          method: 'POST',
+          headers: {
+            'api-key': T_BACKEND_API_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ resume_url: fallbackUrl }),
+        })
+        if (retryResp.ok) {
+          const retryData: TBackendPrefillResponse = await retryResp.json()
+          const retryHasData = checkHasData(retryData.application)
+          if (retryHasData) {
+            console.log('✅ [AI PREFILL] Retry successful!')
+            tBackendData = retryData
           }
-        } catch (retryErr) {
-          console.warn('   🔁 [AI PREFILL] Retry error:', retryErr)
         }
+      } catch (retryErr) {
+        console.warn('⚠️ [AI PREFILL] Retry attempt failed:', retryErr)
       }
     }
 
+    // Final check: if we still have no data after retry, check cache ONE MORE TIME
+    // (A parallel request may have just finished and cached the data)
+    const finalHasData = checkHasData(tBackendData.application)
+    
+    if (!finalHasData && cid) {
+      console.log('🔄 [AI PREFILL] Final cache check before error (parallel request may have cached)...')
+      const supabase = await createClient()
+      const { data: finalRecheck, error: finalRecheckError } = await supabase
+        .from('resumes')
+        .select('extracted_data')
+        .eq('ipfs_hash', cid)
+        .single()
+      
+      if (!finalRecheckError && finalRecheck?.extracted_data) {
+        console.log('✅ [AI PREFILL] Final cache hit! Parallel request cached the data')
+        const cached = finalRecheck.extracted_data as any
+        return NextResponse.json({
+          success: true,
+          form1Data: cached.form1Data,
+          form2Data: cached.form2Data,
+          form3Data: cached.form3Data,
+          stats: cached.stats,
+          metadata: {
+            cached: true,
+            vectorStoreId: cached.metadata?.vectorStoreId,
+            fileId: cached.metadata?.fileId,
+          },
+        })
+      }
+      
+      // Still no data - this is a real error
+      console.error('❌ [AI PREFILL] Failed to extract data after all attempts (including final cache check)')
+      console.error('   Raw text available:', !!tBackendData.raw)
+      console.error('   Raw text length:', tBackendData.raw?.length || 0)
+      console.error('   Vector store:', tBackendData.vector_store_id)
+      console.error('   File ID:', tBackendData.file_id)
+      
+      // Check if raw text exists - if so, it's a parsing issue, not a duplicate
+      if (tBackendData.raw && tBackendData.raw.length > 0) {
+        return NextResponse.json(
+          {
+            error: 'Could not extract structured data from resume.',
+            detail: 'Text was extracted but parsing failed. The file may be in an unsupported format. Please try a different resume or fill forms manually.',
+          },
+          { status: 422 }
+        )
+      }
+      // No raw text - could be scanned PDF, duplicate, or empty file
+      return NextResponse.json(
+        {
+          error: 'Could not extract text from resume.',
+          detail: 'This may be a scanned PDF (image-based) or empty file. Please ensure your resume is a text-based PDF or DOCX file.',
+        },
+        { status: 422 }
+      )
+    } else if (!finalHasData) {
+      // No CID provided, can't check cache, and no data extracted
+      console.error('❌ [AI PREFILL] Failed to extract data (no CID for cache check)')
+      return NextResponse.json(
+        {
+          error: 'Could not extract text from resume.',
+          detail: 'No data was extracted from the resume. Please try again or contact support.',
+        },
+        { status: 422 }
+      )
+    }
+    
     // Map T Backend response to our form structure
     const { form1Data, form2Data, form3Data } = mapTBackendToFormData(tBackendData)
     
@@ -200,7 +300,7 @@ export async function POST(request: NextRequest) {
     console.log(`✅ [AI PREFILL] Extracted ${stats.extracted}/${stats.total} fields:`)
     console.log(`   Fields: ${stats.fieldNames.join(', ')}`)
 
-    return NextResponse.json({
+    const responseData = {
       success: true,
       form1Data,
       form2Data,
@@ -211,7 +311,38 @@ export async function POST(request: NextRequest) {
         fileId: tBackendData.file_id,
         raw: tBackendData.raw,
       },
-    })
+    }
+
+    // Cache the extracted data in Supabase (fire-and-forget)
+    if (cid) {
+      console.log('💾 [AI PREFILL] Caching extracted data for future requests...')
+      const supabase = await createClient()
+      supabase
+        .from('resumes')
+        .update({
+          extracted_data: {
+            form1Data,
+            form2Data,
+            form3Data,
+            stats,
+            metadata: {
+              vectorStoreId: tBackendData.vector_store_id,
+              fileId: tBackendData.file_id,
+            },
+            extractedAt: new Date().toISOString(),
+          },
+        })
+        .eq('ipfs_hash', cid)
+        .then(({ error }) => {
+          if (error) {
+            console.error('⚠️ [AI PREFILL] Cache save failed (non-fatal):', error)
+          } else {
+            console.log('✅ [AI PREFILL] Data cached successfully')
+          }
+        })
+    }
+
+    return NextResponse.json(responseData)
   } catch (error: any) {
     console.error('❌ [AI PREFILL] Unexpected error:', error)
     return NextResponse.json(

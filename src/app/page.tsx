@@ -284,6 +284,8 @@ const HomeContent = () => {
   const primerTriggeredRef = useRef(false)
   const [resumeUploadEvent, setResumeUploadEvent] = useState<ResumeUploadEvent | null>(null)
   const resetInProgressRef = useRef(false)
+  const analysisTriggeredRef = useRef<string | null>(null) // Track which IPFS hash we've already triggered analysis for
+  const analysisPendingRef = useRef(false) // Prevent simultaneous analysis triggers
 
   const updateJourneyStep = useCallback(
     (step: JourneyStageKey, status: JourneyStatus) => {
@@ -325,6 +327,13 @@ const HomeContent = () => {
 
   const handleResumeUploadEvent = useCallback((event: ResumeUploadEvent) => {
     setResumeUploadEvent(event)
+    
+    // Store IPFS hash from analysis_ready event for later prefill use
+    if (event.type === 'analysis_ready' && event.data?.ipfsHash) {
+      setLatestResumeIpfsHash(event.data.ipfsHash)
+      console.log('💾 [PREFILL] Stored IPFS hash from analysis event:', event.data.ipfsHash)
+    }
+    
     // Clear the event after a short delay to allow re-triggering of different events
     setTimeout(() => {
       setResumeUploadEvent(null)
@@ -360,6 +369,8 @@ const HomeContent = () => {
     setHelpRequest(null)
     setPrimerRequest(null)
     primerTriggeredRef.current = false
+    analysisTriggeredRef.current = null // Reset analysis trigger
+    analysisPendingRef.current = false // Reset pending flag
     
     // Clear localStorage
     if (typeof window !== 'undefined' && user?.address) {
@@ -661,6 +672,36 @@ const HomeContent = () => {
     showDashboard,
   ])
 
+  // Auto-trigger analysis when user navigates to forms with existing resume
+  useEffect(() => {
+    if (
+      currentPage === 'dotapp' &&
+      latestResumeIpfsHash &&
+      !form1Data &&
+      !form2Data &&
+      !form3Data &&
+      user &&
+      analysisTriggeredRef.current !== latestResumeIpfsHash && // Only trigger once per resume
+      !analysisPendingRef.current // Prevent simultaneous triggers
+    ) {
+      console.log('📋 [HOME] User navigated to forms with existing resume, triggering analysis...')
+      analysisPendingRef.current = true // Set flag immediately to prevent race
+      analysisTriggeredRef.current = latestResumeIpfsHash
+      handleResumeUploadEvent({
+        type: 'analysis_ready',
+        step: 'navigate_to_forms',
+        data: {
+          ipfsHash: latestResumeIpfsHash,
+        },
+        message: '🔍 I found your uploaded resume! Analyzing it to prefill your forms...',
+      })
+      // Reset pending flag after a delay (analysis will complete)
+      setTimeout(() => {
+        analysisPendingRef.current = false
+      }, 2000)
+    }
+  }, [currentPage, latestResumeIpfsHash, form1Data, form2Data, form3Data, user, handleResumeUploadEvent])
+
   const handlePrimerAction = useCallback(
     (action: 'primer:learn_more' | 'primer:skip') => {
       handleSetPrimerSeen(true)
@@ -673,7 +714,7 @@ const HomeContent = () => {
 
   // T Assistant action handler
   const handleTAssistantAction = useCallback(
-    (action: string) => {
+    (action: string, data?: any) => {
       console.log('🎯 [HOME] T Assistant action:', action)
       switch (action) {
         case 'signin':
@@ -687,58 +728,87 @@ const HomeContent = () => {
           setShowPrefillUpload(false)
           break
         case 'resume:prefill':
-          // If we have an existing resume IPFS hash, automatically trigger prefill
-          if (latestResumeIpfsHash) {
-            // Automatically trigger prefill with existing resume
-            handleResumeUploadEvent({
-              type: 'analysis_ready',
-              step: 'prefill',
-              message: 'Perfect! I\'m using your uploaded resume to prefill your DOT application forms. This will take about 20-30 seconds...',
+          // Legacy action - navigate to forms (analysis should have already happened)
+          setCurrentPage('dotapp')
+          setShowPrefillUpload(true)
+          setShowEmploymentVerification(false)
+          setShowDashboard(false)
+          break
+        case 'resume:prefill:confirm':
+          // T Assistant already extracted data - use it directly (no API call needed)
+          setCurrentPage('dotapp')
+          setShowPrefillUpload(false)
+          setShowEmploymentVerification(false)
+          setShowDashboard(false)
+          
+          if (data) {
+            // T Assistant passed the extracted data directly - use it!
+            console.log('📥 [HOME] Using prefill data from T Assistant (no API call needed)')
+            console.log('   Data received:', {
+              hasForm1Data: !!data.form1Data,
+              hasForm2Data: !!data.form2Data,
+              hasForm3Data: !!data.form3Data,
+              form1DataKeys: data.form1Data ? Object.keys(data.form1Data) : [],
+              form1DataSample: data.form1Data ? {
+                firstName: data.form1Data.firstName,
+                lastName: data.form1Data.lastName,
+                email: data.form1Data.email,
+              } : null,
             })
-            // Navigate to forms page
-            setCurrentPage('dotapp')
-            setShowPrefillUpload(false) // Don't show upload component, we're using existing resume
-            setShowEmploymentVerification(false)
-            setShowDashboard(false)
-            // Automatically trigger prefill API call
-            setTimeout(async () => {
-              try {
-                const prefillResponse = await fetch('/api/ai/prefill-resume', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    cid: latestResumeIpfsHash,
-                  }),
-                })
-                
-                if (prefillResponse.ok) {
-                  const prefillData = await prefillResponse.json()
-                  handlePrefillSuccess(prefillData)
-                } else {
-                  const errorData = await prefillResponse.json().catch(() => ({ error: 'Unknown error' }))
-                  handlePrefillError(errorData.error || 'Failed to prefill forms')
-                }
-              } catch (error) {
-                console.error('❌ Auto-prefill error:', error)
-                handlePrefillError(error instanceof Error ? error.message : 'Failed to prefill forms')
-              }
-            }, 500)
-          } else {
-            // No existing resume, show upload component
-            setCurrentPage('dotapp')
-            setShowPrefillUpload(true)
-            setShowEmploymentVerification(false)
-            setShowDashboard(false)
-            // Trigger a follow-up message from T after a brief delay to ensure navigation completes
+            handlePrefillSuccess(data)
+            
+            // Trigger success message from T
             setTimeout(() => {
               handleResumeUploadEvent({
                 type: 'analysis_ready',
                 step: 'prefill',
-                message: 'Perfect! I\'ll help you prefill your DOT application. You can upload your resume in the form below, and I\'ll extract key information like your name, license details, and work history to automatically fill out the DOT forms. This will save you a lot of time!',
+                message: '✅ Forms prefilled! I\'ve extracted and filled in your information. Please review the forms and complete any missing fields.',
               })
-            }, 300)
+            }, 500)
+          } else {
+            // Fallback: T Assistant didn't pass data, try API (shouldn't happen)
+            console.warn('⚠️ [HOME] No data from T Assistant, falling back to API call')
+            if (latestResumeIpfsHash) {
+              fetch('/api/ai/prefill-resume', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  cid: latestResumeIpfsHash,
+                }),
+              })
+                .then(async (prefillResponse) => {
+                  if (prefillResponse.ok) {
+                    const prefillData = await prefillResponse.json()
+                    handlePrefillSuccess(prefillData)
+                    setTimeout(() => {
+                      handleResumeUploadEvent({
+                        type: 'analysis_ready',
+                        step: 'prefill',
+                        message: '✅ Forms prefilled! I\'ve extracted and filled in your information. Please review the forms and complete any missing fields.',
+                      })
+                    }, 500)
+                  } else {
+                    const errorData = await prefillResponse.json().catch(() => ({ error: 'Unknown error' }))
+                    handlePrefillError(errorData.error || 'Failed to prefill forms')
+                  }
+                })
+                .catch((error) => {
+                  console.error('❌ Auto-prefill error:', error)
+                  handlePrefillError(error instanceof Error ? error.message : 'Failed to prefill forms')
+                })
+            } else {
+              // No resume hash available, show upload component
+              setShowPrefillUpload(true)
+              setTimeout(() => {
+                handleResumeUploadEvent({
+                  type: 'analysis_ready',
+                  step: 'prefill',
+                  message: 'I need your resume to prefill the forms. Please upload it below.',
+                })
+              }, 300)
+            }
           }
           break
         case 'resume:help':
@@ -826,14 +896,29 @@ const HomeContent = () => {
       stats: any
     }) => {
       console.log('✅ [HOME] Prefill successful, populating forms')
+      console.log('   Full prefill data:', JSON.stringify(prefillData, null, 2))
       console.log(
-        `   Fields extracted: ${prefillData.stats.extracted}/${prefillData.stats.total}`
+        `   Fields extracted: ${prefillData.stats?.extracted || 0}/${prefillData.stats?.total || 0}`
       )
+      console.log('   Form1Data:', prefillData.form1Data)
+      console.log('   Form2Data:', prefillData.form2Data)
+      console.log('   Form3Data:', prefillData.form3Data)
 
       // Populate form data
-      setForm1Data(prefillData.form1Data)
-      setForm2Data(prefillData.form2Data)
-      setForm3Data(prefillData.form3Data)
+      if (prefillData.form1Data) {
+        console.log('   ✅ Setting form1Data:', prefillData.form1Data)
+        setForm1Data(prefillData.form1Data)
+      } else {
+        console.warn('   ⚠️ No form1Data in prefill response')
+      }
+      if (prefillData.form2Data) {
+        console.log('   ✅ Setting form2Data:', prefillData.form2Data)
+        setForm2Data(prefillData.form2Data)
+      }
+      if (prefillData.form3Data) {
+        console.log('   ✅ Setting form3Data:', prefillData.form3Data)
+        setForm3Data(prefillData.form3Data)
+      }
 
       // Mark as prefilled and hide upload component
       setHasPrefilled(true)
@@ -1469,15 +1554,8 @@ const HomeContent = () => {
                   if (payload?.finalResult?.ipfsHash) {
                     setLatestResumeIpfsHash(payload.finalResult.ipfsHash)
                   }
-                  // Trigger completion event after upload completes
-                  if (payload?.resume) {
-                    handleResumeUploadEvent({
-                      type: 'analysis_ready',
-                      step: 'upload',
-                      data: payload.resume,
-                      message: '🎉 Your resume is uploaded and verified! I can help you prefill your DOT application forms with information from your resume. Would you like me to do that now?',
-                    })
-                  }
+                  // Note: analysis_ready event is now triggered by ResumeUploadWithVerification itself
+                  // after blockchain verification completes, so we don't need to trigger it here
                 }}
               />
               <ResumeDashboard
@@ -1487,6 +1565,34 @@ const HomeContent = () => {
                   // Store the latest resume's IPFS hash for prefill
                   if (latestResume?.ipfs_hash) {
                     setLatestResumeIpfsHash(latestResume.ipfs_hash)
+                    
+                    // If forms are empty and we have a resume, trigger analysis to prefill
+                    // This handles the case where user already has a resume uploaded
+                    if (
+                      !form1Data &&
+                      !form2Data &&
+                      !form3Data &&
+                      latestResume.ipfs_hash &&
+                      analysisTriggeredRef.current !== latestResume.ipfs_hash && // Only trigger once per resume
+                      !analysisPendingRef.current // Prevent simultaneous triggers
+                    ) {
+                      console.log('📋 [HOME] Existing resume detected, triggering analysis for prefill...')
+                      analysisPendingRef.current = true // Set flag immediately to prevent race
+                      analysisTriggeredRef.current = latestResume.ipfs_hash
+                      handleResumeUploadEvent({
+                        type: 'analysis_ready',
+                        step: 'existing_resume',
+                        data: {
+                          ipfsHash: latestResume.ipfs_hash,
+                          resumeId: latestResume.id,
+                        },
+                        message: '🔍 I found your uploaded resume! Analyzing it to prefill your forms...',
+                      })
+                      // Reset pending flag after a delay (analysis will complete)
+                      setTimeout(() => {
+                        analysisPendingRef.current = false
+                      }, 2000)
+                    }
                   }
                 }}
               />
@@ -1514,6 +1620,10 @@ const HomeContent = () => {
                   <ResumeUploadWithPrefill
                     onPrefillSuccess={handlePrefillSuccess}
                     onPrefillError={handlePrefillError}
+                    onIpfsHashReady={(ipfsHash) => {
+                      // Store IPFS hash for later prefill confirmation
+                      setLatestResumeIpfsHash(ipfsHash)
+                    }}
                   />
 
                   {/* Option to skip prefill */}
