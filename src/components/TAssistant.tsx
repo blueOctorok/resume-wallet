@@ -374,7 +374,13 @@ function TAssistantContent({
           .then(async (res) => {
             if (!res.ok) {
               const error = await res.json()
-              throw new Error(error.error || 'Analysis failed')
+              // Attach the full error object to the Error for detailed handling
+              const err: any = new Error(error.error || 'Analysis failed')
+              err.errorType = error.errorType
+              err.userMessage = error.userMessage
+              err.actionRequired = error.actionRequired
+              err.detail = error.detail
+              throw err
             }
             return res.json()
           })
@@ -442,22 +448,50 @@ function TAssistantContent({
             })
             setTimeout(() => {
               console.log('📤 [T ASSISTANT] Calling onAction with prefill data')
+              console.log('   Action: resume:prefill:confirm')
+              console.log('   Data being passed:', {
+                hasForm1Data: !!data.form1Data,
+                hasForm2Data: !!data.form2Data,
+                hasForm3Data: !!data.form3Data,
+                form1DataKeys: data.form1Data ? Object.keys(data.form1Data) : [],
+                dataType: typeof data,
+                dataKeys: Object.keys(data),
+              })
+              console.log('   Full data object:', data)
               onAction?.('resume:prefill:confirm', data)
+              console.log('   ✅ onAction called')
             }, 500)
           })
           .catch((error) => {
             setIsAnalyzing(false)
             console.error('❌ Analysis error:', error)
-            addAssistantMessage(
-              `⚠️ I couldn't analyze your resume: ${error.message}. You can still fill out the forms manually, or try uploading a different resume.`,
-              {
-                step: 'resume',
-                actions: [
-                  { id: 'resume-continue', label: 'Fill manually', value: 'forms' },
-                  { id: 'resume-help', label: 'Get help', value: 'resume:help' },
-                ],
-              }
-            )
+            
+            // Special handling for T Backend cache lock scenario
+            if (error.errorType === 'T_BACKEND_CACHE_LOCK') {
+              console.log('🔒 [T ASSISTANT] Detected T Backend cache lock - providing user guidance')
+              addAssistantMessage(
+                `⚠️ **${error.userMessage || 'We\'ve seen this resume before but lost our copy of the analysis.'}**\n\n**Quick fix:** Try refreshing the page - sometimes a retry works!\n\n**If that doesn't work:**\n1. Open your resume in any PDF editor\n2. Make any tiny change (add a space, update a date, fix a typo)\n3. Save it as a new PDF file\n4. Upload the new file\n\n**Why this happens:** Your resume was previously analyzed, but we no longer have the extracted data cached. Our AI service recognizes the file and sometimes won't reprocess the exact same document.\n\n*Alternatively, you can fill out the forms manually.*`,
+                {
+                  step: 'resume',
+                  actions: [
+                    { id: 'resume-reupload', label: 'Upload modified resume', value: 'resume:reupload' },
+                    { id: 'resume-continue', label: 'Fill manually', value: 'forms' },
+                  ],
+                }
+              )
+            } else {
+              // Generic error handling
+              addAssistantMessage(
+                `⚠️ I couldn't analyze your resume: ${error.message}. You can still fill out the forms manually, or try uploading a different resume.`,
+                {
+                  step: 'resume',
+                  actions: [
+                    { id: 'resume-continue', label: 'Fill manually', value: 'forms' },
+                    { id: 'resume-help', label: 'Get help', value: 'resume:help' },
+                  ],
+                }
+              )
+            }
           })
       }
       return
@@ -768,6 +802,11 @@ function TAssistantContent({
             // No data available, let parent handle it
             onAction?.(action.value)
           }
+          break
+        case 'resume:reupload':
+          // User needs to upload a modified resume due to cache lock
+          addAssistantMessage('Great! Go ahead and upload your modified resume. Remember, even a tiny change (like adding a space or updating a date) will make it a new file.')
+          onAction?.('resume') // Navigate to resume section
           break
         default:
           onAction?.(action.value)

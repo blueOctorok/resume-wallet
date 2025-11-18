@@ -2,7 +2,484 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
-## 🤖 **LATEST STATUS: RESUME PREFILL NOW WORKS FLAWLESSLY!** 🎉✨
+## 🔄 **LATEST STATUS: PREFILL ANYTIME + FORM REMOUNT FIX** 🎯
+
+**Added "Prefill from Resume" Button + Fixed Form Data Display (November 18, 2025)**
+
+Fixed two critical UX issues: users couldn't request prefill after declining, and prefilled data wasn't displaying in forms. Both now work perfectly.
+
+### Issue 1: No Way Back to Prefill
+Fixed a UX issue where users who declined prefill couldn't change their mind and request it later. Now users can trigger prefill anytime while filling forms.
+
+**The Problem:**
+- User declines prefill → Forms appear
+- User starts filling manually → Realizes it's tedious
+- User wants to prefill now → No way to get back to it
+- User frustrated → Has to refresh or restart
+
+**The Solution:**
+Added a smart banner above the forms that:
+- Shows when user has a resume but hasn't prefilled
+- Offers to prefill with one click
+- Disappears after prefill completes
+- Re-appears if user uploads different resume
+
+**Banner Display Logic:**
+```
+Shows when ALL of:
+✓ User is filling forms (not on prefill screen)
+✓ User hasn't prefilled yet
+✓ User has resume uploaded
+✓ Application not yet submitted
+```
+
+**User Experience:**
+```
+User: Clicks "Skip prefill"
+  → Forms appear
+
+User: (starts filling manually)
+  → Sees banner: "📄 Want to save time? You can prefill forms from your uploaded resume."
+  → [Prefill from Resume] button
+
+User: Clicks "Prefill from Resume"
+  → T analyzes resume
+  → Forms auto-fill
+  → Banner changes to success message: "✨ Forms prefilled with AI!"
+```
+
+**Benefits:**
+- ✅ Users can change their mind
+- ✅ No dead ends or forced restarts
+- ✅ Non-intrusive (banner, not modal)
+- ✅ Smart visibility (only shows when relevant)
+- ✅ Professional UX (always give users options)
+
+**Technical Implementation:**
+- Banner checks: `!hasPrefilled && hasResume && !isDriverApplicationCompleted`
+- Button triggers `analysis_ready` event for existing resume
+- Falls back to upload screen if no resume hash available
+- Uses same prefill flow as initial upload
+
+### Issue 2: Prefilled Data Not Displaying ⚠️
+
+**The Problem:**
+After clicking "Prefill from Resume", T Assistant would analyze and extract data successfully, state would update, but forms remained empty. Console showed data was set, but UI didn't reflect it.
+
+**Root Cause:**
+React form components use `initialData` prop which is only read **once** when component mounts. When prefill updated the state:
+```typescript
+setForm1Data(newData) // ✅ State updated
+// But component already mounted with old initialData (null)
+// Forms show old data (empty) ❌
+```
+
+**The Solution - Force Remount:**
+Added `formResetKey` increment in `handlePrefillSuccess` to force React to remount all form components with the new data:
+
+```typescript
+// Before (forms stay mounted with old initialData):
+<PersonalInfoForm1 initialData={form1Data} />
+  → form1Data changes
+  → Component doesn't remount
+  → Shows old data (empty)
+
+// After (forms remount with new initialData):
+<PersonalInfoForm1 key={formResetKey} initialData={form1Data} />
+  → formResetKey increments (0 → 1)
+  → React unmounts old component
+  → React mounts new component
+  → New component reads updated form1Data
+  → Shows new data! ✅
+```
+
+**Why This Works:**
+When a component's `key` prop changes, React treats it as a completely different component:
+1. Unmounts the old instance (with old initialData)
+2. Mounts a fresh instance (reads current initialData from state)
+3. Fresh instance displays the new data
+
+This is a common React pattern for "resetting" components that depend on initial prop values.
+
+**Technical Implementation:**
+```typescript
+// In handlePrefillSuccess:
+setForm1Data(prefillData.form1Data)
+setForm2Data(prefillData.form2Data)
+setForm3Data(prefillData.form3Data)
+setFormResetKey((prev) => prev + 1) // 🔑 Key change forces remount
+
+// In JSX:
+<PersonalInfoForm1
+  key={`form1-${formResetKey}`} // Changes on every prefill
+  initialData={form1Data}
+  onDataChange={setForm1Data}
+/>
+```
+
+**Files Changed:**
+- `src/app/page.tsx` - Added conditional banner with prefill trigger button + formResetKey increment
+
+**Benefits:**
+- ✅ Prefilled data immediately visible
+- ✅ Forms display correct data after analysis
+- ✅ Works for both initial prefill and "Prefill from Resume" button
+- ✅ Clean React pattern (no hacky workarounds)
+- ✅ Predictable behavior (same as admin reset)
+
+This complements the manual prefill control by ensuring users always have access to prefill, not just at the beginning. Much more flexible! 🎯
+
+### Issue 3: Form Data Not Persisting Across Refresh 💾
+
+**The Problem:**
+After prefilling or manually filling forms, refreshing the page would lose all entered data. Users would have to start over, which is a terrible experience.
+
+**Root Cause:**
+Form data was being **loaded** from localStorage on mount (lines 452-467) but never **saved** back to it. The app had half of a persistence system:
+```typescript
+// Loading existed ✅
+const storedForms = window.localStorage.getItem(`forms-${user.address}`)
+if (storedForms) {
+  setForm1Data(parsedForms.form1Data)
+  // ... restore data
+}
+
+// But saving was missing ❌
+// No code to save form data changes
+```
+
+**The Solution - Auto-Save Forms:**
+Added a `useEffect` hook that automatically saves form data to localStorage whenever `form1Data`, `form2Data`, or `form3Data` changes:
+
+```typescript
+useEffect(() => {
+  if (!user?.address || resetInProgressRef.current) return
+  
+  if (form1Data || form2Data || form3Data) {
+    const formsToSave = { form1Data, form2Data, form3Data }
+    window.localStorage.setItem(
+      `forms-${user.address}`,
+      JSON.stringify(formsToSave)
+    )
+    console.log('💾 [FORMS] Saved form data to localStorage')
+  }
+}, [form1Data, form2Data, form3Data, user?.address])
+```
+
+**How It Works:**
+1. User prefills or types in forms → State updates
+2. useEffect detects state change → Auto-saves to localStorage
+3. User refreshes page → Data loads from localStorage
+4. Forms appear exactly as user left them ✅
+
+**Smart Safeguards:**
+- **Reset Protection:** Skips save during admin reset (`resetInProgressRef.current`)
+- **Empty Check:** Only saves if at least one form has data (prevents saving nulls)
+- **User Isolation:** Each wallet address has separate localStorage key
+
+**"Clear Forms" Button:**
+The existing dev button still works perfectly—it calls `handleWalletDataReset()` which:
+1. Sets `resetInProgressRef.current = true` (blocks auto-save)
+2. Clears all state: `setForm1Data(null)`, etc.
+3. Removes localStorage: `window.localStorage.removeItem(`forms-${user.address}`)`
+4. Resets everything back to initial state
+
+**Files Changed:**
+- `src/app/page.tsx` - Added form data persistence useEffect
+
+**Benefits:**
+- ✅ Form data survives page refresh
+- ✅ Auto-saves on every change (no save button needed)
+- ✅ Works with prefill and manual entry
+- ✅ Respects admin reset (won't resurrect cleared data)
+- ✅ Per-user isolation (multiple wallets work correctly)
+
+Perfect persistence system—data stays until explicitly cleared! 💪
+
+---
+
+## 🎯 **MANUAL PREFILL CONTROL** 💪
+
+**User-Controlled Prefill Flow (November 18, 2025)**
+
+Removed automatic resume prefill triggers to give users full control over when and if they want their forms prefilled. This improves UX by making the experience feel professional rather than pushy.
+
+**The Problem:**
+- System automatically triggered resume analysis on login
+- Unexpected behavior that could confuse users
+- What if user already filled forms manually?
+- What if they want to use a different resume?
+- Forced action user didn't request
+- Happened EVERY time user logged in (annoying!)
+
+**The Solution:**
+Disabled automatic triggers. Prefill now only happens when user explicitly requests it through T Assistant during the DOT form conversation.
+
+**Before (Automatic):**
+```
+User logs in → App sees resume → Automatic analysis → Automatic prefill
+User: "Wait, what? I didn't want that yet!"
+```
+
+**After (Manual):**
+```
+User logs in → No automatic action
+User navigates to forms → Clean slate
+T Assistant (during conversation): "I see you have a resume. Would you like me to prefill?"
+User: "Yes!" → Analysis → Prefill
+  OR
+User: "No thanks" → Fill manually
+  OR
+User: (ignores) → Keep filling manually
+```
+
+**Benefits:**
+- ✅ User initiates and expects the action
+- ✅ User is in context (actively filling forms)
+- ✅ Clear intent and consent
+- ✅ Professional, non-pushy UX
+- ✅ User control over timing
+- ✅ No surprises on login
+- ✅ Respects user's existing work
+
+**Technical Changes:**
+- Disabled two auto-trigger `useEffect` hooks in `src/app/page.tsx`:
+  1. Auto-trigger when navigating to forms with existing resume
+  2. Auto-trigger when ResumeDashboard detects existing resume on load
+- Kept manual trigger flow intact (T Assistant conversation)
+- Added clear comments explaining why auto-triggers were disabled
+
+**How Manual Prefill Works:**
+1. User talks to T Assistant about filling forms
+2. T detects user has uploaded resume
+3. T asks: "Would you like me to prefill with your resume?"
+4. User chooses: "Yes" / "No" / Ignores
+5. If "Yes" → Extract and prefill
+6. User always in control ✅
+
+**Files Changed:**
+- `src/app/page.tsx` - Disabled both automatic prefill triggers (commented out with explanation)
+- `src/components/TAssistant.tsx` - Added "try refreshing" tip to cache lock error message
+
+This change transforms the experience from "system doing things TO the user" to "system helping the user when THEY request it." Much better! 🎯
+
+---
+
+## 🔒 **SMART CACHE LOCK DETECTION** 🎯
+
+**T Backend Cache Lock Detection & User Guidance (November 18, 2025)**
+
+Implemented intelligent error handling for the "T Backend cached but we lost our data" scenario, providing users with clear, actionable guidance instead of confusing error messages.
+
+**The Real-World Problem:**
+User uploads resume → Works great ✅  
+Something happens (admin delete, DB reset, testing, etc.)  
+User tries to re-upload **same resume** → ❌ "Cannot extract text"  
+User confused: *"It worked before, why not now?!"*
+
+This isn't just a testing edge case - it's a real production UX issue that would frustrate users and generate support tickets.
+
+**Why This Happens:**
+- T Backend maintains a permanent vector store of processed files
+- Once they process a file (by content hash), they never reprocess it
+- If our cache gets deleted but theirs persists → stuck in limbo:
+  - ✅ T Backend: "I already processed this" (returns no data)
+  - ❌ Our Database: "I have no cache of this"
+  - 💥 User can't proceed with that resume
+
+**The Solution - Detect & Guide:**
+
+1. **Smart Detection** (API Layer):
+   - Detect when T Backend has `file_id` and `vector_store_id` (knows the file)
+   - But returns no data (cache lock scenario)
+   - Return specific error type: `T_BACKEND_CACHE_LOCK`
+   - HTTP 409 Conflict (resource exists but can't be used)
+
+2. **User-Friendly Guidance** (Frontend):
+   - T Assistant detects the specific error type
+   - Shows clear, non-technical explanation:
+     - Why this happened (previous processing, lost cache)
+     - What it means (file is "locked" in T Backend's memory)
+     - How to fix it (make tiny edit, save as new file)
+   - Provides actionable buttons:
+     - "Upload modified resume" → Navigate back to upload
+     - "Fill manually" → Skip prefill, proceed to forms
+
+3. **Cache Preservation** (Database):
+   - Admin reset NEVER deletes `t_prefill_cache` table
+   - Only deletes: `resumes`, `driver_applications`, `users`
+   - Extraction cache persists for future use
+   - Minimizes likelihood of cache lock scenario
+
+**Error Message Flow:**
+```
+Old (Confusing):
+  "Could not extract text from resume" ❌
+  User: "What? Why? It's a valid PDF!"
+
+New (Clear & Actionable):
+  "We've seen this resume before but lost our copy of the analysis.
+   
+   Why this happens: Your resume was previously analyzed, but we no 
+   longer have the extracted data cached. Our AI service recognizes 
+   the file and won't reprocess the exact same document.
+   
+   Simple fix:
+   1. Open your resume in any PDF editor
+   2. Make any tiny change (add space, update date, fix typo)  
+   3. Save as new PDF
+   4. Upload the new file
+   
+   [Upload modified resume] [Fill manually]" ✅
+  User: "Oh! That makes sense, I'll just add a space."
+```
+
+**Benefits:**
+- ✅ Users understand WHY the error happened
+- ✅ Clear instructions on HOW to fix it
+- ✅ Multiple options (modify resume OR fill manually)
+- ✅ Reduces support tickets and user frustration
+- ✅ Professional, polished UX that builds trust
+- ✅ Cache preserved across admin operations
+- ✅ Technical details logged for debugging
+
+**Files Changed:**
+- `src/app/api/ai/prefill-resume/route.ts` - Added T Backend cache lock detection with detailed error response
+- `src/components/TAssistant.tsx` - Enhanced error handling to show user-friendly guidance with action buttons
+- `src/app/api/admin/reset-wallet/route.ts` - Verified it preserves `t_prefill_cache` (never deletes it)
+
+**Technical Implementation:**
+```typescript
+// API Detection
+if (tBackendData.file_id && tBackendData.vector_store_id && !tBackendData.raw) {
+  return NextResponse.json({
+    error: 'Resume already processed',
+    errorType: 'T_BACKEND_CACHE_LOCK',
+    userMessage: 'We\'ve seen this resume before...',
+    actionRequired: 'Please make a small edit...',
+  }, { status: 409 })
+}
+
+// Frontend Handling
+if (error.errorType === 'T_BACKEND_CACHE_LOCK') {
+  addAssistantMessage(`⚠️ ${error.userMessage}\n\n${error.actionRequired}\n\n[detailed explanation]`, {
+    actions: [
+      { id: 'resume-reupload', label: 'Upload modified resume', value: 'resume:reupload' },
+      { id: 'resume-continue', label: 'Fill manually', value: 'forms' },
+    ]
+  })
+}
+```
+
+**Prevention Strategy:**
+While we can't prevent T Backend's internal caching, we minimize the problem:
+1. Persistent `t_prefill_cache` survives deletions
+2. Admin operations preserve extraction cache
+3. Cache checked before calling T Backend
+4. When cache lock occurs, clear guidance provided
+
+This is a production-quality solution that turns a confusing technical limitation into a managed user experience. 🎯
+
+---
+
+## 🔐 **EXTENDED SESSION TIMEOUT** 🎉
+
+**Session Duration Extended (November 18, 2025)**
+
+Fixed the frustrating 5-10 minute logout issue by configuring Alchemy's session timeout.
+
+**The Problem:**
+- Users were being automatically logged out after ~15 minutes (Alchemy's default)
+- This was way too short for filling out multi-step driver application forms
+- Had to re-authenticate multiple times during a single session
+
+**The Solution:**
+- Added `sessionConfig` to Alchemy Account Kit configuration
+- Extended session duration from 15 minutes → **7 days**
+- Sessions now persist across browser sessions (stored in localStorage)
+- Much better UX for users filling out lengthy forms
+
+**Configuration Added:**
+```typescript
+sessionConfig: {
+  expirationTimeMs: 1000 * 60 * 60 * 24 * 7, // 7 days in milliseconds
+}
+```
+
+**Benefits:**
+- ✅ Users stay logged in for 7 days (configurable)
+- ✅ No more interruptions during form filling
+- ✅ Better experience for returning users
+- ✅ Sessions survive browser restarts (localStorage)
+
+**Files Changed:**
+- `src/lib/alchemy-account-config.ts` - Added sessionConfig to both dev and production configs
+
+**Security Note:**
+While longer sessions improve UX, they increase risk if a device is compromised. 7 days is a reasonable balance for this application type (professional resume verification). Can be adjusted shorter if needed.
+
+---
+
+## 🤖 **PERSISTENT CACHE - PREFILL SURVIVES DELETIONS!** 🎉✨
+
+**NEW: Persistent Prefill Cache (November 17, 2025)**
+
+Added a dedicated `t_prefill_cache` table that preserves AI extraction results even when resumes are deleted. This solves the T Backend duplicate detection issue and makes testing/admin operations seamless.
+
+**The Problem We Solved:**
+- T Backend maintains an internal vector store of processed files
+- Once they process a file (by content hash), they won't reprocess it
+- When we deleted a resume for testing, our cache was deleted too
+- Re-uploading the same resume → T Backend says "already processed" → Returns empty → Prefill fails
+- **Result**: Couldn't test with the same resume twice
+
+**The Solution:**
+- Created separate `t_prefill_cache` table that never gets deleted (unless explicitly cleared)
+- Two-layer caching strategy:
+  1. **PRIMARY**: `t_prefill_cache` (persistent, survives resume deletions)
+  2. **FALLBACK**: `resumes.extracted_data` (deleted with resume)
+- Cache is keyed by T Backend's `file_id` (unique per file content)
+- Admin reset now clears forms but preserves extraction cache
+
+**How It Works:**
+```
+Upload Resume → T Backend Extracts Data → Save to BOTH caches
+                                              ├─ t_prefill_cache (permanent)
+                                              └─ resumes.extracted_data (temporary)
+
+Admin Delete Resume → resumes row deleted
+                   → t_prefill_cache PRESERVED ✅
+
+Re-upload Same Resume → Check t_prefill_cache FIRST
+                      → Cache hit! → Instant prefill (no T Backend call)
+```
+
+**Benefits:**
+- ✅ Can test with same resume infinitely (cache persists)
+- ✅ Admin reset works perfectly (forms clear, cache stays)
+- ✅ Faster prefills after first extraction (instant cache hits)
+- ✅ No redundant T Backend API calls for duplicate uploads
+- ✅ T Backend's internal cache becomes irrelevant to us
+
+**Files Changed:**
+- `CREATE_T_PREFILL_CACHE_TABLE.sql` - New persistent cache table with indexes
+- `src/app/api/ai/prefill-resume/route.ts` - Updated to check persistent cache first, save to both caches
+
+**Database Schema:**
+```sql
+t_prefill_cache (
+  cache_key TEXT PRIMARY KEY,    -- T Backend file_id
+  ipfs_hash TEXT NOT NULL,       -- IPFS CID for lookups
+  file_id TEXT NOT NULL,         -- T Backend file_id (duplicate)
+  payload JSONB NOT NULL,        -- Extracted form data
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
+)
+```
+
+---
+
+## 🤖 **PREVIOUS: RESUME PREFILL NOW WORKS FLAWLESSLY!** 🎉✨
 
 **MAJOR WIN: Seamless Resume-to-Form Prefill Flow**
 

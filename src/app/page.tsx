@@ -507,6 +507,38 @@ const HomeContent = () => {
     }
   }, [journeyState, user?.address])
 
+  // Persist form data to localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined' || !user?.address) return
+    
+    // Don't save during reset
+    if (resetInProgressRef.current) {
+      console.log('⏸️ [FORMS] Skipping localStorage save - reset in progress')
+      return
+    }
+    
+    // Only save if at least one form has data
+    if (!form1Data && !form2Data && !form3Data) {
+      console.log('⏸️ [FORMS] Skipping localStorage save - no form data')
+      return
+    }
+    
+    try {
+      const formsToSave = {
+        form1Data,
+        form2Data,
+        form3Data,
+      }
+      window.localStorage.setItem(
+        `forms-${user.address}`,
+        JSON.stringify(formsToSave)
+      )
+      console.log('💾 [FORMS] Saved form data to localStorage')
+    } catch (error) {
+      console.warn('⚠️ Failed to persist form data', error)
+    }
+  }, [form1Data, form2Data, form3Data, user?.address])
+
   useEffect(() => {
     if (journeyState.resume.status === 'complete' && !hasResume) {
       setHasResume(true)
@@ -672,35 +704,37 @@ const HomeContent = () => {
     showDashboard,
   ])
 
-  // Auto-trigger analysis when user navigates to forms with existing resume
-  useEffect(() => {
-    if (
-      currentPage === 'dotapp' &&
-      latestResumeIpfsHash &&
-      !form1Data &&
-      !form2Data &&
-      !form3Data &&
-      user &&
-      analysisTriggeredRef.current !== latestResumeIpfsHash && // Only trigger once per resume
-      !analysisPendingRef.current // Prevent simultaneous triggers
-    ) {
-      console.log('📋 [HOME] User navigated to forms with existing resume, triggering analysis...')
-      analysisPendingRef.current = true // Set flag immediately to prevent race
-      analysisTriggeredRef.current = latestResumeIpfsHash
-      handleResumeUploadEvent({
-        type: 'analysis_ready',
-        step: 'navigate_to_forms',
-        data: {
-          ipfsHash: latestResumeIpfsHash,
-        },
-        message: '🔍 I found your uploaded resume! Analyzing it to prefill your forms...',
-      })
-      // Reset pending flag after a delay (analysis will complete)
-      setTimeout(() => {
-        analysisPendingRef.current = false
-      }, 2000)
-    }
-  }, [currentPage, latestResumeIpfsHash, form1Data, form2Data, form3Data, user, handleResumeUploadEvent])
+  // DISABLED: Auto-trigger removed for better UX - users should manually request prefill via T Assistant
+  // Automatic prefill was pushy and unexpected. Manual trigger (via DOT form conversation) gives users control.
+  // 
+  // useEffect(() => {
+  //   if (
+  //     currentPage === 'dotapp' &&
+  //     latestResumeIpfsHash &&
+  //     !form1Data &&
+  //     !form2Data &&
+  //     !form3Data &&
+  //     user &&
+  //     analysisTriggeredRef.current !== latestResumeIpfsHash && // Only trigger once per resume
+  //     !analysisPendingRef.current // Prevent simultaneous triggers
+  //   ) {
+  //     console.log('📋 [HOME] User navigated to forms with existing resume, triggering analysis...')
+  //     analysisPendingRef.current = true // Set flag immediately to prevent race
+  //     analysisTriggeredRef.current = latestResumeIpfsHash
+  //     handleResumeUploadEvent({
+  //       type: 'analysis_ready',
+  //       step: 'navigate_to_forms',
+  //       data: {
+  //         ipfsHash: latestResumeIpfsHash,
+  //       },
+  //       message: '🔍 I found your uploaded resume! Analyzing it to prefill your forms...',
+  //     })
+  //     // Reset pending flag after a delay (analysis will complete)
+  //     setTimeout(() => {
+  //       analysisPendingRef.current = false
+  //     }, 2000)
+  //   }
+  // }, [currentPage, latestResumeIpfsHash, form1Data, form2Data, form3Data, user, handleResumeUploadEvent])
 
   const handlePrimerAction = useCallback(
     (action: 'primer:learn_more' | 'primer:skip') => {
@@ -736,6 +770,11 @@ const HomeContent = () => {
           break
         case 'resume:prefill:confirm':
           // T Assistant already extracted data - use it directly (no API call needed)
+          console.log('🎯 [HOME] resume:prefill:confirm action received')
+          console.log('   Data parameter:', data)
+          console.log('   Data type:', typeof data)
+          console.log('   Data keys:', data ? Object.keys(data) : 'null')
+          
           setCurrentPage('dotapp')
           setShowPrefillUpload(false)
           setShowEmploymentVerification(false)
@@ -755,7 +794,17 @@ const HomeContent = () => {
                 email: data.form1Data.email,
               } : null,
             })
-            handlePrefillSuccess(data)
+            console.log('   Calling handlePrefillSuccess with:', data)
+            
+            // Ensure data has the expected structure (API might return { success: true, form1Data, ... })
+            const prefillData = {
+              form1Data: data.form1Data,
+              form2Data: data.form2Data,
+              form3Data: data.form3Data,
+              stats: data.stats,
+            }
+            console.log('   Normalized prefill data:', prefillData)
+            handlePrefillSuccess(prefillData)
             
             // Trigger success message from T
             setTimeout(() => {
@@ -880,9 +929,14 @@ const HomeContent = () => {
 
   // Navigation handler
   const handleNavigation = useCallback(
-    (page: 'signin' | 'resume' | 'dotapp') => {
+    (page: 'signin' | 'resume' | 'dotapp' | 'home') => {
       console.log(`Navigating to: ${page}`)
-      setCurrentPage(page)
+      if (page === 'home') {
+        // Reset to beginning screen (landing/wallet page)
+        setCurrentPage(null)
+      } else {
+        setCurrentPage(page)
+      }
     },
     []
   )
@@ -930,6 +984,10 @@ const HomeContent = () => {
 
       // Start on Form 1
       setCurrentForm(1)
+      
+      // Force remount forms to pick up new data
+      console.log('   🔄 Incrementing formResetKey to remount forms with new data')
+      setFormResetKey((prev) => prev + 1)
     },
     []
   )
@@ -1567,32 +1625,34 @@ const HomeContent = () => {
                     setLatestResumeIpfsHash(latestResume.ipfs_hash)
                     
                     // If forms are empty and we have a resume, trigger analysis to prefill
-                    // This handles the case where user already has a resume uploaded
-                    if (
-                      !form1Data &&
-                      !form2Data &&
-                      !form3Data &&
-                      latestResume.ipfs_hash &&
-                      analysisTriggeredRef.current !== latestResume.ipfs_hash && // Only trigger once per resume
-                      !analysisPendingRef.current // Prevent simultaneous triggers
-                    ) {
-                      console.log('📋 [HOME] Existing resume detected, triggering analysis for prefill...')
-                      analysisPendingRef.current = true // Set flag immediately to prevent race
-                      analysisTriggeredRef.current = latestResume.ipfs_hash
-                      handleResumeUploadEvent({
-                        type: 'analysis_ready',
-                        step: 'existing_resume',
-                        data: {
-                          ipfsHash: latestResume.ipfs_hash,
-                          resumeId: latestResume.id,
-                        },
-                        message: '🔍 I found your uploaded resume! Analyzing it to prefill your forms...',
-                      })
-                      // Reset pending flag after a delay (analysis will complete)
-                      setTimeout(() => {
-                        analysisPendingRef.current = false
-                      }, 2000)
-                    }
+                    // DISABLED: Auto-trigger removed for better UX - users should manually request prefill via T Assistant
+                    // Automatic prefill was pushy and unexpected. Manual trigger (via DOT form conversation) gives users control.
+                    // 
+                    // if (
+                    //   !form1Data &&
+                    //   !form2Data &&
+                    //   !form3Data &&
+                    //   latestResume.ipfs_hash &&
+                    //   analysisTriggeredRef.current !== latestResume.ipfs_hash && // Only trigger once per resume
+                    //   !analysisPendingRef.current // Prevent simultaneous triggers
+                    // ) {
+                    //   console.log('📋 [HOME] Existing resume detected, triggering analysis for prefill...')
+                    //   analysisPendingRef.current = true // Set flag immediately to prevent race
+                    //   analysisTriggeredRef.current = latestResume.ipfs_hash
+                    //   handleResumeUploadEvent({
+                    //     type: 'analysis_ready',
+                    //     step: 'existing_resume',
+                    //     data: {
+                    //       ipfsHash: latestResume.ipfs_hash,
+                    //       resumeId: latestResume.id,
+                    //     },
+                    //     message: '🔍 I found your uploaded resume! Analyzing it to prefill your forms...',
+                    //   })
+                    //   // Reset pending flag after a delay (analysis will complete)
+                    //   setTimeout(() => {
+                    //     analysisPendingRef.current = false
+                    //   }, 2000)
+                    // }
                   }
                 }}
               />
@@ -1668,6 +1728,52 @@ const HomeContent = () => {
                         }`}
                       >
                         Upload different resume
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Prefill option banner - show if user hasn't prefilled yet and has a resume */}
+                  {!hasPrefilled && hasResume && !isDriverApplicationCompleted && (
+                    <div
+                      className={`max-w-4xl mx-auto mb-6 px-4 py-3 rounded-lg border flex items-center justify-between ${
+                        theme === 'dark'
+                          ? 'bg-brand-mint/10 border-brand-mint/30 text-brand-cream'
+                          : 'bg-brand-sage/10 border-brand-sage/30 text-gray-800'
+                      }`}
+                    >
+                      <span>
+                        📄 Want to save time? You can prefill forms from your uploaded resume.
+                      </span>
+                      <button
+                        onClick={() => {
+                          console.log('🔄 [HOME] User requested prefill from forms')
+                          // Trigger analysis for the existing resume
+                          if (latestResumeIpfsHash) {
+                            analysisPendingRef.current = true
+                            analysisTriggeredRef.current = latestResumeIpfsHash
+                            handleResumeUploadEvent({
+                              type: 'analysis_ready',
+                              step: 'manual_prefill_request',
+                              data: {
+                                ipfsHash: latestResumeIpfsHash,
+                              },
+                              message: '🔍 Analyzing your resume to prefill forms...',
+                            })
+                            setTimeout(() => {
+                              analysisPendingRef.current = false
+                            }, 2000)
+                          } else {
+                            // No resume hash available, go back to upload
+                            setShowPrefillUpload(true)
+                          }
+                        }}
+                        className={`px-4 py-2 text-sm font-semibold rounded-xl border transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 whitespace-nowrap ml-4 ${
+                          theme === 'dark'
+                            ? 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50'
+                            : 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage'
+                        }`}
+                      >
+                        Prefill from Resume
                       </button>
                     </div>
                   )}

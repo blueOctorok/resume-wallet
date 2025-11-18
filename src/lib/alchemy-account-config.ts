@@ -59,6 +59,10 @@ try {
       chain: baseSepolia,
       policyId: ALCHEMY_POLICY_ID,
       enablePopupOauth: true, // Enable popup OAuth for Google
+      // Session configuration - extend session to 7 days for better UX
+      sessionConfig: {
+        expirationTimeMs: 1000 * 60 * 60 * 24 * 7, // 7 days in milliseconds
+      },
     },
     uiConfig
   )
@@ -69,6 +73,10 @@ try {
       chain: baseSepolia,
       policyId: ALCHEMY_POLICY_ID,
       enablePopupOauth: true, // Enable popup OAuth for Google
+      // Session configuration - extend session to 7 days for better UX
+      sessionConfig: {
+        expirationTimeMs: 1000 * 60 * 60 * 24 * 7, // 7 days in milliseconds
+      },
     },
     uiConfig
   )

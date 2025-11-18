@@ -19,7 +19,14 @@ const T_BACKEND_BASE_URL = process.env.T_BACKEND_BASE_URL || 'https://api-v2.flu
  * Note: This route may take 20-30 seconds. Requires Vercel Pro plan for 60s timeout.
  * Timeout is configured in vercel.json
  * 
- * CACHING: Extracted data is cached in Supabase to avoid re-processing duplicates
+ * CACHING STRATEGY (Two-Layer):
+ * 1. PRIMARY: t_prefill_cache table (persistent, survives resume deletions)
+ * 2. FALLBACK: resumes.extracted_data column (deleted when resume is deleted)
+ * 
+ * Cache checks happen at 3 strategic points to handle parallel requests:
+ * - Initial check (before T Backend call)
+ * - Mid-flow check (after first attempt fails, before retry)
+ * - Final check (after retry fails, before error)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -46,10 +53,37 @@ export async function POST(request: NextRequest) {
     console.log('🤖 [AI PREFILL] Starting resume extraction...')
     console.log(`   Input: ${cid ? `CID=${cid}` : `URL=${resumeUrl}`}`)
 
-    // Check cache first (Supabase resumes table)
+    const supabase = await createClient()
+
+    // Check persistent cache first (t_prefill_cache - survives resume deletions)
     if (cid) {
-      console.log('📦 [AI PREFILL] Checking cache for IPFS hash:', cid)
-      const supabase = await createClient()
+      console.log('📦 [AI PREFILL] Checking persistent cache for IPFS hash:', cid)
+      const { data: persistentCache, error: persistentError } = await supabase
+        .from('t_prefill_cache')
+        .select('payload')
+        .eq('ipfs_hash', cid)
+        .single()
+
+      if (!persistentError && persistentCache?.payload) {
+        console.log('✅ [AI PREFILL] Persistent cache hit! (t_prefill_cache)')
+        const cached = persistentCache.payload as any
+        return NextResponse.json({
+          success: true,
+          form1Data: cached.form1Data,
+          form2Data: cached.form2Data,
+          form3Data: cached.form3Data,
+          stats: cached.stats,
+          metadata: {
+            cached: true,
+            source: 'persistent_cache',
+            vectorStoreId: cached.metadata?.vectorStoreId,
+            fileId: cached.metadata?.fileId,
+          },
+        })
+      }
+
+      // Fallback: Check resumes table (legacy cache)
+      console.log('📦 [AI PREFILL] Checking resumes table cache...')
       const { data: cachedResume, error: cacheError } = await supabase
         .from('resumes')
         .select('extracted_data')
@@ -57,7 +91,7 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (!cacheError && cachedResume?.extracted_data) {
-        console.log('✅ [AI PREFILL] Cache hit! Returning cached data')
+        console.log('✅ [AI PREFILL] Cache hit in resumes table')
         const cached = cachedResume.extracted_data as any
         return NextResponse.json({
           success: true,
@@ -67,13 +101,14 @@ export async function POST(request: NextRequest) {
           stats: cached.stats,
           metadata: {
             cached: true,
+            source: 'resumes_table',
             vectorStoreId: cached.metadata?.vectorStoreId,
             fileId: cached.metadata?.fileId,
           },
         })
-      } else {
-        console.log('📭 [AI PREFILL] Cache miss - will call T Backend')
       }
+      
+      console.log('📭 [AI PREFILL] Cache miss - will call T Backend')
     }
 
     // Prepare request to T Backend
@@ -175,7 +210,33 @@ export async function POST(request: NextRequest) {
     // (Another parallel request may have just cached the data)
     if (!hasData && cid) {
       console.log('🔄 [AI PREFILL] First attempt returned no data, checking cache again...')
-      const supabase = await createClient()
+      
+      // Check persistent cache first
+      const { data: persistentRecheck, error: persistentRecheckError } = await supabase
+        .from('t_prefill_cache')
+        .select('payload')
+        .eq('ipfs_hash', cid)
+        .single()
+      
+      if (!persistentRecheckError && persistentRecheck?.payload) {
+        console.log('✅ [AI PREFILL] Persistent cache hit on recheck!')
+        const cached = persistentRecheck.payload as any
+        return NextResponse.json({
+          success: true,
+          form1Data: cached.form1Data,
+          form2Data: cached.form2Data,
+          form3Data: cached.form3Data,
+          stats: cached.stats,
+          metadata: {
+            cached: true,
+            source: 'persistent_cache_recheck',
+            vectorStoreId: cached.metadata?.vectorStoreId,
+            fileId: cached.metadata?.fileId,
+          },
+        })
+      }
+
+      // Fallback to resumes table
       const { data: recheck, error: recheckError } = await supabase
         .from('resumes')
         .select('extracted_data')
@@ -183,7 +244,7 @@ export async function POST(request: NextRequest) {
         .single()
       
       if (!recheckError && recheck?.extracted_data) {
-        console.log('✅ [AI PREFILL] Cache hit on recheck! (Another request cached it)')
+        console.log('✅ [AI PREFILL] Cache hit on recheck! (resumes table)')
         const cached = recheck.extracted_data as any
         return NextResponse.json({
           success: true,
@@ -193,6 +254,7 @@ export async function POST(request: NextRequest) {
           stats: cached.stats,
           metadata: {
             cached: true,
+            source: 'resumes_table_recheck',
             vectorStoreId: cached.metadata?.vectorStoreId,
             fileId: cached.metadata?.fileId,
           },
@@ -230,7 +292,33 @@ export async function POST(request: NextRequest) {
     
     if (!finalHasData && cid) {
       console.log('🔄 [AI PREFILL] Final cache check before error (parallel request may have cached)...')
-      const supabase = await createClient()
+      
+      // Check persistent cache first
+      const { data: finalPersistentRecheck, error: finalPersistentError } = await supabase
+        .from('t_prefill_cache')
+        .select('payload')
+        .eq('ipfs_hash', cid)
+        .single()
+      
+      if (!finalPersistentError && finalPersistentRecheck?.payload) {
+        console.log('✅ [AI PREFILL] Final persistent cache hit!')
+        const cached = finalPersistentRecheck.payload as any
+        return NextResponse.json({
+          success: true,
+          form1Data: cached.form1Data,
+          form2Data: cached.form2Data,
+          form3Data: cached.form3Data,
+          stats: cached.stats,
+          metadata: {
+            cached: true,
+            source: 'persistent_cache_final',
+            vectorStoreId: cached.metadata?.vectorStoreId,
+            fileId: cached.metadata?.fileId,
+          },
+        })
+      }
+
+      // Fallback to resumes table
       const { data: finalRecheck, error: finalRecheckError } = await supabase
         .from('resumes')
         .select('extracted_data')
@@ -238,7 +326,7 @@ export async function POST(request: NextRequest) {
         .single()
       
       if (!finalRecheckError && finalRecheck?.extracted_data) {
-        console.log('✅ [AI PREFILL] Final cache hit! Parallel request cached the data')
+        console.log('✅ [AI PREFILL] Final cache hit! (resumes table)')
         const cached = finalRecheck.extracted_data as any
         return NextResponse.json({
           success: true,
@@ -248,6 +336,7 @@ export async function POST(request: NextRequest) {
           stats: cached.stats,
           metadata: {
             cached: true,
+            source: 'resumes_table_final',
             vectorStoreId: cached.metadata?.vectorStoreId,
             fileId: cached.metadata?.fileId,
           },
@@ -261,7 +350,32 @@ export async function POST(request: NextRequest) {
       console.error('   Vector store:', tBackendData.vector_store_id)
       console.error('   File ID:', tBackendData.file_id)
       
-      // Check if raw text exists - if so, it's a parsing issue, not a duplicate
+      // SPECIAL CASE: T Backend knows this file but we lost our cache
+      // This happens when a resume was previously processed but our cache was deleted
+      if (tBackendData.file_id && tBackendData.vector_store_id && !tBackendData.raw) {
+        console.error('🔒 [AI PREFILL] T Backend Cache Lock Detected')
+        console.error('   This file was previously processed by T Backend (file_id exists)')
+        console.error('   But we have no local cache and T Backend won\'t reprocess it')
+        console.error('   User needs to upload a modified version of the file')
+        
+        return NextResponse.json(
+          {
+            error: 'Resume already processed',
+            errorType: 'T_BACKEND_CACHE_LOCK',
+            detail: 'This resume was previously analyzed, but we lost the extracted data. To continue, please make a small edit to your resume and save it as a new file.',
+            userMessage: 'We\'ve seen this resume before but lost our copy of the analysis.',
+            actionRequired: 'Please make any tiny change to your resume (add a space, update a date, fix a typo) and save it as a new PDF file, then upload the new version.',
+            technicalDetails: {
+              fileId: tBackendData.file_id,
+              vectorStore: tBackendData.vector_store_id,
+              reason: 'T Backend cache hit with no local cache'
+            }
+          },
+          { status: 409 } // 409 Conflict - resource exists but can't be used
+        )
+      }
+      
+      // Check if raw text exists - if so, it's a parsing issue, not a cache lock
       if (tBackendData.raw && tBackendData.raw.length > 0) {
         return NextResponse.json(
           {
@@ -271,7 +385,8 @@ export async function POST(request: NextRequest) {
           { status: 422 }
         )
       }
-      // No raw text - could be scanned PDF, duplicate, or empty file
+      
+      // No raw text and no file_id - could be scanned PDF or empty file
       return NextResponse.json(
         {
           error: 'Could not extract text from resume.',
@@ -316,28 +431,48 @@ export async function POST(request: NextRequest) {
     // Cache the extracted data in Supabase (fire-and-forget)
     if (cid) {
       console.log('💾 [AI PREFILL] Caching extracted data for future requests...')
-      const supabase = await createClient()
+      
+      const cachePayload = {
+        form1Data,
+        form2Data,
+        form3Data,
+        stats,
+        metadata: {
+          vectorStoreId: tBackendData.vector_store_id,
+          fileId: tBackendData.file_id,
+        },
+        extractedAt: new Date().toISOString(),
+      }
+
+      // Save to persistent cache table (PRIMARY - survives resume deletions)
+      supabase
+        .from('t_prefill_cache')
+        .upsert({
+          cache_key: tBackendData.file_id, // T Backend's file_id is guaranteed unique
+          ipfs_hash: cid,
+          file_id: tBackendData.file_id,
+          payload: cachePayload,
+        })
+        .then(({ error }) => {
+          if (error) {
+            console.error('⚠️ [AI PREFILL] Persistent cache save failed (non-fatal):', error)
+          } else {
+            console.log('✅ [AI PREFILL] Data cached in persistent cache (t_prefill_cache)')
+          }
+        })
+
+      // Also save to resumes table for backwards compatibility
       supabase
         .from('resumes')
         .update({
-          extracted_data: {
-            form1Data,
-            form2Data,
-            form3Data,
-            stats,
-            metadata: {
-              vectorStoreId: tBackendData.vector_store_id,
-              fileId: tBackendData.file_id,
-            },
-            extractedAt: new Date().toISOString(),
-          },
+          extracted_data: cachePayload,
         })
         .eq('ipfs_hash', cid)
         .then(({ error }) => {
           if (error) {
-            console.error('⚠️ [AI PREFILL] Cache save failed (non-fatal):', error)
+            console.error('⚠️ [AI PREFILL] Resumes table cache save failed (non-fatal):', error)
           } else {
-            console.log('✅ [AI PREFILL] Data cached successfully')
+            console.log('✅ [AI PREFILL] Data cached in resumes table')
           }
         })
     }
