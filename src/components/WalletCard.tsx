@@ -77,18 +77,6 @@ export default function WalletCard({
           </div>
         </button>
 
-        {showAdminTools && (
-          <Link
-            href='/admin'
-            className={`rounded-xl px-3 py-2 text-xs font-semibold transition-all shadow hover:shadow-md ${
-              theme === 'light'
-                ? 'bg-white text-brand-sage border border-brand-sage/40 hover:bg-brand-sage/10'
-                : 'bg-brand-sage-light/30 text-brand-cream border border-brand-cream/40 hover:bg-brand-sage-light/40'
-            }`}
-          >
-            Admin
-          </Link>
-        )}
       </div>
     )
   }

@@ -6,6 +6,7 @@ import Navigation from '@/components/Navigation'
 import AnimatedBackground from '@/components/AnimatedBackground'
 import UserStatusModal from '@/components/UserStatusModal'
 import WalletCard from '@/components/WalletCard'
+import TLoadingModal from '@/components/TLoadingModal'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useSendUserOperation, useSmartAccountClient } from '@account-kit/react'
 import { AssistantBridgeProvider } from '@/contexts/AssistantBridgeContext'
@@ -274,6 +275,12 @@ const HomeContent = () => {
   const [journeyState, setJourneyState] = useState<DriverJourneyState>(() =>
     createInitialJourneyState()
   )
+  
+  // T Assistant state
+  const [isTCollapsed, setIsTCollapsed] = useState(true) // Start collapsed
+  const [tHasUnread, setTHasUnread] = useState(false)
+  const [tIsWorking, setTIsWorking] = useState(false)
+  const [tWorkingMessage, setTWorkingMessage] = useState('T is thinking...')
   const [helpRequest, setHelpRequest] = useState<AssistantHelpRequest | null>(
     null
   )
@@ -1558,6 +1565,8 @@ const HomeContent = () => {
           onStatusClick={openModal}
           onWalletClick={handleWalletClick}
           onNavigate={handleNavigation}
+          tHasUnread={tHasUnread}
+          onTClick={() => setIsTCollapsed(false)}
         />
 
         {/* User Status Modal */}
@@ -1572,25 +1581,40 @@ const HomeContent = () => {
           }}
         />
 
-        {/* Main Content */}
-        <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-3'>
-          {/* T Assistant - Centerpiece */}
-          <div className='mb-8'>
-            <TAssistant
-              currentStep={getCurrentStep()}
-              onAction={handleTAssistantAction}
-              userAddress={user?.address}
-              hasResume={hasResume}
-              hasForms={journeyState.forms.status !== 'pending'}
-              form1Data={form1Data}
-              form2Data={form2Data}
-              form3Data={form3Data}
-              journeyState={journeyState}
-              helpRequest={helpRequest}
-              primerRequest={primerRequest}
-              resumeUploadEvent={resumeUploadEvent}
-            />
-          </div>
+        {/* Main Content - Adjusted for sidebar */}
+        <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-3 transition-all duration-300 ${
+          user && !isTCollapsed ? 'pr-[420px]' : ''
+        }`}>
+          {/* T Assistant - Sidebar (only when logged in) */}
+          {user && (
+            <>
+              <TAssistant
+                currentStep={getCurrentStep()}
+                onAction={handleTAssistantAction}
+                userAddress={user?.address}
+                hasResume={hasResume}
+                hasForms={journeyState.forms.status !== 'pending'}
+                form1Data={form1Data}
+                form2Data={form2Data}
+                form3Data={form3Data}
+                journeyState={journeyState}
+                helpRequest={helpRequest}
+                primerRequest={primerRequest}
+                resumeUploadEvent={resumeUploadEvent}
+                mode="sidebar"
+                isCollapsed={isTCollapsed}
+                onToggleCollapse={() => setIsTCollapsed(!isTCollapsed)}
+                onUnreadChange={setTHasUnread}
+                onLoadingChange={(isLoading, message) => {
+                  setTIsWorking(isLoading)
+                  if (message) setTWorkingMessage(message)
+                }}
+              />
+              
+              {/* T Loading Modal - shown when T is working */}
+              <TLoadingModal isVisible={tIsWorking} message={tWorkingMessage} />
+            </>
+          )}
 
           {/* Conditional Content Based on Navigation */}
           {currentPage === 'signin' && !user && (

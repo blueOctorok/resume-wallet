@@ -38,6 +38,11 @@ interface TAssistantProps {
   helpRequest?: AssistantHelpRequest | null
   primerRequest?: PrimerPrompt | null
   resumeUploadEvent?: ResumeUploadEvent | null
+  isCollapsed?: boolean
+  onToggleCollapse?: () => void
+  onUnreadChange?: (hasUnread: boolean) => void
+  onLoadingChange?: (isLoading: boolean, message?: string) => void
+  mode?: 'sidebar' | 'center'
 }
 
 // Wrapper component that safely handles SSR
@@ -54,6 +59,11 @@ function TAssistantContent({
   helpRequest,
   primerRequest,
   resumeUploadEvent,
+  isCollapsed = false,
+  onToggleCollapse,
+  onUnreadChange,
+  onLoadingChange,
+  mode = 'center',
 }: TAssistantProps) {
   const { theme } = useTheme()
   const [messages, setMessages] = useState<Message[]>([])
@@ -71,6 +81,8 @@ function TAssistantContent({
   const primerRequestHandledRef = useRef<string | null>(null)
   const resumeUploadEventHandledRef = useRef<string | null>(null)
   const messageCounterRef = useRef(0)
+  const lastReadMessageIdRef = useRef<string | null>(null)
+  const [hasUnread, setHasUnread] = useState(false)
 
   const nextMessageId = useCallback((prefix: string) => {
     messageCounterRef.current += 1
@@ -79,20 +91,53 @@ function TAssistantContent({
 
   const addAssistantMessage = useCallback(
     (content: string, options?: { actions?: MessageAction[]; step?: string }) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: nextMessageId('assistant'),
-          role: 'assistant',
-          content,
-          timestamp: new Date(),
-          step: options?.step,
-          actions: options?.actions,
-        },
-      ])
+      const newMessage = {
+        id: nextMessageId('assistant'),
+        role: 'assistant' as const,
+        content,
+        timestamp: new Date(),
+        step: options?.step,
+        actions: options?.actions,
+      }
+      setMessages((prev) => [...prev, newMessage])
+      
+      // Mark as unread if collapsed
+      if (isCollapsed) {
+        setHasUnread(true)
+        onUnreadChange?.(true)
+      }
     },
-    [nextMessageId]
+    [nextMessageId, isCollapsed, onUnreadChange]
   )
+  
+  // Track unread messages
+  useEffect(() => {
+    if (!isCollapsed && hasUnread) {
+      // Mark all messages as read when expanded
+      const lastMessage = messages[messages.length - 1]
+      if (lastMessage) {
+        lastReadMessageIdRef.current = lastMessage.id
+        setHasUnread(false)
+        onUnreadChange?.(false)
+      }
+    }
+  }, [isCollapsed, hasUnread, messages, onUnreadChange])
+
+  // Notify parent of loading state changes
+  useEffect(() => {
+    const isWorking = isLoading || isProcessingHelp || isAnalyzing
+    let message = 'T is thinking...'
+    
+    if (isAnalyzing) {
+      message = '🔍 Analyzing your resume...'
+    } else if (isProcessingHelp) {
+      message = '💭 Processing your request...'
+    } else if (isLoading) {
+      message = '💬 T is thinking...'
+    }
+    
+    onLoadingChange?.(isWorking, message)
+  }, [isLoading, isProcessingHelp, isAnalyzing, onLoadingChange])
 
   const buildApplicationSnapshot = useCallback(() => {
     const stringify = (value: unknown) => {
@@ -840,6 +885,279 @@ function TAssistantContent({
     return null
   }
 
+  // Sidebar mode
+  if (mode === 'sidebar') {
+    if (isCollapsed) {
+      // Collapsed state - just a button that can be clicked
+      return (
+        <div className="fixed right-4 top-20 z-[60] pointer-events-auto">
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              onToggleCollapse?.()
+            }}
+            className={`relative rounded-full p-3 shadow-2xl transition-all duration-300 hover:scale-110 pointer-events-auto ${
+              theme === 'dark'
+                ? 'bg-brand-sage-light/20 backdrop-blur-xl border border-brand-mint'
+                : 'bg-white/90 backdrop-blur-xl border border-gray-200'
+            }`}
+            type="button"
+          >
+            <MessageCircle className={`w-6 h-6 ${
+              theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+            }`} />
+            {hasUnread && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-white" />
+            )}
+          </button>
+        </div>
+      )
+    }
+
+    // Expanded sidebar
+    return (
+      <div
+        className={`fixed right-4 top-20 bottom-4 z-[60] w-96 rounded-lg shadow-2xl flex flex-col transition-all duration-300 pointer-events-auto ${
+          theme === 'dark'
+            ? 'bg-brand-sage-light/20 backdrop-blur-xl border border-brand-mint'
+            : 'bg-white/90 backdrop-blur-xl border border-gray-200'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div
+          className={`flex items-center justify-between p-4 border-b ${
+            theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+          }`}
+        >
+          <div className="flex items-center space-x-3">
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                theme === 'dark'
+                  ? 'bg-brand-mint text-gray-900'
+                  : 'bg-brand-sage text-white'
+              }`}
+            >
+              <MessageCircle className="w-6 h-6" />
+            </div>
+            <div>
+              <h3
+                className={`font-semibold ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`}
+              >
+                T
+              </h3>
+            </div>
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              onToggleCollapse?.()
+            }}
+            className={`p-1 rounded hover:bg-opacity-20 pointer-events-auto ${
+              theme === 'dark' ? 'hover:bg-white' : 'hover:bg-gray-200'
+            }`}
+            aria-label="Collapse T Assistant"
+            type="button"
+          >
+            <span className="text-xl">−</span>
+          </button>
+        </div>
+        <div className="flex items-center space-x-2 px-4">
+          {currentStep === 'welcome' && (
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                theme === 'dark'
+                  ? 'bg-yellow-500/20 text-yellow-400'
+                  : 'bg-yellow-100 text-yellow-800'
+              }`}
+            >
+              Step 1: Welcome
+            </span>
+          )}
+          {currentStep === 'wallet' && (
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                theme === 'dark'
+                  ? 'bg-blue-500/20 text-blue-400'
+                  : 'bg-blue-100 text-blue-800'
+              }`}
+            >
+              Step 2: Wallet Created
+            </span>
+          )}
+          {currentStep === 'resume' && (
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                theme === 'dark'
+                  ? 'bg-green-500/20 text-green-400'
+                  : 'bg-green-100 text-green-800'
+              }`}
+            >
+              Step 3: Resume Uploaded
+            </span>
+          )}
+          {currentStep === 'forms' && (
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                theme === 'dark'
+                  ? 'bg-purple-500/20 text-purple-400'
+                  : 'bg-purple-100 text-purple-800'
+              }`}
+            >
+              Step 4: Forms
+            </span>
+          )}
+          {currentStep === 'submission' && (
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                theme === 'dark'
+                  ? 'bg-emerald-500/20 text-emerald-400'
+                  : 'bg-emerald-100 text-emerald-800'
+              }`}
+            >
+              Step 5: Submitted
+            </span>
+          )}
+        </div>
+        {journeyState && (
+          <div
+            className={`px-4 pb-2 text-xs ${
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            }`}
+          >
+            Progress: {journeySummary}
+          </div>
+        )}
+
+        {/* Messages */}
+        <div
+          ref={messagesContainerRef}
+          className="flex-1 overflow-y-auto p-4 space-y-4"
+        >
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`flex ${
+              message.role === 'user' ? 'justify-end' : 'justify-start'
+            }`}
+          >
+            <div
+              className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                message.role === 'user'
+                  ? theme === 'dark'
+                    ? 'bg-brand-mint text-gray-900'
+                    : 'bg-brand-sage text-white'
+                  : theme === 'dark'
+                    ? 'bg-gray-800 text-gray-100'
+                    : 'bg-gray-100 text-gray-900'
+              }`}
+            >
+              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              <p
+                className={`text-xs mt-1 ${
+                  message.role === 'user'
+                    ? theme === 'dark'
+                      ? 'text-gray-700'
+                      : 'text-white/70'
+                    : theme === 'dark'
+                      ? 'text-gray-400'
+                      : 'text-gray-500'
+                }`}
+              >
+                {message.timestamp.toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+              {message.role === 'assistant' &&
+                message.actions &&
+                message.actions.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {message.actions.map((action) => (
+                      <button
+                        key={action.id}
+                        type="button"
+                        onClick={() => handleMessageAction(action)}
+                        className={`px-3 py-1 text-xs font-medium rounded-full border transition-all ${
+                          theme === 'dark'
+                            ? 'border-brand-mint/50 text-brand-mint hover:bg-brand-mint/10'
+                            : 'border-brand-sage/40 text-brand-sage hover:bg-brand-sage/10'
+                        }`}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+            </div>
+          </div>
+        ))}
+        {(isLoading || isProcessingHelp) && (
+          <div className="flex justify-start">
+            <div
+              className={`rounded-lg px-4 py-2 ${
+                theme === 'dark'
+                  ? 'bg-gray-800 text-gray-100'
+                  : 'bg-gray-100 text-gray-900'
+              }`}
+            >
+              <Loader2 className="w-4 h-4 animate-spin" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Input */}
+      <div
+        className={`p-4 border-t ${
+          theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+        }`}
+      >
+        <div className="flex items-center space-x-2">
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Ask me anything about the application process..."
+            disabled={isLoading}
+            className={`flex-1 px-4 py-2 rounded-lg border-2 focus:outline-none focus:ring-2 focus:border-transparent ${
+              theme === 'dark'
+                ? 'bg-gray-800 border-gray-700 text-white focus:ring-brand-mint placeholder-gray-500'
+                : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage placeholder-gray-400'
+            }`}
+          />
+          <button
+            onClick={handleSend}
+            disabled={!input.trim() || isLoading}
+            className={`p-2 rounded-lg transition-colors ${
+              !input.trim() || isLoading
+                ? 'opacity-50 cursor-not-allowed'
+                : theme === 'dark'
+                  ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
+                  : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+            }`}
+            aria-label="Send message"
+          >
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+    )
+  }
+
+  // Center mode (original layout)
   return (
     <div
       className={`w-full max-w-4xl mx-auto rounded-lg shadow-2xl flex flex-col ${

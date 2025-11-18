@@ -16,6 +16,8 @@ interface NavigationProps {
   onStatusClick?: () => void
   onWalletClick?: () => void
   onNavigate?: (page: 'signin' | 'resume' | 'dotapp' | 'home') => void
+  tHasUnread?: boolean
+  onTClick?: () => void
 }
 
 export default function Navigation({
@@ -24,6 +26,8 @@ export default function Navigation({
   onStatusClick,
   onWalletClick,
   onNavigate,
+  tHasUnread = false,
+  onTClick,
 }: NavigationProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { theme } = useTheme()
@@ -118,8 +122,31 @@ export default function Navigation({
                 </h1>
               </div>
 
-              {/* Theme Toggle and Mobile Menu Button - Right */}
+              {/* T Assistant Indicator (Dynamic Island) and Theme Toggle - Right */}
               <div className='w-20 flex justify-end items-center gap-2'>
+                {/* T Assistant Dynamic Island */}
+                {isAuthenticated && onTClick && (
+                  <button
+                    onClick={onTClick}
+                    className={`relative group flex items-center justify-center p-2 rounded-full transition-all duration-300 ${
+                      theme === 'light'
+                        ? 'bg-brand-sage/60 backdrop-blur-sm hover:bg-brand-sage/80 border border-brand-sage/40'
+                        : 'bg-brand-sage-light/20 backdrop-blur-sm hover:bg-brand-sage-light/30 border border-brand-mint/30'
+                    } ${tHasUnread ? 'animate-pulse' : ''}`}
+                    aria-label='Open T Assistant'
+                  >
+                    <span className={`text-lg ${theme === 'light' ? 'text-white' : 'text-brand-mint'}`}>
+                      T
+                    </span>
+                    {tHasUnread && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border border-white" />
+                    )}
+                    {/* Tooltip */}
+                    <div className='absolute right-0 top-full mt-2 px-3 py-1.5 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
+                      {tHasUnread ? 'T has a new message' : 'Open T Assistant'}
+                    </div>
+                  </button>
+                )}
                 <ThemeToggle />
                 <button
                   onClick={toggleMenu}
