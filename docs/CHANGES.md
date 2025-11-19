@@ -2,6 +2,79 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 📱 **MOBILE RESPONSIVE POLISH** (November 19, 2025)
+
+**Mobile T Assistant Fix + Resume Upload Simplification (Latest)**
+
+Fixed the "Chat with T" button in mobile nav and cleaned up the resume upload section:
+
+**T Assistant Mobile Fix:**
+- **Fixed "Chat with T" button** - Button now opens T Assistant as a full-screen overlay on mobile (previously did nothing)
+- **Mobile full-screen mode** - T Assistant shows as `fixed inset-0` on mobile for better chat experience
+- **Desktop sidebar preserved** - On `md+` breakpoints, T remains as right sidebar
+- **Auto-close menu** - Mobile hamburger menu closes automatically when opening T Assistant
+
+**Resume Upload Simplification:**
+- **Removed "Ask T" buttons** - Simplified the header by removing the two "Ask T about IPFS" and "Ask T about costs" buttons. These were cluttering the UI, especially on mobile.
+- **Responsive title sizing** - Changed title from fixed `text-3xl` to responsive `text-xl sm:text-2xl md:text-3xl` for better mobile readability.
+- **Cleaner layout** - Simplified from "Resume Upload with Full Verification" to just "Resume Upload" for better mobile fit.
+
+**Technical Implementation:**
+```tsx
+// T Assistant: Full-screen on mobile, sidebar on desktop
+<div className={`fixed inset-0 md:inset-auto md:right-4 md:top-20 md:bottom-4 ...`}>
+
+// Navigation: Close menu after opening T
+onClick={() => {
+  onTClick()
+  setIsMenuOpen(false)
+}}
+```
+
+**Files Changed:**
+- `src/components/TAssistant.tsx` - Changed to full-screen overlay on mobile
+- `src/components/Navigation.tsx` - Auto-close menu when T opens
+- `src/components/ResumeUploadWithVerification.tsx` - Removed Ask T buttons, made title responsive
+
+---
+
+## 📱 **MOBILE NAV POLISH + T SIDEBAR FIX**
+
+Smoothed out the navigation experience on phones and fixed the T Assistant sidebar appearing on mobile viewports.
+
+### What Changed
+- Hid the floating **T Dynamic Island** on small screens (it now only appears on `md+` viewports) so it no longer collides with the hamburger/menu controls.
+- Added a dedicated **"Chat with T"** button inside the mobile menu so users can still open the assistant (complete with unread indicator text).
+- Moved the **dark/light ThemeToggle** into the hamburger menu on mobile to free up the header row; it still lives inline on tablet/desktop.
+- Increased spacing and allowed the nav row to flex-wrap on mobile so buttons have breathing room instead of being squished together.
+- **Hidden T Assistant sidebar completely on mobile** (both collapsed and expanded states) using `hidden md:block` and `hidden md:flex` responsive classes.
+- Made sidebar content padding adjustment desktop-only (`md:pr-[420px]`) to give full width on mobile.
+
+### Why It Matters
+- Keeps the brand "dynamic island" feeling on desktop where there's room, while preventing layout overlap on phones.
+- Ensures all critical actions (theme switch + T assistant) remain available without overwhelming the header.
+- Makes the header feel intentional instead of cramped, improving first impressions for mobile users.
+- **Eliminates floating chat bubble on mobile** (390x844 viewport) - T Assistant only accessible via menu.
+- Provides full-width content on mobile for better readability and usability.
+- Consistent UX pattern: desktop gets persistent sidebar access, mobile gets menu-based access.
+
+### Technical Details
+```tsx
+// T Assistant sidebar hidden on mobile
+<div className="hidden md:block fixed right-4 top-20 ...">  // Collapsed
+<div className="hidden md:flex fixed right-4 top-20 ...">   // Expanded
+
+// Content padding only applied on desktop
+<div className={`... ${!isTCollapsed ? 'md:pr-[420px]' : ''}`}>
+```
+
+### Files Touched
+- `src/components/Navigation.tsx` - Responsive nav improvements
+- `src/components/TAssistant.tsx` - Hidden sidebar on mobile
+- `src/app/page.tsx` - Desktop-only padding adjustment
+
+---
+
 ## 🔄 **LATEST STATUS: PREFILL ANYTIME + FORM REMOUNT FIX** 🎯
 
 **Added "Prefill from Resume" Button + Fixed Form Data Display (November 18, 2025)**

@@ -70,9 +70,9 @@ export default function Navigation({
         <div className='relative px-6 sm:px-8 py-5 sm:py-6'>
           <div className='flex flex-col gap-4'>
             {/* Top Row: Logo and Status */}
-            <div className='flex items-center justify-between'>
+            <div className='flex items-center justify-between gap-4'>
               {/* User Status Indicator or Sign In Button - Left (always takes space to center logo) */}
-              <div className='w-20 flex justify-start'>
+              <div className='flex-shrink-0 w-24 flex justify-start'>
                 {isAuthenticated ? (
                   <button
                     onClick={(e) => {
@@ -110,7 +110,7 @@ export default function Navigation({
               </div>
 
               {/* Logo - Center */}
-              <div className='flex-1 flex justify-center'>
+              <div className='flex-1 flex justify-center min-w-0'>
                 <h1
                   className={`text-3xl sm:text-4xl lg:text-5xl font-extralight tracking-wide ${
                     theme === 'light'
@@ -123,12 +123,12 @@ export default function Navigation({
               </div>
 
               {/* T Assistant Indicator (Dynamic Island) and Theme Toggle - Right */}
-              <div className='w-20 flex justify-end items-center gap-2'>
+              <div className='flex-shrink-0 flex justify-end items-center gap-2'>
                 {/* T Assistant Dynamic Island */}
                 {isAuthenticated && onTClick && (
                   <button
                     onClick={onTClick}
-                    className={`relative group flex items-center justify-center p-2 rounded-full transition-all duration-300 ${
+                    className={`hidden md:flex relative group items-center justify-center p-2 rounded-full transition-all duration-300 ${
                       theme === 'light'
                         ? 'bg-brand-sage/60 backdrop-blur-sm hover:bg-brand-sage/80 border border-brand-sage/40'
                         : 'bg-brand-sage-light/20 backdrop-blur-sm hover:bg-brand-sage-light/30 border border-brand-mint/30'
@@ -147,7 +147,9 @@ export default function Navigation({
                     </div>
                   </button>
                 )}
-                <ThemeToggle />
+                <div className='hidden md:flex'>
+                  <ThemeToggle />
+                </div>
                 <button
                   onClick={toggleMenu}
                   className='md:hidden p-2.5 rounded-xl bg-brand-sage/60 backdrop-blur-sm hover:bg-brand-sage/80 hover:border-brand-mint/70 transition-all duration-300 shadow-lg hover:shadow-xl'
@@ -178,7 +180,7 @@ export default function Navigation({
             <div
               className={`${
                 isMenuOpen ? 'flex' : 'hidden'
-              } md:flex flex-col md:flex-row justify-center items-center gap-3 pt-4 border-t border-brand-mint/30`}
+              } md:flex flex-col md:flex-row flex-wrap md:flex-nowrap justify-center items-center gap-4 md:gap-3 pt-4 border-t border-brand-mint/30`}
             >
               {/* Mobile Wallet Button - Leftmost position */}
               {isAuthenticated && user && (
@@ -187,6 +189,26 @@ export default function Navigation({
                   onClick={onWalletClick}
                   isMobile={true}
                 />
+              )}
+              {/* Mobile-only T Assistant access */}
+              {isAuthenticated && onTClick && (
+                <button
+                  onClick={() => {
+                    onTClick()
+                    setIsMenuOpen(false) // Close menu after clicking
+                  }}
+                  className={`md:hidden w-full px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 flex items-center justify-center gap-2 ${
+                    theme === 'light'
+                      ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105'
+                      : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105'
+                  }`}
+                >
+                  <span className='text-base'>🤖</span>
+                  <span>{tHasUnread ? 'T has updates' : 'Chat with T'}</span>
+                  {tHasUnread && (
+                    <span className='ml-1 w-2 h-2 rounded-full bg-red-500 animate-pulse' />
+                  )}
+                </button>
               )}
               {/* Home Button - Always visible */}
               <button
@@ -237,6 +259,10 @@ export default function Navigation({
               >
                 DOT App
               </button>
+              {/* Mobile Theme Toggle */}
+              <div className='w-full md:hidden flex justify-center'>
+                <ThemeToggle />
+              </div>
             </div>
           </div>
         </div>

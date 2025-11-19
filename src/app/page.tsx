@@ -1581,9 +1581,9 @@ const HomeContent = () => {
           }}
         />
 
-        {/* Main Content - Adjusted for sidebar */}
+        {/* Main Content - Adjusted for sidebar (desktop only) */}
         <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-3 transition-all duration-300 ${
-          user && !isTCollapsed ? 'pr-[420px]' : ''
+          user && !isTCollapsed ? 'md:pr-[420px]' : ''
         }`}>
           {/* T Assistant - Sidebar (only when logged in) */}
           {user && (

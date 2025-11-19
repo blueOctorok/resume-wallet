@@ -19,7 +19,7 @@ export default function TLoadingModal({ isVisible, message = 'T is thinking...' 
 
       {/* Modal content */}
       <div
-        className={`relative rounded-2xl p-8 shadow-2xl border pointer-events-auto ${
+        className={`relative rounded-2xl p-6 sm:p-8 mx-4 shadow-2xl border pointer-events-auto ${
           theme === 'dark'
             ? 'bg-brand-sage-light/20 backdrop-blur-xl border-brand-mint'
             : 'bg-white/90 backdrop-blur-xl border-gray-200'
@@ -82,16 +82,16 @@ export default function TLoadingModal({ isVisible, message = 'T is thinking...' 
           </div>
 
           {/* Message */}
-          <div className="text-center">
+          <div className="text-center max-w-xs">
             <p
-              className={`text-lg font-semibold ${
+              className={`text-base sm:text-lg font-semibold ${
                 theme === 'dark' ? 'text-white' : 'text-gray-900'
               }`}
             >
               {message}
             </p>
             <p
-              className={`text-sm mt-1 ${
+              className={`text-xs sm:text-sm mt-1 ${
                 theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
               }`}
             >

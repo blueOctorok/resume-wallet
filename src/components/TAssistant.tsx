@@ -889,8 +889,9 @@ function TAssistantContent({
   if (mode === 'sidebar') {
     if (isCollapsed) {
       // Collapsed state - just a button that can be clicked
+      // Hidden on mobile (< md breakpoint), only visible on desktop
       return (
-        <div className="fixed right-4 top-20 z-[60] pointer-events-auto">
+        <div className="hidden md:block fixed right-4 top-20 z-[60] pointer-events-auto">
           <button
             onClick={(e) => {
               e.stopPropagation()
@@ -916,12 +917,14 @@ function TAssistantContent({
     }
 
     // Expanded sidebar
+    // Mobile: Full-screen overlay
+    // Desktop: Right sidebar
     return (
       <div
-        className={`fixed right-4 top-20 bottom-4 z-[60] w-96 rounded-lg shadow-2xl flex flex-col transition-all duration-300 pointer-events-auto ${
+        className={`fixed inset-0 md:inset-auto md:right-4 md:top-20 md:bottom-4 z-[60] md:w-96 md:rounded-lg shadow-2xl flex flex-col transition-all duration-300 pointer-events-auto ${
           theme === 'dark'
-            ? 'bg-brand-sage-light/20 backdrop-blur-xl border border-brand-mint'
-            : 'bg-white/90 backdrop-blur-xl border border-gray-200'
+            ? 'bg-brand-sage-light/20 backdrop-blur-xl border-brand-mint md:border'
+            : 'bg-white/90 backdrop-blur-xl border-gray-200 md:border'
         }`}
         onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}

@@ -36,7 +36,7 @@ export default function ResumeUploadWithVerification({
   onUploadComplete,
 }: ResumeUploadWithVerificationProps) {
   const { theme } = useTheme()
-  const { notifyResumeUploadEvent, requestHelp } = useAssistantBridge()
+  const { notifyResumeUploadEvent } = useAssistantBridge()
 
   // Add error boundary for Alchemy hooks
   let account: any = null
@@ -58,8 +58,8 @@ export default function ResumeUploadWithVerification({
   if (hookError) {
     return (
       <div className='bg-white p-6 rounded-lg shadow-sm border border-gray-200'>
-        <h3 className='text-lg font-medium text-gray-900 mb-4'>
-          📄 Resume Upload with Full Verification
+        <h3 className='text-xl sm:text-2xl font-medium text-gray-900 mb-4'>
+          📄 Resume Upload
         </h3>
         <div className='bg-red-50 p-4 rounded-lg border border-red-200'>
           <p className='text-red-800'>
@@ -434,14 +434,14 @@ export default function ResumeUploadWithVerification({
             </svg>
           </div>
           <h3
-            className={`text-3xl font-bold mb-2 ${
+            className={`text-xl sm:text-2xl md:text-3xl font-bold mb-2 ${
               theme === 'dark' ? 'text-white' : 'text-gray-900'
             }`}
           >
             Authentication Required
           </h3>
           <p
-            className={`text-lg ${
+            className={`text-sm sm:text-base md:text-lg ${
               theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
             }`}
           >
@@ -462,52 +462,14 @@ export default function ResumeUploadWithVerification({
         theme === 'dark' ? 'border-brand-mint' : 'border-brand-sage'
       }`}
     >
-      <div className='flex justify-between items-start mb-6'>
+      <div className='mb-6'>
         <h3
-          className={`text-3xl font-bold ${
+          className={`text-xl sm:text-2xl md:text-3xl font-bold ${
             theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}
         >
-          📄 Resume Upload with Full Verification
+          📄 Resume Upload
         </h3>
-        <div className='flex gap-2'>
-          <button
-            type='button'
-            onClick={() =>
-              requestHelp({
-                section: 'Resume Upload - IPFS',
-                question: 'What is IPFS and why do we use it for storing resumes?',
-                context: 'User is uploading a resume and wants to understand IPFS storage.',
-              })
-            }
-            className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-md border transition-colors ${
-              theme === 'dark'
-                ? 'border-brand-mint/40 text-brand-mint hover:bg-brand-mint/10'
-                : 'border-brand-sage/40 text-brand-sage hover:bg-brand-sage/10'
-            }`}
-          >
-            <span>❓</span>
-            <span>Ask T about IPFS</span>
-          </button>
-          <button
-            type='button'
-            onClick={() =>
-              requestHelp({
-                section: 'Resume Upload - Blockchain',
-                question: 'What is blockchain verification and why does it matter?',
-                context: 'User is uploading a resume and wants to understand blockchain verification.',
-              })
-            }
-            className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-md border transition-colors ${
-              theme === 'dark'
-                ? 'border-brand-mint/40 text-brand-mint hover:bg-brand-mint/10'
-                : 'border-brand-sage/40 text-brand-sage hover:bg-brand-sage/10'
-            }`}
-          >
-            <span>❓</span>
-            <span>Ask T about costs</span>
-          </button>
-        </div>
       </div>
 
       {/* File Selection */}
