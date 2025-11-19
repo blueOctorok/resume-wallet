@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { MessageCircle, Send, Loader2 } from 'lucide-react'
+import { MessageCircle, Send, Loader2, X } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import type {
   AssistantHelpRequest,
@@ -138,6 +138,20 @@ function TAssistantContent({
     
     onLoadingChange?.(isWorking, message)
   }, [isLoading, isProcessingHelp, isAnalyzing, onLoadingChange])
+
+  // Prevent body scroll on mobile when T Assistant is open
+  useEffect(() => {
+    if (mode === 'sidebar' && !isCollapsed) {
+      // Only prevent scroll on mobile (< md breakpoint)
+      const isMobile = window.innerWidth < 768
+      if (isMobile) {
+        document.body.style.overflow = 'hidden'
+        return () => {
+          document.body.style.overflow = ''
+        }
+      }
+    }
+  }, [mode, isCollapsed])
 
   const buildApplicationSnapshot = useCallback(() => {
     const stringify = (value: unknown) => {
@@ -961,13 +975,15 @@ function TAssistantContent({
               e.preventDefault()
               onToggleCollapse?.()
             }}
-            className={`p-1 rounded hover:bg-opacity-20 pointer-events-auto ${
+            className={`p-2 rounded-lg hover:bg-opacity-20 pointer-events-auto transition-colors ${
               theme === 'dark' ? 'hover:bg-white' : 'hover:bg-gray-200'
             }`}
-            aria-label="Collapse T Assistant"
+            aria-label="Close T Assistant"
             type="button"
           >
-            <span className="text-xl">−</span>
+            <X className={`w-6 h-6 md:w-5 md:h-5 ${
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`} />
           </button>
         </div>
         <div className="flex items-center space-x-2 px-4">

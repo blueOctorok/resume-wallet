@@ -13,6 +13,8 @@ Fixed the "Chat with T" button in mobile nav and cleaned up the resume upload se
 - **Mobile full-screen mode** - T Assistant shows as `fixed inset-0` on mobile for better chat experience
 - **Desktop sidebar preserved** - On `md+` breakpoints, T remains as right sidebar
 - **Auto-close menu** - Mobile hamburger menu closes automatically when opening T Assistant
+- **Prevent background scroll** - Body scroll is disabled on mobile when T Assistant is open (no more scrolling behind modal)
+- **Better close button** - Changed from tiny minus sign (−) to larger X icon (`w-6 h-6` on mobile, `w-5 h-5` on desktop) for clearer "close" signal
 
 **Resume Upload Simplification:**
 - **Removed "Ask T" buttons** - Simplified the header by removing the two "Ask T about IPFS" and "Ask T about costs" buttons. These were cluttering the UI, especially on mobile.
@@ -29,6 +31,20 @@ onClick={() => {
   onTClick()
   setIsMenuOpen(false)
 }}
+
+// Prevent body scroll on mobile when T is open
+useEffect(() => {
+  if (mode === 'sidebar' && !isCollapsed) {
+    const isMobile = window.innerWidth < 768
+    if (isMobile) {
+      document.body.style.overflow = 'hidden'
+      return () => { document.body.style.overflow = '' }
+    }
+  }
+}, [mode, isCollapsed])
+
+// Better close button with X icon
+<X className={`w-6 h-6 md:w-5 md:h-5 ...`} />
 ```
 
 **Files Changed:**
