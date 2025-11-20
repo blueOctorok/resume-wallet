@@ -11,8 +11,11 @@ const quicksand = Quicksand({
 })
 
 export const metadata: Metadata = {
-  title: 'ResumeWallet',
-  description: 'Next generation resume wallet',
+  title: 'Veree | Blockchain-Verified Driver Applications',
+  description: 'Submit your DOT driver application with blockchain verification. Secure, permanent, and tamper-proof credentials.',
+  icons: {
+    icon: '/favicon.svg',
+  },
 }
 
 export default function RootLayout({

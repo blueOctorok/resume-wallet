@@ -4,7 +4,49 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ## 🏠 **BEAUTIFUL HOME PAGE** (November 19, 2025)
 
-**Added Hero Landing Page (Latest)**
+**Updated Branding: Title & Favicon (Latest)**
+
+Refreshed the app's visual identity in browser tabs:
+
+**Changes:**
+- **Page Title**: "Veree | Blockchain-Verified Driver Applications" (was "ResumeWallet")
+- **Meta Description**: Clear value prop about DOT applications with blockchain verification
+- **New Favicon**: Custom SVG with modern "V" symbol
+  - Gradient background (sage → mint)
+  - Clean, geometric V design with subtle depth effects
+  - Scalable vector format (looks sharp on any screen, any size)
+
+**Design Details:**
+- Uses brand colors (#6B9080 sage, #A4C3B2 mint, #EAF4F4 cream)
+- Gradient effects for visual interest and depth
+- SVG format ensures crisp rendering at all resolutions
+- Professional, modern look that stands out in browser tabs
+
+**Files Changed:**
+- `src/app/layout.tsx` - Updated metadata with new title, description, icon path
+- `public/favicon.svg` - New custom SVG favicon with stylized V symbol
+- Deleted `src/app/favicon.ico` (replaced with modern SVG)
+
+---
+
+**Device-Based Theme Defaults**
+
+Implemented smart theme defaults based on device type:
+- **Mobile (< 768px)**: Defaults to **light mode** (better for bright environments, outdoor use)
+- **Desktop (≥ 768px)**: Defaults to **dark mode** (better for extended sessions, reduced eye strain)
+- **User preference**: Once a user manually toggles theme, their choice is saved and takes priority over device defaults
+
+**Why this matters:**
+- Mobile users are often on-the-go in bright environments → light mode is more readable
+- Desktop users often work in controlled lighting → dark mode is more comfortable
+- This gives the best first-time experience for each device type while respecting user choice
+
+**Files Changed:**
+- `src/contexts/ThemeContext.tsx` - Added `getInitialTheme()` helper that checks for saved preference first, then falls back to device-based default
+
+---
+
+**Added Hero Landing Page**
 
 Created a stunning home page to welcome users and explain the product:
 

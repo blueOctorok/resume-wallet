@@ -13,13 +13,36 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('dark') // Default to dark mode
-
-  // Load theme from localStorage on mount
-  useEffect(() => {
+  // Determine initial theme based on device type
+  const getInitialTheme = (): Theme => {
+    if (typeof window === 'undefined') return 'dark'
+    
+    // Check if user has a saved preference (takes priority)
     const savedTheme = localStorage.getItem('veree-theme') as Theme
     if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
-      setThemeState(savedTheme)
+      return savedTheme
+    }
+    
+    // No saved preference - use device-based default
+    // Mobile (< 768px) = light mode, Desktop = dark mode
+    const isMobile = window.innerWidth < 768
+    return isMobile ? 'light' : 'dark'
+  }
+
+  const [theme, setThemeState] = useState<Theme>(getInitialTheme)
+
+  // No longer need the separate useEffect for loading - handled in getInitialTheme
+  // But we still apply theme to document on changes
+  useEffect(() => {
+    // Recheck on mount in case window wasn't available during SSR
+    const savedTheme = localStorage.getItem('veree-theme') as Theme
+    if (!savedTheme) {
+      // Only update if no saved preference exists
+      const isMobile = window.innerWidth < 768
+      const deviceDefault = isMobile ? 'light' : 'dark'
+      if (theme !== deviceDefault) {
+        setThemeState(deviceDefault)
+      }
     }
   }, [])
 
