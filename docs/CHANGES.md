@@ -2,6 +2,39 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🏠 **BEAUTIFUL HOME PAGE** (November 19, 2025)
+
+**Added Hero Landing Page (Latest)**
+
+Created a stunning home page to welcome users and explain the product:
+
+**Home Page Features:**
+- **Hero section** - Large, bold headline with gradient text and clear value proposition
+- **Trust indicators** - Shows Blockchain Verified, DOT Compliant, and AI-Powered badges
+- **How It Works** - 3-step process with visual cards (Upload Resume → AI Auto-Fill → Submit & Verify)
+- **Benefits section** - Highlights permanent records, time savings, security, and instant verification
+- **Dual CTAs** - "Get Started" button adapts based on auth state, plus "Learn More" for exploration
+- **Fully responsive** - Scales beautifully from mobile (390px) to desktop
+- **Theme-aware** - Gorgeous gradients in both light and dark modes
+
+**User Flow:**
+- **Not logged in**: "Get Started" → Sign In page
+- **Logged in**: "Get Started" → Resume Upload page
+- **Home button**: Always returns to this landing page
+
+**Design Highlights:**
+- Uses lucide-react icons (Shield, FileCheck, Sparkles, ArrowRight, Zap)
+- Animated hover states with scale transforms
+- Gradient text effects using `bg-clip-text`
+- Clean, modern card-based layout
+- Strategic use of brand colors (sage, mint, cream)
+
+**Files Changed:**
+- `src/components/HomePage.tsx` - New beautiful home page component
+- `src/app/page.tsx` - Added HomePage to routing, shows when `!currentPage`
+
+---
+
 ## 📱 **MOBILE RESPONSIVE POLISH** (November 19, 2025)
 
 **Mobile T Assistant Fix + Resume Upload Simplification (Latest)**

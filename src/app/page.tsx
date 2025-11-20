@@ -222,6 +222,13 @@ const TAssistant = dynamic(
   }
 )
 
+const HomePage = dynamic(
+  () => import('@/components/HomePage').then((mod) => mod.default),
+  {
+    ssr: false,
+  }
+)
+
 const createInitialJourneyState = (): DriverJourneyState => {
   const timestamp = new Date().toISOString()
   return {
@@ -1617,6 +1624,20 @@ const HomeContent = () => {
           )}
 
           {/* Conditional Content Based on Navigation */}
+          {/* Home Page - Default */}
+          {!currentPage && (
+            <HomePage 
+              isAuthenticated={!!user}
+              onGetStarted={() => {
+                if (user) {
+                  setCurrentPage('resume')
+                } else {
+                  setCurrentPage('signin')
+                }
+              }}
+            />
+          )}
+
           {currentPage === 'signin' && !user && (
             <div className='max-w-md mx-auto overflow-hidden'>
               <AlchemyAuth
