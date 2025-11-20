@@ -33,9 +33,9 @@ body {
   color: #ffffff;
 }
 
-/* Light mode styles */
+/* Light mode styles - slightly darker for better readability */
 [data-theme='light'] body {
-  background: linear-gradient(to bottom, #f5f0e8 0%, #ebe6dd 100%);
+  background: linear-gradient(to bottom, #e8e0d5 0%, #ddd5cb 100%);
   color: #2d3748;
 }
 

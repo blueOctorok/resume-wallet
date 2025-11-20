@@ -283,11 +283,11 @@ const HomeContent = () => {
     createInitialJourneyState()
   )
   
-  // T Assistant state
-  const [isTCollapsed, setIsTCollapsed] = useState(true) // Start collapsed
-  const [tHasUnread, setTHasUnread] = useState(false)
-  const [tIsWorking, setTIsWorking] = useState(false)
-  const [tWorkingMessage, setTWorkingMessage] = useState('T is thinking...')
+  // AvA Assistant state
+  const [isAvaCollapsed, setIsAvaCollapsed] = useState(true) // Start collapsed
+  const [avaHasUnread, setAvaHasUnread] = useState(false)
+  const [avaIsWorking, setAvaIsWorking] = useState(false)
+  const [avaWorkingMessage, setAvaWorkingMessage] = useState('AvA is thinking...')
   const [helpRequest, setHelpRequest] = useState<AssistantHelpRequest | null>(
     null
   )
@@ -1572,8 +1572,8 @@ const HomeContent = () => {
           onStatusClick={openModal}
           onWalletClick={handleWalletClick}
           onNavigate={handleNavigation}
-          tHasUnread={tHasUnread}
-          onTClick={() => setIsTCollapsed(false)}
+          tHasUnread={avaHasUnread}
+          onTClick={() => setIsAvaCollapsed(false)}
         />
 
         {/* User Status Modal */}
@@ -1590,7 +1590,7 @@ const HomeContent = () => {
 
         {/* Main Content - Adjusted for sidebar (desktop only) */}
         <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-3 transition-all duration-300 ${
-          user && !isTCollapsed ? 'md:pr-[420px]' : ''
+          user && !isAvaCollapsed ? 'md:pr-[420px]' : ''
         }`}>
           {/* T Assistant - Sidebar (only when logged in) */}
           {user && (
@@ -1609,17 +1609,17 @@ const HomeContent = () => {
                 primerRequest={primerRequest}
                 resumeUploadEvent={resumeUploadEvent}
                 mode="sidebar"
-                isCollapsed={isTCollapsed}
-                onToggleCollapse={() => setIsTCollapsed(!isTCollapsed)}
-                onUnreadChange={setTHasUnread}
+                isCollapsed={isAvaCollapsed}
+                onToggleCollapse={() => setIsAvaCollapsed(!isAvaCollapsed)}
+                onUnreadChange={setAvaHasUnread}
                 onLoadingChange={(isLoading, message) => {
-                  setTIsWorking(isLoading)
-                  if (message) setTWorkingMessage(message)
+                  setAvaIsWorking(isLoading)
+                  if (message) setAvaWorkingMessage(message)
                 }}
               />
               
-              {/* T Loading Modal - shown when T is working */}
-              <TLoadingModal isVisible={tIsWorking} message={tWorkingMessage} />
+              {/* AvA Loading Modal - shown when AvA is working */}
+              <TLoadingModal isVisible={avaIsWorking} message={avaWorkingMessage} />
             </>
           )}
 

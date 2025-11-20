@@ -4,7 +4,173 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ## 🏠 **BEAUTIFUL HOME PAGE** (November 19, 2025)
 
-**Updated Branding: Title & Favicon (Latest)**
+**Documented Future DQ File Implementation (Latest)**
+
+Added comprehensive documentation for future multi-document support in `docs/PROJECT_ROADMAP.md`:
+
+**DQ File Components Planned:**
+- ✅ Resume (current - ~25-30% coverage)
+- 🔜 MVR (Motor Vehicle Record) - would add +35-40% coverage
+- 🔜 DOT Medical Certificate - would add +5-10%
+- 🔜 CDL Copy - would add +5-10%
+- 🔜 Previous Employer Verification - would add +10-15%
+- 🔜 Drug/Alcohol Test Results - would add +3-5%
+- 🔜 Road Test Certificate - would add +2-3%
+
+**Projected Impact:**
+- Current: 25-30% form prefill (resume only)
+- Phase 1 (MVR + Medical): 65-80% form prefill
+- Complete DQ File: 85-95% form prefill
+
+**Future AvA Enhancements:**
+- Cross-document validation (flag discrepancies between resume, MVR, employer letters)
+- Enhanced guidance based on document types uploaded
+- Automatic extraction of accidents, violations from MVR → auto-fill Form 2
+
+**Files Changed:**
+- `docs/PROJECT_ROADMAP.md` - Added complete DQ file implementation section with technical details
+
+---
+
+**AvA Proactive Form Guidance**
+
+Enhanced AvA to provide transparent, helpful guidance for form fields that can't be extracted from resumes:
+
+**Post-Prefill Summary:**
+- AvA now explicitly tells users what was filled and what wasn't
+- Clear breakdown: "What I filled" vs "What you'll need to add"
+- Sets expectations upfront about resume limitations (e.g., "Form 2: accident/traffic records not on resumes")
+
+**Form-Specific Proactive Guidance:**
+- **Form 2 (Driving Experience & Safety)**: AvA explains why this is all manual entry and what each section requires
+  - Equipment types, years of experience
+  - Accident records (past 3 years)
+  - Traffic convictions and license history
+  - Emphasizes the importance of honesty for DOT compliance
+- **Form 3 (Employment & Education)**: Context-aware help based on prefilled data
+  - If employment was prefilled: explains what's missing (contact info, reason for leaving, FMCSR status)
+  - If no employment data: provides full guidance on what's needed
+  - **Explains DOT Terms**: FMCSR (Federal Motor Carrier Safety Regulations), safety-sensitive functions
+  - Guides users on when to answer "Yes" vs "No" for compliance questions
+
+**Philosophy:**
+- Resumes inherently lack accident records, violations, detailed employment context
+- Better to be transparent and helpful than leave users confused about empty fields
+- ~25-30% prefill coverage is realistic - focus on making the remaining 70% easier
+
+**User Experience:**
+- AvA appears automatically when users enter Form 2 or Form 3 (once per form)
+- No intrusive popups - just helpful messages in the chat
+- Users can ask follow-up questions about any term or requirement
+
+**Files Changed:**
+- `src/components/TAssistant.tsx` - Added form navigation tracking and proactive guidance messages
+
+---
+
+**Rebranded to AvA + Improved Light Mode**
+
+Major rebrand of the AI assistant from "T" to "AvA":
+
+**Name Change:**
+- All user-facing references updated from "T" to "AvA"
+- Welcome message: "Hi! I'm AvA, your AI assistant"
+- Navigation button: "Chat with AvA" (was "Chat with T")
+- Dynamic Island indicator: Shows "AvA" instead of "T"
+- Loading modal: Displays "AvA" with adjusted text sizing
+- All tooltips, aria-labels, and messages updated
+- State variables renamed (isAvaCollapsed, avaHasUnread, avaIsWorking, etc.)
+
+**Light Mode Improvement:**
+- Darkened background gradient for better readability
+- Before: `#f5f0e8 → #ebe6dd` (too bright)
+- After: `#e8e0d5 → #ddd5cb` (more comfortable for extended viewing)
+- Reduces eye strain while maintaining the warm, cream aesthetic
+
+**Technical Updates:**
+- Component names remain TAssistant/TLoadingModal (internal code)
+- T Backend references unchanged (separate service)
+- All AI system prompts updated to identify as AvA
+- Maintained all existing functionality
+
+**Files Changed:**
+- `src/components/TLoadingModal.tsx` - Display "AvA" instead of "T"
+- `src/components/TAssistant.tsx` - All user messages reference AvA
+- `src/components/Navigation.tsx` - Updated buttons and tooltips
+- `src/app/page.tsx` - Renamed state variables
+- `src/app/globals.css` - Darkened light mode background
+
+---
+
+**Enhanced AvA Loading Modal with Context**
+
+Redesigned the T loading modal to be more informative and visually appealing:
+
+**What Changed:**
+- **Context-Specific Messages**: Modal now explains what T is doing and why
+  - "I'm reading your resume and extracting your info to save you time filling out forms. Usually takes 15-20 seconds."
+  - "Looking up the best answer for you. This typically takes 10-15 seconds."
+- **Visual Improvements**:
+  - Larger, more prominent icon (96px → 96px) with gradient backgrounds
+  - Multiple pulsing rings for depth effect
+  - Added sparkle icon (Lucide Sparkles) that rotates around the T
+  - Animated progress bar at bottom showing activity
+  - Gradient backdrop for modern glass-morphism effect
+  - Better spacing and typography hierarchy
+- **Better UX**:
+  - Users now understand WHAT T is doing and HOW LONG it takes
+  - No more generic "This may take a moment" message
+  - Shows estimated time ranges (10-15s, 15-20s)
+  - Explains the value ("to save you time filling out forms")
+
+**Design Details:**
+- Uses lucide-react Sparkles icon
+- Gradient backgrounds (sage → mint for dark, white → gray for light)
+- Multiple animation layers (ping, pulse, spin, progress bar)
+- Larger modal with better padding (max-w-md)
+- Rounded-3xl for softer, more modern look
+
+**Files Changed:**
+- `src/components/TLoadingModal.tsx` - Redesigned with context messages and better visuals
+- `src/components/TAssistant.tsx` - Updated loading messages (removed emoji prefixes for cleaner display)
+
+---
+
+**AvA Assistant: User-Friendly Resume Upload Messages**
+
+Made AvA Assistant more conversational and helpful during resume upload, with simple language for average users:
+
+**What Changed:**
+- **Upload Progress**: T now explains each step in plain English with time estimates
+  - "Starting your upload... This will only take a moment!"
+  - "Uploading your resume... (This usually takes 10-15 seconds)"
+  - "Almost done! Just adding your verification stamp... (20-30 seconds)"
+- **Analysis Messages**: Simplified technical jargon
+  - Before: "Analyzing your resume to extract key information..."
+  - After: "Reading your resume now... I'll automatically pull out your name, contact info, work history, licenses, and more."
+- **Success Celebration**: More engaging and encouraging
+  - "🎉 Perfect! I found 12 pieces of information from your resume."
+  - "✨ Filling out your forms now - you can review and adjust anything!"
+- **Error Handling**: Clear, actionable guidance without technical details
+  - Friendly troubleshooting steps (check internet, file size, format)
+  - Multiple action buttons (Try again, Fill manually, Get help)
+  - Simplified cache lock explanation (no mention of "T Backend" or "vector stores")
+- **Blockchain Verification**: One-sentence explanation only
+  - "This makes your resume tamper-proof and permanently verifiable."
+  - No deep dive into IPFS, hashes, or transaction details
+
+**Philosophy:**
+- 99% of users don't care about blockchain metrics or technical details
+- Focus on **what** is happening and **why it matters to them**
+- Provide clear next steps when things go wrong
+- Celebrate successes and maintain encouraging tone
+
+**Files Changed:**
+- `src/components/TAssistant.tsx` - Rewrote all resume upload event handlers with user-friendly messages
+
+---
+
+**Updated Branding: Title & Favicon**
 
 Refreshed the app's visual identity in browser tabs:
 

@@ -122,9 +122,9 @@ export default function Navigation({
                 </h1>
               </div>
 
-              {/* T Assistant Indicator (Dynamic Island) and Theme Toggle - Right */}
+              {/* AvA Assistant Indicator (Dynamic Island) and Theme Toggle - Right */}
               <div className='flex-shrink-0 flex justify-end items-center gap-2'>
-                {/* T Assistant Dynamic Island */}
+                {/* AvA Assistant Dynamic Island */}
                 {isAuthenticated && onTClick && (
                   <button
                     onClick={onTClick}
@@ -133,17 +133,17 @@ export default function Navigation({
                         ? 'bg-brand-sage/60 backdrop-blur-sm hover:bg-brand-sage/80 border border-brand-sage/40'
                         : 'bg-brand-sage-light/20 backdrop-blur-sm hover:bg-brand-sage-light/30 border border-brand-mint/30'
                     } ${tHasUnread ? 'animate-pulse' : ''}`}
-                    aria-label='Open T Assistant'
+                    aria-label='Open AvA Assistant'
                   >
-                    <span className={`text-lg ${theme === 'light' ? 'text-white' : 'text-brand-mint'}`}>
-                      T
+                    <span className={`text-sm font-semibold ${theme === 'light' ? 'text-white' : 'text-brand-mint'}`}>
+                      AvA
                     </span>
                     {tHasUnread && (
                       <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border border-white" />
                     )}
                     {/* Tooltip */}
                     <div className='absolute right-0 top-full mt-2 px-3 py-1.5 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
-                      {tHasUnread ? 'T has a new message' : 'Open T Assistant'}
+                      {tHasUnread ? 'AvA has a new message' : 'Open AvA Assistant'}
                     </div>
                   </button>
                 )}
@@ -204,7 +204,7 @@ export default function Navigation({
                   }`}
                 >
                   <span className='text-base'>🤖</span>
-                  <span>{tHasUnread ? 'T has updates' : 'Chat with T'}</span>
+                  <span>{tHasUnread ? 'AvA has updates' : 'Chat with AvA'}</span>
                   {tHasUnread && (
                     <span className='ml-1 w-2 h-2 rounded-full bg-red-500 animate-pulse' />
                   )}

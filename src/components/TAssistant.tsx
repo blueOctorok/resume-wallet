@@ -123,23 +123,23 @@ function TAssistantContent({
     }
   }, [isCollapsed, hasUnread, messages, onUnreadChange])
 
-  // Notify parent of loading state changes
+  // Notify parent of loading state changes with detailed messages
   useEffect(() => {
     const isWorking = isLoading || isProcessingHelp || isAnalyzing
-    let message = 'T is thinking...'
+    let message = 'AvA is thinking...'
     
     if (isAnalyzing) {
-      message = '🔍 Analyzing your resume...'
+      message = 'Analyzing your resume...'
     } else if (isProcessingHelp) {
-      message = '💭 Processing your request...'
+      message = 'Finding the best answer for you...'
     } else if (isLoading) {
-      message = '💬 T is thinking...'
+      message = 'AvA is thinking...'
     }
     
     onLoadingChange?.(isWorking, message)
   }, [isLoading, isProcessingHelp, isAnalyzing, onLoadingChange])
 
-  // Prevent body scroll on mobile when T Assistant is open
+  // Prevent body scroll on mobile when AvA Assistant is open
   useEffect(() => {
     if (mode === 'sidebar' && !isCollapsed) {
       // Only prevent scroll on mobile (< md breakpoint)
@@ -152,6 +152,45 @@ function TAssistantContent({
       }
     }
   }, [mode, isCollapsed])
+
+  // Track which forms user has visited for proactive guidance
+  const visitedFormsRef = useRef<Set<number>>(new Set())
+
+  // Provide proactive guidance when user navigates to different forms
+  useEffect(() => {
+    if (!mounted || !journeyState?.currentFormStep) return
+
+    const currentForm = journeyState.currentFormStep
+    
+    // Only show guidance once per form
+    if (visitedFormsRef.current.has(currentForm)) return
+    visitedFormsRef.current.add(currentForm)
+
+    // Form 2: Driving Experience, Accidents, Traffic (all manual entry)
+    if (currentForm === 2) {
+      addAssistantMessage(
+        `📋 **Welcome to Form 2: Driving Experience & Safety Records**\n\n⚠️ **Heads up:** I couldn't extract this information from your resume since it's not typically included. You'll need to manually fill in:\n\n**Section 1: Driving Experience**\n• Equipment types you've operated (straight truck, tractor-trailer, etc.)\n• Years of experience with each\n\n**Section 2: Accident Record**\n• Any accidents in the past 3 years\n• Details: date, nature, injuries, if you were at fault\n\n**Section 3: Traffic Convictions**\n• Any violations or traffic citations\n• License suspensions or denials\n\n💡 **Tip:** Be honest and complete - DOT requires accurate safety records. Need help understanding any terms? Just ask!`,
+        { step: 'forms' }
+      )
+    }
+
+    // Form 3: Employment & Education (partial data)
+    if (currentForm === 3) {
+      const hasEmployment = form3Data?.employers && form3Data.employers.length > 0
+      
+      if (hasEmployment) {
+        addAssistantMessage(
+          `📋 **Welcome to Form 3: Employment History & Education**\n\n✅ **Good news:** I've filled in your employment basics from your resume (employer names, dates, positions).\n\n📝 **You'll need to add:**\n• Employer contact information (phone, full address)\n• Reason for leaving each position\n• Salary information\n• FMCSR status (more on this below)\n• Whether the role was a "safety-sensitive function"\n\n**What's FMCSR?**\nFMCSR = Federal Motor Carrier Safety Regulations. Answer "Yes" if you drove commercial vehicles (CMV) in that job. Answer "No" for non-driving jobs.\n\n**What's a safety-sensitive function?**\nJobs where you operated commercial vehicles or were subject to DOT drug/alcohol testing.\n\n**Education Section**\nYou'll also need to add your education background (high school, college, trade schools).\n\n💬 Ask me if you need clarification on any field!`,
+          { step: 'forms' }
+        )
+      } else {
+        addAssistantMessage(
+          `📋 **Welcome to Form 3: Employment History & Education**\n\nThis section requires details about your work history and education. I'll help you understand what's needed:\n\n**Employment History:**\n• List all employers for the past 3 years (or 10 years for CMV drivers)\n• Include: company name, address, phone, dates, position, salary\n• Indicate if you were subject to FMCSR (driving commercial vehicles)\n• Mark "safety-sensitive" roles (commercial driving, DOT-regulated)\n\n**Education:**\n• High school, college, trade schools\n• Courses relevant to driving (CDL training, etc.)\n\n💬 Need help with any terms like FMCSR? Just ask!`,
+          { step: 'forms' }
+        )
+      }
+    }
+  }, [journeyState?.currentFormStep, mounted, form3Data, addAssistantMessage])
 
   const buildApplicationSnapshot = useCallback(() => {
     const stringify = (value: unknown) => {
@@ -206,7 +245,7 @@ function TAssistantContent({
     if (!mounted || messages.length > 0) return
 
     const welcomeMessages: Record<string, string> = {
-      welcome: "👋 Hi! I'm T, your AI assistant. I'm here to guide you through the entire driver employment process.\n\nLet's get started! First, you'll need to:\n\n1️⃣ **Log in** to create your secure wallet\n2️⃣ **Upload your resume** (I can help prefill your application!)\n3️⃣ **Complete your driver application** (I'll guide you through each form)\n4️⃣ **Submit and verify** your application\n\nReady to begin? Click 'Sign In' to get started!",
+      welcome: "👋 Hi! I'm AvA, your AI assistant. I'm here to guide you through the entire driver employment process.\n\nLet's get started! First, you'll need to:\n\n1️⃣ **Log in** to create your secure wallet\n2️⃣ **Upload your resume** (I can help prefill your application!)\n3️⃣ **Complete your driver application** (I'll guide you through each form)\n4️⃣ **Submit and verify** your application\n\nReady to begin? Click 'Sign In' to get started!",
       wallet: "✅ Great! You're logged in. Now let's move to the next step.\n\n2️⃣ **Upload your resume** - I can automatically extract information from your resume to prefill your application forms, saving you time!\n\nClick 'Upload Resume' when you're ready.",
       resume: "✅ Excellent! Your resume is uploaded. I've extracted your information and prefilled your application forms.\n\n3️⃣ **Complete your driver application** - I'll guide you through each form step by step. Let's start with Form 1: Personal Information.\n\nClick 'Start Application' to begin!",
       forms: "✅ You're making great progress! Continue filling out your driver application forms.\n\nI'm here to help if you have any questions about:\n• DOT compliance requirements\n• Form field explanations\n• What information is needed\n\nJust ask me anything!",
@@ -403,15 +442,19 @@ function TAssistantContent({
             ? `\n\n**Here's what I found:**\n${insights.join('\n')}\n\nI extracted ${stats.extracted} out of ${stats.total} fields. Would you like me to prefill your forms with this information?`
             : `\n\nI extracted ${stats.extracted} out of ${stats.total} fields. Would you like me to prefill your forms with this information?`
 
-          // Automatically prefill after analysis - no confirmation needed
-          // User already uploaded resume, so just prefill it
-          console.log('✅ [T ASSISTANT] Analysis complete, auto-prefilling forms...')
-          addAssistantMessage(
-            `✅ Analysis complete!${insightsText}\n\nI'm prefilling your forms now...`,
-            {
+            // Automatically prefill after analysis - no confirmation needed
+            // User already uploaded resume, so just prefill it
+            console.log('✅ [T ASSISTANT] Analysis complete, auto-prefilling forms...')
+            
+            // Create detailed, transparent summary
+            const fieldCount = stats.extracted || 0
+            const successMessage = fieldCount > 0
+              ? `🎉 Perfect! I found ${fieldCount} pieces of information from your resume.${insightsText}\n\n✨ **Filling out your forms now!**\n\n**What I filled:**\n• Form 1: Personal info, address, license basics\n• Form 3: Employment history (names, dates, roles)\n\n**What you'll need to add:**\n• Form 1: License details, years at address\n• Form 2: Driving experience, accident/traffic records (not on resumes)\n• Form 3: Employer contact info, reason for leaving\n\nI'll help guide you through the rest! 🚗`
+              : `✅ I've reviewed your resume and filled in what I could. I'll guide you through the remaining fields!`
+            
+            addAssistantMessage(successMessage, {
               step: 'resume',
-            }
-          )
+            })
           
           // Auto-prefill with the extracted data
           setTimeout(() => {
@@ -420,9 +463,12 @@ function TAssistantContent({
       } else if (resumeUploadEvent.data?.ipfsHash) {
         // Need to extract data via API (from ResumeUploadWithVerification)
         setIsAnalyzing(true)
-        addAssistantMessage('🔍 Analyzing your resume to extract key information...', {
-          step: 'resume',
-        })
+        addAssistantMessage(
+          '🔍 Reading your resume now...\n\nI\'ll automatically pull out your name, contact info, work history, licenses, and more. This usually takes 15-20 seconds.',
+          {
+            step: 'resume',
+          }
+        )
 
         // Call prefill API to extract data (but don't prefill yet)
         fetch('/api/ai/prefill-resume', {
@@ -487,12 +533,16 @@ function TAssistantContent({
             // Automatically prefill after analysis - no confirmation needed
             // User already uploaded resume, so just prefill it
             console.log('✅ [T ASSISTANT] Analysis complete, auto-prefilling forms...')
-            addAssistantMessage(
-              `✅ Analysis complete!${insightsText}\n\nI'm prefilling your forms now...`,
-              {
-                step: 'resume',
-              }
-            )
+            
+            // Create detailed, transparent summary
+            const fieldCount = stats.extracted || 0
+            const successMessage = fieldCount > 0
+              ? `🎉 Great news! I found ${fieldCount} pieces of information from your resume.${insightsText}\n\n✨ **Filling out your forms now!**\n\n**What I filled:**\n• Form 1: Personal info, address, license basics\n• Form 3: Employment history (names, dates, roles)\n\n**What you'll need to add:**\n• Form 1: License details, years at address\n• Form 2: Driving experience, accident/traffic records (not on resumes)\n• Form 3: Employer contact info, reason for leaving\n\nI'll help guide you through the rest! 🚗`
+              : `✅ I've reviewed your resume and filled in what I could. I'll guide you through the remaining fields!`
+            
+            addAssistantMessage(successMessage, {
+              step: 'resume',
+            })
             
             // Auto-prefill with the extracted data
             console.log('📤 [T ASSISTANT] About to trigger prefill with data:', {
@@ -529,23 +579,30 @@ function TAssistantContent({
             if (error.errorType === 'T_BACKEND_CACHE_LOCK') {
               console.log('🔒 [T ASSISTANT] Detected T Backend cache lock - providing user guidance')
               addAssistantMessage(
-                `⚠️ **${error.userMessage || 'We\'ve seen this resume before but lost our copy of the analysis.'}**\n\n**Quick fix:** Try refreshing the page - sometimes a retry works!\n\n**If that doesn't work:**\n1. Open your resume in any PDF editor\n2. Make any tiny change (add a space, update a date, fix a typo)\n3. Save it as a new PDF file\n4. Upload the new file\n\n**Why this happens:** Your resume was previously analyzed, but we no longer have the extracted data cached. Our AI service recognizes the file and sometimes won't reprocess the exact same document.\n\n*Alternatively, you can fill out the forms manually.*`,
+                `⚠️ **Small hiccup!**\n\nI've seen this resume before but can't find my notes.\n\n**Quick fix (try first):**\n1. Refresh this page (F5)\n2. Upload again\n\n**If that doesn't work:**\n1. Open your resume\n2. Make a tiny edit (add a space, fix a typo)\n3. Save as new file\n4. Upload the new version\n\nOr just fill the forms manually - I'll still help!`,
                 {
                   step: 'resume',
                   actions: [
-                    { id: 'resume-reupload', label: 'Upload modified resume', value: 'resume:reupload' },
+                    { id: 'resume-reupload', label: 'I made changes', value: 'resume:reupload' },
                     { id: 'resume-continue', label: 'Fill manually', value: 'forms' },
                   ],
                 }
               )
             } else {
-              // Generic error handling
+              // Generic error handling - keep it simple and actionable
+              const friendlyError = error.message.includes('504') || error.message.includes('timeout')
+                ? 'The analysis is taking too long (server timeout).'
+                : error.message.includes('Failed to fetch')
+                ? 'Couldn\'t connect to the analysis service.'
+                : error.message
+              
               addAssistantMessage(
-                `⚠️ I couldn't analyze your resume: ${error.message}. You can still fill out the forms manually, or try uploading a different resume.`,
+                `⚠️ Couldn't analyze your resume: ${friendlyError}\n\n**No problem!** You can:\n• Fill out the forms manually (I'll help!)\n• Try uploading again\n• Upload a different resume`,
                 {
                   step: 'resume',
                   actions: [
                     { id: 'resume-continue', label: 'Fill manually', value: 'forms' },
+                    { id: 'resume-retry', label: 'Try again', value: 'resume' },
                     { id: 'resume-help', label: 'Get help', value: 'resume:help' },
                   ],
                 }
@@ -556,19 +613,75 @@ function TAssistantContent({
       return
     }
 
-    // Display the message from other events
-    if (resumeUploadEvent.message) {
+    // Provide helpful, user-friendly messages for other events
+    // Keep it simple - 99% of users don't care about blockchain details
+    if (resumeUploadEvent.type === 'hash_start') {
+      addAssistantMessage(
+        '📋 Starting your upload... This will only take a moment!',
+        { step: 'resume' }
+      )
+    } else if (resumeUploadEvent.type === 'hash_complete') {
+      addAssistantMessage(
+        '✅ Got it! Now uploading your resume to secure storage...',
+        { step: 'resume' }
+      )
+    } else if (resumeUploadEvent.type === 'upload_start') {
+      addAssistantMessage(
+        '📤 Uploading your resume... (This usually takes 10-15 seconds)',
+        { step: 'resume' }
+      )
+    } else if (resumeUploadEvent.type === 'upload_complete') {
+      addAssistantMessage(
+        '🎉 Resume uploaded successfully! Now making it official with verification...',
+        { step: 'resume' }
+      )
+    } else if (resumeUploadEvent.type === 'blockchain_start') {
+      addAssistantMessage(
+        '⚡ Almost done! Just adding your verification stamp... (20-30 seconds)\n\nThis makes your resume tamper-proof and permanently verifiable.',
+        { step: 'resume' }
+      )
+    } else if (resumeUploadEvent.type === 'blockchain_complete') {
+      addAssistantMessage(
+        '✅ Perfect! Your resume is verified and ready.\n\nI\'ll analyze it now to help fill out your application forms automatically. This saves you tons of time!',
+        { 
+          step: 'resume',
+          actions: [
+            { id: 'resume-wait', label: 'Sounds good!', value: 'resume:wait' },
+          ]
+        }
+      )
+    } else if (resumeUploadEvent.type === 'upload_error') {
+      // Show error with helpful guidance
+      const errorMsg = resumeUploadEvent.error || 'Something went wrong'
+      const isDuplicate = errorMsg.toLowerCase().includes('already') || errorMsg.toLowerCase().includes('duplicate')
+      
+      if (isDuplicate) {
+        addAssistantMessage(
+          '📋 I see you\'ve already uploaded this resume before.\n\nWant to use your existing resume, or upload a different one?',
+          {
+            step: 'resume',
+            actions: [
+              { id: 'resume-use-existing', label: 'Use existing', value: 'forms' },
+              { id: 'resume-help', label: 'Upload different', value: 'resume:help' },
+            ],
+          }
+        )
+      } else {
+        addAssistantMessage(
+          `⚠️ Hmm, ran into an issue: "${errorMsg}"\n\nNo worries! Common fixes:\n• Check your internet connection\n• Make sure it's a PDF file\n• Try a smaller file size (under 10MB)\n\nNeed help troubleshooting?`,
+          {
+            step: 'resume',
+            actions: [
+              { id: 'resume-retry', label: 'Try again', value: 'resume' },
+              { id: 'resume-help', label: 'Get help', value: 'resume:help' },
+            ],
+          }
+        )
+      }
+    } else if (resumeUploadEvent.message) {
+      // Fallback for any other events with messages
       addAssistantMessage(resumeUploadEvent.message, {
         step: 'resume',
-        actions: resumeUploadEvent.type === 'blockchain_complete'
-          ? [
-              { id: 'resume-wait', label: 'Wait for analysis...', value: 'resume:wait' },
-            ]
-          : resumeUploadEvent.type === 'upload_error'
-          ? [
-              { id: 'resume-help', label: 'Get help', value: 'resume:help' },
-            ]
-          : undefined,
       })
     }
   }, [resumeUploadEvent, mounted, addAssistantMessage])
@@ -599,7 +712,7 @@ function TAssistantContent({
         const applicationSnapshot = buildApplicationSnapshot()
 
         const helpPrompt = [
-          `You are T, a friendly DOT compliance assistant helping drivers complete FMCSA-required application forms.`,
+          `You are AvA, a friendly DOT compliance assistant helping drivers complete FMCSA-required application forms.`,
           `Current assistant step context: ${currentStep}`,
           userAddress
             ? `User wallet: ${userAddress} (Base smart wallet)`
@@ -703,7 +816,7 @@ function TAssistantContent({
       // Build context-aware prompt with application data
       const applicationSnapshot = buildApplicationSnapshot()
       const contextPrompt = [
-        `You are T, a friendly AI assistant guiding users through the driver employment application process.`,
+        `You are AvA, a friendly AI assistant guiding users through the driver employment application process.`,
         `Current step: ${currentStep}`,
         userAddress ? `User is logged in with wallet: ${userAddress}` : `User is not logged in yet`,
         hasResume ? `User has uploaded their resume` : `User has not uploaded their resume yet`,
@@ -978,7 +1091,7 @@ function TAssistantContent({
             className={`p-2 rounded-lg hover:bg-opacity-20 pointer-events-auto transition-colors ${
               theme === 'dark' ? 'hover:bg-white' : 'hover:bg-gray-200'
             }`}
-            aria-label="Close T Assistant"
+            aria-label="Close AvA Assistant"
             type="button"
           >
             <X className={`w-6 h-6 md:w-5 md:h-5 ${
