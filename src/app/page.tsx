@@ -25,15 +25,7 @@ const ResumeUploadWithVerification = dynamic(
   () => import('@/components/ResumeUploadWithVerification'),
   {
     ssr: false,
-    loading: () => (
-      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
-        <div className='space-y-4 animate-pulse'>
-          <div className='h-6 bg-brand-sage-light/20 rounded w-48' />
-          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
-          <div className='h-4 bg-brand-sage-light/20 rounded w-3/4' />
-        </div>
-      </div>
-    ),
+    loading: () => <LoadingScreen message="Loading resume upload..." fullScreen={false} />,
   }
 )
 
@@ -41,14 +33,7 @@ const AlchemyAuth = dynamic(
   () => import('@/components/AlchemyAuth').then((mod) => mod.default),
   {
     ssr: false,
-    loading: () => (
-      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
-        <div className='space-y-4 animate-pulse'>
-          <div className='h-6 bg-brand-sage-light/20 rounded w-32' />
-          <div className='h-10 bg-brand-sage-light/20 rounded w-full' />
-        </div>
-      </div>
-    ),
+    loading: () => <LoadingScreen message="Loading authentication..." fullScreen={false} />,
   }
 )
 
@@ -59,14 +44,7 @@ const PersonalInfoForm1 = dynamic(
     ),
   {
     ssr: false,
-    loading: () => (
-      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
-        <div className='space-y-4 animate-pulse'>
-          <div className='h-6 bg-brand-sage-light/20 rounded w-40' />
-          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
-        </div>
-      </div>
-    ),
+    loading: () => <LoadingScreen message="Loading DOT application..." fullScreen={false} />,
   }
 )
 
@@ -77,14 +55,7 @@ const PersonalInfoForm2 = dynamic(
     ),
   {
     ssr: false,
-    loading: () => (
-      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
-        <div className='space-y-4 animate-pulse'>
-          <div className='h-6 bg-brand-sage-light/20 rounded w-40' />
-          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
-        </div>
-      </div>
-    ),
+    loading: () => <LoadingScreen message="Loading DOT application..." fullScreen={false} />,
   }
 )
 
@@ -95,14 +66,7 @@ const PersonalInfoForm3 = dynamic(
     ),
   {
     ssr: false,
-    loading: () => (
-      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
-        <div className='space-y-4 animate-pulse'>
-          <div className='h-6 bg-brand-sage-light/20 rounded w-40' />
-          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
-        </div>
-      </div>
-    ),
+    loading: () => <LoadingScreen message="Loading DOT application..." fullScreen={false} />,
   }
 )
 
@@ -110,14 +74,7 @@ const JobListings = dynamic(
   () => import('@/components/JobListings').then((mod) => mod.default),
   {
     ssr: false,
-    loading: () => (
-      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
-        <div className='space-y-4 animate-pulse'>
-          <div className='h-6 bg-brand-sage-light/20 rounded w-40' />
-          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
-        </div>
-      </div>
-    ),
+    loading: () => <LoadingScreen message="Loading job listings..." fullScreen={false} />,
   }
 )
 
@@ -128,14 +85,7 @@ const ApplicationSubmitted = dynamic(
     ),
   {
     ssr: false,
-    loading: () => (
-      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
-        <div className='space-y-4 animate-pulse'>
-          <div className='h-6 bg-brand-sage-light/20 rounded w-48' />
-          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
-        </div>
-      </div>
-    ),
+    loading: () => <LoadingScreen message="Loading application..." fullScreen={false} />,
   }
 )
 
@@ -146,14 +96,7 @@ const DriverDashboard = dynamic(
     ),
   {
     ssr: false,
-    loading: () => (
-      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
-        <div className='space-y-4 animate-pulse'>
-          <div className='h-6 bg-brand-sage-light/20 rounded w-48' />
-          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
-        </div>
-      </div>
-    ),
+    loading: () => <LoadingScreen message="Loading dashboard..." fullScreen={false} />,
   }
 )
 
@@ -164,14 +107,7 @@ const EmploymentVerificationForm = dynamic(
     ),
   {
     ssr: false,
-    loading: () => (
-      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
-        <div className='space-y-4 animate-pulse'>
-          <div className='h-6 bg-brand-sage-light/20 rounded w-48' />
-          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
-        </div>
-      </div>
-    ),
+    loading: () => <LoadingScreen message="Loading verification form..." fullScreen={false} />,
   }
 )
 
@@ -179,14 +115,7 @@ const ResumeUploadWithPrefill = dynamic(
   () => import('@/components/ResumeUploadWithPrefill'),
   {
     ssr: false,
-    loading: () => (
-      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
-        <div className='space-y-4 animate-pulse'>
-          <div className='h-6 bg-brand-sage-light/20 rounded w-48' />
-          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
-        </div>
-      </div>
-    ),
+    loading: () => <LoadingScreen message="Loading resume upload..." fullScreen={false} />,
   }
 )
 
@@ -194,14 +123,7 @@ const ResumeDashboard = dynamic(
   () => import('@/components/ResumeDashboard').then((mod) => mod.default),
   {
     ssr: false,
-    loading: () => (
-      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
-        <div className='space-y-4 animate-pulse'>
-          <div className='h-6 bg-brand-sage-light/20 rounded w-48' />
-          <div className='h-24 bg-brand-sage-light/20 rounded w-full' />
-        </div>
-      </div>
-    ),
+    loading: () => <LoadingScreen message="Loading your resumes..." fullScreen={false} />,
   }
 )
 
@@ -212,14 +134,7 @@ const WalletTransactions = dynamic(
     ),
   {
     ssr: false,
-    loading: () => (
-      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
-        <div className='space-y-4 animate-pulse'>
-          <div className='h-6 bg-brand-sage-light/20 rounded w-48' />
-          <div className='h-20 bg-brand-sage-light/20 rounded w-full' />
-        </div>
-      </div>
-    ),
+    loading: () => <LoadingScreen message="Loading transactions..." fullScreen={false} />,
   }
 )
 
@@ -227,14 +142,7 @@ const TAssistant = dynamic(
   () => import('@/components/TAssistant').then((mod) => mod.default),
   {
     ssr: false,
-    loading: () => (
-      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
-        <div className='space-y-4 animate-pulse'>
-          <div className='h-6 bg-brand-sage-light/20 rounded w-48' />
-          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
-        </div>
-      </div>
-    ),
+    loading: () => <LoadingScreen message="Loading AvA Assistant..." fullScreen={false} />,
   }
 )
 
@@ -242,6 +150,7 @@ const HomePage = dynamic(
   () => import('@/components/HomePage').then((mod) => mod.default),
   {
     ssr: false,
+    loading: () => <LoadingScreen message="Loading..." fullScreen={false} />,
   }
 )
 
@@ -249,6 +158,7 @@ const EmployerDashboard = dynamic(
   () => import('@/components/EmployerDashboard').then((mod) => mod.default),
   {
     ssr: false,
+    loading: () => <LoadingScreen message="Loading dashboard..." fullScreen={false} />,
   }
 )
 
@@ -256,6 +166,7 @@ const RoleSelectionModal = dynamic(
   () => import('@/components/RoleSelectionModal').then((mod) => mod.default),
   {
     ssr: false,
+    loading: () => <LoadingScreen message="Loading..." fullScreen={false} />,
   }
 )
 

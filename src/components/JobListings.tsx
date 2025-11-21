@@ -11,6 +11,7 @@ import {
   Filter,
 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
+import LoadingScreen from './LoadingScreen'
 
 interface Job {
   id: string
@@ -296,13 +297,7 @@ export default function JobListings({ onClose }: JobListingsProps) {
 
         {/* Loading state */}
         {isLoading && (
-          <div className='flex justify-center items-center py-12'>
-            <div
-              className={`animate-spin rounded-full h-12 w-12 border-b-2 ${
-                theme === 'dark' ? 'border-brand-mint' : 'border-brand-sage'
-              }`}
-            ></div>
-          </div>
+          <LoadingScreen message="Searching for jobs..." fullScreen={false} />
         )}
 
         {/* Jobs list */}

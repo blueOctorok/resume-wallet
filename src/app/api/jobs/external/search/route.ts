@@ -24,10 +24,26 @@ export async function GET(request: NextRequest) {
     const appId = process.env.ADZUNA_APP_ID;
     const appKey = process.env.ADZUNA_APP_KEY;
     
+    console.log('🔑 [JOB API] Environment check:', {
+      hasAppId: !!appId,
+      hasAppKey: !!appKey,
+      appIdLength: appId?.length || 0,
+      appKeyLength: appKey?.length || 0,
+    });
+    
     if (!appId || !appKey) {
-      console.error('❌ Adzuna API credentials not configured');
+      console.error('❌ Adzuna API credentials not configured', {
+        ADZUNA_APP_ID: appId ? 'SET' : 'MISSING',
+        ADZUNA_APP_KEY: appKey ? 'SET' : 'MISSING',
+      });
       return NextResponse.json(
-        { error: 'Job search service not configured' },
+        { 
+          error: 'Job search service not configured',
+          debug: process.env.NODE_ENV === 'development' ? {
+            ADZUNA_APP_ID: appId ? 'SET' : 'MISSING',
+            ADZUNA_APP_KEY: appKey ? 'SET' : 'MISSING',
+          } : undefined
+        },
         { status: 500 }
       );
     }
@@ -56,7 +72,8 @@ export async function GET(request: NextRequest) {
       location,
       page,
       resultsPerPage,
-      sortBy
+      sortBy,
+      url: adzunaUrl.toString().replace(appKey, '***') // Hide API key in logs
     });
     
     // Fetch from Adzuna
@@ -66,27 +83,38 @@ export async function GET(request: NextRequest) {
       },
     });
     
+    console.log('📡 [JOB API] Adzuna response status:', response.status);
+    
     if (!response.ok) {
       const errorText = await response.text();
       console.error('❌ Adzuna API error:', {
         status: response.status,
         statusText: response.statusText,
-        body: errorText
+        body: errorText,
+        url: adzunaUrl.toString().replace(appKey, '***')
       });
       return NextResponse.json(
-        { error: 'Failed to fetch jobs from external service' },
+        { 
+          error: 'Failed to fetch jobs from external service',
+          statusCode: response.status,
+          details: process.env.NODE_ENV === 'development' ? errorText : undefined
+        },
         { status: response.status }
       );
     }
     
     const data = await response.json();
     
-    console.log('✅ Jobs fetched successfully:', {
-      count: data.results?.length || 0,
-      total: data.count || 0
+    console.log('📦 [JOB API] Adzuna data structure:', {
+      hasResults: !!data.results,
+      resultsIsArray: Array.isArray(data.results),
+      resultsLength: data.results?.length || 0,
+      hasCount: !!data.count,
     });
     
     // Transform the response to a cleaner format
+    console.log('🔄 [JOB API] Starting transformation...');
+    
     const transformedResults = data.results?.map((job: any) => ({
       id: job.id,
       title: job.title,
@@ -107,6 +135,11 @@ export async function GET(request: NextRequest) {
       is_external: true, // Flag to indicate this is an aggregated job
     })) || [];
     
+    console.log('✅ [JOB API] Jobs transformed successfully:', {
+      count: transformedResults.length,
+      total: data.count || 0
+    });
+    
     return NextResponse.json({
       success: true,
       results: transformedResults,
@@ -116,11 +149,16 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('❌ Error in job search API:', error);
+    console.error('❌ [JOB API] Unexpected error:', error);
+    console.error('❌ [JOB API] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
       { 
         error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        message: error instanceof Error ? error.message : 'Unknown error',
+        details: process.env.NODE_ENV === 'development' ? {
+          stack: error instanceof Error ? error.stack : undefined,
+          error: String(error)
+        } : undefined
       },
       { status: 500 }
     );

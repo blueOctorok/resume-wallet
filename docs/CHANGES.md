@@ -4,6 +4,52 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ## ⏳ **LOADING SCREEN: SMOOTH ASYNC DATA EXPERIENCE** (November 21, 2025)
 
+**Updated: LoadingScreen Implemented Everywhere (Latest)**
+
+Replaced ALL loading states throughout the application with the unified LoadingScreen component for a consistent, professional experience.
+
+**Complete Integration:**
+- ✅ **Role Loading** - "Loading your dashboard..." (full-screen, after login)
+- ✅ **Role Switching** - "Switching roles..." (full-screen, when changing driver/employer)
+- ✅ **Job Search** - "Searching for jobs..." (inline, while fetching Adzuna results)
+- ✅ **Dynamic Imports** - All 16 dynamically loaded components now show LoadingScreen:
+  - Resume Upload - "Loading resume upload..."
+  - Authentication - "Loading authentication..."
+  - DOT Forms (1, 2, 3) - "Loading DOT application..."
+  - Job Listings - "Loading job listings..."
+  - Application Submitted - "Loading application..."
+  - Driver Dashboard - "Loading dashboard..."
+  - Employment Verification - "Loading verification form..."
+  - Resume Dashboard - "Loading your resumes..."
+  - Wallet Transactions - "Loading transactions..."
+  - AvA Assistant - "Loading AvA Assistant..."
+  - Home Page - "Loading..."
+  - Employer Dashboard - "Loading dashboard..."
+  - Role Selection Modal - "Loading..."
+
+**Before vs After:**
+- **Before**: Mix of pulse animations, spinners, and blank screens
+- **After**: Unified brand-styled loading experience with contextual messages
+
+**Technical Details:**
+- **Full-screen mode**: `fullScreen={true}` - overlays entire viewport with backdrop
+- **Inline mode**: `fullScreen={false}` - displays within component container
+- Custom messages for each use case help users understand what's happening
+- All loading states now match the frosted glass aesthetic
+
+**Files Changed:**
+- `src/components/LoadingScreen.tsx` - NEW: Global loading component
+- `src/app/page.tsx` - Replaced all 16 dynamic import loading states + role/switching states
+- `src/components/JobListings.tsx` - Replaced spinner with LoadingScreen
+
+**User Experience:**
+- **Consistent branding** - Every loading state looks professional and on-brand
+- **Contextual feedback** - Users know exactly what's loading
+- **No more janky transitions** - Smooth, polished feel throughout the app
+- **Professional polish** - Feels like a production-ready application
+
+---
+
 **Implemented: Global Loading Screen Component**
 
 Added a beautiful, brand-consistent loading screen to handle asynchronous data loading across the application.
@@ -18,38 +64,47 @@ Added a beautiful, brand-consistent loading screen to handle asynchronous data l
   - Configurable message prop
   - Full-screen or inline mode support
 
-**Integration Points:**
-- **Initial Role Load**: Shows "Loading your dashboard..." when fetching user role after authentication
-- **Role Switching**: Shows "Switching roles..." when user changes between driver/employer
-- **Prevents Content Flash**: Hides content until data is ready, eliminating jarring transitions
-
 **Technical Implementation:**
 - Full-screen overlay with backdrop blur
 - Stacks at z-50 to overlay all content
 - Uses brand colors: `border-t-brand-sage` (light) / `border-t-brand-mint` (dark)
 - `backdrop-blur-xl` for frosted glass effect matching other components
 - Multiple animated elements with staggered timing (spin: 1s, pulse: 1.5s, bounce: 1s)
-- Conditional rendering based on `isRoleLoading` and `isSettingRole` states
-
-**Files Changed:**
-- `src/components/LoadingScreen.tsx` - NEW: Global loading component
-- `src/app/page.tsx` - Integrated LoadingScreen for role loading and role switching
-
-**User Experience:**
-- Smooth, professional loading states
-- No more blank screens or content flashing during async operations
-- Clear feedback on what's happening ("Loading...", "Switching roles...")
-- Consistent with the rest of Veree's aesthetic
-
-**Future Expansion:**
-- Can be used for job search loading
-- Resume upload processing
-- DOT form submission
-- Any other async operations
 
 ---
 
 ## 💼 **JOB AGGREGATION: BROWSE JOBS FEATURE** (November 21, 2025)
+
+**Updated: Enhanced API Error Logging for Production Debugging (Latest)**
+
+Added comprehensive logging to the Adzuna API route to help diagnose production deployment issues.
+
+**Improvements:**
+- **Environment Variable Validation**: Logs whether API credentials are set and their lengths
+- **Request Logging**: Logs all search parameters and API URL (with masked API key)
+- **Response Status Logging**: Logs HTTP status code from Adzuna
+- **Data Structure Validation**: Logs received data structure before transformation
+- **Transformation Logging**: Logs success/failure of data transformation
+- **Detailed Error Messages**: Returns specific error details in development mode
+- **Stack Traces**: Captures and logs full error stack traces for debugging
+
+**Debugging Information:**
+- Check Vercel logs to see exactly where the API call is failing
+- Environment variables status (SET/MISSING) is logged
+- Adzuna API response status and error messages are captured
+- All errors now include detailed context for troubleshooting
+
+**Files Changed:**
+- `src/app/api/jobs/external/search/route.ts` - Enhanced error logging throughout
+
+**Production Deployment Checklist:**
+1. ✅ Add `ADZUNA_APP_ID` to Vercel environment variables
+2. ✅ Add `ADZUNA_APP_KEY` to Vercel environment variables
+3. ✅ Ensure variables are enabled for Production, Preview, and Development
+4. ✅ Redeploy after adding environment variables
+5. ✅ Check Vercel Function Logs if errors persist
+
+---
 
 **Updated: Matched Resume Upload & DOT Form Styling (Latest)**
 
