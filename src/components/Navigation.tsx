@@ -16,7 +16,7 @@ interface NavigationProps {
   userRole?: 'driver' | 'employer' | null
   onStatusClick?: () => void
   onWalletClick?: () => void
-  onNavigate?: (page: 'signin' | 'resume' | 'dotapp' | 'home') => void
+  onNavigate?: (page: 'signin' | 'resume' | 'dotapp' | 'jobs' | 'home') => void
   tHasUnread?: boolean
   onTClick?: () => void
   onSwitchRole?: () => void
@@ -40,7 +40,7 @@ export default function Navigation({
     setIsMenuOpen(!isMenuOpen)
   }
 
-  const handleNavigation = (page: 'signin' | 'resume' | 'dotapp' | 'home') => {
+  const handleNavigation = (page: 'signin' | 'resume' | 'dotapp' | 'jobs' | 'home') => {
     console.log(`🔗 [NAVIGATION] handleNavigation called with page:`, page)
     setIsMenuOpen(false)
     onNavigate?.(page)
@@ -248,6 +248,16 @@ export default function Navigation({
                     }`}
                   >
                     Resume
+                  </button>
+                  <button
+                    onClick={() => handleNavigation('jobs')}
+                    className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 ${
+                      theme === 'light'
+                        ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
+                        : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
+                    }`}
+                  >
+                    Browse Jobs
                   </button>
                   <button
                     onClick={() => {

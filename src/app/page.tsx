@@ -7,6 +7,7 @@ import AnimatedBackground from '@/components/AnimatedBackground'
 import UserStatusModal from '@/components/UserStatusModal'
 import WalletCard from '@/components/WalletCard'
 import TLoadingModal from '@/components/TLoadingModal'
+import LoadingScreen from '@/components/LoadingScreen'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useSendUserOperation, useSmartAccountClient } from '@account-kit/react'
 import { AssistantBridgeProvider } from '@/contexts/AssistantBridgeContext'
@@ -92,6 +93,21 @@ const PersonalInfoForm3 = dynamic(
     import('@/components/driver-application/PersonalInfoForm3').then(
       (mod) => mod.default
     ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className='bg-brand-sage-light/10 backdrop-blur-sm border border-brand-mint/20 rounded-2xl p-8 shadow-xl'>
+        <div className='space-y-4 animate-pulse'>
+          <div className='h-6 bg-brand-sage-light/20 rounded w-40' />
+          <div className='h-4 bg-brand-sage-light/20 rounded w-full' />
+        </div>
+      </div>
+    ),
+  }
+)
+
+const JobListings = dynamic(
+  () => import('@/components/JobListings').then((mod) => mod.default),
   {
     ssr: false,
     loading: () => (
@@ -267,7 +283,7 @@ const HomeContent = () => {
   const [user, setUser] = useState<any>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState<
-    'signin' | 'resume' | 'dotapp' | null
+    'signin' | 'resume' | 'dotapp' | 'jobs' | null
   >(null)
   
   // Role-based access control
@@ -1780,8 +1796,19 @@ const HomeContent = () => {
             </>
           )}
 
+          {/* Loading Screen - Show while fetching user role/data or switching roles */}
+          {user && (isRoleLoading || isSettingRole) && !showRoleSelection && (
+            <LoadingScreen 
+              message={
+                isSettingRole 
+                  ? 'Switching roles...' 
+                  : 'Loading your dashboard...'
+              } 
+            />
+          )}
+
           {/* Role Selection Modal - Show when user needs to select a role */}
-          {showRoleSelection && user && (
+          {showRoleSelection && user && !isRoleLoading && !isSettingRole && (
             <RoleSelectionModal 
               onSelectRole={handleRoleSelection}
               isLoading={isSettingRole}
@@ -1875,6 +1902,12 @@ const HomeContent = () => {
                 }}
               />
               {user && <WalletTransactions />}
+            </div>
+          )}
+
+          {currentPage === 'jobs' && (
+            <div className='max-w-7xl mx-auto'>
+              <JobListings />
             </div>
           )}
 

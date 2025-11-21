@@ -2,6 +2,156 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## ⏳ **LOADING SCREEN: SMOOTH ASYNC DATA EXPERIENCE** (November 21, 2025)
+
+**Implemented: Global Loading Screen Component**
+
+Added a beautiful, brand-consistent loading screen to handle asynchronous data loading across the application.
+
+**Features:**
+- **LoadingScreen Component**: Brand-styled loading animation
+  - Animated spinning ring with "V" logo in center
+  - Pulsing background circle
+  - Three bouncing dots below message
+  - Frosted glass aesthetic matching DOT forms/Resume upload
+  - Theme-aware colors (sage/mint)
+  - Configurable message prop
+  - Full-screen or inline mode support
+
+**Integration Points:**
+- **Initial Role Load**: Shows "Loading your dashboard..." when fetching user role after authentication
+- **Role Switching**: Shows "Switching roles..." when user changes between driver/employer
+- **Prevents Content Flash**: Hides content until data is ready, eliminating jarring transitions
+
+**Technical Implementation:**
+- Full-screen overlay with backdrop blur
+- Stacks at z-50 to overlay all content
+- Uses brand colors: `border-t-brand-sage` (light) / `border-t-brand-mint` (dark)
+- `backdrop-blur-xl` for frosted glass effect matching other components
+- Multiple animated elements with staggered timing (spin: 1s, pulse: 1.5s, bounce: 1s)
+- Conditional rendering based on `isRoleLoading` and `isSettingRole` states
+
+**Files Changed:**
+- `src/components/LoadingScreen.tsx` - NEW: Global loading component
+- `src/app/page.tsx` - Integrated LoadingScreen for role loading and role switching
+
+**User Experience:**
+- Smooth, professional loading states
+- No more blank screens or content flashing during async operations
+- Clear feedback on what's happening ("Loading...", "Switching roles...")
+- Consistent with the rest of Veree's aesthetic
+
+**Future Expansion:**
+- Can be used for job search loading
+- Resume upload processing
+- DOT form submission
+- Any other async operations
+
+---
+
+## 💼 **JOB AGGREGATION: BROWSE JOBS FEATURE** (November 21, 2025)
+
+**Updated: Matched Resume Upload & DOT Form Styling (Latest)**
+
+Updated JobListings component to **exactly match** the styling of Resume Upload and DOT forms for perfect visual consistency.
+
+**Styling Match:**
+- **Light mode**: `bg-white/80 backdrop-blur-xl` with `border-t-4 border-brand-sage`
+- **Dark mode**: `bg-brand-sage-light/20 backdrop-blur-xl` with `border-brand-mint`
+- **Shadows**: `shadow-2xl` on main containers and cards
+- **Job cards**: Same card styling as DOT forms (frosted glass effect with top border)
+- **Inputs**: Gray borders (not sage), white background with `backdrop-blur`
+- **Text**: White (dark) / brand-sage or gray (light) - matches DOT forms exactly
+- **Buttons**: `brand-sage` (light) / `brand-mint/30` with border (dark)
+- **Sort filters**: Active uses `brand-sage` (light) / `brand-mint/30` (dark)
+- **Pagination**: Current page uses `brand-sage` (light) / `brand-mint/30` (dark)
+
+**The Problem:**
+- Job listings looked different from Resume Upload and DOT forms
+- User noticed the inconsistency immediately
+- Broke the cohesive UI experience
+
+**The Fix:**
+- Added `useTheme()` hook for theme-aware styling
+- Changed all containers to use `backdrop-blur-xl` + `border-t-4` pattern
+- Matched input styling (gray borders, not sage)
+- Matched text colors (white/gray, not cream)
+- Matched button styling (sage solid for light, mint outline for dark)
+- Job cards now use same frosted glass effect as DOT forms
+
+**Files Changed:**
+- `src/components/JobListings.tsx` - Complete restyling to match DOT forms
+
+**User Experience:**
+- Job browsing now **perfectly matches** Resume Upload and DOT forms
+- Seamless visual transition between all pages
+- Consistent frosted glass aesthetic throughout the app
+- Professional, unified design language
+
+---
+
+**Implemented: Adzuna Job API Integration**
+
+Integrated Adzuna's job search API to provide drivers with access to thousands of external trucking jobs, keeping them engaged with Veree as their job search hub.
+
+**Features Added:**
+- **Job Search API (`/api/jobs/external/search`)**: Server-side proxy to Adzuna API
+  - Defaults to "truck driver CDL" keyword search
+  - Location-based search with city, state, or zip
+  - Pagination support (20 results per page)
+  - Sort by date, salary, or relevance
+  - Returns cleaned/transformed job data
+  - Secure: API keys kept server-side only
+
+- **JobListings Component**: Beautiful, responsive job browsing interface
+  - Search by keywords and location
+  - Filter toggle with sort options (Most Recent, Highest Salary, Most Relevant)
+  - Job cards display: title, company, location, salary, description, category, contract type, posting date
+  - "Apply Now" buttons redirect to original job postings (external sites)
+  - Mobile-optimized with brand colors (sage, mint, cream)
+  - Loading states, error handling, empty states
+  - Pagination controls
+
+- **Navigation Integration**: 
+  - Added "Browse Jobs" button in driver navigation (between Resume and DOT App)
+  - Available to all users (no login required) to maximize driver engagement
+  - Responsive design matches existing nav patterns
+
+**Strategy:**
+- **Mixed Marketplace Approach**: External jobs (aggregated) + native jobs (future employer postings)
+- **Driver Retention**: Keep drivers coming back to Veree as their primary job search platform
+- **Employer Conversion**: Show scale (thousands of jobs) while building native job posting features
+- This mirrors successful strategies by ZipRecruiter, Indeed, and other major job platforms
+
+**Technical Implementation:**
+- Adzuna API provides free tier: 1,000 API calls/month
+- Environment variables: `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` (must be configured)
+- Dynamic import for JobListings component (SSR disabled)
+- Page routing: Added 'jobs' to currentPage type in `page.tsx`
+- All jobs marked with `is_external: true` flag for future native job differentiation
+
+**Files Changed:**
+- `.env.local` - Added Adzuna API credentials (placeholders)
+- `src/app/api/jobs/external/search/route.ts` - NEW: Adzuna API proxy endpoint
+- `src/components/JobListings.tsx` - NEW: Job browsing UI component
+- `src/app/page.tsx` - Added 'jobs' page type and rendering, dynamic JobListings import
+- `src/components/Navigation.tsx` - Added "Browse Jobs" button for drivers, updated types
+
+**User Experience:**
+- Drivers can browse thousands of trucking jobs without leaving Veree
+- Clean search interface with familiar job board patterns
+- Seamless apply flow (redirects to original posting)
+- Sets foundation for native job postings by Veree employers (coming soon)
+
+**Next Steps:**
+- Configure actual Adzuna API credentials in production
+- Add native job posting feature for employers
+- Integrate "Apply with Veree" feature using blockchain-verified driver profiles
+- Add saved jobs/favorites functionality
+- Implement job application tracking
+
+---
+
 ## 🚀 **ROLE-BASED ARCHITECTURE: DRIVER & EMPLOYER SEPARATION** (November 20, 2025)
 
 **Fixed: Employer Dashboard Not Showing After Login (Latest)**
