@@ -14,12 +14,16 @@ interface WalletCardProps {
   } | null
   onClick?: () => void
   isMobile?: boolean
+  userRole?: 'driver' | 'employer' | null
+  onSwitchRole?: () => void
 }
 
 export default function WalletCard({
   user,
   onClick,
   isMobile = false,
+  userRole,
+  onSwitchRole,
 }: WalletCardProps) {
   const [copied, setCopied] = useState(false)
   const [showFullAddress, setShowFullAddress] = useState(false)
@@ -228,7 +232,45 @@ export default function WalletCard({
             </span>
           </div>
         )}
+
+        {userRole && (
+          <div className='flex items-center justify-between text-xs mt-1'>
+            <span
+              className={`${
+                theme === 'light' ? 'text-gray-600' : 'text-brand-cream/70'
+              }`}
+            >
+              Role:
+            </span>
+            <span
+              className={`font-medium capitalize ${
+                theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+              }`}
+            >
+              {userRole === 'driver' ? '🚗 Driver' : '🏢 Employer'}
+            </span>
+          </div>
+        )}
       </div>
+
+      {/* Switch Role Button */}
+      {userRole && onSwitchRole && (
+        <div className='mt-4'>
+          <button
+            onClick={(event) => {
+              event.stopPropagation()
+              onSwitchRole()
+            }}
+            className={`w-full inline-flex items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
+              theme === 'light'
+                ? 'text-brand-sage border border-brand-sage/40 hover:bg-brand-sage/10'
+                : 'text-brand-cream border border-brand-cream/30 hover:bg-brand-sage-light/30'
+            }`}
+          >
+            Switch to {userRole === 'driver' ? 'Employer' : 'Driver'}
+          </button>
+        </div>
+      )}
 
       {showAdminTools && (
         <div className='mt-4'>

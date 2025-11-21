@@ -1,5 +1,263 @@
 # DriverAppChain - Complete Project Roadmap
 
+## 🚀 **Two-Sided Marketplace: Driver & Employer Platform** (November 20, 2025)
+
+### Architecture Overview
+
+Veree is now architected as a **two-sided marketplace** connecting drivers with employers. The platform has distinct experiences for each user type:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    VEREE PLATFORM                       │
+├──────────────────────┬──────────────────────────────────┤
+│   DRIVER SIDE        │      EMPLOYER SIDE               │
+├──────────────────────┼──────────────────────────────────┤
+│ • Resume Upload      │ • Company Profile                │
+│ • DOT Applications   │ • Job Postings                   │
+│ • DQ File Building   │ • Applicant Review               │
+│ • Job Search         │ • Credential Verification        │
+│ • AvA Assistant      │ • Hiring Pipeline                │
+│ • Application Track  │ • Talent Search                  │
+└──────────────────────┴──────────────────────────────────┘
+```
+
+### Current Implementation Status
+
+#### ✅ **Phase 1: Foundation (COMPLETE)**
+
+**Role Selection & Routing:**
+- Role selection modal on first login (driver/employer choice)
+- Database schema with `role` column and `companies`, `job_postings`, `applications` tables
+- Role-based navigation (drivers see Resume/DOT, employers see dashboard)
+- API endpoints for role management and profile fetching
+
+**Driver Experience (Fully Built):**
+- ✅ Resume upload with blockchain verification
+- ✅ DOT application forms (3-step wizard)
+- ✅ AvA AI assistant for form guidance
+- ✅ Form data persistence and prefill
+- ✅ Blockchain submission and verification
+- ✅ Transaction history and wallet management
+
+**Employer Experience (Placeholder):**
+- ✅ Placeholder dashboard with feature preview
+- ✅ "Coming soon" messaging
+- 🔜 Company profile setup
+- 🔜 Job posting creation
+- 🔜 Applicant review interface
+
+---
+
+### Roadmap: Employer Features
+
+#### 🔜 **Phase 2: Company Profiles (Q1 2026)**
+
+**Company Setup:**
+- Multi-step company profile wizard
+  - Basic info: Company name, DOT/MC numbers
+  - Contact details: Phone, email, website
+  - Location: Address, operating regions
+  - Fleet details: Company size, truck types
+  - Industry type: Long-haul, local, regional, specialized
+- Logo upload and branding
+- Admin verification system (prevent fraudulent employers)
+
+**Technical Implementation:**
+- Update `companies` table with additional fields
+- Create company profile edit interface
+- Implement verification workflow for admins
+- Add company logo storage (IPFS or cloud)
+
+---
+
+#### 🔜 **Phase 3: Job Posting System (Q1-Q2 2026)**
+
+**Job Creation:**
+- Job posting wizard with AI assistance
+  - Job title and description
+  - Requirements: CDL class, endorsements, experience
+  - Location and route type (local, regional, OTR)
+  - Pay structure (per mile, hourly, salary)
+  - Benefits and home time
+  - Equipment type (day cab, sleeper, reefer, etc.)
+- Job preview before publishing
+- Edit and archive existing postings
+- Expiration date management
+
+**Job Discovery (Driver Side):**
+- Job search/browse interface for drivers
+- Filter by location, CDL class, route type, pay
+- One-click application with DQ file
+- Application status tracking
+
+**Technical Implementation:**
+- Job posting CRUD APIs
+- Search and filter logic
+- Application submission flow
+- Notification system for new applications
+
+---
+
+#### 🔜 **Phase 4: Applicant Review & Hiring (Q2 2026)**
+
+**Applicant Management:**
+- View all applications for each job posting
+- Filter applicants by qualifications, experience
+- Review driver DQ files (blockchain-verified)
+- Application status pipeline:
+  - Submitted → Under Review → Interview → Offer → Hired/Rejected
+- Add internal notes and ratings
+- Communication system (messages/emails)
+
+**Credential Verification:**
+- Instant blockchain verification of DQ files
+- View complete DOT applications
+- Access resume, MVR, medical certificates (when available)
+- Flag expired documents or discrepancies
+
+**Technical Implementation:**
+- Applicant dashboard UI
+- Status management system
+- Blockchain verification integration
+- Document viewer for driver files
+- Messaging/notification system
+
+---
+
+#### 🔜 **Phase 5: Advanced Features (Q3-Q4 2026)**
+
+**Analytics & Insights:**
+- Application metrics (views, applications, time-to-hire)
+- Candidate pipeline analytics
+- Hiring trends and benchmarks
+
+**Talent Search:**
+- Proactive driver discovery (search all qualified drivers)
+- Saved searches and alerts
+- Direct outreach to drivers
+
+**Integration Features:**
+- ATS (Applicant Tracking System) integration
+- Background check service integration
+- Drug testing coordination
+- Onboarding workflow automation
+
+**AvA for Employers:**
+- AI-assisted job posting creation
+- Applicant screening recommendations
+- Compliance guidance (DOT hiring requirements)
+- Automated candidate matching
+
+---
+
+### Data Model
+
+```sql
+-- Core Tables (Implemented)
+users              -- role: 'driver' | 'employer'
+companies          -- Employer profiles
+job_postings       -- Job listings
+applications       -- Driver applications to jobs
+
+-- Existing Driver Tables
+resumes
+driver_applications
+t_prefill_cache
+
+-- Future Enhancements
+messages           -- Employer-driver communication
+saved_searches     -- Employer saved talent searches
+notifications      -- Application status updates
+reviews            -- Employer reviews by drivers
+```
+
+### Security & Access Control
+
+**Row-Level Security (RLS) Policies:**
+- Drivers can only see their own applications and data
+- Employers can only see their own company, jobs, and applicants
+- Public can view active job postings (when logged in)
+- Admins can verify companies and moderate content
+
+**Data Privacy:**
+- Driver DQ files only accessible to employers they've applied to
+- No bulk driver data export for employers
+- HIPAA-compliant storage for medical certificates
+- GDPR-compliant data deletion and export
+
+---
+
+### Business Model Implications
+
+**Driver Side (Free):**
+- Resume upload and storage
+- DOT application creation
+- DQ file building and verification
+- Job search and applications
+- AvA AI assistance
+
+**Employer Side (Freemium/Paid):**
+- **Free Tier**: 1-2 job postings, basic applicant review
+- **Premium Tier** ($99-299/month):
+  - Unlimited job postings
+  - Advanced applicant filtering
+  - Priority placement in job search
+  - Analytics and insights
+  - Bulk messaging
+  - AvA hiring assistant
+
+**Future Revenue Streams:**
+- Featured job listings
+- Promoted company profiles
+- Background check services (commission)
+- ATS integration (enterprise)
+- White-label solutions for large fleets
+
+---
+
+### Success Metrics
+
+**Driver Metrics:**
+- Resumes uploaded
+- DOT applications completed
+- Jobs applied to
+- Hires completed
+
+**Employer Metrics:**
+- Companies registered and verified
+- Jobs posted
+- Applications received per job
+- Time to hire
+- Candidate quality ratings
+
+**Platform Metrics:**
+- Total matches (driver applied → employer hired)
+- Blockchain verifications performed
+- AvA interactions
+- User retention and engagement
+
+---
+
+### Technical Architecture Notes
+
+**Scalability:**
+- Independent development of driver and employer features
+- Separate API routes and components
+- Role-based code splitting for faster load times
+
+**Future Roles:**
+- **Recruiters**: Third-party recruiters posting on behalf of companies
+- **Fleet Managers**: Team-based access for large companies
+- **Admins**: Platform moderation and verification
+
+**Blockchain Integration:**
+- Driver DQ files remain on-chain (permanent, tamper-proof)
+- Employers verify credentials via smart contracts
+- Application submissions create immutable audit trail
+- Future: On-chain reputation system for drivers
+
+---
+
 ## 📋 **Complete DQ File Implementation** (Future Enhancement)
 
 ### Overview

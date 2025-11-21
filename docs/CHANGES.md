@@ -2,9 +2,250 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🚀 **ROLE-BASED ARCHITECTURE: DRIVER & EMPLOYER SEPARATION** (November 20, 2025)
+
+**Fixed: Employer Dashboard Not Showing After Login (Latest)**
+
+Fixed critical issue where employers would see a blank screen after logging in.
+
+**The Problem:**
+- `handleAuthSuccess` always set `currentPage = 'resume'` after login
+- Employer dashboard requires `currentPage === null` to render
+- This caused employers to be on the "resume" page with no content (they don't have a resume page)
+
+**The Fix:**
+- Removed auto-navigation from `handleAuthSuccess`
+- Moved navigation logic to the role fetch `useEffect`
+- Now navigation is role-aware:
+  - Driver → navigates to `resume` page
+  - Employer → stays on home (`currentPage = null`) showing dashboard
+  - No role → shows role selection modal
+
+**Files Changed:**
+- `src/app/page.tsx` - Removed hardcoded resume navigation, added role-aware routing
+
+**User Experience:**
+- Employers log in → immediately see their dashboard ✅
+- Drivers log in → immediately see resume upload page ✅
+- New users → see role selection modal ✅
+
+---
+
+**Fixed: Company Name Not Showing on Employer Login**
+
+Fixed issue where employer company name wouldn't appear when logging back in, but would appear when switching roles.
+
+**The Problem:**
+- Company records were only created when **switching** to employer role
+- If a user was already an employer and logged in, no company record existed
+- This caused "Welcome, Employer!" instead of "Welcome, My Company!"
+
+**The Fix:**
+- Modified `/api/user/profile` to auto-create a company record if employer doesn't have one
+- Added logging to track company data fetch and creation
+- Company name now persists across login sessions
+
+**Files Changed:**
+- `src/app/api/user/profile/route.ts` - Auto-create company record for employers
+- `src/app/page.tsx` - Enhanced logging for company data
+
+**Note:** Company name currently defaults to "My Company" placeholder. Future update will add company profile settings where employers can customize their company name.
+
+---
+
+**Added: Switch Role Button in Wallet Modal**
+
+Added a convenient "Switch Role" button in the UserStatusModal (the modal that opens when you click your wallet) for easy role switching between driver and employer.
+
+**Features:**
+- Shows current role with emoji (🚗 Driver or 🏢 Employer) in user info section
+- "Switch to [opposite role]" button above sign out button
+- Confirmation dialog before switching (handled by `handleSwitchRole`)
+- Automatically navigates to appropriate page after switch (driver → resume, employer → dashboard)
+- Modal closes after switching
+- Theme-aware styling with brand colors
+
+**Implementation:**
+- Added `userRole` and `onSwitchRole` props to `UserStatusModal`
+- Added `userRole` and `onSwitchRole` props to `WalletCard` (for future use)
+- Added `onSwitchRole` prop to `Navigation`
+- Created `handleSwitchRole` callback in `page.tsx` with confirmation dialog
+- Reuses existing `handleRoleSelection` logic for API call
+
+**Files Changed:**
+- `src/components/UserStatusModal.tsx` - Added role display and switch button
+- `src/components/WalletCard.tsx` - Added role display and switch button props (prepared for future use)
+- `src/components/Navigation.tsx` - Added onSwitchRole prop
+- `src/app/page.tsx` - Added handleSwitchRole function and passed to UserStatusModal
+
+**User Experience:**
+No more needing to manually update Supabase to test different roles! Click Wallet → Switch Role → Confirm → Done. 🎉
+
+---
+
+**Fixed: Role Selection Not Persisting**
+
+The role selection API was blocking role changes for existing users. When a user with an existing role tried to change it (e.g., employer → driver), the API returned success but didn't actually update the database.
+
+**The Issue:**
+- Line 47-57 in `/api/user/set-role` had a check that prevented role changes
+- It returned 200 status with "Role already set" message
+- Frontend thought it worked, but database stayed unchanged
+- User would see driver content temporarily, but became employer again on logout/login
+
+**The Fix:**
+- Removed the role change restriction
+- Added logging to track role changes
+- Added check to prevent duplicate company records when switching to employer
+- Users can now freely switch between driver and employer roles
+
+**Files Changed:**
+- `src/app/api/user/set-role/route.ts` - Removed role change block, improved company handling
+- `src/app/page.tsx` - Added debug logging for role fetch (can be removed later)
+
+---
+
+**Updated: Employer Dashboard with Brand Colors + Fixed Home Button**
+
+Applied brand colors to employer dashboard and fixed navigation issue:
+
+**Employer Dashboard Color Updates:**
+- Background: `brand-sage-light/10` with `backdrop-blur-xl` (dark), white with backdrop blur (light)
+- Icon gradient: `brand-mint` → `teal-600` with mint shadow
+- Borders: `brand-mint/30` and `brand-sage/40` accents
+- Feature cards: Subtle sage/mint borders with hover effects and scale animation
+- "Coming Soon" badge: `brand-mint` colors with shadow
+- Note section: Sage/mint themed background
+- All text uses `brand-cream` in dark mode
+
+**Fixed Navigation:**
+- Home button now works correctly for employers
+- Added `!currentPage` condition to employer dashboard rendering
+- Ensures employer dashboard only shows on home page, not other routes
+- Maintains proper navigation flow
+
+**Files Changed:**
+- `src/components/EmployerDashboard.tsx` - Complete brand color palette update
+- `src/app/page.tsx` - Fixed conditional rendering for employer dashboard
+
+---
+
+**Updated: Brand Colors for Role Selection Modal**
+
+Applied Veree's brand color palette to the role selection modal:
+
+**Color Updates:**
+- Header icon: brand-sage to brand-mint gradient (was purple/blue)
+- Driver card: brand-sage gradient with mint accents (was blue)
+- Employer card: brand-mint to teal gradient (was purple)
+- Border colors: brand-mint and brand-sage accents (was gray)
+- Selected state: brand-mint glow effects (was blue/purple)
+- Continue button: Matches selected role color scheme
+
+**Maintains:**
+- Theme-aware styling (light/dark mode)
+- All hover states and animations
+- Responsive design and accessibility
+
+**Files Changed:**
+- `src/components/RoleSelectionModal.tsx` - Complete color palette update
+
+---
+
+**Fixed: Wallet-Based Authentication for Role APIs**
+
+Fixed authentication issue with role management APIs to work with Alchemy wallet-based authentication:
+
+**Problem:**
+- API routes were using `supabase.auth.getUser()` (Supabase Auth)
+- App uses Alchemy wallet authentication (no Supabase Auth)
+- Resulted in "Unauthorized" errors on login
+
+**Solution:**
+- Updated API routes to accept `walletAddress` in request body
+- Query `users` table by `wallet_address` instead of Auth user ID
+- Frontend now passes wallet address to API calls
+- Works seamlessly with existing Alchemy authentication
+
+**Files Changed:**
+- `src/app/api/user/profile/route.ts` - Accept wallet address, query by address
+- `src/app/api/user/set-role/route.ts` - Accept wallet address, query by address
+- `src/app/page.tsx` - Pass wallet address in API calls
+
+---
+
+**Two-Sided Marketplace Architecture**
+
+Implemented fundamental role-based access control to separate driver and employer experiences, enabling Veree to function as a two-sided marketplace:
+
+**Role Selection System:**
+- Beautiful modal prompts new users to choose: "I'm a Driver" or "I'm an Employer"
+- Each role option displays relevant features with visual cards and icons
+- One-time selection stored in database - cannot be changed (prevents role confusion)
+- Clean UX with animated transitions, theme-aware styling, and responsive design
+
+**Database Schema:**
+- Added `role` column to `users` table (values: 'driver' | 'employer' | null)
+- Created `companies` table for employer profiles (company name, DOT/MC numbers, location, etc.)
+- Created `job_postings` table for future job board features
+- Created `applications` table to track driver applications to jobs
+- Implemented Row-Level Security (RLS) policies for data access control
+- Added indexes for performance optimization
+
+**Routing & Navigation:**
+- Driver content: Resume upload, DOT application forms, AvA assistant
+- Employer content: Placeholder dashboard with "coming soon" features
+- Navigation dynamically shows/hides menu items based on user role
+- Resume and DOT App buttons only visible to drivers
+- Employer-specific navigation placeholder ready for future features
+
+**API Endpoints:**
+- `POST /api/user/set-role` - Set user role (driver/employer) on first login
+- `GET /api/user/profile` - Fetch user profile with role and company data
+- Automatic company record creation for new employers
+
+**AvA Integration:**
+- Added `userRole` prop to TAssistant for future role-specific guidance
+- Currently only shown to drivers (employer AI features planned)
+- Foundation for employer-specific prompts and assistance
+
+**Employer Features (Coming Soon):**
+- 📋 Post job openings for CDL drivers
+- 👥 Review applications from verified drivers
+- ✓ Instantly verify blockchain-certified DQ files
+- 📊 Manage hiring pipeline from application to hire
+- 🔍 Search/filter qualified applicants by CDL class, endorsements, experience
+
+**Why This Matters:**
+- **Scalability**: Clean separation enables independent feature development for each role
+- **No Technical Debt**: Implemented early to avoid messy refactors later
+- **Two-Sided Growth**: Can onboard employers while building driver features
+- **Future-Proof**: Easy to add more roles (recruiters, fleet managers) later
+
+**User Experience:**
+- Logged-out users see marketing homepage
+- First-time login → role selection modal
+- Drivers → navigate to resume upload page
+- Employers → see placeholder dashboard with feature preview
+- No confusion about which features belong to which role
+
+**Files Changed:**
+- `database_migrations/002_add_role_and_companies.sql` - Complete schema migration
+- `src/components/RoleSelectionModal.tsx` - Beautiful role selection UI
+- `src/components/EmployerDashboard.tsx` - Placeholder employer experience
+- `src/app/api/user/set-role/route.ts` - Role selection API
+- `src/app/api/user/profile/route.ts` - Profile fetching with role
+- `src/app/page.tsx` - Role-based routing logic and conditional rendering
+- `src/components/Navigation.tsx` - Role-aware navigation menu
+- `src/components/TAssistant.tsx` - Added userRole prop
+- `docs/CHANGES.md` - This documentation
+- `docs/PROJECT_ROADMAP.md` - Updated with two-sided marketplace vision
+
+---
+
 ## 🏠 **BEAUTIFUL HOME PAGE** (November 19, 2025)
 
-**Documented Future DQ File Implementation (Latest)**
+**Documented Future DQ File Implementation**
 
 Added comprehensive documentation for future multi-document support in `docs/PROJECT_ROADMAP.md`:
 

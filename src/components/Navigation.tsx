@@ -13,19 +13,23 @@ interface NavigationProps {
     signature?: string
     method?: string
   } | null
+  userRole?: 'driver' | 'employer' | null
   onStatusClick?: () => void
   onWalletClick?: () => void
   onNavigate?: (page: 'signin' | 'resume' | 'dotapp' | 'home') => void
   tHasUnread?: boolean
   onTClick?: () => void
+  onSwitchRole?: () => void
 }
 
 export default function Navigation({
   isAuthenticated = false,
   user,
+  userRole,
   onStatusClick,
   onWalletClick,
   onNavigate,
+  onSwitchRole,
   tHasUnread = false,
   onTClick,
 }: NavigationProps) {
@@ -188,6 +192,8 @@ export default function Navigation({
                   user={user}
                   onClick={onWalletClick}
                   isMobile={true}
+                  userRole={userRole}
+                  onSwitchRole={onSwitchRole}
                 />
               )}
               {/* Mobile-only T Assistant access */}
@@ -221,44 +227,59 @@ export default function Navigation({
               >
                 🏠 Home
               </button>
-              <button
-                onClick={() => {
-                  if (isAuthenticated) {
-                    handleNavigation('resume')
-                  }
-                }}
-                disabled={!isAuthenticated}
-                className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 ${
-                  isAuthenticated
-                    ? theme === 'light'
-                      ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
-                      : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
-                    : theme === 'light'
-                      ? 'text-gray-400 bg-gray-100 border-gray-200 cursor-not-allowed'
-                      : 'text-brand-cream/40 bg-brand-sage-light/10 border-brand-cream/20 cursor-not-allowed'
-                }`}
-              >
-                Resume
-              </button>
-              <button
-                onClick={() => {
-                  if (isAuthenticated) {
-                    handleNavigation('dotapp')
-                  }
-                }}
-                disabled={!isAuthenticated}
-                className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 ${
-                  isAuthenticated
-                    ? theme === 'light'
-                      ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
-                      : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
-                    : theme === 'light'
-                      ? 'text-gray-400 bg-gray-100 border-gray-200 cursor-not-allowed'
-                      : 'text-brand-cream/40 bg-brand-sage-light/10 border-brand-cream/20 cursor-not-allowed'
-                }`}
-              >
-                DOT App
-              </button>
+              {/* Driver-specific navigation */}
+              {userRole === 'driver' && (
+                <>
+                  <button
+                    onClick={() => {
+                      if (isAuthenticated) {
+                        handleNavigation('resume')
+                      }
+                    }}
+                    disabled={!isAuthenticated}
+                    className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 ${
+                      isAuthenticated
+                        ? theme === 'light'
+                          ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
+                          : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
+                        : theme === 'light'
+                          ? 'text-gray-400 bg-gray-100 border-gray-200 cursor-not-allowed'
+                          : 'text-brand-cream/40 bg-brand-sage-light/10 border-brand-cream/20 cursor-not-allowed'
+                    }`}
+                  >
+                    Resume
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (isAuthenticated) {
+                        handleNavigation('dotapp')
+                      }
+                    }}
+                    disabled={!isAuthenticated}
+                    className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 ${
+                      isAuthenticated
+                        ? theme === 'light'
+                          ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
+                          : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
+                        : theme === 'light'
+                          ? 'text-gray-400 bg-gray-100 border-gray-200 cursor-not-allowed'
+                          : 'text-brand-cream/40 bg-brand-sage-light/10 border-brand-cream/20 cursor-not-allowed'
+                    }`}
+                  >
+                    DOT App
+                  </button>
+                </>
+              )}
+              {/* Employer-specific navigation - Coming soon */}
+              {userRole === 'employer' && (
+                <div className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border text-center ${
+                  theme === 'light'
+                    ? 'text-gray-400 bg-gray-100 border-gray-200'
+                    : 'text-brand-cream/40 bg-brand-sage-light/10 border-brand-cream/20'
+                }`}>
+                  🚧 Employer features coming soon
+                </div>
+              )}
               {/* Mobile Theme Toggle */}
               <div className='w-full md:hidden flex justify-center'>
                 <ThemeToggle />

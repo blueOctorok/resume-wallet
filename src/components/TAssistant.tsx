@@ -29,6 +29,7 @@ interface TAssistantProps {
   currentStep?: 'welcome' | 'wallet' | 'resume' | 'forms' | 'submission' | 'complete'
   onAction?: (action: string, data?: any) => void
   userAddress?: string | null
+  userRole?: 'driver' | 'employer' | null
   hasResume?: boolean
   hasForms?: boolean
   form1Data?: any
@@ -50,6 +51,7 @@ function TAssistantContent({
   currentStep = 'welcome',
   onAction,
   userAddress,
+  userRole,
   hasResume,
   hasForms,
   form1Data,

@@ -9,6 +9,8 @@ interface UserStatusModalProps {
     address?: string
     chain?: string
   }
+  userRole?: 'driver' | 'employer' | null
+  onSwitchRole?: () => void
 }
 
 export default function UserStatusModal({
@@ -16,9 +18,16 @@ export default function UserStatusModal({
   onClose,
   onLogout,
   user,
+  userRole,
+  onSwitchRole,
 }: UserStatusModalProps) {
   const handleLogout = () => {
     onLogout()
+    onClose()
+  }
+
+  const handleSwitchRole = () => {
+    onSwitchRole?.()
     onClose()
   }
 
@@ -130,8 +139,28 @@ export default function UserStatusModal({
                     </span>
                   </div>
                 )}
+                {userRole && (
+                  <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0'>
+                    <span className='font-medium text-brand-cream/70 text-xs sm:text-sm'>
+                      Role:
+                    </span>
+                    <span className='text-brand-cream text-xs sm:text-sm'>
+                      {userRole === 'driver' ? '🚗 Driver' : '🏢 Employer'}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* Switch Role Button */}
+            {userRole && onSwitchRole && (
+              <button
+                onClick={handleSwitchRole}
+                className='w-full px-4 sm:px-6 py-3 sm:py-4 mb-3 text-brand-cream font-semibold bg-brand-sage/60 backdrop-blur-sm border border-brand-mint/30 rounded-lg sm:rounded-xl hover:bg-brand-sage/80 hover:border-brand-mint/50 transition-all duration-300 shadow-lg hover:shadow-xl text-sm sm:text-base'
+              >
+                Switch to {userRole === 'driver' ? 'Employer' : 'Driver'}
+              </button>
+            )}
 
             {/* Sign Out Button */}
             <button

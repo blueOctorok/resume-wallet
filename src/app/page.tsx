@@ -229,6 +229,20 @@ const HomePage = dynamic(
   }
 )
 
+const EmployerDashboard = dynamic(
+  () => import('@/components/EmployerDashboard').then((mod) => mod.default),
+  {
+    ssr: false,
+  }
+)
+
+const RoleSelectionModal = dynamic(
+  () => import('@/components/RoleSelectionModal').then((mod) => mod.default),
+  {
+    ssr: false,
+  }
+)
+
 const createInitialJourneyState = (): DriverJourneyState => {
   const timestamp = new Date().toISOString()
   return {
@@ -255,6 +269,13 @@ const HomeContent = () => {
   const [currentPage, setCurrentPage] = useState<
     'signin' | 'resume' | 'dotapp' | null
   >(null)
+  
+  // Role-based access control
+  const [userRole, setUserRole] = useState<'driver' | 'employer' | null>(null)
+  const [isRoleLoading, setIsRoleLoading] = useState(true)
+  const [showRoleSelection, setShowRoleSelection] = useState(false)
+  const [isSettingRole, setIsSettingRole] = useState(false)
+  const [companyName, setCompanyName] = useState<string | null>(null)
   const [currentForm, setCurrentForm] = useState(1)
   const [isDriverApplicationCompleted, setIsDriverApplicationCompleted] =
     useState(false)
@@ -353,6 +374,61 @@ const HomeContent = () => {
       setResumeUploadEvent(null)
     }, 100)
   }, [])
+
+  const handleRoleSelection = useCallback(async (role: 'driver' | 'employer') => {
+    if (!user?.address) {
+      console.error('No user address available')
+      return
+    }
+
+    setIsSettingRole(true)
+    try {
+      const response = await fetch('/api/user/set-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          role,
+          walletAddress: user.address,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setUserRole(role)
+        setShowRoleSelection(false)
+        
+        // If driver, navigate to resume page to start their journey
+        if (role === 'driver') {
+          setCurrentPage('resume')
+        } else {
+          // Employer goes to home which shows their dashboard
+          setCurrentPage(null)
+        }
+      } else {
+        console.error('Failed to set user role:', response.statusText)
+        alert('Failed to set role. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error setting user role:', error)
+      alert('An error occurred. Please try again.')
+    } finally {
+      setIsSettingRole(false)
+    }
+  }, [user])
+
+  // Handle role switching from WalletCard
+  const handleSwitchRole = useCallback(() => {
+    if (!userRole) return
+    
+    const newRole = userRole === 'driver' ? 'employer' : 'driver'
+    const confirmed = confirm(`Switch to ${newRole === 'driver' ? 'Driver' : 'Employer'} role?\n\nThis will change your account type and navigate you to the ${newRole} dashboard.`)
+    
+    if (confirmed) {
+      handleRoleSelection(newRole)
+    }
+  }, [userRole, handleRoleSelection])
 
   const resetApplicationProgress = useCallback(() => {
     console.log('🔄 [RESET] ==================== START RESET ====================')
@@ -589,6 +665,85 @@ const HomeContent = () => {
       updateJourneyStep('wallet', 'complete')
     }
   }, [user?.address, updateJourneyStep])
+
+  // Fetch user role when they log in
+  useEffect(() => {
+    if (!user?.address) {
+      setUserRole(null)
+      setIsRoleLoading(false)
+      setShowRoleSelection(false)
+      return
+    }
+
+    const fetchUserRole = async () => {
+      setIsRoleLoading(true)
+      try {
+        const response = await fetch('/api/user/profile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            walletAddress: user.address,
+          }),
+        })
+        if (response.ok) {
+          const data = await response.json()
+          console.log('[ROLE FETCH] API response:', data)
+          if (data.success && data.profile) {
+            console.log('[ROLE FETCH] Profile found. Role:', data.profile.role, 'Type:', typeof data.profile.role)
+            setUserRole(data.profile.role || null)
+            if (data.profile.company) {
+              console.log('[ROLE FETCH] Company data:', data.profile.company)
+              setCompanyName(data.profile.company.company_name)
+            } else {
+              console.log('[ROLE FETCH] No company data found for employer')
+              setCompanyName(null)
+            }
+            // Handle navigation based on role
+            if (!data.profile.role) {
+              console.log('[ROLE FETCH] No role found - showing role selection')
+              setShowRoleSelection(true)
+            } else {
+              console.log('[ROLE FETCH] Role exists:', data.profile.role, '- NOT showing role selection')
+              
+              // Navigate based on role (only if not already on a page)
+              if (!currentPage || currentPage === 'signin') {
+                if (data.profile.role === 'driver') {
+                  console.log('[ROLE FETCH] Driver role - navigating to resume')
+                  setCurrentPage('resume')
+                } else if (data.profile.role === 'employer') {
+                  console.log('[ROLE FETCH] Employer role - staying on home (dashboard)')
+                  setCurrentPage(null) // null shows employer dashboard
+                }
+              }
+            }
+          }
+        } else {
+          const errorData = await response.json().catch(() => ({}))
+          console.error('Failed to fetch user profile:', response.statusText)
+          console.error('Error details:', errorData)
+          
+          // If user not found (404), they're new - show role selection
+          if (response.status === 404) {
+            console.log('[ROLE FETCH] New user (404) - showing role selection')
+            setShowRoleSelection(true)
+          }
+          
+          // Show alert if migration is needed
+          if (errorData.error === 'Database migration required') {
+            alert('⚠️ Database Migration Required\n\n' + errorData.details)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user role:', error)
+      } finally {
+        setIsRoleLoading(false)
+      }
+    }
+
+    fetchUserRole()
+  }, [user?.address])
 
   useEffect(() => {
     if (hasResume) {
@@ -906,13 +1061,10 @@ const HomeContent = () => {
       console.log('🎯 [HOME] handleAuthSuccess called with:', userData)
       setUser(userData)
       console.log('🎯 [HOME] User state updated')
-      // Auto-navigate to resume page after login
-      if (!currentPage || currentPage === 'signin') {
-        console.log('🎯 [HOME] Auto-navigating to resume page after login')
-        setCurrentPage('resume')
-      }
+      // Don't auto-navigate here - let the role fetch useEffect handle it
+      // This ensures employers go to dashboard and drivers go to resume
     },
-    [currentPage]
+    []
   )
 
   // Modal handlers
@@ -1569,11 +1721,13 @@ const HomeContent = () => {
         <Navigation
           isAuthenticated={!!user}
           user={user}
+          userRole={userRole}
           onStatusClick={openModal}
           onWalletClick={handleWalletClick}
           onNavigate={handleNavigation}
           tHasUnread={avaHasUnread}
           onTClick={() => setIsAvaCollapsed(false)}
+          onSwitchRole={handleSwitchRole}
         />
 
         {/* User Status Modal */}
@@ -1586,6 +1740,8 @@ const HomeContent = () => {
             address: user?.address,
             chain: user?.chain,
           }}
+          userRole={userRole}
+          onSwitchRole={handleSwitchRole}
         />
 
         {/* Main Content - Adjusted for sidebar (desktop only) */}
@@ -1599,6 +1755,7 @@ const HomeContent = () => {
                 currentStep={getCurrentStep()}
                 onAction={handleTAssistantAction}
                 userAddress={user?.address}
+                userRole={userRole}
                 hasResume={hasResume}
                 hasForms={journeyState.forms.status !== 'pending'}
                 form1Data={form1Data}
@@ -1623,20 +1780,36 @@ const HomeContent = () => {
             </>
           )}
 
-          {/* Conditional Content Based on Navigation */}
-          {/* Home Page - Default */}
-          {!currentPage && (
-            <HomePage 
-              isAuthenticated={!!user}
-              onGetStarted={() => {
-                if (user) {
-                  setCurrentPage('resume')
-                } else {
-                  setCurrentPage('signin')
-                }
-              }}
+          {/* Role Selection Modal - Show when user needs to select a role */}
+          {showRoleSelection && user && (
+            <RoleSelectionModal 
+              onSelectRole={handleRoleSelection}
+              isLoading={isSettingRole}
             />
           )}
+
+          {/* Employer Dashboard - Show if user is an employer and on home page */}
+          {user && userRole === 'employer' && !isRoleLoading && !currentPage && (
+            <EmployerDashboard companyName={companyName || undefined} />
+          )}
+
+          {/* Driver Content - Show if user is a driver or has not selected role yet */}
+          {(!user || userRole === 'driver' || (user && !userRole && !showRoleSelection)) && !isRoleLoading && (
+            <>
+              {/* Conditional Content Based on Navigation */}
+              {/* Home Page - Default */}
+              {!currentPage && (
+                <HomePage 
+                  isAuthenticated={!!user}
+                  onGetStarted={() => {
+                    if (user) {
+                      setCurrentPage('resume')
+                    } else {
+                      setCurrentPage('signin')
+                    }
+                  }}
+                />
+              )}
 
           {currentPage === 'signin' && !user && (
             <div className='max-w-md mx-auto overflow-hidden'>
@@ -1827,6 +2000,8 @@ const HomeContent = () => {
                   {renderFormContent()}
                 </>
               )}
+            </>
+          )}
             </>
           )}
         </div>
