@@ -9,6 +9,7 @@ import type {
   PrimerPrompt,
   ResumeUploadEvent,
 } from '@/types/assistant'
+import type { ProfileCompletenessResult } from '@/lib/profile-completeness'
 
 interface MessageAction {
   id: string
@@ -39,6 +40,7 @@ interface TAssistantProps {
   helpRequest?: AssistantHelpRequest | null
   primerRequest?: PrimerPrompt | null
   resumeUploadEvent?: ResumeUploadEvent | null
+  profileCompleteness?: ProfileCompletenessResult | null
   isCollapsed?: boolean
   onToggleCollapse?: () => void
   onUnreadChange?: (hasUnread: boolean) => void
@@ -61,6 +63,7 @@ function TAssistantContent({
   helpRequest,
   primerRequest,
   resumeUploadEvent,
+  profileCompleteness,
   isCollapsed = false,
   onToggleCollapse,
   onUnreadChange,
@@ -687,6 +690,72 @@ function TAssistantContent({
       })
     }
   }, [resumeUploadEvent, mounted, addAssistantMessage])
+
+  // Handle profile completeness guidance
+  const profileCompletenessHandledRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (!mounted || !profileCompleteness) return
+    if (!userAddress || userRole !== 'driver') return
+    
+    // Only show guidance once per score level to avoid spam
+    if (profileCompletenessHandledRef.current === profileCompleteness.score) return
+    profileCompletenessHandledRef.current = profileCompleteness.score
+
+    // Provide contextual guidance based on profile status
+    if (profileCompleteness.status === 'incomplete' && profileCompleteness.score < 40) {
+      addAssistantMessage(
+        `👋 Hey! I noticed your driver profile is only ${profileCompleteness.percentage} complete.\n\n` +
+        `To apply for jobs on Veree, you'll need to add some key information:\n\n` +
+        `🔑 **Essential:**\n` +
+        profileCompleteness.missingFields.slice(0, 3).map(f => `• ${f.label} (+${f.points} points)`).join('\n') +
+        `\n\n` +
+        `Complete your DOT application to unlock job applications!`,
+        {
+          step: 'forms',
+          actions: [
+            { id: 'go-forms', label: 'Complete DOT App', value: 'forms' },
+          ]
+        }
+      )
+    } else if (profileCompleteness.status === 'basic' && profileCompleteness.score >= 40 && profileCompleteness.score < 70) {
+      addAssistantMessage(
+        `🎯 Nice! Your profile is ${profileCompleteness.percentage} complete - you can now apply to jobs!\n\n` +
+        `Want to stand out more? Here are quick wins:\n` +
+        profileCompleteness.missingFields.slice(0, 3).map(f => `• Add ${f.label} (+${f.points} points)`).join('\n') +
+        `\n\n` +
+        `More complete profiles get more employer views! 📈`,
+        {
+          step: 'profile'
+        }
+      )
+    } else if (profileCompleteness.status === 'good' && profileCompleteness.score >= 70 && profileCompleteness.score < 90) {
+      addAssistantMessage(
+        `✨ Great job! Your profile is ${profileCompleteness.percentage} complete.\n\n` +
+        `You're almost there! Just a few more details to reach 100%:\n` +
+        profileCompleteness.missingFields.slice(0, 2).map(f => `• ${f.label}`).join('\n') +
+        `\n\n` +
+        `Employers love seeing complete profiles - it shows you're serious! 💼`,
+        {
+          step: 'profile'
+        }
+      )
+    } else if (profileCompleteness.status === 'excellent' && profileCompleteness.score >= 90) {
+      // Only congratulate on first time hitting excellent
+      if (profileCompletenessHandledRef.current < 90) {
+        addAssistantMessage(
+          `🎉 Awesome! Your profile is ${profileCompleteness.percentage} complete!\n\n` +
+          `You're all set to apply for trucking jobs. Your complete profile will make a great impression on employers.\n\n` +
+          `Ready to find your next opportunity? Browse jobs and apply with one click! 🚚`,
+          {
+            step: 'profile',
+            actions: [
+              { id: 'browse-jobs', label: 'Browse Jobs', value: 'jobs' },
+            ]
+          }
+        )
+      }
+    }
+  }, [profileCompleteness, mounted, userAddress, userRole, addAssistantMessage])
 
   useEffect(() => {
     if (!mounted || !helpRequest) return

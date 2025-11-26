@@ -78,6 +78,14 @@ const JobListings = dynamic(
   }
 )
 
+const MyApplications = dynamic(
+  () => import('@/components/MyApplications').then((mod) => mod.default),
+  {
+    ssr: false,
+    loading: () => <LoadingScreen message="Loading applications..." fullScreen={false} />,
+  }
+)
+
 const ApplicationSubmitted = dynamic(
   () =>
     import('@/components/driver-application/ApplicationSubmitted').then(
@@ -194,7 +202,7 @@ const HomeContent = () => {
   const [user, setUser] = useState<any>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState<
-    'signin' | 'resume' | 'dotapp' | 'jobs' | null
+    'signin' | 'resume' | 'dotapp' | 'jobs' | 'applications' | null
   >(null)
   
   // Role-based access control
@@ -1818,8 +1826,18 @@ const HomeContent = () => {
 
           {currentPage === 'jobs' && (
             <div className='max-w-7xl mx-auto'>
-              <JobListings />
+              <JobListings 
+                onBack={() => setCurrentPage(null)}
+                userAddress={user?.address || null}
+              />
             </div>
+          )}
+
+          {currentPage === 'applications' && (
+            <MyApplications 
+              onBack={() => setCurrentPage(null)}
+              userAddress={user?.address || null}
+            />
           )}
 
           {currentPage === 'dotapp' && (

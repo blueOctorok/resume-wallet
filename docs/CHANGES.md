@@ -2,6 +2,458 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 📊 **PROFILE COMPLETENESS SYSTEM + DOT INTEGRATION** (November 25, 2025)
+
+**Smart Driver Profile Management with AI Guidance**
+
+Implemented a comprehensive profile completeness system that automatically syncs DOT applications to driver profiles, calculates completion scores, and provides AvA guidance to help drivers maximize their application quality.
+
+### **Core Features:**
+
+#### **1. Profile Score Calculator** (`src/lib/profile-completeness.ts`)
+
+- ✅ Calculates 0-100 score based on profile data
+- ✅ **Core Requirements** (50 points): CDL class, state, number, endorsements, experience
+- ✅ **Resume & Application** (30 points): Resume uploaded, DOT app completed, total miles
+- ✅ **Preferences** (20 points): Job types, salary, locations, availability
+- ✅ Status levels: `incomplete` (<40), `basic` (40-69), `good` (70-89), `excellent` (90+)
+- ✅ Returns missing fields sorted by importance
+- ✅ Eligibility checker: `canApplyToJobs()` blocks applications if critical fields missing
+
+#### **2. DOT → Profile Auto-Sync** (`src/app/api/driver/sync-from-dot/route.ts`)
+
+- ✅ Extracts data from completed DOT application:
+  - CDL information (class, endorsements, state, number)
+  - Driving experience (calculates total years from equipment types)
+  - Total miles driven (sums across all equipment types)
+- ✅ Links `driver_application_id` to profile
+- ✅ Links latest resume to profile
+- ✅ Auto-calculates and updates `profile_completion_score`
+- ✅ Creates profile if doesn't exist
+
+**How to Use:**
+
+```typescript
+// Call after DOT application is completed
+await fetch('/api/driver/sync-from-dot', {
+  method: 'POST',
+  body: JSON.stringify({ walletAddress }),
+})
+```
+
+#### **3. Profile Completeness Component** (`src/components/ProfileCompleteness.tsx`)
+
+- ✅ Visual progress indicator with theme-aware styling
+- ✅ Status-based color coding (red → orange → blue → green)
+- ✅ **Compact mode**: Small progress bar for tight spaces
+- ✅ **Full mode**: Detailed breakdown with:
+  - Overall score and status message
+  - Category breakdown (Core, Resume, Preferences)
+  - Top 3 missing fields ("Quick Wins")
+  - Optional "Improve Profile" button
+- ✅ Fully responsive and theme-aware (frosted glass aesthetic)
+
+#### **4. Apply Modal Integration**
+
+- ✅ Shows profile completeness before application
+- ✅ Displays detailed breakdown with all categories
+- ✅ Blocks applications if profile < 40% complete
+- ✅ Shows warning message with missing critical fields
+- ✅ Submit button disabled if eligibility check fails
+- ✅ Button text updates: "Complete Profile to Apply" when ineligible
+
+#### **5. AvA AI Integration**
+
+- ✅ Monitors profile completeness score
+- ✅ Provides contextual guidance based on status:
+  - **Incomplete (<40%)**: "Essential fields needed" + top 3 missing
+  - **Basic (40-69%)**: "You can apply! Here are quick wins..." + top 3
+  - **Good (70-89%)**: "Almost there! Just a few more details..."
+  - **Excellent (90%+)**: "🎉 Profile complete! Ready to apply!"
+- ✅ One-time messages per score level (avoids spam)
+- ✅ Actionable suggestions: "Complete DOT App", "Browse Jobs"
+- ✅ Celebrates milestones when reaching 90%+
+
+### **User Flow:**
+
+1. **Driver uploads resume** → AI extracts data
+2. **Driver completes DOT application** → Call `/api/driver/sync-from-dot`
+3. **Profile auto-populated** → Score calculated (e.g., 75%)
+4. **AvA provides guidance** → "Add salary preference for +5 points"
+5. **Driver clicks "Apply"** → Modal shows profile completeness
+6. **If score < 40%** → Application blocked, shows missing fields
+7. **If score ≥ 40%** → Application allowed, employer sees complete data
+
+### **Benefits:**
+
+- ✅ **No duplicate data entry** - DOT app data flows to profile automatically
+- ✅ **Quality applications** - Minimum completeness required
+- ✅ **Guided experience** - AvA tells you exactly what to complete
+- ✅ **Employer confidence** - Complete profiles get more views
+- ✅ **Gamification** - Score encourages profile completion
+
+### **Technical Highlights:**
+
+**Score Calculation:**
+
+- Weighted system prioritizes critical fields (CDL class = 15 pts)
+- Handles arrays (endorsements) and booleans (willing_to_relocate)
+- Returns sorted list of missing fields by points value
+
+**DOT Extraction:**
+
+- Parses JSONB `application_data` from `driver_applications`
+- Calculates experience: `Math.max()` of all equipment type years
+- Calculates miles: Sum of all equipment type miles
+- Resilient to missing/incomplete data
+
+**AvA Intelligence:**
+
+- Uses `useRef` to track last handled score (prevents spam)
+- Only triggers on score changes
+- Contextual messages based on status level
+- Actionable buttons: "Complete DOT App", "Browse Jobs"
+
+### **Files Created:**
+
+- `src/lib/profile-completeness.ts` - Score calculator utility
+- `src/app/api/driver/sync-from-dot/route.ts` - DOT sync API
+- `src/components/ProfileCompleteness.tsx` - Visual component
+
+### **Files Modified:**
+
+- `src/components/ApplyWithVereeModal.tsx` - Added profile completeness display
+- `src/components/TAssistant.tsx` - Added profile guidance
+- `docs/CHANGES.md` - This entry
+
+**Status:** ✅ Complete - Ready for testing!
+
+**Next Steps:**
+
+- Test DOT completion → profile sync flow
+- Verify AvA guidance messages appear correctly
+- Test application blocking for incomplete profiles
+- Add profile page (future) for drivers to manage preferences
+
+---
+
+## 🗂️ **MIGRATION CLEANUP & DOCUMENTATION** (November 24, 2025)
+
+**Organized Database Migrations into Proper Structure**
+
+Created a clean, documented migration folder structure to track all database changes:
+
+### **New Folder: `supabase/migrations/`**
+
+- ✅ **000_driver_applications_and_resumes.sql** - Foundation tables (already in production)
+  - `driver_applications` - DOT forms with blockchain verification
+  - `resumes` - Resume uploads with blockchain verification
+- ✅ **001_role_based_architecture.sql** - Role-based system (already in production)
+  - `users.role` column
+  - `companies` table
+  - `job_postings` table
+  - `applications` table
+- ✅ **README.md** - Migration guide and schema overview
+- ✅ **MIGRATION_STATUS.md** - Track which migrations have been run
+
+### **Benefits:**
+
+- **Clear history** - Every database change is documented
+- **Easy onboarding** - New developers can see the full schema evolution
+- **Safe deployments** - Migrations are idempotent (safe to re-run)
+- **Version control** - All migrations tracked in Git
+
+### **Files Created:**
+
+- `supabase/migrations/000_driver_applications_and_resumes.sql`
+- `supabase/migrations/001_role_based_architecture.sql`
+- `supabase/migrations/README.md`
+- `supabase/migrations/MIGRATION_STATUS.md`
+
+### **Files Removed:**
+
+- `database_migrations/002_add_role_and_companies.sql` (replaced by 001)
+- `database_migrations/003_add_applications_system.sql` (will rebuild as 002)
+
+**Status:** ✅ Complete - Ready for Migration 002
+
+---
+
+## 🗄️ **MIGRATION 002 CREATED: External Jobs & Driver Profiles** (November 24, 2025)
+
+**Complete Database Migration for "Apply with Veree" System**
+
+Created Migration 002 to enable the full "Apply with Veree" feature set with external job support.
+
+### **What Migration 002 Adds:**
+
+#### **1. External Job Support in `job_postings`**
+
+- New columns: `is_external`, `external_source`, `external_job_id`, `redirect_url`, `external_data`
+- Allows storing both employer-posted AND aggregated jobs (Adzuna, Indeed, etc.)
+- Unique constraint prevents duplicate external jobs
+- Makes `company_id` optional (external jobs don't have companies)
+
+#### **2. Driver Profiles Table**
+
+- Pre-parsed application data for one-click applies
+- Cached CDL info, experience, job preferences
+- Profile completion score (0-100)
+- Links to resume and driver_application records
+
+#### **3. Shareable Application Links**
+
+- `share_token` column for public URLs: `/application/[token]`
+- View count tracking with auto-increment trigger
+- Immutable application data snapshot
+- Last viewed timestamp
+
+#### **4. Application Analytics**
+
+- `application_views` table tracks employer engagement
+- Records: IP, user agent, time spent, sections viewed
+- Auto-increments view count via database trigger
+- RLS policies for privacy
+
+#### **5. Helper Views**
+
+- `complete_applications` - joins users, driver_profiles, job_postings, applications
+- Makes API queries simpler and faster
+
+### **How to Run:**
+
+**⚠️ IMPORTANT:** Migrations 000 and 001 are already in your database! Do NOT re-run them.
+
+**Only run Migration 002:**
+
+1. Open Supabase Dashboard → SQL Editor
+2. Copy contents of `supabase/migrations/002_external_jobs_and_driver_profiles.sql`
+3. Paste and click "Run"
+4. Verify success
+5. Update `MIGRATION_STATUS.md`
+
+**See `supabase/migrations/HOW_TO_RUN_MIGRATIONS.md` for detailed instructions.**
+
+### **What This Enables:**
+
+- ✅ Adzuna jobs can be stored in your database
+- ✅ "Apply with Veree" button works with all jobs
+- ✅ Driver profiles auto-created on first application
+- ✅ Public shareable application links
+- ✅ Application view tracking and analytics
+- ✅ Complete application data in one query
+
+### **Files Created:**
+
+- `supabase/migrations/002_external_jobs_and_driver_profiles.sql` - Complete migration
+- `supabase/migrations/HOW_TO_RUN_MIGRATIONS.md` - Step-by-step guide
+
+### **Migration 002 Status:**
+
+✅ **COMPLETED** - November 24, 2024
+
+**Verification:** All tables and columns confirmed in production database:
+
+- ✅ `driver_profiles` table created
+- ✅ `application_views` table created
+- ✅ `job_postings` has external job columns
+- ✅ `applications` has shareable link columns
+- ✅ All triggers and RLS policies in place
+
+**Ready to Test:**
+
+1. ✅ "Apply with Veree" button on job listings
+2. ✅ Driver profile auto-creation
+3. ✅ Shareable application links `/application/[token]`
+4. ✅ "My Applications" dashboard
+5. ✅ Application view tracking
+
+---
+
+## 🚀 **PHASE 1: "APPLY WITH VEREE" SYSTEM** (November 24, 2025)
+
+**Major Feature: Job Application System with Blockchain-Verified Profiles**
+
+Implemented the complete "Apply with Veree" ecosystem - drivers can now apply to jobs using their verified Veree profiles, and every application is tracked, shareable, and professional.
+
+### **What Got Built:**
+
+#### **1. Database Architecture** (`003_add_applications_system.sql`)
+
+- ✅ **driver_profiles table** - Stores complete driver information for quick applications
+  - Resume URL & IPFS hash
+  - CDL class, endorsements, state
+  - Experience years, total miles driven
+  - Job preferences (types, salary range, relocation)
+  - Profile completion score (0-100)
+- ✅ **applications table** - Tracks every job application
+  - Job details snapshot (title, employer, location, salary)
+  - Application delivery tracking (email sent, opened, clicked)
+  - Status workflow (submitted → viewed → interviewing → hired/rejected)
+  - Shareable public link (`/application/[token]`)
+  - View count & engagement analytics
+- ✅ **application_views table** - Analytics for employer engagement
+  - Tracks when/how employers view applications
+  - IP, user agent, time spent, sections viewed
+- ✅ **Auto-increment triggers** - View counts update automatically
+- ✅ **Row Level Security (RLS)** - Drivers only see their own data
+- ✅ **Helper views** - `complete_applications` joins all related data
+
+#### **2. Application Submission Flow**
+
+- ✅ **ApplyWithVereeModal.tsx** - Beautiful modal for applying to jobs
+  - Fetches driver profile automatically
+  - Shows profile completeness score
+  - Preview of what gets sent to employer
+  - Optional cover letter (1000 chars)
+  - Real-time validation
+- ✅ **API: /api/driver/profile** - Get or create driver profile
+- ✅ **API: /api/applications/submit** - Submit application with dedupe check
+  - Generates unique shareable token (nanoid)
+  - Snapshots all application data
+  - Marks for email delivery (Phase 2)
+
+#### **3. Job Listings Integration**
+
+- ✅ **"Apply with Veree" button** added to every Adzuna job
+  - Primary CTA for logged-in drivers
+  - Opens pre-filled application modal
+  - Falls back to "View Original" link
+- ✅ **Dynamic import** for modal (reduces bundle size)
+- ✅ **User-aware** - Only shows to authenticated drivers
+
+#### **4. My Applications Dashboard**
+
+- ✅ **MyApplications.tsx** - Complete application tracking for drivers
+  - Lists all submitted applications
+  - Shows status badges (submitted, viewed, interviewing, hired, rejected)
+  - Displays job details, salary, location
+  - View count & last viewed timestamp
+  - Copy shareable link button
+  - Link to view original job posting
+- ✅ **API: /api/applications/list** - Fetches user's applications
+- ✅ **Empty state** - Encourages browsing jobs
+
+#### **5. Public Application Pages**
+
+- ✅ **`/application/[token]` page** - Shareable, professional application view
+  - Displays driver qualifications (CDL class, endorsements, experience)
+  - Shows job details being applied for
+  - Optional cover letter
+  - Contact info & resume download
+  - "Powered by Veree" branding
+  - Tracks views automatically
+- ✅ **API: /api/applications/public/[token]** - Public application data
+- ✅ **API: /api/applications/track-view** - Analytics tracking
+  - Records viewer IP, user agent
+  - Auto-increments view counter via DB trigger
+
+#### **6. Navigation Updates**
+
+- ✅ **"My Applications" button** added to driver navigation
+  - Disabled until authenticated
+  - Consistent styling with other nav buttons
+  - Auto-closes mobile menu on click
+
+#### **7. Dependencies Added**
+
+- ✅ **nanoid** - Secure random ID generation for share tokens
+- ✅ **resend** - Email delivery service (ready for Phase 2)
+
+### **Technical Highlights:**
+
+**Smart Defaults:**
+
+- Auto-creates driver profile on first application
+- Duplicate application detection (can't apply twice to same job)
+- Case-insensitive wallet address queries (`.ilike()`)
+
+**Data Snapshot Architecture:**
+
+- Application stores complete data at time of submission
+- Even if driver updates profile, historical applications remain accurate
+- Employers see exactly what was submitted
+
+**Engagement Analytics:**
+
+- View tracking via database triggers (automatic, no manual updates)
+- Tracks employer opens, link clicks, time spent
+- Drivers see "5 views • Last viewed 2 days ago"
+
+**Security & Privacy:**
+
+- RLS policies ensure drivers only see their own applications
+- Public pages accessible via secure token (not guessable)
+- Wallet addresses compared case-insensitively
+
+### **Files Created:**
+
+- `database_migrations/003_add_applications_system.sql`
+- `src/components/ApplyWithVereeModal.tsx`
+- `src/components/MyApplications.tsx`
+- `src/app/application/[token]/page.tsx`
+- `src/app/api/driver/profile/route.ts`
+- `src/app/api/applications/submit/route.ts`
+- `src/app/api/applications/list/route.ts`
+- `src/app/api/applications/public/[token]/route.ts`
+- `src/app/api/applications/track-view/route.ts`
+
+### **Files Modified:**
+
+- `src/components/JobListings.tsx` - Added "Apply with Veree" button
+- `src/components/Navigation.tsx` - Added "My Applications" link
+- `src/app/page.tsx` - Integrated MyApplications component, added 'applications' page type
+- `package.json` - Added nanoid, resend dependencies
+
+### **What Phase 2 Will Add (Email Delivery):**
+
+- Resend integration to send professional emails to employers
+- Email templates with Veree branding
+- Application packet includes:
+  - DOT application PDF
+  - Resume (if uploaded)
+  - Shareable Veree profile link
+  - QR code for easy access
+- Delivery status tracking (sent, bounced, opened)
+- Employer reply handling
+
+### **User Experience:**
+
+**Before:**
+
+- Drivers redirected to external job sites
+- No application tracking
+- Manual entry of same info repeatedly
+- No way to showcase blockchain verification
+
+**After:**
+
+- One-click apply with Veree profile
+- All applications tracked in dashboard
+- Professional shareable links
+- Employers see verified credentials
+- Analytics on who's viewing applications
+- Cover letter optional for personalization
+
+### **Strategic Impact:**
+
+This positions Veree as more than a resume platform - it's now a **complete driver hiring ecosystem**:
+
+1. **Driver Value**: One-click verified applications, tracking, professional presentation
+2. **Employer Value**: Clean, verified applications with tamper-evident work history
+3. **Platform Lock-in**: Both sides have a reason to stay on Veree
+4. **Data Moat**: Application flow data = placement insights = better matching
+5. **Revenue Path**: Pay to post, pay per application, premium placements
+
+**Next Steps:**
+
+- Phase 2: Email delivery with Resend
+- Phase 3: Employer dashboard to receive/manage applications
+- Phase 4: Direct employer job postings (bypass aggregators)
+- Phase 5: Job board API partnerships (ZipRecruiter, Indeed)
+
+---
+
 ## ⏳ **LOADING SCREEN: SMOOTH ASYNC DATA EXPERIENCE** (November 21, 2025)
 
 **Updated: LoadingScreen Implemented Everywhere (Latest)**
@@ -9,6 +461,7 @@ This file tracks major modifications made to the ResumeWallet codebase.
 Replaced ALL loading states throughout the application with the unified LoadingScreen component for a consistent, professional experience.
 
 **Complete Integration:**
+
 - ✅ **Role Loading** - "Loading your dashboard..." (full-screen, after login)
 - ✅ **Role Switching** - "Switching roles..." (full-screen, when changing driver/employer)
 - ✅ **Job Search** - "Searching for jobs..." (inline, while fetching Adzuna results)
@@ -28,21 +481,25 @@ Replaced ALL loading states throughout the application with the unified LoadingS
   - Role Selection Modal - "Loading..."
 
 **Before vs After:**
+
 - **Before**: Mix of pulse animations, spinners, and blank screens
 - **After**: Unified brand-styled loading experience with contextual messages
 
 **Technical Details:**
+
 - **Full-screen mode**: `fullScreen={true}` - overlays entire viewport with backdrop
 - **Inline mode**: `fullScreen={false}` - displays within component container
 - Custom messages for each use case help users understand what's happening
 - All loading states now match the frosted glass aesthetic
 
 **Files Changed:**
+
 - `src/components/LoadingScreen.tsx` - NEW: Global loading component
 - `src/app/page.tsx` - Replaced all 16 dynamic import loading states + role/switching states
 - `src/components/JobListings.tsx` - Replaced spinner with LoadingScreen
 
 **User Experience:**
+
 - **Consistent branding** - Every loading state looks professional and on-brand
 - **Contextual feedback** - Users know exactly what's loading
 - **No more janky transitions** - Smooth, polished feel throughout the app
@@ -55,6 +512,7 @@ Replaced ALL loading states throughout the application with the unified LoadingS
 Added a beautiful, brand-consistent loading screen to handle asynchronous data loading across the application.
 
 **Features:**
+
 - **LoadingScreen Component**: Brand-styled loading animation
   - Animated spinning ring with "V" logo in center
   - Pulsing background circle
@@ -65,6 +523,7 @@ Added a beautiful, brand-consistent loading screen to handle asynchronous data l
   - Full-screen or inline mode support
 
 **Technical Implementation:**
+
 - Full-screen overlay with backdrop blur
 - Stacks at z-50 to overlay all content
 - Uses brand colors: `border-t-brand-sage` (light) / `border-t-brand-mint` (dark)
@@ -80,6 +539,7 @@ Added a beautiful, brand-consistent loading screen to handle asynchronous data l
 Added comprehensive logging to the Adzuna API route to help diagnose production deployment issues.
 
 **Improvements:**
+
 - **Environment Variable Validation**: Logs whether API credentials are set and their lengths
 - **Request Logging**: Logs all search parameters and API URL (with masked API key)
 - **Response Status Logging**: Logs HTTP status code from Adzuna
@@ -89,15 +549,18 @@ Added comprehensive logging to the Adzuna API route to help diagnose production 
 - **Stack Traces**: Captures and logs full error stack traces for debugging
 
 **Debugging Information:**
+
 - Check Vercel logs to see exactly where the API call is failing
 - Environment variables status (SET/MISSING) is logged
 - Adzuna API response status and error messages are captured
 - All errors now include detailed context for troubleshooting
 
 **Files Changed:**
+
 - `src/app/api/jobs/external/search/route.ts` - Enhanced error logging throughout
 
 **Production Deployment Checklist:**
+
 1. ✅ Add `ADZUNA_APP_ID` to Vercel environment variables
 2. ✅ Add `ADZUNA_APP_KEY` to Vercel environment variables
 3. ✅ Ensure variables are enabled for Production, Preview, and Development
@@ -111,6 +574,7 @@ Added comprehensive logging to the Adzuna API route to help diagnose production 
 Updated JobListings component to **exactly match** the styling of Resume Upload and DOT forms for perfect visual consistency.
 
 **Styling Match:**
+
 - **Light mode**: `bg-white/80 backdrop-blur-xl` with `border-t-4 border-brand-sage`
 - **Dark mode**: `bg-brand-sage-light/20 backdrop-blur-xl` with `border-brand-mint`
 - **Shadows**: `shadow-2xl` on main containers and cards
@@ -122,11 +586,13 @@ Updated JobListings component to **exactly match** the styling of Resume Upload 
 - **Pagination**: Current page uses `brand-sage` (light) / `brand-mint/30` (dark)
 
 **The Problem:**
+
 - Job listings looked different from Resume Upload and DOT forms
 - User noticed the inconsistency immediately
 - Broke the cohesive UI experience
 
 **The Fix:**
+
 - Added `useTheme()` hook for theme-aware styling
 - Changed all containers to use `backdrop-blur-xl` + `border-t-4` pattern
 - Matched input styling (gray borders, not sage)
@@ -135,9 +601,11 @@ Updated JobListings component to **exactly match** the styling of Resume Upload 
 - Job cards now use same frosted glass effect as DOT forms
 
 **Files Changed:**
+
 - `src/components/JobListings.tsx` - Complete restyling to match DOT forms
 
 **User Experience:**
+
 - Job browsing now **perfectly matches** Resume Upload and DOT forms
 - Seamless visual transition between all pages
 - Consistent frosted glass aesthetic throughout the app
@@ -150,6 +618,7 @@ Updated JobListings component to **exactly match** the styling of Resume Upload 
 Integrated Adzuna's job search API to provide drivers with access to thousands of external trucking jobs, keeping them engaged with Veree as their job search hub.
 
 **Features Added:**
+
 - **Job Search API (`/api/jobs/external/search`)**: Server-side proxy to Adzuna API
   - Defaults to "truck driver CDL" keyword search
   - Location-based search with city, state, or zip
@@ -167,18 +636,20 @@ Integrated Adzuna's job search API to provide drivers with access to thousands o
   - Loading states, error handling, empty states
   - Pagination controls
 
-- **Navigation Integration**: 
+- **Navigation Integration**:
   - Added "Browse Jobs" button in driver navigation (between Resume and DOT App)
   - Available to all users (no login required) to maximize driver engagement
   - Responsive design matches existing nav patterns
 
 **Strategy:**
+
 - **Mixed Marketplace Approach**: External jobs (aggregated) + native jobs (future employer postings)
 - **Driver Retention**: Keep drivers coming back to Veree as their primary job search platform
 - **Employer Conversion**: Show scale (thousands of jobs) while building native job posting features
 - This mirrors successful strategies by ZipRecruiter, Indeed, and other major job platforms
 
 **Technical Implementation:**
+
 - Adzuna API provides free tier: 1,000 API calls/month
 - Environment variables: `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` (must be configured)
 - Dynamic import for JobListings component (SSR disabled)
@@ -186,6 +657,7 @@ Integrated Adzuna's job search API to provide drivers with access to thousands o
 - All jobs marked with `is_external: true` flag for future native job differentiation
 
 **Files Changed:**
+
 - `.env.local` - Added Adzuna API credentials (placeholders)
 - `src/app/api/jobs/external/search/route.ts` - NEW: Adzuna API proxy endpoint
 - `src/components/JobListings.tsx` - NEW: Job browsing UI component
@@ -193,12 +665,14 @@ Integrated Adzuna's job search API to provide drivers with access to thousands o
 - `src/components/Navigation.tsx` - Added "Browse Jobs" button for drivers, updated types
 
 **User Experience:**
+
 - Drivers can browse thousands of trucking jobs without leaving Veree
 - Clean search interface with familiar job board patterns
 - Seamless apply flow (redirects to original posting)
 - Sets foundation for native job postings by Veree employers (coming soon)
 
 **Next Steps:**
+
 - Configure actual Adzuna API credentials in production
 - Add native job posting feature for employers
 - Integrate "Apply with Veree" feature using blockchain-verified driver profiles
@@ -214,11 +688,13 @@ Integrated Adzuna's job search API to provide drivers with access to thousands o
 Fixed critical issue where employers would see a blank screen after logging in.
 
 **The Problem:**
+
 - `handleAuthSuccess` always set `currentPage = 'resume'` after login
 - Employer dashboard requires `currentPage === null` to render
 - This caused employers to be on the "resume" page with no content (they don't have a resume page)
 
 **The Fix:**
+
 - Removed auto-navigation from `handleAuthSuccess`
 - Moved navigation logic to the role fetch `useEffect`
 - Now navigation is role-aware:
@@ -227,9 +703,11 @@ Fixed critical issue where employers would see a blank screen after logging in.
   - No role → shows role selection modal
 
 **Files Changed:**
+
 - `src/app/page.tsx` - Removed hardcoded resume navigation, added role-aware routing
 
 **User Experience:**
+
 - Employers log in → immediately see their dashboard ✅
 - Drivers log in → immediately see resume upload page ✅
 - New users → see role selection modal ✅
@@ -241,16 +719,19 @@ Fixed critical issue where employers would see a blank screen after logging in.
 Fixed issue where employer company name wouldn't appear when logging back in, but would appear when switching roles.
 
 **The Problem:**
+
 - Company records were only created when **switching** to employer role
 - If a user was already an employer and logged in, no company record existed
 - This caused "Welcome, Employer!" instead of "Welcome, My Company!"
 
 **The Fix:**
+
 - Modified `/api/user/profile` to auto-create a company record if employer doesn't have one
 - Added logging to track company data fetch and creation
 - Company name now persists across login sessions
 
 **Files Changed:**
+
 - `src/app/api/user/profile/route.ts` - Auto-create company record for employers
 - `src/app/page.tsx` - Enhanced logging for company data
 
@@ -263,6 +744,7 @@ Fixed issue where employer company name wouldn't appear when logging back in, bu
 Added a convenient "Switch Role" button in the UserStatusModal (the modal that opens when you click your wallet) for easy role switching between driver and employer.
 
 **Features:**
+
 - Shows current role with emoji (🚗 Driver or 🏢 Employer) in user info section
 - "Switch to [opposite role]" button above sign out button
 - Confirmation dialog before switching (handled by `handleSwitchRole`)
@@ -271,6 +753,7 @@ Added a convenient "Switch Role" button in the UserStatusModal (the modal that o
 - Theme-aware styling with brand colors
 
 **Implementation:**
+
 - Added `userRole` and `onSwitchRole` props to `UserStatusModal`
 - Added `userRole` and `onSwitchRole` props to `WalletCard` (for future use)
 - Added `onSwitchRole` prop to `Navigation`
@@ -278,6 +761,7 @@ Added a convenient "Switch Role" button in the UserStatusModal (the modal that o
 - Reuses existing `handleRoleSelection` logic for API call
 
 **Files Changed:**
+
 - `src/components/UserStatusModal.tsx` - Added role display and switch button
 - `src/components/WalletCard.tsx` - Added role display and switch button props (prepared for future use)
 - `src/components/Navigation.tsx` - Added onSwitchRole prop
@@ -293,18 +777,21 @@ No more needing to manually update Supabase to test different roles! Click Walle
 The role selection API was blocking role changes for existing users. When a user with an existing role tried to change it (e.g., employer → driver), the API returned success but didn't actually update the database.
 
 **The Issue:**
+
 - Line 47-57 in `/api/user/set-role` had a check that prevented role changes
 - It returned 200 status with "Role already set" message
 - Frontend thought it worked, but database stayed unchanged
 - User would see driver content temporarily, but became employer again on logout/login
 
 **The Fix:**
+
 - Removed the role change restriction
 - Added logging to track role changes
 - Added check to prevent duplicate company records when switching to employer
 - Users can now freely switch between driver and employer roles
 
 **Files Changed:**
+
 - `src/app/api/user/set-role/route.ts` - Removed role change block, improved company handling
 - `src/app/page.tsx` - Added debug logging for role fetch (can be removed later)
 
@@ -315,6 +802,7 @@ The role selection API was blocking role changes for existing users. When a user
 Applied brand colors to employer dashboard and fixed navigation issue:
 
 **Employer Dashboard Color Updates:**
+
 - Background: `brand-sage-light/10` with `backdrop-blur-xl` (dark), white with backdrop blur (light)
 - Icon gradient: `brand-mint` → `teal-600` with mint shadow
 - Borders: `brand-mint/30` and `brand-sage/40` accents
@@ -324,12 +812,14 @@ Applied brand colors to employer dashboard and fixed navigation issue:
 - All text uses `brand-cream` in dark mode
 
 **Fixed Navigation:**
+
 - Home button now works correctly for employers
 - Added `!currentPage` condition to employer dashboard rendering
 - Ensures employer dashboard only shows on home page, not other routes
 - Maintains proper navigation flow
 
 **Files Changed:**
+
 - `src/components/EmployerDashboard.tsx` - Complete brand color palette update
 - `src/app/page.tsx` - Fixed conditional rendering for employer dashboard
 
@@ -340,6 +830,7 @@ Applied brand colors to employer dashboard and fixed navigation issue:
 Applied Veree's brand color palette to the role selection modal:
 
 **Color Updates:**
+
 - Header icon: brand-sage to brand-mint gradient (was purple/blue)
 - Driver card: brand-sage gradient with mint accents (was blue)
 - Employer card: brand-mint to teal gradient (was purple)
@@ -348,11 +839,13 @@ Applied Veree's brand color palette to the role selection modal:
 - Continue button: Matches selected role color scheme
 
 **Maintains:**
+
 - Theme-aware styling (light/dark mode)
 - All hover states and animations
 - Responsive design and accessibility
 
 **Files Changed:**
+
 - `src/components/RoleSelectionModal.tsx` - Complete color palette update
 
 ---
@@ -362,17 +855,20 @@ Applied Veree's brand color palette to the role selection modal:
 Fixed authentication issue with role management APIs to work with Alchemy wallet-based authentication:
 
 **Problem:**
+
 - API routes were using `supabase.auth.getUser()` (Supabase Auth)
 - App uses Alchemy wallet authentication (no Supabase Auth)
 - Resulted in "Unauthorized" errors on login
 
 **Solution:**
+
 - Updated API routes to accept `walletAddress` in request body
 - Query `users` table by `wallet_address` instead of Auth user ID
 - Frontend now passes wallet address to API calls
 - Works seamlessly with existing Alchemy authentication
 
 **Files Changed:**
+
 - `src/app/api/user/profile/route.ts` - Accept wallet address, query by address
 - `src/app/api/user/set-role/route.ts` - Accept wallet address, query by address
 - `src/app/page.tsx` - Pass wallet address in API calls
@@ -384,12 +880,14 @@ Fixed authentication issue with role management APIs to work with Alchemy wallet
 Implemented fundamental role-based access control to separate driver and employer experiences, enabling Veree to function as a two-sided marketplace:
 
 **Role Selection System:**
+
 - Beautiful modal prompts new users to choose: "I'm a Driver" or "I'm an Employer"
 - Each role option displays relevant features with visual cards and icons
 - One-time selection stored in database - cannot be changed (prevents role confusion)
 - Clean UX with animated transitions, theme-aware styling, and responsive design
 
 **Database Schema:**
+
 - Added `role` column to `users` table (values: 'driver' | 'employer' | null)
 - Created `companies` table for employer profiles (company name, DOT/MC numbers, location, etc.)
 - Created `job_postings` table for future job board features
@@ -398,6 +896,7 @@ Implemented fundamental role-based access control to separate driver and employe
 - Added indexes for performance optimization
 
 **Routing & Navigation:**
+
 - Driver content: Resume upload, DOT application forms, AvA assistant
 - Employer content: Placeholder dashboard with "coming soon" features
 - Navigation dynamically shows/hides menu items based on user role
@@ -405,16 +904,19 @@ Implemented fundamental role-based access control to separate driver and employe
 - Employer-specific navigation placeholder ready for future features
 
 **API Endpoints:**
+
 - `POST /api/user/set-role` - Set user role (driver/employer) on first login
 - `GET /api/user/profile` - Fetch user profile with role and company data
 - Automatic company record creation for new employers
 
 **AvA Integration:**
+
 - Added `userRole` prop to TAssistant for future role-specific guidance
 - Currently only shown to drivers (employer AI features planned)
 - Foundation for employer-specific prompts and assistance
 
 **Employer Features (Coming Soon):**
+
 - 📋 Post job openings for CDL drivers
 - 👥 Review applications from verified drivers
 - ✓ Instantly verify blockchain-certified DQ files
@@ -422,12 +924,14 @@ Implemented fundamental role-based access control to separate driver and employe
 - 🔍 Search/filter qualified applicants by CDL class, endorsements, experience
 
 **Why This Matters:**
+
 - **Scalability**: Clean separation enables independent feature development for each role
 - **No Technical Debt**: Implemented early to avoid messy refactors later
 - **Two-Sided Growth**: Can onboard employers while building driver features
 - **Future-Proof**: Easy to add more roles (recruiters, fleet managers) later
 
 **User Experience:**
+
 - Logged-out users see marketing homepage
 - First-time login → role selection modal
 - Drivers → navigate to resume upload page
@@ -435,6 +939,7 @@ Implemented fundamental role-based access control to separate driver and employe
 - No confusion about which features belong to which role
 
 **Files Changed:**
+
 - `database_migrations/002_add_role_and_companies.sql` - Complete schema migration
 - `src/components/RoleSelectionModal.tsx` - Beautiful role selection UI
 - `src/components/EmployerDashboard.tsx` - Placeholder employer experience
@@ -455,6 +960,7 @@ Implemented fundamental role-based access control to separate driver and employe
 Added comprehensive documentation for future multi-document support in `docs/PROJECT_ROADMAP.md`:
 
 **DQ File Components Planned:**
+
 - ✅ Resume (current - ~25-30% coverage)
 - 🔜 MVR (Motor Vehicle Record) - would add +35-40% coverage
 - 🔜 DOT Medical Certificate - would add +5-10%
@@ -464,16 +970,19 @@ Added comprehensive documentation for future multi-document support in `docs/PRO
 - 🔜 Road Test Certificate - would add +2-3%
 
 **Projected Impact:**
+
 - Current: 25-30% form prefill (resume only)
 - Phase 1 (MVR + Medical): 65-80% form prefill
 - Complete DQ File: 85-95% form prefill
 
 **Future AvA Enhancements:**
+
 - Cross-document validation (flag discrepancies between resume, MVR, employer letters)
 - Enhanced guidance based on document types uploaded
 - Automatic extraction of accidents, violations from MVR → auto-fill Form 2
 
 **Files Changed:**
+
 - `docs/PROJECT_ROADMAP.md` - Added complete DQ file implementation section with technical details
 
 ---
@@ -483,11 +992,13 @@ Added comprehensive documentation for future multi-document support in `docs/PRO
 Enhanced AvA to provide transparent, helpful guidance for form fields that can't be extracted from resumes:
 
 **Post-Prefill Summary:**
+
 - AvA now explicitly tells users what was filled and what wasn't
 - Clear breakdown: "What I filled" vs "What you'll need to add"
 - Sets expectations upfront about resume limitations (e.g., "Form 2: accident/traffic records not on resumes")
 
 **Form-Specific Proactive Guidance:**
+
 - **Form 2 (Driving Experience & Safety)**: AvA explains why this is all manual entry and what each section requires
   - Equipment types, years of experience
   - Accident records (past 3 years)
@@ -500,16 +1011,19 @@ Enhanced AvA to provide transparent, helpful guidance for form fields that can't
   - Guides users on when to answer "Yes" vs "No" for compliance questions
 
 **Philosophy:**
+
 - Resumes inherently lack accident records, violations, detailed employment context
 - Better to be transparent and helpful than leave users confused about empty fields
 - ~25-30% prefill coverage is realistic - focus on making the remaining 70% easier
 
 **User Experience:**
+
 - AvA appears automatically when users enter Form 2 or Form 3 (once per form)
 - No intrusive popups - just helpful messages in the chat
 - Users can ask follow-up questions about any term or requirement
 
 **Files Changed:**
+
 - `src/components/TAssistant.tsx` - Added form navigation tracking and proactive guidance messages
 
 ---
@@ -519,6 +1033,7 @@ Enhanced AvA to provide transparent, helpful guidance for form fields that can't
 Major rebrand of the AI assistant from "T" to "AvA":
 
 **Name Change:**
+
 - All user-facing references updated from "T" to "AvA"
 - Welcome message: "Hi! I'm AvA, your AI assistant"
 - Navigation button: "Chat with AvA" (was "Chat with T")
@@ -528,18 +1043,21 @@ Major rebrand of the AI assistant from "T" to "AvA":
 - State variables renamed (isAvaCollapsed, avaHasUnread, avaIsWorking, etc.)
 
 **Light Mode Improvement:**
+
 - Darkened background gradient for better readability
 - Before: `#f5f0e8 → #ebe6dd` (too bright)
 - After: `#e8e0d5 → #ddd5cb` (more comfortable for extended viewing)
 - Reduces eye strain while maintaining the warm, cream aesthetic
 
 **Technical Updates:**
+
 - Component names remain TAssistant/TLoadingModal (internal code)
 - T Backend references unchanged (separate service)
 - All AI system prompts updated to identify as AvA
 - Maintained all existing functionality
 
 **Files Changed:**
+
 - `src/components/TLoadingModal.tsx` - Display "AvA" instead of "T"
 - `src/components/TAssistant.tsx` - All user messages reference AvA
 - `src/components/Navigation.tsx` - Updated buttons and tooltips
@@ -553,6 +1071,7 @@ Major rebrand of the AI assistant from "T" to "AvA":
 Redesigned the T loading modal to be more informative and visually appealing:
 
 **What Changed:**
+
 - **Context-Specific Messages**: Modal now explains what T is doing and why
   - "I'm reading your resume and extracting your info to save you time filling out forms. Usually takes 15-20 seconds."
   - "Looking up the best answer for you. This typically takes 10-15 seconds."
@@ -570,6 +1089,7 @@ Redesigned the T loading modal to be more informative and visually appealing:
   - Explains the value ("to save you time filling out forms")
 
 **Design Details:**
+
 - Uses lucide-react Sparkles icon
 - Gradient backgrounds (sage → mint for dark, white → gray for light)
 - Multiple animation layers (ping, pulse, spin, progress bar)
@@ -577,6 +1097,7 @@ Redesigned the T loading modal to be more informative and visually appealing:
 - Rounded-3xl for softer, more modern look
 
 **Files Changed:**
+
 - `src/components/TLoadingModal.tsx` - Redesigned with context messages and better visuals
 - `src/components/TAssistant.tsx` - Updated loading messages (removed emoji prefixes for cleaner display)
 
@@ -587,6 +1108,7 @@ Redesigned the T loading modal to be more informative and visually appealing:
 Made AvA Assistant more conversational and helpful during resume upload, with simple language for average users:
 
 **What Changed:**
+
 - **Upload Progress**: T now explains each step in plain English with time estimates
   - "Starting your upload... This will only take a moment!"
   - "Uploading your resume... (This usually takes 10-15 seconds)"
@@ -606,12 +1128,14 @@ Made AvA Assistant more conversational and helpful during resume upload, with si
   - No deep dive into IPFS, hashes, or transaction details
 
 **Philosophy:**
+
 - 99% of users don't care about blockchain metrics or technical details
 - Focus on **what** is happening and **why it matters to them**
 - Provide clear next steps when things go wrong
 - Celebrate successes and maintain encouraging tone
 
 **Files Changed:**
+
 - `src/components/TAssistant.tsx` - Rewrote all resume upload event handlers with user-friendly messages
 
 ---
@@ -621,6 +1145,7 @@ Made AvA Assistant more conversational and helpful during resume upload, with si
 Refreshed the app's visual identity in browser tabs:
 
 **Changes:**
+
 - **Page Title**: "Veree | Blockchain-Verified Driver Applications" (was "ResumeWallet")
 - **Meta Description**: Clear value prop about DOT applications with blockchain verification
 - **New Favicon**: Custom SVG with modern "V" symbol
@@ -629,12 +1154,14 @@ Refreshed the app's visual identity in browser tabs:
   - Scalable vector format (looks sharp on any screen, any size)
 
 **Design Details:**
+
 - Uses brand colors (#6B9080 sage, #A4C3B2 mint, #EAF4F4 cream)
 - Gradient effects for visual interest and depth
 - SVG format ensures crisp rendering at all resolutions
 - Professional, modern look that stands out in browser tabs
 
 **Files Changed:**
+
 - `src/app/layout.tsx` - Updated metadata with new title, description, icon path
 - `public/favicon.svg` - New custom SVG favicon with stylized V symbol
 - Deleted `src/app/favicon.ico` (replaced with modern SVG)
@@ -644,16 +1171,19 @@ Refreshed the app's visual identity in browser tabs:
 **Device-Based Theme Defaults**
 
 Implemented smart theme defaults based on device type:
+
 - **Mobile (< 768px)**: Defaults to **light mode** (better for bright environments, outdoor use)
 - **Desktop (≥ 768px)**: Defaults to **dark mode** (better for extended sessions, reduced eye strain)
 - **User preference**: Once a user manually toggles theme, their choice is saved and takes priority over device defaults
 
 **Why this matters:**
+
 - Mobile users are often on-the-go in bright environments → light mode is more readable
 - Desktop users often work in controlled lighting → dark mode is more comfortable
 - This gives the best first-time experience for each device type while respecting user choice
 
 **Files Changed:**
+
 - `src/contexts/ThemeContext.tsx` - Added `getInitialTheme()` helper that checks for saved preference first, then falls back to device-based default
 
 ---
@@ -663,6 +1193,7 @@ Implemented smart theme defaults based on device type:
 Created a stunning home page to welcome users and explain the product:
 
 **Home Page Features:**
+
 - **Hero section** - Large, bold headline with gradient text and clear value proposition
 - **Trust indicators** - Shows Blockchain Verified, DOT Compliant, and AI-Powered badges
 - **How It Works** - 3-step process with visual cards (Upload Resume → AI Auto-Fill → Submit & Verify)
@@ -672,11 +1203,13 @@ Created a stunning home page to welcome users and explain the product:
 - **Theme-aware** - Gorgeous gradients in both light and dark modes
 
 **User Flow:**
+
 - **Not logged in**: "Get Started" → Sign In page
 - **Logged in**: "Get Started" → Resume Upload page
 - **Home button**: Always returns to this landing page
 
 **Design Highlights:**
+
 - Uses lucide-react icons (Shield, FileCheck, Sparkles, ArrowRight, Zap)
 - Animated hover states with scale transforms
 - Gradient text effects using `bg-clip-text`
@@ -684,6 +1217,7 @@ Created a stunning home page to welcome users and explain the product:
 - Strategic use of brand colors (sage, mint, cream)
 
 **Files Changed:**
+
 - `src/components/HomePage.tsx` - New beautiful home page component
 - `src/app/page.tsx` - Added HomePage to routing, shows when `!currentPage`
 
@@ -696,6 +1230,7 @@ Created a stunning home page to welcome users and explain the product:
 Fixed the "Chat with T" button in mobile nav and cleaned up the resume upload section:
 
 **T Assistant Mobile Fix:**
+
 - **Fixed "Chat with T" button** - Button now opens T Assistant as a full-screen overlay on mobile (previously did nothing)
 - **Mobile full-screen mode** - T Assistant shows as `fixed inset-0` on mobile for better chat experience
 - **Desktop sidebar preserved** - On `md+` breakpoints, T remains as right sidebar
@@ -704,11 +1239,13 @@ Fixed the "Chat with T" button in mobile nav and cleaned up the resume upload se
 - **Better close button** - Changed from tiny minus sign (−) to larger X icon (`w-6 h-6` on mobile, `w-5 h-5` on desktop) for clearer "close" signal
 
 **Resume Upload Simplification:**
+
 - **Removed "Ask T" buttons** - Simplified the header by removing the two "Ask T about IPFS" and "Ask T about costs" buttons. These were cluttering the UI, especially on mobile.
 - **Responsive title sizing** - Changed title from fixed `text-3xl` to responsive `text-xl sm:text-2xl md:text-3xl` for better mobile readability.
 - **Cleaner layout** - Simplified from "Resume Upload with Full Verification" to just "Resume Upload" for better mobile fit.
 
 **Technical Implementation:**
+
 ```tsx
 // T Assistant: Full-screen on mobile, sidebar on desktop
 <div className={`fixed inset-0 md:inset-auto md:right-4 md:top-20 md:bottom-4 ...`}>
@@ -735,6 +1272,7 @@ useEffect(() => {
 ```
 
 **Files Changed:**
+
 - `src/components/TAssistant.tsx` - Changed to full-screen overlay on mobile
 - `src/components/Navigation.tsx` - Auto-close menu when T opens
 - `src/components/ResumeUploadWithVerification.tsx` - Removed Ask T buttons, made title responsive
@@ -746,6 +1284,7 @@ useEffect(() => {
 Smoothed out the navigation experience on phones and fixed the T Assistant sidebar appearing on mobile viewports.
 
 ### What Changed
+
 - Hid the floating **T Dynamic Island** on small screens (it now only appears on `md+` viewports) so it no longer collides with the hamburger/menu controls.
 - Added a dedicated **"Chat with T"** button inside the mobile menu so users can still open the assistant (complete with unread indicator text).
 - Moved the **dark/light ThemeToggle** into the hamburger menu on mobile to free up the header row; it still lives inline on tablet/desktop.
@@ -754,6 +1293,7 @@ Smoothed out the navigation experience on phones and fixed the T Assistant sideb
 - Made sidebar content padding adjustment desktop-only (`md:pr-[420px]`) to give full width on mobile.
 
 ### Why It Matters
+
 - Keeps the brand "dynamic island" feeling on desktop where there's room, while preventing layout overlap on phones.
 - Ensures all critical actions (theme switch + T assistant) remain available without overwhelming the header.
 - Makes the header feel intentional instead of cramped, improving first impressions for mobile users.
@@ -762,6 +1302,7 @@ Smoothed out the navigation experience on phones and fixed the T Assistant sideb
 - Consistent UX pattern: desktop gets persistent sidebar access, mobile gets menu-based access.
 
 ### Technical Details
+
 ```tsx
 // T Assistant sidebar hidden on mobile
 <div className="hidden md:block fixed right-4 top-20 ...">  // Collapsed
@@ -772,6 +1313,7 @@ Smoothed out the navigation experience on phones and fixed the T Assistant sideb
 ```
 
 ### Files Touched
+
 - `src/components/Navigation.tsx` - Responsive nav improvements
 - `src/components/TAssistant.tsx` - Hidden sidebar on mobile
 - `src/app/page.tsx` - Desktop-only padding adjustment
@@ -785,9 +1327,11 @@ Smoothed out the navigation experience on phones and fixed the T Assistant sideb
 Fixed two critical UX issues: users couldn't request prefill after declining, and prefilled data wasn't displaying in forms. Both now work perfectly.
 
 ### Issue 1: No Way Back to Prefill
+
 Fixed a UX issue where users who declined prefill couldn't change their mind and request it later. Now users can trigger prefill anytime while filling forms.
 
 **The Problem:**
+
 - User declines prefill → Forms appear
 - User starts filling manually → Realizes it's tedious
 - User wants to prefill now → No way to get back to it
@@ -795,12 +1339,14 @@ Fixed a UX issue where users who declined prefill couldn't change their mind and
 
 **The Solution:**
 Added a smart banner above the forms that:
+
 - Shows when user has a resume but hasn't prefilled
 - Offers to prefill with one click
 - Disappears after prefill completes
 - Re-appears if user uploads different resume
 
 **Banner Display Logic:**
+
 ```
 Shows when ALL of:
 ✓ User is filling forms (not on prefill screen)
@@ -810,6 +1356,7 @@ Shows when ALL of:
 ```
 
 **User Experience:**
+
 ```
 User: Clicks "Skip prefill"
   → Forms appear
@@ -825,6 +1372,7 @@ User: Clicks "Prefill from Resume"
 ```
 
 **Benefits:**
+
 - ✅ Users can change their mind
 - ✅ No dead ends or forced restarts
 - ✅ Non-intrusive (banner, not modal)
@@ -832,6 +1380,7 @@ User: Clicks "Prefill from Resume"
 - ✅ Professional UX (always give users options)
 
 **Technical Implementation:**
+
 - Banner checks: `!hasPrefilled && hasResume && !isDriverApplicationCompleted`
 - Button triggers `analysis_ready` event for existing resume
 - Falls back to upload screen if no resume hash available
@@ -844,6 +1393,7 @@ After clicking "Prefill from Resume", T Assistant would analyze and extract data
 
 **Root Cause:**
 React form components use `initialData` prop which is only read **once** when component mounts. When prefill updated the state:
+
 ```typescript
 setForm1Data(newData) // ✅ State updated
 // But component already mounted with old initialData (null)
@@ -871,6 +1421,7 @@ Added `formResetKey` increment in `handlePrefillSuccess` to force React to remou
 
 **Why This Works:**
 When a component's `key` prop changes, React treats it as a completely different component:
+
 1. Unmounts the old instance (with old initialData)
 2. Mounts a fresh instance (reads current initialData from state)
 3. Fresh instance displays the new data
@@ -878,6 +1429,7 @@ When a component's `key` prop changes, React treats it as a completely different
 This is a common React pattern for "resetting" components that depend on initial prop values.
 
 **Technical Implementation:**
+
 ```typescript
 // In handlePrefillSuccess:
 setForm1Data(prefillData.form1Data)
@@ -894,9 +1446,11 @@ setFormResetKey((prev) => prev + 1) // 🔑 Key change forces remount
 ```
 
 **Files Changed:**
+
 - `src/app/page.tsx` - Added conditional banner with prefill trigger button + formResetKey increment
 
 **Benefits:**
+
 - ✅ Prefilled data immediately visible
 - ✅ Forms display correct data after analysis
 - ✅ Works for both initial prefill and "Prefill from Resume" button
@@ -912,6 +1466,7 @@ After prefilling or manually filling forms, refreshing the page would lose all e
 
 **Root Cause:**
 Form data was being **loaded** from localStorage on mount (lines 452-467) but never **saved** back to it. The app had half of a persistence system:
+
 ```typescript
 // Loading existed ✅
 const storedForms = window.localStorage.getItem(`forms-${user.address}`)
@@ -930,7 +1485,7 @@ Added a `useEffect` hook that automatically saves form data to localStorage when
 ```typescript
 useEffect(() => {
   if (!user?.address || resetInProgressRef.current) return
-  
+
   if (form1Data || form2Data || form3Data) {
     const formsToSave = { form1Data, form2Data, form3Data }
     window.localStorage.setItem(
@@ -943,27 +1498,32 @@ useEffect(() => {
 ```
 
 **How It Works:**
+
 1. User prefills or types in forms → State updates
 2. useEffect detects state change → Auto-saves to localStorage
 3. User refreshes page → Data loads from localStorage
 4. Forms appear exactly as user left them ✅
 
 **Smart Safeguards:**
+
 - **Reset Protection:** Skips save during admin reset (`resetInProgressRef.current`)
 - **Empty Check:** Only saves if at least one form has data (prevents saving nulls)
 - **User Isolation:** Each wallet address has separate localStorage key
 
 **"Clear Forms" Button:**
 The existing dev button still works perfectly—it calls `handleWalletDataReset()` which:
+
 1. Sets `resetInProgressRef.current = true` (blocks auto-save)
 2. Clears all state: `setForm1Data(null)`, etc.
 3. Removes localStorage: `window.localStorage.removeItem(`forms-${user.address}`)`
 4. Resets everything back to initial state
 
 **Files Changed:**
+
 - `src/app/page.tsx` - Added form data persistence useEffect
 
 **Benefits:**
+
 - ✅ Form data survives page refresh
 - ✅ Auto-saves on every change (no save button needed)
 - ✅ Works with prefill and manual entry
@@ -981,6 +1541,7 @@ Perfect persistence system—data stays until explicitly cleared! 💪
 Removed automatic resume prefill triggers to give users full control over when and if they want their forms prefilled. This improves UX by making the experience feel professional rather than pushy.
 
 **The Problem:**
+
 - System automatically triggered resume analysis on login
 - Unexpected behavior that could confuse users
 - What if user already filled forms manually?
@@ -992,12 +1553,14 @@ Removed automatic resume prefill triggers to give users full control over when a
 Disabled automatic triggers. Prefill now only happens when user explicitly requests it through T Assistant during the DOT form conversation.
 
 **Before (Automatic):**
+
 ```
 User logs in → App sees resume → Automatic analysis → Automatic prefill
 User: "Wait, what? I didn't want that yet!"
 ```
 
 **After (Manual):**
+
 ```
 User logs in → No automatic action
 User navigates to forms → Clean slate
@@ -1010,6 +1573,7 @@ User: (ignores) → Keep filling manually
 ```
 
 **Benefits:**
+
 - ✅ User initiates and expects the action
 - ✅ User is in context (actively filling forms)
 - ✅ Clear intent and consent
@@ -1019,6 +1583,7 @@ User: (ignores) → Keep filling manually
 - ✅ Respects user's existing work
 
 **Technical Changes:**
+
 - Disabled two auto-trigger `useEffect` hooks in `src/app/page.tsx`:
   1. Auto-trigger when navigating to forms with existing resume
   2. Auto-trigger when ResumeDashboard detects existing resume on load
@@ -1026,6 +1591,7 @@ User: (ignores) → Keep filling manually
 - Added clear comments explaining why auto-triggers were disabled
 
 **How Manual Prefill Works:**
+
 1. User talks to T Assistant about filling forms
 2. T detects user has uploaded resume
 3. T asks: "Would you like me to prefill with your resume?"
@@ -1034,6 +1600,7 @@ User: (ignores) → Keep filling manually
 6. User always in control ✅
 
 **Files Changed:**
+
 - `src/app/page.tsx` - Disabled both automatic prefill triggers (commented out with explanation)
 - `src/components/TAssistant.tsx` - Added "try refreshing" tip to cache lock error message
 
@@ -1051,11 +1618,12 @@ Implemented intelligent error handling for the "T Backend cached but we lost our
 User uploads resume → Works great ✅  
 Something happens (admin delete, DB reset, testing, etc.)  
 User tries to re-upload **same resume** → ❌ "Cannot extract text"  
-User confused: *"It worked before, why not now?!"*
+User confused: _"It worked before, why not now?!"_
 
 This isn't just a testing edge case - it's a real production UX issue that would frustrate users and generate support tickets.
 
 **Why This Happens:**
+
 - T Backend maintains a permanent vector store of processed files
 - Once they process a file (by content hash), they never reprocess it
 - If our cache gets deleted but theirs persists → stuck in limbo:
@@ -1088,6 +1656,7 @@ This isn't just a testing edge case - it's a real production UX issue that would
    - Minimizes likelihood of cache lock scenario
 
 **Error Message Flow:**
+
 ```
 Old (Confusing):
   "Could not extract text from resume" ❌
@@ -1095,22 +1664,23 @@ Old (Confusing):
 
 New (Clear & Actionable):
   "We've seen this resume before but lost our copy of the analysis.
-   
-   Why this happens: Your resume was previously analyzed, but we no 
-   longer have the extracted data cached. Our AI service recognizes 
+
+   Why this happens: Your resume was previously analyzed, but we no
+   longer have the extracted data cached. Our AI service recognizes
    the file and won't reprocess the exact same document.
-   
+
    Simple fix:
    1. Open your resume in any PDF editor
-   2. Make any tiny change (add space, update date, fix typo)  
+   2. Make any tiny change (add space, update date, fix typo)
    3. Save as new PDF
    4. Upload the new file
-   
+
    [Upload modified resume] [Fill manually]" ✅
   User: "Oh! That makes sense, I'll just add a space."
 ```
 
 **Benefits:**
+
 - ✅ Users understand WHY the error happened
 - ✅ Clear instructions on HOW to fix it
 - ✅ Multiple options (modify resume OR fill manually)
@@ -1120,35 +1690,48 @@ New (Clear & Actionable):
 - ✅ Technical details logged for debugging
 
 **Files Changed:**
+
 - `src/app/api/ai/prefill-resume/route.ts` - Added T Backend cache lock detection with detailed error response
 - `src/components/TAssistant.tsx` - Enhanced error handling to show user-friendly guidance with action buttons
 - `src/app/api/admin/reset-wallet/route.ts` - Verified it preserves `t_prefill_cache` (never deletes it)
 
 **Technical Implementation:**
+
 ```typescript
 // API Detection
 if (tBackendData.file_id && tBackendData.vector_store_id && !tBackendData.raw) {
-  return NextResponse.json({
-    error: 'Resume already processed',
-    errorType: 'T_BACKEND_CACHE_LOCK',
-    userMessage: 'We\'ve seen this resume before...',
-    actionRequired: 'Please make a small edit...',
-  }, { status: 409 })
+  return NextResponse.json(
+    {
+      error: 'Resume already processed',
+      errorType: 'T_BACKEND_CACHE_LOCK',
+      userMessage: "We've seen this resume before...",
+      actionRequired: 'Please make a small edit...',
+    },
+    { status: 409 }
+  )
 }
 
 // Frontend Handling
 if (error.errorType === 'T_BACKEND_CACHE_LOCK') {
-  addAssistantMessage(`⚠️ ${error.userMessage}\n\n${error.actionRequired}\n\n[detailed explanation]`, {
-    actions: [
-      { id: 'resume-reupload', label: 'Upload modified resume', value: 'resume:reupload' },
-      { id: 'resume-continue', label: 'Fill manually', value: 'forms' },
-    ]
-  })
+  addAssistantMessage(
+    `⚠️ ${error.userMessage}\n\n${error.actionRequired}\n\n[detailed explanation]`,
+    {
+      actions: [
+        {
+          id: 'resume-reupload',
+          label: 'Upload modified resume',
+          value: 'resume:reupload',
+        },
+        { id: 'resume-continue', label: 'Fill manually', value: 'forms' },
+      ],
+    }
+  )
 }
 ```
 
 **Prevention Strategy:**
 While we can't prevent T Backend's internal caching, we minimize the problem:
+
 1. Persistent `t_prefill_cache` survives deletions
 2. Admin operations preserve extraction cache
 3. Cache checked before calling T Backend
@@ -1165,17 +1748,20 @@ This is a production-quality solution that turns a confusing technical limitatio
 Fixed the frustrating 5-10 minute logout issue by configuring Alchemy's session timeout.
 
 **The Problem:**
+
 - Users were being automatically logged out after ~15 minutes (Alchemy's default)
 - This was way too short for filling out multi-step driver application forms
 - Had to re-authenticate multiple times during a single session
 
 **The Solution:**
+
 - Added `sessionConfig` to Alchemy Account Kit configuration
 - Extended session duration from 15 minutes → **7 days**
 - Sessions now persist across browser sessions (stored in localStorage)
 - Much better UX for users filling out lengthy forms
 
 **Configuration Added:**
+
 ```typescript
 sessionConfig: {
   expirationTimeMs: 1000 * 60 * 60 * 24 * 7, // 7 days in milliseconds
@@ -1183,12 +1769,14 @@ sessionConfig: {
 ```
 
 **Benefits:**
+
 - ✅ Users stay logged in for 7 days (configurable)
 - ✅ No more interruptions during form filling
 - ✅ Better experience for returning users
 - ✅ Sessions survive browser restarts (localStorage)
 
 **Files Changed:**
+
 - `src/lib/alchemy-account-config.ts` - Added sessionConfig to both dev and production configs
 
 **Security Note:**
@@ -1203,6 +1791,7 @@ While longer sessions improve UX, they increase risk if a device is compromised.
 Added a dedicated `t_prefill_cache` table that preserves AI extraction results even when resumes are deleted. This solves the T Backend duplicate detection issue and makes testing/admin operations seamless.
 
 **The Problem We Solved:**
+
 - T Backend maintains an internal vector store of processed files
 - Once they process a file (by content hash), they won't reprocess it
 - When we deleted a resume for testing, our cache was deleted too
@@ -1210,6 +1799,7 @@ Added a dedicated `t_prefill_cache` table that preserves AI extraction results e
 - **Result**: Couldn't test with the same resume twice
 
 **The Solution:**
+
 - Created separate `t_prefill_cache` table that never gets deleted (unless explicitly cleared)
 - Two-layer caching strategy:
   1. **PRIMARY**: `t_prefill_cache` (persistent, survives resume deletions)
@@ -1218,6 +1808,7 @@ Added a dedicated `t_prefill_cache` table that preserves AI extraction results e
 - Admin reset now clears forms but preserves extraction cache
 
 **How It Works:**
+
 ```
 Upload Resume → T Backend Extracts Data → Save to BOTH caches
                                               ├─ t_prefill_cache (permanent)
@@ -1231,6 +1822,7 @@ Re-upload Same Resume → Check t_prefill_cache FIRST
 ```
 
 **Benefits:**
+
 - ✅ Can test with same resume infinitely (cache persists)
 - ✅ Admin reset works perfectly (forms clear, cache stays)
 - ✅ Faster prefills after first extraction (instant cache hits)
@@ -1238,10 +1830,12 @@ Re-upload Same Resume → Check t_prefill_cache FIRST
 - ✅ T Backend's internal cache becomes irrelevant to us
 
 **Files Changed:**
+
 - `CREATE_T_PREFILL_CACHE_TABLE.sql` - New persistent cache table with indexes
 - `src/app/api/ai/prefill-resume/route.ts` - Updated to check persistent cache first, save to both caches
 
 **Database Schema:**
+
 ```sql
 t_prefill_cache (
   cache_key TEXT PRIMARY KEY,    -- T Backend file_id
@@ -1260,6 +1854,7 @@ t_prefill_cache (
 **MAJOR WIN: Seamless Resume-to-Form Prefill Flow**
 
 After extensive debugging and optimization, the resume prefill feature now works **reliably and automatically**:
+
 - ✅ Upload resume → T Assistant analyzes → Forms auto-prefill → User just reviews and submits
 - ✅ No more duplicate errors, timeouts, or race conditions
 - ✅ Works on page reload (existing resumes automatically trigger analysis)
@@ -1269,11 +1864,13 @@ After extensive debugging and optimization, the resume prefill feature now works
 **What We Fixed:**
 
 Three critical issues were resolved to achieve this:
+
 1. **504 Timeouts**: T Backend couldn't download from slow public IPFS gateways → Fixed by using Pinata's fast dedicated gateway
 2. **Race Conditions**: Duplicate API calls when page loaded with existing resume → Fixed with triple cache check + frontend deduplication flag
 3. **Confusing Logs**: Warnings appeared even when prefill succeeded → Fixed by streamlining retry logic and only showing errors when truly failed
 
 **User Experience Now:**
+
 - Upload resume once
 - T Assistant automatically extracts all relevant data
 - Forms are prefilled instantly (or from cache if already processed)
@@ -1307,6 +1904,7 @@ Three critical issues were resolved to achieve this:
    - Lesson: Add your own caching layer when external APIs have unpredictable behavior
 
 **Files Modified:**
+
 - `src/app/api/ai/prefill-resume/route.ts` - Triple cache check, Pinata gateway, cleaner logging
 - `src/app/page.tsx` - Race condition prevention with `analysisPendingRef`
 - `COMPLETE_RESUMES_SCHEMA.sql` - Added `extracted_data` JSONB column for caching

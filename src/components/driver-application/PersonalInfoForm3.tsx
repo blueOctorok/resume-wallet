@@ -416,51 +416,129 @@ export default function PersonalInfoForm3({
     setFormData((prev) => ({
       // Employment History - preserve if exists, especially from AI
       employers: prev.employers?.length > 0 && prev.employers.some(emp => emp.name || emp.positionHeld)
-        ? prev.employers.map((employer) => ({
-            // Fill missing fields within existing employers
-            name: employer.name || '',
-            phone: employer.phone || '',
-            address: employer.address || '',
-            positionHeld: employer.positionHeld || '',
-            fromDate: employer.fromDate || '',
-            toDate: employer.toDate || '',
-            reasonForLeaving: employer.reasonForLeaving || '',
-            salary: employer.salary || '',
-            gapsInEmployment: employer.gapsInEmployment || '',
-            subjectToFMCSR: employer.subjectToFMCSR || 'yes',
-            safetySensitiveFunction: employer.safetySensitiveFunction || 'yes',
-            isUnemployment: employer.isUnemployment ?? false,
-          }))
-        : [
-            {
-              name: 'ABC Trucking Company',
-              phone: '(555) 123-4567',
-              address: '123 Highway Road, Columbus, OH 43215',
-              positionHeld: 'Commercial Driver',
-              fromDate: '01/2022',
-              toDate: 'Present',
-              reasonForLeaving: '',
-              salary: '$55,000',
-              gapsInEmployment: 'None',
-              subjectToFMCSR: 'yes',
-              safetySensitiveFunction: 'yes',
-              isUnemployment: false,
-            },
-            {
-              name: 'XYZ Logistics',
-              phone: '(555) 987-6543',
-              address: '456 Freight Lane, Cleveland, OH 44101',
-              positionHeld: 'Delivery Driver',
-              fromDate: '06/2019',
-              toDate: '12/2021',
-              reasonForLeaving: 'Better opportunity',
-              salary: '$48,000',
-              gapsInEmployment: 'None',
-              subjectToFMCSR: 'yes',
-              safetySensitiveFunction: 'yes',
-              isUnemployment: false,
-            },
-          ],
+        ? prev.employers.map((employer) => {
+            // Check if this is a past job (not current) that needs reasonForLeaving
+            const isPastJob = employer.toDate && employer.toDate !== 'Present' && employer.toDate.trim() !== ''
+            const needsReason = isPastJob && !employer.isUnemployment && (!employer.reasonForLeaving || employer.reasonForLeaving.trim() === '')
+            
+            return {
+              // Fill missing fields within existing employers
+              name: employer.name || '',
+              phone: employer.phone || '',
+              address: employer.address || '',
+              positionHeld: employer.positionHeld || '',
+              fromDate: employer.fromDate || '',
+              toDate: employer.toDate || '',
+              // Fill reasonForLeaving for past jobs if missing
+              reasonForLeaving: needsReason 
+                ? 'Better opportunity' 
+                : (employer.reasonForLeaving || ''),
+              salary: employer.salary || '',
+              gapsInEmployment: employer.gapsInEmployment || '',
+              subjectToFMCSR: employer.subjectToFMCSR || 'yes',
+              safetySensitiveFunction: employer.safetySensitiveFunction || 'yes',
+              isUnemployment: employer.isUnemployment ?? false,
+            }
+          })
+        : (() => {
+            // Calculate dates relative to today to ensure 10+ years coverage
+            const today = new Date()
+            const currentYear = today.getFullYear()
+            const currentMonth = today.getMonth() + 1 // 1-12
+            
+            return [
+              // Current Job (starts 3 years ago)
+              {
+                name: 'ABC Trucking Company',
+                phone: '(555) 123-4567',
+                address: '123 Highway Road, Columbus, OH 43215',
+                positionHeld: 'Commercial Driver',
+                fromDate: `01/${currentYear - 3}`,
+                toDate: 'Present',
+                reasonForLeaving: '', // Current job doesn't need reason
+                salary: '$55,000',
+                gapsInEmployment: 'None',
+                subjectToFMCSR: 'yes',
+                safetySensitiveFunction: 'yes',
+                isUnemployment: false,
+              },
+              // Previous Job (2.5 years)
+              {
+                name: 'XYZ Logistics',
+                phone: '(555) 987-6543',
+                address: '456 Freight Lane, Cleveland, OH 44101',
+                positionHeld: 'Delivery Driver',
+                fromDate: `06/${currentYear - 6}`,
+                toDate: `12/${currentYear - 3}`,
+                reasonForLeaving: 'Better opportunity',
+                salary: '$48,000',
+                gapsInEmployment: 'None',
+                subjectToFMCSR: 'yes',
+                safetySensitiveFunction: 'yes',
+                isUnemployment: false,
+              },
+              // Earlier Job (2.2 years)
+              {
+                name: 'Midwest Transport Solutions',
+                phone: '(555) 456-7890',
+                address: '789 Industrial Blvd, Indianapolis, IN 46225',
+                positionHeld: 'Regional Driver',
+                fromDate: `03/${currentYear - 8}`,
+                toDate: `05/${currentYear - 6}`,
+                reasonForLeaving: 'Relocated for better pay',
+                salary: '$45,000',
+                gapsInEmployment: 'None',
+                subjectToFMCSR: 'yes',
+                safetySensitiveFunction: 'yes',
+                isUnemployment: false,
+              },
+              // Unemployment Period (0.2 years) - Tests checkbox functionality
+              {
+                name: 'Unemployment',
+                phone: '',
+                address: '',
+                positionHeld: 'Unemployed',
+                fromDate: `01/${currentYear - 8}`,
+                toDate: `02/${currentYear - 8}`,
+                reasonForLeaving: 'Between jobs',
+                salary: '',
+                gapsInEmployment: 'Short gap between positions',
+                subjectToFMCSR: 'no',
+                safetySensitiveFunction: 'no',
+                isUnemployment: true, // Checkbox will be checked
+              },
+              // Earlier Job (1.2 years)
+              {
+                name: 'Swift Delivery Services',
+                phone: '(555) 234-5678',
+                address: '321 Commerce Dr, Cincinnati, OH 45202',
+                positionHeld: 'Local Delivery Driver',
+                fromDate: `11/${currentYear - 9}`,
+                toDate: `12/${currentYear - 8}`,
+                reasonForLeaving: 'Seeking long-haul opportunities',
+                salary: '$42,000',
+                gapsInEmployment: 'None',
+                subjectToFMCSR: 'yes',
+                safetySensitiveFunction: 'yes',
+                isUnemployment: false,
+              },
+              // Additional Job to reach 10+ years (0.7 years)
+              {
+                name: 'First Transport Inc',
+                phone: '(555) 345-6789',
+                address: '555 Main Street, Toledo, OH 43601',
+                positionHeld: 'Entry Level Driver',
+                fromDate: `03/${currentYear - 10}`,
+                toDate: `09/${currentYear - 9}`,
+                reasonForLeaving: 'Found better opportunity',
+                salary: '$40,000',
+                gapsInEmployment: 'None',
+                subjectToFMCSR: 'yes',
+                safetySensitiveFunction: 'yes',
+                isUnemployment: false,
+              },
+            ]
+          })(),
       
       // Education - add test data only if empty
       education: prev.education?.length > 0 && prev.education.some(edu => edu.nameAndLocation || edu.courseOfStudy)

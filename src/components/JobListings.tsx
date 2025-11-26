@@ -9,9 +9,16 @@ import {
   Briefcase,
   TrendingUp,
   Filter,
+  FileText,
 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import LoadingScreen from './LoadingScreen'
+import dynamic from 'next/dynamic'
+
+// Dynamically import the modal to reduce initial bundle size
+const ApplyWithVereeModal = dynamic(() => import('./ApplyWithVereeModal'), {
+  ssr: false
+})
 
 interface Job {
   id: string
@@ -31,14 +38,18 @@ interface Job {
 
 interface JobListingsProps {
   onClose?: () => void
+  onBack: () => void
+  userAddress: string | null
 }
 
-export default function JobListings({ onClose }: JobListingsProps) {
+export default function JobListings({ onClose, onBack, userAddress }: JobListingsProps) {
   const { theme } = useTheme()
   const [jobs, setJobs] = useState<Job[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [totalCount, setTotalCount] = useState(0)
+  const [applyModalOpen, setApplyModalOpen] = useState(false)
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null)
 
   // Search filters
   const [keywords, setKeywords] = useState('truck driver CDL')
@@ -390,19 +401,35 @@ export default function JobListings({ onClose }: JobListingsProps) {
                     </div>
                   </div>
 
-                  {/* Apply button */}
-                  <div className='flex-shrink-0'>
+                  {/* Apply buttons */}
+                  <div className='flex-shrink-0 flex flex-col gap-2'>
+                    {userAddress && (
+                      <button
+                        onClick={() => {
+                          setSelectedJob(job)
+                          setApplyModalOpen(true)
+                        }}
+                        className={`flex items-center gap-2 px-6 py-3 font-semibold rounded-lg transition-all duration-200 whitespace-nowrap shadow-lg hover:shadow-xl ${
+                          theme === 'dark'
+                            ? 'bg-brand-mint/30 hover:bg-brand-mint/40 text-white border border-brand-mint/50'
+                            : 'bg-brand-sage hover:bg-brand-sage-dark text-white'
+                        }`}
+                      >
+                        <FileText className='w-4 h-4' />
+                        Apply with Veree
+                      </button>
+                    )}
                     <a
                       href={job.redirect_url}
                       target='_blank'
                       rel='noopener noreferrer'
                       className={`flex items-center gap-2 px-6 py-3 font-semibold rounded-lg transition-all duration-200 whitespace-nowrap shadow-lg hover:shadow-xl ${
                         theme === 'dark'
-                          ? 'bg-brand-mint/30 hover:bg-brand-mint/40 text-white border border-brand-mint/50'
-                          : 'bg-brand-sage hover:bg-brand-sage-dark text-white'
+                          ? 'bg-slate-800 hover:bg-slate-700 text-white border border-gray-600'
+                          : 'bg-gray-100 hover:bg-gray-200 text-brand-sage border border-gray-300'
                       }`}
                     >
-                      Apply Now
+                      View Original
                       <ExternalLink className='w-4 h-4' />
                     </a>
                   </div>
@@ -470,6 +497,20 @@ export default function JobListings({ onClose }: JobListingsProps) {
           </div>
         )}
       </div>
+
+      {/* Apply Modal */}
+      <ApplyWithVereeModal
+        isOpen={applyModalOpen}
+        onClose={() => {
+          setApplyModalOpen(false)
+          setSelectedJob(null)
+        }}
+        job={selectedJob}
+        userAddress={userAddress}
+        onApplicationSubmitted={() => {
+          console.log('Application submitted successfully')
+        }}
+      />
     </div>
   )
 }
