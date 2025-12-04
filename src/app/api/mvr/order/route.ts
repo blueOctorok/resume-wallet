@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
 
 /**
@@ -12,13 +13,35 @@ import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from 
  *   dlNumber: string
  *   dlState: string
  *   mvrSearchType?: 'standard' | 'comprehensive'
+ *   jobState?: string (2-letter state code where job will be performed)
+ *   includeFmcsaCrashInspection?: boolean (include FMCSA crash/inspection report)
  * }
  * 
  * Creates an MVR order with Accio and stores it in mvr_orders table
  */
 export async function POST(request: NextRequest) {
   try {
-    const { walletAddress, dlNumber, dlState, mvrSearchType = 'standard' } = await request.json()
+    const { 
+      walletAddress, 
+      dlNumber, 
+      dlState, 
+      mvrSearchType = 'standard',
+      jobState,
+      includeFmcsaCrashInspection = false,
+      // Personal info (optional - will use DOT app if not provided)
+      firstName: providedFirstName,
+      lastName: providedLastName,
+      middleName: providedMiddleName,
+      email: providedEmail,
+      phone: providedPhone,
+      ssn: providedSsn,
+      dob: providedDob,
+      gender: providedGender,
+      address: providedAddress,
+      city: providedCity,
+      state: providedState,
+      zip: providedZip,
+    } = await request.json()
 
     // Validate input
     if (!walletAddress) {
@@ -53,18 +76,38 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // 1. Get user and driver profile
-    const { data: user, error: userError } = await supabase
+    // 1. Get or create user
+    let { data: user, error: userError } = await supabase
       .from('users')
       .select('id, email, name')
       .ilike('wallet_address', walletAddress)
       .single()
 
-    if (userError || !user) {
-      console.error('[MVR ORDER] User not found:', walletAddress)
+    // If user doesn't exist, create them (they're authenticated via Alchemy)
+    if (userError && userError.code === 'PGRST116') {
+      console.log('[MVR ORDER] User not found, creating new user:', walletAddress)
+      const { data: newUser, error: createError } = await supabase
+        .from('users')
+        .insert({
+          wallet_address: walletAddress,
+          is_active: true,
+        })
+        .select('id, email, name')
+        .single()
+
+      if (createError || !newUser) {
+        console.error('[MVR ORDER] Error creating user:', createError)
+        return NextResponse.json(
+          { error: 'Failed to create user account' },
+          { status: 500 }
+        )
+      }
+      user = newUser
+    } else if (userError || !user) {
+      console.error('[MVR ORDER] Error fetching user:', userError)
       return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
+        { error: 'Failed to fetch user account' },
+        { status: 500 }
       )
     }
 
@@ -112,38 +155,45 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .maybeSingle()
 
-    // Extract personal info from DOT application or use defaults
+    // Extract personal info: Use provided values first, then DOT app, then user defaults
     const appData = dotApplication?.application_data || {}
     const form1Data = appData.form1Data || {}
     
-    const firstName = form1Data.firstName || user.name?.split(' ')[0] || ''
-    const lastName = form1Data.lastName || user.name?.split(' ').slice(1).join(' ') || ''
-    const middleName = form1Data.middleName || ''
-    const email = user.email || ''
-    const phone = form1Data.phone || ''
-    const ssn = form1Data.ssn || '' // Last 4 digits only
-    const dob = form1Data.dateOfBirth || ''
-    const address = form1Data.address || ''
-    const city = form1Data.city || ''
-    const state = form1Data.state || ''
-    const zip = form1Data.zip || ''
+    const firstName = providedFirstName || form1Data.firstName || user.name?.split(' ')[0] || ''
+    const lastName = providedLastName || form1Data.lastName || user.name?.split(' ').slice(1).join(' ') || ''
+    const middleName = providedMiddleName || form1Data.middleName || ''
+    const email = providedEmail || user.email || ''
+    const phone = providedPhone || form1Data.phone || ''
+    const ssn = providedSsn || form1Data.ssn || '' // Last 4 digits only
+    const dob = providedDob || form1Data.dateOfBirth || ''
+    const gender = providedGender || form1Data.gender || 'U' // M/F/U
+    const address = providedAddress || form1Data.address || ''
+    const city = providedCity || form1Data.city || ''
+    const state = providedState || form1Data.state || ''
+    const zip = providedZip || form1Data.zip || ''
 
     // Validate required fields
     if (!firstName || !lastName || !email || !ssn || !dob || !address || !city || !state || !zip) {
+      const missingFields = {
+        firstName: !firstName,
+        lastName: !lastName,
+        email: !email,
+        ssn: !ssn,
+        dob: !dob,
+        address: !address,
+        city: !city,
+        state: !state,
+        zip: !zip
+      }
+      
+      // Check if DOT application exists but is incomplete
+      const hasIncompleteApp = dotApplication && !dotApplication.is_complete
+      
       return NextResponse.json(
         { 
-          error: 'Missing required information. Please complete your DOT application first.',
-          missingFields: {
-            firstName: !firstName,
-            lastName: !lastName,
-            email: !email,
-            ssn: !ssn,
-            dob: !dob,
-            address: !address,
-            city: !city,
-            state: !state,
-            zip: !zip
-          }
+          error: 'Missing required personal information. Please provide all required fields (name, DOB, SSN, address) either in this form or by completing your DOT application.',
+          missingFields,
+          requiresPersonalInfo: true
         },
         { status: 400 }
       )
@@ -163,14 +213,17 @@ export async function POST(request: NextRequest) {
       phone,
       ssn: ssn.slice(-4), // Only last 4 digits for security
       dob,
+      gender,
       address,
       city,
       state,
       zip,
+      jobState, // Pass through from request (optional)
       dlNumber,
       dlState,
       orderNumber,
       mvrSearchType,
+      includeFmcsaCrashInspection, // Pass through from request
       webhookUrl,
       webhookGuid
     })
@@ -183,7 +236,7 @@ export async function POST(request: NextRequest) {
       const accioResponseRaw = await fetch(accioApiUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/xml',
+          'Content-Type': 'text/xml',
         },
         body: orderXml
       })
@@ -196,6 +249,7 @@ export async function POST(request: NextRequest) {
 
       accioResponse = await accioResponseRaw.text()
       console.log('[MVR ORDER] Accio API response received')
+      console.log('[MVR ORDER] Accio response (first 500 chars):', accioResponse.substring(0, 500))
     } catch (error: any) {
       console.error('[MVR ORDER] Error calling Accio API:', error)
       return NextResponse.json(
@@ -204,26 +258,77 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 6. Parse Accio response to get suborder number
-    // Accio typically returns order confirmation with suborder number
-    const subOrderMatch = accioResponse.match(/<subOrder[^>]*number="([^"]+)"/i)
-    const subOrderNumber = subOrderMatch ? subOrderMatch[1] : null
+    // 6. Parse Accio response to get suborder ID and applicant portal URL
+    // Response format (from Accio docs):
+    // <?xml version="1.0" encoding="UTF-8"?>
+    // <XML>
+    //   <order orderID="53027" number="123987">
+    //     <subOrder type="MVR" suborderID="889798"/>
+    //     <subOrder type="fmcsa_crash_inspection" suborderID="889799"/>
+    //     <applicantPortalURL>https://service.keybackground.com/c/p/collect_information?guikey=...</applicantPortalURL>
+    //   </order>
+    // </XML>
+    
+    // Try multiple patterns to find subOrder ID
+    let subOrderId = null
+    const patterns = [
+      /<subOrder[^>]*type=["']MVR["'][^>]*suborderID=["']([^"']+)["']/i,
+      /<subOrder[^>]*suborderID=["']([^"']+)["'][^>]*type=["']MVR["']/i,
+      /<subOrder[^>]*type=["']MVR["'][^>]*suborderID=["']([^"']+)["']/i,
+    ]
+    
+    for (const pattern of patterns) {
+      const match = accioResponse.match(pattern)
+      if (match) {
+        subOrderId = match[1]
+        break
+      }
+    }
+    
+    // Try multiple patterns for portal URL
+    let applicantPortalUrl = null
+    const portalPatterns = [
+      /<applicantPortalURL>([^<]+)<\/applicantPortalURL>/i,
+      /<applicantPortalURL[^>]*>([^<]+)<\/applicantPortalURL>/i,
+      /applicantPortalURL[^>]*>([^<]+)</i,
+    ]
+    
+    for (const pattern of portalPatterns) {
+      const match = accioResponse.match(pattern)
+      if (match) {
+        applicantPortalUrl = match[1]
+        break
+      }
+    }
+    
+    console.log('[MVR ORDER] Parsed response - subOrderId:', subOrderId, 'portalUrl:', applicantPortalUrl)
+    
+    // Log full response if parsing failed (for debugging)
+    if (!subOrderId && !applicantPortalUrl) {
+      console.warn('[MVR ORDER] Could not parse Accio response. Full response:', accioResponse)
+    }
 
-    // 7. Store order in database
-    const { data: mvrOrder, error: orderError } = await supabase
+    // 7. Store order in database (use service role to bypass RLS)
+    const supabaseService = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { data: mvrOrder, error: orderError } = await supabaseService
       .from('mvr_orders')
       .insert({
         driver_user_id: user.id,
         driver_profile_id: profile.id,
         driver_application_id: dotApplication?.id || null,
         accio_order_number: orderNumber,
-        accio_suborder_number: subOrderNumber,
+        accio_suborder_number: subOrderId,
         order_type: 'MVR',
         mvr_search_type: mvrSearchType,
         dl_number: dlNumber,
         dl_state: dlState,
         status: 'pending',
         order_xml: orderXml,
+        applicant_portal_url: applicantPortalUrl,
         expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
       })
       .select()
@@ -246,7 +351,8 @@ export async function POST(request: NextRequest) {
         orderNumber: mvrOrder.accio_order_number,
         subOrderNumber: mvrOrder.accio_suborder_number,
         status: mvrOrder.status,
-        orderedAt: mvrOrder.ordered_at
+        orderedAt: mvrOrder.ordered_at,
+        applicantPortalUrl: mvrOrder.applicant_portal_url
       }
     })
 

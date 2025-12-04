@@ -2,6 +2,147 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 📋 **ACCIO MVR INTEGRATION COMPLETE WITH LIVE TEST CREDENTIALS** (December 2, 2025)
+
+**Enhanced Accio MVR Integration with Latest XML Schema + Working Test Environment**
+
+Updated the Accio XML builder to match the latest production XML format provided by Accio, configured real test credentials, and implemented applicant portal URL handling.
+
+### **Improvements:**
+
+- **Live Test Credentials Configured:**
+  - Real API endpoint: `https://service.keybackground.com/c/p/researcherxml`
+  - Working test account credentials: `testaccount` / `admin` / `demo2023`
+  - Ready to test MVR orders immediately!
+
+- **Applicant Portal URL Handling:**
+  - Added `applicant_portal_url` column to `mvr_orders` table
+  - Parses portal URL from Accio's XML response
+  - Returns portal URL in order API response for UI display
+  - Portal allows applicants to provide additional info if needed (email suppressed by default)
+
+- **New Subject Fields:**
+  - Added `gender` field (M/F/U for Male/Female/Unknown)
+  - Added `race` field (defaults to 'U' for Unknown)
+  - Added `jobstate` field (state where job will be performed, defaults to residential state)
+  - Changed `portalfromapplicant` from 'N' to 'Y' to match production format
+
+- **New Order Configuration:**
+  - Added `SuppressApplicantPortalEmail` flag (defaults to 'Y' to prevent Accio from emailing applicants directly)
+  - Added `includeFmcsaCrashInspection` option to order FMCSA crash/inspection reports alongside MVR
+  - Updated XML comments to match Accio's production format
+
+- **Improved Response Parsing:**
+  - Parses Accio's XML response to extract `suborderID` (not just order number)
+  - Extracts `applicantPortalURL` from response
+  - Better error handling and logging
+
+### **Files Created:**
+
+- `src/app/mvr/page.tsx` - **Dedicated MVR order page** with clean form UI
+- `docs/ACCIO_XML_EXAMPLE.md` - Complete XML format examples with annotations
+- `ADD_APPLICANT_PORTAL_URL.sql` - Database migration to add portal URL column
+
+### **Files Modified:**
+
+- `.env.local` - Configured real test credentials and API endpoint
+- `src/lib/accio-xml-builder.ts` - Updated interface and XML generation logic
+- `src/app/api/mvr/order/route.ts` - Added response parsing and portal URL handling
+- `src/app/api/mvr/status/[orderId]/route.ts` - Returns portal URL in status response
+- `src/components/Navigation.tsx` - Added "Order MVR" button that links to dedicated page
+- `src/app/page.tsx` - Added 'mvr' route handling
+- `docs/MVR_INTEGRATION.md` - Updated with test credentials and portal URL docs
+
+### **UI Features:**
+
+- Clean, dedicated MVR order page at `/mvr`
+- Full form with all required information:
+  - **Personal Information**: First/Last Name, Email, Phone, SSN (last 4), DOB, Address, City, State, Zip
+  - **License Information**: DL Number and State (required), Job State (optional)
+  - **Options**: MVR Search Type (standard/comprehensive), FMCSA Crash/Inspection checkbox
+- Success screen shows order details + applicant portal URL
+- Applicant portal link displayed with context (only needed occasionally)
+- Navigation button in driver menu
+- **No DOT application required** - all info collected directly in MVR form
+
+### **Driver UI Button:**
+
+- Added a minimal **Order MVR** button for logged-in drivers:
+  - `src/components/OrderMvrButton.tsx` - Collects DL number/state and calls `/api/mvr/order`
+  - Wired into driver navigation next to `MvrPaymentButton` so drivers can:
+    - Pay in USDC (on-chain)
+    - Trigger the actual MVR order (off-chain via Accio)
+
+### **Backward Compatibility:**
+
+All changes are backward compatible. New fields have sensible defaults:
+- `gender` defaults to 'U' (Unknown)
+- `race` defaults to 'U' (Unknown)
+- `jobstate` defaults to residential state
+- `suppressApplicantEmail` defaults to true
+- `includeFmcsaCrashInspection` defaults to false
+
+### **Next Steps:**
+
+- Test with Accio API to verify new format is accepted
+- Consider adding UI options for FMCSA crash/inspection reports if needed by drivers
+- May need to update webhook parser if FMCSA results have different structure
+
+---
+
+## 💳 **USDC WALLET PAYMENTS (BASE SEPOLIA) + MVR CONFIG** (November 26, 2025)
+
+**Hybrid Wallet Model for MVR Payments Using Alchemy Smart Wallets**
+
+Implemented a wallet-based USDC payment flow on Base Sepolia that lets drivers pay Veree in USDC via Alchemy Smart Wallets, while Veree pays Accio/Key Background off-chain. Added a config API so the frontend never hardcodes business logic (token address, treasury, price).
+
+### **Core Features:**
+
+- **USDC on Base Sepolia:**
+  - Uses official USDC testnet address: `0x036CbD53842c5426634e7929541eC2318f3dCF7e`
+  - All transfers happen on **Base Sepolia** via Alchemy Smart Wallets
+  - Drivers never touch MetaMask or seed phrases
+
+- **Treasury Smart Wallet:**
+  - Uses your Alchemy Smart Wallet (`TREASURY_ADDRESS`) as the internal treasury
+  - Drivers send USDC → treasury; Veree pays Accio/Key with normal fiat
+  - Enables a **hybrid** on-chain/off-chain billing model
+
+- **MVR Price Config API** (`src/app/api/wallet/mvr-config/route.ts`):
+  - Returns USDC token address, decimals, treasury address, and `MVR_PRICE_USDC`
+  - Reads from env: `USDC_BASE_SEPOLIA_ADDRESS`, `TREASURY_ADDRESS`, `MVR_PRICE_USDC`
+  - Keeps pricing and addresses controlled by the backend
+
+- **Driver Wallet UI Integration** (`src/components/WalletCard.tsx`, `src/components/MvrPaymentButton.tsx`):
+  - Adds a **“Pay 10 USDC for MVR (Base Sepolia)”** button for drivers
+  - Uses `useSmartAccountClient` + `useSendUserOperation` to:
+    - Encode `transfer(treasury, amount)` with `viem`
+    - Submit a user operation to the USDC contract
+    - Wait for the transaction to be mined and show a success message
+  - Button is driver-only and lives inside the existing Wallet card
+
+- **Configuration & Env Vars** (`.env.local`):
+  - `USDC_BASE_SEPOLIA_ADDRESS` - USDC token on Base Sepolia
+  - `TREASURY_ADDRESS` - Veree treasury smart wallet (Alchemy)
+  - `MVR_PRICE_USDC` - Price per MVR in USDC (currently `10`)
+  - `NEXT_PUBLIC_APP_URL` - Used for webhooks and future deep links
+
+### **Files Created:**
+
+- `src/app/api/wallet/mvr-config/route.ts` - Returns USDC + MVR pricing config
+- `src/components/MvrPaymentButton.tsx` - Alchemy Smart Wallet USDC payment button
+
+### **Files Modified:**
+
+- `src/components/WalletCard.tsx` - Integrated MVR payment button for drivers
+- `.env.local` - Added USDC, treasury, and MVR price env vars
+- `docs/MVR_INTEGRATION.md` - Detailed MVR + wallet integration guide
+- `docs/CHANGES.md` - This entry
+
+**Status:** ✅ Backend + wallet payment UX ready. Next step is to automatically chain `/api/mvr/order` after a successful USDC transfer once Accio credentials are live.
+
+---
+
 ## 📊 **PROFILE COMPLETENESS SYSTEM + DOT INTEGRATION** (November 25, 2025)
 
 **Smart Driver Profile Management with AI Guidance**

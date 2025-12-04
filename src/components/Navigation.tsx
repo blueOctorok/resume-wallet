@@ -1,9 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import WalletCard from './WalletCard'
 import ThemeToggle from './ThemeToggle'
 import { useTheme } from '@/contexts/ThemeContext'
+
+// Dynamically import MVR payment button to avoid auth conflicts
+const MvrPaymentButton = dynamic(() => import('./MvrPaymentButton'), {
+  ssr: false,
+})
+
 
 interface NavigationProps {
   isAuthenticated?: boolean
@@ -17,6 +24,7 @@ interface NavigationProps {
   onStatusClick?: () => void
   onWalletClick?: () => void
   onNavigate?: (page: 'signin' | 'resume' | 'dotapp' | 'jobs' | 'applications' | 'home') => void
+  onMvrClick?: () => void
   tHasUnread?: boolean
   onTClick?: () => void
   onSwitchRole?: () => void
@@ -30,10 +38,13 @@ export default function Navigation({
   onWalletClick,
   onNavigate,
   onSwitchRole,
+  onMvrClick,
   tHasUnread = false,
   onTClick,
 }: NavigationProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isDriverDropdownOpen, setIsDriverDropdownOpen] = useState(false)
+  const [isEmployerDropdownOpen, setIsEmployerDropdownOpen] = useState(false)
   const { theme } = useTheme()
 
   const toggleMenu = () => {
@@ -151,9 +162,6 @@ export default function Navigation({
                     </div>
                   </button>
                 )}
-                <div className='hidden md:flex'>
-                  <ThemeToggle />
-                </div>
                 <button
                   onClick={toggleMenu}
                   className='md:hidden p-2.5 rounded-xl bg-brand-sage/60 backdrop-blur-sm hover:bg-brand-sage/80 hover:border-brand-mint/70 transition-all duration-300 shadow-lg hover:shadow-xl'
@@ -180,13 +188,13 @@ export default function Navigation({
               </div>
             </div>
 
-            {/* Bottom Row: Navigation Links (Desktop - always visible, Mobile - toggle) */}
+            {/* Bottom Row: Navigation Links */}
             <div
               className={`${
                 isMenuOpen ? 'flex' : 'hidden'
-              } md:flex flex-col md:flex-row flex-wrap md:flex-nowrap justify-center items-center gap-4 md:gap-3 pt-4 border-t border-brand-mint/30`}
+              } md:flex flex-col md:flex-row justify-center items-center gap-3 pt-4 border-t border-brand-mint/30`}
             >
-              {/* Mobile Wallet Button - Leftmost position */}
+              {/* Mobile Wallet Button */}
               {isAuthenticated && user && (
                 <WalletCard
                   user={user}
@@ -196,12 +204,13 @@ export default function Navigation({
                   onSwitchRole={onSwitchRole}
                 />
               )}
+              
               {/* Mobile-only T Assistant access */}
               {isAuthenticated && onTClick && (
                 <button
                   onClick={() => {
                     onTClick()
-                    setIsMenuOpen(false) // Close menu after clicking
+                    setIsMenuOpen(false)
                   }}
                   className={`md:hidden w-full px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 flex items-center justify-center gap-2 ${
                     theme === 'light'
@@ -216,6 +225,7 @@ export default function Navigation({
                   )}
                 </button>
               )}
+
               {/* Home Button - Always visible */}
               <button
                 onClick={() => handleNavigation('home')}
@@ -227,86 +237,205 @@ export default function Navigation({
               >
                 🏠 Home
               </button>
-              {/* Driver-specific navigation */}
-              {userRole === 'driver' && (
-                <>
-                  <button
-                    onClick={() => {
-                      if (isAuthenticated) {
-                        handleNavigation('resume')
-                      }
-                    }}
-                    disabled={!isAuthenticated}
-                    className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 ${
-                      isAuthenticated
-                        ? theme === 'light'
-                          ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
-                          : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
-                        : theme === 'light'
-                          ? 'text-gray-400 bg-gray-100 border-gray-200 cursor-not-allowed'
-                          : 'text-brand-cream/40 bg-brand-sage-light/10 border-brand-cream/20 cursor-not-allowed'
-                    }`}
-                  >
-                    Resume
-                  </button>
-                  <button
-                    onClick={() => handleNavigation('jobs')}
-                    className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 ${
-                      theme === 'light'
-                        ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
-                        : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
-                    }`}
-                  >
-                    Browse Jobs
-                  </button>
-                  <button
-                    onClick={() => handleNavigation('applications')}
-                    disabled={!isAuthenticated}
-                    className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 ${
-                      isAuthenticated
-                        ? theme === 'light'
-                          ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
-                          : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
-                        : theme === 'light'
-                          ? 'text-gray-400 bg-gray-100 border-gray-200 cursor-not-allowed'
-                          : 'text-brand-cream/40 bg-brand-sage-light/10 border-brand-cream/20 cursor-not-allowed'
-                    }`}
-                  >
-                    My Applications
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (isAuthenticated) {
-                        handleNavigation('dotapp')
-                      }
-                    }}
-                    disabled={!isAuthenticated}
-                    className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 ${
-                      isAuthenticated
-                        ? theme === 'light'
-                          ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
-                          : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
-                        : theme === 'light'
-                          ? 'text-gray-400 bg-gray-100 border-gray-200 cursor-not-allowed'
-                          : 'text-brand-cream/40 bg-brand-sage-light/10 border-brand-cream/20 cursor-not-allowed'
-                    }`}
-                  >
-                    DOT App
-                  </button>
-                </>
-              )}
-              {/* Employer-specific navigation - Coming soon */}
-              {userRole === 'employer' && (
-                <div className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border text-center ${
-                  theme === 'light'
-                    ? 'text-gray-400 bg-gray-100 border-gray-200'
-                    : 'text-brand-cream/40 bg-brand-sage-light/10 border-brand-cream/20'
-                }`}>
-                  🚧 Employer features coming soon
+
+              {/* Driver Options Dropdown */}
+              {userRole === 'driver' && isAuthenticated && (
+                <div className="relative">
+                  {theme === 'dark' ? (
+                    <div className="rotating-gold-border w-full md:w-auto">
+                      <button
+                        onClick={() => {
+                          setIsDriverDropdownOpen(!isDriverDropdownOpen)
+                          setIsEmployerDropdownOpen(false)
+                        }}
+                        className="w-full px-6 py-2.5 text-sm font-semibold rounded-[10px] text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 transition-all duration-300 flex items-center gap-2 relative z-10"
+                      >
+                        Driver Options
+                        <svg 
+                          className={`w-4 h-4 transition-transform ${isDriverDropdownOpen ? 'rotate-180' : ''}`}
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setIsDriverDropdownOpen(!isDriverDropdownOpen)
+                        setIsEmployerDropdownOpen(false)
+                      }}
+                      className="w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 flex items-center gap-2 text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105"
+                    >
+                      Driver Options
+                      <svg 
+                        className={`w-4 h-4 transition-transform ${isDriverDropdownOpen ? 'rotate-180' : ''}`}
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  )}
+                  
+                  {isDriverDropdownOpen && (
+                    <>
+                      <div 
+                        className="fixed inset-0 z-10" 
+                        onClick={() => setIsDriverDropdownOpen(false)}
+                      />
+                      <div className={`absolute top-full mt-2 left-0 z-20 min-w-[200px] rounded-xl shadow-2xl border ${
+                        theme === 'light'
+                          ? 'bg-white border-brand-sage/40'
+                          : 'bg-gray-800/95 border-gray-700'
+                      }`}>
+                        <div className="p-2 space-y-1">
+                          <button
+                            onClick={() => {
+                              handleNavigation('resume')
+                              setIsDriverDropdownOpen(false)
+                            }}
+                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                              theme === 'light'
+                                ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
+                                : 'text-brand-cream hover:bg-brand-sage-light/20'
+                            }`}
+                          >
+                            📄 Resume
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleNavigation('jobs')
+                              setIsDriverDropdownOpen(false)
+                            }}
+                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                              theme === 'light'
+                                ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
+                                : 'text-brand-cream hover:bg-brand-sage-light/20'
+                            }`}
+                          >
+                            🔍 Browse Jobs
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleNavigation('applications')
+                              setIsDriverDropdownOpen(false)
+                            }}
+                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                              theme === 'light'
+                                ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
+                                : 'text-brand-cream hover:bg-brand-sage-light/20'
+                            }`}
+                          >
+                            📋 My Applications
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleNavigation('dotapp')
+                              setIsDriverDropdownOpen(false)
+                            }}
+                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                              theme === 'light'
+                                ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
+                                : 'text-brand-cream hover:bg-brand-sage-light/20'
+                            }`}
+                          >
+                            📝 DOT App
+                          </button>
+                          {onMvrClick && (
+                            <button
+                              onClick={() => {
+                                onMvrClick()
+                                setIsDriverDropdownOpen(false)
+                              }}
+                              className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                                theme === 'light'
+                                  ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
+                                  : 'text-brand-cream hover:bg-brand-sage-light/20'
+                              }`}
+                            >
+                              🚗 Order MVR
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
-              {/* Mobile Theme Toggle */}
-              <div className='w-full md:hidden flex justify-center'>
+
+              {/* Employer Options Dropdown */}
+              {userRole === 'employer' && isAuthenticated && (
+                <div className="relative">
+                  {theme === 'dark' ? (
+                    <div className="rotating-gold-border w-full md:w-auto">
+                      <button
+                        onClick={() => {
+                          setIsEmployerDropdownOpen(!isEmployerDropdownOpen)
+                          setIsDriverDropdownOpen(false)
+                        }}
+                        className="w-full px-6 py-2.5 text-sm font-semibold rounded-[10px] text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 transition-all duration-300 flex items-center gap-2 relative z-10"
+                      >
+                        Employer Options
+                        <svg 
+                          className={`w-4 h-4 transition-transform ${isEmployerDropdownOpen ? 'rotate-180' : ''}`}
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setIsEmployerDropdownOpen(!isEmployerDropdownOpen)
+                        setIsDriverDropdownOpen(false)
+                      }}
+                      className="w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 flex items-center gap-2 text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105"
+                    >
+                      Employer Options
+                      <svg 
+                        className={`w-4 h-4 transition-transform ${isEmployerDropdownOpen ? 'rotate-180' : ''}`}
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  )}
+                  
+                  {isEmployerDropdownOpen && (
+                    <>
+                      <div 
+                        className="fixed inset-0 z-10" 
+                        onClick={() => setIsEmployerDropdownOpen(false)}
+                      />
+                      <div className={`absolute top-full mt-2 left-0 z-20 min-w-[200px] rounded-xl shadow-2xl border ${
+                        theme === 'light'
+                          ? 'bg-white border-brand-sage/40'
+                          : 'bg-gray-800/95 border-gray-700'
+                      }`}>
+                        <div className="p-2">
+                          <div className={`px-4 py-2.5 text-sm ${
+                            theme === 'light' ? 'text-gray-500' : 'text-brand-cream/60'
+                          }`}>
+                            🚧 Coming soon
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Theme Toggle - Bottom Right */}
+              <div className='w-full md:w-auto flex justify-end md:ml-auto'>
                 <ThemeToggle />
               </div>
             </div>

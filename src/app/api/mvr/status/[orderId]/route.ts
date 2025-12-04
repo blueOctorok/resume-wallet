@@ -92,7 +92,8 @@ export async function GET(
         completedAt: mvrOrder.completed_at,
         expiresAt: mvrOrder.expires_at,
         feeAmount: mvrOrder.fee_amount,
-        errorMessage: mvrOrder.error_message
+        errorMessage: mvrOrder.error_message,
+        applicantPortalUrl: mvrOrder.applicant_portal_url
       },
       result: result ? {
         id: result.id,

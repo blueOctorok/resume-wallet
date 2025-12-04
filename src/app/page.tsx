@@ -8,6 +8,7 @@ import UserStatusModal from '@/components/UserStatusModal'
 import WalletCard from '@/components/WalletCard'
 import TLoadingModal from '@/components/TLoadingModal'
 import LoadingScreen from '@/components/LoadingScreen'
+import MvrOrderForm from '@/components/MvrOrderForm'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useSendUserOperation, useSmartAccountClient } from '@account-kit/react'
 import { AssistantBridgeProvider } from '@/contexts/AssistantBridgeContext'
@@ -202,7 +203,7 @@ const HomeContent = () => {
   const [user, setUser] = useState<any>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState<
-    'signin' | 'resume' | 'dotapp' | 'jobs' | 'applications' | null
+    'signin' | 'resume' | 'dotapp' | 'jobs' | 'applications' | 'mvr' | null
   >(null)
   
   // Role-based access control
@@ -1030,7 +1031,7 @@ const HomeContent = () => {
 
   // Navigation handler
   const handleNavigation = useCallback(
-    (page: 'signin' | 'resume' | 'dotapp' | 'home') => {
+    (page: 'signin' | 'resume' | 'dotapp' | 'jobs' | 'applications' | 'mvr' | 'home') => {
       console.log(`Navigating to: ${page}`)
       if (page === 'home') {
         // Reset to beginning screen (landing/wallet page)
@@ -1660,6 +1661,7 @@ const HomeContent = () => {
           onStatusClick={openModal}
           onWalletClick={handleWalletClick}
           onNavigate={handleNavigation}
+          onMvrClick={() => handleNavigation('mvr')}
           tHasUnread={avaHasUnread}
           onTClick={() => setIsAvaCollapsed(false)}
           onSwitchRole={handleSwitchRole}
@@ -1838,6 +1840,15 @@ const HomeContent = () => {
               onBack={() => setCurrentPage(null)}
               userAddress={user?.address || null}
             />
+          )}
+
+          {currentPage === 'mvr' && (
+            <div className='max-w-2xl mx-auto'>
+              <MvrOrderForm 
+                userAddress={user?.address || ''}
+                onBack={() => setCurrentPage(null)}
+              />
+            </div>
           )}
 
           {currentPage === 'dotapp' && (

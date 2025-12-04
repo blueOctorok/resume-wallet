@@ -14,10 +14,13 @@ export interface AccioOrderData {
   phone?: string
   ssn: string // Last 4 digits only for security
   dob: string // Format: YYYYMMDD
+  gender?: 'M' | 'F' | 'U' // M = Male, F = Female, U = Unknown/Unspecified
+  race?: string // U = Unknown (default)
   address: string
   city: string
-  state: string // 2-letter state code
+  state: string // 2-letter state code (residential)
   zip: string
+  jobState?: string // State where job will be performed (2-letter code)
   
   // License Information
   dlNumber: string
@@ -26,6 +29,8 @@ export interface AccioOrderData {
   // Order Configuration
   orderNumber: string // Unique order number we generate
   mvrSearchType?: 'standard' | 'comprehensive'
+  suppressApplicantEmail?: boolean // Suppress Accio's applicant portal email
+  includeFmcsaCrashInspection?: boolean // Include FMCSA crash/inspection report
   
   // Optional: Webhook Configuration
   webhookUrl?: string
@@ -45,14 +50,19 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
     phone,
     ssn,
     dob,
+    gender = 'U',
+    race = 'U',
     address,
     city,
     state,
     zip,
+    jobState,
     dlNumber,
     dlState,
     orderNumber,
     mvrSearchType = 'standard',
+    suppressApplicantEmail = true,
+    includeFmcsaCrashInspection = false,
     webhookUrl,
     webhookGuid
   } = data
@@ -66,17 +76,21 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
   // Format DOB (YYYYMMDD)
   const dobFormatted = dob.replace(/-/g, '').substring(0, 8)
 
-  // Build XML
+  // Build XML - matching new Accio format exactly
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <Accio_Order>
     <mode>${mode}</mode>
     <login>
         <account>${escapeXml(account)}</account>
+        <!-- ATS master account name -->
         <username>${escapeXml(username)}</username>
+        <!-- ATS master user name -->
         <password>${escapeXml(password)}</password>
+        <!-- ATS master password -->
     </login>
     <placeOrder number="${orderNumber}">
         <mode>${mode}</mode>
+        <SuppressApplicantPortalEmail>${suppressApplicantEmail ? 'Y' : 'N'}</SuppressApplicantPortalEmail>
         <orderInfo>
             <requester_name use_default="Y"/>
             <requester_phone use_default="Y"/>
@@ -95,11 +109,14 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
             <email>${escapeXml(email)}</email>
             <ssn>${escapeXml(ssn)}</ssn>
             <dob>${dobFormatted}</dob>
-            ${phone ? `<phone_number>${escapeXml(phone)}</phone_number>` : '<phone_number/>'}
+            <gender>${gender}</gender>
+            <race>${race}</race>
+            ${phone ? `<phone_number>${escapeXml(phone)}</phone_number>` : '<phone_number>555-555-5555</phone_number>'}
             <address>${escapeXml(address)}</address>
             <city>${escapeXml(city)}</city>
             <state>${escapeXml(state)}</state>
             <zip>${escapeXml(zip)}</zip>
+            ${jobState ? `<jobstate>${escapeXml(jobState)}</jobstate>` : `<jobstate>${escapeXml(state)}</jobstate>`}
             <citizenship_status>A citizen of the United States</citizenship_status>
             <FCRAPurpose>Employment by Hire or Contract</FCRAPurpose>
             <ApplicantID/>
@@ -109,7 +126,7 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
             <drugscreen>N</drugscreen>
             <has_admitted_convictions>N</has_admitted_convictions>
             <admitted_conviction_details/>
-            <portalfromapplicant>N</portalfromapplicant>
+            <portalfromapplicant>Y</portalfromapplicant>
         </subject>`
 
   // Add webhook configuration if provided
@@ -129,8 +146,21 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
         <subOrder type='MVR'>
             <dlnum>${escapeXml(dlNumber)}</dlnum>
             <dlstate>${escapeXml(dlState)}</dlstate>
+            <!-- See 'State Conversion' -->
             <mvr_searchtype>${mvrSearchType}</mvr_searchtype>
-        </subOrder>
+            <!-- Optional -->
+        </subOrder>`
+
+  // Add FMCSA crash/inspection subOrder if requested
+  if (includeFmcsaCrashInspection) {
+    xml += `
+        <subOrder type='fmcsa_crash_inspection'>
+            <dlnum>${escapeXml(dlNumber)}</dlnum>
+            <dlstate>${escapeXml(dlState)}</dlstate>
+        </subOrder>`
+  }
+
+  xml += `
     </placeOrder>
 </Accio_Order>`
 

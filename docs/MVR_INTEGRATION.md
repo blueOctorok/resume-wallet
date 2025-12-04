@@ -37,16 +37,18 @@ See `supabase/migrations/RUN_MIGRATION_003.md` for detailed instructions.
 Add these to `.env.local` (and production environment):
 
 ```bash
-# Accio MVR API
-ACCIO_ACCOUNT="your_accio_account_name"
-ACCIO_USERNAME="your_accio_username"
-ACCIO_PASSWORD="your_accio_password"
-ACCIO_MODE="PROD" # or "TEST" for testing
-ACCIO_API_URL="https://api.accio.com" # Replace with actual Accio API endpoint
+# Accio MVR API (Key Background / Accio integration)
+ACCIO_ACCOUNT="testaccount"
+ACCIO_USERNAME="admin"
+ACCIO_PASSWORD="demo2023"
+ACCIO_MODE="TEST" # TEST for testing, PROD for production
+ACCIO_API_URL="https://service.keybackground.com/c/p/researcherxml"
 NEXT_PUBLIC_APP_URL="http://localhost:3000" # For webhook URL generation
 ```
 
-**⚠️ Important:** Replace placeholder values with your actual Accio credentials!
+**✅ Test Credentials Ready!** The credentials above are real test credentials provided by Accio/Key Background. You can use them immediately for testing.
+
+**For Production:** Contact Accio to get your production credentials and change `ACCIO_MODE` to `PROD`.
 
 ---
 
@@ -64,7 +66,9 @@ Orders an MVR from Accio for a driver.
   "walletAddress": "0x...",
   "dlNumber": "123456789",
   "dlState": "TX",
-  "mvrSearchType": "standard" // optional: "standard" | "comprehensive"
+  "mvrSearchType": "standard", // optional: "standard" | "comprehensive"
+  "includeFmcsaCrashInspection": false, // optional: include FMCSA crash/inspection report
+  "jobState": "NY" // optional: state where job will be performed (defaults to residential state)
 }
 ```
 
@@ -75,19 +79,30 @@ Orders an MVR from Accio for a driver.
   "order": {
     "id": "uuid",
     "orderNumber": "1234567890",
-    "subOrderNumber": "9876543210",
+    "subOrderNumber": "889798",
     "status": "pending",
-    "orderedAt": "2025-11-25T12:00:00Z"
+    "orderedAt": "2025-11-25T12:00:00Z",
+    "applicantPortalUrl": "https://service.keybackground.com/c/p/collect_information?guikey=n9N1xA52M3PQ7nrd0pvFakvd26q71H7o"
   }
 }
 ```
+
+**Important:** The `applicantPortalUrl` is returned when `SuppressApplicantPortalEmail` is enabled (default). This URL allows applicants to provide additional information if needed by Accio, but the email is suppressed so you control when/how to present it to drivers.
 
 **How it works:**
 1. Validates driver has completed DOT application (for personal info)
 2. Builds Accio XML order payload
 3. Sends order to Accio API
-4. Stores order in `mvr_orders` table
-5. Returns order details
+4. Parses Accio's XML response to extract subOrderID and applicantPortalURL
+5. Stores order in `mvr_orders` table
+6. Returns order details including portal URL
+
+**About the Applicant Portal URL:**
+- Accio returns a unique portal URL for each order
+- Portal allows driver to provide additional info if needed
+- Email is suppressed (you control when to show the URL)
+- You can present this URL to the driver in your UI if additional info is needed
+- Most MVRs complete without requiring the portal
 
 ---
 
@@ -133,13 +148,14 @@ Gets the current status of an MVR order and its results (if available).
   "order": {
     "id": "uuid",
     "orderNumber": "1234567890",
-    "subOrderNumber": "9876543210",
+    "subOrderNumber": "889798",
     "status": "completed",
     "orderedAt": "2025-11-25T12:00:00Z",
     "processedAt": "2025-11-25T12:05:00Z",
     "completedAt": "2025-11-25T12:10:00Z",
     "expiresAt": "2025-12-25T12:00:00Z",
-    "feeAmount": 6.50
+    "feeAmount": 6.50,
+    "applicantPortalUrl": "https://service.keybackground.com/c/p/collect_information?guikey=..."
   },
   "result": {
     "id": "uuid",
@@ -172,22 +188,36 @@ import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from 
 
 const xml = buildAccioMvrOrderXml({
   firstName: "John",
+  middleName: "B", // optional
   lastName: "Doe",
   email: "john@example.com",
+  phone: "555-555-5555", // optional (defaults to 555-555-5555 if missing)
   ssn: "1234", // Last 4 digits only
   dob: "1987-06-01",
+  gender: "M", // optional: M/F/U (defaults to U)
+  race: "U", // optional (defaults to U for Unknown)
   address: "123 Main St",
   city: "Austin",
-  state: "TX",
+  state: "TX", // residential state
   zip: "78701",
+  jobState: "NY", // optional: state where job will be performed (defaults to residential state)
   dlNumber: "123456789",
   dlState: "TX",
   orderNumber: generateOrderNumber(),
-  mvrSearchType: "standard",
+  mvrSearchType: "standard", // optional: standard or comprehensive
+  suppressApplicantEmail: true, // optional: prevent Accio from emailing applicant (defaults to true)
+  includeFmcsaCrashInspection: false, // optional: include FMCSA crash/inspection report (defaults to false)
   webhookUrl: "https://yourapp.com/api/mvr/webhook",
   webhookGuid: generateWebhookGuid()
 })
 ```
+
+**New Fields Explained:**
+- `gender`: Driver's gender (M = Male, F = Female, U = Unknown). Defaults to 'U'.
+- `race`: Driver's race code. Defaults to 'U' (Unknown) for privacy.
+- `jobState`: State where the driving job will be performed. Defaults to residential state if not provided.
+- `suppressApplicantEmail`: When true (default), prevents Accio from sending portal emails to applicants. We handle all driver communication.
+- `includeFmcsaCrashInspection`: When true, orders an additional FMCSA crash/inspection report alongside the MVR.
 
 ### XML Parser (`src/lib/accio-xml-parser.ts`)
 
