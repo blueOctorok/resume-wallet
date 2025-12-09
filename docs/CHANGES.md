@@ -2,7 +2,146 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
-## 📋 **X402 PAYMENT INTEGRATION - IMPLEMENTED** (Current)
+## 🔒 **CRITICAL SECURITY UPDATE - CVE-2025-66478 PATCHED** (Current)
+
+**Next.js React Server Components Remote Code Execution Vulnerability - FIXED**
+
+Patched critical security vulnerability (CVSS 10.0) that could allow remote code execution in Next.js applications using React Server Components.
+
+### **Vulnerability Details:**
+
+- **CVE**: CVE-2025-66478 (Next.js) / CVE-2025-55182 (React upstream)
+- **Severity**: CVSS 10.0 (Critical)
+- **Impact**: Remote code execution via crafted RSC requests
+- **Affected**: Next.js 15.x applications using App Router
+- **Discovery Date**: December 4, 2025
+
+### **Action Taken:**
+
+1. **Upgraded Next.js**: `15.5.0` → `15.5.7` (patched version)
+2. **Ran Security Fix**: Executed `npx fix-react2shell-next` to verify patch
+3. **Verified**: Scanner confirms project is no longer vulnerable
+
+### **Files Modified:**
+
+- `package.json` - Updated Next.js to 15.5.7
+
+### **⚠️ CRITICAL: Secret Rotation Required**
+
+**If your application was online and unpatched as of December 4, 2025 at 1:00 PM PT, you MUST rotate all secrets:**
+
+#### **Priority 1 - Rotate Immediately:**
+- `X402_PAYMENT_PRIVATE_KEY` - Payment wallet private key
+- `PRIVATE_KEY` - Deployment wallet private key
+- `SUPABASE_SERVICE_ROLE_KEY` - Database service role key
+- `ADMIN_API_KEY` - Admin authentication key
+- `T_BACKEND_API_KEY` - AI service API key
+
+#### **Priority 2 - Rotate Soon:**
+- `ALCHEMY_API_KEY` - Blockchain RPC key
+- `ACCIO_PASSWORD` - MVR service password
+- `ADZUNA_APP_KEY` - Job search API key
+- `PINATA_API_KEY` / `PINATA_SECRET_KEY` - IPFS service keys
+- Any other API keys or credentials
+
+#### **How to Rotate:**
+
+1. **Payment Wallet** (`X402_PAYMENT_PRIVATE_KEY`):
+   ```bash
+   npm run payment:create
+   # Generate new wallet, fund it, update .env.local
+   # Update Vercel environment variables
+   ```
+
+2. **Other Secrets**:
+   - Generate new keys from respective services
+   - Update `.env.local` and Vercel environment variables
+   - Test functionality after rotation
+   - Revoke old keys
+
+3. **Vercel Environment Variables**:
+   - Go to Vercel Dashboard → Settings → Environment Variables
+   - Update all secrets listed above
+   - Redeploy application
+
+### **Verification:**
+
+```bash
+# Verify Next.js version
+npm list next
+
+# Should show: next@15.5.7
+
+# Verify no vulnerabilities
+npx fix-react2shell-next
+
+# Should show: "No vulnerable packages found!"
+```
+
+### **References:**
+
+- [Next.js Security Advisory](https://nextjs.org/security)
+- [CVE-2025-66478 Details](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-66478)
+- [React CVE-2025-55182](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-55182)
+
+---
+
+## 🔒 **SECURITY IMPROVEMENTS - API ROUTE AUTHENTICATION** (Previous)
+
+**Fixed Vercel Security Warnings - Added Authentication to Admin/Dev Routes**
+
+Resolved security issues flagged by Vercel by adding proper authentication to admin and development API routes that access sensitive data.
+
+### **Security Issues Fixed:**
+
+1. **`/api/admin/credits`** - Was publicly accessible without authentication
+   - Now requires `ADMIN_API_KEY` in `x-admin-key` header or `Authorization` header
+   - In production, requires admin key to be configured
+   - In development, allows access if no admin key is set
+
+2. **`/api/dev/clear-rate-limits`** - Was only protected by NODE_ENV check
+   - Now requires `ADMIN_API_KEY` authentication in production
+   - Still allows development access when NODE_ENV is not production
+
+### **Files Modified:**
+
+- `src/app/api/admin/credits/route.ts` - Added admin authentication check
+- `src/app/api/dev/clear-rate-limits/route.ts` - Added admin authentication for production
+
+### **Authentication Pattern:**
+
+Both routes now follow the same pattern as `/api/admin/reset-wallet`:
+- Check for `ADMIN_API_KEY` environment variable
+- Validate key from `x-admin-key` or `Authorization` header
+- Return 401 Unauthorized if key is missing or invalid
+- In production, require admin key to be configured
+
+### **Environment Variable Required:**
+
+```bash
+ADMIN_API_KEY=your-secure-admin-key-here
+```
+
+### **Usage:**
+
+```bash
+# Using x-admin-key header
+curl -H "x-admin-key: your-admin-key" https://your-app.vercel.app/api/admin/credits
+
+# Using Authorization header
+curl -H "Authorization: Bearer your-admin-key" https://your-app.vercel.app/api/admin/credits
+```
+
+### **Next Steps:**
+
+- Ensure `ADMIN_API_KEY` is set in Vercel environment variables
+- Test admin routes with authentication
+- Consider adding rate limiting to admin routes
+- Review other API routes for similar security improvements
+
+---
+
+## 📋 **X402 PAYMENT INTEGRATION - IMPLEMENTED** (Previous)
 
 **Automatic Payment Handling for Pace Drivers x402 Integration**
 

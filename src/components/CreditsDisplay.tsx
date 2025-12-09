@@ -19,7 +19,10 @@ export function CreditsDisplay() {
 
   const fetchCredits = async () => {
     try {
-      const response = await fetch('/api/admin/credits')
+      const response = await fetch('/api/credits')
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.status}`)
+      }
       const data = await response.json()
       setCredits(data)
     } catch (error) {

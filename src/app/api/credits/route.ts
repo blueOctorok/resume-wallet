@@ -1,35 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
-
-const ADMIN_API_KEY = process.env.ADMIN_API_KEY
+import { NextResponse } from 'next/server'
 
 /**
- * GET /api/admin/credits
+ * GET /api/credits
  * 
- * Fetches the current credit balance from T Backend.
- * This is for admin/dev monitoring only.
- * 
- * Requires authentication via ADMIN_API_KEY in x-admin-key header or Authorization header.
+ * Public endpoint to fetch credit balance for UI display.
+ * This is a read-only operation that doesn't expose sensitive data.
  */
-export async function GET(request: NextRequest) {
-  // Check for admin authentication
-  if (ADMIN_API_KEY) {
-    const headerKey = request.headers.get('x-admin-key') || request.headers.get('authorization')
-    if (!headerKey || headerKey.replace('Bearer ', '').trim() !== ADMIN_API_KEY) {
-      return NextResponse.json(
-        { error: 'Missing or invalid admin key. Authentication required.' },
-        { status: 401 }
-      )
-    }
-  } else {
-    // If no ADMIN_API_KEY is set, only allow in development
-    if (process.env.NODE_ENV === 'production') {
-      return NextResponse.json(
-        { error: 'Admin API key is not configured. This endpoint is disabled in production.' },
-        { status: 500 }
-      )
-    }
-  }
-
+export async function GET() {
   try {
     const paymentKey = process.env.X402_PAYMENT_PRIVATE_KEY || process.env.PRIVATE_KEY
     if (!paymentKey) {

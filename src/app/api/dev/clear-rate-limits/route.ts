@@ -4,14 +4,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { uploadRateLimiter, verificationRateLimiter } from '@/lib/rate-limit'
 
+const ADMIN_API_KEY = process.env.ADMIN_API_KEY
+
 export async function POST(req: NextRequest) {
   try {
-    // Only allow in development
+    // Only allow in development OR with admin key
     if (process.env.NODE_ENV === 'production') {
-      return NextResponse.json(
-        { error: 'Not available in production' },
-        { status: 403 }
-      )
+      // In production, require admin key
+      if (ADMIN_API_KEY) {
+        const headerKey = req.headers.get('x-admin-key') || req.headers.get('authorization')
+        if (!headerKey || headerKey.replace('Bearer ', '').trim() !== ADMIN_API_KEY) {
+          return NextResponse.json(
+            { error: 'Missing or invalid admin key. Authentication required.' },
+            { status: 401 }
+          )
+        }
+      } else {
+        return NextResponse.json(
+          { error: 'Not available in production without admin key configured' },
+          { status: 403 }
+        )
+      }
     }
 
     const body = await req.json()
