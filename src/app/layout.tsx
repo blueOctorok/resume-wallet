@@ -25,7 +25,33 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang='en'>
+    <html lang='en' suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  // Check for saved preference first
+                  const savedTheme = localStorage.getItem('veree-theme');
+                  if (savedTheme === 'light' || savedTheme === 'dark') {
+                    document.documentElement.setAttribute('data-theme', savedTheme);
+                    return;
+                  }
+                  // No saved preference - use device-based default
+                  // Mobile (< 768px) = light mode, Desktop = dark mode
+                  const isMobile = window.innerWidth < 768;
+                  const defaultTheme = isMobile ? 'light' : 'dark';
+                  document.documentElement.setAttribute('data-theme', defaultTheme);
+                } catch (e) {
+                  // Fallback to dark if anything fails
+                  document.documentElement.setAttribute('data-theme', 'dark');
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className={`${quicksand.variable} antialiased`}>
         <ThemeProvider>
           <AlchemyProvider>

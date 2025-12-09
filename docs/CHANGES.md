@@ -2,7 +2,61 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
-## 🔒 **CRITICAL SECURITY UPDATE - CVE-2025-66478 PATCHED** (Current)
+## 🔧 **Fixed Theme Default on Desktop** (Current)
+
+Fixed issue where desktop was defaulting to light mode instead of dark mode on initial page load.
+
+### **Problem:**
+- Desktop users were seeing light mode by default on veree.io
+- Should be dark mode default on desktop, light mode default on mobile
+
+### **Solution:**
+- Added blocking script in `layout.tsx` that runs before React hydrates
+- Script immediately sets `data-theme` attribute based on device type
+- Prevents flash of wrong theme and ensures correct default
+- Updated `ThemeContext` to read from `data-theme` attribute if localStorage is empty
+
+### **Technical Details:**
+- Script checks `window.innerWidth < 768` to detect mobile
+- Mobile (< 768px) = light mode default
+- Desktop (≥ 768px) = dark mode default
+- User saved preferences still take priority over device defaults
+
+### **Files Modified:**
+- `src/app/layout.tsx` - Added blocking script for immediate theme setting
+- `src/contexts/ThemeContext.tsx` - Updated to read from data-theme attribute
+
+## ✨ **Premium Glowing Gold Rotating Border for Driver Options**
+
+Implemented a premium rotating multi-tone gold border with glow effect for the "Driver Options" button in both light and dark modes.
+
+### **Implementation Details:**
+
+- Updated light mode to use the existing `rotating-gold-border` class (previously only worked in dark mode)
+- Enhanced gradient with contrasting gold shades (dark to light) for visual depth
+- Added double-layered drop-shadow for a luminous glow effect
+- The effect uses a wrapper div with 2px padding and an animated gradient background
+- Button sits on top with forced solid background to prevent gradient bleed-through
+- Uses the same working implementation across both themes
+
+### **Technical Notes:**
+
+The `rotating-gold-border` class in `globals.css` uses:
+1. CSS Houdini `@property --rotate` for smooth custom property animation
+2. 5-stop gradient with contrasting gold tones:
+   - Dark Gold (`#B8860B`) → Bright Gold (`#FFD700`) → Light Gold (`#FFED4E`) → Medium Gold (`#DAA520`) → Dark Gold
+3. Dual drop-shadow layers create the glow: 8px blur (60% opacity) + 16px blur (40% opacity)
+4. 2px padding creates the visual "border" effect where gradient shows through
+5. Inner button has forced solid background (`#697469 !important`) to prevent gradient bleed
+6. Animation cycles every 2.5 seconds for smooth, continuous rotation
+7. `display: inline-flex` ensures proper layout without dimension issues
+
+### **Files Modified:**
+
+- `src/components/Navigation.tsx` - Updated light mode to use `rotating-gold-border` class
+- `src/app/globals.css` - Enhanced gradient with multi-tone gold and added glow effect
+
+## 🔒 **CRITICAL SECURITY UPDATE - CVE-2025-66478 PATCHED**
 
 **Next.js React Server Components Remote Code Execution Vulnerability - FIXED**
 

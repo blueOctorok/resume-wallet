@@ -23,6 +23,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       return savedTheme
     }
     
+    // Check if script already set data-theme attribute (from blocking script in layout)
+    const existingTheme = document.documentElement.getAttribute('data-theme') as Theme
+    if (existingTheme && (existingTheme === 'light' || existingTheme === 'dark')) {
+      return existingTheme
+    }
+    
     // No saved preference - use device-based default
     // Mobile (< 768px) = light mode, Desktop = dark mode
     const isMobile = window.innerWidth < 768

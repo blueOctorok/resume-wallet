@@ -49,21 +49,28 @@ body {
 
 .rotating-gold-border {
   position: relative;
+  display: inline-flex;
   border-radius: 0.75rem;
   padding: 2px;
   background-image: linear-gradient(
     var(--rotate),
-    #D2AC47,
-    #E8C468 43%,
-    #D2AC47
+    #B8860B,
+    #FFD700 25%,
+    #FFED4E 50%,
+    #DAA520 75%,
+    #B8860B
   );
-  animation: spin-gold-border 2.5s linear infinite;
+  animation: spin-gold-border 4s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.35)) 
+          drop-shadow(0 0 12px rgba(255, 215, 0, 0.2));
 }
-
 
 .rotating-gold-border button {
   position: relative;
   z-index: 1;
+  display: flex;
+  background: #5a615a !important;
+  border: none !important;
 }
 
 @keyframes spin-gold-border {

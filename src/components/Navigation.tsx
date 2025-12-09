@@ -262,23 +262,25 @@ export default function Navigation({
                       </button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => {
-                        setIsDriverDropdownOpen(!isDriverDropdownOpen)
-                        setIsEmployerDropdownOpen(false)
-                      }}
-                      className="w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 flex items-center gap-2 text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105"
-                    >
-                      Driver Options
-                      <svg 
-                        className={`w-4 h-4 transition-transform ${isDriverDropdownOpen ? 'rotate-180' : ''}`}
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
+                    <div className="rotating-gold-border w-full md:w-auto">
+                      <button
+                        onClick={() => {
+                          setIsDriverDropdownOpen(!isDriverDropdownOpen)
+                          setIsEmployerDropdownOpen(false)
+                        }}
+                        className="w-full px-6 py-2.5 text-sm font-semibold rounded-[10px] text-white bg-brand-sage hover:bg-brand-sage-dark transition-all duration-300 flex items-center gap-2 relative z-10 shadow-lg hover:shadow-xl hover:scale-105"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
+                        Driver Options
+                        <svg 
+                          className={`w-4 h-4 transition-transform ${isDriverDropdownOpen ? 'rotate-180' : ''}`}
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    </div>
                   )}
                   
                   {isDriverDropdownOpen && (
