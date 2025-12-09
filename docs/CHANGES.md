@@ -2,7 +2,33 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
-## 🔧 **Fixed Theme Default on Desktop** (Current)
+## 🔧 **Fixed Mobile Email Sign-In Issue** (Current)
+
+Fixed issue where email sign-in button wasn't working on mobile devices.
+
+### **Problem:**
+- Clicking "Sign in with Email" on mobile devices did nothing
+- Desktop worked fine (possibly due to cookies/localStorage)
+- Touch events weren't being handled properly by Alchemy AuthCard
+
+### **Solution:**
+- Added mobile-specific CSS fixes for Alchemy AuthCard components
+- Ensured proper touch event handling with `touch-action: manipulation`
+- Fixed iOS Safari input zoom issue by setting font-size to 16px
+- Added proper pointer-events and tap highlight colors for mobile
+- Improved AuthCard container styling for better mobile interaction
+
+### **Technical Details:**
+- Mobile breakpoint: `@media (max-width: 768px)`
+- Applied fixes to all Alchemy UI buttons, inputs, and interactive elements
+- Ensured AuthCard container doesn't block pointer events
+- Fixed iOS Safari zoom-on-focus issue for email inputs
+
+### **Files Modified:**
+- `src/components/AlchemyAuth.tsx` - Added mobile touch handling styles
+- `src/app/globals.css` - Added comprehensive mobile fixes for Alchemy AuthCard
+
+## 🔧 **Fixed Theme Default on Desktop**
 
 Fixed issue where desktop was defaulting to light mode instead of dark mode on initial page load.
 

@@ -338,7 +338,15 @@ export default function AlchemyAuth({
       <div className='relative overflow-hidden'>
         {/* Alchemy AuthCard - handles all the authentication logic */}
         {/* overflow-hidden prevents Alchemy UI elements from causing flickering at certain breakpoints */}
-        <div className='overflow-hidden'>
+        {/* Mobile-specific fixes: ensure touch events work properly */}
+        <div 
+          className='overflow-hidden'
+          style={{
+            touchAction: 'manipulation', // Enable proper touch handling on mobile
+            WebkitTapHighlightColor: 'transparent', // Remove tap highlight on iOS
+            minHeight: '200px', // Ensure enough space for AuthCard to render
+          }}
+        >
           <AuthCard />
         </div>
       </div>

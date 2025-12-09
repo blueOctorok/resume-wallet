@@ -19,15 +19,33 @@ export function CreditsDisplay() {
 
   const fetchCredits = async () => {
     try {
-      const response = await fetch('/api/credits')
+      const response = await fetch('/api/credits', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
       if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.status}`)
+        // Don't throw, just set error state
+        setCredits({ error: `Failed to fetch: ${response.status}` })
+        setLoading(false)
+        return
       }
+      
       const data = await response.json()
       setCredits(data)
     } catch (error) {
-      console.error('Failed to fetch credits:', error)
-      setCredits({ error: 'Failed to fetch credits' })
+      // Silently handle network errors - don't spam console
+      // Only log if it's not a network error (which is expected in some cases)
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        // Network error - likely API route not available or connection issue
+        setCredits({ error: 'Network error' })
+      } else {
+        // Other errors - log but don't throw
+        console.error('Failed to fetch credits:', error)
+        setCredits({ error: 'Failed to fetch credits' })
+      }
     } finally {
       setLoading(false)
     }

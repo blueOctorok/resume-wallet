@@ -167,3 +167,36 @@ body {
 [data-theme='light'] .akui-btn-secondary * {
   color: #2d3748 !important;
 }
+
+/* Mobile-specific fixes for Alchemy AuthCard */
+/* Ensure all interactive elements work properly on touch devices */
+@media (max-width: 768px) {
+  /* Alchemy AuthCard buttons and inputs */
+  .akui-btn,
+  .akui-btn-primary,
+  .akui-btn-secondary,
+  .akui-input,
+  button[type='button'],
+  button[type='submit'],
+  input[type='email'],
+  input[type='text'] {
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1) !important;
+    cursor: pointer !important;
+  }
+
+  /* Ensure AuthCard container doesn't block events */
+  [data-alchemy-auth-card],
+  .akui-auth-card,
+  .akui-auth-card * {
+    pointer-events: auto !important;
+  }
+
+  /* Fix for iOS Safari - ensure inputs are tappable */
+  input[type='email'],
+  input[type='text'] {
+    font-size: 16px !important; /* Prevents zoom on iOS when focusing */
+    -webkit-appearance: none !important;
+    appearance: none !important;
+  }
+}
