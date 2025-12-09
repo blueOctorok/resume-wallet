@@ -3,6 +3,7 @@ import { Quicksand } from 'next/font/google'
 import './globals.css'
 import AlchemyProvider from '@/components/AlchemyProvider'
 import { ThemeProvider } from '@/contexts/ThemeContext'
+import { CreditsDisplay } from '@/components/CreditsDisplay'
 
 const quicksand = Quicksand({
   variable: '--font-quicksand',
@@ -29,6 +30,7 @@ export default function RootLayout({
         <ThemeProvider>
           <AlchemyProvider>
             {children}
+            <CreditsDisplay />
           </AlchemyProvider>
         </ThemeProvider>
       </body>

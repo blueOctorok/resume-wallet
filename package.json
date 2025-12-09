@@ -16,7 +16,14 @@
     "deploy:base": "npx hardhat run scripts/deploy-resume-registry.js --network baseMainnet",
     "transfer-ownership": "npx hardhat run scripts/transfer-ownership.js --network baseSepolia",
     "verify:base-sepolia": "npx hardhat verify --network baseSepolia",
-    "verify:base": "npx hardhat verify --network baseMainnet"
+    "verify:base": "npx hardhat verify --network baseMainnet",
+    "payment:create": "node scripts/create-payment-wallet.js",
+    "payment:address": "node -e \"require('dotenv').config({path:'.env.local'}); const {privateKeyToAccount} = require('viem/accounts'); const pk = process.env.X402_PAYMENT_PRIVATE_KEY || process.env.PRIVATE_KEY; if (!pk) { console.log('No payment wallet configured'); process.exit(1); } const normalized = pk.startsWith('0x') ? pk : '0x' + pk; const acc = privateKeyToAccount(normalized); console.log('Payment Wallet:', acc.address); console.log('BaseScan:', 'https://basescan.org/address/' + acc.address);\"",
+    "payment:backup": "node scripts/backup-payment-wallet.js",
+    "payment:test": "node scripts/test-x402-payment.js",
+    "payment:test-team": "node scripts/test-team-format.js",
+    "payment:list": "node scripts/list-payments.js",
+    "payment:credits": "node scripts/check-credits.js"
   },
   "dependencies": {
     "@account-kit/core": "^4.64.0",

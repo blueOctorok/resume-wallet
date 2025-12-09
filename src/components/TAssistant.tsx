@@ -806,11 +806,19 @@ function TAssistantContent({
           .filter(Boolean)
           .join('\n\n')
 
+        // Build headers with wallet address if available
+        const helpHeaders: Record<string, string> = {
+          'Content-Type': 'application/json',
+        }
+        
+        // Add X-Wallet-Address header if user is logged in
+        if (userAddress) {
+          helpHeaders['X-Wallet-Address'] = userAddress
+        }
+
         const response = await fetch('/api/ai/chat', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: helpHeaders,
           body: JSON.stringify({
             message: helpPrompt,
             session_id: sessionId,
@@ -900,11 +908,19 @@ function TAssistantContent({
         `User message: ${userMessage.content}`,
       ].join('\n')
 
+      // Build headers with wallet address if available
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      
+      // Add X-Wallet-Address header if user is logged in
+      if (userAddress) {
+        headers['X-Wallet-Address'] = userAddress
+      }
+
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           message: contextPrompt,
           session_id: sessionId,
@@ -913,8 +929,13 @@ function TAssistantContent({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        const errorMessage = errorData?.error || 'Failed to get AI response'
+        let errorMessage = errorData?.error || 'Failed to get AI response'
         const detailMessage = errorData?.detail
+        
+        // Handle specific error codes with user-friendly messages
+        if (response.status === 502 || response.status === 503) {
+          errorMessage = 'AI service is temporarily unavailable. Please try again in a moment.'
+        }
         const combinedMessage = detailMessage
           ? `${errorMessage}: ${detailMessage}`
           : errorMessage
