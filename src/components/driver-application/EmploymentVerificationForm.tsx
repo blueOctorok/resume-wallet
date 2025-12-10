@@ -59,9 +59,10 @@ interface EmploymentVerificationData {
 
 interface EmploymentVerificationFormProps {
   onComplete?: () => void
+  userAddress?: string
 }
 
-const EmploymentVerificationForm = ({ onComplete }: EmploymentVerificationFormProps) => {
+const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerificationFormProps) => {
   const { theme } = useTheme()
   const [formData, setFormData] = useState<EmploymentVerificationData>({
     driverName: '',
@@ -228,26 +229,81 @@ const EmploymentVerificationForm = ({ onComplete }: EmploymentVerificationFormPr
         return
       }
 
+      if (!userAddress) {
+        throw new Error('User address is required to save employment verification')
+      }
+
       // Create deterministic hash of the DOT Employment Verification form data
       const applicationHash = await hashJson(formData)
 
       // For now, use the same hash placeholder for ipfsHash until IPFS storage is added
       const ipfsHash = applicationHash
 
+      // 1. Save to Supabase FIRST (source of truth, validates data structure)
+      console.log('💾 Saving employment verification to Supabase...')
+      const saveResponse = await fetch('/api/driver-applications/save-employment-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userAddress,
+          employmentVerificationData: formData,
+          applicationHash,
+          ipfsHash,
+        }),
+      })
+
+      if (!saveResponse.ok) {
+        const errorData = await saveResponse.json().catch(() => ({}))
+        console.error('❌ Failed to save to Supabase:', errorData)
+        throw new Error(errorData.error || 'Failed to save employment verification to database')
+      }
+
+      console.log('✅ Employment verification saved to Supabase successfully')
+
+      // 2. Submit to blockchain for verification (after DB save succeeds)
+      console.log('📝 Submitting to blockchain for verification...')
       const res = await fetch('/api/blockchain/submit-driver-application', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ applicationHash, ipfsHash }),
+        body: JSON.stringify({ 
+          applicationHash, 
+          ipfsHash,
+          userAddress: userAddress,
+        }),
       })
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err?.error || 'Failed to submit application')
+        // Database save succeeded, but blockchain failed - log and continue
+        console.error('⚠️ Blockchain submission failed, but data is saved:', err)
+        throw new Error(err.error || 'Failed to submit to blockchain (data is saved to database)')
       }
 
       const data = await res.json()
       setTxHash(data.transactionHash)
       setExplorerUrl(data.explorerUrl)
+
+      // 3. Update database with blockchain transaction details
+      try {
+        const updateResponse = await fetch('/api/driver-applications/save-employment-verification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userAddress,
+            employmentVerificationData: formData,
+            applicationHash,
+            ipfsHash,
+            transactionHash: data.transactionHash,
+            applicationId: data.applicationId,
+          }),
+        })
+        if (updateResponse.ok) {
+          console.log('✅ Database updated with blockchain verification details')
+        }
+      } catch (updateError) {
+        console.warn('⚠️ Failed to update database with blockchain details (non-critical):', updateError)
+      }
+
       // Notify parent that employment verification is complete
       onComplete?.()
     } catch (e) {

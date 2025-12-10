@@ -5,10 +5,10 @@ export async function POST(request: Request) {
   try {
     const { role, walletAddress } = await request.json();
 
-    // Validate role
-    if (!role || !['driver', 'employer'].includes(role)) {
+    // Validate role - allow null/empty to clear role (for testing)
+    if (role !== null && role !== '' && !['driver', 'employer'].includes(role)) {
       return NextResponse.json(
-        { error: 'Invalid role. Must be "driver" or "employer".' },
+        { error: 'Invalid role. Must be "driver", "employer", or null/empty to clear.' },
         { status: 400 }
       );
     }
@@ -44,13 +44,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // Allow role changes (user can switch between driver/employer)
-    console.log(`[SET ROLE] User ${existingUser.id} changing role from "${existingUser.role}" to "${role}"`);
+    // Allow role changes (user can switch between driver/employer) or clear role (for testing)
+    const newRole = (role === null || role === '') ? null : role
+    console.log(`[SET ROLE] User ${existingUser.id} changing role from "${existingUser.role}" to "${newRole || 'NULL (cleared)'}"`);
 
-    // Update user role
+    // Update user role (set to null if clearing)
     const { error: updateError } = await supabase
       .from('users')
-      .update({ role })
+      .update({ role: newRole })
       .eq('id', existingUser.id);
 
     if (updateError) {
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
     }
 
     // If switching to employer, create a company record if it doesn't exist
-    if (role === 'employer') {
+    if (newRole === 'employer') {
       // Check if company already exists
       const { data: existingCompany } = await supabase
         .from('companies')
@@ -88,8 +89,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      role,
-      message: `Role set to ${role} successfully`
+      role: newRole,
+      message: newRole ? `Role set to ${newRole} successfully` : 'Role cleared successfully'
     });
 
   } catch (error) {

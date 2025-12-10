@@ -332,8 +332,28 @@ const HomeContent = () => {
 
       if (response.ok) {
         const data = await response.json()
+        console.log('[ROLE SELECTION] Role saved successfully:', data)
+        
+        // Update state immediately
         setUserRole(role)
         setShowRoleSelection(false)
+        
+        // Verify the role was actually saved by refetching
+        // This ensures persistence and prevents the modal from showing again
+        const verifyResponse = await fetch('/api/user/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ walletAddress: user.address }),
+        })
+        
+        if (verifyResponse.ok) {
+          const verifyData = await verifyResponse.json()
+          if (verifyData.success && verifyData.profile?.role === role) {
+            console.log('[ROLE SELECTION] Role verified in database:', verifyData.profile.role)
+          } else {
+            console.warn('[ROLE SELECTION] Role verification failed - role may not have persisted')
+          }
+        }
         
         // If driver, navigate to resume page to start their journey
         if (role === 'driver') {
@@ -343,8 +363,11 @@ const HomeContent = () => {
           setCurrentPage(null)
         }
       } else {
-        console.error('Failed to set user role:', response.statusText)
-        alert('Failed to set role. Please try again.')
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Failed to set user role:', response.statusText, errorData)
+        alert(`Failed to set role: ${errorData.error || response.statusText}. Please try again.`)
+        // Keep modal open so user can retry
+        setIsSettingRole(false)
       }
     } catch (error) {
       console.error('Error setting user role:', error)
@@ -611,6 +634,11 @@ const HomeContent = () => {
       return
     }
 
+    // Reset role state when user changes (but don't show modal yet - wait for API response)
+    setUserRole(null)
+    setShowRoleSelection(false)
+    setIsRoleLoading(true) // Show loading while we fetch
+
     const fetchUserRole = async () => {
       setIsRoleLoading(true)
       try {
@@ -627,8 +655,16 @@ const HomeContent = () => {
           const data = await response.json()
           console.log('[ROLE FETCH] API response:', data)
           if (data.success && data.profile) {
-            console.log('[ROLE FETCH] Profile found. Role:', data.profile.role, 'Type:', typeof data.profile.role)
-            setUserRole(data.profile.role || null)
+            // Normalize role value - handle null, undefined, empty string, or invalid values
+            const roleValue = data.profile.role
+            const normalizedRole = (roleValue === 'driver' || roleValue === 'employer') 
+              ? roleValue 
+              : null
+            
+            console.log('[ROLE FETCH] Profile found. Role:', roleValue, 'Normalized:', normalizedRole, 'Type:', typeof roleValue)
+            
+            setUserRole(normalizedRole)
+            
             if (data.profile.company) {
               console.log('[ROLE FETCH] Company data:', data.profile.company)
               setCompanyName(data.profile.company.company_name)
@@ -636,33 +672,47 @@ const HomeContent = () => {
               console.log('[ROLE FETCH] No company data found for employer')
               setCompanyName(null)
             }
-            // Handle navigation based on role
-            if (!data.profile.role) {
-              console.log('[ROLE FETCH] No role found - showing role selection')
+            
+            // Show role selection if role is missing or invalid
+            if (!normalizedRole) {
+              console.log('[ROLE FETCH] No valid role found - showing role selection')
               setShowRoleSelection(true)
+              // Don't navigate if no role - wait for user to select
             } else {
-              console.log('[ROLE FETCH] Role exists:', data.profile.role, '- NOT showing role selection')
+              console.log('[ROLE FETCH] Valid role exists:', normalizedRole, '- NOT showing role selection')
+              setShowRoleSelection(false) // Explicitly hide modal if role exists
               
               // Navigate based on role (only if not already on a page)
               if (!currentPage || currentPage === 'signin') {
-                if (data.profile.role === 'driver') {
+                if (normalizedRole === 'driver') {
                   console.log('[ROLE FETCH] Driver role - navigating to resume')
                   setCurrentPage('resume')
-                } else if (data.profile.role === 'employer') {
+                } else if (normalizedRole === 'employer') {
                   console.log('[ROLE FETCH] Employer role - staying on home (dashboard)')
                   setCurrentPage(null) // null shows employer dashboard
                 }
               }
             }
+          } else {
+            // API returned success but no profile data - treat as new user
+            console.log('[ROLE FETCH] API success but no profile data - showing role selection')
+            setUserRole(null)
+            setShowRoleSelection(true)
           }
         } else {
           const errorData = await response.json().catch(() => ({}))
           console.error('Failed to fetch user profile:', response.statusText)
           console.error('Error details:', errorData)
           
-          // If user not found (404), they're new - show role selection
+          // If user not found (404) or any error, they're new or need role selection
           if (response.status === 404) {
             console.log('[ROLE FETCH] New user (404) - showing role selection')
+            setUserRole(null)
+            setShowRoleSelection(true)
+          } else {
+            // For other errors, still show role selection as fallback
+            console.log('[ROLE FETCH] Error fetching profile - showing role selection as fallback')
+            setUserRole(null)
             setShowRoleSelection(true)
           }
           
@@ -673,6 +723,10 @@ const HomeContent = () => {
         }
       } catch (error) {
         console.error('Error fetching user role:', error)
+        // On any error, show role selection as fallback
+        console.log('[ROLE FETCH] Exception caught - showing role selection as fallback')
+        setUserRole(null)
+        setShowRoleSelection(true)
       } finally {
         setIsRoleLoading(false)
       }
@@ -1111,7 +1165,7 @@ const HomeContent = () => {
     try {
       setSubmissionError(null)
       setIsSubmitting(true)
-      console.log('📝 [HOME] Form 3 completed, submitting to blockchain...')
+      console.log('📝 [HOME] Form 3 completed, starting submission...')
 
       // Check if user is authenticated
       if (!user?.address) {
@@ -1143,7 +1197,7 @@ const HomeContent = () => {
       const { hashJson } = await import('@/lib/hash-utils')
       const applicationHash = await hashJson(combinedData)
 
-      // Check for duplicate in database BEFORE submitting to blockchain
+      // Check for duplicate in database BEFORE submitting
       console.log('🔍 [HOME] Checking database for duplicate hash...')
       const { checkDuplicateApplicationHash } = await import(
         '@/lib/supabase-client-db'
@@ -1172,158 +1226,7 @@ const HomeContent = () => {
       // For now, use a placeholder IPFS hash (we can add IPFS upload later)
       const ipfsHash = 'placeholder_ipfs_hash_' + Date.now()
 
-      // Preflight with server (DB + on-chain hash)
-      console.log('📝 [HOME] Preflight via API')
-      const preflightRes = await fetch(
-        '/api/blockchain/preflight-driver-application',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ applicationHash, userAddress: user.address }),
-        }
-      )
-      const preflightJson = await preflightRes.json().catch(() => ({}))
-      if (!preflightRes.ok || preflightJson?.error) {
-        setSubmissionError(
-          preflightJson?.details || preflightJson?.error || 'Preflight failed'
-        )
-        setIsSubmitting(false)
-        return
-      }
-
-      // Submit to chain from user's Base smart wallet using Alchemy Account Kit
-      console.log(
-        '📝 [HOME] Submitting transaction from user smart wallet via Alchemy SDK'
-      )
-
-      if (!client) {
-        setSubmissionError(
-          'Wallet client not ready. Please log in with your Alchemy Smart Wallet.'
-        )
-        setIsSubmitting(false)
-        return
-      }
-
-      const contractAddress = process.env
-        .NEXT_PUBLIC_DRIVER_APP_CONTRACT_ADDRESS as string
-      const { abi } = await import(
-        '../../artifacts/contracts/ProductionDriverRegistry.sol/ProductionDriverRegistry.json'
-      )
-      const { encodeFunctionData } = await import('viem')
-
-      // Encode the contract call
-      const callData = encodeFunctionData({
-        abi: abi as any,
-        functionName: 'submitApplication',
-        args: [applicationHash],
-      })
-
-      console.log(
-        '🔍 [HOME] Sending user operation to contract:',
-        contractAddress
-      )
-      console.log('🔍 [HOME] Client available:', !!client)
-      console.log(
-        '🔍 [HOME] sendUserOperationAsync available:',
-        !!sendUserOperationAsync
-      )
-
-      if (!sendUserOperationAsync) {
-        throw new Error(
-          'sendUserOperationAsync function not available. Ensure you are logged in with Alchemy Smart Wallet.'
-        )
-      }
-
-      // Send user operation via Alchemy SDK
-      const result = await sendUserOperationAsync({
-        uo: {
-          target: contractAddress as `0x${string}`,
-          data: callData as `0x${string}`,
-          value: 0n,
-        },
-      })
-
-      console.log('📦 [HOME] User operation result:', result)
-
-      if (!result) {
-        throw new Error('Failed to send user operation - no result returned')
-      }
-
-      // The result should be a user operation hash
-      const userOpHash = typeof result === 'string' ? result : result.hash
-
-      if (!userOpHash) {
-        console.error(
-          '❌ [HOME] Invalid result from sendUserOperation:',
-          result
-        )
-        throw new Error('Failed to get user operation hash from result')
-      }
-
-      console.log(
-        '⏳ [HOME] Waiting for transaction receipt for userOp:',
-        userOpHash
-      )
-
-      // Wait for the transaction to be mined
-      const txHash = await client.waitForUserOperationTransaction({
-        hash: userOpHash as `0x${string}`,
-      })
-
-      console.log('✅ [HOME] Transaction confirmed:', txHash)
-
-      // Get transaction receipt to parse events
-      const { createPublicClient, http } = await import('viem')
-      const { baseSepolia } = await import('viem/chains')
-      const publicClient = createPublicClient({
-        chain: baseSepolia,
-        transport: http(
-          `https://base-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
-        ),
-      })
-
-      const receipt = await publicClient.getTransactionReceipt({ hash: txHash })
-
-      // Parse ApplicationSubmitted event
-      let applicationId: number | null = null
-      try {
-        const { decodeEventLog } = await import('viem')
-        const submittedEvent = receipt.logs.find((log: any) => {
-          try {
-            const decoded = decodeEventLog({
-              abi: abi as any,
-              data: log.data,
-              topics: log.topics,
-            })
-            return decoded.eventName === 'ApplicationSubmitted'
-          } catch {
-            return false
-          }
-        })
-
-        if (submittedEvent) {
-          const decoded = decodeEventLog({
-            abi: abi as any,
-            data: submittedEvent.data,
-            topics: submittedEvent.topics,
-          })
-          applicationId = Number(
-            (decoded.args as any).applicationId || (decoded.args as any)[0]
-          )
-        }
-      } catch (e) {
-        console.warn('⚠️ [HOME] Could not parse application ID from event:', e)
-      }
-
-      const txData = {
-        transactionHash: receipt.transactionHash,
-        blockNumber: Number(receipt.blockNumber),
-        applicationId,
-      }
-
-      setBlockchainData(txData)
-
-      // Save to database with application hash and blockchain data
+      // 1. SAVE TO DATABASE FIRST (all form data)
       console.log('💾 [HOME] Saving application to database...')
       const { completeDriverApplicationClient } = await import(
         '@/lib/supabase-client-db'
@@ -1337,43 +1240,93 @@ const HomeContent = () => {
 
       if (!dbResult.success) {
         console.error('❌ [HOME] Failed to save to database:', dbResult.error)
-        // Don't fail the whole submission, but log it
-      } else {
-        // Update database with blockchain transaction hash and application ID
-        const { createClient } = await import('@/utils/supabase/client')
-        const supabase = createClient()
+        setSubmissionError(
+          'Failed to save application to database: ' + dbResult.error
+        )
+        setIsSubmitting(false)
+        return
+      }
 
-        // Get user_id
-        const { data: userData } = await supabase
-          .from('users')
-          .select('id')
-          .eq('wallet_address', user.address)
-          .single()
+      console.log('✅ [HOME] Application saved to database successfully')
 
-        if (userData && dbResult.application) {
-          await fetch('/api/blockchain/persist-driver-application', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userAddress: user.address,
-              applicationHash,
-              ipfsHash,
-              transactionHash: txData.transactionHash,
-              applicationId: txData.applicationId,
-              blockNumber: txData.blockNumber,
-            }),
-          })
-          console.log('✅ [HOME] Database updated with blockchain data')
+      // 2. SUBMIT TO BLOCKCHAIN FOR VERIFICATION (server-side with sponsored gas)
+      console.log('📝 [HOME] Submitting to blockchain for verification (server-side)...')
+      
+      try {
+        const blockchainResponse = await fetch('/api/blockchain/submit-driver-application', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            applicationHash,
+            ipfsHash,
+            userAddress: user.address,
+          }),
+        })
+
+        if (!blockchainResponse.ok) {
+          const errorData = await blockchainResponse.json().catch(() => ({}))
+          console.error('⚠️ [HOME] Blockchain submission failed:', errorData)
+          // Database save succeeded, so don't fail completely
+          setSubmissionError(
+            'Application saved to database, but blockchain verification failed. You can retry verification later.'
+          )
+          // Still mark as completed since data is saved
+          setIsDriverApplicationCompleted(true)
+          setShowEmploymentVerification(false)
+          setShowDashboard(false)
+          setIsSubmitting(false)
+          return
         }
+
+        const blockchainData = await blockchainResponse.json()
+        console.log('✅ [HOME] Blockchain verification successful:', blockchainData)
+
+        const txData = {
+          transactionHash: blockchainData.transactionHash,
+          blockNumber: blockchainData.blockNumber,
+          applicationId: blockchainData.applicationId,
+        }
+
+        setBlockchainData(txData)
+
+        // 3. UPDATE DATABASE WITH BLOCKCHAIN TRANSACTION DETAILS
+        console.log('💾 [HOME] Updating database with blockchain verification details...')
+        const updateResponse = await fetch('/api/blockchain/persist-driver-application', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userAddress: user.address,
+            applicationHash,
+            ipfsHash,
+            transactionHash: txData.transactionHash,
+            applicationId: txData.applicationId,
+            blockNumber: txData.blockNumber,
+          }),
+        })
+
+        if (updateResponse.ok) {
+          console.log('✅ [HOME] Database updated with blockchain verification details')
+        } else {
+          console.warn('⚠️ [HOME] Failed to update database with blockchain details (non-critical)')
+        }
+
+      } catch (blockchainError) {
+        console.error('⚠️ [HOME] Blockchain verification error:', blockchainError)
+        // Database save succeeded, so we can continue
+        setSubmissionError(
+          'Application saved successfully. Blockchain verification will be retried automatically.'
+        )
       }
 
       // Mark as completed and show the submission confirmation screen
-      // User will click button to proceed to Employment Verification
       setIsDriverApplicationCompleted(true)
       setShowEmploymentVerification(false)
       setShowDashboard(false)
+      
+      console.log('✅ [HOME] Application submission complete')
+      
     } catch (error: any) {
-      console.warn('⚠️ [HOME] Failed to submit to blockchain:', error)
+      console.error('❌ [HOME] Application submission failed:', error)
       setSubmissionError(error?.message || 'Failed to submit application')
     } finally {
       setIsSubmitting(false)
@@ -1494,6 +1447,7 @@ const HomeContent = () => {
     if (isDriverApplicationCompleted && showEmploymentVerification) {
       return (
         <EmploymentVerificationForm
+          userAddress={user?.address}
           onComplete={() => {
             setShowEmploymentVerification(false)
             setShowDashboard(true)
@@ -1729,7 +1683,8 @@ const HomeContent = () => {
           )}
 
           {/* Role Selection Modal - Show when user needs to select a role */}
-          {showRoleSelection && user && !isRoleLoading && !isSettingRole && (
+          {/* Show modal if: user is logged in, not loading, not setting role, and either showRoleSelection is true OR userRole is null/undefined */}
+          {user && !isRoleLoading && !isSettingRole && (showRoleSelection || userRole === null) && (
             <RoleSelectionModal 
               onSelectRole={handleRoleSelection}
               isLoading={isSettingRole}

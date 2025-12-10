@@ -162,6 +162,39 @@ export default function UserStatusModal({
               </button>
             )}
 
+            {/* Clear Role Button (for testing) */}
+            {userRole && user?.address && (
+              <button
+                onClick={async () => {
+                  if (confirm('Clear your role? This will show the role selection modal again. (For testing)')) {
+                    try {
+                      const response = await fetch('/api/user/set-role', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                          role: null,
+                          walletAddress: user.address 
+                        }),
+                      })
+                      if (response.ok) {
+                        // Reload page to trigger role fetch and show modal
+                        window.location.reload()
+                      } else {
+                        const errorData = await response.json().catch(() => ({}))
+                        alert(`Failed to clear role: ${errorData.error || 'Unknown error'}`)
+                      }
+                    } catch (error) {
+                      console.error('Error clearing role:', error)
+                      alert('Error clearing role')
+                    }
+                  }
+                }}
+                className='w-full px-4 sm:px-6 py-3 sm:py-4 mb-3 text-yellow-200 font-semibold bg-yellow-600/20 backdrop-blur-sm border border-yellow-500/30 rounded-lg sm:rounded-xl hover:bg-yellow-600/30 hover:border-yellow-500/50 transition-all duration-300 shadow-lg hover:shadow-xl text-sm sm:text-base'
+              >
+                🧪 Clear Role (Test)
+              </button>
+            )}
+
             {/* Sign Out Button */}
             <button
               onClick={handleLogout}
