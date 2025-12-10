@@ -4,6 +4,7 @@ import './globals.css'
 import AlchemyProvider from '@/components/AlchemyProvider'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { CreditsDisplay } from '@/components/CreditsDisplay'
+import MobileConsole from '@/components/MobileConsole'
 
 const quicksand = Quicksand({
   variable: '--font-quicksand',
@@ -48,6 +49,19 @@ export default function RootLayout({
                   document.documentElement.setAttribute('data-theme', 'dark');
                 }
               })();
+              
+              // Global error handler for crypto errors on mobile
+              window.addEventListener('error', function(event) {
+                if (event.message && (
+                  event.message.includes('crv') ||
+                  event.message.includes('invalid') && event.message.includes('crypto') ||
+                  event.message.includes('g:invalid')
+                )) {
+                  console.error('🔐 Mobile crypto error detected:', event.message);
+                  // Store error for component to display
+                  sessionStorage.setItem('crypto-error', 'true');
+                }
+              });
             `,
           }}
         />
@@ -57,6 +71,7 @@ export default function RootLayout({
           <AlchemyProvider>
             {children}
             <CreditsDisplay />
+            <MobileConsole />
           </AlchemyProvider>
         </ThemeProvider>
       </body>

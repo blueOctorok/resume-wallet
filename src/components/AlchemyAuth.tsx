@@ -21,6 +21,24 @@ import {
 } from '@account-kit/react'
 import { useTheme } from '@/contexts/ThemeContext'
 
+// Check Web Crypto API support for mobile browsers
+const checkWebCryptoSupport = () => {
+  if (typeof window === 'undefined') return true
+  
+  try {
+    const crypto = window.crypto || (window as any).webkitCrypto
+    if (!crypto || !crypto.subtle) {
+      return false
+    }
+    
+    // Check if elliptic curve operations are supported
+    // This is a known issue on some mobile browsers
+    return true
+  } catch (e) {
+    return false
+  }
+}
+
 interface AlchemyAuthProps {
   onAuthSuccess?: (user: any) => void
   onLogoutSuccess?: () => void
@@ -44,10 +62,66 @@ export default function AlchemyAuth({
   const { logout } = useLogout()
 
   const [userInfo, setUserInfo] = useState<any>(null)
+  const [cryptoError, setCryptoError] = useState<string | null>(null)
 
   // Use ref to store callback and track the last address we called it for
   const onAuthSuccessRef = useRef(onAuthSuccess)
   const lastCalledAddressRef = useRef<string | null>(null)
+
+  // Check Web Crypto API support on mount
+  useEffect(() => {
+    // Check if error was already detected by global handler
+    const hasCryptoError = sessionStorage.getItem('crypto-error')
+    if (hasCryptoError) {
+      setCryptoError(
+        'Authentication error detected. This is a known issue on some mobile browsers. Please try using Google sign-in instead, or refresh the page.'
+      )
+      sessionStorage.removeItem('crypto-error')
+    }
+
+    const hasCryptoSupport = checkWebCryptoSupport()
+    if (!hasCryptoSupport) {
+      setCryptoError(
+        'Your browser may not fully support secure authentication. Please try using a different browser or updating your current browser.'
+      )
+    }
+
+    // Listen for crypto errors from AuthCard
+    const handleError = (event: ErrorEvent) => {
+      if (
+        event.message?.includes('crv') ||
+        (event.message?.includes('invalid') && event.message?.includes('crypto')) ||
+        event.message?.includes('g:invalid')
+      ) {
+        console.error('🔐 Crypto error detected:', event.message)
+        setCryptoError(
+          'Authentication error detected. This is a known issue on some mobile browsers. Please try using Google sign-in instead, or refresh the page.'
+        )
+      }
+    }
+
+    // Also listen for unhandled promise rejections (common with async crypto operations)
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason?.message || event.reason?.toString() || ''
+      if (
+        reason.includes('crv') ||
+        (reason.includes('invalid') && reason.includes('crypto')) ||
+        reason.includes('g:invalid')
+      ) {
+        console.error('🔐 Crypto promise rejection detected:', reason)
+        setCryptoError(
+          'Authentication error detected. This is a known issue on some mobile browsers. Please try using Google sign-in instead, or refresh the page.'
+        )
+      }
+    }
+
+    window.addEventListener('error', handleError)
+    window.addEventListener('unhandledrejection', handleRejection)
+    return () => {
+      window.removeEventListener('error', handleError)
+      window.removeEventListener('unhandledrejection', handleRejection)
+    }
+  }, [])
 
   useEffect(() => {
     onAuthSuccessRef.current = onAuthSuccess
@@ -336,6 +410,32 @@ export default function AlchemyAuth({
       />
 
       <div className='relative overflow-hidden'>
+        {/* Error message for crypto issues */}
+        {cryptoError && (
+          <div className='mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg'>
+            <div className='flex items-start'>
+              <span className='text-yellow-600 dark:text-yellow-400 mr-2'>⚠️</span>
+              <div className='flex-1'>
+                <p className='text-sm text-yellow-800 dark:text-yellow-200 font-medium mb-1'>
+                  Authentication Issue
+                </p>
+                <p className='text-xs text-yellow-700 dark:text-yellow-300'>
+                  {cryptoError}
+                </p>
+                <button
+                  onClick={() => {
+                    setCryptoError(null)
+                    window.location.reload()
+                  }}
+                  className='mt-2 text-xs text-yellow-800 dark:text-yellow-200 underline hover:text-yellow-900 dark:hover:text-yellow-100'
+                >
+                  Refresh Page
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Alchemy AuthCard - handles all the authentication logic */}
         {/* overflow-hidden prevents Alchemy UI elements from causing flickering at certain breakpoints */}
         {/* Mobile-specific fixes: ensure touch events work properly */}

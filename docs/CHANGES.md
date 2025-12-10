@@ -2,7 +2,39 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
-## 🔧 **Fixed Mobile Email Sign-In Issue** (Current)
+## 🔧 **Fixed Mobile Crypto Error (CRV Undefined)** (Current)
+
+Fixed "g:invalid crv: undefined" error that occurs during OTP verification on mobile devices.
+
+### **Problem:**
+- Mobile users getting "g:invalid crv: undefined" error when entering OTP code
+- This is a Web Crypto API compatibility issue with mobile browsers (especially iOS Safari)
+- Elliptic curve operations not fully supported on some mobile browsers
+
+### **Solution:**
+- Added global error handler to catch crypto errors
+- Added error detection in AlchemyAuth component
+- Display user-friendly error message with workaround suggestions
+- Recommend using Google sign-in as alternative on mobile
+- Added sessionStorage flag to persist error state across page interactions
+
+### **Technical Details:**
+- Error occurs in Alchemy's AuthCard when using Web Crypto API for key generation
+- Mobile browsers (iOS Safari, some Android browsers) have limited Web Crypto API support
+- Error is caught at multiple levels: global error handler, component error listener, and promise rejection handler
+- Users are directed to use Google sign-in as a workaround (uses OAuth instead of Web Crypto)
+
+### **User Experience:**
+- Clear error message explaining the issue
+- Suggestion to use Google sign-in instead
+- Option to refresh page
+- Error persists until user takes action
+
+### **Files Modified:**
+- `src/components/AlchemyAuth.tsx` - Added crypto error detection and user-friendly error display
+- `src/app/layout.tsx` - Added global error handler for crypto errors
+
+## 🔧 **Fixed Mobile Email Sign-In Issue**
 
 Fixed issue where email sign-in button wasn't working on mobile devices.
 
