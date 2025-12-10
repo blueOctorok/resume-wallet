@@ -2,6 +2,42 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 📱 **MOBILE UX FIX: Role Selection Modal** (December 10, 2024)
+
+### Summary
+Fixed critical mobile scrolling issues with role selection modal where users were unable to scroll the modal content.
+
+### Changes
+
+#### **1. Body Scroll Lock**
+- ✅ Added `useEffect` to lock body scroll when modal is open
+- ✅ Prevents background page from scrolling on mobile
+- ✅ Automatically restores scroll on unmount
+
+#### **2. Modal Scroll Container**
+- ✅ Made modal content independently scrollable
+- ✅ Added `overflow-y-auto` and `overscroll-contain` to modal
+- ✅ Set `max-h-[95vh]` to prevent modal from exceeding viewport
+- ✅ Added `touchAction` styles to prevent touch event conflicts
+
+#### **3. Mobile-First Responsive Design**
+- ✅ Reduced padding on mobile (`p-4` → `p-3 sm:p-4`)
+- ✅ Smaller text sizes on mobile (responsive with `sm:` breakpoints)
+- ✅ Smaller icons on mobile (`w-10 h-10` on mobile, `sm:w-14 sm:h-14` on desktop)
+- ✅ Reduced spacing throughout for better mobile fit
+- ✅ Full-width button on mobile, auto-width on desktop
+- ✅ Changed hover effects to `active:` states for mobile
+
+#### **4. Better Touch Interactions**
+- ✅ Added `active:scale-[0.98]` for visual feedback on touch
+- ✅ Preserved `sm:hover:scale-[1.02]` for desktop hover states
+- ✅ Proper touch event handling with `touchAction` styles
+
+#### **Files Changed**
+- `src/components/RoleSelectionModal.tsx` - Complete mobile UX overhaul
+
+---
+
 ## 🏗️ **ARCHITECTURE REFACTOR: DB-FIRST + SPONSORED GAS** (December 10, 2024)
 
 ### Summary
