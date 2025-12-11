@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import dynamic from 'next/dynamic'
-import WalletCard from './WalletCard'
+import { Home } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 import { useTheme } from '@/contexts/ThemeContext'
 
@@ -82,34 +82,58 @@ export default function Navigation({
         {/* Outer glow effect */}
         <div className={glowClasses} />
 
-        <div className='relative px-6 sm:px-8 py-5 sm:py-6'>
-          <div className='flex flex-col gap-4'>
+        <div className='relative px-4 sm:px-8 py-4 sm:py-6'>
+          <div className='flex flex-col gap-3 sm:gap-4'>
             {/* Top Row: Logo and Status */}
-            <div className='flex items-center justify-between gap-4'>
-              {/* User Status Indicator or Sign In Button - Left (always takes space to center logo) */}
-              <div className='flex-shrink-0 w-24 flex justify-start'>
+            <div className='flex items-center justify-between gap-2 sm:gap-4'>
+              {/* User Status Indicator and Home Button - Left */}
+              <div className='flex-shrink-0 flex items-center gap-1.5 sm:gap-2'>
                 {isAuthenticated ? (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onStatusClick?.()
-                    }}
-                    className='relative group flex flex-col items-center space-y-1.5 p-2.5 rounded-xl bg-brand-sage/60 backdrop-blur-sm hover:bg-brand-sage/80 hover:border-brand-mint/70 transition-all duration-300 shadow-lg hover:shadow-xl border border-transparent'
-                    aria-label='View account status'
-                  >
-                    {/* Blinking green dot */}
-                    <div className='w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50' />
+                  <>
+                    {/* Logged In Status Button with Elevated Glowing Effect */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onStatusClick?.()
+                      }}
+                      className='relative group flex flex-col items-center space-y-1 sm:space-y-1.5 p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-brand-sage/90 backdrop-blur-sm hover:bg-brand-sage/95 hover:border-brand-mint/70 transition-all duration-300 border-2 border-white/30'
+                      aria-label='View account status'
+                      style={{
+                        boxShadow: '0 0 20px rgba(255, 255, 255, 0.25), 0 0 40px rgba(255, 255, 255, 0.15), 0 0 60px rgba(255, 255, 255, 0.05), inset 0 0 15px rgba(255, 255, 255, 0.1), 0 4px 12px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.15)'
+                      }}
+                    >
+                      {/* Blinking green dot */}
+                      <div className='w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50' />
 
-                    {/* "Logged in" text */}
-                    <span className='text-xs text-brand-cream/90 font-medium'>
-                      Logged in
-                    </span>
+                      {/* "Logged in" text */}
+                      <span className='text-[10px] sm:text-xs text-brand-cream/90 font-medium'>
+                        Logged in
+                      </span>
 
-                    {/* Tooltip */}
-                    <div className='absolute left-0 top-full mt-2 px-3 py-1.5 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
-                      Click to view account
-                    </div>
-                  </button>
+                      {/* Tooltip */}
+                      <div className='absolute left-0 top-full mt-2 px-3 py-1.5 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
+                        Click to view account
+                      </div>
+                    </button>
+
+                    {/* Home Icon Button */}
+                    <button
+                      onClick={() => handleNavigation('home')}
+                      className={`relative group p-2 sm:p-2.5 rounded-lg sm:rounded-xl backdrop-blur-sm transition-all duration-300 shadow-lg hover:shadow-xl border ${
+                        theme === 'light'
+                          ? 'bg-brand-sage/60 hover:bg-brand-sage/80 border-brand-sage/40 hover:border-brand-mint/70 text-white'
+                          : 'bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-mint/30 hover:border-brand-mint/50 text-brand-cream'
+                      }`}
+                      aria-label='Go to home'
+                    >
+                      <Home className='w-4 h-4 sm:w-5 sm:h-5' strokeWidth={2} />
+                      
+                      {/* Tooltip */}
+                      <div className='absolute left-0 top-full mt-2 px-3 py-1.5 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
+                        Home
+                      </div>
+                    </button>
+                  </>
                 ) : (
                   <button
                     onClick={() => handleNavigation('signin')}
@@ -124,8 +148,8 @@ export default function Navigation({
                 )}
               </div>
 
-              {/* Logo - Center */}
-              <div className='flex-1 flex justify-center min-w-0'>
+              {/* Logo - Slightly Left of Center */}
+              <div className='flex-1 flex justify-center min-w-0 -ml-0 sm:-ml-12'>
                 <h1
                   className={`text-3xl sm:text-4xl lg:text-5xl font-extralight tracking-wide ${
                     theme === 'light'
@@ -164,10 +188,10 @@ export default function Navigation({
                 )}
                 <button
                   onClick={toggleMenu}
-                  className='md:hidden p-2.5 rounded-xl bg-brand-sage/60 backdrop-blur-sm hover:bg-brand-sage/80 hover:border-brand-mint/70 transition-all duration-300 shadow-lg hover:shadow-xl'
+                  className='md:hidden p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-brand-sage/60 backdrop-blur-sm hover:bg-brand-sage/80 hover:border-brand-mint/70 transition-all duration-300 shadow-lg hover:shadow-xl'
                   aria-label='Toggle menu'
                 >
-                  <div className='w-5 h-5 flex flex-col justify-center items-center gap-1'>
+                  <div className='w-4 h-4 sm:w-5 sm:h-5 flex flex-col justify-center items-center gap-1'>
                     <div
                       className={`w-full h-0.5 bg-white transition-all duration-300 ${
                         isMenuOpen ? 'rotate-45 translate-y-1.5' : ''
@@ -192,55 +216,11 @@ export default function Navigation({
             <div
               className={`${
                 isMenuOpen ? 'flex' : 'hidden'
-              } md:flex flex-col md:flex-row justify-center items-center gap-3 pt-4 border-t border-brand-mint/30`}
+              } md:flex flex-col md:flex-row items-center gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-brand-mint/30 relative`}
             >
-              {/* Mobile Wallet Button */}
-              {isAuthenticated && user && (
-                <WalletCard
-                  user={user}
-                  onClick={onWalletClick}
-                  isMobile={true}
-                  userRole={userRole}
-                  onSwitchRole={onSwitchRole}
-                />
-              )}
-              
-              {/* Mobile-only T Assistant access */}
-              {isAuthenticated && onTClick && (
-                <button
-                  onClick={() => {
-                    onTClick()
-                    setIsMenuOpen(false)
-                  }}
-                  className={`md:hidden w-full px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 flex items-center justify-center gap-2 ${
-                    theme === 'light'
-                      ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105'
-                      : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105'
-                  }`}
-                >
-                  <span className='text-base'>🤖</span>
-                  <span>{tHasUnread ? 'AvA has updates' : 'Chat with AvA'}</span>
-                  {tHasUnread && (
-                    <span className='ml-1 w-2 h-2 rounded-full bg-red-500 animate-pulse' />
-                  )}
-                </button>
-              )}
-
-              {/* Home Button - Always visible */}
-              <button
-                onClick={() => handleNavigation('home')}
-                className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 ${
-                  theme === 'light'
-                    ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105'
-                    : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105'
-                }`}
-              >
-                🏠 Home
-              </button>
-
-              {/* Driver Options Dropdown */}
+              {/* Driver Options Dropdown - Perfectly Centered in bottom row */}
               {userRole === 'driver' && isAuthenticated && (
-                <div className="relative">
+                <div className="relative md:absolute md:left-1/2 md:-translate-x-1/2 w-full md:w-auto">
                   {theme === 'dark' ? (
                     <div className="rotating-gold-border w-full md:w-auto">
                       <button
@@ -248,7 +228,7 @@ export default function Navigation({
                           setIsDriverDropdownOpen(!isDriverDropdownOpen)
                           setIsEmployerDropdownOpen(false)
                         }}
-                        className="w-full px-6 py-2.5 text-sm font-semibold rounded-[10px] text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 transition-all duration-300 flex items-center gap-2 relative z-10"
+                        className="w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-[10px] text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 transition-all duration-300 flex items-center justify-center gap-2 relative z-10"
                       >
                         Driver Options
                         <svg 
@@ -268,7 +248,7 @@ export default function Navigation({
                           setIsDriverDropdownOpen(!isDriverDropdownOpen)
                           setIsEmployerDropdownOpen(false)
                         }}
-                        className="w-full px-6 py-2.5 text-sm font-semibold rounded-[10px] text-white bg-brand-sage hover:bg-brand-sage-dark transition-all duration-300 flex items-center gap-2 relative z-10 shadow-lg hover:shadow-xl hover:scale-105"
+                        className="w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-[10px] text-white bg-brand-sage hover:bg-brand-sage-dark transition-all duration-300 flex items-center justify-center gap-2 relative z-10 shadow-lg hover:shadow-xl hover:scale-105"
                       >
                         Driver Options
                         <svg 
@@ -289,7 +269,7 @@ export default function Navigation({
                         className="fixed inset-0 z-10" 
                         onClick={() => setIsDriverDropdownOpen(false)}
                       />
-                      <div className={`absolute top-full mt-2 left-0 z-20 min-w-[200px] rounded-xl shadow-2xl border ${
+                      <div className={`absolute top-full mt-2 left-1/2 -translate-x-1/2 z-20 w-[180px] rounded-xl shadow-2xl border ${
                         theme === 'light'
                           ? 'bg-white border-brand-sage/40'
                           : 'bg-gray-800/95 border-gray-700'
@@ -434,6 +414,27 @@ export default function Navigation({
                     </>
                   )}
                 </div>
+              )}
+
+              {/* Mobile-only T Assistant access - Below Driver Options */}
+              {isAuthenticated && onTClick && (
+                <button
+                  onClick={() => {
+                    onTClick()
+                    setIsMenuOpen(false)
+                  }}
+                  className={`md:hidden w-full px-4 py-2 text-xs font-medium rounded-lg border transition-all duration-300 flex items-center justify-center gap-1.5 ${
+                    theme === 'light'
+                      ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105'
+                      : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105'
+                  }`}
+                >
+                  <span className='text-sm'>🤖</span>
+                  <span>{tHasUnread ? 'AvA has updates' : 'Chat with AvA'}</span>
+                  {tHasUnread && (
+                    <span className='ml-1 w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse' />
+                  )}
+                </button>
               )}
 
               {/* Theme Toggle - Bottom Right */}

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
+import { getAdminSupabaseClient } from '@/utils/supabase/admin';
 
 export async function POST(request: Request) {
   try {
@@ -20,7 +20,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = await createClient();
+    // Use admin client to bypass RLS (we validate wallet address server-side)
+    const supabase = await getAdminSupabaseClient();
 
     // Check if user already has a role (case-insensitive wallet comparison)
     const { data: existingUser, error: fetchError } = await supabase

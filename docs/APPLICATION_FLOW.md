@@ -4,9 +4,13 @@
 
 This document defines the **correct application flow** for the Resume Wallet platform. This flow has been carefully designed to maximize cost efficiency, prevent spam, and provide a production-ready user experience.
 
-## 🚀 The Correct Flow: Hash-First Process
+## 🚀 The Correct Flows: Hybrid Approach
 
-### **Step-by-Step Flow:**
+**We use different flows for different use cases:**
+
+### **Flow 1: Hash-First (For File Uploads - Resumes)**
+
+This flow prevents expensive IPFS uploads for spam files:
 
 ```
 1. 🔢 Calculate SHA-256 hash locally (FREE)
@@ -19,6 +23,21 @@ This document defines the **correct application flow** for the Resume Wallet pla
 4. 💾 Database save ($0.001)
 5. ⛓️ Blockchain verification ($0.02) ← Async
 ```
+
+**Used for:** Resume uploads (files that need IPFS storage)
+
+### **Flow 2: DB-First (For Form Submissions - Applications)**
+
+This flow provides instant feedback and better data integrity:
+
+```
+1. 🔢 Calculate hash locally
+2. 💾 Save to Supabase FIRST (source of truth)
+3. ⛓️ Submit to blockchain (server-sponsored gas)
+4. 💾 Update DB with blockchain transaction details
+```
+
+**Used for:** DOT applications, employment verification forms
 
 ### **Why This Order Matters:**
 
@@ -338,19 +357,26 @@ ALCHEMY_BASE_SEPOLIA_URL=your_alchemy_url
 
 ## 🚀 Summary
 
-The **Hash-First Flow** is the correct implementation for the Resume Wallet platform:
+The platform uses a **hybrid approach** with two different flows:
 
+### **For File Uploads (Resumes): Hash-First**
 1. **Calculate hash locally** (FREE)
-2. **Validate in database** (FREE)
+2. **Validate in database** (FREE) - prevents IPFS spam
 3. **Upload to IPFS** ($0.10 for valid files)
 4. **Save to database** ($0.001)
 5. **Verify on blockchain** ($0.02 async)
 
-**Key Benefits:**
+**Benefits:** Spam costs $0, legitimate uploads cost ~$0.121
 
-- ✅ Spam costs $0 (stopped early)
-- ✅ Legitimate uploads cost ~$0.121
-- ✅ Predictable business model
-- ✅ Production-ready architecture
+### **For Form Submissions (Applications): DB-First**
+1. **Calculate hash locally**
+2. **Save to database first** (instant success)
+3. **Submit to blockchain** (server-sponsored gas)
+4. **Update DB with tx details**
 
-**This flow should NEVER be changed without careful consideration of cost implications and user experience.**
+**Benefits:** Better UX, instant feedback, data integrity
+
+**Why Different Flows?**
+- Files need IPFS storage → hash-first prevents expensive IPFS spam
+- Forms don't need IPFS → DB-first provides instant feedback
+- Both approaches are correct for their use cases

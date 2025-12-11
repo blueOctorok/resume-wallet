@@ -4,7 +4,7 @@ import {
   countExtractedFields,
   type TBackendPrefillResponse,
 } from '@/lib/ai-prefill-mapper'
-import { createClient } from '@/utils/supabase/server'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 const T_BACKEND_API_KEY = process.env.T_BACKEND_API_KEY
 const T_BACKEND_BASE_URL = process.env.T_BACKEND_BASE_URL || 'https://api-v2.fluxpointstudios.com'
@@ -53,7 +53,8 @@ export async function POST(request: NextRequest) {
     console.log('🤖 [AI PREFILL] Starting resume extraction...')
     console.log(`   Input: ${cid ? `CID=${cid}` : `URL=${resumeUrl}`}`)
 
-    const supabase = await createClient()
+    // Use admin client to bypass RLS (called from API route that validates requests)
+    const supabase = await getAdminSupabaseClient()
 
     // Check persistent cache first (t_prefill_cache - survives resume deletions)
     if (cid) {

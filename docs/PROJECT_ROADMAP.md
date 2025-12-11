@@ -26,12 +26,14 @@ Veree is now architected as a **two-sided marketplace** connecting drivers with 
 #### ✅ **Phase 1: Foundation (COMPLETE)**
 
 **Role Selection & Routing:**
+
 - Role selection modal on first login (driver/employer choice)
 - Database schema with `role` column and `companies`, `job_postings`, `applications` tables
 - Role-based navigation (drivers see Resume/DOT, employers see dashboard)
 - API endpoints for role management and profile fetching
 
 **Driver Experience (Fully Built):**
+
 - ✅ Resume upload with blockchain verification
 - ✅ DOT application forms (3-step wizard)
 - ✅ AvA AI assistant for form guidance
@@ -40,6 +42,7 @@ Veree is now architected as a **two-sided marketplace** connecting drivers with 
 - ✅ Transaction history and wallet management
 
 **Employer Experience (Placeholder):**
+
 - ✅ Placeholder dashboard with feature preview
 - ✅ "Coming soon" messaging
 - 🔜 Company profile setup
@@ -53,6 +56,7 @@ Veree is now architected as a **two-sided marketplace** connecting drivers with 
 #### 🔜 **Phase 2: Company Profiles (Q1 2026)**
 
 **Company Setup:**
+
 - Multi-step company profile wizard
   - Basic info: Company name, DOT/MC numbers
   - Contact details: Phone, email, website
@@ -63,6 +67,7 @@ Veree is now architected as a **two-sided marketplace** connecting drivers with 
 - Admin verification system (prevent fraudulent employers)
 
 **Technical Implementation:**
+
 - Update `companies` table with additional fields
 - Create company profile edit interface
 - Implement verification workflow for admins
@@ -73,6 +78,7 @@ Veree is now architected as a **two-sided marketplace** connecting drivers with 
 #### 🔜 **Phase 3: Job Posting System (Q1-Q2 2026)**
 
 **Job Creation:**
+
 - Job posting wizard with AI assistance
   - Job title and description
   - Requirements: CDL class, endorsements, experience
@@ -85,12 +91,14 @@ Veree is now architected as a **two-sided marketplace** connecting drivers with 
 - Expiration date management
 
 **Job Discovery (Driver Side):**
+
 - Job search/browse interface for drivers
 - Filter by location, CDL class, route type, pay
 - One-click application with DQ file
 - Application status tracking
 
 **Technical Implementation:**
+
 - Job posting CRUD APIs
 - Search and filter logic
 - Application submission flow
@@ -101,6 +109,7 @@ Veree is now architected as a **two-sided marketplace** connecting drivers with 
 #### 🔜 **Phase 4: Applicant Review & Hiring (Q2 2026)**
 
 **Applicant Management:**
+
 - View all applications for each job posting
 - Filter applicants by qualifications, experience
 - Review driver DQ files (blockchain-verified)
@@ -110,12 +119,14 @@ Veree is now architected as a **two-sided marketplace** connecting drivers with 
 - Communication system (messages/emails)
 
 **Credential Verification:**
+
 - Instant blockchain verification of DQ files
 - View complete DOT applications
 - Access resume, MVR, medical certificates (when available)
 - Flag expired documents or discrepancies
 
 **Technical Implementation:**
+
 - Applicant dashboard UI
 - Status management system
 - Blockchain verification integration
@@ -127,22 +138,26 @@ Veree is now architected as a **two-sided marketplace** connecting drivers with 
 #### 🔜 **Phase 5: Advanced Features (Q3-Q4 2026)**
 
 **Analytics & Insights:**
+
 - Application metrics (views, applications, time-to-hire)
 - Candidate pipeline analytics
 - Hiring trends and benchmarks
 
 **Talent Search:**
+
 - Proactive driver discovery (search all qualified drivers)
 - Saved searches and alerts
 - Direct outreach to drivers
 
 **Integration Features:**
+
 - ATS (Applicant Tracking System) integration
 - Background check service integration
 - Drug testing coordination
 - Onboarding workflow automation
 
 **AvA for Employers:**
+
 - AI-assisted job posting creation
 - Applicant screening recommendations
 - Compliance guidance (DOT hiring requirements)
@@ -174,12 +189,14 @@ reviews            -- Employer reviews by drivers
 ### Security & Access Control
 
 **Row-Level Security (RLS) Policies:**
+
 - Drivers can only see their own applications and data
 - Employers can only see their own company, jobs, and applicants
 - Public can view active job postings (when logged in)
 - Admins can verify companies and moderate content
 
 **Data Privacy:**
+
 - Driver DQ files only accessible to employers they've applied to
 - No bulk driver data export for employers
 - HIPAA-compliant storage for medical certificates
@@ -190,6 +207,7 @@ reviews            -- Employer reviews by drivers
 ### Business Model Implications
 
 **Driver Side (Free):**
+
 - Resume upload and storage
 - DOT application creation
 - DQ file building and verification
@@ -197,6 +215,7 @@ reviews            -- Employer reviews by drivers
 - AvA AI assistance
 
 **Employer Side (Freemium/Paid):**
+
 - **Free Tier**: 1-2 job postings, basic applicant review
 - **Premium Tier** ($99-299/month):
   - Unlimited job postings
@@ -207,6 +226,7 @@ reviews            -- Employer reviews by drivers
   - AvA hiring assistant
 
 **Future Revenue Streams:**
+
 - Featured job listings
 - Promoted company profiles
 - Background check services (commission)
@@ -218,12 +238,14 @@ reviews            -- Employer reviews by drivers
 ### Success Metrics
 
 **Driver Metrics:**
+
 - Resumes uploaded
 - DOT applications completed
 - Jobs applied to
 - Hires completed
 
 **Employer Metrics:**
+
 - Companies registered and verified
 - Jobs posted
 - Applications received per job
@@ -231,6 +253,7 @@ reviews            -- Employer reviews by drivers
 - Candidate quality ratings
 
 **Platform Metrics:**
+
 - Total matches (driver applied → employer hired)
 - Blockchain verifications performed
 - AvA interactions
@@ -241,16 +264,19 @@ reviews            -- Employer reviews by drivers
 ### Technical Architecture Notes
 
 **Scalability:**
+
 - Independent development of driver and employer features
 - Separate API routes and components
 - Role-based code splitting for faster load times
 
 **Future Roles:**
+
 - **Recruiters**: Third-party recruiters posting on behalf of companies
 - **Fleet Managers**: Team-based access for large companies
 - **Admins**: Platform moderation and verification
 
 **Blockchain Integration:**
+
 - Driver DQ files remain on-chain (permanent, tamper-proof)
 - Employers verify credentials via smart contracts
 - Application submissions create immutable audit trail
@@ -267,12 +293,15 @@ Currently, Veree extracts data from **resumes only**, achieving ~25-30% form pre
 ### DQ File Components
 
 #### ✅ **Currently Implemented: Resume**
+
 **What We Extract:**
+
 - Personal information (name, contact, DOB, address)
 - License basics (number, state, endorsements)
 - Employment history (employer, dates, position, location)
 
 **Form Coverage:**
+
 - Form 1 (Personal Info): ~40-50% prefilled
 - Form 2 (Driving/Safety): 0% (not on resumes)
 - Form 3 (Employment): ~20-30% prefilled
@@ -281,7 +310,9 @@ Currently, Veree extracts data from **resumes only**, achieving ~25-30% form pre
 ---
 
 #### 🔜 **Future: Motor Vehicle Record (MVR)**
+
 **What We Could Extract:**
+
 - Complete accident history (dates, nature, at-fault status, injuries, fatalities)
 - Traffic violations and convictions (dates, violations, states, penalties)
 - License suspensions or denials
@@ -289,6 +320,7 @@ Currently, Veree extracts data from **resumes only**, achieving ~25-30% form pre
 - Years of commercial driving experience
 
 **Enhanced Form Coverage:**
+
 - Form 2 (Accident Record): Auto-fill from MVR accident data
 - Form 2 (Traffic Convictions): Auto-fill violation history
 - Form 1 (License Info): Enhanced with expiration dates, full endorsement history
@@ -297,7 +329,9 @@ Currently, Veree extracts data from **resumes only**, achieving ~25-30% form pre
 ---
 
 #### 🔜 **Future: DOT Medical Certificate**
+
 **What We Could Extract:**
+
 - Medical examiner name and contact
 - Medical certificate number
 - Examination date
@@ -306,13 +340,16 @@ Currently, Veree extracts data from **resumes only**, achieving ~25-30% form pre
 - Restrictions or limitations
 
 **Enhanced Form Coverage:**
+
 - Form 1 (Medical Qualification): Auto-fill certificate details
 - **New Coverage: +5-10%**
 
 ---
 
 #### 🔜 **Future: CDL Copy (License Document)**
+
 **What We Could Extract:**
+
 - Full license number
 - Issue and expiration dates
 - License class (A, B, C)
@@ -321,13 +358,16 @@ Currently, Veree extracts data from **resumes only**, achieving ~25-30% form pre
 - Issuing state details
 
 **Enhanced Form Coverage:**
+
 - Form 1 (License Information): Complete license details, no manual entry needed
 - **New Coverage: +5-10%**
 
 ---
 
 #### 🔜 **Future: Previous Employer Verification Letters**
+
 **What We Could Extract:**
+
 - Employer contact information (phone, address)
 - Supervisor names and titles
 - Detailed job descriptions
@@ -338,6 +378,7 @@ Currently, Veree extracts data from **resumes only**, achieving ~25-30% form pre
 - Drug/alcohol testing records
 
 **Enhanced Form Coverage:**
+
 - Form 3 (Employment History): Complete employer details, no manual contact lookup
 - Form 3 (FMCSR/Safety-Sensitive): Auto-detect from employer verification
 - **New Coverage: +10-15%**
@@ -345,20 +386,25 @@ Currently, Veree extracts data from **resumes only**, achieving ~25-30% form pre
 ---
 
 #### 🔜 **Future: Drug/Alcohol Test Results**
+
 **What We Could Extract:**
+
 - Test dates and types (pre-employment, random, post-accident)
 - Test results (pass/fail, levels)
 - Testing facility information
 - Medical Review Officer (MRO) details
 
 **Enhanced Form Coverage:**
+
 - New section: Pre-employment testing status
 - **New Coverage: +3-5%**
 
 ---
 
 #### 🔜 **Future: Road Test Certificate**
+
 **What We Could Extract:**
+
 - Test date and location
 - Examiner name and credentials
 - Vehicle type tested
@@ -366,6 +412,7 @@ Currently, Veree extracts data from **resumes only**, achieving ~25-30% form pre
 - Expiration date
 
 **Enhanced Form Coverage:**
+
 - Form 1: Road test certification status
 - **New Coverage: +2-3%**
 
@@ -374,16 +421,13 @@ Currently, Veree extracts data from **resumes only**, achieving ~25-30% form pre
 ### Implementation Priority
 
 **Phase 1 (Highest Impact):**
+
 1. **MVR Integration** → +35-40% coverage (biggest win)
 2. **DOT Medical Certificate** → +5-10% coverage
 
-**Phase 2 (Medium Impact):**
-3. **CDL Document OCR** → +5-10% coverage
-4. **Employer Verification Letters** → +10-15% coverage
+**Phase 2 (Medium Impact):** 3. **CDL Document OCR** → +5-10% coverage 4. **Employer Verification Letters** → +10-15% coverage
 
-**Phase 3 (Lower Priority):**
-5. Drug/Alcohol Test Results → +3-5%
-6. Road Test Certificate → +2-3%
+**Phase 3 (Lower Priority):** 5. Drug/Alcohol Test Results → +3-5% 6. Road Test Certificate → +2-3%
 
 **Projected Final Coverage: 85-95% of all form fields**
 
@@ -392,23 +436,27 @@ Currently, Veree extracts data from **resumes only**, achieving ~25-30% form pre
 ### Technical Implementation Notes
 
 #### MVR Processing
+
 - **Vendors**: Most states use similar MVR formats (PDF, sometimes electronic)
 - **OCR Requirements**: Need robust PDF parsing (may vary by state)
 - **AI Extraction**: T Backend can handle MVR text extraction
 - **Validation**: Cross-reference accident dates with employment gaps
 
 #### Medical Certificate Processing
+
 - **Format**: Standardized DOT form (MER Form, MCSA-5876)
 - **OCR**: High success rate (structured form)
 - **Storage**: HIPAA considerations - medical data requires special handling
 - **Expiration Tracking**: Can alert users before certificate expires
 
 #### CDL OCR
+
 - **Format**: Varies by state but follows AAMVA standards
 - **OCR Difficulty**: Moderate - raised text, security features
 - **Validation**: Can verify against CDLIS (Commercial Driver's License Information System)
 
 #### Employer Verifications
+
 - **Format**: Unstructured (letters, emails, faxes)
 - **AI Extraction**: High complexity - natural language processing required
 - **Validation**: Cross-reference with reported employment history
@@ -420,12 +468,15 @@ Currently, Veree extracts data from **resumes only**, achieving ~25-30% form pre
 When additional documents are implemented, AvA's guidance will improve:
 
 **Current (Resume Only):**
+
 > "Form 2: I couldn't extract this from your resume since it's not typically included. You'll need to manually fill in accidents and violations."
 
 **Future (MVR Uploaded):**
+
 > "Form 2: I've extracted your accident history and traffic violations from your MVR. Found 1 accident (2022) and 2 violations (speeding). Please review for accuracy."
 
 **Future (Complete DQ File):**
+
 > "Great news! I've filled in 87% of your application from your uploaded documents. You just need to add: salary history, reason for leaving (2 employers), and your signature."
 
 ---
@@ -433,11 +484,13 @@ When additional documents are implemented, AvA's guidance will improve:
 ### User Experience Flow
 
 **Current:**
+
 1. User uploads resume
 2. AvA fills ~25-30% of forms
 3. User manually enters driving/safety records
 
 **Future (Multi-Document):**
+
 1. User uploads resume, MVR, medical cert, CDL
 2. AvA processes all documents in parallel
 3. AvA fills ~85-95% of forms
@@ -449,12 +502,14 @@ When additional documents are implemented, AvA's guidance will improve:
 ### Data Validation Opportunities
 
 With multiple documents, AvA can cross-validate:
+
 - **Resume vs MVR**: Do employment dates align with accident dates?
 - **MVR vs Employer Verification**: Does accident record match employer's safety report?
 - **CDL vs Resume**: Do endorsements match claimed experience?
 - **Medical Cert vs Application**: Is medical status current?
 
 AvA could flag discrepancies:
+
 > "⚠️ I noticed your resume shows you worked at ABC Trucking from 2020-2022, but your MVR shows an accident in 2019 while employed there. Please clarify the employment dates."
 
 ---
@@ -677,7 +732,7 @@ AvA could flag discrepancies:
 
 **What We Were Doing WRONG:**
 
-- ❌ **Trying to make Base Account SDK deploy contracts** - Base Account SDK is for USER transactions, not deployment
+- ❌ **Trying to make wallets deploy contracts** - User wallets are for transactions, not deployment
 - ❌ **Building deployment UI for users** - Users should NEVER deploy contracts
 - ❌ **Hours of "Request rejected" errors** - Because we were using the wrong tool for the job
 - ❌ **Overcomplicating simple architecture** - Smart contracts are deployed ONCE by developers
@@ -693,13 +748,13 @@ Developer (You) → Standard Wallet → Deploy Contract → Get Address → Hard
 #### **User Phase (Forever After):**
 
 ```
-Users → Base Account SDK → Connect → Use Existing Contract (Gas Sponsored in USDC)
+Users → Alchemy Smart Wallets → Connect → Use Existing Contract (Server-Sponsored Gas)
 ```
 
 ### **Why This Makes Sense:**
 
 1. **Smart contracts are deployed ONCE** and used by thousands of users
-2. **Base Account SDK is for user transactions**, not deployment
+2. **User wallets are for transactions**, not deployment
 3. **Users don't need to deploy anything** - they just use the existing contract
 4. **One contract address serves all users globally**
 
@@ -708,11 +763,11 @@ Users → Base Account SDK → Connect → Use Existing Contract (Gas Sponsored 
 1. **Remove the deployment component** from the UI
 2. **You deploy the contract once** using standard wallet
 3. **Update the app to use the deployed contract address**
-4. **Keep Base Account SDK for user authentication and transactions**
+4. **Keep Alchemy Smart Wallets for user authentication and transactions**
 
 ### **Why We Got Confused:**
 
-- **Got caught up in Base Account SDK hype** and assumed it could do everything
+- **Got caught up in deployment complexity** and assumed users needed to deploy
 - **Ignored the obvious**: Smart contracts are deployed once, used by many
 - **Overcomplicated the architecture** when the standard approach works fine
 - **Spent hours fighting "Request rejected" errors** instead of stepping back
@@ -726,7 +781,7 @@ Users → Base Account SDK → Connect → Use Existing Contract (Gas Sponsored 
 1. **You deploy ResumeRegistry.sol once** with standard wallet
 2. **Get the contract address** and hardcode it
 3. **Users just connect and use the existing contract**
-4. **Base Account SDK handles all user transactions with USDC gas sponsorship**
+4. **Alchemy Smart Wallets handle all user authentication, server handles gas sponsorship**
 
 ---
 
@@ -881,59 +936,38 @@ Users → Alchemy Smart Wallets → Alchemy RPC Infrastructure → Base Sepolia 
 
 ---
 
-## 🔧 Base Account SDK Implementation Plan
+## 🔧 Alchemy Smart Wallets Implementation
 
-### **Current Status: Base Account SDK Integration (Phase 1) ✅**
+### **Current Status: Alchemy Smart Wallets Integration ✅ COMPLETE**
 
 **What We Have:**
 
-- ✅ Base Account SDK configured and working
-- ✅ EIP-712 typed data authentication
+- ✅ Alchemy Smart Wallets configured and working
+- ✅ Email + OTP authentication (seedless wallets)
 - ✅ Wallet connection state management
-- ✅ Base network support (8453, 84532)
-- ✅ MagicSpend capability detection
-- ✅ ERC20 gas payment system
-- ✅ Base Pay integration
-- ✅ Payment status tracking
+- ✅ Base Sepolia network support
+- ✅ Gas sponsorship via server-side transactions
+- ✅ Session persistence (2-hour expiry)
+- ✅ Production-ready infrastructure (Alchemy RPC + APIs)
 
-**What We're Testing:**
+**Architecture:**
 
-- 🔍 Complete driver experience flow
-- 🔍 Base Pay payment processing
-- 🔍 ERC20 gas payment options
-- 🔍 Resume upload integration
+- Users authenticate with Alchemy Smart Wallets (email + OTP)
+- All blockchain transactions use server-side sponsored gas
+- Gas paid by server wallet (users never pay)
+- Complete Alchemy infrastructure stack (RPC, APIs, Smart Wallets)
 
-### **Phase 2: Advanced Base Features**
+### **Alchemy Smart Wallets Advantages**
 
-**What We'll Add:**
-
-1. **Enhanced Payment Features**
-   - Subscription payments
-   - Recurring billing
-   - Payment analytics
-
-2. **Advanced Batch Operations**
-   - Complex multi-step workflows
-   - Conditional transactions
-   - Advanced error handling
-
-3. **Custom Paymaster Policies**
-   - Dynamic gas pricing
-   - Usage analytics and monitoring
-   - Contract allowlist management
-
-### **Base Account SDK Advantages**
-
-| Feature                | Base Account SDK           |
-| ---------------------- | -------------------------- |
-| **Wallet Management**  | ✅ Seedless wallets        |
-| **Authentication**     | ✅ EIP-712 typed data      |
-| **Network Support**    | ✅ Base networks only      |
-| **Payments**           | ✅ One-tap USDC            |
-| **Gas Sponsorship**    | ✅ Native support          |
-| **Batch Transactions** | ✅ EIP-5792 support        |
-| **User Experience**    | ✅ Excellent (Base-native) |
-| **Development**        | ✅ Simple (Base-focused)   |
+| Feature               | Alchemy Smart Wallets    |
+| --------------------- | ------------------------ |
+| **Wallet Management** | ✅ Seedless wallets      |
+| **Authentication**    | ✅ Email + OTP           |
+| **Network Support**   | ✅ Multi-chain (Base)    |
+| **Gas Sponsorship**   | ✅ Server-side sponsored |
+| **Infrastructure**    | ✅ Production-ready RPC  |
+| **User Experience**   | ✅ SaaS-first appearance |
+| **Development**       | ✅ Complete API suite    |
 
 ---
 
@@ -1127,7 +1161,7 @@ You already have a `.env.local` with:
 **What We're Building Next:**
 
 - ⛓️ **Smart contract deployment** (deploy to Base Sepolia using Alchemy RPC)
-- 🧪 **Test USDC gas sponsorship** (verify Base SDK paymaster works with Alchemy)
+- 🧪 **Test gas sponsorship** (verify server-side sponsored transactions work)
 - 📊 **Resume management dashboard** (list and detail views)
 - 📄 **Document upload system** (CDL, medical certs, etc.)
 - 🔗 **Blockchain verification** (store IPFS hashes on-chain via Alchemy)
@@ -1137,7 +1171,7 @@ You already have a `.env.local` with:
 - **Reliable deployments** - Alchemy's 99.9% uptime ensures successful contract deployment
 - **Enhanced debugging** - Better error messages and transaction monitoring
 - **Production scalability** - Infrastructure ready for high user volumes
-- **Maintained USDC goals** - Base SDK paymaster still handles gas sponsorship seamlessly
+- **Maintained USDC goals** - Server-side sponsored gas ensures users never pay
 - **🛡️ Automatic MEV Protection** - Resume verification transactions protected from manipulation
 - **Transaction Privacy** - Sensitive resume data kept private during blockchain processing
 

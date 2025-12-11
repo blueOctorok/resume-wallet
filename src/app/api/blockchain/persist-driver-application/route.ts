@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,7 +19,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = await createClient()
+    // Use admin client to bypass RLS (we validate wallet address server-side)
+    const supabase = await getAdminSupabaseClient()
 
     // Get user_id
     const { data: userRow, error: userErr } = await supabase
@@ -35,34 +36,78 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Insert application row if not exists, else update
-    const { data: existing } = await supabase
-      .from('driver_applications')
-      .select('id')
-      .eq('user_id', userRow.id)
-      .eq('application_hash', applicationHash)
-      .maybeSingle()
+    // Find existing application by user_id and application_hash (preferred) or just user_id (fallback)
+    let existing = null
+    
+    // First try to find by application_hash (most accurate)
+    if (applicationHash) {
+      const { data: hashMatch } = await supabase
+        .from('driver_applications')
+        .select('id')
+        .eq('user_id', userRow.id)
+        .eq('application_hash', applicationHash)
+        .maybeSingle()
+      existing = hashMatch
+    }
+    
+    // If not found by hash, find most recent application for this user (fallback)
+    if (!existing) {
+      const { data: userMatch } = await supabase
+        .from('driver_applications')
+        .select('id')
+        .eq('user_id', userRow.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      existing = userMatch
+    }
 
     if (!existing) {
-      await supabase.from('driver_applications').insert({
+      // Application not found - this shouldn't happen if completeDriverApplicationClient was called first
+      console.error('⚠️ [PERSIST] Application not found for user, creating new record without application_data')
+      const { error: insertError } = await supabase.from('driver_applications').insert({
         user_id: userRow.id,
-        application_hash: applicationHash,
+        application_hash: applicationHash || null,
         ipfs_hash: ipfsHash || null,
         blockchain_tx_hash: transactionHash,
         blockchain_application_id: applicationId ? String(applicationId) : null,
         verification_status: 'SUBMITTED',
+        application_data: {}, // Empty data - this is a fallback, should not happen
       })
+      if (insertError) {
+        console.error('❌ [PERSIST] Failed to insert fallback record:', insertError)
+        return NextResponse.json(
+          { error: 'Failed to persist blockchain data' },
+          { status: 500 }
+        )
+      }
     } else {
-      await supabase
+      // Update existing application with blockchain data
+      const updateData: any = {
+        ipfs_hash: ipfsHash || null,
+        blockchain_tx_hash: transactionHash,
+        blockchain_application_id: applicationId ? String(applicationId) : null,
+        verification_status: 'SUBMITTED',
+        updated_at: new Date().toISOString(),
+      }
+      
+      // Update application_hash if it was null (in case it wasn't set during completion)
+      if (applicationHash) {
+        updateData.application_hash = applicationHash
+      }
+      
+      const { error: updateError } = await supabase
         .from('driver_applications')
-        .update({
-          ipfs_hash: ipfsHash || null,
-          blockchain_tx_hash: transactionHash,
-          blockchain_application_id: applicationId ? String(applicationId) : null,
-          verification_status: 'SUBMITTED',
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', existing.id)
+        
+      if (updateError) {
+        console.error('❌ [PERSIST] Failed to update application:', updateError)
+        return NextResponse.json(
+          { error: 'Failed to persist blockchain data' },
+          { status: 500 }
+        )
+      }
     }
 
     return NextResponse.json({ ok: true, blockNumber })

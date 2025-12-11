@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { uploadRateLimiter, RATE_LIMITS } from '@/lib/rate-limit'
 import { checkUploadEligibility, recordPaidUpload } from '@/lib/pricing'
 import { createClient } from '@/utils/supabase/server'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { uploadToIPFS } from '@/lib/ipfs'
 
 export async function POST(req: NextRequest) {
@@ -144,7 +145,49 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ Resume Upload API: File validation passed')
 
-    // 7. Check payment requirement
+    // 7. Check for duplicates using file hash BEFORE expensive operations (FREE operation)
+    // NOTE: Using admin client to bypass RLS and check across ALL users for duplicates
+    // This prevents IPFS upload costs for duplicate files
+    console.log('🔍 Resume Upload API: Checking for duplicate file hash (before IPFS)')
+
+    // Use admin client for duplicate check (bypasses RLS to check across all users)
+    const adminSupabase = await getAdminSupabaseClient()
+    const { data: existingResume } = await adminSupabase
+      .from('resumes')
+      .select('id, user_id')
+      .eq('file_hash', fileHash)
+      .maybeSingle()
+
+    if (existingResume) {
+      // Check if it's the same user (allowed to re-upload) or different user (block)
+      if (existingResume.user_id === user.id) {
+        console.log('⚠️ Resume Upload API: User re-uploading same file (rejected before IPFS)')
+        return NextResponse.json(
+          {
+            error: 'Duplicate file',
+            message:
+              'You have already uploaded this exact file. Please select a different file or update your existing resume.',
+          },
+          { status: 409 }
+        )
+      } else {
+        console.log(
+          '🚫 Resume Upload API: File already uploaded by different user (rejected before IPFS)'
+        )
+        return NextResponse.json(
+          {
+            error: 'Duplicate file',
+            message:
+              'This file has already been uploaded by another user. Please select a different file or rename your current file.',
+          },
+          { status: 409 }
+        )
+      }
+    }
+
+    console.log('✅ Resume Upload API: No duplicate file hash found - proceeding with IPFS upload')
+
+    // 8. Check payment requirement (only check if not duplicate)
     if (eligibility.requiresPayment && !paymentTxHash) {
       console.log('💳 Resume Upload API: Payment required')
       return NextResponse.json(
@@ -159,7 +202,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 8. Verify payment if required (TODO: Add Base Pay verification)
+    // 9. Verify payment if required (TODO: Add Base Pay verification)
     if (eligibility.requiresPayment && paymentTxHash) {
       console.log('💳 Resume Upload API: Verifying payment')
       // TODO: Verify the transaction on Base network
@@ -168,7 +211,7 @@ export async function POST(req: NextRequest) {
       console.log('✅ Resume Upload API: Payment recorded')
     }
 
-    // 9. Upload to IPFS
+    // 10. Upload to IPFS (only reached if not duplicate and payment verified)
     console.log('📁 Resume Upload API: Uploading to IPFS')
     const ipfsResult = await uploadToIPFS(file)
 
@@ -181,46 +224,7 @@ export async function POST(req: NextRequest) {
       ipfsResult.ipfsHash
     )
 
-    // 10. Check for duplicates using file hash (FREE operation)
-    console.log('🔍 Resume Upload API: Checking for duplicate file hash')
-
-    // Check database duplicates by file hash
-    const { data: existingResume } = await supabase
-      .from('resumes')
-      .select('id, user_id')
-      .eq('file_hash', fileHash)
-      .single()
-
-    if (existingResume) {
-      // Check if it's the same user (allowed to re-upload) or different user (block)
-      if (existingResume.user_id === user.id) {
-        console.log('⚠️ Resume Upload API: User re-uploading same file')
-        return NextResponse.json(
-          {
-            error: 'Duplicate file',
-            message:
-              'You have already uploaded this exact file. Please select a different file or update your existing resume.',
-          },
-          { status: 409 }
-        )
-      } else {
-        console.log(
-          '🚫 Resume Upload API: File already uploaded by different user'
-        )
-        return NextResponse.json(
-          {
-            error: 'Duplicate file',
-            message:
-              'This file has already been uploaded by another user. Please select a different file or rename your current file.',
-          },
-          { status: 409 }
-        )
-      }
-    }
-
-    console.log('✅ Resume Upload API: No duplicate file hash found')
-
-    // 11. Save to database (WITH FILE HASH + IPFS HASH)
+    // 11. Save to database (WITH FILE HASH + IPFS HASH) - only reached if IPFS upload succeeded
     console.log('💾 Resume Upload API: Saving to database')
 
     const { data: resume, error: resumeError } = await supabase

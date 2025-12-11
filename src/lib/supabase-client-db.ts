@@ -1,4 +1,6 @@
-import { createClient } from '@/utils/supabase/client'
+'use server'
+
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 // Types for driver application data
 export interface DriverApplicationData {
@@ -169,7 +171,8 @@ export async function saveDriverApplicationClient(
   console.log('💾 Driver App DB: Saving application for user:', userAddress)
   console.log('💾 Driver App DB: Current step:', currentStep)
 
-  const supabase = createClient()
+  // Use admin client to bypass RLS (called from API routes or server-side that validates wallet addresses)
+  const supabase = await getAdminSupabaseClient()
 
   try {
     // First, get or create the user
@@ -285,7 +288,8 @@ export async function getDriverApplicationClient(
 ): Promise<DriverApplicationRecord | null> {
   console.log('📖 Driver App DB: Getting application for user:', userAddress)
 
-  const supabase = createClient()
+  // Use admin client to bypass RLS (called from API routes or server-side that validates wallet addresses)
+  const supabase = await getAdminSupabaseClient()
 
   try {
     // First, get the user_id from the wallet address
@@ -336,7 +340,8 @@ export async function getDriverApplicationClient(
 export async function completeDriverApplicationClient(
   userAddress: string,
   applicationData: DriverApplicationData,
-  ipfsHash?: string
+  ipfsHash?: string,
+  applicationHash?: string
 ): Promise<{
   success: boolean
   error?: string
@@ -344,7 +349,8 @@ export async function completeDriverApplicationClient(
 }> {
   console.log('🎯 Driver App DB: Completing application for user:', userAddress)
 
-  const supabase = createClient()
+  // Use admin client to bypass RLS (called from API routes or server-side that validates wallet addresses)
+  const supabase = await getAdminSupabaseClient()
 
   try {
     // First, save the final application data
@@ -365,14 +371,21 @@ export async function completeDriverApplicationClient(
       throw new Error(`User not found for wallet address: ${userAddress}`)
     }
 
-    // Then mark as complete and add IPFS hash
+    // Then mark as complete and add IPFS hash and application hash
+    const updateData: any = {
+      is_complete: true,
+      ipfs_hash: ipfsHash || null,
+      updated_at: new Date().toISOString(),
+    }
+    
+    // Add application_hash if provided (needed for blockchain persist endpoint to find the record)
+    if (applicationHash) {
+      updateData.application_hash = applicationHash
+    }
+
     const { data, error } = await supabase
       .from('driver_applications')
-      .update({
-        is_complete: true,
-        ipfs_hash: ipfsHash || null,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('user_id', userData.id)
       .select()
       .single()
@@ -414,7 +427,8 @@ export async function checkDuplicateApplicationHash(
 ): Promise<{ exists: boolean; existingApplication?: DriverApplicationRecord }> {
   console.log('🔍 Driver App DB: Checking for duplicate hash:', applicationHash)
   
-  const supabase = createClient()
+  // Use admin client to bypass RLS (called from API routes or server-side that validates wallet addresses)
+  const supabase = await getAdminSupabaseClient()
 
   try {
     // Get user_id from wallet address
@@ -471,7 +485,8 @@ export async function getAllDriverApplicationsClient(
     userAddress
   )
 
-  const supabase = createClient()
+  // Use admin client to bypass RLS (called from API routes or server-side that validates wallet addresses)
+  const supabase = await getAdminSupabaseClient()
 
   try {
     // Get user_id from wallet address
@@ -522,7 +537,8 @@ export async function deleteDriverApplicationClient(
     userAddress
   )
 
-  const supabase = createClient()
+  // Use admin client to bypass RLS (called from API routes or server-side that validates wallet addresses)
+  const supabase = await getAdminSupabaseClient()
 
   try {
     // Get user_id from wallet address

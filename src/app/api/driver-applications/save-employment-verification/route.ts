@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 /**
  * API route to save employment verification data to Supabase
@@ -36,7 +37,38 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if a driver_application exists for this user
+    // Check for duplicate application hash BEFORE saving to DB (prevents duplicate blockchain submissions)
+    if (applicationHash) {
+      console.log('🔍 Checking for duplicate application hash:', applicationHash.substring(0, 16) + '...')
+      // Use admin client for duplicate check (bypasses RLS to check across all users)
+      const adminSupabase = await getAdminSupabaseClient()
+      const { data: duplicateApp } = await adminSupabase
+        .from('driver_applications')
+        .select('id, user_id, created_at')
+        .eq('application_hash', applicationHash)
+        .maybeSingle()
+
+      if (duplicateApp) {
+        // Check if it's the same user (allowed to update) or different user (block duplicate)
+        if (duplicateApp.user_id === userData.id) {
+          console.log('⚠️ User submitting same form data again - will update existing record')
+          // Allow update - same user updating their own form
+        } else {
+          console.log('🚫 Duplicate application hash detected from different user (rejected before DB save)')
+          return NextResponse.json(
+            {
+              error: 'Duplicate application',
+              message: 'This exact application has already been submitted by another user. Please review your data and try again.',
+            },
+            { status: 409 }
+          )
+        }
+      } else {
+        console.log('✅ No duplicate application hash found - proceeding with save')
+      }
+    }
+
+    // Check if a driver_application exists for this user (for update vs create logic)
     const { data: existingApp, error: fetchError } = await supabase
       .from('driver_applications')
       .select('*')

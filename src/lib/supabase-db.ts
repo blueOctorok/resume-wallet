@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 // Database operations using Supabase
 export async function createResume(data: {
@@ -8,7 +8,8 @@ export async function createResume(data: {
   isPublic: boolean
   userId: string
 }) {
-  const supabase = await createClient()
+  // Use admin client to bypass RLS (called from API routes that validate wallet addresses)
+  const supabase = await getAdminSupabaseClient()
 
   // Transform camelCase to snake_case for database
   const dbData = {
@@ -33,7 +34,8 @@ export async function createResume(data: {
 }
 
 export async function getUserResumes(userId: string) {
-  const supabase = await createClient()
+  // Use admin client to bypass RLS (called from API routes that validate wallet addresses)
+  const supabase = await getAdminSupabaseClient()
 
   const { data: resumes, error } = await supabase
     .from('resumes')
@@ -51,7 +53,8 @@ export async function getUserResumes(userId: string) {
 export async function getUserProfile(walletAddress: string) {
   console.log('👤 Supabase DB: Getting user profile for:', walletAddress)
 
-  const supabase = await createClient()
+  // Use admin client to bypass RLS (called from API routes that validate wallet addresses)
+  const supabase = await getAdminSupabaseClient()
 
   const { data: user, error } = await supabase
     .from('users')
@@ -98,7 +101,8 @@ export async function upsertUser(data: {
   console.log('👤 Supabase DB: Input data:', data)
 
   try {
-    const supabase = await createClient()
+    // Use admin client to bypass RLS (called from API routes that validate wallet addresses)
+    const supabase = await getAdminSupabaseClient()
     console.log('👤 Supabase DB: Client created successfully')
 
     // Transform camelCase to snake_case for database
@@ -135,7 +139,8 @@ export async function getDriverApplication(userAddress: string) {
   console.log('📋 Supabase DB: Getting driver application for:', userAddress)
 
   try {
-    const supabase = await createClient()
+    // Use admin client to bypass RLS (called from API routes that validate wallet addresses)
+    const supabase = await getAdminSupabaseClient()
 
     const { data, error } = await supabase
       .from('driver_applications')
@@ -171,7 +176,8 @@ export async function saveDriverApplication(
   console.log('💾 Supabase DB: Step:', currentStep)
 
   try {
-    const supabase = await createClient()
+    // Use admin client to bypass RLS (called from API routes that validate wallet addresses)
+    const supabase = await getAdminSupabaseClient()
 
     const { data, error } = await supabase
       .from('driver_applications')
@@ -205,7 +211,8 @@ export async function completeDriverApplication(
   console.log('🎉 Supabase DB: User:', userAddress)
 
   try {
-    const supabase = await createClient()
+    // Use admin client to bypass RLS (called from API routes that validate wallet addresses)
+    const supabase = await getAdminSupabaseClient()
 
     const { data, error } = await supabase
       .from('driver_applications')

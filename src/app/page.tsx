@@ -1235,7 +1235,8 @@ const HomeContent = () => {
       const dbResult = await completeDriverApplicationClient(
         user.address,
         combinedData,
-        ipfsHash
+        ipfsHash,
+        applicationHash // Pass application hash so persist endpoint can find the record
       )
 
       if (!dbResult.success) {
@@ -1593,17 +1594,6 @@ const HomeContent = () => {
             >
               🧹 Clear Forms (Dev)
             </button>
-          </div>
-        )}
-
-        {/* Wallet Card - Desktop Top Left */}
-        {user && (
-          <div className='hidden md:block fixed top-4 left-4 z-40'>
-            <WalletCard
-              user={user}
-              onClick={handleWalletClick}
-              isMobile={false}
-            />
           </div>
         )}
 
