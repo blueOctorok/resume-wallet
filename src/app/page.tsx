@@ -155,6 +155,13 @@ const TAssistant = dynamic(
   }
 )
 
+const WalletInfo = dynamic(
+  () => import('@/components/WalletInfo').then((mod) => mod.default),
+  {
+    ssr: false,
+  }
+)
+
 const HomePage = dynamic(
   () => import('@/components/HomePage').then((mod) => mod.default),
   {
@@ -1580,6 +1587,18 @@ const HomeContent = () => {
       <div className='min-h-screen overflow-x-hidden relative'>
         {/* Animated Background */}
         <AnimatedBackground />
+
+        {/* Wallet Info - Top Left Corner (Desktop Only) */}
+        {user?.address && (
+          <div className='fixed top-4 left-4 z-[60] pointer-events-none'>
+            <div className='pointer-events-auto'>
+              <WalletInfo 
+                walletAddress={user.address} 
+                onClick={openModal}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Admin Quick Reset Button (Development Only) */}
         {user && process.env.NODE_ENV === 'development' && (

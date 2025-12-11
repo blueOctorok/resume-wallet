@@ -74,8 +74,8 @@ export default function Navigation({
       : 'absolute -inset-[1px] rounded-3xl bg-gradient-to-b from-brand-mint/20 to-transparent opacity-50 blur-sm -z-10'
 
   return (
-    <header className='sticky top-4 z-50 px-4 sm:px-6' style={{ transform: 'translate3d(0,0,0)', backfaceVisibility: 'hidden' }}>
-      <nav className={navClasses}>
+    <header className='sticky top-4 z-50 px-4 sm:px-6 pointer-events-none' style={{ transform: 'translate3d(0,0,0)', backfaceVisibility: 'hidden' }}>
+      <nav className={`${navClasses} pointer-events-auto`}>
         {/* Extra depth layer - inner shadow */}
         <div className={innerShadowClasses} />
 
