@@ -13,6 +13,7 @@ import {
   TransferResult,
   BASE_SEPOLIA_USDC_ADDRESS,
 } from '@/lib/alchemy-transfers-api'
+import { useTheme } from '@/contexts/ThemeContext'
 
 interface TransactionHistoryProps {
   walletAddress: string
@@ -33,6 +34,7 @@ export default function TransactionHistory({
   autoRefresh = false,
   refreshInterval = 30000,
 }: TransactionHistoryProps) {
+  const { theme } = useTheme()
   const [transfers, setTransfers] = useState<TransferResult[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
@@ -167,10 +169,18 @@ export default function TransactionHistory({
 
   if (loading) {
     return (
-      <div className='p-6 bg-white rounded-lg shadow-md'>
+      <div className={`p-6 rounded-lg ${
+        theme === 'dark'
+          ? 'bg-brand-sage-light/10 border border-brand-cream/20'
+          : 'bg-white border border-gray-200'
+      }`}>
         <div className='flex items-center space-x-2'>
-          <div className='animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600'></div>
-          <span className='text-gray-600'>Loading transaction history...</span>
+          <div className={`animate-spin rounded-full h-5 w-5 border-b-2 ${
+            theme === 'dark' ? 'border-brand-mint' : 'border-blue-600'
+          }`}></div>
+          <span className={theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'}>
+            Loading transaction history...
+          </span>
         </div>
       </div>
     )
@@ -178,13 +188,21 @@ export default function TransactionHistory({
 
   if (error) {
     return (
-      <div className='p-6 bg-white rounded-lg shadow-md'>
-        <div className='text-red-600 mb-4'>
-          <span className='text-red-600'>❌</span> Error: {error}
+      <div className={`p-6 rounded-lg ${
+        theme === 'dark'
+          ? 'bg-brand-sage-light/10 border border-brand-cream/20'
+          : 'bg-white border border-gray-200'
+      }`}>
+        <div className={`mb-4 ${theme === 'dark' ? 'text-red-400' : 'text-red-600'}`}>
+          <span>❌</span> Error: {error}
         </div>
         <button
           onClick={handleRefresh}
-          className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700'
+          className={`px-4 py-2 rounded-md ${
+            theme === 'dark'
+              ? 'bg-brand-mint hover:bg-brand-mint/80 text-brand-sage'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+          }`}
         >
           Retry
         </button>
@@ -193,42 +211,60 @@ export default function TransactionHistory({
   }
 
   return (
-    <div className='bg-white rounded-lg shadow-md'>
+    <div className={`rounded-lg ${
+      theme === 'dark'
+        ? 'bg-transparent'
+        : 'bg-white'
+    }`}>
       {/* Header */}
-      <div className='p-6 border-b border-gray-200'>
-        <div className='flex items-center justify-between mb-4'>
-          <h2 className='text-2xl font-bold'>📊 Transaction History</h2>
-          <button
-            onClick={handleRefresh}
-            className='text-sm text-blue-600 hover:text-blue-800 underline'
-          >
-            🔄 Refresh
-          </button>
-        </div>
+      {showFilters && (
+        <div className={`p-4 border-b ${
+          theme === 'dark' ? 'border-brand-mint/20' : 'border-gray-200'
+        }`}>
+          <div className='flex items-center justify-between mb-4'>
+            <h2 className={`text-xl font-bold ${
+              theme === 'dark' ? 'text-brand-cream' : 'text-gray-900'
+            }`}>📊 Transaction History</h2>
+            <button
+              onClick={handleRefresh}
+              className={`text-sm underline ${
+                theme === 'dark'
+                  ? 'text-brand-mint hover:text-brand-cream'
+                  : 'text-blue-600 hover:text-blue-800'
+              }`}
+            >
+              🔄 Refresh
+            </button>
+          </div>
 
-        {/* Summary */}
-        <div className='flex items-center space-x-4 text-sm text-gray-600 mb-4'>
-          <span>
-            Address: {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}
-          </span>
-          <span>•</span>
-          <span>Total Transactions: {transactionCount}</span>
-          <span>•</span>
-          <span>Showing: {transfers.length}</span>
-        </div>
+          {/* Summary */}
+          <div className={`flex flex-wrap items-center gap-2 text-xs mb-4 ${
+            theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
+          }`}>
+            <span>
+              Address: {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}
+            </span>
+            <span>•</span>
+            <span>Total: {transactionCount}</span>
+            <span>•</span>
+            <span>Showing: {transfers.length}</span>
+          </div>
 
-        {/* Filters */}
-        {showFilters && (
-          <div className='flex space-x-2'>
+          {/* Filters */}
+          <div className='flex flex-wrap gap-2'>
             {(['all', 'from', 'to', 'resume', 'usdc'] as FilterType[]).map(
               (filterType) => (
                 <button
                   key={filterType}
                   onClick={() => setFilter(filterType)}
-                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                     filter === filterType
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? theme === 'dark'
+                        ? 'bg-brand-mint text-brand-sage'
+                        : 'bg-blue-600 text-white'
+                      : theme === 'dark'
+                        ? 'bg-brand-sage-light/20 text-brand-cream/70 hover:bg-brand-sage-light/30'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
                   {getFilterLabel(filterType)}
@@ -236,30 +272,38 @@ export default function TransactionHistory({
               )
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Transaction List */}
-      <div className='max-h-96 overflow-y-auto'>
+      <div className='max-h-[400px] overflow-y-auto'>
         {transfers.length === 0 ? (
-          <div className='p-6 text-center text-gray-500'>
+          <div className={`p-6 text-center ${
+            theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-500'
+          }`}>
             <div className='text-4xl mb-2'>📭</div>
             <div>No transactions found</div>
-            <div className='text-sm mt-1'>
+            <div className='text-xs mt-1'>
               {hasHistory
                 ? 'Try adjusting the filter'
                 : 'This address has no transaction history'}
             </div>
           </div>
         ) : (
-          <div className='divide-y divide-gray-200'>
+          <div className={`divide-y ${
+            theme === 'dark' ? 'divide-brand-mint/20' : 'divide-gray-200'
+          }`}>
             {transfers.map((transfer, index) => {
               const formatted = formatTransferForDisplay(transfer)
 
               return (
                 <div
                   key={`${transfer.hash}-${index}`}
-                  className='p-4 hover:bg-gray-50'
+                  className={`p-4 transition-colors ${
+                    theme === 'dark'
+                      ? 'hover:bg-brand-sage-light/10'
+                      : 'hover:bg-gray-50'
+                  }`}
                 >
                   <div className='flex items-center justify-between'>
                     <div className='flex-1'>
@@ -276,16 +320,22 @@ export default function TransactionHistory({
                           }`}
                         ></div>
                         <div>
-                          <div className='font-medium text-gray-900'>
+                          <div className={`font-medium ${
+                            theme === 'dark' ? 'text-brand-cream' : 'text-gray-900'
+                          }`}>
                             {formatted.type}
                           </div>
-                          <div className='text-sm text-gray-500'>
+                          <div className={`text-xs ${
+                            theme === 'dark' ? 'text-brand-cream/60' : 'text-gray-500'
+                          }`}>
                             {formatted.timestamp}
                           </div>
                         </div>
                       </div>
 
-                      <div className='mt-2 text-sm text-gray-600'>
+                      <div className={`mt-2 text-xs ${
+                        theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
+                      }`}>
                         <div>
                           From: {formatted.from.slice(0, 10)}...
                           {formatted.from.slice(-8)}
@@ -298,10 +348,14 @@ export default function TransactionHistory({
                     </div>
 
                     <div className='text-right'>
-                      <div className='font-medium text-gray-900'>
+                      <div className={`font-medium ${
+                        theme === 'dark' ? 'text-brand-cream' : 'text-gray-900'
+                      }`}>
                         {formatted.amount} {transfer.asset || 'ETH'}
                       </div>
-                      <div className='text-xs text-gray-500'>
+                      <div className={`text-xs ${
+                        theme === 'dark' ? 'text-brand-cream/60' : 'text-gray-500'
+                      }`}>
                         Block #{formatted.blockNumber}
                       </div>
                     </div>
@@ -312,7 +366,11 @@ export default function TransactionHistory({
                       href={`https://sepolia.basescan.org/tx/${transfer.hash}`}
                       target='_blank'
                       rel='noopener noreferrer'
-                      className='text-xs text-blue-600 hover:text-blue-800 underline'
+                      className={`text-xs underline ${
+                        theme === 'dark'
+                          ? 'text-brand-mint hover:text-brand-cream'
+                          : 'text-blue-600 hover:text-blue-800'
+                      }`}
                     >
                       View on BaseScan →
                     </a>
@@ -326,14 +384,20 @@ export default function TransactionHistory({
 
       {/* Load More */}
       {pageKey && (
-        <div className='p-4 border-t border-gray-200 text-center'>
+        <div className={`p-4 border-t text-center ${
+          theme === 'dark' ? 'border-brand-mint/20' : 'border-gray-200'
+        }`}>
           <button
             onClick={handleLoadMore}
             disabled={loadingMore}
             className={`px-4 py-2 rounded-md font-medium transition-colors ${
               loadingMore
-                ? 'bg-gray-400 text-white cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                ? theme === 'dark'
+                  ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                  : 'bg-gray-400 text-white cursor-not-allowed'
+                : theme === 'dark'
+                  ? 'bg-brand-mint hover:bg-brand-mint/80 text-brand-sage'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
             }`}
           >
             {loadingMore ? '⏳ Loading...' : '📄 Load More'}
@@ -342,10 +406,15 @@ export default function TransactionHistory({
       )}
 
       {/* Footer Info */}
-      <div className='px-6 py-3 bg-gray-50 rounded-b-lg text-xs text-gray-500 text-center'>
+      <div className={`px-4 py-3 text-xs text-center ${
+        theme === 'dark'
+          ? 'text-brand-cream/50'
+          : 'bg-gray-50 text-gray-500'
+      }`}>
         Powered by Alchemy Transfers API • Base Sepolia Network
-        {autoRefresh &&
-          ` • Auto-refreshes every ${Math.floor(refreshInterval / 1000)}s`}
+        {autoRefresh && (
+          <> • Auto-refreshes every {Math.floor(refreshInterval / 1000)}s</>
+        )}
       </div>
     </div>
   )

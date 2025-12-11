@@ -6,6 +6,7 @@ import { encodeFunctionData } from 'viem'
 import { calculateFileHash, validateFile } from '@/lib/hash-utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
+import { Paperclip, FileText, X } from 'lucide-react'
 
 interface UploadStep {
   id: string
@@ -475,32 +476,103 @@ export default function ResumeUploadWithVerification({
       {/* File Selection */}
       <div className='mb-6'>
         <label
-          className={`block text-sm font-medium mb-2 ${
+          className={`block text-sm font-medium mb-3 ${
             theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
           }`}
         >
           Select Resume (PDF only)
         </label>
-        <input
-          type='file'
-          accept='.pdf'
-          onChange={handleFileChange}
-          className={`w-full px-4 py-3 rounded-lg ${
-            theme === 'dark'
-              ? 'bg-brand-cream border-gray-300 text-gray-900'
-              : 'bg-white border-gray-300 text-gray-900'
-          } border focus:outline-none focus:ring-2 focus:ring-brand-mint`}
-          disabled={uploading}
-        />
-        {file && (
-          <p
-            className={`text-sm mt-1 ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-            }`}
-          >
-            Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-          </p>
-        )}
+        
+        {/* Custom File Upload Button */}
+        <div className='relative'>
+          <input
+            type='file'
+            id='resume-file-input'
+            accept='.pdf'
+            onChange={handleFileChange}
+            className='hidden'
+            disabled={uploading}
+          />
+          
+          {!file ? (
+            <label
+              htmlFor='resume-file-input'
+              className={`
+                flex items-center justify-center gap-3 w-full px-6 py-4 rounded-xl 
+                border-2 border-dashed transition-all duration-200 cursor-pointer
+                hover:scale-[1.02] active:scale-[0.98]
+                ${
+                  uploading
+                    ? 'opacity-50 cursor-not-allowed'
+                    : theme === 'dark'
+                    ? 'border-brand-mint/50 bg-brand-mint/5 hover:border-brand-mint hover:bg-brand-mint/10 text-white'
+                    : 'border-brand-sage/50 bg-brand-sage/5 hover:border-brand-sage hover:bg-brand-sage/10 text-gray-700'
+                }
+              `}
+            >
+              <Paperclip
+                className={`w-5 h-5 ${
+                  theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                }`}
+              />
+              <span className='font-medium text-base'>
+                Click to attach PDF resume
+              </span>
+            </label>
+          ) : (
+            <div
+              className={`
+                flex items-center justify-between gap-4 w-full px-6 py-4 rounded-xl
+                border-2 transition-all duration-200
+                ${
+                  theme === 'dark'
+                    ? 'border-green-500/50 bg-green-500/10 text-white'
+                    : 'border-green-500/50 bg-green-50 text-gray-700'
+                }
+              `}
+            >
+              <div className='flex items-center gap-3 flex-1 min-w-0'>
+                <FileText
+                  className={`w-5 h-5 flex-shrink-0 ${
+                    theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                  }`}
+                />
+                <div className='flex-1 min-w-0'>
+                  <p className='font-medium text-base truncate'>{file.name}</p>
+                  <p
+                    className={`text-sm ${
+                      theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                    }`}
+                  >
+                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                </div>
+              </div>
+              {!uploading && (
+                <button
+                  type='button'
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setFile(null)
+                    // Reset file input
+                    const input = document.getElementById(
+                      'resume-file-input'
+                    ) as HTMLInputElement
+                    if (input) input.value = ''
+                  }}
+                  className={`
+                    p-2 rounded-lg transition-colors duration-200
+                    hover:bg-red-500/20 flex-shrink-0
+                    ${theme === 'dark' ? 'text-red-400' : 'text-red-600'}
+                  `}
+                  aria-label='Remove file'
+                >
+                  <X className='w-5 h-5' />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Upload Button */}
@@ -575,55 +647,6 @@ export default function ResumeUploadWithVerification({
             )}
           </div>
         ))}
-      </div>
-
-      {/* Cost Breakdown */}
-      <div
-        className={`mt-4 p-4 rounded-lg border-2 mb-6 ${
-          theme === 'dark'
-            ? 'bg-blue-900/20 border-blue-500/50'
-            : 'bg-blue-50 border-blue-200'
-        }`}
-      >
-        <h4
-          className={`font-medium mb-2 ${
-            theme === 'dark' ? 'text-blue-400' : 'text-blue-800'
-          }`}
-        >
-          💰 Cost Breakdown (Hash-First Flow)
-        </h4>
-        <div
-          className={`text-sm space-y-1 ${
-            theme === 'dark' ? 'text-blue-300' : 'text-blue-700'
-          }`}
-        >
-          <div>
-            🔢 File hash calculation:{' '}
-            <span className='font-semibold text-green-600'>FREE</span>
-          </div>
-          <div>
-            🔍 Database validation:{' '}
-            <span className='font-semibold text-green-600'>FREE</span>
-          </div>
-          <div>
-            📁 IPFS upload:{' '}
-            <span className='font-semibold text-yellow-600'>~$0.10</span>
-          </div>
-          <div>
-            💾 Database save:{' '}
-            <span className='font-semibold text-yellow-600'>~$0.001</span>
-          </div>
-          <div>
-            ⛓️ Blockchain verification:{' '}
-            <span className='font-semibold text-yellow-600'>~$0.02</span>
-          </div>
-          <div className='border-t pt-1 mt-2'>
-            <strong>Total for legitimate upload: ~$0.121</strong>
-          </div>
-          <div className='text-xs text-blue-600'>
-            💡 Spam attempts cost $0 (stopped before IPFS)
-          </div>
-        </div>
       </div>
 
       {/* Final Result */}

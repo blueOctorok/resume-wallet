@@ -1625,42 +1625,42 @@ const HomeContent = () => {
           onSwitchRole={handleSwitchRole}
         />
 
+        {/* T Assistant - Sidebar (only when logged in) */}
+        {user && (
+          <>
+            <TAssistant
+              currentStep={getCurrentStep()}
+              onAction={handleTAssistantAction}
+              userAddress={user?.address}
+              userRole={userRole}
+              hasResume={hasResume}
+              hasForms={journeyState.forms.status !== 'pending'}
+              form1Data={form1Data}
+              form2Data={form2Data}
+              form3Data={form3Data}
+              journeyState={journeyState}
+              helpRequest={helpRequest}
+              primerRequest={primerRequest}
+              resumeUploadEvent={resumeUploadEvent}
+              mode="sidebar"
+              isCollapsed={isAvaCollapsed}
+              onToggleCollapse={() => setIsAvaCollapsed(!isAvaCollapsed)}
+              onUnreadChange={setAvaHasUnread}
+              onLoadingChange={(isLoading, message) => {
+                setAvaIsWorking(isLoading)
+                if (message) setAvaWorkingMessage(message)
+              }}
+            />
+            
+            {/* AvA Loading Modal - shown when AvA is working */}
+            <TLoadingModal isVisible={avaIsWorking} message={avaWorkingMessage} />
+          </>
+        )}
+
         {/* Main Content - Adjusted for sidebar (desktop only) */}
-        <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-3 transition-all duration-300 ${
+        <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-8 relative z-0 transition-all duration-300 ${
           user && !isAvaCollapsed ? 'md:pr-[420px]' : ''
         }`}>
-          {/* T Assistant - Sidebar (only when logged in) */}
-          {user && (
-            <>
-              <TAssistant
-                currentStep={getCurrentStep()}
-                onAction={handleTAssistantAction}
-                userAddress={user?.address}
-                userRole={userRole}
-                hasResume={hasResume}
-                hasForms={journeyState.forms.status !== 'pending'}
-                form1Data={form1Data}
-                form2Data={form2Data}
-                form3Data={form3Data}
-                journeyState={journeyState}
-                helpRequest={helpRequest}
-                primerRequest={primerRequest}
-                resumeUploadEvent={resumeUploadEvent}
-                mode="sidebar"
-                isCollapsed={isAvaCollapsed}
-                onToggleCollapse={() => setIsAvaCollapsed(!isAvaCollapsed)}
-                onUnreadChange={setAvaHasUnread}
-                onLoadingChange={(isLoading, message) => {
-                  setAvaIsWorking(isLoading)
-                  if (message) setAvaWorkingMessage(message)
-                }}
-              />
-              
-              {/* AvA Loading Modal - shown when AvA is working */}
-              <TLoadingModal isVisible={avaIsWorking} message={avaWorkingMessage} />
-            </>
-          )}
-
           {/* Loading Screen - Show while fetching user role/data or switching roles */}
           {user && (isRoleLoading || isSettingRole) && !showRoleSelection && (
             <LoadingScreen 
@@ -1772,7 +1772,7 @@ const HomeContent = () => {
           )}
 
           {currentPage === 'jobs' && (
-            <div className='max-w-7xl mx-auto'>
+            <div className='max-w-7xl mx-auto relative z-0'>
               <JobListings 
                 onBack={() => setCurrentPage(null)}
                 userAddress={user?.address || null}
@@ -1781,10 +1781,12 @@ const HomeContent = () => {
           )}
 
           {currentPage === 'applications' && (
-            <MyApplications 
-              onBack={() => setCurrentPage(null)}
-              userAddress={user?.address || null}
-            />
+            <div className='max-w-7xl mx-auto relative z-0'>
+              <MyApplications 
+                onBack={() => setCurrentPage(null)}
+                userAddress={user?.address || null}
+              />
+            </div>
           )}
 
           {currentPage === 'mvr' && (

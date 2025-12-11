@@ -50,13 +50,23 @@ export default function MyApplications({ onBack, userAddress }: MyApplicationsPr
 
       if (response.ok) {
         const data = await response.json()
-        setApplications(data.applications || [])
+        // Always set applications array (empty array is valid - means no applications yet)
+        const apps = data.applications || []
+        setApplications(apps)
+        // Always clear error on successful response
+        setError(null)
       } else {
-        setError('Failed to load applications')
+        // For any error response, treat as "no applications" and show friendly empty state
+        // This includes: user not found, API errors, etc.
+        console.warn('API returned error, treating as empty applications:', response.status)
+        setApplications([])
+        setError(null) // Don't set error - just show friendly empty state
       }
     } catch (err) {
+      // On network/connection errors, also treat as "no applications"
       console.error('Error fetching applications:', err)
-      setError('Failed to load applications')
+      setApplications([])
+      setError(null) // Don't show error - just show friendly empty state
     } finally {
       setLoading(false)
     }
@@ -124,7 +134,7 @@ export default function MyApplications({ onBack, userAddress }: MyApplicationsPr
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
+    <div className="w-full p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <div className="max-w-7xl mx-auto mb-8">
         <button
@@ -162,35 +172,58 @@ export default function MyApplications({ onBack, userAddress }: MyApplicationsPr
 
       {/* Applications List */}
       <div className="max-w-7xl mx-auto">
-        {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-6">
-            <p className="text-red-900 dark:text-red-100">{error}</p>
-          </div>
-        )}
-
         {applications.length === 0 ? (
-          <div className={`rounded-2xl shadow-2xl border-t-4 p-12 text-center transition-all ${
+          <div className={`rounded-2xl shadow-2xl border-t-4 p-12 sm:p-16 text-center transition-all relative overflow-hidden ${
             theme === 'dark'
               ? 'bg-brand-sage-light/20 backdrop-blur-xl border-brand-mint'
               : 'bg-white/80 backdrop-blur-xl border-brand-sage'
           }`}>
-            <FileText className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-              No applications yet
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Start browsing jobs and apply with your Veree profile!
-            </p>
-            <button
-              onClick={onBack}
-              className={`px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all ${
+            {/* Decorative background elements */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-brand-mint/10 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-brand-sage/10 to-transparent rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+            
+            <div className="relative z-10">
+              {/* Icon with animated background */}
+              <div className={`w-24 h-24 mx-auto mb-6 rounded-2xl flex items-center justify-center ${
                 theme === 'dark'
-                  ? 'bg-gradient-to-r from-brand-mint to-teal-600 text-white'
-                  : 'bg-gradient-to-r from-brand-sage to-brand-sage-dark text-white'
-              }`}
-            >
-              Browse Jobs
-            </button>
+                  ? 'bg-gradient-to-br from-brand-mint/20 to-teal-600/20 border-2 border-brand-mint/30'
+                  : 'bg-gradient-to-br from-brand-sage/20 to-brand-sage-dark/20 border-2 border-brand-sage/30'
+              } shadow-lg`}>
+                <FileText className={`w-12 h-12 ${
+                  theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                }`} />
+              </div>
+              
+              <h3 className={`text-2xl sm:text-3xl font-bold mb-3 ${
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
+              }`}>
+                You don't have any applications yet
+              </h3>
+              
+              <p className={`text-lg sm:text-xl mb-2 ${
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+              }`}>
+                Start your job search journey!
+              </p>
+              
+              <p className={`text-base mb-8 ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              }`}>
+                Browse available positions and apply to jobs using your Veree profile
+              </p>
+              
+              <button
+                onClick={onBack}
+                className={`inline-flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 ${
+                  theme === 'dark'
+                    ? 'bg-gradient-to-r from-brand-mint to-teal-600 text-white hover:from-brand-mint/90 hover:to-teal-600/90'
+                    : 'bg-gradient-to-r from-brand-sage to-brand-sage-dark text-white hover:from-brand-sage/90 hover:to-brand-sage-dark/90'
+                }`}
+              >
+                <Briefcase className="w-5 h-5" />
+                Browse Jobs & Apply
+              </button>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">

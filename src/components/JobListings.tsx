@@ -136,7 +136,7 @@ export default function JobListings({ onClose, onBack, userAddress }: JobListing
   }
 
   return (
-    <div className='min-h-screen'>
+    <div className='w-full'>
       <div className='max-w-4xl mx-auto px-4 py-8'>
         {/* Header */}
         <div className='mb-8'>

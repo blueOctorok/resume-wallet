@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { getUSDCBalance, hasSufficientUSDC } from '@/lib/alchemy-token-api'
+import { useTheme } from '@/contexts/ThemeContext'
 
 interface USDCBalanceProps {
   walletAddress: string
@@ -16,6 +17,7 @@ export default function USDCBalance({
   showSufficiencyCheck = false,
   refreshInterval = 60000, // 60 seconds default (reduced frequency)
 }: USDCBalanceProps) {
+  const { theme } = useTheme()
   const [balance, setBalance] = useState<string>('0.00')
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
@@ -84,24 +86,42 @@ export default function USDCBalance({
 
   if (loading) {
     return (
-      <div className='flex items-center space-x-2 p-3 bg-gray-50 rounded-lg'>
-        <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600'></div>
-        <span className='text-sm text-gray-600'>Loading USDC balance...</span>
+      <div className={`flex items-center space-x-2 p-3 rounded-lg ${
+        theme === 'dark'
+          ? 'bg-brand-sage-light/10 border border-brand-mint/20'
+          : 'bg-gray-50 border border-gray-200'
+      }`}>
+        <div className={`animate-spin rounded-full h-4 w-4 border-b-2 ${
+          theme === 'dark' ? 'border-brand-mint' : 'border-blue-600'
+        }`}></div>
+        <span className={`text-sm ${
+          theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
+        }`}>Loading USDC balance...</span>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className='p-3 bg-red-50 border border-red-200 rounded-lg'>
+      <div className={`p-3 rounded-lg border ${
+        theme === 'dark'
+          ? 'bg-red-900/20 border-red-500/30'
+          : 'bg-red-50 border-red-200'
+      }`}>
         <div className='flex items-center justify-between'>
           <div className='flex items-center space-x-2'>
-            <span className='text-red-600'>❌</span>
-            <span className='text-sm text-red-700'>Error: {error}</span>
+            <span className={theme === 'dark' ? 'text-red-400' : 'text-red-600'}>❌</span>
+            <span className={`text-sm ${
+              theme === 'dark' ? 'text-red-300' : 'text-red-700'
+            }`}>Error: {error}</span>
           </div>
           <button
             onClick={handleRefresh}
-            className='text-xs text-red-600 hover:text-red-800 underline'
+            className={`text-xs underline ${
+              theme === 'dark'
+                ? 'text-red-400 hover:text-red-300'
+                : 'text-red-600 hover:text-red-800'
+            }`}
           >
             Retry
           </button>
@@ -113,15 +133,27 @@ export default function USDCBalance({
   return (
     <div className='space-y-2'>
       {/* USDC Balance Display */}
-      <div className='flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg'>
+      <div className={`flex items-center justify-between p-3 rounded-lg border ${
+        theme === 'dark'
+          ? 'bg-brand-mint/10 border-brand-mint/30'
+          : 'bg-blue-50 border-blue-200'
+      }`}>
         <div className='flex items-center space-x-2'>
-          <span className='text-blue-600'>💰</span>
-          <span className='font-medium text-blue-900'>USDC Balance:</span>
-          <span className='font-bold text-blue-900'>${balance}</span>
+          <span className={theme === 'dark' ? 'text-brand-mint' : 'text-blue-600'}>💰</span>
+          <span className={`font-medium ${
+            theme === 'dark' ? 'text-brand-cream' : 'text-blue-900'
+          }`}>USDC Balance:</span>
+          <span className={`font-bold ${
+            theme === 'dark' ? 'text-brand-cream' : 'text-blue-900'
+          }`}>${balance}</span>
         </div>
         <button
           onClick={handleRefresh}
-          className='text-xs text-blue-600 hover:text-blue-800 underline'
+          className={`text-xs underline ${
+            theme === 'dark'
+              ? 'text-brand-mint hover:text-brand-cream'
+              : 'text-blue-600 hover:text-blue-800'
+          }`}
           title='Refresh balance'
         >
           🔄 Refresh
@@ -133,25 +165,38 @@ export default function USDCBalance({
         <div
           className={`p-3 border rounded-lg ${
             hasSufficient
-              ? 'bg-green-50 border-green-200'
-              : 'bg-yellow-50 border-yellow-200'
+              ? theme === 'dark'
+                ? 'bg-green-900/20 border-green-500/30'
+                : 'bg-green-50 border-green-200'
+              : theme === 'dark'
+                ? 'bg-yellow-900/20 border-yellow-500/30'
+                : 'bg-yellow-50 border-yellow-200'
           }`}
         >
           <div className='flex items-center space-x-2'>
             <span
-              className={hasSufficient ? 'text-green-600' : 'text-yellow-600'}
+              className={hasSufficient 
+                ? (theme === 'dark' ? 'text-green-400' : 'text-green-600')
+                : (theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600')
+              }
             >
               {hasSufficient ? '✅' : '⚠️'}
             </span>
             <div className='flex-1'>
               {hasSufficient ? (
-                <span className='text-sm text-green-700'>
+                <span className={`text-sm ${
+                  theme === 'dark' ? 'text-green-300' : 'text-green-700'
+                }`}>
                   Sufficient USDC for transaction (${requiredAmount} required)
                 </span>
               ) : (
-                <div className='text-sm text-yellow-700'>
+                <div className={`text-sm ${
+                  theme === 'dark' ? 'text-yellow-300' : 'text-yellow-700'
+                }`}>
                   <div>Insufficient USDC for transaction</div>
-                  <div className='text-xs mt-1'>
+                  <div className={`text-xs mt-1 ${
+                    theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'
+                  }`}>
                     Need ${requiredAmount}, have ${balance}
                     {shortfall && ` (short $${shortfall})`}
                   </div>
@@ -163,7 +208,9 @@ export default function USDCBalance({
       )}
 
       {/* Balance Info */}
-      <div className='text-xs text-gray-500 text-center'>
+      <div className={`text-xs text-center ${
+        theme === 'dark' ? 'text-brand-cream/50' : 'text-gray-500'
+      }`}>
         Base Sepolia USDC • Auto-refreshes every{' '}
         {Math.floor(refreshInterval / 1000)}s
       </div>

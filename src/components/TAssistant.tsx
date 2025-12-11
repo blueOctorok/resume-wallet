@@ -1110,25 +1110,36 @@ function TAssistantContent({
       // Collapsed state - just a button that can be clicked
       // Hidden on mobile (< md breakpoint), only visible on desktop
       return (
-        <div className="hidden md:block fixed right-4 top-20 z-[60] pointer-events-auto">
+        <div className="hidden md:block fixed right-4 top-20 z-[9999] pointer-events-auto" style={{ pointerEvents: 'auto' }}>
           <button
             onClick={(e) => {
               e.stopPropagation()
               e.preventDefault()
-              onToggleCollapse?.()
+              if (onToggleCollapse) {
+                onToggleCollapse()
+              }
             }}
-            className={`relative rounded-full p-3 shadow-2xl transition-all duration-300 hover:scale-110 pointer-events-auto ${
+            className={`relative rounded-2xl px-4 py-3 shadow-2xl transition-all duration-300 hover:scale-110 hover:shadow-3xl pointer-events-auto border-2 cursor-pointer ${
               theme === 'dark'
-                ? 'bg-brand-sage-light/20 backdrop-blur-xl border border-brand-mint'
-                : 'bg-white/90 backdrop-blur-xl border border-gray-200'
+                ? 'bg-gradient-to-br from-brand-mint/30 to-brand-sage-light/20 backdrop-blur-xl border-brand-mint/50 hover:border-brand-mint shadow-brand-mint/20'
+                : 'bg-gradient-to-br from-brand-sage/90 to-brand-sage-dark/80 backdrop-blur-xl border-brand-sage/60 hover:border-brand-sage shadow-brand-sage/30'
             }`}
             type="button"
+            style={{
+              boxShadow: theme === 'dark' 
+                ? '0 0 30px rgba(20, 184, 166, 0.3), 0 8px 32px rgba(0, 0, 0, 0.3)'
+                : '0 0 30px rgba(107, 142, 35, 0.4), 0 8px 32px rgba(0, 0, 0, 0.2)',
+              pointerEvents: 'auto',
+              zIndex: 9999
+            }}
           >
-            <MessageCircle className={`w-6 h-6 ${
-              theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
-            }`} />
+            <span className={`text-sm font-bold tracking-wide ${
+              theme === 'dark' ? 'text-brand-cream' : 'text-white'
+            }`}>
+              AvA
+            </span>
             {hasUnread && (
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-white" />
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-white shadow-lg" />
             )}
           </button>
         </div>
@@ -1139,15 +1150,33 @@ function TAssistantContent({
     // Mobile: Full-screen overlay
     // Desktop: Right sidebar
     return (
-      <div
-        className={`fixed inset-0 md:inset-auto md:right-4 md:top-20 md:bottom-4 z-[60] md:w-96 md:rounded-lg shadow-2xl flex flex-col transition-all duration-300 pointer-events-auto ${
-          theme === 'dark'
-            ? 'bg-brand-sage-light/20 backdrop-blur-xl border-brand-mint md:border'
-            : 'bg-white/90 backdrop-blur-xl border-gray-200 md:border'
-        }`}
-        onClick={(e) => e.stopPropagation()}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
+      <>
+        {/* Backdrop for mobile */}
+        <div 
+          className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998]"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (onToggleCollapse) {
+              onToggleCollapse()
+            }
+          }}
+        />
+        <div
+          className={`fixed inset-0 md:inset-auto md:right-4 md:top-20 md:bottom-4 z-[9999] md:w-96 md:rounded-2xl shadow-2xl flex flex-col transition-all duration-300 pointer-events-auto border-2 ${
+            theme === 'dark'
+              ? 'bg-brand-sage-light/30 backdrop-blur-xl border-brand-mint/50'
+              : 'bg-white/95 backdrop-blur-xl border-brand-sage/40'
+          }`}
+          style={{
+            boxShadow: theme === 'dark'
+              ? '0 0 40px rgba(20, 184, 166, 0.2), 0 20px 60px rgba(0, 0, 0, 0.4)'
+              : '0 0 40px rgba(107, 142, 35, 0.15), 0 20px 60px rgba(0, 0, 0, 0.2)',
+            pointerEvents: 'auto',
+            zIndex: 9999
+          }}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
         {/* Header */}
         <div
           className={`flex items-center justify-between p-4 border-b ${
@@ -1156,39 +1185,52 @@ function TAssistantContent({
         >
           <div className="flex items-center space-x-3">
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center ${
+              className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg border-2 ${
                 theme === 'dark'
-                  ? 'bg-brand-mint text-gray-900'
-                  : 'bg-brand-sage text-white'
+                  ? 'bg-gradient-to-br from-brand-mint to-teal-600 text-brand-cream border-brand-mint/50'
+                  : 'bg-gradient-to-br from-brand-sage to-brand-sage-dark text-white border-brand-sage/50'
               }`}
+              style={{
+                boxShadow: theme === 'dark'
+                  ? '0 0 20px rgba(20, 184, 166, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.1)'
+                  : '0 0 20px rgba(107, 142, 35, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.1)'
+              }}
             >
-              <MessageCircle className="w-6 h-6" />
+              <span className="text-lg font-bold">AvA</span>
             </div>
             <div>
               <h3
-                className={`font-semibold ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                className={`font-bold text-lg ${
+                  theme === 'dark' ? 'text-brand-cream' : 'text-gray-900'
                 }`}
               >
-                T
+                AvA Assistant
               </h3>
+              <p className={`text-xs ${
+                theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
+              }`}>
+                Your AI helper
+              </p>
             </div>
           </div>
           <button
             onClick={(e) => {
               e.stopPropagation()
               e.preventDefault()
-              onToggleCollapse?.()
+              if (onToggleCollapse) {
+                onToggleCollapse()
+              }
             }}
-            className={`p-2 rounded-lg hover:bg-opacity-20 pointer-events-auto transition-colors ${
-              theme === 'dark' ? 'hover:bg-white' : 'hover:bg-gray-200'
+            className={`p-2 rounded-lg hover:bg-opacity-20 pointer-events-auto transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer ${
+              theme === 'dark' 
+                ? 'hover:bg-white/20 text-brand-cream hover:text-white' 
+                : 'hover:bg-gray-200/80 text-gray-700 hover:text-gray-900'
             }`}
             aria-label="Close AvA Assistant"
             type="button"
+            style={{ pointerEvents: 'auto', zIndex: 10000 }}
           >
-            <X className={`w-6 h-6 md:w-5 md:h-5 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`} />
+            <X className={`w-6 h-6 md:w-5 md:h-5`} />
           </button>
         </div>
         <div className="flex items-center space-x-2 px-4">
@@ -1307,7 +1349,7 @@ function TAssistantContent({
                         key={action.id}
                         type="button"
                         onClick={() => handleMessageAction(action)}
-                        className={`px-3 py-1 text-xs font-medium rounded-full border transition-all ${
+                        className={`px-3 py-1 text-xs font-medium rounded-full border transition-all cursor-pointer ${
                           theme === 'dark'
                             ? 'border-brand-mint/50 text-brand-mint hover:bg-brand-mint/10'
                             : 'border-brand-sage/40 text-brand-sage hover:bg-brand-sage/10'
@@ -1334,50 +1376,51 @@ function TAssistantContent({
             </div>
           </div>
         )}
-      </div>
-
-      {/* Input */}
-      <div
-        className={`p-4 border-t ${
-          theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
-        }`}
-      >
-        <div className="flex items-center space-x-2">
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Ask me anything about the application process..."
-            disabled={isLoading}
-            className={`flex-1 px-4 py-2 rounded-lg border-2 focus:outline-none focus:ring-2 focus:border-transparent ${
-              theme === 'dark'
-                ? 'bg-gray-800 border-gray-700 text-white focus:ring-brand-mint placeholder-gray-500'
-                : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage placeholder-gray-400'
-            }`}
-          />
-          <button
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            className={`p-2 rounded-lg transition-colors ${
-              !input.trim() || isLoading
-                ? 'opacity-50 cursor-not-allowed'
-                : theme === 'dark'
-                  ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                  : 'bg-brand-sage text-white hover:bg-brand-sage/90'
-            }`}
-            aria-label="Send message"
-          >
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Send className="w-5 h-5" />
-            )}
-          </button>
         </div>
-      </div>
-    </div>
+
+        {/* Input */}
+        <div
+          className={`p-4 border-t ${
+            theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+          }`}
+        >
+          <div className="flex items-center space-x-2">
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ask me anything about the application process..."
+              disabled={isLoading}
+              className={`flex-1 px-4 py-2 rounded-lg border-2 focus:outline-none focus:ring-2 focus:border-transparent ${
+                theme === 'dark'
+                  ? 'bg-gray-800 border-gray-700 text-white focus:ring-brand-mint placeholder-gray-500'
+                  : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage placeholder-gray-400'
+              }`}
+            />
+            <button
+              onClick={handleSend}
+              disabled={!input.trim() || isLoading}
+              className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                !input.trim() || isLoading
+                  ? 'opacity-50 cursor-not-allowed'
+                  : theme === 'dark'
+                    ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
+                    : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+              }`}
+              aria-label="Send message"
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+        </div>
+        </div>
+      </>
     )
   }
 
@@ -1399,28 +1442,33 @@ function TAssistantContent({
       >
         <div className="flex items-center space-x-3">
           <div
-            className={`w-10 h-10 rounded-full flex items-center justify-center ${
+            className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg border-2 ${
               theme === 'dark'
-                ? 'bg-brand-mint text-gray-900'
-                : 'bg-brand-sage text-white'
+                ? 'bg-gradient-to-br from-brand-mint to-teal-600 text-brand-cream border-brand-mint/50'
+                : 'bg-gradient-to-br from-brand-sage to-brand-sage-dark text-white border-brand-sage/50'
             }`}
+            style={{
+              boxShadow: theme === 'dark'
+                ? '0 0 20px rgba(20, 184, 166, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.1)'
+                : '0 0 20px rgba(107, 142, 35, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.1)'
+            }}
           >
-            <MessageCircle className="w-6 h-6" />
+            <span className="text-lg font-bold">AvA</span>
           </div>
           <div>
             <h3
-              className={`font-semibold ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
+              className={`font-bold text-lg ${
+                theme === 'dark' ? 'text-brand-cream' : 'text-gray-900'
               }`}
             >
-              T - Your AI Guide
+              AvA Assistant
             </h3>
             <p
               className={`text-xs ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
               }`}
             >
-              Step-by-step employment process guide
+              Your AI helper for the employment process
             </p>
           </div>
         </div>
@@ -1541,7 +1589,7 @@ function TAssistantContent({
                         key={action.id}
                         type="button"
                         onClick={() => handleMessageAction(action)}
-                        className={`px-3 py-1 text-xs font-medium rounded-full border transition-all ${
+                        className={`px-3 py-1 text-xs font-medium rounded-full border transition-all cursor-pointer ${
                           theme === 'dark'
                             ? 'border-brand-mint/50 text-brand-mint hover:bg-brand-mint/10'
                             : 'border-brand-sage/40 text-brand-sage hover:bg-brand-sage/10'
@@ -1594,7 +1642,7 @@ function TAssistantContent({
           <button
             onClick={handleSend}
             disabled={!input.trim() || isLoading}
-            className={`p-2 rounded-lg transition-colors ${
+            className={`p-2 rounded-lg transition-colors cursor-pointer ${
               !input.trim() || isLoading
                 ? 'opacity-50 cursor-not-allowed'
                 : theme === 'dark'
@@ -1612,8 +1660,8 @@ function TAssistantContent({
         </div>
       </div>
     </div>
-  )
-}
+    )
+  }
 
 // Main component that handles SSR
 export default function TAssistant(props: TAssistantProps) {

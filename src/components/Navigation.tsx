@@ -74,7 +74,7 @@ export default function Navigation({
       : 'absolute -inset-[1px] rounded-3xl bg-gradient-to-b from-brand-mint/20 to-transparent opacity-50 blur-sm -z-10'
 
   return (
-    <header className='sticky top-4 z-50 px-4 sm:px-6'>
+    <header className='sticky top-4 z-50 px-4 sm:px-6' style={{ transform: 'translate3d(0,0,0)', backfaceVisibility: 'hidden' }}>
       <nav className={navClasses}>
         {/* Extra depth layer - inner shadow */}
         <div className={innerShadowClasses} />
@@ -96,7 +96,7 @@ export default function Navigation({
                         e.stopPropagation()
                         onStatusClick?.()
                       }}
-                      className='relative group flex flex-col items-center space-y-1 sm:space-y-1.5 p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-brand-sage/90 backdrop-blur-sm hover:bg-brand-sage/95 hover:border-brand-mint/70 transition-all duration-300 border-2 border-white/30'
+                      className='relative group flex flex-col items-center space-y-1 sm:space-y-1.5 p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-brand-sage/90 backdrop-blur-sm hover:bg-brand-sage/95 hover:border-brand-mint/70 transition-all duration-300 border-2 border-white/30 cursor-pointer'
                       aria-label='View account status'
                       style={{
                         boxShadow: '0 0 20px rgba(255, 255, 255, 0.25), 0 0 40px rgba(255, 255, 255, 0.15), 0 0 60px rgba(255, 255, 255, 0.05), inset 0 0 15px rgba(255, 255, 255, 0.1), 0 4px 12px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.15)'
@@ -119,7 +119,7 @@ export default function Navigation({
                     {/* Home Icon Button */}
                     <button
                       onClick={() => handleNavigation('home')}
-                      className={`relative group p-2 sm:p-2.5 rounded-lg sm:rounded-xl backdrop-blur-sm transition-all duration-300 shadow-lg hover:shadow-xl border ${
+                      className={`relative group p-2 sm:p-2.5 rounded-lg sm:rounded-xl backdrop-blur-sm transition-all duration-300 shadow-lg hover:shadow-xl border cursor-pointer ${
                         theme === 'light'
                           ? 'bg-brand-sage/60 hover:bg-brand-sage/80 border-brand-sage/40 hover:border-brand-mint/70 text-white'
                           : 'bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-mint/30 hover:border-brand-mint/50 text-brand-cream'
@@ -137,7 +137,7 @@ export default function Navigation({
                 ) : (
                   <button
                     onClick={() => handleNavigation('signin')}
-                    className={`px-4 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 ${
+                    className={`px-4 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer ${
                       theme === 'light'
                         ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark'
                         : 'text-brand-cream bg-brand-mint/20 hover:bg-brand-mint/30 border-brand-mint/40 hover:border-brand-mint/60'
@@ -166,29 +166,45 @@ export default function Navigation({
                 {/* AvA Assistant Dynamic Island */}
                 {isAuthenticated && onTClick && (
                   <button
-                    onClick={onTClick}
-                    className={`hidden md:flex relative group items-center justify-center p-2 rounded-full transition-all duration-300 ${
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      e.preventDefault()
+                      if (onTClick) {
+                        onTClick()
+                      }
+                    }}
+                    className={`hidden md:flex relative group items-center justify-center px-4 py-2.5 rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-2xl border-2 cursor-pointer ${
                       theme === 'light'
-                        ? 'bg-brand-sage/60 backdrop-blur-sm hover:bg-brand-sage/80 border border-brand-sage/40'
-                        : 'bg-brand-sage-light/20 backdrop-blur-sm hover:bg-brand-sage-light/30 border border-brand-mint/30'
+                        ? 'bg-gradient-to-br from-brand-sage to-brand-sage-dark backdrop-blur-sm hover:from-brand-sage-dark hover:to-brand-sage border-brand-sage/60 shadow-lg shadow-brand-sage/30'
+                        : 'bg-gradient-to-br from-brand-mint/30 to-brand-sage-light/20 backdrop-blur-sm hover:from-brand-mint/40 hover:to-brand-sage-light/30 border-brand-mint/50 shadow-lg shadow-brand-mint/20'
                     } ${tHasUnread ? 'animate-pulse' : ''}`}
                     aria-label='Open AvA Assistant'
+                    type="button"
+                    style={{
+                      boxShadow: theme === 'light'
+                        ? '0 0 25px rgba(107, 142, 35, 0.4), 0 8px 24px rgba(0, 0, 0, 0.2)'
+                        : '0 0 25px rgba(20, 184, 166, 0.3), 0 8px 24px rgba(0, 0, 0, 0.3)',
+                      pointerEvents: 'auto',
+                      zIndex: 9999
+                    }}
                   >
-                    <span className={`text-sm font-semibold ${theme === 'light' ? 'text-white' : 'text-brand-mint'}`}>
+                    <span className={`text-sm font-bold tracking-wide ${
+                      theme === 'light' ? 'text-white drop-shadow-md' : 'text-brand-cream drop-shadow-md'
+                    }`}>
                       AvA
                     </span>
                     {tHasUnread && (
-                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border border-white" />
+                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-white shadow-lg" />
                     )}
                     {/* Tooltip */}
-                    <div className='absolute right-0 top-full mt-2 px-3 py-1.5 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
+                    <div className='absolute right-0 top-full mt-2 px-3 py-1.5 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50'>
                       {tHasUnread ? 'AvA has a new message' : 'Open AvA Assistant'}
                     </div>
                   </button>
                 )}
                 <button
                   onClick={toggleMenu}
-                  className='md:hidden p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-brand-sage/60 backdrop-blur-sm hover:bg-brand-sage/80 hover:border-brand-mint/70 transition-all duration-300 shadow-lg hover:shadow-xl'
+                  className='md:hidden p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-brand-sage/60 backdrop-blur-sm hover:bg-brand-sage/80 hover:border-brand-mint/70 transition-all duration-300 shadow-lg hover:shadow-xl cursor-pointer'
                   aria-label='Toggle menu'
                 >
                   <div className='w-4 h-4 sm:w-5 sm:h-5 flex flex-col justify-center items-center gap-1'>
@@ -228,7 +244,7 @@ export default function Navigation({
                           setIsDriverDropdownOpen(!isDriverDropdownOpen)
                           setIsEmployerDropdownOpen(false)
                         }}
-                        className="w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-[10px] text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 transition-all duration-300 flex items-center justify-center gap-2 relative z-10"
+                        className="w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-[10px] text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 transition-all duration-300 flex items-center justify-center gap-2 relative z-10 cursor-pointer"
                       >
                         Driver Options
                         <svg 
@@ -248,7 +264,7 @@ export default function Navigation({
                           setIsDriverDropdownOpen(!isDriverDropdownOpen)
                           setIsEmployerDropdownOpen(false)
                         }}
-                        className="w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-[10px] text-white bg-brand-sage hover:bg-brand-sage-dark transition-all duration-300 flex items-center justify-center gap-2 relative z-10 shadow-lg hover:shadow-xl hover:scale-105"
+                        className="w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-[10px] text-white bg-brand-sage hover:bg-brand-sage-dark transition-all duration-300 flex items-center justify-center gap-2 relative z-10 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer"
                       >
                         Driver Options
                         <svg 
@@ -280,7 +296,7 @@ export default function Navigation({
                               handleNavigation('resume')
                               setIsDriverDropdownOpen(false)
                             }}
-                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                               theme === 'light'
                                 ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
                                 : 'text-brand-cream hover:bg-brand-sage-light/20'
@@ -293,7 +309,7 @@ export default function Navigation({
                               handleNavigation('jobs')
                               setIsDriverDropdownOpen(false)
                             }}
-                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                               theme === 'light'
                                 ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
                                 : 'text-brand-cream hover:bg-brand-sage-light/20'
@@ -306,7 +322,7 @@ export default function Navigation({
                               handleNavigation('applications')
                               setIsDriverDropdownOpen(false)
                             }}
-                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                               theme === 'light'
                                 ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
                                 : 'text-brand-cream hover:bg-brand-sage-light/20'
@@ -319,7 +335,7 @@ export default function Navigation({
                               handleNavigation('dotapp')
                               setIsDriverDropdownOpen(false)
                             }}
-                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                               theme === 'light'
                                 ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
                                 : 'text-brand-cream hover:bg-brand-sage-light/20'
@@ -333,7 +349,7 @@ export default function Navigation({
                                 onMvrClick()
                                 setIsDriverDropdownOpen(false)
                               }}
-                              className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                              className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                                 theme === 'light'
                                   ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
                                   : 'text-brand-cream hover:bg-brand-sage-light/20'
@@ -359,7 +375,7 @@ export default function Navigation({
                           setIsEmployerDropdownOpen(!isEmployerDropdownOpen)
                           setIsDriverDropdownOpen(false)
                         }}
-                        className="w-full px-6 py-2.5 text-sm font-semibold rounded-[10px] text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 transition-all duration-300 flex items-center gap-2 relative z-10"
+                        className="w-full px-6 py-2.5 text-sm font-semibold rounded-[10px] text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 transition-all duration-300 flex items-center gap-2 relative z-10 cursor-pointer"
                       >
                         Employer Options
                         <svg 
@@ -378,7 +394,7 @@ export default function Navigation({
                         setIsEmployerDropdownOpen(!isEmployerDropdownOpen)
                         setIsDriverDropdownOpen(false)
                       }}
-                      className="w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 flex items-center gap-2 text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105"
+                      className="w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 flex items-center gap-2 text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer"
                     >
                       Employer Options
                       <svg 
@@ -423,7 +439,7 @@ export default function Navigation({
                     onTClick()
                     setIsMenuOpen(false)
                   }}
-                  className={`md:hidden w-full px-4 py-2 text-xs font-medium rounded-lg border transition-all duration-300 flex items-center justify-center gap-1.5 ${
+                  className={`md:hidden w-full px-4 py-2 text-xs font-medium rounded-lg border transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer ${
                     theme === 'light'
                       ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105'
                       : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105'
