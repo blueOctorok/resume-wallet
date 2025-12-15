@@ -8,9 +8,10 @@
  */
 
 import { useState, useEffect } from 'react'
-import { useSignerStatus, useSmartAccountClient, useSendCalls } from '@account-kit/react'
+import { useSignerStatus, useSmartAccountClient, useSendCalls, useUser } from '@account-kit/react'
 import { encodeFunctionData, parseAbi } from 'viem'
 import { useTheme } from '@/contexts/ThemeContext'
+import { getUSDCTransferHistory } from '@/lib/alchemy-transfers-api'
 
 interface MvrConfig {
   usdcAddress: string
@@ -19,11 +20,22 @@ interface MvrConfig {
   priceUsdc: string
 }
 
-export default function MvrPaymentButton() {
+interface MvrPaymentButtonProps {
+  onPaymentSuccess?: (txHash: string) => void
+  onPaymentError?: (error: string) => void
+  disabled?: boolean
+}
+
+export default function MvrPaymentButton({ 
+  onPaymentSuccess, 
+  onPaymentError,
+  disabled = false 
+}: MvrPaymentButtonProps) {
   const { isConnected, isInitializing } = useSignerStatus()
   const { client } = useSmartAccountClient({ type: 'LightAccount' })
   const { sendCalls, isPending } = useSendCalls({ client })
   const { theme } = useTheme()
+  const user = useUser()
 
   const [config, setConfig] = useState<MvrConfig | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -65,7 +77,15 @@ export default function MvrPaymentButton() {
   }
 
   const handlePayment = async () => {
-    if (!client || !config) return
+    if (!client || !config) {
+      setError('Payment service not ready. Please try again.')
+      return
+    }
+
+    if (!sendCalls) {
+      setError('Transaction service not available. Please refresh and try again.')
+      return
+    }
 
     setIsLoading(true)
     setError(null)
@@ -74,6 +94,13 @@ export default function MvrPaymentButton() {
     try {
       // Calculate amount in raw USDC (6 decimals)
       const amountRaw = BigInt(Math.floor(parseFloat(config.priceUsdc) * 10 ** config.decimals))
+
+      console.log('💳 [MVR PAYMENT] Initiating payment:', {
+        amount: config.priceUsdc,
+        amountRaw: amountRaw.toString(),
+        to: config.treasuryAddress,
+        usdcAddress: config.usdcAddress,
+      })
 
       // Encode ERC-20 transfer function call
       const transferAbi = parseAbi([
@@ -86,6 +113,8 @@ export default function MvrPaymentButton() {
         args: [config.treasuryAddress as `0x${string}`, amountRaw],
       })
 
+      console.log('💳 [MVR PAYMENT] Calling sendCalls...')
+
       // Send the transaction via Alchemy Smart Wallet
       const result = await sendCalls({
         calls: [
@@ -96,13 +125,114 @@ export default function MvrPaymentButton() {
         ],
       })
 
-      console.log('✅ USDC payment transaction sent:', result)
+      console.log('💳 [MVR PAYMENT] sendCalls result:', result)
+      console.log('💳 [MVR PAYMENT] Result type:', typeof result)
+      if (result) {
+        console.log('💳 [MVR PAYMENT] Result keys:', Object.keys(result))
+      }
+      
+      // Extract transaction hash from result
+      // Alchemy Account Kit's sendCalls can return:
+      // - A string (the hash directly)
+      // - An object with hash/userOpHash property
+      // - undefined (if the call hasn't been processed yet)
+      let txHash: string | null = null
+      
+      if (result === undefined || result === null) {
+        // Fallback: If result is undefined, we poll for the transaction
+        console.warn('⚠️ sendCalls returned undefined - polling for transaction...')
+        
+        // Wait a moment for the transaction to propagate
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        
+        // Poll for the latest USDC transfer matching our criteria
+        let foundTx = false
+        let attempts = 0
+        const maxAttempts = 10 // 20 seconds total
+        
+        while (!foundTx && attempts < maxAttempts) {
+          try {
+            // Check recent USDC transfers
+            const history = await getUSDCTransferHistory(
+              user?.address || '',
+              config.usdcAddress,
+              { maxCount: 5 }
+            )
+            
+            if (history.success && history.transfers.length > 0) {
+              // Look for a transfer that matches:
+              // 1. To the treasury address
+              // 2. Created very recently (we can't easily check timestamp precision, so we take the latest)
+              // 3. Amount matches roughly (ignoring decimals precision issues)
+              
+              const recentTransfer = history.transfers.find(t => 
+                t.to.toLowerCase() === config.treasuryAddress.toLowerCase() &&
+                // Check if value is close to expected amount (allowing for small diffs)
+                Math.abs(t.value - parseFloat(config.priceUsdc)) < 0.0001
+              )
+              
+              if (recentTransfer) {
+                console.log('✅ Found matching transaction via polling:', recentTransfer.hash)
+                txHash = recentTransfer.hash
+                foundTx = true
+                break
+              }
+            }
+          } catch (pollErr) {
+            console.warn('Polling error:', pollErr)
+          }
+          
+          attempts++
+          if (!foundTx) {
+            await new Promise(resolve => setTimeout(resolve, 2000))
+          }
+        }
+        
+        if (!txHash) {
+          throw new Error('Transaction was submitted but hash could not be retrieved. Please check your wallet history.')
+        }
+      }
+      
+      if (typeof result === 'string') {
+        txHash = result
+      } else if (result && typeof result === 'object') {
+        txHash = (result as any).hash || (result as any).userOpHash || (result as any).txHash || null
+      }
+      
+      if (!txHash || txHash === 'pending') {
+        // One last check if we didn't get it from the result object directly
+        if (!txHash) {
+             throw new Error('Transaction hash not available. The transaction may still be processing.')
+        }
+      }
+
+      // Record payment in database
+      try {
+        const paymentResponse = await fetch('/api/mvr/payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            txHash,
+            amountUsdc: config.priceUsdc,
+            walletAddress: user?.address,
+          }),
+        })
+
+        if (!paymentResponse.ok) {
+          console.warn('⚠️ Payment recorded in blockchain but failed to save to database')
+        }
+      } catch (err) {
+        console.error('⚠️ Error recording payment:', err)
+        // Don't fail the payment if DB recording fails - blockchain payment succeeded
+      }
 
       setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      onPaymentSuccess?.(txHash)
     } catch (err) {
       console.error('❌ MVR payment error:', err)
-      setError(err instanceof Error ? err.message : 'Payment failed')
+      const errorMessage = err instanceof Error ? err.message : 'Payment failed'
+      setError(errorMessage)
+      onPaymentError?.(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -126,7 +256,7 @@ export default function MvrPaymentButton() {
     <div className="flex flex-col gap-2">
       <button
         onClick={handlePayment}
-        disabled={isLoading || isPending || !config}
+        disabled={isLoading || isPending || !config || disabled}
         className={buttonClasses}
       >
         {isLoading || isPending

@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
   try {
     const { 
       walletAddress, 
+      paymentTxHash, // Payment transaction hash (required)
       dlNumber, 
       dlState, 
       mvrSearchType = 'standard',
@@ -58,6 +59,46 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validate payment before proceeding
+    if (!paymentTxHash) {
+      return NextResponse.json(
+        { error: 'Payment is required. Please complete payment before ordering.' },
+        { status: 400 }
+      )
+    }
+
+    const supabase = await createClient()
+
+    // Verify payment exists and is completed
+    const { data: payment, error: paymentError } = await supabase
+      .from('payments')
+      .select('id, status, amount_usdc, user_id')
+      .eq('tx_hash', paymentTxHash)
+      .eq('type', 'MVR_ORDER')
+      .single()
+
+    if (paymentError || !payment || payment.status !== 'COMPLETED') {
+      console.error('[MVR ORDER] Payment validation failed:', paymentError)
+      return NextResponse.json(
+        { error: 'Invalid or incomplete payment. Please complete payment before ordering.' },
+        { status: 400 }
+      )
+    }
+
+    // Verify payment belongs to this user
+    let { data: userForPayment, error: userForPaymentError } = await supabase
+      .from('users')
+      .select('id')
+      .ilike('wallet_address', walletAddress)
+      .single()
+
+    if (userForPaymentError || !userForPayment || payment.user_id !== userForPayment.id) {
+      return NextResponse.json(
+        { error: 'Payment does not belong to this user.' },
+        { status: 403 }
+      )
+    }
+
     // Validate Accio credentials
     const accioAccount = process.env.ACCIO_ACCOUNT
     const accioUsername = process.env.ACCIO_USERNAME
@@ -72,9 +113,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('[MVR ORDER] Starting MVR order for wallet:', walletAddress)
-
-    const supabase = await createClient()
+    console.log('[MVR ORDER] Starting MVR order for wallet:', walletAddress, 'with payment:', paymentTxHash)
 
     // 1. Get or create user
     let { data: user, error: userError } = await supabase

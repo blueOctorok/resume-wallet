@@ -38,7 +38,8 @@ export default function TransactionHistory({
   const [transfers, setTransfers] = useState<TransferResult[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
-  const [filter, setFilter] = useState<FilterType>('all')
+  // Default to 'usdc' filter since users typically want to see USDC transfers
+  const [filter, setFilter] = useState<FilterType>('usdc')
   const [hasHistory, setHasHistory] = useState<boolean>(false)
   const [transactionCount, setTransactionCount] = useState<number>(0)
   const [pageKey, setPageKey] = useState<string | undefined>()

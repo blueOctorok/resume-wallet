@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import MvrPaymentButton from './MvrPaymentButton'
 
 interface MvrOrderFormProps {
   userAddress: string
@@ -30,9 +31,31 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [orderResult, setOrderResult] = useState<any>(null)
+  
+  // Payment state
+  const [paymentTxHash, setPaymentTxHash] = useState<string | null>(null)
+  const [isPaymentComplete, setIsPaymentComplete] = useState(false)
+
+  const handlePaymentSuccess = (txHash: string) => {
+    setPaymentTxHash(txHash)
+    setIsPaymentComplete(true)
+    setError(null) // Clear any previous errors
+  }
+
+  const handlePaymentError = (errorMsg: string) => {
+    setError(`Payment failed: ${errorMsg}`)
+    setIsPaymentComplete(false)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Require payment before submission
+    if (!isPaymentComplete || !paymentTxHash) {
+      setError('Please complete payment before submitting order')
+      return
+    }
+
     setIsLoading(true)
     setError(null)
     setSuccess(false)
@@ -44,6 +67,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           walletAddress: userAddress,
+          paymentTxHash, // Include payment transaction hash
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           email: email.trim(),
@@ -286,6 +310,54 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
             </div>
           </div>
 
+          {/* Payment Section */}
+          <div className="space-y-4">
+            <h3 className={`text-sm font-semibold uppercase tracking-wide ${
+              theme === 'light' ? 'text-gray-700' : 'text-brand-cream/80'
+            }`}>
+              Payment
+            </h3>
+            
+            {!isPaymentComplete ? (
+              <div className="space-y-2">
+                <p className={`text-sm ${
+                  theme === 'light' ? 'text-gray-600' : 'text-brand-cream/70'
+                }`}>
+                  Complete payment to proceed with your MVR order.
+                </p>
+                <MvrPaymentButton 
+                  onPaymentSuccess={handlePaymentSuccess}
+                  onPaymentError={handlePaymentError}
+                  disabled={isLoading}
+                />
+              </div>
+            ) : (
+              <div className={`p-4 rounded-xl ${
+                theme === 'light'
+                  ? 'bg-green-50 border border-green-200'
+                  : 'bg-green-900/20 border border-green-500/30'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <svg className={`w-5 h-5 ${
+                    theme === 'light' ? 'text-green-600' : 'text-green-400'
+                  }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <p className={`text-sm font-medium ${
+                    theme === 'light' ? 'text-green-700' : 'text-green-400'
+                  }`}>
+                    Payment confirmed
+                  </p>
+                </div>
+                <p className={`text-xs mt-1 font-mono ${
+                  theme === 'light' ? 'text-green-600' : 'text-green-400/80'
+                }`}>
+                  {paymentTxHash?.slice(0, 20)}...
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Error Message */}
           {error && (
             <div className={`p-4 rounded-xl ${
@@ -300,9 +372,9 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || !isPaymentComplete}
             className={`w-full px-6 py-4 rounded-xl font-semibold text-base transition-all ${
-              isLoading
+              isLoading || !isPaymentComplete
                 ? theme === 'light'
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-brand-sage-light/10 text-brand-cream/40 cursor-not-allowed'
@@ -311,7 +383,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
                   : 'bg-brand-sage-light/20 text-brand-cream hover:bg-brand-sage-light/30 border border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105'
             }`}
           >
-            {isLoading ? 'Ordering MVR...' : 'Order MVR'}
+            {isLoading ? 'Ordering MVR...' : !isPaymentComplete ? 'Complete Payment First' : 'Submit MVR Order'}
           </button>
         </form>
       )}

@@ -140,7 +140,13 @@ export async function getWalletTransfers(
     }
 
     console.log(`✅ Retrieved ${data.result.transfers.length} transfers`)
-    console.log('🔧 Raw API response:', data.result)
+    console.log('🔧 Raw API response:', JSON.stringify(data.result, null, 2))
+    if (data.result.transfers.length === 0) {
+      console.warn('⚠️ No transfers returned from Alchemy API. This could mean:')
+      console.warn('   - Transaction is too recent (may take 30-60 seconds to index)')
+      console.warn('   - Address has no transaction history')
+      console.warn('   - API query parameters need adjustment')
+    }
 
     return {
       transfers: data.result.transfers,
@@ -628,7 +634,7 @@ export async function getUSDCTransferHistory(
           fromAddress: address,
           toAddress: address,
           contractAddresses: [usdcContractAddress],
-          maxCount,
+          maxCount: `0x${maxCount.toString(16)}`, // Convert to hex string (required by Alchemy API)
           pageKey,
           category: ['erc20'],
           order,

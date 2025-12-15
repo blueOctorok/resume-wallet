@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Copy, Check } from 'lucide-react'
-import { getUSDCBalance } from '@/lib/alchemy-token-api'
+import { getUSDCBalanceMainnet, getUSDCBalanceSepolia } from '@/lib/alchemy-token-api'
 import { useTheme } from '@/contexts/ThemeContext'
 
 interface WalletInfoProps {
@@ -17,7 +17,8 @@ export default function WalletInfo({
   onClick,
 }: WalletInfoProps) {
   const { theme } = useTheme()
-  const [balance, setBalance] = useState<string>('0.00')
+  const [balanceMainnet, setBalanceMainnet] = useState<string>('0.00')
+  const [balanceSepolia, setBalanceSepolia] = useState<string>('0.00')
   const [loading, setLoading] = useState<boolean>(true)
   const [copied, setCopied] = useState<boolean>(false)
 
@@ -46,15 +47,27 @@ export default function WalletInfo({
     }
 
     try {
-      const balanceResult = await getUSDCBalance(walletAddress)
-      if (balanceResult.success) {
-        setBalance(balanceResult.balanceFormatted)
+      // Fetch both Mainnet and Sepolia balances in parallel
+      const [mainnetResult, sepoliaResult] = await Promise.all([
+        getUSDCBalanceMainnet(walletAddress),
+        getUSDCBalanceSepolia(walletAddress),
+      ])
+
+      if (mainnetResult.success) {
+        setBalanceMainnet(mainnetResult.balanceFormatted)
       } else {
-        setBalance('0.00')
+        setBalanceMainnet('0.00')
+      }
+
+      if (sepoliaResult.success) {
+        setBalanceSepolia(sepoliaResult.balanceFormatted)
+      } else {
+        setBalanceSepolia('0.00')
       }
     } catch (err) {
-      console.error('Error fetching USDC balance:', err)
-      setBalance('0.00')
+      console.error('Error fetching USDC balances:', err)
+      setBalanceMainnet('0.00')
+      setBalanceSepolia('0.00')
     } finally {
       setLoading(false)
     }
@@ -123,42 +136,84 @@ export default function WalletInfo({
         )}
       </div>
 
-      {/* USDC Balance */}
-      <div className="flex items-center gap-2">
-        <div
-          className={`w-1.5 h-1.5 rounded-full ${
-            theme === 'dark' ? 'bg-brand-mint' : 'bg-brand-sage'
-          }`}
-          style={{
-            boxShadow:
-              theme === 'dark'
-                ? '0 0 8px rgba(20, 184, 166, 0.6)'
-                : '0 0 8px rgba(107, 142, 35, 0.6)',
-          }}
-        />
-        <div className="flex items-baseline gap-1.5">
-          <span
-            className={`text-xs font-medium ${
-              theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
+      {/* USDC Balances */}
+      <div className="flex items-center gap-3">
+        {/* Base Mainnet USDC */}
+        <div className="flex items-center gap-1.5">
+          <div
+            className={`w-1.5 h-1.5 rounded-full ${
+              theme === 'dark' ? 'bg-green-400' : 'bg-green-600'
             }`}
-          >
-            USDC
-          </span>
-          {loading ? (
-            <div
-              className={`animate-spin rounded-full h-3 w-3 border-b-2 ${
-                theme === 'dark' ? 'border-brand-mint' : 'border-brand-sage'
-              }`}
-            />
-          ) : (
+            style={{
+              boxShadow:
+                theme === 'dark'
+                  ? '0 0 8px rgba(74, 222, 128, 0.6)'
+                  : '0 0 8px rgba(22, 163, 74, 0.6)',
+            }}
+          />
+          <div className="flex items-baseline gap-1">
             <span
-              className={`text-sm font-bold ${
-                theme === 'dark' ? 'text-brand-cream' : 'text-gray-900'
+              className={`text-xs font-medium ${
+                theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
               }`}
             >
-              ${balance}
+              Base
             </span>
-          )}
+            {loading ? (
+              <div
+                className={`animate-spin rounded-full h-3 w-3 border-b-2 ${
+                  theme === 'dark' ? 'border-green-400' : 'border-green-600'
+                }`}
+              />
+            ) : (
+              <span
+                className={`text-xs font-bold ${
+                  theme === 'dark' ? 'text-green-400' : 'text-green-700'
+                }`}
+              >
+                ${balanceMainnet}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Base Sepolia USDC */}
+        <div className="flex items-center gap-1.5">
+          <div
+            className={`w-1.5 h-1.5 rounded-full ${
+              theme === 'dark' ? 'bg-blue-400' : 'bg-blue-600'
+            }`}
+            style={{
+              boxShadow:
+                theme === 'dark'
+                  ? '0 0 8px rgba(96, 165, 250, 0.6)'
+                  : '0 0 8px rgba(37, 99, 235, 0.6)',
+            }}
+          />
+          <div className="flex items-baseline gap-1">
+            <span
+              className={`text-xs font-medium ${
+                theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
+              }`}
+            >
+              Sepolia
+            </span>
+            {loading ? (
+              <div
+                className={`animate-spin rounded-full h-3 w-3 border-b-2 ${
+                  theme === 'dark' ? 'border-blue-400' : 'border-blue-600'
+                }`}
+              />
+            ) : (
+              <span
+                className={`text-xs font-bold ${
+                  theme === 'dark' ? 'text-blue-400' : 'text-blue-700'
+                }`}
+              >
+                ${balanceSepolia}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </button>

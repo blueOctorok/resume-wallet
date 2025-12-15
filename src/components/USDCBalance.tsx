@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getUSDCBalance, hasSufficientUSDC } from '@/lib/alchemy-token-api'
+import { getUSDCBalanceMainnet, getUSDCBalanceSepolia, hasSufficientUSDC, tokenAPIConfig } from '@/lib/alchemy-token-api'
 import { useTheme } from '@/contexts/ThemeContext'
 
 interface USDCBalanceProps {
@@ -18,7 +18,8 @@ export default function USDCBalance({
   refreshInterval = 60000, // 60 seconds default (reduced frequency)
 }: USDCBalanceProps) {
   const { theme } = useTheme()
-  const [balance, setBalance] = useState<string>('0.00')
+  const [balanceMainnet, setBalanceMainnet] = useState<string>('0.00')
+  const [balanceSepolia, setBalanceSepolia] = useState<string>('0.00')
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [hasSufficient, setHasSufficient] = useState<boolean>(true)
@@ -34,17 +35,25 @@ export default function USDCBalance({
     try {
       setError(null)
 
-      // Get USDC balance
-      const balanceResult = await getUSDCBalance(walletAddress)
+      // Get both Mainnet and Sepolia USDC balances in parallel
+      const [mainnetResult, sepoliaResult] = await Promise.all([
+        getUSDCBalanceMainnet(walletAddress),
+        getUSDCBalanceSepolia(walletAddress),
+      ])
 
-      if (!balanceResult.success) {
-        setError(balanceResult.error || 'Failed to get USDC balance')
-        setBalance('0.00')
+      if (mainnetResult.success) {
+        setBalanceMainnet(mainnetResult.balanceFormatted)
       } else {
-        setBalance(balanceResult.balanceFormatted)
+        setBalanceMainnet('0.00')
       }
 
-      // Check sufficiency if required
+      if (sepoliaResult.success) {
+        setBalanceSepolia(sepoliaResult.balanceFormatted)
+      } else {
+        setBalanceSepolia('0.00')
+      }
+
+      // Check sufficiency if required (uses configured network)
       if (showSufficiencyCheck && requiredAmount) {
         const sufficiencyResult = await hasSufficientUSDC(
           walletAddress,
@@ -133,31 +142,77 @@ export default function USDCBalance({
   return (
     <div className='space-y-2'>
       {/* USDC Balance Display */}
-      <div className={`flex items-center justify-between p-3 rounded-lg border ${
+      <div className={`p-3 rounded-lg border ${
         theme === 'dark'
           ? 'bg-brand-mint/10 border-brand-mint/30'
           : 'bg-blue-50 border-blue-200'
       }`}>
-        <div className='flex items-center space-x-2'>
-          <span className={theme === 'dark' ? 'text-brand-mint' : 'text-blue-600'}>💰</span>
+        <div className='flex items-center justify-between mb-2'>
           <span className={`font-medium ${
             theme === 'dark' ? 'text-brand-cream' : 'text-blue-900'
-          }`}>USDC Balance:</span>
-          <span className={`font-bold ${
-            theme === 'dark' ? 'text-brand-cream' : 'text-blue-900'
-          }`}>${balance}</span>
+          }`}>💰 USDC Balances</span>
+          <button
+            onClick={handleRefresh}
+            className={`text-xs underline ${
+              theme === 'dark'
+                ? 'text-brand-mint hover:text-brand-cream'
+                : 'text-blue-600 hover:text-blue-800'
+            }`}
+            title='Refresh balances'
+          >
+            🔄 Refresh
+          </button>
         </div>
-        <button
-          onClick={handleRefresh}
-          className={`text-xs underline ${
-            theme === 'dark'
-              ? 'text-brand-mint hover:text-brand-cream'
-              : 'text-blue-600 hover:text-blue-800'
-          }`}
-          title='Refresh balance'
-        >
-          🔄 Refresh
-        </button>
+        
+        {/* Base Mainnet USDC */}
+        <div className={`flex items-center justify-between p-2 rounded ${
+          theme === 'dark' ? 'bg-green-900/20' : 'bg-green-50'
+        } mb-1`}>
+          <div className='flex items-center gap-2'>
+            <div className={`w-2 h-2 rounded-full ${
+              theme === 'dark' ? 'bg-green-400' : 'bg-green-600'
+            }`} />
+            <span className={`text-sm font-medium ${
+              theme === 'dark' ? 'text-green-300' : 'text-green-700'
+            }`}>Base Mainnet:</span>
+          </div>
+          <span className={`text-sm font-bold ${
+            theme === 'dark' ? 'text-green-400' : 'text-green-700'
+          }`}>
+            {loading ? (
+              <div className={`animate-spin rounded-full h-3 w-3 border-b-2 ${
+                theme === 'dark' ? 'border-green-400' : 'border-green-600'
+              }`} />
+            ) : (
+              `$${balanceMainnet}`
+            )}
+          </span>
+        </div>
+
+        {/* Base Sepolia USDC */}
+        <div className={`flex items-center justify-between p-2 rounded ${
+          theme === 'dark' ? 'bg-blue-900/20' : 'bg-blue-50'
+        }`}>
+          <div className='flex items-center gap-2'>
+            <div className={`w-2 h-2 rounded-full ${
+              theme === 'dark' ? 'bg-blue-400' : 'bg-blue-600'
+            }`} />
+            <span className={`text-sm font-medium ${
+              theme === 'dark' ? 'text-blue-300' : 'text-blue-700'
+            }`}>Base Sepolia:</span>
+          </div>
+          <span className={`text-sm font-bold ${
+            theme === 'dark' ? 'text-blue-400' : 'text-blue-700'
+          }`}>
+            {loading ? (
+              <div className={`animate-spin rounded-full h-3 w-3 border-b-2 ${
+                theme === 'dark' ? 'border-blue-400' : 'border-blue-600'
+              }`} />
+            ) : (
+              `$${balanceSepolia}`
+            )}
+          </span>
+        </div>
       </div>
 
       {/* Sufficiency Check */}
@@ -211,8 +266,7 @@ export default function USDCBalance({
       <div className={`text-xs text-center ${
         theme === 'dark' ? 'text-brand-cream/50' : 'text-gray-500'
       }`}>
-        Base Sepolia USDC • Auto-refreshes every{' '}
-        {Math.floor(refreshInterval / 1000)}s
+        Auto-refreshes every {Math.floor(refreshInterval / 1000)}s
       </div>
     </div>
   )

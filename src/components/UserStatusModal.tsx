@@ -266,8 +266,104 @@ export default function UserStatusModal({
             )}
 
             {activeTab === 'send' && user.address && (
-              <div>
-                <SendUSDC 
+              <div className='space-y-4'>
+                {/* Simple token list / selector */}
+                <div
+                  className={`p-3 rounded-lg border text-xs sm:text-sm ${
+                    theme === 'dark'
+                      ? 'bg-brand-sage-light/10 border-brand-mint/30'
+                      : 'bg-gray-50 border-gray-200'
+                  }`}
+                >
+                  <p
+                    className={`mb-2 font-medium ${
+                      theme === 'dark' ? 'text-brand-cream' : 'text-gray-800'
+                    }`}
+                  >
+                    Choose asset to send
+                  </p>
+
+                  <div className='space-y-2'>
+                    {/* Base Sepolia USDC – currently supported */}
+                    <div
+                      className={`flex items-center justify-between p-2 rounded-lg border text-xs sm:text-sm ${
+                        theme === 'dark'
+                          ? 'bg-blue-900/30 border-blue-500/40'
+                          : 'bg-blue-50 border-blue-200'
+                      }`}
+                    >
+                      <div>
+                        <div
+                          className={`font-semibold ${
+                            theme === 'dark' ? 'text-brand-cream' : 'text-gray-900'
+                          }`}
+                        >
+                          USDC
+                          <span className='ml-1 text-[11px] opacity-80'>
+                            • Base Sepolia (test)
+                          </span>
+                        </div>
+                        <div
+                          className={`text-[11px] ${
+                            theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
+                          }`}
+                        >
+                          Current send flow uses this asset for testing.
+                        </div>
+                      </div>
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-[11px] font-semibold ${
+                          theme === 'dark'
+                            ? 'bg-blue-500/30 text-blue-100 border border-blue-400/50'
+                            : 'bg-blue-100 text-blue-700 border border-blue-300'
+                        }`}
+                      >
+                        Active
+                      </span>
+                    </div>
+
+                    {/* Base Mainnet USDC – view-only for now */}
+                    <div
+                      className={`flex items-center justify-between p-2 rounded-lg border text-xs sm:text-sm opacity-70 ${
+                        theme === 'dark'
+                          ? 'bg-gray-900/40 border-gray-700'
+                          : 'bg-white border-gray-200'
+                      }`}
+                    >
+                      <div>
+                        <div
+                          className={`font-semibold ${
+                            theme === 'dark' ? 'text-brand-cream/80' : 'text-gray-800'
+                          }`}
+                        >
+                          USDC
+                          <span className='ml-1 text-[11px] opacity-80'>
+                            • Base Mainnet
+                          </span>
+                        </div>
+                        <div
+                          className={`text-[11px] ${
+                            theme === 'dark' ? 'text-brand-cream/60' : 'text-gray-500'
+                          }`}
+                        >
+                          View-only for now. Sending from Veree will use this in production.
+                        </div>
+                      </div>
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-[11px] font-semibold ${
+                          theme === 'dark'
+                            ? 'bg-gray-800 text-gray-400 border border-gray-700'
+                            : 'bg-gray-100 text-gray-500 border border-gray-200'
+                        }`}
+                      >
+                        Coming soon
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Current send flow: Base Sepolia USDC */}
+                <SendUSDC
                   walletAddress={user.address}
                   onSuccess={() => {
                     // Refresh balance after successful send
@@ -287,8 +383,10 @@ export default function UserStatusModal({
               <div>
                 <TransactionHistory 
                   walletAddress={user.address}
-                  maxTransactions={20}
-                  showFilters={false}
+                  maxTransactions={50}
+                  showFilters={true}
+                  autoRefresh={true}
+                  refreshInterval={30000}
                 />
               </div>
             )}

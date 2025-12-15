@@ -200,6 +200,35 @@ The `rotating-gold-border` class in `globals.css` uses:
 - `src/components/Navigation.tsx` - Updated light mode to use `rotating-gold-border` class
 - `src/app/globals.css` - Enhanced gradient with multi-tone gold and added glow effect
 
+---
+
+## 💼 **Wallet UX: Explicit Assets & Testnet Context for Sends** (Current)
+
+### Summary
+
+Clarified which asset and network are used when sending from the in-app wallet, and added a simple token list in the wallet modal to prepare for future Veree token + Base mainnet flows while keeping current logic scoped to Base Sepolia USDC for testing.
+
+### Changes
+
+- **Explicit Asset Context in Send Flow**
+  - `SendUSDC` now:
+    - Shows a clear banner: **“Sending: USDC (testnet)”**
+    - Labels the network as **“Base Sepolia (test)”**
+    - Explains that this flow is for test funds only and production will use Base mainnet/Veree token.
+  - Balance checks use `getUSDCBalanceSepolia` so validation matches the actual asset being sent.
+
+- **Token List in Wallet Modal (Send Tab)**
+  - In the wallet modal **Send** tab (`UserStatusModal`):
+    - Added a small token list:
+      - **USDC • Base Sepolia (test)** – marked as **Active** (current send flow uses this).
+      - **USDC • Base Mainnet** – shown as **Coming soon** (view-only hint for future real-money flows).
+    - Keeps the UI aligned with how real wallets show multiple assets, but without overengineering the underlying send logic yet.
+
+### Files Modified
+
+- `src/components/wallet/SendUSDC.tsx` – Scoped balance checks to Sepolia, added asset/network banner.
+- `src/components/UserStatusModal.tsx` – Added simple token list UI in the wallet send tab.
+
 ## 🔒 **CRITICAL SECURITY UPDATE - CVE-2025-66478 PATCHED**
 
 **Next.js React Server Components Remote Code Execution Vulnerability - FIXED**
