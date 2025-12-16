@@ -10,6 +10,7 @@ import {
   TrendingUp,
   Filter,
   FileText,
+  ArrowLeft,
 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import LoadingScreen from './LoadingScreen'
@@ -136,10 +137,17 @@ export default function JobListings({ onClose, onBack, userAddress }: JobListing
   }
 
   return (
-    <div className='w-full'>
-      <div className='max-w-4xl mx-auto px-4 py-8'>
+    <div className='w-full p-4 sm:p-6 lg:p-8'>
+      <div className='max-w-7xl mx-auto'>
         {/* Header */}
         <div className='mb-8'>
+          <button
+            onClick={onBack}
+            className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-4 cursor-pointer"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Back
+          </button>
           <h1
             className={`text-3xl md:text-4xl font-bold mb-2 ${
               theme === 'dark' ? 'text-white' : 'text-brand-sage'

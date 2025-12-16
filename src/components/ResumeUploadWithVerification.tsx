@@ -6,7 +6,7 @@ import { encodeFunctionData } from 'viem'
 import { calculateFileHash, validateFile } from '@/lib/hash-utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
-import { Paperclip, FileText, X } from 'lucide-react'
+import { Paperclip, FileText, X, ArrowLeft } from 'lucide-react'
 
 interface UploadStep {
   id: string
@@ -18,6 +18,7 @@ interface UploadStep {
 
 interface ResumeUploadWithVerificationProps {
   user?: any
+  onBack?: () => void
   onUploadComplete?: (payload: {
     resume: any
     finalResult: {
@@ -34,6 +35,7 @@ interface ResumeUploadWithVerificationProps {
 
 export default function ResumeUploadWithVerification({
   user,
+  onBack,
   onUploadComplete,
 }: ResumeUploadWithVerificationProps) {
   const { theme } = useTheme()
@@ -454,24 +456,35 @@ export default function ResumeUploadWithVerification({
   }
 
   return (
-    <div
-      className={`max-w-4xl mx-auto p-6 ${
-        theme === 'dark'
-          ? 'bg-brand-sage-light/20 backdrop-blur-xl'
-          : 'bg-white/80 backdrop-blur-xl'
-      } rounded-2xl shadow-2xl relative z-10 border-t-4 ${
-        theme === 'dark' ? 'border-brand-mint' : 'border-brand-sage'
-      }`}
-    >
-      <div className='mb-6'>
-        <h3
-          className={`text-xl sm:text-2xl md:text-3xl font-bold ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+    <div className='w-full p-4 sm:p-6 lg:p-8'>
+      <div className='max-w-7xl mx-auto'>
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-4 cursor-pointer"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Back
+          </button>
+        )}
+        <div
+          className={`max-w-4xl mx-auto p-6 ${
+            theme === 'dark'
+              ? 'bg-brand-sage-light/20 backdrop-blur-xl'
+              : 'bg-white/80 backdrop-blur-xl'
+          } rounded-2xl shadow-2xl relative z-10 border-t-4 ${
+            theme === 'dark' ? 'border-brand-mint' : 'border-brand-sage'
           }`}
         >
-          📄 Resume Upload
-        </h3>
-      </div>
+          <div className='mb-6'>
+            <h3
+              className={`text-xl sm:text-2xl md:text-3xl font-bold ${
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
+              }`}
+            >
+              📄 Resume Upload
+            </h3>
+          </div>
 
       {/* File Selection */}
       <div className='mb-6'>
@@ -740,6 +753,8 @@ export default function ResumeUploadWithVerification({
         ) : (
           <p>❌ Please connect your Alchemy Smart Wallet first</p>
         )}
+        </div>
+        </div>
       </div>
     </div>
   )

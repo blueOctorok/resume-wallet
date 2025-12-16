@@ -124,6 +124,9 @@ export default function AlchemyAuth({
   }, [])
 
   useEffect(() => {
+    console.log('🔧 [AUTH] onAuthSuccess callback ref updated:', {
+      hasCallback: !!onAuthSuccess,
+    })
     onAuthSuccessRef.current = onAuthSuccess
   }, [onAuthSuccess])
 
@@ -160,6 +163,13 @@ export default function AlchemyAuth({
 
   // Handle authentication success
   useEffect(() => {
+    console.log('🔍 [AUTH] useEffect triggered - checking connection status:', {
+      isConnected,
+      hasUser: !!user,
+      hasAccount: !!account?.address,
+      lastCalledAddress: lastCalledAddressRef.current,
+    })
+
     if (isConnected && user && account?.address) {
       const authData = {
         address: account.address,
@@ -174,25 +184,38 @@ export default function AlchemyAuth({
       // Check if this is a new address (first login or address changed)
       const isNewAddress = lastCalledAddressRef.current !== authData.address
 
+      console.log('📋 [AUTH] Auth data prepared:', {
+        address: authData.address,
+        email: authData.email,
+        isNewAddress,
+        hasCallback: !!onAuthSuccessRef.current,
+      })
+
       // Update user info state
       setUserInfo((prev) => {
         if (prev?.address === authData.address) {
+          console.log('⏭️ [AUTH] Same address, skipping userInfo update')
           return prev // Don't update if it's the same
         }
+        console.log('🔄 [AUTH] Updating userInfo state')
         return authData
       })
 
       // Call the callback only for new addresses
       if (isNewAddress && onAuthSuccessRef.current) {
         console.log(
-          '🔔 Calling onAuthSuccess callback for new address:',
+          '🔔 [AUTH] Calling onAuthSuccess callback for new address:',
           authData.address
         )
         onAuthSuccessRef.current(authData)
         lastCalledAddressRef.current = authData.address
+      } else if (!isNewAddress) {
+        console.log('⏭️ [AUTH] Address already processed, skipping callback')
+      } else if (!onAuthSuccessRef.current) {
+        console.log('⚠️ [AUTH] No callback provided')
       }
 
-      console.log('✅ Alchemy Smart Wallet authentication successful:', {
+      console.log('✅ [AUTH] Alchemy Smart Wallet authentication successful:', {
         address: account.address,
         email: user.email,
         chain: 'Base Sepolia',

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { ArrowLeft } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import MvrPaymentButton from './MvrPaymentButton'
 
@@ -105,38 +106,36 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
   }`
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className={`p-6 rounded-2xl ${
-        theme === 'light'
-          ? 'bg-white/80 backdrop-blur-xl border border-brand-sage/40'
-          : 'bg-brand-sage-light/20 backdrop-blur-xl border border-brand-mint/30'
-      }`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className={`text-3xl font-light tracking-wide mb-2 ${
-              theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
-            }`}>
-              Order MVR
-            </h1>
-            <p className={`text-sm ${
-              theme === 'light' ? 'text-gray-600' : 'text-brand-cream/70'
-            }`}>
-              Motor Vehicle Record through Accio
-            </p>
-          </div>
+    <div className="w-full p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div>
           <button
             onClick={onBack}
-            className={`px-6 py-2.5 rounded-xl font-medium transition-all ${
-              theme === 'light'
-                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                : 'bg-brand-sage-light/10 text-brand-cream hover:bg-brand-sage-light/20'
-            }`}
+            className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-4 cursor-pointer"
           >
-            ← Back
+            <ArrowLeft className="w-5 h-5" />
+            Back
           </button>
+          <div className={`p-6 rounded-2xl ${
+            theme === 'light'
+              ? 'bg-white/80 backdrop-blur-xl border border-brand-sage/40'
+              : 'bg-brand-sage-light/20 backdrop-blur-xl border border-brand-mint/30'
+          }`}>
+            <div>
+              <h1 className={`text-3xl font-light tracking-wide mb-2 ${
+                theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+              }`}>
+                Order MVR
+              </h1>
+              <p className={`text-sm ${
+                theme === 'light' ? 'text-gray-600' : 'text-brand-cream/70'
+              }`}>
+                Motor Vehicle Record through Accio
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
 
       {/* Success Message */}
       {success && orderResult && (
@@ -387,6 +386,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
           </button>
         </form>
       )}
+      </div>
     </div>
   )
 }

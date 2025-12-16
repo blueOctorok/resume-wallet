@@ -139,7 +139,7 @@ export default function MyApplications({ onBack, userAddress }: MyApplicationsPr
       <div className="max-w-7xl mx-auto mb-8">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-4"
+          className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-4 cursor-pointer"
         >
           <ArrowLeft className="w-5 h-5" />
           Back

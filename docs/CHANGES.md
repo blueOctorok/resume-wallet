@@ -2,6 +2,52 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🏠 **DRIVER HOME PAGE** (Current)
+
+**Created dedicated home page for drivers with clear instructions and navigation**
+
+### **Overview:**
+When a driver logs in and views the home page, they now see a driver-specific landing page instead of the generic home page. This page provides clear instructions on what to do and where to find features.
+
+### **Features:**
+
+- **Welcome Section:**
+  - Personalized "Welcome, Driver!" heading
+  - Clear call-to-action text
+  - Tip banner directing users to "Driver Options" in the navigation menu
+
+- **Quick Actions Grid:**
+  - **Upload Resume** - Clickable card with description and navigation
+  - **DOT Application** - Access to driver application forms
+  - **Order MVR** - Motor Vehicle Record ordering
+  - **Browse Jobs** - Job search functionality
+  - **My Applications** - Track application status
+
+- **Getting Started Guide:**
+  - Step-by-step instructions (4 steps)
+  - Explains: Resume Upload → DOT App → Order MVR → Browse Jobs
+  - Each step includes tips pointing to "Driver Options" menu location
+  - Navigation reminder section highlighting the "Driver Options" dropdown
+
+- **Design:**
+  - Matches existing HomePage styling and theme support
+  - Uses brand colors (sage, mint, cream)
+  - Fully responsive (mobile-first)
+  - Smooth hover animations and transitions
+  - Theme-aware (light/dark mode)
+
+### **User Flow:**
+1. Driver logs in → sees DriverHomePage (instead of generic HomePage)
+2. Sees clear instructions and quick action buttons
+3. Can click cards to navigate directly OR use "Driver Options" dropdown in nav
+4. Better onboarding experience for new drivers
+
+### **Files Created:**
+- `src/components/DriverHomePage.tsx` - New driver-specific home page component
+
+### **Files Modified:**
+- `src/app/page.tsx` - Conditional rendering: shows DriverHomePage when `userRole === 'driver'` and `!currentPage`
+
 ## 📱 **MOBILE UX FIX: Role Selection Modal** (December 10, 2024)
 
 ### Summary
