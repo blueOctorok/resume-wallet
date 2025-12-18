@@ -30,9 +30,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
     
     // No saved preference - use device-based default
-    // Mobile (< 768px) = light mode, Desktop = dark mode
-    const isMobile = window.innerWidth < 768
-    return isMobile ? 'light' : 'dark'
+    // Default to dark mode for all devices
+    return 'dark'
   }
 
   const [theme, setThemeState] = useState<Theme>(getInitialTheme)
@@ -44,8 +43,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const savedTheme = localStorage.getItem('veree-theme') as Theme
     if (!savedTheme) {
       // Only update if no saved preference exists
-      const isMobile = window.innerWidth < 768
-      const deviceDefault = isMobile ? 'light' : 'dark'
+      // Default to dark mode for all devices
+      const deviceDefault = 'dark'
       if (theme !== deviceDefault) {
         setThemeState(deviceDefault)
       }

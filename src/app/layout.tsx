@@ -39,11 +39,8 @@ export default function RootLayout({
                     document.documentElement.setAttribute('data-theme', savedTheme);
                     return;
                   }
-                  // No saved preference - use device-based default
-                  // Mobile (< 768px) = light mode, Desktop = dark mode
-                  const isMobile = window.innerWidth < 768;
-                  const defaultTheme = isMobile ? 'light' : 'dark';
-                  document.documentElement.setAttribute('data-theme', defaultTheme);
+                  // No saved preference - default to dark mode for all devices
+                  document.documentElement.setAttribute('data-theme', 'dark');
                 } catch (e) {
                   // Fallback to dark if anything fails
                   document.documentElement.setAttribute('data-theme', 'dark');
