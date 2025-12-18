@@ -1785,14 +1785,6 @@ const HomeContent = () => {
           </div>
         )}
 
-        {/* MVR Status Indicator - Left Side (Desktop Only) */}
-        {user?.address && (
-          <MvrStatusIndicator
-            walletAddress={user.address}
-            onOpenManagement={() => setIsMvrManagementOpen(true)}
-          />
-        )}
-
         {/* MVR Management Modal */}
         {user?.address && (
           <MvrManagementModal
@@ -1851,6 +1843,8 @@ const HomeContent = () => {
           onWalletClick={handleWalletClick}
           onNavigate={handleNavigation}
           onMvrClick={() => handleNavigation('mvr')}
+          mvrWalletAddress={user?.address || null}
+          onOpenMvrManagement={() => setIsMvrManagementOpen(true)}
           tHasUnread={avaHasUnread}
           onTClick={() => setIsAvaCollapsed(false)}
           onSwitchRole={handleSwitchRole}

@@ -30,6 +30,7 @@ Created a dedicated MVR Management Modal that provides complete transparency int
   - Single action: Click to open MVR Management Modal
   - Shows current status at a glance
   - Always clickable - no dead states
+  - Now lives in the navigation bar (bottom-left on desktop, inside Driver Options dropdown on mobile) for consistent access
 
 - **Smart Navigation:**
   - From modal, users can:

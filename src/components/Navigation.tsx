@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { Home } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 import { useTheme } from '@/contexts/ThemeContext'
+import MvrStatusIndicator from './MvrStatusIndicator'
 
 // Dynamically import MVR payment button to avoid auth conflicts
 const MvrPaymentButton = dynamic(() => import('./MvrPaymentButton'), {
@@ -25,6 +26,8 @@ interface NavigationProps {
   onWalletClick?: () => void
   onNavigate?: (page: 'signin' | 'resume' | 'dotapp' | 'jobs' | 'applications' | 'home') => void
   onMvrClick?: () => void
+  mvrWalletAddress?: string | null
+  onOpenMvrManagement?: () => void
   tHasUnread?: boolean
   onTClick?: () => void
   onSwitchRole?: () => void
@@ -39,6 +42,8 @@ export default function Navigation({
   onNavigate,
   onSwitchRole,
   onMvrClick,
+  mvrWalletAddress,
+  onOpenMvrManagement,
   tHasUnread = false,
   onTClick,
 }: NavigationProps) {
@@ -234,7 +239,50 @@ export default function Navigation({
                 isMenuOpen ? 'flex' : 'hidden'
               } md:flex flex-col md:flex-row items-center gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-brand-mint/30 relative`}
             >
-              {/* Driver Options Dropdown - Perfectly Centered in bottom row */}
+              {/* Desktop MVR Status - Bottom Left of nav */}
+              {isAuthenticated && mvrWalletAddress && onOpenMvrManagement && (
+                <div className="hidden md:flex w-full md:w-auto justify-start">
+                  <MvrStatusIndicator
+                    walletAddress={mvrWalletAddress}
+                    onOpenManagement={onOpenMvrManagement}
+                    placement="nav-desktop"
+                  />
+                </div>
+              )}
+
+              {/* Mobile MVR Status - First on mobile, before AvA */}
+              {isAuthenticated && mvrWalletAddress && onOpenMvrManagement && (
+                <div className="md:hidden w-full">
+                  <MvrStatusIndicator
+                    walletAddress={mvrWalletAddress}
+                    onOpenManagement={onOpenMvrManagement}
+                    placement="nav-mobile"
+                  />
+                </div>
+              )}
+
+              {/* Mobile-only T Assistant access - Second on mobile */}
+              {isAuthenticated && onTClick && (
+                <button
+                  onClick={() => {
+                    onTClick()
+                    setIsMenuOpen(false)
+                  }}
+                  className={`md:hidden w-full px-4 py-2 text-xs font-medium rounded-lg border transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer ${
+                    theme === 'light'
+                      ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105'
+                      : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105'
+                  }`}
+                >
+                  <span className='text-sm'>🤖</span>
+                  <span>{tHasUnread ? 'AvA has updates' : 'Chat with AvA'}</span>
+                  {tHasUnread && (
+                    <span className='ml-1 w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse' />
+                  )}
+                </button>
+              )}
+
+              {/* Driver Options Dropdown - Last on mobile (since it's a dropdown) */}
               {userRole === 'driver' && isAuthenticated && (
                 <div className="relative md:absolute md:left-1/2 md:-translate-x-1/2 w-full md:w-auto">
                   {theme === 'dark' ? (
@@ -430,27 +478,6 @@ export default function Navigation({
                     </>
                   )}
                 </div>
-              )}
-
-              {/* Mobile-only T Assistant access - Below Driver Options */}
-              {isAuthenticated && onTClick && (
-                <button
-                  onClick={() => {
-                    onTClick()
-                    setIsMenuOpen(false)
-                  }}
-                  className={`md:hidden w-full px-4 py-2 text-xs font-medium rounded-lg border transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer ${
-                    theme === 'light'
-                      ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105'
-                      : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105'
-                  }`}
-                >
-                  <span className='text-sm'>🤖</span>
-                  <span>{tHasUnread ? 'AvA has updates' : 'Chat with AvA'}</span>
-                  {tHasUnread && (
-                    <span className='ml-1 w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse' />
-                  )}
-                </button>
               )}
 
               {/* Theme Toggle - Bottom Right */}

@@ -7,6 +7,13 @@ import { useTheme } from '@/contexts/ThemeContext'
 interface MvrStatusIndicatorProps {
   walletAddress: string | null
   onOpenManagement: () => void
+  /**
+   * Controls where the indicator is rendered so we can tweak layout without duplicating logic.
+   * - 'sidebar': floating card on the left side (desktop only)
+   * - 'nav-desktop': inline chip in the nav bottom row (desktop)
+   * - 'nav-mobile': full-width item inside the mobile driver dropdown
+   */
+  placement?: 'sidebar' | 'nav-desktop' | 'nav-mobile'
 }
 
 interface MvrStatus {
@@ -37,7 +44,11 @@ interface MvrStatus {
   } | null
 }
 
-export default function MvrStatusIndicator({ walletAddress, onOpenManagement }: MvrStatusIndicatorProps) {
+export default function MvrStatusIndicator({
+  walletAddress,
+  onOpenManagement,
+  placement = 'sidebar',
+}: MvrStatusIndicatorProps) {
   const { theme } = useTheme()
   const [mvrStatus, setMvrStatus] = useState<MvrStatus | null>(null)
   const [loading, setLoading] = useState(true)
@@ -86,155 +97,171 @@ export default function MvrStatusIndicator({ walletAddress, onOpenManagement }: 
     onOpenManagement()
   }
 
-  // Desktop only - hidden on mobile
-  return (
-    <div className="hidden lg:block fixed left-4 top-24 z-[60] pointer-events-none">
-      <div
-        onClick={handleClick}
-        className={`pointer-events-auto cursor-pointer rounded-xl p-4 shadow-lg border transition-all hover:shadow-xl hover:scale-105 ${
-          theme === 'light'
-            ? 'bg-white/90 backdrop-blur-sm border-brand-sage/40'
-            : 'bg-brand-sage-light/30 backdrop-blur-xl border-brand-mint/50'
-        }`}
-        style={{
+  // Placement-aware wrapper classes
+  const wrapperClassName =
+    placement === 'sidebar'
+      ? 'hidden lg:block fixed left-4 top-24 z-[60] pointer-events-none'
+      : placement === 'nav-desktop'
+        ? 'hidden md:block'
+        : 'block md:hidden w-full'
+
+  // Compact styling for nav, slightly larger for sidebar
+  // nav-mobile should match button styling (like Driver Options and AvA buttons)
+  const cardBaseClasses =
+    placement === 'nav-desktop'
+      ? 'cursor-pointer rounded-lg px-3.5 py-2.5 shadow-md border transition-all hover:shadow-lg hover:scale-105'
+      : placement === 'nav-mobile'
+        ? 'cursor-pointer w-full px-4 py-2 rounded-lg border transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105'
+        : 'cursor-pointer rounded-xl p-4 shadow-lg border transition-all hover:shadow-xl hover:scale-105'
+
+  const cardThemeClasses =
+    placement === 'nav-mobile'
+      ? theme === 'light'
+        ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark'
+        : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50'
+      : theme === 'light'
+        ? 'bg-white/90 backdrop-blur-sm border-brand-sage/40'
+        : 'bg-brand-sage-light/30 backdrop-blur-xl border-brand-mint/50'
+
+  const cardLayoutClasses =
+    placement === 'nav-mobile'
+      ? 'w-full'
+      : placement === 'nav-desktop'
+        ? ''
+        : ''
+
+  const cardClassName = `${cardBaseClasses} ${cardThemeClasses} ${cardLayoutClasses}`
+
+  const cardStyle =
+    placement === 'sidebar'
+      ? {
           minWidth: '200px',
           maxWidth: '240px',
-        }}
-      >
-        <div className="flex items-start gap-3">
-          {/* Icon */}
-          <div
-            className={`flex-shrink-0 mt-0.5 ${
-              loading
-                ? 'text-gray-400'
-                : mvrStatus?.paymentPending
-                  ? 'text-orange-500'
-                  : mvrStatus?.hasMvr
-                    ? mvrStatus.result?.resultStatus === 'parsed'
-                      ? 'text-green-500'
-                      : 'text-yellow-500'
-                    : 'text-gray-400'
-            }`}
-          >
-            {loading ? (
-              <Clock className="h-5 w-5 animate-pulse" />
-            ) : mvrStatus?.paymentPending ? (
-              <FileText className="h-5 w-5 animate-pulse" />
-            ) : mvrStatus?.hasMvr ? (
-              mvrStatus.result?.resultStatus === 'parsed' ? (
-                <CheckCircle2 className="h-5 w-5" />
-              ) : (
-                <Clock className="h-5 w-5" />
-              )
-            ) : (
-              <FileText className="h-5 w-5" />
-            )}
-          </div>
+          pointerEvents: 'auto' as const,
+        }
+      : undefined
 
-          {/* Content */}
-          <div className="flex-1 min-w-0">
+  return (
+    <div className={wrapperClassName}>
+      <div
+        onClick={handleClick}
+        className={cardClassName}
+        style={cardStyle}
+      >
+        <div className={`flex items-center ${placement === 'nav-desktop' || placement === 'nav-mobile' ? 'gap-2.5' : 'gap-3'} ${placement === 'nav-mobile' ? 'justify-center' : ''}`}>
+          {/* Icon - Hidden on mobile */}
+          {placement !== 'nav-mobile' && (
             <div
-              className={`text-sm font-semibold mb-1 ${
-                theme === 'light' ? 'text-gray-900' : 'text-brand-cream'
+              className={`flex-shrink-0 ${
+                loading
+                  ? 'text-gray-400'
+                  : mvrStatus?.paymentPending
+                    ? 'text-orange-500'
+                    : mvrStatus?.hasMvr
+                      ? mvrStatus.result?.resultStatus === 'parsed'
+                        ? 'text-green-500'
+                        : 'text-yellow-500'
+                      : 'text-gray-400'
               }`}
             >
-              MVR Status
+              {loading ? (
+                <Clock className={`${placement === 'nav-desktop' ? 'h-4.5 w-4.5' : 'h-5 w-5'} animate-pulse`} />
+              ) : mvrStatus?.paymentPending ? (
+                <FileText className={`${placement === 'nav-desktop' ? 'h-4.5 w-4.5' : 'h-5 w-5'} animate-pulse`} />
+              ) : mvrStatus?.hasMvr ? (
+                mvrStatus.result?.resultStatus === 'parsed' ? (
+                  <CheckCircle2 className={placement === 'nav-desktop' ? 'h-4.5 w-4.5' : 'h-5 w-5'} />
+                ) : (
+                  <Clock className={placement === 'nav-desktop' ? 'h-4.5 w-4.5' : 'h-5 w-5'} />
+                )
+              ) : (
+                <FileText className={placement === 'nav-desktop' ? 'h-4.5 w-4.5' : 'h-5 w-5'} />
+              )}
             </div>
+          )}
+
+          {/* Content */}
+          <div className={`${placement === 'nav-mobile' ? '' : 'flex-1'} min-w-0`}>
+            {placement === 'sidebar' && (
+              <div
+                className={`text-sm font-semibold mb-0.5 ${
+                  theme === 'light' ? 'text-gray-900' : 'text-brand-cream'
+                }`}
+              >
+                MVR Status
+              </div>
+            )}
 
             {loading ? (
               <div
-                className={`text-xs ${
-                  theme === 'light' ? 'text-gray-600' : 'text-gray-400'
+                className={`${placement === 'nav-mobile' ? 'text-xs' : 'text-sm'} font-medium ${
+                  placement === 'nav-mobile'
+                    ? ''
+                    : theme === 'light' ? 'text-gray-700' : 'text-gray-300'
                 }`}
               >
-                Checking...
+                {placement === 'nav-mobile' ? 'MVR: Checking...' : 'Checking...'}
               </div>
             ) : error ? (
               <div
-                className={`text-xs ${
-                  theme === 'light' ? 'text-red-600' : 'text-red-400'
+                className={`${placement === 'nav-mobile' ? 'text-xs' : 'text-sm'} font-medium ${
+                  placement === 'nav-mobile'
+                    ? ''
+                    : theme === 'light' ? 'text-red-700' : 'text-red-400'
                 }`}
               >
-                Error loading
+                {placement === 'nav-mobile' ? 'MVR: Error' : 'Error'}
               </div>
             ) : mvrStatus?.paymentPending ? (
-              <div className="space-y-1">
-                <div
-                  className={`text-xs font-medium ${
-                    theme === 'light' ? 'text-orange-600' : 'text-orange-400'
-                  }`}
-                >
-                  Payment Pending
-                </div>
-                <div
-                  className={`text-xs ${
-                    theme === 'light' ? 'text-gray-600' : 'text-gray-400'
-                  }`}
-                >
-                  {mvrStatus.payments.length} payment{mvrStatus.payments.length > 1 ? 's' : ''} • Complete order
-                </div>
-                <div
-                  className={`text-xs underline mt-1 ${
-                    theme === 'light'
-                      ? 'text-brand-sage hover:text-brand-sage/80'
-                      : 'text-brand-mint hover:text-brand-mint/80'
-                  }`}
-                >
-                  Complete Order →
-                </div>
+              <div
+                className={`${placement === 'nav-mobile' ? 'text-xs' : 'text-sm'} ${placement === 'nav-mobile' ? 'font-medium' : 'font-semibold'} ${
+                  placement === 'nav-mobile'
+                    ? ''
+                    : theme === 'light' ? 'text-orange-700' : 'text-orange-400'
+                }`}
+              >
+                {placement === 'nav-mobile' ? 'MVR: Payment Pending' : 'Payment Pending'}
               </div>
             ) : mvrStatus?.hasMvr ? (
-              <div className="space-y-1">
+              <div>
                 <div
-                  className={`text-xs ${
-                    theme === 'light' ? 'text-gray-700' : 'text-gray-300'
+                  className={`${placement === 'nav-mobile' ? 'text-xs' : 'text-sm'} ${placement === 'nav-mobile' ? 'font-medium' : 'font-semibold'} ${
+                    placement === 'nav-mobile'
+                      ? ''
+                      : theme === 'light' ? 'text-gray-900' : 'text-gray-200'
                   }`}
                 >
-                  {mvrStatus.result?.resultStatus === 'parsed'
-                    ? 'Available'
-                    : mvrStatus.order?.status === 'pending'
-                      ? 'Processing...'
-                      : 'Ordered'}
+                  {placement === 'nav-mobile'
+                    ? `MVR: ${mvrStatus.result?.resultStatus === 'parsed'
+                      ? 'Available'
+                      : mvrStatus.order?.status === 'pending'
+                        ? 'Processing'
+                        : 'Ordered'}`
+                    : mvrStatus.result?.resultStatus === 'parsed'
+                      ? 'Available'
+                      : mvrStatus.order?.status === 'pending'
+                        ? 'Processing'
+                        : 'Ordered'}
                 </div>
-                {mvrStatus.result?.licenseNumber && (
+                {placement === 'sidebar' && mvrStatus.result?.licenseNumber && (
                   <div
-                    className={`text-xs ${
-                      theme === 'light' ? 'text-gray-500' : 'text-gray-400'
+                    className={`text-xs mt-0.5 ${
+                      theme === 'light' ? 'text-gray-600' : 'text-gray-400'
                     }`}
                   >
                     {mvrStatus.result.licenseState} • {mvrStatus.result.licenseNumber.slice(0, 4)}...
                   </div>
                 )}
-                {mvrStatus.hasMvr && (
-                  <div
-                    className={`text-xs underline mt-1 ${
-                      theme === 'light'
-                        ? 'text-brand-sage hover:text-brand-sage/80'
-                        : 'text-brand-mint hover:text-brand-mint/80'
-                    }`}
-                  >
-                    View MVR →
-                  </div>
-                )}
               </div>
             ) : (
-              <div className="space-y-1">
-                <div
-                  className={`text-xs ${
-                    theme === 'light' ? 'text-gray-600' : 'text-gray-400'
-                  }`}
-                >
-                  No payments or orders
-                </div>
-                <div
-                  className={`text-xs underline mt-1 ${
-                    theme === 'light'
-                      ? 'text-brand-sage hover:text-brand-sage/80'
-                      : 'text-brand-mint hover:text-brand-mint/80'
-                  }`}
-                >
-                  Order MVR →
-                </div>
+              <div
+                className={`${placement === 'nav-mobile' ? 'text-xs' : 'text-sm'} font-medium ${
+                  placement === 'nav-mobile'
+                    ? ''
+                    : theme === 'light' ? 'text-gray-700' : 'text-gray-300'
+                }`}
+              >
+                {placement === 'nav-mobile' ? 'MVR: No Order' : 'No MVR'}
               </div>
             )}
           </div>

@@ -82,6 +82,18 @@ body {
   }
 }
 
+/* Hide scrollbar on mobile devices */
+@media (max-width: 767px) {
+  .scrollbar-hide-mobile {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+
+  .scrollbar-hide-mobile::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
+}
+
 /* Theme-aware scrollbar */
 ::-webkit-scrollbar {
   width: 12px;

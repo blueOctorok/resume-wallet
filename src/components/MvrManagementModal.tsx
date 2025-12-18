@@ -114,7 +114,7 @@ export default function MvrManagementModal({
 
       {/* Modal */}
       <div
-        className={`relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl border ${
+        className={`relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl border scrollbar-hide-mobile ${
           theme === 'light'
             ? 'bg-white border-gray-300'
             : 'bg-gray-900/95 backdrop-blur-xl border-gray-700'
