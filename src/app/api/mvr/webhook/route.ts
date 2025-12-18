@@ -242,3 +242,18 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * GET handler for webhook health check
+ * Allows verification that the webhook endpoint is accessible
+ */
+export async function GET() {
+  return NextResponse.json(
+    { 
+      message: 'MVR webhook endpoint is active',
+      method: 'POST',
+      description: 'This endpoint receives MVR results from Accio via POST requests'
+    },
+    { status: 200 }
+  )
+}
+
