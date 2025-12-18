@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
+import ResumeUploadWithPrefill from '@/components/ResumeUploadWithPrefill'
 
 const DEFAULT_CARRIER_INFO = {
   name: process.env.NEXT_PUBLIC_CARRIER_NAME ?? 'Your Motor Carrier Name',
@@ -166,6 +167,30 @@ export default function PersonalInfoForm1({
     initialMountRef.current = false
     onDataChange?.(formData)
   }, [formData, onDataChange, initialData])
+
+  const handlePrefillSuccess = (prefillData: any) => {
+    console.log('✅ [PREFILL] Prefill success callback called with:', prefillData)
+    
+    if (prefillData.form1Data) {
+      // Update form data with prefill results
+      setFormData((prev) => ({
+        ...prev,
+        firstName: prev.firstName || prefillData.form1Data.firstName || '',
+        middleName: prev.middleName || prefillData.form1Data.middleName || '',
+        lastName: prev.lastName || prefillData.form1Data.lastName || '',
+        phone: prev.phone || prefillData.form1Data.phone || '',
+        email: prev.email || prefillData.form1Data.email || '',
+        dateOfBirth: prev.dateOfBirth || prefillData.form1Data.dateOfBirth || '',
+        currentMailing: {
+          ...prev.currentMailing,
+          street: prev.currentMailing.street || prefillData.form1Data.currentMailing?.street || '',
+          city: prev.currentMailing.city || prefillData.form1Data.currentMailing?.city || '',
+          state: prev.currentMailing.state || prefillData.form1Data.currentMailing?.state || '',
+          zipCode: prev.currentMailing.zipCode || prefillData.form1Data.currentMailing?.zipCode || '',
+        },
+      }))
+    }
+  }
 
   // Initialize/restore from parent once to avoid loops
   const hasHydratedRef = useRef(false)
@@ -762,6 +787,22 @@ export default function PersonalInfoForm1({
           <span>Ask T about this section</span>
         </button>
       </div>
+
+      {/* Resume Upload with Prefill - Show on step 1 only */}
+      {currentStep === 1 && (
+        <div className='mb-8'>
+          <ResumeUploadWithPrefill
+            onPrefillSuccess={handlePrefillSuccess}
+            onPrefillError={(error) => {
+              console.error('Prefill error:', error)
+              alert(error.message || 'Failed to prefill from resume')
+            }}
+            onIpfsHashReady={(ipfsHash) => {
+              console.log('IPFS hash ready:', ipfsHash)
+            }}
+          />
+        </div>
+      )}
 
       <div className='text-center'>
         <h2

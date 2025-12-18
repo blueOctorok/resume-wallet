@@ -36,6 +36,7 @@ import {
   uploadDriverApplicationToIPFS,
 } from '@/lib/driver-contract'
 import AutoCompletePanel from './driver-application/AutoCompletePanel'
+import PrefillBanner from './driver-application/PrefillBanner'
 
 const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
   const [currentStep, setCurrentStep] = useState(1)
@@ -157,8 +158,48 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
     if (user?.address) {
       loadExistingApplication()
       checkBlockchainApplications()
+      checkResumeAndMvr()
     }
   }, [user?.address])
+
+  const checkResumeAndMvr = async () => {
+    if (!user?.address) return
+
+    try {
+      // Check for resume via API (fetch resumes list)
+      try {
+        const resumeResponse = await fetch('/api/resumes', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-wallet-address': user.address,
+          },
+        })
+        if (resumeResponse.ok) {
+          const resumes = await resumeResponse.json()
+          setHasResume(Array.isArray(resumes) && resumes.length > 0)
+        } else {
+          setHasResume(false)
+        }
+      } catch {
+        setHasResume(false)
+      }
+
+      // Check for MVR by trying prefill API (it will return 404 if no MVR)
+      try {
+        const mvrResponse = await fetch('/api/driver/prefill-from-mvr', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ walletAddress: user.address }),
+        })
+        setHasMvr(mvrResponse.ok)
+      } catch {
+        setHasMvr(false)
+      }
+    } catch (error) {
+      console.error('Error checking resume/MVR:', error)
+    }
+  }
 
   const checkBlockchainApplications = async () => {
     try {
@@ -245,6 +286,158 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
     }))
     setSuccess('Application data filled successfully!')
     setTimeout(() => setSuccess(null), 3000)
+  }
+
+  const handlePrefillFromResume = async () => {
+    if (!user?.address) return
+
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      // Get latest resume IPFS hash via API
+      const resumesResponse = await fetch('/api/resumes', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': user.address,
+        },
+      })
+
+      if (!resumesResponse.ok) {
+        throw new Error('Failed to fetch resumes')
+      }
+
+      const resumes = await resumesResponse.json()
+      if (!Array.isArray(resumes) || resumes.length === 0) {
+        throw new Error('No resume found. Please upload a resume first.')
+      }
+
+      const latestResume = resumes[0] // Already sorted by API
+      if (!latestResume.ipfs_hash) {
+        throw new Error('Resume missing IPFS hash. Please re-upload your resume.')
+      }
+
+      // Call prefill API with IPFS hash
+      const response = await fetch('/api/ai/prefill-resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cid: latestResume.ipfs_hash }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to prefill from resume')
+      }
+
+      const prefillData = await response.json()
+
+      if (!prefillData.form1Data) {
+        throw new Error('No data returned from resume prefill')
+      }
+
+      // Merge with existing data (only fill empty fields)
+      setApplicationData((prev) => ({
+        ...prev,
+        personalInfo: {
+          ...prev.personalInfo,
+          firstName: prev.personalInfo.firstName || prefillData.form1Data.firstName || '',
+          middleName: prev.personalInfo.middleName || prefillData.form1Data.middleName || '',
+          lastName: prev.personalInfo.lastName || prefillData.form1Data.lastName || '',
+          phone: prev.personalInfo.phone || prefillData.form1Data.phone || '',
+          email: prev.personalInfo.email || prefillData.form1Data.email || '',
+          dateOfBirth: prev.personalInfo.dateOfBirth || prefillData.form1Data.dateOfBirth || '',
+          address: prev.personalInfo.address || prefillData.form1Data.currentMailing?.street || '',
+          city: prev.personalInfo.city || prefillData.form1Data.currentMailing?.city || '',
+          state: prev.personalInfo.state || prefillData.form1Data.currentMailing?.state || '',
+          zipCode: prev.personalInfo.zipCode || prefillData.form1Data.currentMailing?.zipCode || '',
+        },
+        employmentHistory: prefillData.form2Data?.employmentHistory?.length 
+          ? prefillData.form2Data.employmentHistory 
+          : prev.employmentHistory,
+      }))
+
+      setSuccess('Application prefilled from resume!')
+      setTimeout(() => setSuccess(null), 5000)
+      checkResumeAndMvr() // Refresh status
+    } catch (err: any) {
+      console.error('Resume prefill error:', err)
+      setError(err.message || 'Failed to prefill from resume')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handlePrefillFromMvr = async () => {
+    if (!user?.address) return
+
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      // Call MVR prefill API
+      const response = await fetch('/api/driver/prefill-from-mvr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress: user.address }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || errorData.message || 'Failed to prefill from MVR')
+      }
+
+      const prefillData = await response.json()
+      const form1Data = prefillData.form1Data
+
+      if (!form1Data) {
+        throw new Error('No data returned from MVR prefill')
+      }
+
+      // Merge with existing data (only fill empty fields)
+      const primaryLicense = form1Data.currentLicenses?.[0]
+      
+      setApplicationData((prev) => ({
+        ...prev,
+        personalInfo: {
+          ...prev.personalInfo,
+          firstName: prev.personalInfo.firstName || form1Data.firstName || '',
+          middleName: prev.personalInfo.middleName || form1Data.middleName || '',
+          lastName: prev.personalInfo.lastName || form1Data.lastName || '',
+          phone: prev.personalInfo.phone || form1Data.phone || '',
+          email: prev.personalInfo.email || form1Data.email || '',
+          dateOfBirth: prev.personalInfo.dateOfBirth || form1Data.dateOfBirth || '',
+          address: prev.personalInfo.address || form1Data.currentMailing?.street || '',
+          city: prev.personalInfo.city || form1Data.currentMailing?.city || '',
+          state: prev.personalInfo.state || form1Data.currentMailing?.state || '',
+          zipCode: prev.personalInfo.zipCode || form1Data.currentMailing?.zipCode || '',
+        },
+        cdlInfo: {
+          ...prev.cdlInfo,
+          cdlNumber: prev.cdlInfo.cdlNumber || primaryLicense?.licenseNumber || '',
+          cdlState: prev.cdlInfo.cdlState || primaryLicense?.state || '',
+          cdlExpiration: prev.cdlInfo.cdlExpiration || primaryLicense?.expirationDate || '',
+          cdlClass: prev.cdlInfo.cdlClass || primaryLicense?.typeClass || '',
+          endorsements: prev.cdlInfo.endorsements.length 
+            ? prev.cdlInfo.endorsements 
+            : (primaryLicense?.endorsements 
+              ? primaryLicense.endorsements.split(',').map((e: string) => e.trim()).filter(Boolean)
+              : []),
+        },
+      }))
+
+      const summary = prefillData.summary
+      setSuccess(
+        `Application prefilled from MVR! ${summary.extractedFields} fields extracted.`
+      )
+      setTimeout(() => setSuccess(null), 5000)
+      checkResumeAndMvr() // Refresh status
+    } catch (err: any) {
+      console.error('MVR prefill error:', err)
+      setError(err.message || 'Failed to prefill from MVR')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const saveApplication = async () => {
@@ -985,6 +1178,16 @@ const DriverApplication: React.FC<DriverApplicationProps> = ({ user }) => {
           <div className='mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-xl backdrop-blur-sm'>
             <p className='text-green-300 font-medium'>{success}</p>
           </div>
+        )}
+
+        {/* Prefill Banner - Show on step 1 only */}
+        {currentStep === 1 && (
+          <PrefillBanner
+            hasResume={hasResume}
+            hasMvr={hasMvr}
+            onPrefillFromResume={handlePrefillFromResume}
+            onPrefillFromMvr={handlePrefillFromMvr}
+          />
         )}
 
         {/* Step Content */}

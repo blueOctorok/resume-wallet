@@ -2,7 +2,121 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
-## 🏠 **DRIVER HOME PAGE** (Current)
+## 💳 **MVR MANAGEMENT DASHBOARD** (December 17, 2025)
+
+**Comprehensive MVR management modal with full payment and order visibility**
+
+### **Overview:**
+Created a dedicated MVR Management Modal that provides complete transparency into all MVR-related activities. Users can see all payments made, all orders placed, identify orphaned payments, and take action to complete pending orders or view completed MVRs.
+
+### **Features:**
+
+- **MVR Management Modal (`MvrManagementModal.tsx`):**
+  - Comprehensive dashboard showing all MVR-related data
+  - Summary cards: Total payments, total orders, orphaned payments
+  - Full payment history with transaction details and status
+  - Full order history with completion status
+  - Click-through to view completed MVR reports
+  - Prominent alerts for orphaned payments with one-click completion
+  - "Order Your First MVR" CTA when no orders exist
+
+- **Enhanced API (`/api/mvr/check-status`):**
+  - Returns all payments (not just latest)
+  - Returns all orders with results (not just latest)
+  - Detects orphaned payments (payments without orders)
+  - Maintains backward compatibility with legacy fields
+
+- **Simplified Status Indicator:**
+  - Single action: Click to open MVR Management Modal
+  - Shows current status at a glance
+  - Always clickable - no dead states
+
+- **Smart Navigation:**
+  - From modal, users can:
+    - Start a new MVR order
+    - Complete an order from orphaned payment
+    - View any completed MVR report
+  - Payment hash pre-filling for incomplete orders
+  - Seamless flow between modal and forms
+
+### **User Benefits:**
+1. **Complete Transparency**: See every payment and order in one place
+2. **No Lost Payments**: Orphaned payments highlighted with clear recovery path
+3. **Easy Management**: One-click access to all MVR-related actions
+4. **Clear Status**: Visual indicators for pending, processing, and completed states
+5. **Informed Decisions**: See total USDC spent and order completion rates
+
+### **Files Created:**
+- `src/components/MvrManagementModal.tsx` - Comprehensive MVR dashboard modal
+
+### **Files Modified:**
+- `src/app/api/mvr/check-status/route.ts` - Return all payments and orders
+- `src/components/MvrStatusIndicator.tsx` - Simplified to open management modal
+- `src/components/MvrOrderForm.tsx` - Auto-detect pending payments from localStorage
+- `src/app/page.tsx` - Wire up management modal with navigation callbacks
+
+---
+
+## 🚗 **MVR TO DOT APPLICATION PREFILL** (Current)
+
+**AI-powered prefilling of DOT application from MVR results**
+
+### **Overview:**
+Implemented automatic prefilling of DOT application Form 1 using verified data from MVR (Motor Vehicle Record) results. When drivers receive MVR results from Accio, they can now automatically prefill their DOT application with verified license and personal information.
+
+### **Features:**
+
+- **Enhanced XML Parser:**
+  - Updated `accio-xml-parser.ts` to properly parse full MVR result XML according to Accio documentation
+  - Extracts subject block (personal info: name, address, DOB, email, phone, SSN)
+  - Parses `mvr_license` blocks (multiple licenses with class, endorsements, restrictions)
+  - Extracts `mvr_violation` blocks with dates, descriptions, and points
+  - Handles fees, medical certificate info, and order metadata
+
+- **MVR-to-DOT Mapper:**
+  - Created `mvr-to-dot-mapper.ts` to map MVR results to DOT Form 1 structure
+  - Maps personal information (name, address, DOB, contact info)
+  - Maps license information (number, state, class, endorsements, expiration)
+  - Formats dates from YYYYMMDD to YYYY-MM-DD
+  - Only fills available fields - leaves user-specified fields empty
+
+- **Prefill API Endpoint:**
+  - New `/api/driver/prefill-from-mvr` endpoint
+  - Gets latest parsed MVR result for a driver
+  - Maps to Form 1 data structure
+  - Returns extraction summary (how many fields were found)
+  - Does NOT auto-update application - client merges and saves
+
+- **Enhanced Webhook Handler:**
+  - Updated MVR webhook to store complete parsed data in `parsed_data` JSONB field
+  - Includes subject information for prefilling
+  - Stores all license blocks (not just primary)
+  - Properly formats dates for database storage
+
+### **Data Flow:**
+1. Driver orders MVR → Accio processes → Webhook receives XML
+2. XML parsed → Full structured data stored in `mvr_results.parsed_data`
+3. Driver opens DOT application → Can call prefill API
+4. API maps MVR data → Returns Form 1 structure
+5. Client merges with existing form data → User reviews and saves
+
+### **Files Created:**
+- `src/lib/mvr-to-dot-mapper.ts` - Maps MVR results to DOT Form 1 structure
+- `src/app/api/driver/prefill-from-mvr/route.ts` - API endpoint for prefilling
+
+### **Files Modified:**
+- `src/lib/accio-xml-parser.ts` - Enhanced to parse full MVR XML structure (subject, mvr_license, mvr_violation blocks)
+- `src/app/api/mvr/webhook/route.ts` - Updated to store complete parsed data including subject information
+
+### **Next Steps:**
+- Add UI button in DOT application to trigger prefill
+- Show extraction summary to user (e.g., "15 fields extracted from MVR")
+- Handle date format conversions (YYYYMMDD → YYYY-MM-DD)
+- Consider prefilling Form 2 (employment history) if MVR includes work history
+
+---
+
+## 🏠 **DRIVER HOME PAGE** (Previous)
 
 **Created dedicated home page for drivers with clear instructions and navigation**
 

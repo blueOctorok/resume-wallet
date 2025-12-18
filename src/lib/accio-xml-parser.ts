@@ -12,15 +12,33 @@ export interface ParsedMvrResult {
   timeOrdered?: string
   timeFilled?: string
   
-  // License Information
-  licenseNumber?: string
-  licenseState?: string
-  licenseClass?: string
-  licenseStatus?: string
-  licenseIssueDate?: string
-  licenseExpirationDate?: string
+  // Subject Information (personal info from XML subject block)
+  subject?: {
+    firstName?: string
+    middleName?: string
+    lastName?: string
+    nameSuffix?: string
+    ssn?: string // Full SSN from XML (for parsing only, not storage)
+    dateOfBirth?: string // YYYYMMDD format from XML
+    email?: string
+    phone?: string
+    address?: string
+    city?: string
+    state?: string
+    zip?: string
+    country?: string
+    gender?: string
+  }
   
-  // Violations & Points
+  // License Information (from MVR subOrder - dlnum, dlstate, dlexpiration)
+  licenseNumber?: string // dlnum
+  licenseState?: string // dlstate
+  licenseExpirationDate?: string // dlexpiration (YYYYMMDD format)
+  
+  // License Details (from mvr_license blocks - multiple possible)
+  licenses?: MvrLicense[]
+  
+  // Violations & Points (from mvr_violation blocks)
   totalPoints?: number
   violationCount?: number
   violations?: Violation[]
@@ -37,16 +55,13 @@ export interface ParsedMvrResult {
   medicalCertExpiration?: string
   medicalCertStatus?: string
   
-  // CDL Information
-  cdlEndorsements?: string[]
-  cdlRestrictions?: string[]
-  
   // Fees
   fees?: {
     addon?: number
     adjustments?: number
     thirdparty?: number
     taxes?: number
+    total?: number
   }
   
   // Status
@@ -57,6 +72,17 @@ export interface ParsedMvrResult {
   
   // Raw Data
   rawXml?: string
+}
+
+export interface MvrLicense {
+  issueDate?: string // license_issue_date (YYYYMMDD)
+  expirationDate?: string // license_expiration_date (YYYYMMDD)
+  class?: string // license_class
+  code?: string // license_code
+  type?: string // license_type (e.g., "PERSONAL")
+  status?: string // license_status (e.g., "VALID")
+  endorsements?: string // license_endorsements (comma-separated or single value)
+  restrictions?: string // license_restrictions
 }
 
 export interface Violation {
@@ -87,53 +113,80 @@ export interface Suspension {
  */
 export function parseAccioMvrResult(xml: string): ParsedMvrResult {
   try {
-    // Basic XML parsing (you may want to use a proper XML parser like 'xml2js' or 'fast-xml-parser')
-    // For now, we'll extract key fields using regex (not ideal, but works for MVP)
-    
+    // Extract order numbers from completeOrder attributes
     const result: ParsedMvrResult = {
-      orderNumber: extractXmlValue(xml, 'order'),
-      subOrderNumber: extractXmlValue(xml, 'subOrder'),
-      remoteOrderNumber: extractXmlValue(xml, 'remote_order'),
-      remoteSubOrderNumber: extractXmlValue(xml, 'remote_subOrder'),
+      orderNumber: extractXmlAttribute(xml, 'completeOrder', 'number') || extractXmlValue(xml, 'ordernumber') || '',
+      subOrderNumber: extractXmlAttribute(xml, 'subOrder', 'number') || extractXmlValue(xml, 'suborder') || '',
+      remoteOrderNumber: extractXmlAttribute(xml, 'completeOrder', 'remote_number') || extractXmlValue(xml, 'remote_number'),
+      remoteSubOrderNumber: extractXmlAttribute(xml, 'subOrder', 'remote_number') || extractXmlValue(xml, 'remote_suborder'),
       timeOrdered: extractXmlValue(xml, 'time_ordered'),
       timeFilled: extractXmlValue(xml, 'time_filled'),
-      filledStatus: extractXmlValue(xml, 'filledStatus'),
-      filledCode: extractXmlValue(xml, 'filledCode'),
-      heldForReview: extractXmlValue(xml, 'held_for_review') === 'Y',
-      heldForReleaseForm: extractXmlValue(xml, 'held_for_release_form') === 'Y',
+      filledStatus: extractXmlAttribute(xml, 'subOrder', 'filledStatus'),
+      filledCode: extractXmlAttribute(xml, 'subOrder', 'filledCode'),
+      heldForReview: extractXmlAttribute(xml, 'subOrder', 'held_for_review') === 'Y',
+      heldForReleaseForm: extractXmlAttribute(xml, 'subOrder', 'held_for_release_form') === 'Y',
       rawXml: xml
     }
 
-    // Extract license information
-    result.licenseNumber = extractXmlValue(xml, 'dlnum') || extractXmlValue(xml, 'verified_dlnum')
-    result.licenseState = extractXmlValue(xml, 'dlstate') || extractXmlValue(xml, 'verified_dlstate')
-    result.licenseClass = extractXmlValue(xml, 'dlclass') || extractXmlValue(xml, 'verified_dlclass')
-    result.licenseStatus = extractXmlValue(xml, 'license_status') || extractXmlValue(xml, 'verified_license_status')
-    result.licenseExpirationDate = extractXmlValue(xml, 'dlexpiration') || extractXmlValue(xml, 'verified_dlexpiration')
-
-    // Extract points and violations (basic - may need enhancement)
-    const pointsMatch = xml.match(/<total_points>(\d+)<\/total_points>/i)
-    if (pointsMatch) {
-      result.totalPoints = parseInt(pointsMatch[1], 10)
-    }
-
-    const violationCountMatch = xml.match(/<violation_count>(\d+)<\/violation_count>/i)
-    if (violationCountMatch) {
-      result.violationCount = parseInt(violationCountMatch[1], 10)
-    }
-
-    // Extract fees
-    const addonMatch = xml.match(/<addon>([\d.]+)<\/addon>/i)
-    if (addonMatch) {
-      result.fees = {
-        addon: parseFloat(addonMatch[1]),
-        adjustments: parseFloat(extractXmlValue(xml, 'adjustments') || '0'),
-        thirdparty: parseFloat(extractXmlValue(xml, 'thirdparty') || '0'),
-        taxes: parseFloat(extractXmlValue(xml, 'taxes') || '0')
+    // Extract subject information (personal info from subject block)
+    const subjectXml = extractXmlBlock(xml, 'subject')
+    if (subjectXml) {
+      result.subject = {
+        firstName: extractXmlValue(subjectXml, 'name_first'),
+        middleName: extractXmlValue(subjectXml, 'name_middle'),
+        lastName: extractXmlValue(subjectXml, 'name_last'),
+        nameSuffix: extractXmlValue(subjectXml, 'name_suffix'),
+        ssn: extractXmlValue(subjectXml, 'ssn'),
+        dateOfBirth: extractXmlValue(subjectXml, 'dob'), // YYYYMMDD format
+        email: extractXmlValue(subjectXml, 'email'),
+        phone: extractXmlValue(subjectXml, 'phone_number'),
+        address: extractXmlValue(subjectXml, 'address'),
+        city: extractXmlValue(subjectXml, 'city'),
+        state: extractXmlValue(subjectXml, 'state'),
+        zip: extractXmlValue(subjectXml, 'zip'),
+        country: extractXmlValue(subjectXml, 'country'),
+        gender: extractXmlValue(subjectXml, 'gender')
       }
     }
 
-    // Extract medical certificate info
+    // Extract basic license info from MVR subOrder (dlnum, dlstate, dlexpiration)
+    result.licenseNumber = extractXmlValue(xml, 'dlnum')
+    result.licenseState = extractXmlValue(xml, 'dlstate')
+    result.licenseExpirationDate = extractXmlValue(xml, 'dlexpiration') // YYYYMMDD format
+
+    // Extract mvr_license blocks (can be multiple)
+    result.licenses = extractMvrLicenses(xml)
+
+    // Extract mvr_violation blocks
+    result.violations = extractMvrViolations(xml)
+    result.violationCount = result.violations?.length || 0
+    
+    // Calculate total points from violations
+    if (result.violations && result.violations.length > 0) {
+      result.totalPoints = result.violations.reduce((sum, v) => sum + (v.points || 0), 0)
+    }
+
+    // Extract fees (from fees block within subOrder)
+    const feesXml = extractXmlBlock(xml, 'fees')
+    if (feesXml) {
+      const addon = extractXmlValue(feesXml, 'addon')
+      const adjustments = extractXmlValue(feesXml, 'adjustments')
+      const thirdparty = extractXmlValue(feesXml, 'thirdparty')
+      const taxes = extractXmlValue(feesXml, 'taxes')
+      const total = extractXmlValue(feesXml, 'total')
+      
+      if (addon || adjustments || thirdparty || taxes) {
+        result.fees = {
+          addon: addon ? parseFloat(addon) : undefined,
+          adjustments: adjustments ? parseFloat(adjustments) : undefined,
+          thirdparty: thirdparty ? parseFloat(thirdparty) : undefined,
+          taxes: taxes ? parseFloat(taxes) : undefined,
+          total: total ? parseFloat(total) : undefined
+        }
+      }
+    }
+
+    // Extract medical certificate info (if present)
     result.medicalCertExpiration = extractXmlValue(xml, 'medical_cert_expiration')
     result.medicalCertStatus = extractXmlValue(xml, 'medical_cert_status')
 
@@ -148,16 +201,102 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
  * Extract value from XML tag
  */
 function extractXmlValue(xml: string, tagName: string): string | undefined {
-  const regex = new RegExp(`<${tagName}[^>]*>([^<]*)</${tagName}>`, 'i')
+  const regex = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)</${tagName}>`, 'i')
+  const match = xml.match(regex)
+  if (match && match[1]) {
+    return match[1].trim()
+  }
+  return undefined
+}
+
+/**
+ * Extract attribute value from XML tag
+ */
+function extractXmlAttribute(xml: string, tagName: string, attributeName: string): string | undefined {
+  const regex = new RegExp(`<${tagName}[^>]*${attributeName}=["']([^"']*)["']`, 'i')
   const match = xml.match(regex)
   return match ? match[1].trim() : undefined
+}
+
+/**
+ * Extract XML block (content between opening and closing tags)
+ */
+function extractXmlBlock(xml: string, tagName: string): string | undefined {
+  // Match opening tag, then capture everything until closing tag
+  const regex = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)</${tagName}>`, 'i')
+  const match = xml.match(regex)
+  return match ? match[1] : undefined
+}
+
+/**
+ * Extract all mvr_license blocks from XML
+ */
+function extractMvrLicenses(xml: string): MvrLicense[] {
+  const licenses: MvrLicense[] = []
+  
+  // Match all <mvr_license> blocks
+  const licenseRegex = /<mvr_license[^>]*>([\s\S]*?)<\/mvr_license>/gi
+  let match
+  
+  while ((match = licenseRegex.exec(xml)) !== null) {
+    const licenseXml = match[1]
+    const license: MvrLicense = {
+      issueDate: extractXmlValue(licenseXml, 'license_issue_date'),
+      expirationDate: extractXmlValue(licenseXml, 'license_expiration_date'),
+      class: extractXmlValue(licenseXml, 'license_class'),
+      code: extractXmlValue(licenseXml, 'license_code'),
+      type: extractXmlValue(licenseXml, 'license_type'),
+      status: extractXmlValue(licenseXml, 'license_status'),
+      endorsements: extractXmlValue(licenseXml, 'license_endorsements'),
+      restrictions: extractXmlValue(licenseXml, 'license_restrictions')
+    }
+    licenses.push(license)
+  }
+  
+  return licenses
+}
+
+/**
+ * Extract all mvr_violation blocks from XML
+ */
+function extractMvrViolations(xml: string): Violation[] {
+  const violations: Violation[] = []
+  
+  // Match all <mvr_violation> blocks
+  const violationRegex = /<mvr_violation[^>]*>([\s\S]*?)<\/mvr_violation>/gi
+  let match
+  
+  while ((match = violationRegex.exec(xml)) !== null) {
+    const violationXml = match[1]
+    
+    // Parse violation date (YYYYMMDD format)
+    const violationDate = extractXmlValue(violationXml, 'violation_date')
+    const convictionDate = extractXmlValue(violationXml, 'conviction_date')
+    
+    // Parse points (vendor_points or state_points)
+    const vendorPoints = extractXmlValue(violationXml, 'vendor_points')
+    const statePoints = extractXmlValue(violationXml, 'state_points')
+    const points = vendorPoints ? parseInt(vendorPoints, 10) : (statePoints ? parseInt(statePoints, 10) : undefined)
+    
+    const violation: Violation = {
+      date: violationDate,
+      type: extractXmlValue(violationXml, 'violation_type'),
+      description: extractXmlValue(violationXml, 'description') || extractXmlValue(violationXml, 'state_description'),
+      points: points,
+      state: extractXmlValue(violationXml, 'state') || extractXmlValue(violationXml, 'state_code')
+    }
+    
+    violations.push(violation)
+  }
+  
+  return violations
 }
 
 /**
  * Extract multiple values from XML (for arrays)
  */
 function extractXmlValues(xml: string, tagName: string): string[] {
-  const regex = new RegExp(`<${tagName}[^>]*>([^<]*)</${tagName}>`, 'gi')
+  const regex = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)</${tagName}>`, 'gi')
   const matches = xml.matchAll(regex)
   const values: string[] = []
   for (const match of matches) {
@@ -172,6 +311,11 @@ function extractXmlValues(xml: string, tagName: string): string[] {
  * Convert parsed result to JSONB format for database storage
  */
 export function mvrResultToJsonb(result: ParsedMvrResult): any {
+  // Get primary license from licenses array or fallback to basic license fields
+  const primaryLicense = result.licenses && result.licenses.length > 0 
+    ? result.licenses[0] 
+    : null
+
   return {
     orderNumber: result.orderNumber,
     subOrderNumber: result.subOrderNumber,
@@ -179,14 +323,36 @@ export function mvrResultToJsonb(result: ParsedMvrResult): any {
     remoteSubOrderNumber: result.remoteSubOrderNumber,
     timeOrdered: result.timeOrdered,
     timeFilled: result.timeFilled,
+    subject: result.subject ? {
+      // Only store non-sensitive fields (exclude SSN)
+      firstName: result.subject.firstName,
+      middleName: result.subject.middleName,
+      lastName: result.subject.lastName,
+      nameSuffix: result.subject.nameSuffix,
+      dateOfBirth: result.subject.dateOfBirth,
+      email: result.subject.email,
+      phone: result.subject.phone,
+      address: result.subject.address,
+      city: result.subject.city,
+      state: result.subject.state,
+      zip: result.subject.zip,
+      country: result.subject.country,
+      gender: result.subject.gender
+    } : undefined,
     license: {
       number: result.licenseNumber,
       state: result.licenseState,
-      class: result.licenseClass,
-      status: result.licenseStatus,
-      issueDate: result.licenseIssueDate,
-      expirationDate: result.licenseExpirationDate
+      expirationDate: result.licenseExpirationDate,
+      // From mvr_license blocks
+      class: primaryLicense?.class,
+      code: primaryLicense?.code,
+      type: primaryLicense?.type,
+      status: primaryLicense?.status,
+      issueDate: primaryLicense?.issueDate,
+      endorsements: primaryLicense?.endorsements,
+      restrictions: primaryLicense?.restrictions
     },
+    licenses: result.licenses || [], // All license blocks
     violations: {
       totalPoints: result.totalPoints || 0,
       count: result.violationCount || 0,
@@ -203,10 +369,6 @@ export function mvrResultToJsonb(result: ParsedMvrResult): any {
     medical: {
       certExpiration: result.medicalCertExpiration,
       certStatus: result.medicalCertStatus
-    },
-    cdl: {
-      endorsements: result.cdlEndorsements || [],
-      restrictions: result.cdlRestrictions || []
     },
     fees: result.fees,
     status: {

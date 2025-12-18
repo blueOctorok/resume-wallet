@@ -11,7 +11,6 @@ import { useState, useEffect } from 'react'
 import { useSignerStatus, useSmartAccountClient, useSendCalls, useUser } from '@account-kit/react'
 import { encodeFunctionData, parseAbi } from 'viem'
 import { useTheme } from '@/contexts/ThemeContext'
-import { getUSDCTransferHistory } from '@/lib/alchemy-transfers-api'
 
 interface MvrConfig {
   usdcAddress: string
@@ -33,7 +32,7 @@ export default function MvrPaymentButton({
 }: MvrPaymentButtonProps) {
   const { isConnected, isInitializing } = useSignerStatus()
   const { client } = useSmartAccountClient({ type: 'LightAccount' })
-  const { sendCalls, isPending } = useSendCalls({ client })
+  const { sendCallsAsync, isPending } = useSendCalls({ client })
   const { theme } = useTheme()
   const user = useUser()
 
@@ -82,7 +81,7 @@ export default function MvrPaymentButton({
       return
     }
 
-    if (!sendCalls) {
+    if (!sendCallsAsync || !client) {
       setError('Transaction service not available. Please refresh and try again.')
       return
     }
@@ -113,10 +112,10 @@ export default function MvrPaymentButton({
         args: [config.treasuryAddress as `0x${string}`, amountRaw],
       })
 
-      console.log('💳 [MVR PAYMENT] Calling sendCalls...')
+      console.log('💳 [MVR PAYMENT] Calling sendCallsAsync...')
 
       // Send the transaction via Alchemy Smart Wallet
-      const result = await sendCalls({
+      const result = await sendCallsAsync({
         calls: [
           {
             to: config.usdcAddress as `0x${string}`,
@@ -125,88 +124,46 @@ export default function MvrPaymentButton({
         ],
       })
 
-      console.log('💳 [MVR PAYMENT] sendCalls result:', result)
-      console.log('💳 [MVR PAYMENT] Result type:', typeof result)
-      if (result) {
-        console.log('💳 [MVR PAYMENT] Result keys:', Object.keys(result))
-      }
+      console.log('💳 [MVR PAYMENT] Transaction sent, call IDs:', result.ids)
       
-      // Extract transaction hash from result
-      // Alchemy Account Kit's sendCalls can return:
-      // - A string (the hash directly)
-      // - An object with hash/userOpHash property
-      // - undefined (if the call hasn't been processed yet)
-      let txHash: string | null = null
-      
-      if (result === undefined || result === null) {
-        // Fallback: If result is undefined, we poll for the transaction
-        console.warn('⚠️ sendCalls returned undefined - polling for transaction...')
+      // Get the call ID to wait for status
+      const callId = result.ids[0]
+
+      // Wait for transaction confirmation using client.waitForCallsStatus
+      let txHash: string
+      try {
+        console.log('⏳ [MVR PAYMENT] Waiting for transaction confirmation...')
         
-        // Wait a moment for the transaction to propagate
-        await new Promise(resolve => setTimeout(resolve, 2000))
-        
-        // Poll for the latest USDC transfer matching our criteria
-        let foundTx = false
-        let attempts = 0
-        const maxAttempts = 10 // 20 seconds total
-        
-        while (!foundTx && attempts < maxAttempts) {
-          try {
-            // Check recent USDC transfers
-            const history = await getUSDCTransferHistory(
-              user?.address || '',
-              config.usdcAddress,
-              { maxCount: 5 }
-            )
-            
-            if (history.success && history.transfers.length > 0) {
-              // Look for a transfer that matches:
-              // 1. To the treasury address
-              // 2. Created very recently (we can't easily check timestamp precision, so we take the latest)
-              // 3. Amount matches roughly (ignoring decimals precision issues)
-              
-              const recentTransfer = history.transfers.find(t => 
-                t.to.toLowerCase() === config.treasuryAddress.toLowerCase() &&
-                // Check if value is close to expected amount (allowing for small diffs)
-                Math.abs(t.value - parseFloat(config.priceUsdc)) < 0.0001
-              )
-              
-              if (recentTransfer) {
-                console.log('✅ Found matching transaction via polling:', recentTransfer.hash)
-                txHash = recentTransfer.hash
-                foundTx = true
-                break
-              }
-            }
-          } catch (pollErr) {
-            console.warn('Polling error:', pollErr)
-          }
+        // Check if waitForCallsStatus is available on the client
+        if (client && typeof client.waitForCallsStatus === 'function') {
+          const statusResult = await client.waitForCallsStatus({ id: callId })
           
-          attempts++
-          if (!foundTx) {
-            await new Promise(resolve => setTimeout(resolve, 2000))
-          }
+          console.log('✅ [MVR PAYMENT] Transaction status:', statusResult)
+          
+          // Extract transaction hash from status result
+          txHash = 
+            statusResult?.status === 'CONFIRMED' 
+              ? (statusResult.transactions?.[0]?.hash || 
+                 statusResult.hash || 
+                 statusResult.transactionHash || 
+                 callId)
+              : callId // Fallback to call ID if we can't extract hash
+          
+          console.log('✅ [MVR PAYMENT] Transaction hash:', txHash)
+        } else {
+          // If method not available, use call ID as transaction reference
+          console.log('ℹ️ [MVR PAYMENT] waitForCallsStatus not available, using call ID as transaction reference')
+          txHash = callId
         }
-        
-        if (!txHash) {
-          throw new Error('Transaction was submitted but hash could not be retrieved. Please check your wallet history.')
-        }
-      }
-      
-      if (typeof result === 'string') {
-        txHash = result
-      } else if (result && typeof result === 'object') {
-        txHash = (result as any).hash || (result as any).userOpHash || (result as any).txHash || null
-      }
-      
-      if (!txHash || txHash === 'pending') {
-        // One last check if we didn't get it from the result object directly
-        if (!txHash) {
-             throw new Error('Transaction hash not available. The transaction may still be processing.')
-        }
+      } catch (waitErr) {
+        // If waiting fails, still use the call ID as the hash
+        // The transaction was submitted successfully, even if we can't confirm it
+        console.warn('⚠️ [MVR PAYMENT] Could not wait for confirmation, but transaction was sent:', waitErr)
+        txHash = callId
       }
 
       // Record payment in database
+      let savedPaymentTxHash = txHash
       try {
         const paymentResponse = await fetch('/api/mvr/payment', {
           method: 'POST',
@@ -220,6 +177,11 @@ export default function MvrPaymentButton({
 
         if (!paymentResponse.ok) {
           console.warn('⚠️ Payment recorded in blockchain but failed to save to database')
+        } else {
+          const paymentData = await paymentResponse.json()
+          console.log('✅ [MVR PAYMENT] Payment saved to database:', paymentData)
+          // Use the saved hash from the database (which may be truncated to 66 chars)
+          savedPaymentTxHash = paymentData.payment?.txHash || txHash
         }
       } catch (err) {
         console.error('⚠️ Error recording payment:', err)
@@ -227,7 +189,8 @@ export default function MvrPaymentButton({
       }
 
       setSuccess(true)
-      onPaymentSuccess?.(txHash)
+      // Pass the saved hash (may be truncated) to the form so it can find the payment
+      onPaymentSuccess?.(savedPaymentTxHash)
     } catch (err) {
       console.error('❌ MVR payment error:', err)
       const errorMessage = err instanceof Error ? err.message : 'Payment failed'

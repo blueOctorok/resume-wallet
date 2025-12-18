@@ -37,6 +37,19 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
   const [paymentTxHash, setPaymentTxHash] = useState<string | null>(null)
   const [isPaymentComplete, setIsPaymentComplete] = useState(false)
 
+  // Check for pending payment on mount
+  useState(() => {
+    if (typeof window !== 'undefined') {
+      const pendingPayment = localStorage.getItem('pendingMvrPayment')
+      if (pendingPayment) {
+        setPaymentTxHash(pendingPayment)
+        setIsPaymentComplete(true)
+        // Clear it from localStorage
+        localStorage.removeItem('pendingMvrPayment')
+      }
+    }
+  })
+
   const handlePaymentSuccess = (txHash: string) => {
     setPaymentTxHash(txHash)
     setIsPaymentComplete(true)

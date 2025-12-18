@@ -67,20 +67,70 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = await createClient()
+    // Use service role client to bypass RLS for payment lookup and order creation
+    const supabaseService = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     // Verify payment exists and is completed
-    const { data: payment, error: paymentError } = await supabase
+    // Handle both full hash and truncated hash (66 chars) for matching
+    // Note: We need to find the MOST RECENT payment that matches the hash
+    const truncatedHash = paymentTxHash.length > 66 ? paymentTxHash.substring(0, 66) : paymentTxHash
+    
+    // Try to find the most recent payment by exact hash first, then by truncated hash
+    let payment = null
+    let paymentError = null
+    
+    // First try exact match (order by created_at DESC to get the latest one)
+    let { data: exactPayment, error: exactError } = await supabaseService
       .from('payments')
-      .select('id, status, amount_usdc, user_id')
+      .select('id, status, amount_usdc, user_id, tx_hash, created_at')
       .eq('tx_hash', paymentTxHash)
       .eq('type', 'MVR_ORDER')
-      .single()
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    
+    if (exactPayment) {
+      payment = exactPayment
+    } else if (truncatedHash !== paymentTxHash) {
+      // If no exact match and hash was truncated, try truncated version
+      const { data: truncatedPayment, error: truncError } = await supabaseService
+        .from('payments')
+        .select('id, status, amount_usdc, user_id, tx_hash, created_at')
+        .eq('tx_hash', truncatedHash)
+        .eq('type', 'MVR_ORDER')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      
+      payment = truncatedPayment
+      paymentError = truncError
+    } else {
+      paymentError = exactError
+    }
 
-    if (paymentError || !payment || payment.status !== 'COMPLETED') {
-      console.error('[MVR ORDER] Payment validation failed:', paymentError)
+    if (paymentError) {
+      console.error('[MVR ORDER] Payment lookup error:', paymentError)
       return NextResponse.json(
-        { error: 'Invalid or incomplete payment. Please complete payment before ordering.' },
+        { error: 'Failed to verify payment. Please try again.' },
+        { status: 500 }
+      )
+    }
+
+    if (!payment) {
+      console.error('[MVR ORDER] Payment not found for txHash:', paymentTxHash)
+      return NextResponse.json(
+        { error: 'Payment not found. Please complete payment before ordering.' },
+        { status: 400 }
+      )
+    }
+
+    if (payment.status !== 'COMPLETED') {
+      console.error('[MVR ORDER] Payment not completed. Status:', payment.status)
+      return NextResponse.json(
+        { error: 'Payment not completed. Please wait for payment confirmation.' },
         { status: 400 }
       )
     }
@@ -348,11 +398,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. Store order in database (use service role to bypass RLS)
-    const supabaseService = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-
+    // Reuse supabaseService declared earlier in the function
     const { data: mvrOrder, error: orderError } = await supabaseService
       .from('mvr_orders')
       .insert({

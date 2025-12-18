@@ -5,6 +5,20 @@ import { parseAccioMvrResult, mvrResultToJsonb } from '@/lib/accio-xml-parser'
 import { calculateProfileScore } from '@/lib/profile-completeness'
 
 /**
+ * Convert YYYYMMDD date format to ISO date string for database storage
+ */
+function formatDateForDb(dateStr: string | undefined): string | null {
+  if (!dateStr || dateStr.length !== 8) return null
+  
+  const year = dateStr.substring(0, 4)
+  const month = dateStr.substring(4, 6)
+  const day = dateStr.substring(6, 8)
+  
+  // Return as YYYY-MM-DD format
+  return `${year}-${month}-${day}`
+}
+
+/**
  * API Route: Accio Webhook Handler
  * 
  * POST /api/mvr/webhook
@@ -89,19 +103,26 @@ export async function POST(request: NextRequest) {
       console.log('[MVR WEBHOOK] Result already exists, updating...')
     }
 
-    // 3. Convert parsed result to JSONB
+    // 3. Convert parsed result to JSONB for storage
     const parsedData = mvrResultToJsonb(parsedResult)
 
-    // 4. Store or update MVR result
+    // 4. Extract license details from mvr_license blocks (use first license as primary)
+    const primaryLicense = parsedResult.licenses && parsedResult.licenses.length > 0 
+      ? parsedResult.licenses[0] 
+      : null
+
+    // 5. Store or update MVR result
     const resultData = {
       mvr_order_id: mvrOrder.id,
       driver_user_id: mvrOrder.driver_user_id,
       driver_profile_id: mvrOrder.driver_profile_id,
       license_number: parsedResult.licenseNumber,
       license_state: parsedResult.licenseState,
-      license_class: parsedResult.licenseClass,
-      license_status: parsedResult.licenseStatus,
-      license_expiration_date: parsedResult.licenseExpirationDate || null,
+      license_class: primaryLicense?.class || null, // From mvr_license block
+      license_status: primaryLicense?.status || null, // From mvr_license block
+      license_expiration_date: primaryLicense?.expirationDate 
+        ? formatDateForDb(primaryLicense.expirationDate) 
+        : (parsedResult.licenseExpirationDate ? formatDateForDb(parsedResult.licenseExpirationDate) : null),
       total_points: parsedResult.totalPoints || 0,
       violation_count: parsedResult.violationCount || 0,
       violations: parsedResult.violations || [],
@@ -111,9 +132,9 @@ export async function POST(request: NextRequest) {
       suspensions: parsedResult.suspensions || [],
       medical_cert_expiration: parsedResult.medicalCertExpiration || null,
       medical_cert_status: parsedResult.medicalCertStatus || null,
-      cdl_endorsements: parsedResult.cdlEndorsements || [],
-      cdl_restrictions: parsedResult.cdlRestrictions || [],
-      parsed_data: parsedData,
+      cdl_endorsements: primaryLicense?.endorsements ? [primaryLicense.endorsements] : [],
+      cdl_restrictions: primaryLicense?.restrictions ? [primaryLicense.restrictions] : [],
+      parsed_data: parsedData, // Complete structured data for prefilling
       result_status: 'parsed',
       parsed_at: new Date().toISOString()
     }

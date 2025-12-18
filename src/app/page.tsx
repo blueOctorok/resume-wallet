@@ -10,6 +10,9 @@ import WalletCard from '@/components/WalletCard'
 import TLoadingModal from '@/components/TLoadingModal'
 import LoadingScreen from '@/components/LoadingScreen'
 import MvrOrderForm from '@/components/MvrOrderForm'
+import MvrStatusIndicator from '@/components/MvrStatusIndicator'
+import MvrViewModal from '@/components/MvrViewModal'
+import MvrManagementModal from '@/components/MvrManagementModal'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   useSendUserOperation,
@@ -263,6 +266,9 @@ const HomeContent = () => {
   const [user, setUser] = useState<any>(null)
   const [isCheckingSession, setIsCheckingSession] = useState(true) // Track if we're still checking for a session
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isMvrModalOpen, setIsMvrModalOpen] = useState(false)
+  const [isMvrManagementOpen, setIsMvrManagementOpen] = useState(false)
+  const [selectedMvrOrderId, setSelectedMvrOrderId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState<
     'signin' | 'resume' | 'dotapp' | 'jobs' | 'applications' | 'mvr' | null
   >(null)
@@ -668,13 +674,13 @@ const HomeContent = () => {
 
     // Don't save during reset
     if (resetInProgressRef.current) {
-      console.log('⏸️ [FORMS] Skipping localStorage save - reset in progress')
+      // Skipping save during reset
       return
     }
 
     // Only save if at least one form has data
     if (!form1Data && !form2Data && !form3Data) {
-      console.log('⏸️ [FORMS] Skipping localStorage save - no form data')
+      // No form data to save
       return
     }
 
@@ -688,7 +694,7 @@ const HomeContent = () => {
         `forms-${user.address}`,
         JSON.stringify(formsToSave)
       )
-      console.log('💾 [FORMS] Saved form data to localStorage')
+      // Saved to localStorage silently
     } catch (error) {
       console.warn('⚠️ Failed to persist form data', error)
     }
@@ -707,19 +713,15 @@ const HomeContent = () => {
       const detail = (event as CustomEvent).detail as {
         walletAddress?: string
       }
-      console.log('📢 [RESET] Received wallet-data-reset event:', detail)
       if (
         detail?.walletAddress &&
         detail.walletAddress.toLowerCase() === user.address.toLowerCase()
       ) {
-        console.log('✅ [RESET] Wallet address matches, triggering reset')
         resetApplicationProgress()
-      } else {
-        console.log('⚠️ [RESET] Wallet address mismatch, ignoring reset')
       }
     }
     window.addEventListener('wallet-data-reset', handler)
-    console.log('👂 [RESET] Listening for wallet-data-reset events')
+    // Listening for reset events
     return () => {
       window.removeEventListener('wallet-data-reset', handler)
     }
@@ -1781,6 +1783,47 @@ const HomeContent = () => {
               <WalletInfo walletAddress={user.address} onClick={openModal} />
             </div>
           </div>
+        )}
+
+        {/* MVR Status Indicator - Left Side (Desktop Only) */}
+        {user?.address && (
+          <MvrStatusIndicator
+            walletAddress={user.address}
+            onOpenManagement={() => setIsMvrManagementOpen(true)}
+          />
+        )}
+
+        {/* MVR Management Modal */}
+        {user?.address && (
+          <MvrManagementModal
+            isOpen={isMvrManagementOpen}
+            onClose={() => setIsMvrManagementOpen(false)}
+            walletAddress={user.address}
+            onOrderNew={() => setCurrentPage('mvr')}
+            onCompleteOrder={(paymentTxHash) => {
+              // Store payment hash for form to pick up
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('pendingMvrPayment', paymentTxHash)
+              }
+              setCurrentPage('mvr')
+            }}
+            onViewMvr={(orderId) => {
+              setSelectedMvrOrderId(orderId)
+              setIsMvrModalOpen(true)
+            }}
+          />
+        )}
+
+        {/* MVR View Modal */}
+        {user?.address && (
+          <MvrViewModal
+            isOpen={isMvrModalOpen}
+            onClose={() => {
+              setIsMvrModalOpen(false)
+              setSelectedMvrOrderId(null)
+            }}
+            walletAddress={user.address}
+          />
         )}
 
         {/* Admin Quick Reset Button (Development Only) */}
