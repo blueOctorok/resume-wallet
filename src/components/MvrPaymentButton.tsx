@@ -20,12 +20,14 @@ interface MvrConfig {
 }
 
 interface MvrPaymentButtonProps {
+  userAddress?: string // Explicitly pass wallet address to ensure consistency
   onPaymentSuccess?: (txHash: string) => void
   onPaymentError?: (error: string) => void
   disabled?: boolean
 }
 
 export default function MvrPaymentButton({ 
+  userAddress,
   onPaymentSuccess, 
   onPaymentError,
   disabled = false 
@@ -35,6 +37,9 @@ export default function MvrPaymentButton({
   const { sendCallsAsync, isPending } = useSendCalls({ client })
   const { theme } = useTheme()
   const user = useUser()
+  
+  // Use explicit userAddress prop if provided, otherwise fall back to user?.address
+  const walletAddress = userAddress || user?.address
 
   const [config, setConfig] = useState<MvrConfig | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -171,7 +176,7 @@ export default function MvrPaymentButton({
           body: JSON.stringify({
             txHash,
             amountUsdc: config.priceUsdc,
-            walletAddress: user?.address,
+            walletAddress: walletAddress,
           }),
         })
 

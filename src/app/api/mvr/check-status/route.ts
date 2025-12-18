@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 /**
  * API Route: Check MVR Status by Wallet Address
@@ -20,7 +20,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const supabase = await createClient()
+    // Use service role client to bypass RLS and read all payments/orders
+    const supabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     // Get user ID
     const { data: user, error: userError } = await supabase
@@ -43,7 +47,20 @@ export async function GET(request: NextRequest) {
 
     console.log('[MVR CHECK] User found:', { userId: user.id, walletAddress })
 
-    // Check for any MVR payments (including orphaned ones without orders)
+    // Query ALL payments for this user first (for debugging)
+    const { data: allPayments, error: allPaymentsError } = await supabase
+      .from('payments')
+      .select('id, tx_hash, amount_usdc, status, created_at, type, user_id')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+
+    console.log('[MVR CHECK] All payments for user (debug):', {
+      count: allPayments?.length || 0,
+      payments: allPayments,
+      error: allPaymentsError,
+    })
+
+    // Now filter for MVR_ORDER type
     const { data: payments, error: paymentsError } = await supabase
       .from('payments')
       .select('id, tx_hash, amount_usdc, status, created_at, type')
@@ -51,7 +68,7 @@ export async function GET(request: NextRequest) {
       .eq('type', 'MVR_ORDER')
       .order('created_at', { ascending: false })
 
-    console.log('[MVR CHECK] Payments query result:', {
+    console.log('[MVR CHECK] MVR payments query result:', {
       paymentsFound: payments?.length || 0,
       payments: payments,
       error: paymentsError,

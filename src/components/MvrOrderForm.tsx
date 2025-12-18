@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import MvrPaymentButton from './MvrPaymentButton'
@@ -38,7 +38,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
   const [isPaymentComplete, setIsPaymentComplete] = useState(false)
 
   // Check for pending payment on mount
-  useState(() => {
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const pendingPayment = localStorage.getItem('pendingMvrPayment')
       if (pendingPayment) {
@@ -48,7 +48,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
         localStorage.removeItem('pendingMvrPayment')
       }
     }
-  })
+  }, [])
 
   const handlePaymentSuccess = (txHash: string) => {
     setPaymentTxHash(txHash)
@@ -338,6 +338,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
                   Complete payment to proceed with your MVR order.
                 </p>
                 <MvrPaymentButton 
+                  userAddress={userAddress}
                   onPaymentSuccess={handlePaymentSuccess}
                   onPaymentError={handlePaymentError}
                   disabled={isLoading}

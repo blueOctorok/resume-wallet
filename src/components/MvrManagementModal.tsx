@@ -71,19 +71,20 @@ export default function MvrManagementModal({
         const result = await response.json()
         
         // Transform the data to match our interface
+        // API returns orders as an array, and each order may have a result nested
         const transformedData: MvrStatusData = {
           hasMvr: result.hasMvr,
           hasPayment: result.hasPayment,
           paymentPending: result.paymentPending,
           payments: result.payments || [],
-          orders: result.order ? [{
-            id: result.order.id,
-            orderNumber: result.order.orderNumber,
-            status: result.order.status,
-            orderedAt: result.order.orderedAt,
-            paymentId: result.order.paymentId,
-            hasResult: !!result.result,
-          }] : [],
+          orders: result.orders?.map((order: any) => ({
+            id: order.id,
+            orderNumber: order.orderNumber,
+            status: order.status,
+            orderedAt: order.orderedAt,
+            paymentId: order.paymentId,
+            hasResult: !!order.hasResult || !!order.result,
+          })) || [],
         }
 
         setData(transformedData)

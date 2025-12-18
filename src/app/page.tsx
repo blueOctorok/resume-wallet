@@ -9,10 +9,6 @@ import UserStatusModal from '@/components/UserStatusModal'
 import WalletCard from '@/components/WalletCard'
 import TLoadingModal from '@/components/TLoadingModal'
 import LoadingScreen from '@/components/LoadingScreen'
-import MvrOrderForm from '@/components/MvrOrderForm'
-import MvrStatusIndicator from '@/components/MvrStatusIndicator'
-import MvrViewModal from '@/components/MvrViewModal'
-import MvrManagementModal from '@/components/MvrManagementModal'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   useSendUserOperation,
@@ -234,6 +230,35 @@ const RoleSelectionModal = dynamic(
   {
     ssr: false,
     loading: () => <LoadingScreen message='Loading...' fullScreen={false} />,
+  }
+)
+
+const MvrOrderForm = dynamic(
+  () => import('@/components/MvrOrderForm').then((mod) => mod.default),
+  {
+    ssr: false,
+    loading: () => <LoadingScreen message='Loading MVR order form...' fullScreen={false} />,
+  }
+)
+
+const MvrStatusIndicator = dynamic(
+  () => import('@/components/MvrStatusIndicator').then((mod) => mod.default),
+  {
+    ssr: false,
+  }
+)
+
+const MvrViewModal = dynamic(
+  () => import('@/components/MvrViewModal').then((mod) => mod.default),
+  {
+    ssr: false,
+  }
+)
+
+const MvrManagementModal = dynamic(
+  () => import('@/components/MvrManagementModal').then((mod) => mod.default),
+  {
+    ssr: false,
   }
 )
 

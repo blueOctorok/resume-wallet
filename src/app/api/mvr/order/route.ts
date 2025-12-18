@@ -136,15 +136,30 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify payment belongs to this user
-    let { data: userForPayment, error: userForPaymentError } = await supabase
+    // Get the user from the payment to ensure we're using the same user ID
+    let { data: paymentUser, error: paymentUserError } = await supabaseService
       .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
+      .select('id, wallet_address')
+      .eq('id', payment.user_id)
       .single()
 
-    if (userForPaymentError || !userForPayment || payment.user_id !== userForPayment.id) {
+    if (paymentUserError || !paymentUser) {
+      console.error('[MVR ORDER] Error fetching user for payment:', paymentUserError)
       return NextResponse.json(
-        { error: 'Payment does not belong to this user.' },
+        { error: 'Payment user not found.' },
+        { status: 404 }
+      )
+    }
+
+    // Verify the payment's user wallet address matches the provided wallet address (case-insensitive)
+    if (paymentUser.wallet_address?.toLowerCase() !== walletAddress.toLowerCase()) {
+      console.error('[MVR ORDER] Payment wallet mismatch:', {
+        paymentWallet: paymentUser.wallet_address,
+        providedWallet: walletAddress,
+        paymentUserId: payment.user_id
+      })
+      return NextResponse.json(
+        { error: 'Payment does not belong to this wallet address.' },
         { status: 403 }
       )
     }
@@ -166,7 +181,7 @@ export async function POST(request: NextRequest) {
     console.log('[MVR ORDER] Starting MVR order for wallet:', walletAddress, 'with payment:', paymentTxHash)
 
     // 1. Get or create user
-    let { data: user, error: userError } = await supabase
+    let { data: user, error: userError } = await supabaseService
       .from('users')
       .select('id, email, name')
       .ilike('wallet_address', walletAddress)
@@ -175,7 +190,7 @@ export async function POST(request: NextRequest) {
     // If user doesn't exist, create them (they're authenticated via Alchemy)
     if (userError && userError.code === 'PGRST116') {
       console.log('[MVR ORDER] User not found, creating new user:', walletAddress)
-      const { data: newUser, error: createError } = await supabase
+      const { data: newUser, error: createError } = await supabaseService
         .from('users')
         .insert({
           wallet_address: walletAddress,
@@ -201,7 +216,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get or create driver profile
-    let { data: profile, error: profileError } = await supabase
+    let { data: profile, error: profileError } = await supabaseService
       .from('driver_profiles')
       .select('*')
       .eq('user_id', user.id)
@@ -209,7 +224,7 @@ export async function POST(request: NextRequest) {
 
     if (profileError && profileError.code === 'PGRST116') {
       // Create profile if it doesn't exist
-      const { data: newProfile, error: createError } = await supabase
+      const { data: newProfile, error: createError } = await supabaseService
         .from('driver_profiles')
         .insert({
           user_id: user.id,
@@ -235,7 +250,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Get driver application data for personal info
-    const { data: dotApplication } = await supabase
+    const { data: dotApplication } = await supabaseService
       .from('driver_applications')
       .select('application_data')
       .eq('user_id', user.id)
@@ -399,19 +414,22 @@ export async function POST(request: NextRequest) {
 
     // 7. Store order in database (use service role to bypass RLS)
     // Reuse supabaseService declared earlier in the function
+    // Link order to the payment that was used
     const { data: mvrOrder, error: orderError } = await supabaseService
       .from('mvr_orders')
       .insert({
         driver_user_id: user.id,
         driver_profile_id: profile.id,
         driver_application_id: dotApplication?.id || null,
+        payment_id: payment.id, // Link to the payment
+        payment_tx_hash: truncatedHash, // Store tx hash for reference
         accio_order_number: orderNumber,
         accio_suborder_number: subOrderId,
         order_type: 'MVR',
         mvr_search_type: mvrSearchType,
         dl_number: dlNumber,
         dl_state: dlState,
-        status: 'pending',
+        status: 'pending', // Will be updated to 'processing' when Accio accepts it
         order_xml: orderXml,
         applicant_portal_url: applicantPortalUrl,
         expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now

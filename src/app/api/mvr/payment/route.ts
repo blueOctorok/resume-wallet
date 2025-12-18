@@ -109,6 +109,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log('[MVR PAYMENT] ✅ Payment successfully recorded:', {
+      paymentId: payment.id,
+      userId: user.id,
+      walletAddress: walletAddress,
+      txHash: payment.tx_hash,
+      amountUsdc: payment.amount_usdc,
+      type: 'MVR_ORDER',
+      status: 'COMPLETED'
+    })
+
     return NextResponse.json({
       success: true,
       payment: {
