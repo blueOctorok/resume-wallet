@@ -57,17 +57,18 @@ export default function UserStatusModal({
       // Save current scroll position
       const scrollY = window.scrollY
       // Lock body scroll
+      const originalStyle = window.getComputedStyle(document.body).overflow
+      document.body.style.overflow = 'hidden'
       document.body.style.position = 'fixed'
       document.body.style.top = `-${scrollY}px`
       document.body.style.width = '100%'
-      document.body.style.overflow = 'hidden'
       
       return () => {
         // Restore body scroll
+        document.body.style.overflow = originalStyle
         document.body.style.position = ''
         document.body.style.top = ''
         document.body.style.width = ''
-        document.body.style.overflow = ''
         window.scrollTo(0, scrollY)
       }
     }
@@ -81,18 +82,14 @@ export default function UserStatusModal({
       <div
         className='fixed inset-0 bg-black/50 backdrop-blur-sm z-[100]'
         onClick={handleBackdropClick}
-        onTouchMove={(e) => e.preventDefault()}
-        onWheel={(e) => e.preventDefault()}
       />
 
       {/* Modal */}
       <div
-        className='fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[101] w-[90vw] max-w-[340px] sm:max-w-sm md:max-w-md lg:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col'
+        className='fixed inset-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-[101] w-full sm:w-[90vw] sm:max-w-[340px] md:max-w-md lg:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col pointer-events-auto'
         onClick={(e) => e.stopPropagation()}
-        onTouchStart={(e) => e.stopPropagation()}
-        onTouchMove={(e) => e.stopPropagation()}
       >
-        <div className='relative bg-brand-sage-light/20 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl border border-brand-mint/30 flex flex-col h-full'>
+        <div className='relative bg-brand-sage-light/20 backdrop-blur-xl rounded-0 sm:rounded-2xl md:rounded-3xl shadow-2xl flex flex-col h-full sm:h-auto overflow-hidden'>
           {/* Close Button */}
           <button
             onClick={onClose}
@@ -115,10 +112,8 @@ export default function UserStatusModal({
           </button>
 
           {/* Inner shadow for depth */}
-          <div className='absolute inset-0 rounded-3xl shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)] pointer-events-none' />
+          <div className='absolute inset-0 sm:rounded-3xl shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)] pointer-events-none' />
 
-          {/* Outer glow */}
-          <div className='absolute -inset-[1px] rounded-3xl bg-gradient-to-b from-brand-mint/20 to-transparent opacity-50 blur-sm -z-10' />
 
           {/* Header */}
           <div className='p-4 sm:p-6 border-b border-brand-mint/20'>
@@ -177,12 +172,9 @@ export default function UserStatusModal({
             </div>
           )}
 
-          {/* Tab Content */}
+          {/* Tab Content - Scrollable area */}
           <div 
-            className='flex-1 overflow-y-auto p-4 sm:p-6'
-            onTouchStart={(e) => e.stopPropagation()}
-            onTouchMove={(e) => e.stopPropagation()}
-            onWheel={(e) => e.stopPropagation()}
+            className='flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-hide-mobile min-h-0'
           >
             {activeTab === 'overview' && (
               <div className='space-y-4 sm:space-y-6'>
