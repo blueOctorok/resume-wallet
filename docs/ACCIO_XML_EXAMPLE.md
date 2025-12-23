@@ -162,7 +162,7 @@ When `includeFmcsaCrashInspection: true` is passed, an additional subOrder is in
 5. **XML Comments** - Added clarifying comments matching Accio's production format
 
 ### Changed Values:
-- **`<portalfromapplicant>`** changed from `N` to `Y` to match production format
+- **`<portalfromapplicant>`** must be `N` (not `Y`) - This sends results to production webhook instead of applicant portal
 - **Phone handling** - Now defaults to `555-555-5555` if not provided instead of empty tag
 
 ### Optional Enhancement:

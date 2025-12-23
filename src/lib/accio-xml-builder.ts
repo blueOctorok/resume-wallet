@@ -126,7 +126,7 @@ export function buildAccioMvrOrderXml(data: AccioOrderData): string {
             <drugscreen>N</drugscreen>
             <has_admitted_convictions>N</has_admitted_convictions>
             <admitted_conviction_details/>
-            <portalfromapplicant>Y</portalfromapplicant>
+            <portalfromapplicant>N</portalfromapplicant>
         </subject>`
 
   // Add webhook configuration if provided
