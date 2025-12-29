@@ -306,7 +306,9 @@ export async function POST(request: NextRequest) {
     // 3. Generate order number and webhook GUID
     const orderNumber = generateOrderNumber()
     const webhookGuid = generateWebhookGuid()
-    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/mvr/webhook`
+    // Remove trailing slash from base URL to avoid double slashes
+    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '')
+    const webhookUrl = `${baseUrl}/api/mvr/webhook`
 
     // 4. Build Accio XML order
     const orderXml = buildAccioMvrOrderXml({
