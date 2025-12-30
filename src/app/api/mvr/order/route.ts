@@ -375,6 +375,21 @@ export async function POST(request: NextRequest) {
     //   </order>
     // </XML>
     
+    // Extract Accio's orderID (their internal order number - becomes remote_number in webhook)
+    let accioOrderId = null
+    const orderIdPatterns = [
+      /<order[^>]*orderID=["']([^"']+)["']/i,
+      /<order[^>]*orderID=["']([^"']+)[\"']/i,
+    ]
+    
+    for (const pattern of orderIdPatterns) {
+      const match = accioResponse.match(pattern)
+      if (match) {
+        accioOrderId = match[1]
+        break
+      }
+    }
+
     // Try multiple patterns to find subOrder ID
     let subOrderId = null
     const patterns = [
@@ -407,7 +422,7 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    console.log('[MVR ORDER] Parsed response - subOrderId:', subOrderId, 'portalUrl:', applicantPortalUrl)
+    console.log('[MVR ORDER] Parsed response - accioOrderId:', accioOrderId, 'subOrderId:', subOrderId, 'portalUrl:', applicantPortalUrl)
     
     // Log full response if parsing failed (for debugging)
     if (!subOrderId && !applicantPortalUrl) {
@@ -427,6 +442,8 @@ export async function POST(request: NextRequest) {
         payment_tx_hash: truncatedHash, // Store tx hash for reference
         accio_order_number: orderNumber,
         accio_suborder_number: subOrderId,
+        accio_remote_order_number: accioOrderId || null, // Accio's internal order number (from orderID in response)
+        accio_remote_suborder_number: subOrderId || null, // Accio's internal suborder number (same as suborderID)
         order_type: 'MVR',
         mvr_search_type: mvrSearchType,
         dl_number: dlNumber,
