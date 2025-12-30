@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 /**
  * API Route: Get MVR Order Status
@@ -24,7 +24,11 @@ export async function GET(
       )
     }
 
-    const supabase = await createClient()
+    // Use service role client to bypass RLS (we use Alchemy wallet auth, not Supabase Auth)
+    const supabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     // Get user
     const { data: user, error: userError } = await supabase
