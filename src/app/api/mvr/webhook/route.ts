@@ -82,11 +82,15 @@ export async function POST(request: NextRequest) {
 
     // 1. Find the MVR order - try multiple matching strategies
     // Strategy 1: Match by our order number (from reference_number or direct match)
+    // Handle case where accio_suborder_number might be NULL in DB
     let { data: mvrOrder, error: orderError } = await supabaseService
       .from('mvr_orders')
       .select('*, driver_user_id, driver_profile_id')
       .eq('accio_order_number', orderNumber)
-      .eq('accio_suborder_number', subOrderNumber)
+      .or(subOrderNumber 
+        ? `accio_suborder_number.eq.${subOrderNumber},accio_suborder_number.is.null`
+        : 'accio_suborder_number.is.null'
+      )
       .maybeSingle()
 
     // Strategy 2: If not found, try matching by Accio's remote_number
