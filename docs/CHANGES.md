@@ -2,6 +2,39 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🔧 **MVR WEBHOOK PARSING FIX** (December 29, 2025)
+
+**Fixed webhook parser to handle Accio XML with empty number attributes**
+
+### **Problem:**
+Accio was sending XML results with empty `number=""` attributes on `<subOrder>` elements, instead using `remote_number` for identification. The parser was extracting empty strings and failing with "Missing order numbers in result" error.
+
+### **Solution:**
+Enhanced the XML parser to:
+- Find MVR subOrder specifically by type="MVR" or by content indicators (dlnum/dlstate)
+- Use `remote_number` as fallback when `number` attribute is empty
+- Try multiple matching strategies in webhook (direct number match, then remote_number match)
+- Handle cases where Accio sends multiple subOrders with varying structures
+
+### **Changes:**
+- **`src/lib/accio-xml-parser.ts`:**
+  - Added `findMvrSubOrder()` function to locate MVR-specific subOrder in XML
+  - Updated parser to use `remote_number` when `number` is empty
+  - Added fallback logic for cases where MVR subOrder isn't found by type
+  - Improved order number extraction with proper fallback chain
+
+- **`src/app/api/mvr/webhook/route.ts`:**
+  - Enhanced order matching to try `remote_number` if direct match fails
+  - Better error logging with all available order number fields
+  - Uses `remoteSubOrderNumber` as fallback when `subOrderNumber` is missing
+
+### **Impact:**
+- Webhook now successfully processes Accio XML results even when `number` attributes are empty
+- More resilient parsing handles variations in Accio's XML format
+- Better error messages help diagnose matching issues
+
+---
+
 ## 💳 **MVR MANAGEMENT DASHBOARD** (December 17, 2025)
 
 **Comprehensive MVR management modal with full payment and order visibility**

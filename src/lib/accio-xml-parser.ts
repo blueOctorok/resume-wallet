@@ -113,18 +113,45 @@ export interface Suspension {
  */
 export function parseAccioMvrResult(xml: string): ParsedMvrResult {
   try {
+    // Extract order number from completeOrder
+    // Priority: reference_number > number (usually contains our order number) > remote_number (Accio's internal number)
+    const orderReferenceNumber = extractXmlAttribute(xml, 'completeOrder', 'reference_number')
+    const orderNumberAttr = extractXmlAttribute(xml, 'completeOrder', 'number')
+    const orderRemoteNumber = extractXmlAttribute(xml, 'completeOrder', 'remote_number')
+    // Use reference_number if available, otherwise use number attribute (which should contain our order number)
+    const orderNumber = (orderReferenceNumber && orderReferenceNumber.trim()) || (orderNumberAttr && orderNumberAttr.trim()) || orderRemoteNumber || extractXmlValue(xml, 'ordernumber') || ''
+    
+    // Find MVR subOrder specifically - look for type="MVR" or check all subOrders
+    // Accio sometimes sends empty number="" and uses remote_number instead
+    let mvrSubOrder = findMvrSubOrder(xml)
+    
+    // If no MVR subOrder found, try to extract from first subOrder as fallback
+    if (!mvrSubOrder) {
+      const firstSubOrderNumber = extractXmlAttribute(xml, 'subOrder', 'number')
+      const firstSubOrderRemote = extractXmlAttribute(xml, 'subOrder', 'remote_number')
+      if (firstSubOrderNumber || firstSubOrderRemote) {
+        mvrSubOrder = {
+          number: firstSubOrderNumber && firstSubOrderNumber.trim() ? firstSubOrderNumber : undefined,
+          remoteNumber: firstSubOrderRemote
+        }
+      }
+    }
+    
+    const subOrderNumber = (mvrSubOrder?.number && mvrSubOrder.number.trim()) || mvrSubOrder?.remoteNumber || ''
+    const remoteSubOrderNumber = mvrSubOrder?.remoteNumber
+
     // Extract order numbers from completeOrder attributes
     const result: ParsedMvrResult = {
-      orderNumber: extractXmlAttribute(xml, 'completeOrder', 'number') || extractXmlValue(xml, 'ordernumber') || '',
-      subOrderNumber: extractXmlAttribute(xml, 'subOrder', 'number') || extractXmlValue(xml, 'suborder') || '',
-      remoteOrderNumber: extractXmlAttribute(xml, 'completeOrder', 'remote_number') || extractXmlValue(xml, 'remote_number'),
-      remoteSubOrderNumber: extractXmlAttribute(xml, 'subOrder', 'remote_number') || extractXmlValue(xml, 'remote_suborder'),
-      timeOrdered: extractXmlValue(xml, 'time_ordered'),
-      timeFilled: extractXmlValue(xml, 'time_filled'),
-      filledStatus: extractXmlAttribute(xml, 'subOrder', 'filledStatus'),
-      filledCode: extractXmlAttribute(xml, 'subOrder', 'filledCode'),
-      heldForReview: extractXmlAttribute(xml, 'subOrder', 'held_for_review') === 'Y',
-      heldForReleaseForm: extractXmlAttribute(xml, 'subOrder', 'held_for_release_form') === 'Y',
+      orderNumber,
+      subOrderNumber,
+      remoteOrderNumber: orderRemoteNumber,
+      remoteSubOrderNumber,
+      timeOrdered: mvrSubOrder?.timeOrdered || extractXmlValue(xml, 'time_ordered'),
+      timeFilled: mvrSubOrder?.timeFilled || extractXmlValue(xml, 'time_filled'),
+      filledStatus: mvrSubOrder?.filledStatus,
+      filledCode: mvrSubOrder?.filledCode,
+      heldForReview: mvrSubOrder?.heldForReview || false,
+      heldForReleaseForm: mvrSubOrder?.heldForReleaseForm || false,
       rawXml: xml
     }
 
@@ -207,6 +234,76 @@ function extractXmlValue(xml: string, tagName: string): string | undefined {
     return match[1].trim()
   }
   return undefined
+}
+
+/**
+ * Find MVR subOrder in XML - looks for type="MVR" or matches by description
+ * Returns subOrder info including number/remote_number with proper fallback
+ */
+function findMvrSubOrder(xml: string): {
+  number?: string
+  remoteNumber?: string
+  timeOrdered?: string
+  timeFilled?: string
+  filledStatus?: string
+  filledCode?: string
+  heldForReview?: boolean
+  heldForReleaseForm?: boolean
+} | null {
+  // Match all subOrder tags
+  const subOrderRegex = /<subOrder([^>]*)>([\s\S]*?)<\/subOrder>/gi
+  let match
+  
+  while ((match = subOrderRegex.exec(xml)) !== null) {
+    const attributes = match[1]
+    const content = match[2]
+    
+    // Check if this is an MVR subOrder by type attribute
+    const typeMatch = attributes.match(/type=["']([^"']*)["']/i)
+    const type = typeMatch ? typeMatch[1].toUpperCase() : ''
+    
+    // Check description for MVR indicators
+    const descMatch = attributes.match(/description=["']([^"']*)["']/i)
+    const description = descMatch ? descMatch[1].toUpperCase() : ''
+    
+    // Also check content for MVR indicators (dlnum, dlstate are MVR-specific)
+    const hasMvrContent = content.includes('<dlnum>') || content.includes('<dlstate>')
+    
+    // If this looks like an MVR subOrder (type="MVR" or has MVR content/description)
+    if (type === 'MVR' || hasMvrContent || description.includes('MVR') || description.includes('MOTOR VEHICLE')) {
+      // Extract number and remote_number
+      const numberMatch = attributes.match(/number=["']([^"']*)["']/i)
+      const number = numberMatch ? numberMatch[1].trim() : ''
+      
+      const remoteNumberMatch = attributes.match(/remote_number=["']([^"']*)["']/i)
+      const remoteNumber = remoteNumberMatch ? remoteNumberMatch[1].trim() : undefined
+      
+      // Extract other attributes
+      const filledStatusMatch = attributes.match(/filledStatus=["']([^"']*)["']/i)
+      const filledCodeMatch = attributes.match(/filledCode=["']([^"']*)["']/i)
+      const heldForReviewMatch = attributes.match(/held_for_review=["']([^"']*)["']/i)
+      const heldForReleaseMatch = attributes.match(/held_for_release_form=["']([^"']*)["']/i)
+      
+      // Extract time values from content
+      const timeOrdered = extractXmlValue(content, 'time_ordered')
+      const timeFilled = extractXmlValue(content, 'time_filled')
+      
+      return {
+        number: number || undefined, // Return undefined if empty, not empty string
+        remoteNumber,
+        timeOrdered,
+        timeFilled,
+        filledStatus: filledStatusMatch ? filledStatusMatch[1] : undefined,
+        filledCode: filledCodeMatch ? filledCodeMatch[1] : undefined,
+        heldForReview: heldForReviewMatch ? heldForReviewMatch[1] === 'Y' : false,
+        heldForReleaseForm: heldForReleaseMatch ? heldForReleaseMatch[1] === 'Y' : false
+      }
+    }
+  }
+  
+  // If no MVR subOrder found by type/description, return null
+  // The caller should handle this case
+  return null
 }
 
 /**

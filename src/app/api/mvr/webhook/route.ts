@@ -58,10 +58,14 @@ export async function POST(request: NextRequest) {
 
     // Extract order numbers from XML
     const orderNumber = parsedResult.orderNumber
-    const subOrderNumber = parsedResult.subOrderNumber
+    const subOrderNumber = parsedResult.subOrderNumber || parsedResult.remoteSubOrderNumber
 
     if (!orderNumber || !subOrderNumber) {
-      console.error('[MVR WEBHOOK] Missing order numbers in XML')
+      console.error('[MVR WEBHOOK] Missing order numbers in XML', {
+        orderNumber,
+        subOrderNumber,
+        remoteSubOrderNumber: parsedResult.remoteSubOrderNumber
+      })
       return NextResponse.json(
         { error: 'Missing order numbers in result' },
         { status: 400 }
@@ -76,16 +80,60 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // 1. Find the MVR order
-    const { data: mvrOrder, error: orderError } = await supabaseService
+    // 1. Find the MVR order - try multiple matching strategies
+    // Strategy 1: Match by our order number (from reference_number or direct match)
+    let { data: mvrOrder, error: orderError } = await supabaseService
       .from('mvr_orders')
       .select('*, driver_user_id, driver_profile_id')
       .eq('accio_order_number', orderNumber)
       .eq('accio_suborder_number', subOrderNumber)
-      .single()
+      .maybeSingle()
+
+    // Strategy 2: If not found, try matching by Accio's remote_number
+    if (!mvrOrder && parsedResult.remoteOrderNumber && parsedResult.remoteSubOrderNumber) {
+      console.log('[MVR WEBHOOK] Trying remote number match:', parsedResult.remoteOrderNumber, parsedResult.remoteSubOrderNumber)
+      const { data: remoteMatch, error: remoteError } = await supabaseService
+        .from('mvr_orders')
+        .select('*, driver_user_id, driver_profile_id')
+        .eq('accio_remote_order_number', parsedResult.remoteOrderNumber)
+        .eq('accio_remote_suborder_number', parsedResult.remoteSubOrderNumber)
+        .maybeSingle()
+      
+      if (remoteMatch && !remoteError) {
+        mvrOrder = remoteMatch
+        orderError = null
+      }
+    }
+
+    // Strategy 3: If still not found, try matching by Accio's internal number (their number attribute)
+    // This handles cases where Accio doesn't populate reference_number
+    if (!mvrOrder && parsedResult.remoteOrderNumber) {
+      console.log('[MVR WEBHOOK] Trying Accio internal number match:', parsedResult.remoteOrderNumber)
+      // Try to find any pending order that might match (less reliable, but better than nothing)
+      const { data: accioMatch, error: accioError } = await supabaseService
+        .from('mvr_orders')
+        .select('*, driver_user_id, driver_profile_id')
+        .eq('status', 'pending')
+        .eq('dl_number', parsedResult.licenseNumber || '')
+        .eq('dl_state', parsedResult.licenseState || '')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      
+      if (accioMatch && !accioError) {
+        console.log('[MVR WEBHOOK] Found potential match by DL info:', accioMatch.id)
+        mvrOrder = accioMatch
+        orderError = null
+      }
+    }
 
     if (orderError || !mvrOrder) {
-      console.error('[MVR WEBHOOK] MVR order not found:', orderNumber, subOrderNumber)
+      console.error('[MVR WEBHOOK] MVR order not found:', {
+        orderNumber,
+        subOrderNumber,
+        remoteOrderNumber: parsedResult.remoteOrderNumber,
+        remoteSubOrderNumber: parsedResult.remoteSubOrderNumber
+      })
       return NextResponse.json(
         { error: 'MVR order not found' },
         { status: 404 }
