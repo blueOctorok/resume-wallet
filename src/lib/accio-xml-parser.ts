@@ -113,13 +113,30 @@ export interface Suspension {
  */
 export function parseAccioMvrResult(xml: string): ParsedMvrResult {
   try {
-    // Extract order number from completeOrder
+    // Extract order number from completeOrder - try multiple tag names
     // Priority: reference_number > number (usually contains our order number) > remote_number (Accio's internal number)
-    const orderReferenceNumber = extractXmlAttribute(xml, 'completeOrder', 'reference_number')
-    const orderNumberAttr = extractXmlAttribute(xml, 'completeOrder', 'number')
-    const orderRemoteNumber = extractXmlAttribute(xml, 'completeOrder', 'remote_number')
+    let orderReferenceNumber = extractXmlAttribute(xml, 'completeOrder', 'reference_number')
+    let orderNumberAttr = extractXmlAttribute(xml, 'completeOrder', 'number')
+    let orderRemoteNumber = extractXmlAttribute(xml, 'completeOrder', 'remote_number')
+    
+    // Fallback: try 'order' tag if 'completeOrder' doesn't exist
+    if (!orderReferenceNumber && !orderNumberAttr && !orderRemoteNumber) {
+      orderReferenceNumber = extractXmlAttribute(xml, 'order', 'reference_number')
+      orderNumberAttr = extractXmlAttribute(xml, 'order', 'number')
+      orderRemoteNumber = extractXmlAttribute(xml, 'order', 'remote_number') || extractXmlAttribute(xml, 'order', 'orderID')
+    }
+    
+    // Also try extracting from orderInfo block (ordernumber or order_number tags)
+    const orderInfoNumber = extractXmlValue(xml, 'ordernumber') || extractXmlValue(xml, 'order_number')
+    
     // Use reference_number if available, otherwise use number attribute (which should contain our order number)
-    const orderNumber = (orderReferenceNumber && orderReferenceNumber.trim()) || (orderNumberAttr && orderNumberAttr.trim()) || orderRemoteNumber || extractXmlValue(xml, 'ordernumber') || ''
+    // Fallback to orderInfo number, then remote_number (Accio's internal number)
+    // Note: If only remote_number is available, we'll use it as orderNumber for matching purposes
+    const orderNumber = (orderReferenceNumber && orderReferenceNumber.trim()) 
+      || (orderNumberAttr && orderNumberAttr.trim()) 
+      || orderInfoNumber
+      || orderRemoteNumber // Use remote_number as fallback - webhook can match by this
+      || ''
     
     // Find MVR subOrder specifically - look for type="MVR" or check all subOrders
     // Accio sometimes sends empty number="" and uses remote_number instead

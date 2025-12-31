@@ -43,6 +43,8 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[MVR WEBHOOK] Received MVR results from Accio')
+    // Log first 1000 chars of XML for debugging
+    console.log('[MVR WEBHOOK] XML preview (first 1000 chars):', xmlBody.substring(0, 1000))
 
     // Parse XML result
     let parsedResult
@@ -57,15 +59,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract order numbers from XML
-    const orderNumber = parsedResult.orderNumber
+    // Use remoteOrderNumber as fallback if orderNumber is empty (Accio sometimes only sends remote_number)
+    const orderNumber = parsedResult.orderNumber || parsedResult.remoteOrderNumber || ''
     const subOrderNumber = parsedResult.subOrderNumber || parsedResult.remoteSubOrderNumber
 
     if (!orderNumber || !subOrderNumber) {
       console.error('[MVR WEBHOOK] Missing order numbers in XML', {
-        orderNumber,
-        subOrderNumber,
-        remoteSubOrderNumber: parsedResult.remoteSubOrderNumber
+        orderNumber: parsedResult.orderNumber,
+        remoteOrderNumber: parsedResult.remoteOrderNumber,
+        subOrderNumber: parsedResult.subOrderNumber,
+        remoteSubOrderNumber: parsedResult.remoteSubOrderNumber,
+        licenseNumber: parsedResult.licenseNumber,
+        licenseState: parsedResult.licenseState,
+        parsedResult: {
+          orderNumber: parsedResult.orderNumber,
+          subOrderNumber: parsedResult.subOrderNumber,
+          remoteOrderNumber: parsedResult.remoteOrderNumber,
+          remoteSubOrderNumber: parsedResult.remoteSubOrderNumber
+        }
       })
+      // Log more of the XML to help debug
+      console.error('[MVR WEBHOOK] Full XML (first 2000 chars):', xmlBody.substring(0, 2000))
       return NextResponse.json(
         { error: 'Missing order numbers in result' },
         { status: 400 }
