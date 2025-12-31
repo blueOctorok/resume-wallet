@@ -177,9 +177,18 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
     }
 
     // Extract basic license info from MVR subOrder (dlnum, dlstate, dlexpiration)
-    result.licenseNumber = extractXmlValue(xml, 'dlnum')
-    result.licenseState = extractXmlValue(xml, 'dlstate')
-    result.licenseExpirationDate = extractXmlValue(xml, 'dlexpiration') // YYYYMMDD format
+    // IMPORTANT: Extract from the MVR subOrder content, not the entire XML
+    // This prevents matching wrong tags (e.g., empty dlnum in subject block)
+    if (mvrSubOrder?.content) {
+      result.licenseNumber = extractXmlValue(mvrSubOrder.content, 'dlnum')
+      result.licenseState = extractXmlValue(mvrSubOrder.content, 'dlstate')
+      result.licenseExpirationDate = extractXmlValue(mvrSubOrder.content, 'dlexpiration') // YYYYMMDD format
+    } else {
+      // Fallback: try to extract from entire XML (but this is less reliable)
+      result.licenseNumber = extractXmlValue(xml, 'dlnum')
+      result.licenseState = extractXmlValue(xml, 'dlstate')
+      result.licenseExpirationDate = extractXmlValue(xml, 'dlexpiration') // YYYYMMDD format
+    }
 
     // Extract mvr_license blocks (can be multiple)
     result.licenses = extractMvrLicenses(xml)
@@ -249,6 +258,7 @@ function findMvrSubOrder(xml: string): {
   filledCode?: string
   heldForReview?: boolean
   heldForReleaseForm?: boolean
+  content?: string // The subOrder XML content for extracting dlnum/dlstate
 } | null {
   // Match all subOrder tags
   const subOrderRegex = /<subOrder([^>]*)>([\s\S]*?)<\/subOrder>/gi
@@ -296,7 +306,8 @@ function findMvrSubOrder(xml: string): {
         filledStatus: filledStatusMatch ? filledStatusMatch[1] : undefined,
         filledCode: filledCodeMatch ? filledCodeMatch[1] : undefined,
         heldForReview: heldForReviewMatch ? heldForReviewMatch[1] === 'Y' : false,
-        heldForReleaseForm: heldForReleaseMatch ? heldForReleaseMatch[1] === 'Y' : false
+        heldForReleaseForm: heldForReleaseMatch ? heldForReleaseMatch[1] === 'Y' : false,
+        content // Return the subOrder content so we can extract dlnum/dlstate from it
       }
     }
   }

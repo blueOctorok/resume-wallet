@@ -376,10 +376,13 @@ export async function POST(request: NextRequest) {
     // </XML>
     
     // Extract Accio's orderID (their internal order number - becomes remote_number in webhook)
+    // Also try to extract from completeOrder if present
     let accioOrderId = null
     const orderIdPatterns = [
       /<order[^>]*orderID=["']([^"']+)["']/i,
       /<order[^>]*orderID=["']([^"']+)[\"']/i,
+      /<completeOrder[^>]*remote_number=["']([^"']+)["']/i,
+      /<completeOrder[^>]*number=["']([^"']+)["']/i,
     ]
     
     for (const pattern of orderIdPatterns) {
@@ -388,6 +391,10 @@ export async function POST(request: NextRequest) {
         accioOrderId = match[1]
         break
       }
+    }
+    
+    if (!accioOrderId) {
+      console.warn('[MVR ORDER] Could not extract accioOrderId from response. This may cause webhook matching issues.')
     }
 
     // Try multiple patterns to find subOrder ID

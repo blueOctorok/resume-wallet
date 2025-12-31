@@ -2,6 +2,33 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🔧 **MVR WEBHOOK LICENSE NUMBER PARSING FIX** (December 31, 2025)
+
+**Fixed parser to extract license numbers from MVR subOrder block, not entire XML**
+
+### **Problem:**
+The webhook parser was extracting `dlnum` and `dlstate` from the entire XML document, which caused it to match wrong tags (e.g., empty `<dlnum/>` in the `<subject>` block) and extract huge chunks of XML text instead of the actual license values. This caused Strategy 3 (DL number matching) to fail because `licenseNumber` and `licenseState` contained malformed data.
+
+### **Solution:**
+Updated the parser to extract `dlnum` and `dlstate` specifically from the MVR subOrder block content, not from the entire XML. This ensures we get the correct license values that were sent in the order.
+
+### **Changes:**
+- **`src/lib/accio-xml-parser.ts`**:
+  - Modified `findMvrSubOrder()` to return the subOrder content block
+  - Updated license extraction to use `mvrSubOrder.content` instead of entire XML
+  - Added fallback to extract from entire XML if subOrder content is not available
+- **`src/app/api/mvr/order/route.ts`**:
+  - Enhanced `orderID` extraction patterns to try additional formats
+  - Added warning log if `accioOrderId` cannot be extracted from Accio's response
+
+### **Impact:**
+- License number and state are now correctly extracted from webhook XML
+- Strategy 3 (DL number matching) will work correctly
+- Better handling of cases where Accio doesn't return orderID in initial response
+- More reliable webhook matching overall
+
+---
+
 ## 🔧 **MVR WEBHOOK NULL SUBORDER MATCHING FIX** (December 30, 2025)
 
 **Fixed webhook to handle orders where Accio didn't return order/suborder IDs in initial response**
