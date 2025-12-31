@@ -109,34 +109,49 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Strategy 3: If still not found, try matching by Accio's internal number (their number attribute)
-    // This handles cases where Accio doesn't populate reference_number
-    if (!mvrOrder && parsedResult.remoteOrderNumber) {
-      console.log('[MVR WEBHOOK] Trying Accio internal number match:', parsedResult.remoteOrderNumber)
-      // Try to find any pending order that might match (less reliable, but better than nothing)
+    // Strategy 3: If still not found, try matching by DL number and state
+    // This handles cases where Accio doesn't populate reference_number or remote_number wasn't stored
+    if (!mvrOrder && parsedResult.licenseNumber && parsedResult.licenseState) {
+      console.log('[MVR WEBHOOK] Trying DL number match:', parsedResult.licenseNumber, parsedResult.licenseState)
+      // Try to find any pending order that matches by DL number and state
       const { data: accioMatch, error: accioError } = await supabaseService
         .from('mvr_orders')
         .select('*, driver_user_id, driver_profile_id')
         .eq('status', 'pending')
-        .eq('dl_number', parsedResult.licenseNumber || '')
-        .eq('dl_state', parsedResult.licenseState || '')
+        .eq('dl_number', parsedResult.licenseNumber)
+        .eq('dl_state', parsedResult.licenseState)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
       
       if (accioMatch && !accioError) {
-        console.log('[MVR WEBHOOK] Found potential match by DL info:', accioMatch.id)
+        console.log('[MVR WEBHOOK] Found match by DL info:', accioMatch.id, 'updating remote order numbers')
+        // Update the order with Accio's remote numbers for future matching
+        await supabaseService
+          .from('mvr_orders')
+          .update({
+            accio_remote_order_number: parsedResult.remoteOrderNumber || null,
+            accio_remote_suborder_number: parsedResult.remoteSubOrderNumber || null
+          })
+          .eq('id', accioMatch.id)
         mvrOrder = accioMatch
         orderError = null
       }
     }
 
     if (orderError || !mvrOrder) {
-      console.error('[MVR WEBHOOK] MVR order not found:', {
+      console.error('[MVR WEBHOOK] MVR order not found after all strategies:', {
         orderNumber,
         subOrderNumber,
         remoteOrderNumber: parsedResult.remoteOrderNumber,
-        remoteSubOrderNumber: parsedResult.remoteSubOrderNumber
+        remoteSubOrderNumber: parsedResult.remoteSubOrderNumber,
+        licenseNumber: parsedResult.licenseNumber,
+        licenseState: parsedResult.licenseState,
+        strategiesAttempted: [
+          'Strategy 1: order_number + suborder_number match',
+          'Strategy 2: remote_order_number + remote_suborder_number match',
+          'Strategy 3: DL number + state match'
+        ]
       })
       return NextResponse.json(
         { error: 'MVR order not found' },

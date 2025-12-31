@@ -2,6 +2,36 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🔧 **MVR WEBHOOK NULL SUBORDER MATCHING FIX** (December 30, 2025)
+
+**Fixed webhook to handle orders where Accio didn't return order/suborder IDs in initial response**
+
+### **Problem:**
+Some MVR orders are created with `accio_suborder_number = NULL` and `accio_remote_order_number = NULL` because Accio doesn't always return these IDs in their initial order response. When Accio later sends the webhook result with their internal order numbers (`53818`), the webhook's matching logic failed:
+- Strategy 1 failed because it matches by our order number, but Accio sends their internal number
+- Strategy 2 failed because it requires `accio_remote_order_number` to exist in DB, but it's NULL
+- Strategy 3 (DL matching) worked but didn't update the remote order numbers for future matching
+
+### **Solution:**
+Enhanced webhook matching with multiple improvements:
+- **Strategy 1**: Updated to handle NULL suborder numbers using `.or()` query
+- **Strategy 3**: Improved DL number matching to update `accio_remote_order_number` and `accio_remote_suborder_number` when a match is found, making future webhook calls more reliable
+- **Better Logging**: Added detailed logging of all matching strategies and extracted values for debugging
+
+### **Changes:**
+- **`src/app/api/mvr/webhook/route.ts`**:
+  - Strategy 1: Updated matching logic to use `.or()` query that handles NULL suborder numbers
+  - Strategy 3: Now updates `accio_remote_order_number` and `accio_remote_suborder_number` when matching by DL number
+  - Enhanced error logging to include licenseNumber, licenseState, and all strategies attempted
+
+### **Impact:**
+- Webhook can now successfully match orders even when initial Accio response didn't include order/suborder IDs
+- Strategy 3 matches update the database with Accio's remote numbers, improving future matching
+- More resilient order matching handles variations in Accio's initial order responses
+- Better debugging information helps diagnose matching failures
+
+---
+
 ## 🔧 **MVR WEBHOOK PARSING FIX** (December 29, 2025)
 
 **Fixed webhook parser to handle Accio XML with empty number attributes**
