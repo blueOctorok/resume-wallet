@@ -135,6 +135,17 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
     let filledCode: string | undefined
     let timeOrdered: string | undefined
     let timeFilled: string | undefined
+    let mvrSubOrder: {
+      number?: string
+      remoteNumber?: string
+      timeOrdered?: string
+      timeFilled?: string
+      filledStatus?: string
+      filledCode?: string
+      heldForReview?: boolean
+      heldForReleaseForm?: boolean
+      content?: string
+    } | null = null
     
     if (isPostResultsFormat) {
       // Parse <postResults> format - order info is in the root element attributes
@@ -180,7 +191,7 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
         || ''
       
       // Find MVR subOrder specifically - look for type="MVR" or check all subOrders
-      let mvrSubOrder = findMvrSubOrder(xml)
+      mvrSubOrder = findMvrSubOrder(xml)
       
       // If no MVR subOrder found, try to extract from first subOrder as fallback
       if (!mvrSubOrder) {
@@ -302,28 +313,35 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
     // "MEDICAL CERTIFICATE INFORMATION   Issue: 06/04/2024   Expiration: 06/02/2026"
     // "Status:   CERTIFIED   Self Certificate: NON-EXCEPTED INTERSTATE."
     if (!result.medicalCertExpiration || !result.medicalCertStatus) {
-      const textBlock = extractXmlValue(xml, 'text')
-      if (textBlock) {
-        const medicalInfo = extractMedicalInfoFromText(textBlock)
-        if (medicalInfo.expiration && !result.medicalCertExpiration) {
-          result.medicalCertExpiration = medicalInfo.expiration
+      try {
+        const textBlock = extractXmlValue(xml, 'text')
+        if (textBlock) {
+          const medicalInfo = extractMedicalInfoFromText(textBlock)
+          if (medicalInfo.expiration && !result.medicalCertExpiration) {
+            result.medicalCertExpiration = medicalInfo.expiration
+          }
+          if (medicalInfo.status && !result.medicalCertStatus) {
+            result.medicalCertStatus = medicalInfo.status
+          }
+          if (medicalInfo.issueDate) {
+            result.medicalCertIssueDate = medicalInfo.issueDate
+          }
+          if (medicalInfo.selfCertification) {
+            result.medicalCertSelfCertification = medicalInfo.selfCertification
+          }
         }
-        if (medicalInfo.status && !result.medicalCertStatus) {
-          result.medicalCertStatus = medicalInfo.status
-        }
-        if (medicalInfo.issueDate) {
-          result.medicalCertIssueDate = medicalInfo.issueDate
-        }
-        if (medicalInfo.selfCertification) {
-          result.medicalCertSelfCertification = medicalInfo.selfCertification
-        }
+      } catch (textParseError) {
+        // Non-critical - just log and continue
+        console.warn('[ACCIO PARSER] Could not parse medical info from text block:', textParseError)
       }
     }
 
     return result
-  } catch (error) {
-    console.error('[ACCIO PARSER] Error parsing XML:', error)
-    throw new Error('Failed to parse Accio XML result')
+  } catch (error: any) {
+    console.error('[ACCIO PARSER] Error parsing XML:', error?.message || error)
+    console.error('[ACCIO PARSER] Error stack:', error?.stack)
+    console.error('[ACCIO PARSER] XML sample (first 500 chars):', xml?.substring(0, 500))
+    throw new Error(`Failed to parse Accio XML result: ${error?.message || 'Unknown error'}`)
   }
 }
 
