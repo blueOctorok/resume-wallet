@@ -48,32 +48,40 @@ export async function POST(request: NextRequest) {
     // Check if this is a completion notification - Accio sends different formats:
     // 1. <ScreeningResults><completeOrder>...</completeOrder></ScreeningResults> (full order)
     // 2. <postResults order="..." subOrder="..." type="MVR">...</postResults> (individual result)
-    const isScreeningResults = xmlBody.includes('<ScreeningResults>') || xmlBody.includes('<completeOrder')
-    const isPostResults = xmlBody.includes('<postResults')
-    const isCompletionNotification = isScreeningResults || isPostResults
+    // 3. In-progress updates wrapped in ScreeningResults with filledStatus="in progress"
+    const hasScreeningResults = xmlBody.includes('<ScreeningResults>')
+    const hasCompleteOrder = xmlBody.includes('<completeOrder')
+    const hasPostResults = xmlBody.includes('<postResults')
+    
+    // Check for in-progress status (not a completion)
+    const isInProgressStatus = xmlBody.includes('filledStatus="in progress"') || 
+                               xmlBody.includes("filledStatus='in progress'") ||
+                               xmlBody.includes('<status>inprogress')
     
     const isConfirmation = xmlBody.includes('<orderConfirmation>') || xmlBody.includes('<confirmation>')
-    const isInProgress = xmlBody.includes('<inProgress>') || xmlBody.includes('<status>inprogress')
+    
+    // It's a completion if it has results AND is not marked as in-progress
+    const isCompletionNotification = (hasScreeningResults || hasCompleteOrder || hasPostResults) && !isInProgressStatus
     
     if (!isCompletionNotification) {
-      // This might be a confirmation or in-progress notification - acknowledge but don't process
-      console.log('[MVR WEBHOOK] Non-completion notification received. Type detection:', {
+      // This might be a confirmation, in-progress, or ETA notification - acknowledge but don't process
+      console.log('[MVR WEBHOOK] Non-completion notification received:', {
+        hasScreeningResults,
+        hasCompleteOrder,
+        hasPostResults,
+        isInProgressStatus,
         isConfirmation,
-        isInProgress,
-        hasScreeningResults: xmlBody.includes('<ScreeningResults>'),
-        hasCompleteOrder: xmlBody.includes('<completeOrder'),
-        hasPostResults: xmlBody.includes('<postResults'),
-        firstTag: xmlBody.match(/<([a-zA-Z_]+)/)?.[1] || 'unknown'
+        type: isInProgressStatus ? 'in_progress' : isConfirmation ? 'confirmation' : 'unknown'
       })
       // Return 200 to acknowledge receipt - don't want Accio to keep retrying
       return NextResponse.json({ 
         success: true, 
         message: 'Non-completion notification acknowledged',
-        type: isConfirmation ? 'confirmation' : isInProgress ? 'in_progress' : 'unknown'
+        type: isInProgressStatus ? 'in_progress' : isConfirmation ? 'confirmation' : 'unknown'
       })
     }
     
-    console.log('[MVR WEBHOOK] Detected format:', isPostResults ? 'postResults' : 'ScreeningResults')
+    console.log('[MVR WEBHOOK] Processing completion notification')
 
     console.log('[MVR WEBHOOK] Processing completion notification')
 
