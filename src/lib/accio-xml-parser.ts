@@ -150,8 +150,19 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
     if (isPostResultsFormat) {
       // Parse <postResults> format - order info is in the root element attributes
       // <postResults order="53901" subOrder="893073" type="MVR" filledStatus="filled" filledCode="discrepancy">
-      orderNumber = extractXmlAttribute(xml, 'postResults', 'order') || ''
-      subOrderNumber = extractXmlAttribute(xml, 'postResults', 'subOrder') || ''
+      
+      // Extract the opening tag to parse attributes more reliably
+      const postResultsTagMatch = xml.match(/<postResults([^>]*)>/i)
+      const postResultsAttrs = postResultsTagMatch ? postResultsTagMatch[1] : ''
+      
+      // Parse order attribute (NOT subOrder) - use specific regex with word boundary
+      const orderMatch = postResultsAttrs.match(/\border=["']([^"']+)["']/i)
+      orderNumber = orderMatch ? orderMatch[1] : ''
+      
+      // Parse subOrder attribute separately
+      const subOrderMatch = postResultsAttrs.match(/\bsubOrder=["']([^"']+)["']/i)
+      subOrderNumber = subOrderMatch ? subOrderMatch[1] : ''
+      
       filledStatus = extractXmlAttribute(xml, 'postResults', 'filledStatus')
       filledCode = extractXmlAttribute(xml, 'postResults', 'filledCode')
       
@@ -163,7 +174,9 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
       timeOrdered = extractXmlValue(xml, 'time_ordered')
       timeFilled = extractXmlValue(xml, 'time_filled')
       
-      console.log('[ACCIO PARSER] Detected postResults format - order:', orderNumber, 'subOrder:', subOrderNumber)
+      console.log('[ACCIO PARSER] Detected postResults format')
+      console.log('[ACCIO PARSER] postResults attrs:', postResultsAttrs)
+      console.log('[ACCIO PARSER] Parsed order:', orderNumber, 'subOrder:', subOrderNumber)
     } else {
       // Parse <completeOrder> or <order> format
       // Extract order number from completeOrder - try multiple tag names
@@ -433,7 +446,9 @@ function findMvrSubOrder(xml: string): {
  * Extract attribute value from XML tag
  */
 function extractXmlAttribute(xml: string, tagName: string, attributeName: string): string | undefined {
-  const regex = new RegExp(`<${tagName}[^>]*${attributeName}=["']([^"']*)["']`, 'i')
+  // Use word boundary or space/quote before attribute name to prevent partial matches
+  // e.g., "order" should not match "subOrder"
+  const regex = new RegExp(`<${tagName}[^>]*[\\s"']${attributeName}=["']([^"']*)["']`, 'i')
   const match = xml.match(regex)
   return match ? match[1].trim() : undefined
 }
