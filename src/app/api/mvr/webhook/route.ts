@@ -45,8 +45,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Empty body' }, { status: 400 })
     }
 
-    // Check if this is a ScreeningResults (completion) or other notification type
-    const isCompletionNotification = xmlBody.includes('<ScreeningResults>') || xmlBody.includes('<completeOrder')
+    // Check if this is a completion notification - Accio sends different formats:
+    // 1. <ScreeningResults><completeOrder>...</completeOrder></ScreeningResults> (full order)
+    // 2. <postResults order="..." subOrder="..." type="MVR">...</postResults> (individual result)
+    const isScreeningResults = xmlBody.includes('<ScreeningResults>') || xmlBody.includes('<completeOrder')
+    const isPostResults = xmlBody.includes('<postResults')
+    const isCompletionNotification = isScreeningResults || isPostResults
+    
     const isConfirmation = xmlBody.includes('<orderConfirmation>') || xmlBody.includes('<confirmation>')
     const isInProgress = xmlBody.includes('<inProgress>') || xmlBody.includes('<status>inprogress')
     
@@ -57,6 +62,7 @@ export async function POST(request: NextRequest) {
         isInProgress,
         hasScreeningResults: xmlBody.includes('<ScreeningResults>'),
         hasCompleteOrder: xmlBody.includes('<completeOrder'),
+        hasPostResults: xmlBody.includes('<postResults'),
         firstTag: xmlBody.match(/<([a-zA-Z_]+)/)?.[1] || 'unknown'
       })
       // Return 200 to acknowledge receipt - don't want Accio to keep retrying
@@ -66,6 +72,8 @@ export async function POST(request: NextRequest) {
         type: isConfirmation ? 'confirmation' : isInProgress ? 'in_progress' : 'unknown'
       })
     }
+    
+    console.log('[MVR WEBHOOK] Detected format:', isPostResults ? 'postResults' : 'ScreeningResults')
 
     console.log('[MVR WEBHOOK] Processing completion notification')
 

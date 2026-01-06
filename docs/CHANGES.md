@@ -2,6 +2,171 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 📋 **MVR REPORT UI & PARSER ENHANCEMENTS** (January 5, 2026)
+
+**Comprehensive overhaul of MVR display and parsing based on real MVR report comparison**
+
+### **Problem:**
+After comparing our MVR display to a real KeyBackground MVR report (Acevedo_Natanael_53863.pdf), we discovered:
+- We only showed summary counts (violations: 1), not actual violation details
+- Missing accident and suspension extraction functions
+- Missing CDL-specific info (multiple license classes, medical certificate, restrictions)
+- UI was barebones compared to professional MVR reports
+
+### **Raw XML Analysis:**
+Received actual raw XML from KeyBackground (MVR.xml) which revealed the exact structure:
+```xml
+<postResults order="53901" subOrder="893073" type="MVR" filledStatus="filled" filledCode="discrepancy">
+  <mvr_license>
+    <license_issue_date>20250113</license_issue_date>
+    <license_orig_issue>10/07/2019</license_orig_issue>
+    <license_class>B - CDL SINGLE VEH GVWR 26,001 OR MORE,UNDER 10K TOW</license_class>
+    <license_type>COMMERCIAL</license_type>
+    <license_status>VAL-VALID</license_status>
+    <license_restrictions>CORR LENSES</license_restrictions>
+  </mvr_license>
+  <mvr_violation>
+    <violation_type>DRIVER VIOLATION</violation_type>
+    <description>NO OR IMPROPER LIGHTS</description>
+    <violation_date>20220218</violation_date>
+    <conviction_date>20220418</conviction_date>
+    <state_code>IL</state_code>
+    <state_points>3.00</state_points>
+    <acd_code>E55</acd_code>
+  </mvr_violation>
+</postResults>
+```
+
+### **Changes Made:**
+
+#### **Parser Enhancements (`src/lib/accio-xml-parser.ts`)**:
+- **NEW: `<postResults>` format support** - Accio sends results in this format, not just `<ScreeningResults>`
+- Added `extractMvrAccidents()` function with multiple tag pattern support
+- Added `extractMvrSuspensions()` function with multiple tag pattern support
+- Added `extractMedicalInfoFromText()` - extracts medical cert from plain text block when not in structured tags
+- Enhanced `extractMvrViolations()` with:
+  - `convictionDate` - often different from issue date
+  - `acdCode` - AAMVA Code Dictionary (standardized codes like "E55")
+  - `stateCode` - state-specific violation code
+- Enhanced `extractMvrLicenses()` to:
+  - Parse combined class field (e.g., "B - CDL SINGLE VEH...") into class letter + description
+  - Convert `license_orig_issue` from MM/DD/YYYY to YYYYMMDD format
+- Enhanced `MvrLicense` interface with:
+  - `originalIssueDate` - "Orig. Issued" date
+  - `classDescription` - full description (e.g., "CDL SINGLE VEH GVWR 26,001 OR MORE")
+  - `cdlStatus` - separate CDL status field
+- Enhanced medical certificate fields:
+  - `medicalCertIssueDate` - when medical cert was issued
+  - `medicalCertSelfCertification` - e.g., "NON-EXCEPTED INTERSTATE"
+
+#### **Webhook Enhancements (`src/app/api/mvr/webhook/route.ts`)**:
+- Now detects and handles `<postResults>` format in addition to `<ScreeningResults>`
+- Improved logging for format detection
+
+#### **API Enhancements (`src/app/api/mvr/status/[orderId]/route.ts`)**:
+- Now returns full violation/accident/suspension arrays (not just counts)
+- Added `licenses` array from parsed data
+- Added full medical certificate fields from parsed_data
+- Added `cdlEndorsements` and `cdlRestrictions` arrays
+
+#### **UI Overhaul (`src/components/MvrViewModal.tsx`)**:
+- **License Section**: Shows all license classes (CDL drivers often have B, C, D)
+- **Medical Certificate Section**: Shows status, issue date, expiration, self-certification type
+- **Summary Stats**: Visual cards for Points, Violations, Accidents, Suspensions
+- **Violations Detail**: Full violation cards with:
+  - Description, issue date, conviction date
+  - State where violation occurred
+  - Points assessed
+  - ACD/State codes
+- **Accidents Detail**: Shows severity, fault, description
+- **Suspensions Detail**: Shows reason, date range, state
+- **Visual Improvements**:
+  - Color-coded status (green=valid, red=expired, yellow=pending)
+  - Icon badges for different sections
+  - Collapsible payment history
+
+### **What a Real MVR Shows (Reference: Acevedo + MVR.xml):**
+| Data | In Real Report | We Now Display |
+|------|----------------|----------------|
+| Multiple license classes | B, C, D | ✅ |
+| License type (COMMERCIAL/PERSONAL) | ✅ | ✅ |
+| CDL Status | VALID | ✅ |
+| Restrictions | CORR LENSES | ✅ |
+| Medical Certificate | Issue/Expiration/Status | ✅ |
+| Self Certification | NON-EXCEPTED INTERSTATE | ✅ |
+| Violation description | "NO OR IMPROPER LIGHTS" | ✅ |
+| Violation dates | Issue + Conviction | ✅ |
+| Points | 3.00 | ✅ |
+| State/ACD codes | IL/E55 | ✅ |
+
+### **Impact:**
+- MVR reports now show professional-level detail matching KeyBackground's PDF reports
+- Trucking companies can see the actual violations, not just counts
+- CDL-specific info (medical cert, endorsements, restrictions) now visible
+- Parser handles both `<ScreeningResults>` and `<postResults>` XML formats
+
+---
+
+## 🔧 **MVR ORDER FORM - MIDDLE NAME FIELD ADDED** (January 2, 2026)
+
+**Added middle name field to MVR order form for accurate DMV matching**
+
+### **Problem:**
+MVR orders were returning `status=unknown` from the Ohio BMV because the name submitted didn't match the BMV records. The form only collected First Name and Last Name, but driver licenses include the middle name.
+
+### **Solution:**
+Added a middle name field to the MVR order form.
+
+### **Changes:**
+- **`src/components/MvrOrderForm.tsx`**:
+  - Added `middleName` state variable
+  - Added middle name input field (3-column layout: first, middle, last)
+  - Added helper text: "Enter your name exactly as it appears on your driver's license"
+  - Middle name is passed to the API in the order payload
+
+### **Impact:**
+- Users can now enter their full name as it appears on their license
+- Should resolve `unknown` status from DMV when middle name is required for matching
+
+---
+
+## 🎉 **MVR INTEGRATION FULLY WORKING** (January 2, 2026)
+
+**End-to-end MVR order processing is now functional!**
+
+### **Summary:**
+After extensive debugging and multiple fixes over the past week, the MVR (Motor Vehicle Report) integration with Accio/KeyBackground is now fully operational. Orders are placed, results are received via webhook, and data is stored correctly.
+
+### **Successful Test:**
+- **Order Number:** `17671950189337937`
+- **Accio Remote Number:** `53825`
+- **Status:** `needs_review` (expected for fake test license)
+- **Fee:** $10.00 + $5.00 thirdparty
+- **Result:** Full XML response saved to `result_xml`
+
+### **What's Working:**
+1. ✅ Order placement to Accio API
+2. ✅ Webhook receives results from Accio
+3. ✅ Order matching via multiple strategies (order number, remote number, DL+state)
+4. ✅ Result parsing (fees, timestamps, license info, status)
+5. ✅ Database updates (mvr_orders, mvr_results, driver_profiles)
+6. ✅ Remote order number storage for reliable future matching
+
+### **Key Lessons Learned:**
+- **DOB Validation:** Accio rejects orders where DOB results in age < 16 (error 104)
+- **Test Mode vs PROD Mode:** `<mode>PROD</mode>` required even with test credentials
+- **Portal From Applicant:** Must be `N` for webhook postback to work
+- **Webhook URL:** Must be production URL (https://www.veree.io/api/mvr/webhook)
+- **Fake License Numbers:** Result in `filledCode="unknown"` status (expected behavior)
+
+### **Status Meanings:**
+- `completed` = MVR returned with clear/known status
+- `needs_review` = MVR returned with unknown or flagged status
+- `pending` = Waiting for Accio response
+- `error` = Something went wrong
+
+---
+
 ## 🔧 **MVR WEBHOOK LICENSE NUMBER PARSING FIX** (December 31, 2025)
 
 **Fixed parser to extract license numbers from MVR subOrder block, not entire XML**

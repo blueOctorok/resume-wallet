@@ -15,6 +15,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
 
   // Personal Information
   const [firstName, setFirstName] = useState('')
+  const [middleName, setMiddleName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [ssn, setSsn] = useState('')
@@ -83,6 +84,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
           walletAddress: userAddress,
           paymentTxHash, // Include payment transaction hash
           firstName: firstName.trim(),
+          middleName: middleName.trim(),
           lastName: lastName.trim(),
           email: email.trim(),
           ssn: ssn.trim(),
@@ -205,7 +207,11 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
             }`}>
               Personal Information
             </h3>
-            <div className="grid grid-cols-2 gap-4">
+            {/* Name fields - 3 columns for first, middle, last */}
+            <p className={`text-xs ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>
+              Enter your name exactly as it appears on your driver&apos;s license
+            </p>
+            <div className="grid grid-cols-3 gap-4">
               <input
                 type="text"
                 value={firstName}
@@ -216,12 +222,22 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
               />
               <input
                 type="text"
+                value={middleName}
+                onChange={(e) => setMiddleName(e.target.value)}
+                placeholder="Middle Name"
+                className={inputClass}
+              />
+              <input
+                type="text"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 required
                 placeholder="Last Name"
                 className={inputClass}
               />
+            </div>
+            {/* Other personal info - 2 columns */}
+            <div className="grid grid-cols-2 gap-4">
               <input
                 type="email"
                 value={email}

@@ -53,7 +53,9 @@ export interface ParsedMvrResult {
   
   // Medical Certificate
   medicalCertExpiration?: string
+  medicalCertIssueDate?: string
   medicalCertStatus?: string
+  medicalCertSelfCertification?: string // e.g., "NON-EXCEPTED INTERSTATE"
   
   // Fees
   fees?: {
@@ -75,22 +77,28 @@ export interface ParsedMvrResult {
 }
 
 export interface MvrLicense {
-  issueDate?: string // license_issue_date (YYYYMMDD)
-  expirationDate?: string // license_expiration_date (YYYYMMDD)
-  class?: string // license_class
-  code?: string // license_code
-  type?: string // license_type (e.g., "PERSONAL")
-  status?: string // license_status (e.g., "VALID")
-  endorsements?: string // license_endorsements (comma-separated or single value)
-  restrictions?: string // license_restrictions
+  issueDate?: string           // license_issue_date (YYYYMMDD) - "Issued" date
+  originalIssueDate?: string   // Original issue date (YYYYMMDD) - "Orig. Issued" date
+  expirationDate?: string      // license_expiration_date (YYYYMMDD)
+  class?: string               // license_class (e.g., "B", "C", "D")
+  classDescription?: string    // Full description (e.g., "CDL SINGLE VEH GVWR 26,001 OR MORE")
+  code?: string                // license_code
+  type?: string                // license_type (e.g., "COMMERCIAL", "PERSONAL")
+  status?: string              // license_status (e.g., "VALID", "SUSPENDED")
+  cdlStatus?: string           // Separate CDL status field
+  endorsements?: string        // license_endorsements (comma-separated: Hazmat, Tanker, etc.)
+  restrictions?: string        // license_restrictions (e.g., "CORR LENSES")
 }
 
 export interface Violation {
-  date?: string
-  type?: string
-  description?: string
-  points?: number
-  state?: string
+  date?: string               // Issue/violation date
+  convictionDate?: string     // Conviction date (often different from issue date)
+  type?: string               // Violation type code
+  description?: string        // Full description (e.g., "NO OR IMPROPER LIGHTS")
+  points?: number             // Points assessed
+  state?: string              // State where violation occurred
+  acdCode?: string            // ACD (AAMVA Code Dictionary) code (e.g., "E55")
+  stateCode?: string          // State-specific code
 }
 
 export interface Accident {
@@ -109,66 +117,103 @@ export interface Suspension {
 
 /**
  * Parse Accio XML result into structured data
- * This is a basic parser - you may need to enhance based on actual Accio response format
+ * Supports multiple Accio XML formats:
+ * 1. <ScreeningResults><completeOrder>...</completeOrder></ScreeningResults> (full order completion)
+ * 2. <postResults order="..." subOrder="...">...</postResults> (individual result notification)
  */
 export function parseAccioMvrResult(xml: string): ParsedMvrResult {
   try {
-    // Extract order number from completeOrder - try multiple tag names
-    // Priority: reference_number > number (usually contains our order number) > remote_number (Accio's internal number)
-    let orderReferenceNumber = extractXmlAttribute(xml, 'completeOrder', 'reference_number')
-    let orderNumberAttr = extractXmlAttribute(xml, 'completeOrder', 'number')
-    let orderRemoteNumber = extractXmlAttribute(xml, 'completeOrder', 'remote_number')
+    // First, check if this is a <postResults> format (simpler, used for individual results)
+    // Example: <postResults order="53901" subOrder="893073" type="MVR" filledStatus="filled" filledCode="discrepancy">
+    const isPostResultsFormat = xml.includes('<postResults')
     
-    // Fallback: try 'order' tag if 'completeOrder' doesn't exist
-    if (!orderReferenceNumber && !orderNumberAttr && !orderRemoteNumber) {
-      orderReferenceNumber = extractXmlAttribute(xml, 'order', 'reference_number')
-      orderNumberAttr = extractXmlAttribute(xml, 'order', 'number')
-      orderRemoteNumber = extractXmlAttribute(xml, 'order', 'remote_number') || extractXmlAttribute(xml, 'order', 'orderID')
-    }
+    let orderNumber = ''
+    let subOrderNumber = ''
+    let orderRemoteNumber: string | undefined
+    let remoteSubOrderNumber: string | undefined
+    let filledStatus: string | undefined
+    let filledCode: string | undefined
+    let timeOrdered: string | undefined
+    let timeFilled: string | undefined
     
-    // Also try extracting from orderInfo block (ordernumber or order_number tags)
-    const orderInfoNumber = extractXmlValue(xml, 'ordernumber') || extractXmlValue(xml, 'order_number')
-    
-    // Use reference_number if available, otherwise use number attribute (which should contain our order number)
-    // Fallback to orderInfo number, then remote_number (Accio's internal number)
-    // Note: If only remote_number is available, we'll use it as orderNumber for matching purposes
-    const orderNumber = (orderReferenceNumber && orderReferenceNumber.trim()) 
-      || (orderNumberAttr && orderNumberAttr.trim()) 
-      || orderInfoNumber
-      || orderRemoteNumber // Use remote_number as fallback - webhook can match by this
-      || ''
-    
-    // Find MVR subOrder specifically - look for type="MVR" or check all subOrders
-    // Accio sometimes sends empty number="" and uses remote_number instead
-    let mvrSubOrder = findMvrSubOrder(xml)
-    
-    // If no MVR subOrder found, try to extract from first subOrder as fallback
-    if (!mvrSubOrder) {
-      const firstSubOrderNumber = extractXmlAttribute(xml, 'subOrder', 'number')
-      const firstSubOrderRemote = extractXmlAttribute(xml, 'subOrder', 'remote_number')
-      if (firstSubOrderNumber || firstSubOrderRemote) {
-        mvrSubOrder = {
-          number: firstSubOrderNumber && firstSubOrderNumber.trim() ? firstSubOrderNumber : undefined,
-          remoteNumber: firstSubOrderRemote
+    if (isPostResultsFormat) {
+      // Parse <postResults> format - order info is in the root element attributes
+      // <postResults order="53901" subOrder="893073" type="MVR" filledStatus="filled" filledCode="discrepancy">
+      orderNumber = extractXmlAttribute(xml, 'postResults', 'order') || ''
+      subOrderNumber = extractXmlAttribute(xml, 'postResults', 'subOrder') || ''
+      filledStatus = extractXmlAttribute(xml, 'postResults', 'filledStatus')
+      filledCode = extractXmlAttribute(xml, 'postResults', 'filledCode')
+      
+      // These are Accio's internal numbers - store them as remote numbers for matching
+      orderRemoteNumber = orderNumber
+      remoteSubOrderNumber = subOrderNumber
+      
+      // Time fields are still in regular tags
+      timeOrdered = extractXmlValue(xml, 'time_ordered')
+      timeFilled = extractXmlValue(xml, 'time_filled')
+      
+      console.log('[ACCIO PARSER] Detected postResults format - order:', orderNumber, 'subOrder:', subOrderNumber)
+    } else {
+      // Parse <completeOrder> or <order> format
+      // Extract order number from completeOrder - try multiple tag names
+      // Priority: reference_number > number (usually contains our order number) > remote_number (Accio's internal number)
+      let orderReferenceNumber = extractXmlAttribute(xml, 'completeOrder', 'reference_number')
+      let orderNumberAttr = extractXmlAttribute(xml, 'completeOrder', 'number')
+      orderRemoteNumber = extractXmlAttribute(xml, 'completeOrder', 'remote_number')
+      
+      // Fallback: try 'order' tag if 'completeOrder' doesn't exist
+      if (!orderReferenceNumber && !orderNumberAttr && !orderRemoteNumber) {
+        orderReferenceNumber = extractXmlAttribute(xml, 'order', 'reference_number')
+        orderNumberAttr = extractXmlAttribute(xml, 'order', 'number')
+        orderRemoteNumber = extractXmlAttribute(xml, 'order', 'remote_number') || extractXmlAttribute(xml, 'order', 'orderID')
+      }
+      
+      // Also try extracting from orderInfo block (ordernumber or order_number tags)
+      const orderInfoNumber = extractXmlValue(xml, 'ordernumber') || extractXmlValue(xml, 'order_number')
+      
+      // Use reference_number if available, otherwise use number attribute (which should contain our order number)
+      // Fallback to orderInfo number, then remote_number (Accio's internal number)
+      orderNumber = (orderReferenceNumber && orderReferenceNumber.trim()) 
+        || (orderNumberAttr && orderNumberAttr.trim()) 
+        || orderInfoNumber
+        || orderRemoteNumber // Use remote_number as fallback - webhook can match by this
+        || ''
+      
+      // Find MVR subOrder specifically - look for type="MVR" or check all subOrders
+      let mvrSubOrder = findMvrSubOrder(xml)
+      
+      // If no MVR subOrder found, try to extract from first subOrder as fallback
+      if (!mvrSubOrder) {
+        const firstSubOrderNumber = extractXmlAttribute(xml, 'subOrder', 'number')
+        const firstSubOrderRemote = extractXmlAttribute(xml, 'subOrder', 'remote_number')
+        if (firstSubOrderNumber || firstSubOrderRemote) {
+          mvrSubOrder = {
+            number: firstSubOrderNumber && firstSubOrderNumber.trim() ? firstSubOrderNumber : undefined,
+            remoteNumber: firstSubOrderRemote
+          }
         }
       }
+      
+      subOrderNumber = (mvrSubOrder?.number && mvrSubOrder.number.trim()) || mvrSubOrder?.remoteNumber || ''
+      remoteSubOrderNumber = mvrSubOrder?.remoteNumber
+      timeOrdered = mvrSubOrder?.timeOrdered || extractXmlValue(xml, 'time_ordered')
+      timeFilled = mvrSubOrder?.timeFilled || extractXmlValue(xml, 'time_filled')
+      filledStatus = mvrSubOrder?.filledStatus
+      filledCode = mvrSubOrder?.filledCode
     }
-    
-    const subOrderNumber = (mvrSubOrder?.number && mvrSubOrder.number.trim()) || mvrSubOrder?.remoteNumber || ''
-    const remoteSubOrderNumber = mvrSubOrder?.remoteNumber
 
-    // Extract order numbers from completeOrder attributes
+    // Build result object
     const result: ParsedMvrResult = {
       orderNumber,
       subOrderNumber,
       remoteOrderNumber: orderRemoteNumber,
       remoteSubOrderNumber,
-      timeOrdered: mvrSubOrder?.timeOrdered || extractXmlValue(xml, 'time_ordered'),
-      timeFilled: mvrSubOrder?.timeFilled || extractXmlValue(xml, 'time_filled'),
-      filledStatus: mvrSubOrder?.filledStatus,
-      filledCode: mvrSubOrder?.filledCode,
-      heldForReview: mvrSubOrder?.heldForReview || false,
-      heldForReleaseForm: mvrSubOrder?.heldForReleaseForm || false,
+      timeOrdered,
+      timeFilled,
+      filledStatus,
+      filledCode,
+      heldForReview: false,
+      heldForReleaseForm: false,
       rawXml: xml
     }
 
@@ -219,6 +264,14 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
       result.totalPoints = result.violations.reduce((sum, v) => sum + (v.points || 0), 0)
     }
 
+    // Extract mvr_accident blocks
+    result.accidents = extractMvrAccidents(xml)
+    result.accidentCount = result.accidents?.length || 0
+
+    // Extract mvr_suspension blocks
+    result.suspensions = extractMvrSuspensions(xml)
+    result.suspensionCount = result.suspensions?.length || 0
+
     // Extract fees (from fees block within subOrder)
     const feesXml = extractXmlBlock(xml, 'fees')
     if (feesXml) {
@@ -240,8 +293,32 @@ export function parseAccioMvrResult(xml: string): ParsedMvrResult {
     }
 
     // Extract medical certificate info (if present)
+    // First try structured tags
     result.medicalCertExpiration = extractXmlValue(xml, 'medical_cert_expiration')
     result.medicalCertStatus = extractXmlValue(xml, 'medical_cert_status')
+    
+    // If not found in structured tags, try to extract from <text> block
+    // Accio puts medical info in plain text like:
+    // "MEDICAL CERTIFICATE INFORMATION   Issue: 06/04/2024   Expiration: 06/02/2026"
+    // "Status:   CERTIFIED   Self Certificate: NON-EXCEPTED INTERSTATE."
+    if (!result.medicalCertExpiration || !result.medicalCertStatus) {
+      const textBlock = extractXmlValue(xml, 'text')
+      if (textBlock) {
+        const medicalInfo = extractMedicalInfoFromText(textBlock)
+        if (medicalInfo.expiration && !result.medicalCertExpiration) {
+          result.medicalCertExpiration = medicalInfo.expiration
+        }
+        if (medicalInfo.status && !result.medicalCertStatus) {
+          result.medicalCertStatus = medicalInfo.status
+        }
+        if (medicalInfo.issueDate) {
+          result.medicalCertIssueDate = medicalInfo.issueDate
+        }
+        if (medicalInfo.selfCertification) {
+          result.medicalCertSelfCertification = medicalInfo.selfCertification
+        }
+      }
+    }
 
     return result
   } catch (error) {
@@ -355,6 +432,17 @@ function extractXmlBlock(xml: string, tagName: string): string | undefined {
 
 /**
  * Extract all mvr_license blocks from XML
+ * Based on real MVR XML structure from Accio:
+ * <mvr_license>
+ *   <license_issue_date>20250113</license_issue_date>
+ *   <license_orig_issue>10/07/2019</license_orig_issue>
+ *   <license_expiration_date>20271001</license_expiration_date>
+ *   <license_class>B - CDL SINGLE VEH GVWR 26,001 OR MORE,UNDER 10K TOW</license_class>
+ *   <license_code>REGULAR CDL LICENSE</license_code>
+ *   <license_type>COMMERCIAL</license_type>
+ *   <license_status>VAL-VALID</license_status>
+ *   <license_restrictions>CORR LENSES</license_restrictions>
+ * </mvr_license>
  */
 function extractMvrLicenses(xml: string): MvrLicense[] {
   const licenses: MvrLicense[] = []
@@ -365,17 +453,49 @@ function extractMvrLicenses(xml: string): MvrLicense[] {
   
   while ((match = licenseRegex.exec(xml)) !== null) {
     const licenseXml = match[1]
+    
+    // Get the full class string (e.g., "B - CDL SINGLE VEH GVWR 26,001 OR MORE,UNDER 10K TOW")
+    const fullClass = extractXmlValue(licenseXml, 'license_class')
+    
+    // Parse class letter and description from combined field
+    // Format: "B - CDL SINGLE VEH..." or just "D - OPERATOR"
+    let classLetter = ''
+    let classDescription = ''
+    if (fullClass) {
+      const classParts = fullClass.split(' - ')
+      classLetter = classParts[0]?.trim() || fullClass
+      classDescription = classParts.slice(1).join(' - ').trim() || ''
+    }
+    
+    // Get original issue date - Accio uses "license_orig_issue" in MM/DD/YYYY format
+    const origIssue = extractXmlValue(licenseXml, 'license_orig_issue')
+    let originalIssueDateFormatted = origIssue
+    // Convert MM/DD/YYYY to YYYYMMDD for consistency
+    if (origIssue && origIssue.includes('/')) {
+      const parts = origIssue.split('/')
+      if (parts.length === 3) {
+        originalIssueDateFormatted = `${parts[2]}${parts[0].padStart(2, '0')}${parts[1].padStart(2, '0')}`
+      }
+    }
+    
     const license: MvrLicense = {
       issueDate: extractXmlValue(licenseXml, 'license_issue_date'),
+      originalIssueDate: originalIssueDateFormatted,
       expirationDate: extractXmlValue(licenseXml, 'license_expiration_date'),
-      class: extractXmlValue(licenseXml, 'license_class'),
+      class: classLetter,
+      classDescription: classDescription,
       code: extractXmlValue(licenseXml, 'license_code'),
       type: extractXmlValue(licenseXml, 'license_type'),
       status: extractXmlValue(licenseXml, 'license_status'),
+      cdlStatus: extractXmlValue(licenseXml, 'cdl_status'),
       endorsements: extractXmlValue(licenseXml, 'license_endorsements'),
       restrictions: extractXmlValue(licenseXml, 'license_restrictions')
     }
-    licenses.push(license)
+    
+    // Only add if we have at least a class or type
+    if (license.class || license.type || license.status) {
+      licenses.push(license)
+    }
   }
   
   return licenses
@@ -383,38 +503,209 @@ function extractMvrLicenses(xml: string): MvrLicense[] {
 
 /**
  * Extract all mvr_violation blocks from XML
+ * Based on real MVR report structure - includes conviction dates, ACD codes, etc.
  */
 function extractMvrViolations(xml: string): Violation[] {
   const violations: Violation[] = []
   
-  // Match all <mvr_violation> blocks
-  const violationRegex = /<mvr_violation[^>]*>([\s\S]*?)<\/mvr_violation>/gi
-  let match
+  // Try multiple tag patterns that Accio might use
+  const tagPatterns = [
+    /<mvr_violation[^>]*>([\s\S]*?)<\/mvr_violation>/gi,
+    /<violation[^>]*>([\s\S]*?)<\/violation>/gi,
+    /<VIOLATION[^>]*>([\s\S]*?)<\/VIOLATION>/gi
+  ]
   
-  while ((match = violationRegex.exec(xml)) !== null) {
-    const violationXml = match[1]
-    
-    // Parse violation date (YYYYMMDD format)
-    const violationDate = extractXmlValue(violationXml, 'violation_date')
-    const convictionDate = extractXmlValue(violationXml, 'conviction_date')
-    
-    // Parse points (vendor_points or state_points)
-    const vendorPoints = extractXmlValue(violationXml, 'vendor_points')
-    const statePoints = extractXmlValue(violationXml, 'state_points')
-    const points = vendorPoints ? parseInt(vendorPoints, 10) : (statePoints ? parseInt(statePoints, 10) : undefined)
-    
-    const violation: Violation = {
-      date: violationDate,
-      type: extractXmlValue(violationXml, 'violation_type'),
-      description: extractXmlValue(violationXml, 'description') || extractXmlValue(violationXml, 'state_description'),
-      points: points,
-      state: extractXmlValue(violationXml, 'state') || extractXmlValue(violationXml, 'state_code')
+  for (const regex of tagPatterns) {
+    let match
+    while ((match = regex.exec(xml)) !== null) {
+      const violationXml = match[1]
+      
+      // Parse violation date (YYYYMMDD format or various formats)
+      const violationDate = extractXmlValue(violationXml, 'violation_date')
+        || extractXmlValue(violationXml, 'issue_date')
+        || extractXmlValue(violationXml, 'date')
+      
+      // Conviction date is often different from issue date
+      const convictionDate = extractXmlValue(violationXml, 'conviction_date')
+        || extractXmlValue(violationXml, 'disposed_date')
+      
+      // Parse points (vendor_points or state_points)
+      const vendorPoints = extractXmlValue(violationXml, 'vendor_points')
+      const statePoints = extractXmlValue(violationXml, 'state_points')
+      const pointsStr = extractXmlValue(violationXml, 'points')
+      const points = vendorPoints 
+        ? parseInt(vendorPoints, 10) 
+        : (statePoints ? parseInt(statePoints, 10) : (pointsStr ? parseInt(pointsStr, 10) : undefined))
+      
+      // ACD code (AAMVA Code Dictionary) - standardized violation codes
+      const acdCode = extractXmlValue(violationXml, 'acd_code')
+        || extractXmlValue(violationXml, 'ACD')
+        || extractXmlValue(violationXml, 'aamva_code')
+      
+      const stateCode = extractXmlValue(violationXml, 'state_code')
+        || extractXmlValue(violationXml, 'local_code')
+      
+      const violation: Violation = {
+        date: violationDate,
+        convictionDate,
+        type: extractXmlValue(violationXml, 'violation_type')
+          || extractXmlValue(violationXml, 'type'),
+        description: extractXmlValue(violationXml, 'description') 
+          || extractXmlValue(violationXml, 'state_description')
+          || extractXmlValue(violationXml, 'violation_description'),
+        points: isNaN(points as number) ? undefined : points,
+        state: extractXmlValue(violationXml, 'state')
+          || extractXmlValue(violationXml, 'state_of_violation')
+          || extractXmlValue(violationXml, 'jurisdiction'),
+        acdCode,
+        stateCode
+      }
+      
+      // Only add if we have at least some data
+      if (violation.date || violation.description || violation.type) {
+        violations.push(violation)
+      }
     }
-    
-    violations.push(violation)
   }
   
   return violations
+}
+
+/**
+ * Extract all mvr_accident blocks from XML
+ * Based on real MVR report structure - accidents may include date, severity, fault, description
+ */
+function extractMvrAccidents(xml: string): Accident[] {
+  const accidents: Accident[] = []
+  
+  // Try multiple tag patterns that Accio might use
+  const tagPatterns = [
+    /<mvr_accident[^>]*>([\s\S]*?)<\/mvr_accident>/gi,
+    /<accident[^>]*>([\s\S]*?)<\/accident>/gi,
+    /<ACCIDENT[^>]*>([\s\S]*?)<\/ACCIDENT>/gi
+  ]
+  
+  for (const regex of tagPatterns) {
+    let match
+    while ((match = regex.exec(xml)) !== null) {
+      const accidentXml = match[1]
+      
+      // Try multiple field name variations
+      const accident: Accident = {
+        date: extractXmlValue(accidentXml, 'accident_date') 
+          || extractXmlValue(accidentXml, 'date')
+          || extractXmlValue(accidentXml, 'incident_date'),
+        severity: extractXmlValue(accidentXml, 'severity')
+          || extractXmlValue(accidentXml, 'accident_severity'),
+        fault: extractXmlValue(accidentXml, 'fault')
+          || extractXmlValue(accidentXml, 'at_fault')
+          || extractXmlValue(accidentXml, 'fault_indicator'),
+        description: extractXmlValue(accidentXml, 'description')
+          || extractXmlValue(accidentXml, 'accident_description')
+          || extractXmlValue(accidentXml, 'state_description')
+      }
+      
+      // Only add if we have at least some data
+      if (accident.date || accident.description || accident.severity) {
+        accidents.push(accident)
+      }
+    }
+  }
+  
+  return accidents
+}
+
+/**
+ * Extract all mvr_suspension blocks from XML
+ * Based on real MVR report structure - suspensions may include date, reason, end date, state
+ */
+function extractMvrSuspensions(xml: string): Suspension[] {
+  const suspensions: Suspension[] = []
+  
+  // Try multiple tag patterns that Accio might use
+  const tagPatterns = [
+    /<mvr_suspension[^>]*>([\s\S]*?)<\/mvr_suspension>/gi,
+    /<suspension[^>]*>([\s\S]*?)<\/suspension>/gi,
+    /<SUSPENSION[^>]*>([\s\S]*?)<\/SUSPENSION>/gi,
+    /<license_suspension[^>]*>([\s\S]*?)<\/license_suspension>/gi
+  ]
+  
+  for (const regex of tagPatterns) {
+    let match
+    while ((match = regex.exec(xml)) !== null) {
+      const suspensionXml = match[1]
+      
+      // Try multiple field name variations
+      const suspension: Suspension = {
+        date: extractXmlValue(suspensionXml, 'suspension_date')
+          || extractXmlValue(suspensionXml, 'start_date')
+          || extractXmlValue(suspensionXml, 'date')
+          || extractXmlValue(suspensionXml, 'effective_date'),
+        reason: extractXmlValue(suspensionXml, 'reason')
+          || extractXmlValue(suspensionXml, 'suspension_reason')
+          || extractXmlValue(suspensionXml, 'description'),
+        endDate: extractXmlValue(suspensionXml, 'end_date')
+          || extractXmlValue(suspensionXml, 'reinstatement_date')
+          || extractXmlValue(suspensionXml, 'expiration_date'),
+        state: extractXmlValue(suspensionXml, 'state')
+          || extractXmlValue(suspensionXml, 'state_code')
+      }
+      
+      // Only add if we have at least some data
+      if (suspension.date || suspension.reason) {
+        suspensions.push(suspension)
+      }
+    }
+  }
+  
+  return suspensions
+}
+
+/**
+ * Extract medical certificate info from plain text block
+ * Parses text like:
+ * "MEDICAL CERTIFICATE INFORMATION   Issue: 06/04/2024   Expiration: 06/02/2026"
+ * "Status:   CERTIFIED   Self Certificate: NON-EXCEPTED INTERSTATE."
+ */
+function extractMedicalInfoFromText(text: string): {
+  issueDate?: string
+  expiration?: string
+  status?: string
+  selfCertification?: string
+} {
+  const result: {
+    issueDate?: string
+    expiration?: string
+    status?: string
+    selfCertification?: string
+  } = {}
+  
+  // Look for "Issue: MM/DD/YYYY"
+  const issueMatch = text.match(/Issue:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i)
+  if (issueMatch) {
+    result.issueDate = issueMatch[1]
+  }
+  
+  // Look for "Expiration: MM/DD/YYYY"
+  const expirationMatch = text.match(/Expiration:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i)
+  if (expirationMatch) {
+    result.expiration = expirationMatch[1]
+  }
+  
+  // Look for "Status: CERTIFIED" or similar
+  // Pattern: "Status:" followed by whitespace and then a word
+  const statusMatch = text.match(/Status:\s*([A-Z]+)/i)
+  if (statusMatch) {
+    result.status = statusMatch[1]
+  }
+  
+  // Look for "Self Certificate: NON-EXCEPTED INTERSTATE" or similar
+  const selfCertMatch = text.match(/Self Certificate:\s*([A-Z\-\s]+)(?:\.|$)/i)
+  if (selfCertMatch) {
+    result.selfCertification = selfCertMatch[1].trim()
+  }
+  
+  return result
 }
 
 /**
@@ -493,7 +784,9 @@ export function mvrResultToJsonb(result: ParsedMvrResult): any {
     },
     medical: {
       certExpiration: result.medicalCertExpiration,
-      certStatus: result.medicalCertStatus
+      certIssueDate: result.medicalCertIssueDate,
+      certStatus: result.medicalCertStatus,
+      selfCertification: result.medicalCertSelfCertification
     },
     fees: result.fees,
     status: {

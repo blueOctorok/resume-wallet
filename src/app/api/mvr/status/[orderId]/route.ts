@@ -44,7 +44,7 @@ export async function GET(
       )
     }
 
-    // Get MVR order with result
+    // Get MVR order with result - include all detailed data
     const { data: mvrOrder, error: orderError } = await supabase
       .from('mvr_orders')
       .select(`
@@ -58,11 +58,19 @@ export async function GET(
           license_expiration_date,
           total_points,
           violation_count,
+          violations,
           accident_count,
+          accidents,
           suspension_count,
+          suspensions,
+          medical_cert_expiration,
+          medical_cert_status,
+          cdl_endorsements,
+          cdl_restrictions,
           result_status,
           received_at,
-          parsed_at
+          parsed_at,
+          parsed_data
         )
       `)
       .eq('id', orderId)
@@ -101,15 +109,32 @@ export async function GET(
       },
       result: result ? {
         id: result.id,
+        // License info
         licenseNumber: result.license_number,
         licenseState: result.license_state,
         licenseClass: result.license_class,
         licenseStatus: result.license_status,
         licenseExpirationDate: result.license_expiration_date,
+        // All licenses (from parsed_data if available)
+        licenses: result.parsed_data?.licenses || [],
+        // Summary counts
         totalPoints: result.total_points,
         violationCount: result.violation_count,
         accidentCount: result.accident_count,
         suspensionCount: result.suspension_count,
+        // Detailed arrays
+        violations: result.violations || [],
+        accidents: result.accidents || [],
+        suspensions: result.suspensions || [],
+        // Medical certificate
+        medicalCertExpiration: result.medical_cert_expiration || result.parsed_data?.medical?.certExpiration,
+        medicalCertIssueDate: result.parsed_data?.medical?.certIssueDate,
+        medicalCertStatus: result.medical_cert_status || result.parsed_data?.medical?.certStatus,
+        medicalCertSelfCertification: result.parsed_data?.medical?.selfCertification,
+        // CDL info
+        cdlEndorsements: result.cdl_endorsements || [],
+        cdlRestrictions: result.cdl_restrictions || [],
+        // Status
         resultStatus: result.result_status,
         receivedAt: result.received_at,
         parsedAt: result.parsed_at
