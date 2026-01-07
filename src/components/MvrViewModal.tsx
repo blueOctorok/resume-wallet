@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { 
   X, FileText, Calendar, MapPin, CreditCard, AlertCircle, 
   Shield, AlertTriangle, Car, Clock, CheckCircle, XCircle,
-  BadgeCheck, Stethoscope
+  Stethoscope, ChevronDown, ExternalLink, Award, Activity
 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 
@@ -121,22 +121,22 @@ function formatDate(dateStr: string | undefined | null): string {
 }
 
 /**
- * Get status color classes
+ * Get status badge styling
  */
-function getStatusColor(status: string | undefined | null, theme: string): string {
-  if (!status) return theme === 'light' ? 'text-gray-500' : 'text-gray-400'
+function getStatusBadge(status: string | undefined | null): { bg: string; text: string; dot: string } {
+  if (!status) return { bg: 'bg-gray-500/20', text: 'text-gray-400', dot: 'bg-gray-400' }
   
   const statusLower = status.toLowerCase()
-  if (statusLower.includes('valid') || statusLower.includes('active') || statusLower.includes('certified')) {
-    return 'text-green-600'
+  if (statusLower.includes('valid') || statusLower.includes('active') || statusLower.includes('certified') || statusLower.includes('completed')) {
+    return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', dot: 'bg-emerald-400' }
   }
   if (statusLower.includes('expired') || statusLower.includes('suspend') || statusLower.includes('revoked')) {
-    return 'text-red-600'
+    return { bg: 'bg-red-500/20', text: 'text-red-400', dot: 'bg-red-400' }
   }
-  if (statusLower.includes('pending') || statusLower.includes('unknown')) {
-    return 'text-yellow-600'
+  if (statusLower.includes('pending') || statusLower.includes('unknown') || statusLower.includes('review')) {
+    return { bg: 'bg-amber-500/20', text: 'text-amber-400', dot: 'bg-amber-400' }
   }
-  return theme === 'light' ? 'text-gray-700' : 'text-gray-300'
+  return { bg: 'bg-gray-500/20', text: 'text-gray-400', dot: 'bg-gray-400' }
 }
 
 export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrViewModalProps) {
@@ -146,6 +146,7 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
   const [mvrOrder, setMvrOrder] = useState<MvrOrder | null>(null)
   const [mvrResult, setMvrResult] = useState<MvrResult | null>(null)
   const [payments, setPayments] = useState<Payment[]>([])
+  const [showPayments, setShowPayments] = useState(false)
 
   useEffect(() => {
     if (!isOpen || !walletAddress) {
@@ -165,7 +166,6 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
 
         const data = await response.json()
 
-        // Set payments regardless of order status
         if (data.payments && data.payments.length > 0) {
           setPayments(data.payments)
         }
@@ -173,7 +173,6 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
         if (data.hasMvr && data.order) {
           setMvrOrder(data.order)
 
-          // If we have a result, fetch full details
           if (data.result?.id) {
             const orderId = data.order.id
             const statusResponse = await fetch(`/api/mvr/status/${orderId}?walletAddress=${encodeURIComponent(walletAddress)}`)
@@ -201,127 +200,182 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
 
   if (!isOpen) return null
 
-  // Theme-based styling helpers
-  const cardClass = theme === 'light'
-    ? 'bg-white border-gray-200'
-    : 'bg-brand-sage-light/30 border-brand-mint/30'
-  
-  const labelClass = theme === 'light' ? 'text-gray-500' : 'text-gray-400'
-  const valueClass = theme === 'light' ? 'text-gray-900 font-medium' : 'text-brand-cream font-medium'
-  const headingClass = theme === 'light' ? 'text-gray-900' : 'text-brand-cream'
+  // Determine if we're in dark mode
+  const isDark = theme === 'dark'
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Backdrop */}
+      {/* Backdrop with blur */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/70 backdrop-blur-md"
         onClick={onClose}
       />
 
-      {/* Modal */}
-      <div
-        className={`relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl border ${
-          theme === 'light'
-            ? 'bg-gray-50 border-gray-200'
-            : 'bg-brand-sage-light/95 backdrop-blur-xl border-brand-mint/50'
-        }`}
-      >
-        {/* Header */}
-        <div
-          className={`sticky top-0 z-10 flex items-center justify-between p-6 border-b ${
-            theme === 'light'
-              ? 'bg-white border-gray-200'
-              : 'bg-brand-sage-light/95 border-brand-mint/30'
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <FileText className={`h-6 w-6 ${theme === 'light' ? 'text-brand-sage' : 'text-brand-mint'}`} />
-            <h2 className={`text-2xl font-bold ${headingClass}`}>
-              Motor Vehicle Report
-            </h2>
+      {/* Modal Container */}
+      <div className={`relative w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl ${
+        isDark 
+          ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border border-gray-700/50' 
+          : 'bg-white border border-gray-200'
+      }`}>
+        
+        {/* Header with gradient accent */}
+        <div className={`relative px-6 py-5 border-b ${
+          isDark ? 'border-gray-700/50' : 'border-gray-200'
+        }`}>
+          {/* Accent line */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-sage via-brand-mint to-brand-sage-light" />
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`p-2.5 rounded-xl ${
+                isDark ? 'bg-brand-sage/20' : 'bg-brand-sage/10'
+              }`}>
+                <FileText className="h-6 w-6 text-brand-mint" />
+              </div>
+              <div>
+                <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  Motor Vehicle Report
+                </h2>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Official DMV Record
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className={`p-2 rounded-xl transition-all ${
+                isDark 
+                  ? 'hover:bg-gray-700/50 text-gray-400 hover:text-white' 
+                  : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className={`p-2 rounded-lg transition-colors ${
-              theme === 'light'
-                ? 'hover:bg-gray-100 text-gray-500'
-                : 'hover:bg-brand-sage-light/50 text-gray-400'
-            }`}
-          >
-            <X className="h-5 w-5" />
-          </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-6">
+        {/* Scrollable Content */}
+        <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-6 space-y-5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4 border-brand-sage"></div>
-              <p className={labelClass}>Loading MVR data...</p>
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="relative">
+                <div className="w-16 h-16 border-4 border-brand-sage/20 rounded-full" />
+                <div className="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-t-brand-mint rounded-full animate-spin" />
+              </div>
+              <p className={`mt-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                Loading MVR data...
+              </p>
             </div>
           ) : error ? (
-            <div className="text-center py-12">
-              <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
-              <p className={theme === 'light' ? 'text-red-600' : 'text-red-400'}>{error}</p>
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className={`p-4 rounded-full ${isDark ? 'bg-red-500/10' : 'bg-red-50'}`}>
+                <AlertCircle className="h-12 w-12 text-red-500" />
+              </div>
+              <p className={`mt-4 font-medium ${isDark ? 'text-red-400' : 'text-red-600'}`}>
+                {error}
+              </p>
             </div>
           ) : (
             <>
-              {/* Payment History - Collapsible */}
+              {/* Payment History Accordion */}
               {payments.length > 0 && (
-                <details className={`p-4 rounded-xl border ${cardClass}`}>
-                  <summary className={`cursor-pointer flex items-center gap-2 ${headingClass}`}>
-                    <CreditCard className="h-5 w-5" />
-                    <span className="font-semibold">Payment History ({payments.length})</span>
-                  </summary>
-                  <div className="mt-3 space-y-2">
-                    {payments.map((payment, idx) => (
-                      <div
-                        key={payment.id}
-                        className={`p-3 rounded-lg text-sm ${
-                          theme === 'light'
-                            ? 'bg-gray-50 border border-gray-100'
-                            : 'bg-brand-sage-light/20 border border-brand-mint/20'
-                        }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <span className={valueClass}>Payment #{idx + 1}</span>
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            payment.status === 'completed'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-yellow-100 text-yellow-700'
-                          }`}>
-                            {payment.status}
-                          </span>
-                        </div>
-                        <div className={`text-xs mt-1 ${labelClass}`}>
-                          ${payment.amount} USDC • {new Date(payment.createdAt).toLocaleDateString()}
-                        </div>
+                <div className={`rounded-xl overflow-hidden ${
+                  isDark ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-gray-50 border border-gray-200'
+                }`}>
+                  <button
+                    onClick={() => setShowPayments(!showPayments)}
+                    className={`w-full px-4 py-3 flex items-center justify-between ${
+                      isDark ? 'hover:bg-gray-700/30' : 'hover:bg-gray-100'
+                    } transition-colors`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <CreditCard className={`h-4 w-4 ${isDark ? 'text-brand-mint' : 'text-brand-sage'}`} />
+                      <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        Payment History
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        isDark ? 'bg-brand-sage/20 text-brand-mint' : 'bg-brand-sage/10 text-brand-sage'
+                      }`}>
+                        {payments.length}
+                      </span>
+                    </div>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${
+                      showPayments ? 'rotate-180' : ''
+                    } ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                  </button>
+                  
+                  {showPayments && (
+                    <div className={`px-4 pb-4 space-y-2 border-t ${
+                      isDark ? 'border-gray-700/50' : 'border-gray-200'
+                    }`}>
+                      <div className="pt-3">
+                        {payments.map((payment, idx) => (
+                          <div
+                            key={payment.id}
+                            className={`p-3 rounded-lg ${
+                              isDark ? 'bg-gray-900/50' : 'bg-white border border-gray-100'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                                ${payment.amount} USDC
+                              </span>
+                              <span className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
+                                payment.status === 'completed'
+                                  ? 'bg-emerald-500/20 text-emerald-400'
+                                  : 'bg-amber-500/20 text-amber-400'
+                              }`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${
+                                  payment.status === 'completed' ? 'bg-emerald-400' : 'bg-amber-400'
+                                }`} />
+                                {payment.status}
+                              </span>
+                            </div>
+                            <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                              {new Date(payment.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </details>
+                    </div>
+                  )}
+                </div>
               )}
 
-              {/* Order Status Bar */}
+              {/* Order Status Card */}
               {mvrOrder && (
-                <div className={`p-4 rounded-xl border ${cardClass}`}>
-                  <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className={`rounded-xl p-5 ${
+                  isDark 
+                    ? 'bg-gradient-to-br from-gray-800 to-gray-800/50 border border-gray-700/50' 
+                    : 'bg-white border border-gray-200 shadow-sm'
+                }`}>
+                  <div className="grid grid-cols-3 gap-6">
                     <div>
-                      <span className={`text-sm ${labelClass}`}>Order #</span>
-                      <p className={`text-lg ${valueClass}`}>{mvrOrder.orderNumber}</p>
-                    </div>
-                    <div>
-                      <span className={`text-sm ${labelClass}`}>Status</span>
-                      <p className={`text-lg font-semibold flex items-center gap-2 ${getStatusColor(mvrOrder.status, theme)}`}>
-                        {mvrOrder.status === 'completed' && <CheckCircle className="h-5 w-5" />}
-                        {mvrOrder.status === 'pending' && <Clock className="h-5 w-5" />}
-                        {mvrOrder.status === 'needs_review' && <AlertTriangle className="h-5 w-5" />}
-                        {mvrOrder.status.toUpperCase()}
+                      <p className={`text-xs uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        Order Number
+                      </p>
+                      <p className={`mt-1 font-mono text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        {mvrOrder.orderNumber}
                       </p>
                     </div>
                     <div>
-                      <span className={`text-sm ${labelClass}`}>Ordered</span>
-                      <p className={valueClass}>{formatDate(mvrOrder.orderedAt)}</p>
+                      <p className={`text-xs uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        Status
+                      </p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${getStatusBadge(mvrOrder.status).dot}`} />
+                        <span className={`text-sm font-medium ${getStatusBadge(mvrOrder.status).text}`}>
+                          {mvrOrder.status.replace('_', ' ').toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <p className={`text-xs uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        Ordered
+                      </p>
+                      <p className={`mt-1 text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        {formatDate(mvrOrder.orderedAt)}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -330,220 +384,296 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
               {/* MVR Results */}
               {mvrResult ? (
                 <>
-                  {/* License Information - Primary Card */}
-                  <div className={`p-6 rounded-xl border ${cardClass}`}>
-                    <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${headingClass}`}>
-                      <Shield className="h-5 w-5 text-blue-500" />
-                      License Information
-                    </h3>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div>
-                        <span className={`text-sm ${labelClass}`}>License Number</span>
-                        <p className={valueClass}>{mvrResult.licenseNumber || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <span className={`text-sm ${labelClass}`}>State</span>
-                        <p className={valueClass}>{mvrResult.licenseState || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <span className={`text-sm ${labelClass}`}>Status</span>
-                        <p className={`font-semibold ${getStatusColor(mvrResult.licenseStatus, theme)}`}>
-                          {mvrResult.licenseStatus || 'Unknown'}
-                        </p>
-                      </div>
-                      <div>
-                        <span className={`text-sm ${labelClass}`}>Expiration</span>
-                        <p className={valueClass}>{formatDate(mvrResult.licenseExpirationDate)}</p>
+                  {/* License Card - Hero Section */}
+                  <div className={`rounded-xl overflow-hidden ${
+                    isDark 
+                      ? 'bg-gradient-to-br from-brand-sage/20 via-gray-800 to-gray-800/50 border border-brand-sage/30' 
+                      : 'bg-gradient-to-br from-brand-cream to-white border border-brand-sage/20'
+                  }`}>
+                    <div className={`px-5 py-4 border-b ${
+                      isDark ? 'border-brand-sage/20' : 'border-brand-sage/10'
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-5 w-5 text-brand-mint" />
+                        <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          License Information
+                        </h3>
                       </div>
                     </div>
-
-                    {/* Multiple License Classes (CDL drivers often have B, C, D) */}
-                    {mvrResult.licenses && mvrResult.licenses.length > 0 && (
-                      <div className="mt-6 pt-4 border-t border-gray-200/30">
-                        <h4 className={`text-md font-semibold mb-3 ${headingClass}`}>
-                          License Classes
-                        </h4>
-                        <div className="space-y-3">
-                          {mvrResult.licenses.map((license, idx) => (
-                            <div 
-                              key={idx}
-                              className={`p-3 rounded-lg ${
-                                theme === 'light' ? 'bg-gray-50' : 'bg-brand-sage-light/20'
-                              }`}
-                            >
-                              <div className="flex flex-wrap items-center gap-4">
-                                <div className="flex items-center gap-2">
-                                  <span className={`text-2xl font-bold ${
-                                    license.type?.toLowerCase().includes('commercial')
-                                      ? 'text-blue-600'
-                                      : theme === 'light' ? 'text-gray-700' : 'text-gray-300'
-                                  }`}>
-                                    Class {license.class || '?'}
-                                  </span>
-                                  <span className={`text-xs px-2 py-1 rounded ${
-                                    license.type?.toLowerCase().includes('commercial')
-                                      ? 'bg-blue-100 text-blue-700'
-                                      : 'bg-gray-100 text-gray-600'
-                                  }`}>
-                                    {license.type || 'Unknown'}
-                                  </span>
-                                </div>
-                                <span className={`text-sm font-medium ${getStatusColor(license.status, theme)}`}>
-                                  {license.status || 'Unknown'}
-                                </span>
-                              </div>
-                              {license.classDescription && (
-                                <p className={`text-sm mt-1 ${labelClass}`}>
-                                  {license.classDescription}
-                                </p>
-                              )}
-                              {license.restrictions && (
-                                <p className={`text-xs mt-2 ${labelClass}`}>
-                                  <span className="font-medium">Restrictions:</span> {license.restrictions}
-                                </p>
-                              )}
-                            </div>
-                          ))}
+                    
+                    <div className="p-5">
+                      {/* Main License Details */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+                        <div>
+                          <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                            License Number
+                          </p>
+                          <p className={`mt-1 text-lg font-bold font-mono ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            {mvrResult.licenseNumber || 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                            State
+                          </p>
+                          <p className={`mt-1 text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            {mvrResult.licenseState || 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                            Status
+                          </p>
+                          <div className={`mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${
+                            getStatusBadge(mvrResult.licenseStatus).bg
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${getStatusBadge(mvrResult.licenseStatus).dot}`} />
+                            <span className={`text-sm font-semibold ${getStatusBadge(mvrResult.licenseStatus).text}`}>
+                              {mvrResult.licenseStatus || 'Unknown'}
+                            </span>
+                          </div>
+                        </div>
+                        <div>
+                          <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                            Expiration
+                          </p>
+                          <p className={`mt-1 text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            {formatDate(mvrResult.licenseExpirationDate)}
+                          </p>
                         </div>
                       </div>
-                    )}
 
-                    {/* CDL Endorsements & Restrictions (shown if no detailed license blocks) */}
-                    {(!mvrResult.licenses || mvrResult.licenses.length === 0) && (
-                      <>
-                        {(mvrResult.cdlEndorsements?.length > 0 || mvrResult.cdlRestrictions?.length > 0) && (
-                          <div className="mt-6 pt-4 border-t border-gray-200/30 grid grid-cols-2 gap-4">
-                            {mvrResult.cdlEndorsements?.length > 0 && (
-                              <div>
-                                <span className={`text-sm ${labelClass}`}>Endorsements</span>
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {mvrResult.cdlEndorsements.map((e, i) => (
-                                    <span key={i} className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">
-                                      {e}
+                      {/* License Classes */}
+                      {mvrResult.licenses && mvrResult.licenses.length > 0 && (
+                        <div className={`mt-6 pt-5 border-t ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
+                          <p className={`text-xs uppercase tracking-wider mb-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                            License Classes
+                          </p>
+                          <div className="grid gap-3">
+                            {mvrResult.licenses.map((license, idx) => (
+                              <div 
+                                key={idx}
+                                className={`p-4 rounded-xl ${
+                                  isDark ? 'bg-gray-900/50' : 'bg-gray-50'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                                      license.type?.toLowerCase().includes('commercial')
+                                        ? 'bg-blue-500/20'
+                                        : isDark ? 'bg-gray-700' : 'bg-gray-200'
+                                    }`}>
+                                      <span className={`text-xl font-black ${
+                                        license.type?.toLowerCase().includes('commercial')
+                                          ? 'text-blue-400'
+                                          : isDark ? 'text-gray-300' : 'text-gray-600'
+                                      }`}>
+                                        {license.class || '?'}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <span className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                                          Class {license.class}
+                                        </span>
+                                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                          license.type?.toLowerCase().includes('commercial')
+                                            ? 'bg-blue-500/20 text-blue-400'
+                                            : isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'
+                                        }`}>
+                                          {license.type || 'Standard'}
+                                        </span>
+                                      </div>
+                                      {license.classDescription && (
+                                        <p className={`text-sm mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                          {license.classDescription}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className={`px-2.5 py-1 rounded-lg ${getStatusBadge(license.status).bg}`}>
+                                    <span className={`text-xs font-medium ${getStatusBadge(license.status).text}`}>
+                                      {license.status || 'Unknown'}
                                     </span>
-                                  ))}
+                                  </div>
                                 </div>
+                                {license.restrictions && (
+                                  <div className={`mt-3 pt-3 border-t ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
+                                    <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                                      <span className="font-medium">Restrictions:</span> {license.restrictions}
+                                    </p>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                            {mvrResult.cdlRestrictions?.length > 0 && (
-                              <div>
-                                <span className={`text-sm ${labelClass}`}>Restrictions</span>
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {mvrResult.cdlRestrictions.map((r, i) => (
-                                    <span key={i} className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded">
-                                      {r}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+                            ))}
                           </div>
-                        )}
-                      </>
-                    )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Medical Certificate */}
                   {(mvrResult.medicalCertExpiration || mvrResult.medicalCertStatus) && (
-                    <div className={`p-6 rounded-xl border ${cardClass}`}>
-                      <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${headingClass}`}>
-                        <Stethoscope className="h-5 w-5 text-green-500" />
-                        Medical Certificate
-                      </h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className={`rounded-xl overflow-hidden ${
+                      isDark 
+                        ? 'bg-gray-800/50 border border-gray-700/50' 
+                        : 'bg-white border border-gray-200 shadow-sm'
+                    }`}>
+                      <div className={`px-5 py-4 border-b ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
+                        <div className="flex items-center gap-2">
+                          <Stethoscope className="h-5 w-5 text-emerald-400" />
+                          <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            Medical Certificate
+                          </h3>
+                        </div>
+                      </div>
+                      <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-5">
                         <div>
-                          <span className={`text-sm ${labelClass}`}>Status</span>
-                          <p className={`font-semibold ${getStatusColor(mvrResult.medicalCertStatus, theme)}`}>
-                            {mvrResult.medicalCertStatus || 'Unknown'}
-                          </p>
+                          <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Status</p>
+                          <div className={`mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${
+                            getStatusBadge(mvrResult.medicalCertStatus).bg
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${getStatusBadge(mvrResult.medicalCertStatus).dot}`} />
+                            <span className={`text-sm font-semibold ${getStatusBadge(mvrResult.medicalCertStatus).text}`}>
+                              {mvrResult.medicalCertStatus || 'Unknown'}
+                            </span>
+                          </div>
                         </div>
                         {mvrResult.medicalCertIssueDate && (
                           <div>
-                            <span className={`text-sm ${labelClass}`}>Issued</span>
-                            <p className={valueClass}>{formatDate(mvrResult.medicalCertIssueDate)}</p>
+                            <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Issued</p>
+                            <p className={`mt-1 font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                              {formatDate(mvrResult.medicalCertIssueDate)}
+                            </p>
                           </div>
                         )}
                         <div>
-                          <span className={`text-sm ${labelClass}`}>Expiration</span>
-                          <p className={valueClass}>{formatDate(mvrResult.medicalCertExpiration)}</p>
+                          <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Expiration</p>
+                          <p className={`mt-1 font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            {formatDate(mvrResult.medicalCertExpiration)}
+                          </p>
                         </div>
                         {mvrResult.medicalCertSelfCertification && (
                           <div>
-                            <span className={`text-sm ${labelClass}`}>Self Certification</span>
-                            <p className={`text-sm ${valueClass}`}>{mvrResult.medicalCertSelfCertification}</p>
+                            <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Self Certification</p>
+                            <p className={`mt-1 text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                              {mvrResult.medicalCertSelfCertification}
+                            </p>
                           </div>
                         )}
                       </div>
                     </div>
                   )}
 
-                  {/* Summary Stats */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className={`p-4 rounded-xl border text-center ${cardClass}`}>
-                      <div className={`text-3xl font-bold ${
-                        (mvrResult.totalPoints || 0) > 0 ? 'text-red-500' : 'text-green-500'
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-4 gap-3">
+                    {/* Points */}
+                    <div className={`rounded-xl p-4 text-center ${
+                      isDark ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white border border-gray-200'
+                    }`}>
+                      <div className={`text-3xl font-black ${
+                        (mvrResult.totalPoints || 0) > 0 ? 'text-red-400' : 'text-emerald-400'
                       }`}>
                         {mvrResult.totalPoints || 0}
                       </div>
-                      <div className={`text-sm ${labelClass}`}>Points</div>
+                      <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        Points
+                      </p>
                     </div>
-                    <div className={`p-4 rounded-xl border text-center ${cardClass}`}>
-                      <div className={`text-3xl font-bold ${
-                        (mvrResult.violationCount || 0) > 0 ? 'text-orange-500' : 'text-green-500'
+                    
+                    {/* Violations */}
+                    <div className={`rounded-xl p-4 text-center ${
+                      isDark ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white border border-gray-200'
+                    }`}>
+                      <div className={`text-3xl font-black ${
+                        (mvrResult.violationCount || 0) > 0 ? 'text-amber-400' : 'text-emerald-400'
                       }`}>
                         {mvrResult.violationCount || 0}
                       </div>
-                      <div className={`text-sm ${labelClass}`}>Violations</div>
+                      <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        Violations
+                      </p>
                     </div>
-                    <div className={`p-4 rounded-xl border text-center ${cardClass}`}>
-                      <div className={`text-3xl font-bold ${
-                        (mvrResult.accidentCount || 0) > 0 ? 'text-red-500' : 'text-green-500'
+                    
+                    {/* Accidents */}
+                    <div className={`rounded-xl p-4 text-center ${
+                      isDark ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white border border-gray-200'
+                    }`}>
+                      <div className={`text-3xl font-black ${
+                        (mvrResult.accidentCount || 0) > 0 ? 'text-red-400' : 'text-emerald-400'
                       }`}>
                         {mvrResult.accidentCount || 0}
                       </div>
-                      <div className={`text-sm ${labelClass}`}>Accidents</div>
+                      <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        Accidents
+                      </p>
                     </div>
-                    <div className={`p-4 rounded-xl border text-center ${cardClass}`}>
-                      <div className={`text-3xl font-bold ${
-                        (mvrResult.suspensionCount || 0) > 0 ? 'text-red-500' : 'text-green-500'
+                    
+                    {/* Suspensions */}
+                    <div className={`rounded-xl p-4 text-center ${
+                      isDark ? 'bg-gray-800/50 border border-gray-700/50' : 'bg-white border border-gray-200'
+                    }`}>
+                      <div className={`text-3xl font-black ${
+                        (mvrResult.suspensionCount || 0) > 0 ? 'text-red-400' : 'text-emerald-400'
                       }`}>
                         {mvrResult.suspensionCount || 0}
                       </div>
-                      <div className={`text-sm ${labelClass}`}>Suspensions</div>
+                      <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        Suspensions
+                      </p>
                     </div>
                   </div>
 
                   {/* Violations Detail */}
                   {mvrResult.violations && mvrResult.violations.length > 0 && (
-                    <div className={`p-6 rounded-xl border ${cardClass}`}>
-                      <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${headingClass}`}>
-                        <AlertTriangle className="h-5 w-5 text-orange-500" />
-                        Violations ({mvrResult.violations.length})
-                      </h3>
-                      <div className="space-y-3">
+                    <div className={`rounded-xl overflow-hidden ${
+                      isDark 
+                        ? 'bg-gray-800/50 border border-gray-700/50' 
+                        : 'bg-white border border-gray-200 shadow-sm'
+                    }`}>
+                      <div className={`px-5 py-4 border-b ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="h-5 w-5 text-amber-400" />
+                          <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            Violations
+                          </h3>
+                          <span className={`text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400`}>
+                            {mvrResult.violations.length}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-5 space-y-3">
                         {mvrResult.violations.map((violation, idx) => (
                           <div 
                             key={idx}
-                            className={`p-4 rounded-lg border-l-4 border-orange-400 ${
-                              theme === 'light' ? 'bg-orange-50' : 'bg-orange-900/20'
+                            className={`p-4 rounded-xl border-l-4 border-amber-500 ${
+                              isDark ? 'bg-amber-500/5' : 'bg-amber-50'
                             }`}
                           >
-                            <div className="flex flex-wrap justify-between items-start gap-2">
+                            <div className="flex items-start justify-between gap-4">
                               <div className="flex-1">
-                                <p className={`font-medium ${headingClass}`}>
+                                <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                                   {violation.description || violation.type || 'Violation'}
                                 </p>
-                                <div className={`text-sm mt-1 flex flex-wrap gap-3 ${labelClass}`}>
+                                <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm ${
+                                  isDark ? 'text-gray-400' : 'text-gray-500'
+                                }`}>
                                   {violation.date && (
-                                    <span>Issue: {formatDate(violation.date)}</span>
+                                    <span className="flex items-center gap-1">
+                                      <Calendar className="h-3.5 w-3.5" />
+                                      Issue: {formatDate(violation.date)}
+                                    </span>
                                   )}
                                   {violation.convictionDate && (
-                                    <span>Conviction: {formatDate(violation.convictionDate)}</span>
+                                    <span className="flex items-center gap-1">
+                                      <CheckCircle className="h-3.5 w-3.5" />
+                                      Conviction: {formatDate(violation.convictionDate)}
+                                    </span>
                                   )}
                                   {violation.state && (
                                     <span className="flex items-center gap-1">
-                                      <MapPin className="h-3 w-3" />
+                                      <MapPin className="h-3.5 w-3.5" />
                                       {violation.state}
                                     </span>
                                   )}
@@ -551,13 +681,13 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
                               </div>
                               <div className="flex flex-col items-end gap-1">
                                 {violation.points !== undefined && violation.points > 0 && (
-                                  <span className="text-sm font-bold text-red-600">
+                                  <span className="text-lg font-bold text-red-400">
                                     {violation.points} pts
                                   </span>
                                 )}
-                                {(violation.acdCode || violation.stateCode) && (
-                                  <span className={`text-xs ${labelClass}`}>
-                                    {violation.state && `${violation.state}/`}{violation.acdCode || violation.stateCode}
+                                {violation.acdCode && (
+                                  <span className={`text-xs font-mono ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                                    ACD: {violation.acdCode}
                                   </span>
                                 )}
                               </div>
@@ -570,25 +700,36 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
 
                   {/* Accidents Detail */}
                   {mvrResult.accidents && mvrResult.accidents.length > 0 && (
-                    <div className={`p-6 rounded-xl border ${cardClass}`}>
-                      <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${headingClass}`}>
-                        <Car className="h-5 w-5 text-red-500" />
-                        Accidents ({mvrResult.accidents.length})
-                      </h3>
-                      <div className="space-y-3">
+                    <div className={`rounded-xl overflow-hidden ${
+                      isDark 
+                        ? 'bg-gray-800/50 border border-gray-700/50' 
+                        : 'bg-white border border-gray-200 shadow-sm'
+                    }`}>
+                      <div className={`px-5 py-4 border-b ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
+                        <div className="flex items-center gap-2">
+                          <Car className="h-5 w-5 text-red-400" />
+                          <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            Accidents
+                          </h3>
+                          <span className={`text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400`}>
+                            {mvrResult.accidents.length}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-5 space-y-3">
                         {mvrResult.accidents.map((accident, idx) => (
                           <div 
                             key={idx}
-                            className={`p-4 rounded-lg border-l-4 border-red-400 ${
-                              theme === 'light' ? 'bg-red-50' : 'bg-red-900/20'
+                            className={`p-4 rounded-xl border-l-4 border-red-500 ${
+                              isDark ? 'bg-red-500/5' : 'bg-red-50'
                             }`}
                           >
-                            <div className="flex justify-between items-start">
+                            <div className="flex items-start justify-between">
                               <div>
-                                <p className={`font-medium ${headingClass}`}>
+                                <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                                   {accident.description || 'Accident'}
                                 </p>
-                                <p className={`text-sm ${labelClass}`}>
+                                <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                                   {formatDate(accident.date)}
                                 </p>
                               </div>
@@ -596,14 +737,14 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
                                 {accident.severity && (
                                   <span className={`text-sm font-medium ${
                                     accident.severity.toLowerCase().includes('fatal') 
-                                      ? 'text-red-600' 
-                                      : 'text-orange-600'
+                                      ? 'text-red-400' 
+                                      : 'text-amber-400'
                                   }`}>
                                     {accident.severity}
                                   </span>
                                 )}
                                 {accident.fault && (
-                                  <p className={`text-xs ${labelClass}`}>
+                                  <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
                                     Fault: {accident.fault}
                                   </p>
                                 )}
@@ -617,32 +758,43 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
 
                   {/* Suspensions Detail */}
                   {mvrResult.suspensions && mvrResult.suspensions.length > 0 && (
-                    <div className={`p-6 rounded-xl border ${cardClass}`}>
-                      <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${headingClass}`}>
-                        <XCircle className="h-5 w-5 text-red-500" />
-                        Suspensions ({mvrResult.suspensions.length})
-                      </h3>
-                      <div className="space-y-3">
+                    <div className={`rounded-xl overflow-hidden ${
+                      isDark 
+                        ? 'bg-gray-800/50 border border-gray-700/50' 
+                        : 'bg-white border border-gray-200 shadow-sm'
+                    }`}>
+                      <div className={`px-5 py-4 border-b ${isDark ? 'border-gray-700/50' : 'border-gray-200'}`}>
+                        <div className="flex items-center gap-2">
+                          <XCircle className="h-5 w-5 text-red-400" />
+                          <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            Suspensions
+                          </h3>
+                          <span className={`text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400`}>
+                            {mvrResult.suspensions.length}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-5 space-y-3">
                         {mvrResult.suspensions.map((suspension, idx) => (
                           <div 
                             key={idx}
-                            className={`p-4 rounded-lg border-l-4 border-red-600 ${
-                              theme === 'light' ? 'bg-red-50' : 'bg-red-900/20'
+                            className={`p-4 rounded-xl border-l-4 border-red-600 ${
+                              isDark ? 'bg-red-500/5' : 'bg-red-50'
                             }`}
                           >
-                            <div className="flex justify-between items-start">
+                            <div className="flex items-start justify-between">
                               <div>
-                                <p className={`font-medium ${headingClass}`}>
+                                <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                                   {suspension.reason || 'Suspension'}
                                 </p>
-                                <p className={`text-sm ${labelClass}`}>
+                                <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                                   From: {formatDate(suspension.date)}
                                   {suspension.endDate && ` → To: ${formatDate(suspension.endDate)}`}
                                 </p>
                               </div>
                               {suspension.state && (
-                                <span className={`text-sm flex items-center gap-1 ${labelClass}`}>
-                                  <MapPin className="h-3 w-3" />
+                                <span className={`text-sm flex items-center gap-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  <MapPin className="h-3.5 w-3.5" />
                                   {suspension.state}
                                 </span>
                               )}
@@ -653,26 +805,29 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
                     </div>
                   )}
 
-                  {/* Report Timestamp */}
-                  <div className={`text-center text-xs ${labelClass}`}>
-                    Report received: {new Date(mvrResult.receivedAt).toLocaleString()}
-                    {mvrResult.parsedAt && ` • Processed: ${new Date(mvrResult.parsedAt).toLocaleString()}`}
+                  {/* Footer */}
+                  <div className={`text-center text-xs py-2 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+                    Report received {new Date(mvrResult.receivedAt).toLocaleString()}
+                    {mvrResult.parsedAt && ` • Processed ${new Date(mvrResult.parsedAt).toLocaleString()}`}
                   </div>
                 </>
               ) : (
-                <div className={`p-6 rounded-xl border ${
-                  theme === 'light'
-                    ? 'bg-yellow-50 border-yellow-200'
-                    : 'bg-yellow-900/20 border-yellow-500/30'
+                /* Processing State */
+                <div className={`rounded-xl p-8 ${
+                  isDark 
+                    ? 'bg-amber-500/10 border border-amber-500/30' 
+                    : 'bg-amber-50 border border-amber-200'
                 }`}>
-                  <div className="flex items-center gap-3">
-                    <Clock className="h-6 w-6 text-yellow-600" />
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-xl ${isDark ? 'bg-amber-500/20' : 'bg-amber-100'}`}>
+                      <Clock className="h-8 w-8 text-amber-500" />
+                    </div>
                     <div>
-                      <p className={`font-medium ${theme === 'light' ? 'text-yellow-800' : 'text-yellow-400'}`}>
-                        MVR results are still processing
+                      <p className={`font-semibold ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>
+                        MVR Results Processing
                       </p>
-                      <p className={`text-sm ${theme === 'light' ? 'text-yellow-700' : 'text-yellow-500'}`}>
-                        This typically takes a few minutes. Please check back later.
+                      <p className={`text-sm mt-1 ${isDark ? 'text-amber-500/80' : 'text-amber-600'}`}>
+                        This typically takes a few minutes. The report will update automatically when ready.
                       </p>
                     </div>
                   </div>
