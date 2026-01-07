@@ -35,6 +35,7 @@ Veree is now architected as a **two-sided marketplace** connecting drivers with 
 **Driver Experience (Fully Built):**
 
 - ✅ Resume upload with blockchain verification
+- ✅ **Resume builder** - Create professional driver resumes (NEW!)
 - ✅ DOT application forms (3-step wizard)
 - ✅ AvA AI assistant for form guidance
 - ✅ Form data persistence and prefill

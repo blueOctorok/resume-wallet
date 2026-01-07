@@ -2,6 +2,55 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 📝 **RESUME BUILDER FEATURE** (January 2026)
+
+**Added resume builder functionality to allow drivers to create professional resumes directly in the platform.**
+
+### **Why This Matters:**
+Many drivers don't have good resumes, and providing a resume builder creates significant value:
+- **Driver-specific sections** - Tailored for trucking industry (CDL info, equipment types, route experience)
+- **Structured data storage** - Better than PDF extraction for form prefill
+- **Professional output** - Export to PDF when complete
+- **Integration with existing flow** - Built resumes can be used for DOT form prefill
+
+### **What's Implemented:**
+- ✅ **Database Schema**: Added `resume_type` (uploaded/built), `structured_data` (JSONB), and `source_resume_id` columns
+- ✅ **ResumeBuilder Component**: Multi-step form builder with driver-specific sections:
+  - Personal Information (name, contact, professional summary)
+  - CDL & License (CDL number, class, endorsements, restrictions)
+  - Employment History (companies, positions, dates, responsibilities, equipment)
+  - Education & Training (placeholder - full implementation coming)
+  - Skills & Equipment (placeholder - full implementation coming)
+  - References (placeholder - full implementation coming)
+  - Review & Export (placeholder - PDF export coming soon)
+- ✅ **Tab Navigation**: Added tabs to resume page (Upload Resume | Create Resume)
+- ✅ **API Endpoints**: `/api/resumes/create` for creating and updating built resumes
+- ✅ **Progress Saving**: Users can save progress and return to edit later
+
+### **Technical Implementation:**
+- **Migration**: `006_resume_builder_support.sql` - Adds resume builder columns to database
+- **Component**: `src/components/ResumeBuilder.tsx` - Main resume builder component
+- **Tab Selector**: `src/components/ResumeTabSelector.tsx` - UI for switching between upload/create
+- **API**: `src/app/api/resumes/create/route.ts` - Handles POST (create) and PUT (update) operations
+- **Page Integration**: Updated `src/app/page.tsx` to support resume tabs
+
+### **Database Changes:**
+```sql
+-- New columns added to resumes table
+ALTER TABLE resumes ADD COLUMN resume_type VARCHAR(20) DEFAULT 'uploaded';
+ALTER TABLE resumes ADD COLUMN structured_data JSONB;
+ALTER TABLE resumes ADD COLUMN source_resume_id UUID REFERENCES resumes(id);
+```
+
+### **Future Enhancements:**
+- 🔜 **PDF Export**: Generate professional PDF resume from structured data
+- 🔜 **Template Selection**: Multiple resume templates for different job types
+- 🔜 **AI Suggestions**: Auto-complete and suggestions based on job descriptions
+- 🔜 **Form Prefill Integration**: Use structured data to prefill DOT forms (better than PDF extraction)
+- 🔜 **Resume Analytics**: Track resume views and application success rates
+
+---
+
 ## 🎉 **MVR INTEGRATION FULLY OPERATIONAL** (January 7, 2026)
 
 **The complete MVR (Motor Vehicle Record) integration with KeyBackground/Accio is now working end-to-end with real DMV data!**

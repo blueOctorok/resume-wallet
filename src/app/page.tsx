@@ -9,6 +9,7 @@ import UserStatusModal from '@/components/UserStatusModal'
 import WalletCard from '@/components/WalletCard'
 import TLoadingModal from '@/components/TLoadingModal'
 import LoadingScreen from '@/components/LoadingScreen'
+import ResumeTabSelector from '@/components/ResumeTabSelector'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   useSendUserOperation,
@@ -34,6 +35,16 @@ const ResumeUploadWithVerification = dynamic(
     ssr: false,
     loading: () => (
       <LoadingScreen message='Loading resume upload...' fullScreen={false} />
+    ),
+  }
+)
+
+const ResumeBuilder = dynamic(
+  () => import('@/components/ResumeBuilder'),
+  {
+    ssr: false,
+    loading: () => (
+      <LoadingScreen message='Loading resume builder...' fullScreen={false} />
     ),
   }
 )
@@ -297,6 +308,7 @@ const HomeContent = () => {
   const [currentPage, setCurrentPage] = useState<
     'signin' | 'resume' | 'dotapp' | 'jobs' | 'applications' | 'mvr' | null
   >(null)
+  const [resumeTab, setResumeTab] = useState<'upload' | 'create'>('upload')
 
   // Role-based access control
   const [userRole, setUserRole] = useState<'driver' | 'employer' | null>(null)
@@ -2019,19 +2031,41 @@ const HomeContent = () => {
 
                 {currentPage === 'resume' && (
                   <div className='max-w-4xl mx-auto space-y-6'>
-                    <ResumeUploadWithVerification
-                      user={user}
-                      onBack={() => setCurrentPage(null)}
-                      onUploadComplete={(payload) => {
-                        setHasResume(true)
-                        // Store the IPFS hash for later prefill use
-                        if (payload?.finalResult?.ipfsHash) {
-                          setLatestResumeIpfsHash(payload.finalResult.ipfsHash)
-                        }
-                        // Note: analysis_ready event is now triggered by ResumeUploadWithVerification itself
-                        // after blockchain verification completes, so we don't need to trigger it here
-                      }}
+                    {/* Resume Tab Selector */}
+                    <ResumeTabSelector
+                      activeTab={resumeTab}
+                      onTabChange={setResumeTab}
+                      theme={theme}
                     />
+
+                    {/* Tab Content */}
+                    {resumeTab === 'upload' && (
+                      <ResumeUploadWithVerification
+                        user={user}
+                        onBack={() => setCurrentPage(null)}
+                        onUploadComplete={(payload) => {
+                          setHasResume(true)
+                          // Store the IPFS hash for later prefill use
+                          if (payload?.finalResult?.ipfsHash) {
+                            setLatestResumeIpfsHash(payload.finalResult.ipfsHash)
+                          }
+                          // Note: analysis_ready event is now triggered by ResumeUploadWithVerification itself
+                          // after blockchain verification completes, so we don't need to trigger it here
+                        }}
+                      />
+                    )}
+
+                    {resumeTab === 'create' && (
+                      <ResumeBuilder
+                        user={user}
+                        onBack={() => setCurrentPage(null)}
+                        onSave={(resumeId) => {
+                          console.log('Resume saved:', resumeId)
+                          setHasResume(true)
+                        }}
+                      />
+                    )}
+
                     <ResumeDashboard
                       user={user}
                       onResumesLoaded={(count, latestResume) => {

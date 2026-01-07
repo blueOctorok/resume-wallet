@@ -406,11 +406,11 @@ export default function ResumeUploadWithVerification({
   if (!user?.address) {
     return (
       <div
-        className={`max-w-4xl mx-auto p-6 ${
+        className={`max-w-4xl mx-auto rounded-2xl border p-6 sm:p-8 shadow-2xl relative ${
           theme === 'dark'
-            ? 'bg-brand-sage-light/20 backdrop-blur-xl'
-            : 'bg-white/80 backdrop-blur-xl'
-        } rounded-2xl shadow-2xl relative z-10 border-t-4 ${
+            ? 'bg-brand-sage-light/20 border-brand-mint/30 backdrop-blur-xl'
+            : 'bg-white/80 border-brand-sage/20 backdrop-blur-xl'
+        } border-t-4 ${
           theme === 'dark' ? 'border-brand-mint' : 'border-brand-sage'
         }`}
       >
@@ -456,26 +456,25 @@ export default function ResumeUploadWithVerification({
   }
 
   return (
-    <div className='w-full p-4 sm:p-6 lg:p-8'>
-      <div className='max-w-7xl mx-auto'>
-        {onBack && (
-          <button
-            onClick={onBack}
-            className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-4 cursor-pointer"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back
-          </button>
-        )}
-        <div
-          className={`max-w-4xl mx-auto p-6 ${
-            theme === 'dark'
-              ? 'bg-brand-sage-light/20 backdrop-blur-xl'
-              : 'bg-white/80 backdrop-blur-xl'
-          } rounded-2xl shadow-2xl relative z-10 border-t-4 ${
-            theme === 'dark' ? 'border-brand-mint' : 'border-brand-sage'
-          }`}
+    <>
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-4 cursor-pointer"
         >
+          <ArrowLeft className="w-5 h-5" />
+          Back
+        </button>
+      )}
+      <div
+        className={`max-w-4xl mx-auto rounded-2xl border p-6 sm:p-8 shadow-2xl relative ${
+          theme === 'dark'
+            ? 'bg-brand-sage-light/20 border-brand-mint/30 backdrop-blur-xl'
+            : 'bg-white/80 border-brand-sage/20 backdrop-blur-xl'
+        } border-t-4 ${
+          theme === 'dark' ? 'border-brand-mint' : 'border-brand-sage'
+        }`}
+      >
           <div className='mb-6'>
             <h3
               className={`text-xl sm:text-2xl md:text-3xl font-bold ${
@@ -754,8 +753,7 @@ export default function ResumeUploadWithVerification({
           <p>❌ Please connect your Alchemy Smart Wallet first</p>
         )}
         </div>
-        </div>
       </div>
-    </div>
+    </>
   )
 }

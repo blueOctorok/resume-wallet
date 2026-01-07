@@ -94,6 +94,94 @@ body {
   }
 }
 
+/* Beautiful horizontal scrollbar for resume builder step indicators */
+.resume-steps-scrollbar {
+  scrollbar-width: thin; /* Firefox - thin scrollbar */
+  scrollbar-color: transparent transparent; /* Firefox - default hidden */
+}
+
+/* Dark mode scrollbar for step indicators */
+[data-theme='dark'] .resume-steps-scrollbar {
+  scrollbar-color: rgba(201, 217, 195, 0.3) transparent; /* brand-mint with opacity for Firefox */
+}
+
+[data-theme='dark'] .resume-steps-scrollbar::-webkit-scrollbar {
+  height: 8px; /* Horizontal scrollbar height */
+}
+
+[data-theme='dark'] .resume-steps-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+[data-theme='dark'] .resume-steps-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    90deg,
+    rgba(201, 217, 195, 0.4) 0%,
+    rgba(201, 217, 195, 0.6) 50%,
+    rgba(201, 217, 195, 0.4) 100%
+  ); /* brand-mint gradient */
+  border-radius: 10px;
+  border: 1px solid rgba(201, 217, 195, 0.2);
+  transition: all 0.3s ease;
+}
+
+[data-theme='dark'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    90deg,
+    rgba(201, 217, 195, 0.5) 0%,
+    rgba(201, 217, 195, 0.8) 50%,
+    rgba(201, 217, 195, 0.5) 100%
+  );
+  border-color: rgba(201, 217, 195, 0.4);
+  box-shadow: 0 0 8px rgba(201, 217, 195, 0.3);
+}
+
+[data-theme='dark'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active {
+  background: rgba(201, 217, 195, 0.8);
+}
+
+/* Light mode scrollbar for step indicators */
+[data-theme='light'] .resume-steps-scrollbar {
+  scrollbar-color: rgba(105, 116, 105, 0.3) transparent; /* brand-sage with opacity for Firefox */
+}
+
+[data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar {
+  height: 8px; /* Horizontal scrollbar height */
+}
+
+[data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+[data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    90deg,
+    rgba(105, 116, 105, 0.3) 0%,
+    rgba(105, 116, 105, 0.5) 50%,
+    rgba(105, 116, 105, 0.3) 100%
+  ); /* brand-sage gradient */
+  border-radius: 10px;
+  border: 1px solid rgba(105, 116, 105, 0.15);
+  transition: all 0.3s ease;
+}
+
+[data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    90deg,
+    rgba(105, 116, 105, 0.4) 0%,
+    rgba(105, 116, 105, 0.7) 50%,
+    rgba(105, 116, 105, 0.4) 100%
+  );
+  border-color: rgba(105, 116, 105, 0.3);
+  box-shadow: 0 0 8px rgba(105, 116, 105, 0.2);
+}
+
+[data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active {
+  background: rgba(105, 116, 105, 0.7);
+}
+
 /* Theme-aware scrollbar */
 ::-webkit-scrollbar {
   width: 12px;
