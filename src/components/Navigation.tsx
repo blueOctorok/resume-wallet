@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import dynamic from 'next/dynamic'
-import { Home } from 'lucide-react'
+import { Home, FileText, Search, ClipboardList, FileCheck, Car } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 import { useTheme } from '@/contexts/ThemeContext'
 import MvrStatusIndicator from './MvrStatusIndicator'
@@ -344,52 +344,56 @@ export default function Navigation({
                               handleNavigation('resume')
                               setIsDriverDropdownOpen(false)
                             }}
-                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2 ${
                               theme === 'light'
                                 ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
                                 : 'text-brand-cream hover:bg-brand-sage-light/20'
                             }`}
                           >
-                            📄 Resume
+                            <FileText className='w-4 h-4' />
+                            Resume
                           </button>
                           <button
                             onClick={() => {
                               handleNavigation('jobs')
                               setIsDriverDropdownOpen(false)
                             }}
-                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2 ${
                               theme === 'light'
                                 ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
                                 : 'text-brand-cream hover:bg-brand-sage-light/20'
                             }`}
                           >
-                            🔍 Browse Jobs
+                            <Search className='w-4 h-4' />
+                            Browse Jobs
                           </button>
                           <button
                             onClick={() => {
                               handleNavigation('applications')
                               setIsDriverDropdownOpen(false)
                             }}
-                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2 ${
                               theme === 'light'
                                 ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
                                 : 'text-brand-cream hover:bg-brand-sage-light/20'
                             }`}
                           >
-                            📋 My Applications
+                            <ClipboardList className='w-4 h-4' />
+                            My Applications
                           </button>
                           <button
                             onClick={() => {
                               handleNavigation('dotapp')
                               setIsDriverDropdownOpen(false)
                             }}
-                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2 ${
                               theme === 'light'
                                 ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
                                 : 'text-brand-cream hover:bg-brand-sage-light/20'
                             }`}
                           >
-                            📝 DOT App
+                            <FileCheck className='w-4 h-4' />
+                            DOT App
                           </button>
                           {onMvrClick && (
                             <button
@@ -397,13 +401,14 @@ export default function Navigation({
                                 onMvrClick()
                                 setIsDriverDropdownOpen(false)
                               }}
-                              className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                              className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2 ${
                                 theme === 'light'
                                   ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
                                   : 'text-brand-cream hover:bg-brand-sage-light/20'
                               }`}
                             >
-                              🚗 Order MVR
+                              <Car className='w-4 h-4' />
+                              Order MVR
                             </button>
                           )}
                         </div>

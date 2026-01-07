@@ -2,7 +2,23 @@
 
 import React, { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
-import { ArrowLeft, ArrowRight, Save, Download, Plus, X, Check } from 'lucide-react'
+import { 
+  ArrowLeft, 
+  ArrowRight, 
+  Save, 
+  Download, 
+  Plus, 
+  X, 
+  Check,
+  User,
+  Truck,
+  Briefcase,
+  GraduationCap,
+  Settings,
+  Phone,
+  FileCheck,
+  FileEdit
+} from 'lucide-react'
 
 interface PersonalInfo {
   firstName: string
@@ -74,13 +90,13 @@ interface ResumeBuilderProps {
 }
 
 const STEPS = [
-  { id: 'personal', name: 'Personal Info', icon: '👤' },
-  { id: 'cdl', name: 'CDL & License', icon: '🚛' },
-  { id: 'employment', name: 'Employment History', icon: '💼' },
-  { id: 'education', name: 'Education & Training', icon: '🎓' },
-  { id: 'skills', name: 'Skills & Equipment', icon: '⚙️' },
-  { id: 'references', name: 'References', icon: '📞' },
-  { id: 'review', name: 'Review & Export', icon: '✅' },
+  { id: 'personal', name: 'Personal Info', Icon: User },
+  { id: 'cdl', name: 'CDL & License', Icon: Truck },
+  { id: 'employment', name: 'Employment History', Icon: Briefcase },
+  { id: 'education', name: 'Education & Training', Icon: GraduationCap },
+  { id: 'skills', name: 'Skills & Equipment', Icon: Settings },
+  { id: 'references', name: 'References', Icon: Phone },
+  { id: 'review', name: 'Review & Export', Icon: FileCheck },
 ]
 
 // CDL endorsement options (common ones) - available to all step components
@@ -270,11 +286,12 @@ export default function ResumeBuilder({
           {/* Header */}
           <div className='mb-4 sm:mb-6'>
             <h3
-              className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-2 ${
+              className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-2 flex items-center gap-2 ${
                 theme === 'dark' ? 'text-white' : 'text-gray-900'
               }`}
             >
-              📝 Build Your Resume
+              <FileEdit className='w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7' />
+              Build Your Resume
             </h3>
             <p
               className={`text-xs sm:text-sm md:text-base ${
@@ -304,7 +321,7 @@ export default function ResumeBuilder({
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    <span className='text-sm sm:text-base'>{step.icon}</span>
+                    <step.Icon className='w-4 h-4 sm:w-5 sm:h-5' />
                     <span className='hidden sm:inline'>{step.name}</span>
                     <span className='sm:hidden font-semibold'>{index + 1}</span>
                   </button>
@@ -630,7 +647,7 @@ function CDLInfoStep({ data, onChange, theme }: CDLInfoStepProps) {
           }}
           className={`w-full px-3 sm:px-4 py-2 rounded-lg border text-sm sm:text-base ${
             theme === 'dark'
-              ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400'
+              ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
               : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
           }`}
         />
@@ -1011,7 +1028,7 @@ function InputField({
         required={required}
         className={`w-full px-3 sm:px-4 py-2 rounded-lg border transition-all text-sm sm:text-base ${
           theme === 'dark'
-            ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:border-brand-mint focus:ring-1 focus:ring-brand-mint'
+            ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-brand-mint focus:ring-1 focus:ring-brand-mint'
             : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-brand-sage focus:ring-1 focus:ring-brand-sage'
         } disabled:opacity-50 disabled:cursor-not-allowed`}
       />
@@ -1054,7 +1071,7 @@ function TextareaField({
         placeholder={placeholder}
         className={`w-full px-3 sm:px-4 py-2 rounded-lg border transition-all resize-none text-sm sm:text-base ${
           theme === 'dark'
-            ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:border-brand-mint focus:ring-1 focus:ring-brand-mint'
+            ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-brand-mint focus:ring-1 focus:ring-brand-mint'
             : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-brand-sage focus:ring-1 focus:ring-brand-sage'
         }`}
       />
@@ -1093,7 +1110,7 @@ function SelectField({
         required={required}
         className={`w-full px-3 sm:px-4 py-2 rounded-lg border transition-all text-sm sm:text-base ${
           theme === 'dark'
-            ? 'bg-gray-800 border-gray-700 text-white focus:border-brand-mint focus:ring-1 focus:ring-brand-mint'
+            ? 'bg-white border-gray-300 text-gray-900 focus:border-brand-mint focus:ring-1 focus:ring-brand-mint'
             : 'bg-white border-gray-300 text-gray-900 focus:border-brand-sage focus:ring-1 focus:ring-brand-sage'
         }`}
       >

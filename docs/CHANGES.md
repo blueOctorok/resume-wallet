@@ -2,6 +2,28 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🔧 **CREDITS API ERROR HANDLING IMPROVEMENTS** (January 2026)
+
+**Improved error handling for T Backend API outages in credits routes.**
+
+### **Problem:**
+When T Backend (`api-v2.fluxpointstudios.com`) experiences outages (502/503/504 errors), raw nginx HTML errors were being passed through to the frontend, causing confusing error displays.
+
+### **Solution:**
+- ✅ **Added timeout handling** - 10 second timeout with `AbortController` prevents hanging requests
+- ✅ **Graceful server error handling** - 5xx errors now return clean 503 "Service Unavailable" responses
+- ✅ **Environment variable consistency** - Now uses `T_BACKEND_BASE_URL` env var instead of hardcoded URL
+- ✅ **Better error messages** - User-friendly messages instead of raw nginx HTML
+
+### **Files Updated:**
+- `src/app/api/credits/route.ts` - Public credits endpoint
+- `src/app/api/admin/credits/route.ts` - Admin credits endpoint
+
+### **Note:**
+If you see 502/503 errors for AI features, it means T Backend (Flux Point Studios) is down. This is an external service issue - contact them or wait for it to resolve.
+
+---
+
 ## 📝 **RESUME BUILDER FEATURE** (January 2026)
 
 **Added resume builder functionality to allow drivers to create professional resumes directly in the platform.**
