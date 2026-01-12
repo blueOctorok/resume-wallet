@@ -2,6 +2,174 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 📋 **RESUME MANAGEMENT DASHBOARD ENHANCEMENT** (January 2026)
+
+**Enhanced the Resume Management dashboard with full CRUD operations, blockchain verification flow, and improved UX.**
+
+### **New Features:**
+
+1. **Delete Resume**
+   - Delete button on all resumes with confirmation modal
+   - Warning message for verified resumes (blockchain record is permanent)
+   - Soft delete from database
+
+2. **One-Click Blockchain Verification** (for Built Resumes)
+   - Prominent "Verify on Blockchain" button for unverified resumes
+   - **One-click flow**: Generate PDF → Upload to IPFS → Record on blockchain
+   - No need to re-upload - uses existing structured data
+   - Real-time progress feedback with loading states
+   - New API endpoint: `POST /api/resumes/[id]/verify`
+
+3. **Download PDF**
+   - Download PDF button for built resumes
+   - Generates professional PDF from structured data
+   - Uses jsPDF with proper formatting
+
+4. **Duplicate Resume**
+   - Clone any built resume
+   - Opens Resume Builder with duplicated data
+   - Creates new resume entry
+
+5. **Better Status Labels**
+   - Changed "Pending" to "Not Verified" for clarity
+   - Added CTA message: "Secure this resume on the blockchain"
+   - Improved color scheme (amber instead of yellow)
+
+### **Files Changed:**
+
+- `src/components/ResumeDashboard.tsx` - Complete rewrite with all new features
+- `src/app/api/resumes/[id]/route.ts` - Added DELETE handler
+- `src/app/api/resumes/[id]/verify/route.ts` - **New** one-click blockchain verification
+- `src/app/page.tsx` - Added onDuplicateResume and onVerifyResume props
+
+**Note:** Public/Private toggle was removed as it wasn't necessary for the core use case. Resumes remain private by default.
+
+### **UI Improvements:**
+
+- Action buttons organized by priority (primary actions first)
+- Toast notifications for success/error feedback
+- Loading states for all async operations
+- Responsive button layout
+- Icons for all actions (Lucide React)
+
+---
+
+## 🔄 **UNIFIED DRIVER PROFILE - BIDIRECTIONAL DATA FLOW** (January 2026)
+
+**Implemented unified driver profile enabling bidirectional data flow between Resume Builder and DOT Application.**
+
+### **The Problem:**
+Users could start with either the Resume Builder or DOT Application, but data didn't flow between them. If a user filled out their DOT application first, they'd have to re-enter everything in the Resume Builder, and vice versa.
+
+### **The Solution:**
+A **Unified Driver Profile** that acts as a single source of truth. Both forms read from and write to this profile.
+
+```
+                    ┌─────────────────────┐
+                    │  UNIFIED PROFILE    │
+                    │  (Single Source of  │
+                    │      Truth)         │
+                    └─────────┬───────────┘
+                              │
+         ┌────────────────────┼────────────────────┐
+         │                    │                    │
+         ▼                    ▼                    ▼
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│  Resume Builder │  │  DOT Application │  │    MVR Data     │
+│   (read/write)  │  │   (read/write)   │  │   (read only)   │
+└─────────────────┘  └─────────────────┘  └─────────────────┘
+```
+
+### **User Journeys Now Supported:**
+
+1. **Resume First → DOT App**: User builds resume → data auto-prefills DOT application
+2. **DOT App First → Resume**: User fills DOT form → data auto-prefills Resume Builder
+3. **Upload Resume → Both**: AI extracts data → prefills both forms
+4. **Purchase MVR → Both**: MVR data (violations, accidents) → prefills driving record sections
+
+### **Technical Implementation:**
+
+**Database Migration** (`supabase/migrations/007_unified_driver_profile.sql`):
+- Added new columns to `driver_profiles` table for all shared fields
+- Personal info, address, CDL, emergency contact
+- JSONB fields for employment history, references, education, skills
+- MVR data fields for violations and accidents
+- `last_updated_from` tracking field
+
+**TypeScript Types** (`src/types/driver-profile.ts`):
+- `UnifiedDriverProfile` - Main profile type
+- `UnifiedEmployment` - Superset of Resume + DOT employment fields
+- `UnifiedReference` - Superset of Resume + DOT reference fields
+- Helper functions: `rowToProfile()`, `profileToRow()`
+
+**Mapping Utilities** (`src/lib/profile-mapper.ts`):
+- `profileToResumeBuilder()` - Profile → Resume Builder format
+- `resumeBuilderToProfile()` - Resume Builder → Profile format
+- `profileToDotApplication()` - Profile → DOT Application format
+- `dotApplicationToProfile()` - DOT Application → Profile format
+- `mergeIntoProfile()` - Smart merge that preserves existing data
+- `mergeEmploymentHistory()` - Merge employment while preserving fields from both forms
+
+**API Endpoint** (`src/app/api/driver/profile/route.ts`):
+- `GET` - Fetch user's unified profile
+- `POST` - Create or fetch profile (upsert)
+- `PUT` - Update profile with source tracking
+
+### **Field Mapping:**
+
+| Field Category | Resume Builder | DOT Application | Profile Storage |
+|---------------|----------------|-----------------|-----------------|
+| **Name** | firstName, lastName | firstName, middleName, lastName | All three |
+| **Contact** | email, phone | email, phone | Both |
+| **Address** | address, city, state, zip | address, city, state, zip | Same |
+| **CDL** | number, state, class, endorsements | number, state, class, endorsements | Same |
+| **Employment** | responsibilities[], equipment[] | reasonForLeaving, supervisor | Superset |
+| **References** | title, company | yearsKnown | Superset |
+| **DOT Only** | - | dateOfBirth, SSN, emergencyContact | Stored |
+| **Resume Only** | professionalSummary, education, skills | - | Stored |
+
+### **Files Added/Modified:**
+
+**New Files:**
+- `supabase/migrations/007_unified_driver_profile.sql` - Database migration
+- `src/types/driver-profile.ts` - TypeScript types
+- `src/lib/profile-mapper.ts` - Bidirectional mapping utilities
+
+**Modified Files:**
+- `src/app/api/driver/profile/route.ts` - Full CRUD operations
+
+### **Integration Complete! ✅**
+
+All components now use the unified profile:
+
+1. **Resume Builder** (`src/components/ResumeBuilder.tsx`): ✅
+   - On mount: Fetches profile, prefills form if data exists
+   - On save: Saves to profile with source `resume_builder`
+   - Shows "Prefilled from..." indicator when data came from profile
+
+2. **DOT Application** (`src/app/page.tsx`): ✅
+   - On mount: Fetches profile, prefills form1/form2/form3 if data exists
+   - On complete: Saves to profile with source `dot_application`
+   - Only loads from profile if localStorage is empty (preserves local edits)
+
+3. **AI Prefill** (`src/app/page.tsx` - `handlePrefillSuccess`): ✅
+   - After extraction: Saves to profile with source `uploaded_resume`
+   - Data flows to both Resume Builder and DOT forms
+
+4. **MVR Results**: 🔜 (Future enhancement)
+   - When webhook receives MVR, update profile with violations/accidents
+
+### **How Users Experience This:**
+
+| User Journey | What Happens |
+|--------------|--------------|
+| Build resume → Open DOT form | DOT form is prefilled with resume data |
+| Fill DOT form → Open Resume Builder | Resume Builder is prefilled with DOT data |
+| Upload resume (AI extract) → Both forms | Both forms prefilled from extracted data |
+| Any changes saved | Profile updates, other forms get the new data next time |
+
+---
+
 ## 🔧 **CREDITS API ERROR HANDLING IMPROVEMENTS** (January 2026)
 
 **Improved error handling for T Backend API outages in credits routes.**
@@ -24,9 +192,9 @@ If you see 502/503 errors for AI features, it means T Backend (Flux Point Studio
 
 ---
 
-## 📝 **RESUME BUILDER FEATURE** (January 2026)
+## 📝 **RESUME BUILDER FEATURE - COMPLETE** (January 2026)
 
-**Added resume builder functionality to allow drivers to create professional resumes directly in the platform.**
+**Fully implemented resume builder functionality allowing drivers to create professional resumes directly in the platform.**
 
 ### **Why This Matters:**
 Many drivers don't have good resumes, and providing a resume builder creates significant value:
@@ -37,24 +205,31 @@ Many drivers don't have good resumes, and providing a resume builder creates sig
 
 ### **What's Implemented:**
 - ✅ **Database Schema**: Added `resume_type` (uploaded/built), `structured_data` (JSONB), and `source_resume_id` columns
-- ✅ **ResumeBuilder Component**: Multi-step form builder with driver-specific sections:
-  - Personal Information (name, contact, professional summary)
-  - CDL & License (CDL number, class, endorsements, restrictions)
-  - Employment History (companies, positions, dates, responsibilities, equipment)
-  - Education & Training (placeholder - full implementation coming)
-  - Skills & Equipment (placeholder - full implementation coming)
-  - References (placeholder - full implementation coming)
-  - Review & Export (placeholder - PDF export coming soon)
+- ✅ **ResumeBuilder Component**: Complete multi-step form builder with all driver-specific sections:
+  - ✅ Personal Information (name, contact, address, professional summary)
+  - ✅ CDL & License (CDL number, class, endorsements, restrictions, expiration)
+  - ✅ Employment History (companies, positions, dates, responsibilities, equipment, current employment toggle)
+  - ✅ Education & Training (school, degree, field, year, certifications)
+  - ✅ Skills & Equipment (category-based skills: equipment, route, technology, safety, other)
+  - ✅ References (name, title, company, relationship, contact info)
+  - ✅ Review & Export (complete preview with PDF export functionality)
 - ✅ **Tab Navigation**: Added tabs to resume page (Upload Resume | Create Resume)
-- ✅ **API Endpoints**: `/api/resumes/create` for creating and updating built resumes
+- ✅ **API Endpoints**: 
+  - `/api/resumes/create` - POST/PUT for creating and updating built resumes
+  - `/api/resumes/[id]` - GET for fetching single resume by ID
 - ✅ **Progress Saving**: Users can save progress and return to edit later
+- ✅ **Resume Loading**: Automatically loads existing resume data when editing
+- ✅ **PDF Export**: Full PDF generation using jsPDF and html2canvas with professional formatting
 
 ### **Technical Implementation:**
-- **Migration**: `006_resume_builder_support.sql` - Adds resume builder columns to database
-- **Component**: `src/components/ResumeBuilder.tsx` - Main resume builder component
+- **Migration**: `supabase/migrations/006_resume_builder_support.sql` - Adds resume builder columns to database
+- **Component**: `src/components/ResumeBuilder.tsx` - Complete resume builder with all steps implemented
 - **Tab Selector**: `src/components/ResumeTabSelector.tsx` - UI for switching between upload/create
-- **API**: `src/app/api/resumes/create/route.ts` - Handles POST (create) and PUT (update) operations
+- **API Routes**: 
+  - `src/app/api/resumes/create/route.ts` - Handles POST (create) and PUT (update) operations
+  - `src/app/api/resumes/[id]/route.ts` - Handles GET for single resume retrieval
 - **Page Integration**: Updated `src/app/page.tsx` to support resume tabs
+- **PDF Libraries**: Added `jspdf` and `html2canvas` for client-side PDF generation
 
 ### **Database Changes:**
 ```sql
@@ -64,12 +239,20 @@ ALTER TABLE resumes ADD COLUMN structured_data JSONB;
 ALTER TABLE resumes ADD COLUMN source_resume_id UUID REFERENCES resumes(id);
 ```
 
+### **User Experience:**
+- **Step-by-step wizard** with progress indicators
+- **Mobile-responsive** design with proper breakpoints
+- **Save anytime** - progress is saved to database
+- **Edit existing** - resume data loads automatically when editing
+- **Professional PDF** - export generates clean, formatted PDF resume
+- **Review before export** - complete preview of all resume sections
+
 ### **Future Enhancements:**
-- 🔜 **PDF Export**: Generate professional PDF resume from structured data
 - 🔜 **Template Selection**: Multiple resume templates for different job types
 - 🔜 **AI Suggestions**: Auto-complete and suggestions based on job descriptions
 - 🔜 **Form Prefill Integration**: Use structured data to prefill DOT forms (better than PDF extraction)
 - 🔜 **Resume Analytics**: Track resume views and application success rates
+- 🔜 **Resume Sharing**: Generate shareable links for built resumes
 
 ---
 

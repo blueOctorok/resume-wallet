@@ -1,7 +1,18 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { 
+  Trash2, 
+  Download, 
+  Copy, 
+  Shield, 
+  Edit3,
+  ExternalLink,
+  AlertTriangle,
+  X,
+  Loader2
+} from 'lucide-react'
 
 interface ResumeRecord {
   id: string
@@ -17,6 +28,8 @@ interface ResumeRecord {
   is_paid?: boolean
   file_size?: number
   mime_type?: string
+  resume_type?: 'uploaded' | 'built'
+  structured_data?: Record<string, unknown>
 }
 
 interface ResumeDashboardProps {
@@ -24,11 +37,15 @@ interface ResumeDashboardProps {
     address?: string
   } | null
   onResumesLoaded?: (count: number, latestResume?: ResumeRecord) => void
+  onEditResume?: (resumeId: string) => void
+  onDuplicateResume?: (resumeId: string, structuredData: Record<string, unknown>) => void
+  onVerifyResume?: (resumeId: string) => void
 }
 
+// Updated labels: "Pending" -> "Not Verified" for clearer UX
 const STATUS_LABELS: Record<string, string> = {
   VERIFIED: 'Verified',
-  PENDING: 'Pending',
+  PENDING: 'Not Verified',
   FAILED: 'Failed',
 }
 
@@ -36,7 +53,7 @@ const STATUS_STYLES: Record<string, string> = {
   VERIFIED:
     'bg-green-500/10 text-green-600 dark:text-green-300 border border-green-500/40',
   PENDING:
-    'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border border-yellow-500/40',
+    'bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/40',
   FAILED:
     'bg-red-500/10 text-red-600 dark:text-red-300 border border-red-500/40',
 }
@@ -70,18 +87,27 @@ const formatDate = (value?: string) => {
 export default function ResumeDashboard({
   user,
   onResumesLoaded,
+  onEditResume,
+  onDuplicateResume,
+  onVerifyResume,
 }: ResumeDashboardProps) {
   const { theme } = useTheme()
   const [resumes, setResumes] = useState<ResumeRecord[]>([])
-  const [selectedResume, setSelectedResume] = useState<ResumeRecord | null>(
-    null
-  )
+  const [selectedResume, setSelectedResume] = useState<ResumeRecord | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'VERIFIED' | 'PENDING' | 'FAILED'>('ALL')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  // Modal and action states
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [resumeToDelete, setResumeToDelete] = useState<ResumeRecord | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [isVerifying, setIsVerifying] = useState(false)
+  const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
-  const fetchResumes = async (address: string) => {
+  const fetchResumes = useCallback(async (address: string) => {
     setIsLoading(true)
     setError(null)
     try {
@@ -118,18 +144,26 @@ export default function ResumeDashboard({
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [onResumesLoaded])
 
   useEffect(() => {
     if (user?.address) {
       fetchResumes(user.address)
-      } else {
-        setResumes([])
-        setSelectedResume(null)
-        onResumesLoaded?.(0, undefined)
-      }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    } else {
+      setResumes([])
+      setSelectedResume(null)
+      onResumesLoaded?.(0, undefined)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.address])
+
+  // Clear action message after 3 seconds
+  useEffect(() => {
+    if (actionMessage) {
+      const timer = setTimeout(() => setActionMessage(null), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [actionMessage])
 
   const filteredResumes = useMemo(() => {
     return resumes.filter((resume) => {
@@ -155,6 +189,253 @@ export default function ResumeDashboard({
     [resumes]
   )
 
+  // Handle delete resume
+  const handleDeleteClick = (resume: ResumeRecord) => {
+    setResumeToDelete(resume)
+    setDeleteModalOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!resumeToDelete || !user?.address) return
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/resumes/${resumeToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'x-wallet-address': user.address,
+        },
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to delete resume')
+      }
+
+      setActionMessage({ type: 'success', text: 'Resume deleted successfully' })
+      setDeleteModalOpen(false)
+      setResumeToDelete(null)
+      
+      // Refresh the list
+      fetchResumes(user.address)
+    } catch (err) {
+      setActionMessage({ 
+        type: 'error', 
+        text: err instanceof Error ? err.message : 'Failed to delete resume' 
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Handle download PDF for built resumes
+  const handleDownloadPDF = async (resume: ResumeRecord) => {
+    if (!resume.structured_data) return
+
+    setIsDownloading(true)
+    try {
+      // Dynamically import jspdf to avoid SSR issues
+      const { default: jsPDF } = await import('jspdf')
+      
+      const data = resume.structured_data as {
+        personalInfo?: { firstName?: string; lastName?: string; email?: string; phone?: string; address?: string; city?: string; state?: string; zipCode?: string; summary?: string }
+        cdlInfo?: { cdlClass?: string; cdlState?: string; cdlExpiration?: string; endorsements?: string[] }
+        employments?: Array<{ company?: string; position?: string; startDate?: string; endDate?: string; current?: boolean; description?: string }>
+        educations?: Array<{ school?: string; degree?: string; field?: string; graduationDate?: string }>
+        skills?: Array<{ category?: string; items?: string[] }>
+        references?: Array<{ name?: string; relationship?: string; company?: string; phone?: string; email?: string }>
+      }
+
+      const pdf = new jsPDF()
+      let y = 20
+
+      // Helper to add text with word wrap
+      const addText = (text: string, x: number, maxWidth: number, fontSize: number = 10) => {
+        pdf.setFontSize(fontSize)
+        const lines = pdf.splitTextToSize(text, maxWidth)
+        pdf.text(lines, x, y)
+        y += lines.length * (fontSize * 0.4) + 2
+      }
+
+      // Header - Name
+      const fullName = `${data.personalInfo?.firstName || ''} ${data.personalInfo?.lastName || ''}`.trim()
+      if (fullName) {
+        pdf.setFontSize(24)
+        pdf.setFont('helvetica', 'bold')
+        pdf.text(fullName, 105, y, { align: 'center' })
+        y += 10
+      }
+
+      // Contact info
+      pdf.setFont('helvetica', 'normal')
+      pdf.setFontSize(10)
+      const contactParts = [
+        data.personalInfo?.email,
+        data.personalInfo?.phone,
+        [data.personalInfo?.city, data.personalInfo?.state].filter(Boolean).join(', ')
+      ].filter(Boolean)
+      if (contactParts.length > 0) {
+        pdf.text(contactParts.join(' | '), 105, y, { align: 'center' })
+        y += 8
+      }
+
+      // Summary
+      if (data.personalInfo?.summary) {
+        y += 5
+        pdf.setFont('helvetica', 'bold')
+        pdf.setFontSize(12)
+        pdf.text('PROFESSIONAL SUMMARY', 20, y)
+        y += 6
+        pdf.setFont('helvetica', 'normal')
+        addText(data.personalInfo.summary, 20, 170, 10)
+      }
+
+      // CDL Info
+      if (data.cdlInfo?.cdlClass) {
+        y += 5
+        pdf.setFont('helvetica', 'bold')
+        pdf.setFontSize(12)
+        pdf.text('CDL INFORMATION', 20, y)
+        y += 6
+        pdf.setFont('helvetica', 'normal')
+        pdf.setFontSize(10)
+        const cdlParts = [
+          `Class ${data.cdlInfo.cdlClass}`,
+          data.cdlInfo.cdlState,
+          data.cdlInfo.cdlExpiration ? `Expires: ${data.cdlInfo.cdlExpiration}` : null,
+          data.cdlInfo.endorsements?.length ? `Endorsements: ${data.cdlInfo.endorsements.join(', ')}` : null
+        ].filter(Boolean)
+        pdf.text(cdlParts.join(' | '), 20, y)
+        y += 6
+      }
+
+      // Employment
+      if (data.employments && data.employments.length > 0) {
+        y += 5
+        pdf.setFont('helvetica', 'bold')
+        pdf.setFontSize(12)
+        pdf.text('EMPLOYMENT HISTORY', 20, y)
+        y += 6
+        
+        for (const job of data.employments) {
+          if (y > 270) { pdf.addPage(); y = 20 }
+          pdf.setFont('helvetica', 'bold')
+          pdf.setFontSize(11)
+          pdf.text(job.position || 'Position', 20, y)
+          y += 5
+          pdf.setFont('helvetica', 'normal')
+          pdf.setFontSize(10)
+          const jobLine = [job.company, `${job.startDate || ''} - ${job.current ? 'Present' : job.endDate || ''}`].filter(Boolean).join(' | ')
+          pdf.text(jobLine, 20, y)
+          y += 5
+          if (job.description) {
+            addText(job.description, 20, 170, 9)
+          }
+          y += 3
+        }
+      }
+
+      // Education
+      if (data.educations && data.educations.length > 0) {
+        y += 5
+        pdf.setFont('helvetica', 'bold')
+        pdf.setFontSize(12)
+        pdf.text('EDUCATION', 20, y)
+        y += 6
+        
+        for (const edu of data.educations) {
+          if (y > 270) { pdf.addPage(); y = 20 }
+          pdf.setFont('helvetica', 'normal')
+          pdf.setFontSize(10)
+          const eduLine = [edu.degree, edu.field, edu.school, edu.graduationDate].filter(Boolean).join(' | ')
+          pdf.text(eduLine, 20, y)
+          y += 5
+        }
+      }
+
+      // Skills
+      if (data.skills && data.skills.length > 0) {
+        y += 5
+        pdf.setFont('helvetica', 'bold')
+        pdf.setFontSize(12)
+        pdf.text('SKILLS', 20, y)
+        y += 6
+        pdf.setFont('helvetica', 'normal')
+        pdf.setFontSize(10)
+        
+        for (const skillGroup of data.skills) {
+          if (y > 270) { pdf.addPage(); y = 20 }
+          const skillLine = `${skillGroup.category}: ${skillGroup.items?.join(', ') || ''}`
+          addText(skillLine, 20, 170, 10)
+        }
+      }
+
+      // Generate filename
+      const fileName = `${fullName.replace(/\s+/g, '_') || 'Resume'}_Resume.pdf`
+      pdf.save(fileName)
+      
+      setActionMessage({ type: 'success', text: 'PDF downloaded successfully' })
+    } catch (err) {
+      console.error('PDF generation error:', err)
+      setActionMessage({ 
+        type: 'error', 
+        text: 'Failed to generate PDF' 
+      })
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
+  // Handle duplicate
+  const handleDuplicate = (resume: ResumeRecord) => {
+    if (resume.structured_data && onDuplicateResume) {
+      onDuplicateResume(resume.id, resume.structured_data)
+    }
+  }
+
+  // Handle verify - for built resumes, do one-click verification
+  const handleVerify = async (resume: ResumeRecord) => {
+    // For built resumes with structured data, use one-click verification
+    if (resume.resume_type === 'built' && resume.structured_data && user?.address) {
+      setIsVerifying(true)
+      setActionMessage({ type: 'success', text: 'Generating PDF and uploading to blockchain...' })
+      
+      try {
+        const response = await fetch(`/api/resumes/${resume.id}/verify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-wallet-address': user.address,
+          },
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Verification failed')
+        }
+
+        setActionMessage({ 
+          type: 'success', 
+          text: `Resume verified on blockchain! TX: ${data.transactionHash.slice(0, 10)}...` 
+        })
+        
+        // Refresh the list to show updated status
+        fetchResumes(user.address)
+      } catch (err) {
+        setActionMessage({ 
+          type: 'error', 
+          text: err instanceof Error ? err.message : 'Failed to verify resume' 
+        })
+      } finally {
+        setIsVerifying(false)
+      }
+    } else if (onVerifyResume) {
+      // For uploaded resumes, use the parent's verify handler (redirect to upload flow)
+      onVerifyResume(resume.id)
+    }
+  }
+
   if (!user?.address) {
     return (
       <div
@@ -172,236 +453,354 @@ export default function ResumeDashboard({
   }
 
   return (
-    <div
-      className={`max-w-4xl mx-auto rounded-2xl border p-6 sm:p-8 shadow-2xl relative ${
-        theme === 'dark'
-          ? 'bg-brand-sage-light/20 border-brand-mint/30'
-          : 'bg-white/80 border-brand-sage/20'
-      }`}
-    >
-      <div className='flex flex-col gap-6'>
-        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
-          <div>
-            <h3
-              className={`text-2xl font-semibold ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}
-            >
-              Resume Management
-            </h3>
-            <p
-              className={`text-sm ${
-                theme === 'dark'
-                  ? 'text-brand-cream/70'
-                  : 'text-brand-sage/80'
-              }`}
-            >
-              Track your uploads, blockchain verification, and sharing status.
-            </p>
-          </div>
-          <button
-            onClick={() => user.address && fetchResumes(user.address)}
-            className={`inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 ${
-              theme === 'dark'
-                ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
-                : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
-            }`}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Refreshing…' : 'Refresh'}
-          </button>
+    <>
+      {/* Action Message Toast */}
+      {actionMessage && (
+        <div className={`fixed top-4 right-4 z-[100] px-4 py-3 rounded-xl shadow-lg border ${
+          actionMessage.type === 'success'
+            ? 'bg-green-500/10 border-green-500/40 text-green-600 dark:text-green-300'
+            : 'bg-red-500/10 border-red-500/40 text-red-600 dark:text-red-300'
+        }`}>
+          {actionMessage.text}
         </div>
+      )}
 
-        <div
-          className={`grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-xl border p-4 ${
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && resumeToDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className={`relative w-full max-w-md rounded-2xl border p-6 shadow-2xl ${
             theme === 'dark'
-              ? 'bg-brand-sage/30 border-brand-mint/20'
-              : 'bg-brand-sage/10 border-brand-sage/20'
-          }`}
-        >
-          <StatItem
-            label='Total Uploads'
-            value={resumes.length}
-            theme={theme}
-          />
-          <StatItem
-            label='Verified'
-            value={verifiedCount}
-            theme={theme}
-          />
-          <StatItem
-            label='Awaiting Verification'
-            value={resumes.length - verifiedCount}
-            theme={theme}
-          />
-        </div>
+              ? 'bg-brand-sage-light border-brand-mint/30'
+              : 'bg-white border-gray-200'
+          }`}>
+            <button
+              onClick={() => { setDeleteModalOpen(false); setResumeToDelete(null) }}
+              className={`absolute top-4 right-4 p-1 rounded-lg transition-colors ${
+                theme === 'dark' ? 'hover:bg-brand-sage/50' : 'hover:bg-gray-100'
+              }`}
+            >
+              <X className="w-5 h-5" />
+            </button>
 
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-          <div className='flex flex-col gap-3'>
-            <div className='flex flex-col gap-2'>
-              <input
-                type='search'
-                placeholder='Search by title, filename, or hash…'
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                className={`w-full rounded-xl border px-4 py-2 text-sm focus:outline-none focus:ring-2 ${
+            <div className="flex items-start gap-4">
+              <div className={`p-3 rounded-full ${
+                theme === 'dark' ? 'bg-red-500/20' : 'bg-red-100'
+              }`}>
+                <AlertTriangle className="w-6 h-6 text-red-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className={`text-lg font-semibold ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`}>
+                  Delete Resume
+                </h3>
+                <p className={`mt-2 text-sm ${
+                  theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
+                }`}>
+                  Are you sure you want to delete &quot;{resumeToDelete.title || resumeToDelete.filename}&quot;?
+                </p>
+                
+                {/* Warning for verified resumes */}
+                {resumeToDelete.verification_status === 'VERIFIED' && (
+                  <div className={`mt-3 p-3 rounded-lg border ${
+                    theme === 'dark'
+                      ? 'bg-amber-500/10 border-amber-500/30'
+                      : 'bg-amber-50 border-amber-200'
+                  }`}>
+                    <p className={`text-xs ${
+                      theme === 'dark' ? 'text-amber-300' : 'text-amber-700'
+                    }`}>
+                      <strong>Note:</strong> This resume is verified on the blockchain. 
+                      Deleting will remove it from your dashboard, but the blockchain record is permanent and cannot be removed.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3 justify-end">
+              <button
+                onClick={() => { setDeleteModalOpen(false); setResumeToDelete(null) }}
+                disabled={isDeleting}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                   theme === 'dark'
-                    ? 'bg-brand-cream text-gray-900 border-transparent focus:ring-brand-mint'
-                    : 'bg-white text-gray-900 border-brand-sage/40 focus:ring-brand-sage'
+                    ? 'bg-brand-sage/30 text-brand-cream hover:bg-brand-sage/50'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
-              />
-              <div className='flex gap-2'>
-                {(['ALL', 'VERIFIED', 'PENDING', 'FAILED'] as const).map(
-                  (status) => (
-                    <button
-                      key={status}
-                      onClick={() => setStatusFilter(status)}
-                      className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-all ${
-                        statusFilter === status
-                          ? theme === 'dark'
-                            ? 'bg-brand-mint text-gray-900 border-brand-mint'
-                            : 'bg-brand-sage text-white border-brand-sage'
-                          : theme === 'dark'
-                            ? 'bg-brand-sage/20 text-brand-cream/70 border-brand-mint/20 hover:bg-brand-sage/30'
-                            : 'bg-white text-brand-sage border-brand-sage/30 hover:bg-brand-sage/10'
-                      }`}
-                    >
-                      {status === 'ALL'
-                        ? 'All'
-                        : STATUS_LABELS[status] ?? status.toLowerCase()}
-                    </button>
-                  )
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-all flex items-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div
+        className={`max-w-4xl mx-auto rounded-2xl border p-6 sm:p-8 shadow-2xl relative ${
+          theme === 'dark'
+            ? 'bg-brand-sage-light/20 border-brand-mint/30'
+            : 'bg-white/80 border-brand-sage/20'
+        }`}
+      >
+        <div className='flex flex-col gap-6'>
+          <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
+            <div>
+              <h3
+                className={`text-2xl font-semibold ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`}
+              >
+                Resume Management
+              </h3>
+              <p
+                className={`text-sm ${
+                  theme === 'dark'
+                    ? 'text-brand-cream/70'
+                    : 'text-brand-sage/80'
+                }`}
+              >
+                Track your uploads, blockchain verification, and sharing status.
+              </p>
+            </div>
+            <button
+              onClick={() => user.address && fetchResumes(user.address)}
+              className={`inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                theme === 'dark'
+                  ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
+                  : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
+              }`}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Refreshing…' : 'Refresh'}
+            </button>
+          </div>
+
+          <div
+            className={`grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-xl border p-4 ${
+              theme === 'dark'
+                ? 'bg-brand-sage/30 border-brand-mint/20'
+                : 'bg-brand-sage/10 border-brand-sage/20'
+            }`}
+          >
+            <StatItem
+              label='Total Resumes'
+              value={resumes.length}
+              theme={theme}
+            />
+            <StatItem
+              label='Verified'
+              value={verifiedCount}
+              theme={theme}
+            />
+            <StatItem
+              label='Not Verified'
+              value={resumes.length - verifiedCount}
+              theme={theme}
+            />
+          </div>
+
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+            <div className='flex flex-col gap-3'>
+              <div className='flex flex-col gap-2'>
+                <input
+                  type='search'
+                  placeholder='Search by title, filename, or hash…'
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  className={`w-full rounded-xl border px-4 py-2 text-sm focus:outline-none focus:ring-2 ${
+                    theme === 'dark'
+                      ? 'bg-brand-cream text-gray-900 border-transparent focus:ring-brand-mint'
+                      : 'bg-white text-gray-900 border-brand-sage/40 focus:ring-brand-sage'
+                  }`}
+                />
+                <div className='flex gap-2'>
+                  {(['ALL', 'VERIFIED', 'PENDING', 'FAILED'] as const).map(
+                    (status) => (
+                      <button
+                        key={status}
+                        onClick={() => setStatusFilter(status)}
+                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-all ${
+                          statusFilter === status
+                            ? theme === 'dark'
+                              ? 'bg-brand-mint text-gray-900 border-brand-mint'
+                              : 'bg-brand-sage text-white border-brand-sage'
+                            : theme === 'dark'
+                              ? 'bg-brand-sage/20 text-brand-cream/70 border-brand-mint/20 hover:bg-brand-sage/30'
+                              : 'bg-white text-brand-sage border-brand-sage/30 hover:bg-brand-sage/10'
+                        }`}
+                      >
+                        {status === 'ALL'
+                          ? 'All'
+                          : STATUS_LABELS[status] ?? status.toLowerCase()}
+                      </button>
+                    )
+                  )}
+                </div>
+              </div>
+
+              <div
+                className={`rounded-xl border p-3 sm:p-4 overflow-hidden ${
+                  theme === 'dark'
+                    ? 'bg-brand-sage/20 border-brand-mint/20'
+                    : 'bg-brand-cream/40 border-brand-sage/20'
+                }`}
+              >
+                {error && (
+                  <div
+                    className={`mb-3 rounded-lg border px-3 py-2 text-sm ${
+                      theme === 'dark'
+                        ? 'bg-red-900/20 border-red-500/40 text-red-300'
+                        : 'bg-red-50 border-red-200 text-red-700'
+                    }`}
+                  >
+                    {error}
+                  </div>
+                )}
+
+                {isLoading && (
+                  <LoadingList theme={theme} />
+                )}
+
+                {!isLoading && filteredResumes.length === 0 && (
+                  <div
+                    className={`rounded-lg border px-4 py-6 text-center text-sm ${
+                      theme === 'dark'
+                        ? 'border-brand-mint/20 text-brand-cream/60'
+                        : 'border-brand-sage/20 text-brand-sage/70'
+                    }`}
+                  >
+                    {resumes.length === 0
+                      ? 'Upload your first resume to see it here.'
+                      : 'No resumes match your current filters.'}
+                  </div>
+                )}
+
+                {!isLoading && filteredResumes.length > 0 && (
+                  <div className='flex flex-col gap-3 max-h-[420px] overflow-y-auto pr-1'>
+                    {filteredResumes.map((resume) => {
+                      const status = resume.verification_status || 'PENDING'
+                      return (
+                        <button
+                          key={resume.id}
+                          onClick={() => setSelectedResume(resume)}
+                          className={`w-full text-left rounded-xl border p-4 transition-all ${
+                            selectedResume?.id === resume.id
+                              ? theme === 'dark'
+                                ? 'bg-brand-mint/20 border-brand-mint/60 shadow-lg'
+                                : 'bg-white border-brand-sage/60 shadow-lg'
+                              : theme === 'dark'
+                                ? 'bg-brand-sage/30 border-brand-mint/10 hover:border-brand-mint/40 hover:bg-brand-sage/40'
+                                : 'bg-white/70 border-brand-sage/20 hover:border-brand-sage/40 hover:bg-white'
+                          }`}
+                        >
+                          <div className='flex items-start justify-between gap-3'>
+                            <div className='flex-1'>
+                              <div className='flex items-center gap-2'>
+                                <h4
+                                  className={`text-sm font-semibold ${
+                                    theme === 'dark'
+                                      ? 'text-brand-cream'
+                                      : 'text-brand-sage'
+                                  }`}
+                                >
+                                  {resume.title || resume.filename}
+                                </h4>
+                                {resume.resume_type === 'built' && (
+                                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${
+                                    theme === 'dark'
+                                      ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/30'
+                                      : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/20'
+                                  }`}>
+                                    Built
+                                  </span>
+                                )}
+                              </div>
+                              <p
+                                className={`text-xs mt-1 ${
+                                  theme === 'dark'
+                                    ? 'text-brand-cream/60'
+                                    : 'text-brand-sage/70'
+                                }`}
+                              >
+                                {resume.filename}
+                              </p>
+                            </div>
+                            <span
+                              className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${STATUS_STYLES[status] || STATUS_STYLES.PENDING}`}
+                            >
+                              {STATUS_LABELS[status] || status.toLowerCase()}
+                            </span>
+                          </div>
+                          <div
+                            className={`mt-3 text-xs flex justify-between ${
+                              theme === 'dark'
+                                ? 'text-brand-cream/60'
+                                : 'text-brand-sage/70'
+                            }`}
+                          >
+                            <span>{formatDate(resume.created_at)}</span>
+                            <span>{formatFileSize(resume.file_size)}</span>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
                 )}
               </div>
             </div>
 
             <div
-              className={`rounded-xl border p-3 sm:p-4 overflow-hidden ${
+              className={`rounded-2xl border p-4 sm:p-6 h-full ${
                 theme === 'dark'
-                  ? 'bg-brand-sage/20 border-brand-mint/20'
-                  : 'bg-brand-cream/40 border-brand-sage/20'
+                  ? 'bg-brand-sage/25 border-brand-mint/20'
+                  : 'bg-white border-brand-sage/20'
               }`}
             >
-              {error && (
+              {selectedResume ? (
+                <ResumeDetail
+                  resume={selectedResume}
+                  theme={theme}
+                  onEdit={onEditResume}
+                  onDelete={handleDeleteClick}
+                  onDownloadPDF={handleDownloadPDF}
+                  onDuplicate={handleDuplicate}
+                  onVerify={handleVerify}
+                  isDownloading={isDownloading}
+                  isVerifying={isVerifying}
+                />
+              ) : (
                 <div
-                  className={`mb-3 rounded-lg border px-3 py-2 text-sm ${
+                  className={`h-full flex items-center justify-center text-sm ${
                     theme === 'dark'
-                      ? 'bg-red-900/20 border-red-500/40 text-red-300'
-                      : 'bg-red-50 border-red-200 text-red-700'
+                      ? 'text-brand-cream/60'
+                      : 'text-brand-sage/70'
                   }`}
                 >
-                  {error}
-                </div>
-              )}
-
-              {isLoading && (
-                <LoadingList theme={theme} />
-              )}
-
-              {!isLoading && filteredResumes.length === 0 && (
-                <div
-                  className={`rounded-lg border px-4 py-6 text-center text-sm ${
-                    theme === 'dark'
-                      ? 'border-brand-mint/20 text-brand-cream/60'
-                      : 'border-brand-sage/20 text-brand-sage/70'
-                  }`}
-                >
-                  {resumes.length === 0
-                    ? 'Upload your first resume to see it here.'
-                    : 'No resumes match your current filters.'}
-                </div>
-              )}
-
-              {!isLoading && filteredResumes.length > 0 && (
-                <div className='flex flex-col gap-3 max-h-[420px] overflow-y-auto pr-1'>
-                  {filteredResumes.map((resume) => {
-                    const status = resume.verification_status || 'PENDING'
-                    return (
-                      <button
-                        key={resume.id}
-                        onClick={() => setSelectedResume(resume)}
-                        className={`w-full text-left rounded-xl border p-4 transition-all ${
-                          selectedResume?.id === resume.id
-                            ? theme === 'dark'
-                              ? 'bg-brand-mint/20 border-brand-mint/60 shadow-lg'
-                              : 'bg-white border-brand-sage/60 shadow-lg'
-                            : theme === 'dark'
-                              ? 'bg-brand-sage/30 border-brand-mint/10 hover:border-brand-mint/40 hover:bg-brand-sage/40'
-                              : 'bg-white/70 border-brand-sage/20 hover:border-brand-sage/40 hover:bg-white'
-                        }`}
-                      >
-                        <div className='flex items-start justify-between gap-3'>
-                          <div>
-                            <h4
-                              className={`text-sm font-semibold ${
-                                theme === 'dark'
-                                  ? 'text-brand-cream'
-                                  : 'text-brand-sage'
-                              }`}
-                            >
-                              {resume.title || resume.filename}
-                            </h4>
-                            <p
-                              className={`text-xs mt-1 ${
-                                theme === 'dark'
-                                  ? 'text-brand-cream/60'
-                                  : 'text-brand-sage/70'
-                              }`}
-                            >
-                              {resume.filename}
-                            </p>
-                          </div>
-                          <span
-                            className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${STATUS_STYLES[status] || STATUS_STYLES.PENDING}`}
-                          >
-                            {STATUS_LABELS[status] || status.toLowerCase()}
-                          </span>
-                        </div>
-                        <div
-                          className={`mt-3 text-xs flex justify-between ${
-                            theme === 'dark'
-                              ? 'text-brand-cream/60'
-                              : 'text-brand-sage/70'
-                          }`}
-                        >
-                          <span>{formatDate(resume.created_at)}</span>
-                          <span>{formatFileSize(resume.file_size)}</span>
-                        </div>
-                      </button>
-                    )
-                  })}
+                  Select a resume to see full details.
                 </div>
               )}
             </div>
           </div>
-
-          <div
-            className={`rounded-2xl border p-4 sm:p-6 h-full ${
-              theme === 'dark'
-                ? 'bg-brand-sage/25 border-brand-mint/20'
-                : 'bg-white border-brand-sage/20'
-            }`}
-          >
-            {selectedResume ? (
-              <ResumeDetail
-                resume={selectedResume}
-                theme={theme}
-              />
-            ) : (
-              <div
-                className={`h-full flex items-center justify-center text-sm ${
-                  theme === 'dark'
-                    ? 'text-brand-cream/60'
-                    : 'text-brand-sage/70'
-                }`}
-              >
-                Select a resume to see full details.
-              </div>
-            )}
-          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -435,11 +834,30 @@ function StatItem({ label, value, theme }: StatItemProps) {
 interface ResumeDetailProps {
   resume: ResumeRecord
   theme: string
+  onEdit?: (resumeId: string) => void
+  onDelete: (resume: ResumeRecord) => void
+  onDownloadPDF: (resume: ResumeRecord) => void
+  onDuplicate: (resume: ResumeRecord) => void
+  onVerify: (resume: ResumeRecord) => void
+  isDownloading: boolean
+  isVerifying: boolean
 }
 
-function ResumeDetail({ resume, theme }: ResumeDetailProps) {
+function ResumeDetail({
+  resume,
+  theme,
+  onEdit,
+  onDelete,
+  onDownloadPDF,
+  onDuplicate,
+  onVerify,
+  isDownloading,
+  isVerifying
+}: ResumeDetailProps) {
   const status = resume.verification_status || 'PENDING'
   const statusLabel = STATUS_LABELS[status] || status.toLowerCase()
+  const isVerified = status === 'VERIFIED'
+  const isBuilt = resume.resume_type === 'built'
 
   const InfoRow = ({
     label,
@@ -468,6 +886,25 @@ function ResumeDetail({ resume, theme }: ResumeDetailProps) {
     </div>
   )
 
+  // Button styles
+  const primaryButtonClass = `inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
+    theme === 'dark'
+      ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
+      : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+  }`
+
+  const secondaryButtonClass = `inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
+    theme === 'dark'
+      ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/40 hover:bg-brand-mint/30'
+      : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30 hover:bg-brand-sage/20'
+  }`
+
+  const dangerButtonClass = `inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
+    theme === 'dark'
+      ? 'bg-red-500/20 text-red-300 border border-red-500/40 hover:bg-red-500/30'
+      : 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
+  }`
+
   return (
     <div className='flex flex-col gap-5'>
       <div className='flex justify-between items-start gap-3'>
@@ -486,7 +923,16 @@ function ResumeDetail({ resume, theme }: ResumeDetailProps) {
                 : 'text-brand-sage/70'
             }`}
           >
-            Uploaded {formatDate(resume.created_at)}
+            {isBuilt ? 'Created' : 'Uploaded'} {formatDate(resume.created_at)}
+            {isBuilt && (
+              <span className={`ml-2 px-2 py-0.5 rounded text-xs ${
+                theme === 'dark'
+                  ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/30'
+                  : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/20'
+              }`}>
+                Built Resume
+              </span>
+            )}
           </p>
         </div>
         <span
@@ -496,67 +942,230 @@ function ResumeDetail({ resume, theme }: ResumeDetailProps) {
         </span>
       </div>
 
-      <div className='grid grid-cols-1 gap-4'>
-        <InfoRow label='Filename' value={resume.filename} />
-        <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-          <InfoRow label='File Size' value={formatFileSize(resume.file_size)} />
-          <InfoRow label='MIME Type' value={resume.mime_type} />
+      {/* Not Verified CTA */}
+      {!isVerified && (
+        <div className={`p-3 rounded-lg border ${
+          theme === 'dark'
+            ? 'bg-amber-500/10 border-amber-500/30'
+            : 'bg-amber-50 border-amber-200'
+        }`}>
+          <div className="flex items-center gap-2">
+            <Shield className={`w-4 h-4 ${theme === 'dark' ? 'text-amber-300' : 'text-amber-600'}`} />
+            <p className={`text-sm font-medium ${theme === 'dark' ? 'text-amber-300' : 'text-amber-700'}`}>
+              Secure this resume on the blockchain
+            </p>
+          </div>
+          <p className={`mt-1 text-xs ${theme === 'dark' ? 'text-amber-300/70' : 'text-amber-600'}`}>
+            Verification creates a permanent, tamper-proof record that employers can trust.
+          </p>
         </div>
-        <InfoRow label='IPFS Hash' value={resume.ipfs_hash} mono />
-        <InfoRow label='IPFS URL' value={resume.ipfs_url} mono />
-        <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-          <InfoRow
-            label='Blockchain Tx Hash'
-            value={resume.blockchain_tx_hash || undefined}
-            mono
-          />
-          <InfoRow
-            label='Blockchain Resume ID'
-            value={resume.blockchain_resume_id || undefined}
-          />
-        </div>
-        <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-          <InfoRow
-            label='Sharing Status'
-            value={resume.is_public ? 'Public' : 'Private'}
-          />
-          <InfoRow
-            label='Payment'
-            value={resume.is_paid ? 'Paid' : 'Free Tier'}
-          />
-        </div>
-      </div>
+      )}
 
-      <div className='flex flex-wrap gap-3'>
-        {resume.ipfs_url && (
-          <a
-            href={resume.ipfs_url}
-            target='_blank'
-            rel='noopener noreferrer'
-            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 ${
-              theme === 'dark'
-                ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/40 hover:bg-brand-mint/30'
-                : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30 hover:bg-brand-sage/20'
-            }`}
-          >
-            View on IPFS
-          </a>
-        )}
-        {resume.blockchain_tx_hash && (
-          <a
-            href={`https://sepolia.basescan.org/tx/${resume.blockchain_tx_hash}`}
-            target='_blank'
-            rel='noopener noreferrer'
-            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 ${
-              theme === 'dark'
-                ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/40 hover:bg-brand-mint/30'
-                : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30 hover:bg-brand-sage/20'
-            }`}
-          >
-            View on BaseScan
-          </a>
-        )}
-      </div>
+      {isBuilt ? (
+        // Built Resume View
+        <>
+          <div className='grid grid-cols-1 gap-4'>
+            <InfoRow label='Resume Type' value='Built (Created via Resume Builder)' />
+            <InfoRow label='Created' value={formatDate(resume.created_at)} />
+            {resume.structured_data && (
+              <div className='mt-2'>
+                <span
+                  className={`text-xs font-semibold uppercase tracking-wide ${
+                    theme === 'dark' ? 'text-brand-cream/50' : 'text-brand-sage/70'
+                  }`}
+                >
+                  Resume Sections
+                </span>
+                <div className={`mt-2 p-3 rounded-lg border ${
+                  theme === 'dark'
+                    ? 'bg-brand-sage/20 border-brand-mint/20'
+                    : 'bg-gray-50 border-gray-200'
+                }`}>
+                  <div className='grid grid-cols-2 gap-2 text-sm'>
+                    {(resume.structured_data as { personalInfo?: object }).personalInfo && (
+                      <span className={theme === 'dark' ? 'text-brand-cream/80' : 'text-gray-700'}>
+                        ✓ Personal Info
+                      </span>
+                    )}
+                    {(resume.structured_data as { cdlInfo?: object }).cdlInfo && (
+                      <span className={theme === 'dark' ? 'text-brand-cream/80' : 'text-gray-700'}>
+                        ✓ CDL & License
+                      </span>
+                    )}
+                    {((resume.structured_data as { employments?: unknown[] }).employments?.length ?? 0) > 0 && (
+                      <span className={theme === 'dark' ? 'text-brand-cream/80' : 'text-gray-700'}>
+                        ✓ Employment ({(resume.structured_data as { employments?: unknown[] }).employments?.length})
+                      </span>
+                    )}
+                    {((resume.structured_data as { educations?: unknown[] }).educations?.length ?? 0) > 0 && (
+                      <span className={theme === 'dark' ? 'text-brand-cream/80' : 'text-gray-700'}>
+                        ✓ Education ({(resume.structured_data as { educations?: unknown[] }).educations?.length})
+                      </span>
+                    )}
+                    {((resume.structured_data as { skills?: unknown[] }).skills?.length ?? 0) > 0 && (
+                      <span className={theme === 'dark' ? 'text-brand-cream/80' : 'text-gray-700'}>
+                        ✓ Skills ({(resume.structured_data as { skills?: unknown[] }).skills?.length})
+                      </span>
+                    )}
+                    {((resume.structured_data as { references?: unknown[] }).references?.length ?? 0) > 0 && (
+                      <span className={theme === 'dark' ? 'text-brand-cream/80' : 'text-gray-700'}>
+                        ✓ References ({(resume.structured_data as { references?: unknown[] }).references?.length})
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Action Buttons for Built Resumes */}
+          <div className='flex flex-wrap gap-2'>
+            {/* Verify on Blockchain - Primary CTA for unverified */}
+            {!isVerified && (
+              <button 
+                onClick={() => onVerify(resume)} 
+                disabled={isVerifying}
+                className={primaryButtonClass}
+              >
+                {isVerifying ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Shield className="w-4 h-4" />
+                )}
+                {isVerifying ? 'Verifying...' : 'Verify on Blockchain'}
+              </button>
+            )}
+            
+            {/* Edit */}
+            {onEdit && (
+              <button onClick={() => onEdit(resume.id)} className={isVerified ? primaryButtonClass : secondaryButtonClass}>
+                <Edit3 className="w-4 h-4" />
+                Edit
+              </button>
+            )}
+            
+            {/* Download PDF */}
+            <button 
+              onClick={() => onDownloadPDF(resume)} 
+              disabled={isDownloading}
+              className={secondaryButtonClass}
+            >
+              {isDownloading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              Download PDF
+            </button>
+            
+            {/* Duplicate */}
+            <button onClick={() => onDuplicate(resume)} className={secondaryButtonClass}>
+              <Copy className="w-4 h-4" />
+              Duplicate
+            </button>
+            
+            {/* Delete */}
+            <button onClick={() => onDelete(resume)} className={dangerButtonClass}>
+              <Trash2 className="w-4 h-4" />
+              Delete
+            </button>
+          </div>
+        </>
+      ) : (
+        // Uploaded Resume View
+        <>
+          <div className='grid grid-cols-1 gap-4'>
+            <InfoRow label='Filename' value={resume.filename} />
+            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+              <InfoRow label='File Size' value={formatFileSize(resume.file_size)} />
+              <InfoRow label='MIME Type' value={resume.mime_type} />
+            </div>
+            <InfoRow label='IPFS Hash' value={resume.ipfs_hash} mono />
+            <InfoRow label='IPFS URL' value={resume.ipfs_url} mono />
+            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+              <InfoRow
+                label='Blockchain Tx Hash'
+                value={resume.blockchain_tx_hash || undefined}
+                mono
+              />
+              <InfoRow
+                label='Blockchain Resume ID'
+                value={resume.blockchain_resume_id || undefined}
+              />
+            </div>
+            
+            <InfoRow
+              label='Payment'
+              value={resume.is_paid ? 'Paid' : 'Free Tier'}
+            />
+          </div>
+          
+          {/* Action Buttons for Uploaded Resumes */}
+          <div className='flex flex-wrap gap-2'>
+            {/* Verify on Blockchain - Primary CTA for unverified */}
+            {!isVerified && (
+              <button 
+                onClick={() => onVerify(resume)} 
+                disabled={isVerifying}
+                className={primaryButtonClass}
+              >
+                {isVerifying ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Shield className="w-4 h-4" />
+                )}
+                {isVerifying ? 'Verifying...' : 'Verify on Blockchain'}
+              </button>
+            )}
+            
+            {/* View on IPFS */}
+            {resume.ipfs_url && (
+              <a
+                href={resume.ipfs_url}
+                target='_blank'
+                rel='noopener noreferrer'
+                className={secondaryButtonClass}
+              >
+                <ExternalLink className="w-4 h-4" />
+                View on IPFS
+              </a>
+            )}
+            
+            {/* View on BaseScan */}
+            {resume.blockchain_tx_hash && (
+              <a
+                href={`https://sepolia.basescan.org/tx/${resume.blockchain_tx_hash}`}
+                target='_blank'
+                rel='noopener noreferrer'
+                className={secondaryButtonClass}
+              >
+                <ExternalLink className="w-4 h-4" />
+                View on BaseScan
+              </a>
+            )}
+            
+            {/* Download from IPFS */}
+            {resume.ipfs_url && (
+              <a
+                href={resume.ipfs_url}
+                target='_blank'
+                rel='noopener noreferrer'
+                download
+                className={secondaryButtonClass}
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </a>
+            )}
+            
+            {/* Delete */}
+            <button onClick={() => onDelete(resume)} className={dangerButtonClass}>
+              <Trash2 className="w-4 h-4" />
+              Delete
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -580,5 +1189,3 @@ function LoadingList({ theme }: { theme: string }) {
     </div>
   )
 }
-
-

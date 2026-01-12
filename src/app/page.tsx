@@ -27,6 +27,8 @@ import type {
   PrimerPrompt,
   ResumeUploadEvent,
 } from '@/types/assistant'
+import { profileToDotApplication, dotApplicationToProfile } from '@/lib/profile-mapper'
+import type { UnifiedDriverProfile } from '@/types/driver-profile'
 
 // Dynamic imports to avoid SSR issues with Alchemy hooks
 const ResumeUploadWithVerification = dynamic(
@@ -309,6 +311,7 @@ const HomeContent = () => {
     'signin' | 'resume' | 'dotapp' | 'jobs' | 'applications' | 'mvr' | null
   >(null)
   const [resumeTab, setResumeTab] = useState<'upload' | 'create'>('upload')
+  const [editingResumeId, setEditingResumeId] = useState<string | undefined>(undefined)
 
   // Role-based access control
   const [userRole, setUserRole] = useState<'driver' | 'employer' | null>(null)
@@ -336,6 +339,11 @@ const HomeContent = () => {
   const [form2Data, setForm2Data] = useState<any>(null)
   const [form3Data, setForm3Data] = useState<any>(null)
   const [formResetKey, setFormResetKey] = useState(0)
+  
+  // Track if data was loaded from unified profile
+  const [profileDataLoaded, setProfileDataLoaded] = useState(false)
+  const [profileSource, setProfileSource] = useState<string | null>(null)
+  const profileLoadAttemptedRef = useRef(false)
 
   // Track if user has used AI prefill
   const [hasPrefilled, setHasPrefilled] = useState(false)
@@ -736,6 +744,117 @@ const HomeContent = () => {
       console.warn('⚠️ Failed to persist form data', error)
     }
   }, [form1Data, form2Data, form3Data, user?.address])
+
+  // Load from unified profile if no localStorage form data exists
+  // This enables DOT form prefill from Resume Builder data
+  useEffect(() => {
+    const loadFromProfile = async () => {
+      // Only attempt once per session
+      if (profileLoadAttemptedRef.current) return
+      if (!user?.address) return
+      
+      // Wait a tick to let localStorage load complete first
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // Don't load from profile if forms already have data (from localStorage or AI prefill)
+      if (form1Data || form2Data || form3Data) {
+        console.log('📋 [DOT APP] Forms already have data, skipping profile load')
+        profileLoadAttemptedRef.current = true
+        return
+      }
+      
+      // Don't load during reset
+      if (resetInProgressRef.current) return
+      
+      profileLoadAttemptedRef.current = true
+      
+      try {
+        console.log('📦 [DOT APP] Checking unified profile for prefill data...')
+        const response = await fetch('/api/driver/profile', {
+          headers: {
+            'x-wallet-address': user.address,
+          },
+        })
+        
+        if (!response.ok) return
+        
+        const { profile } = await response.json()
+        
+        if (!profile) {
+          console.log('📭 [DOT APP] No profile found')
+          return
+        }
+        
+        // Check if profile has meaningful data
+        const hasProfileData = profile.firstName || profile.lastName || 
+          profile.cdlNumber || profile.employmentHistory?.length > 0
+          
+        if (!hasProfileData) {
+          console.log('📭 [DOT APP] Profile exists but has no data')
+          return
+        }
+        
+        console.log('✅ [DOT APP] Profile found with data, prefilling forms...')
+        console.log('   Source:', profile.lastUpdatedFrom || 'unknown')
+        
+        // Convert profile to DOT application format
+        const dotData = profileToDotApplication(profile as UnifiedDriverProfile)
+        
+        // Set form data - only set forms that have data
+        if (dotData.personalInfo || dotData.cdlInfo) {
+          // Form 1: Personal info, residency, license
+          setForm1Data({
+            firstName: dotData.personalInfo?.firstName || '',
+            middleName: dotData.personalInfo?.middleName || '',
+            lastName: dotData.personalInfo?.lastName || '',
+            phone: dotData.personalInfo?.phone || '',
+            email: dotData.personalInfo?.email || '',
+            dateOfBirth: dotData.personalInfo?.dateOfBirth || '',
+            currentMailing: {
+              street: dotData.personalInfo?.address || '',
+              city: dotData.personalInfo?.city || '',
+              state: dotData.personalInfo?.state || '',
+              zipCode: dotData.personalInfo?.zipCode || '',
+              yearsAtAddress: '',
+            },
+            currentLicenses: dotData.cdlInfo ? [{
+              state: dotData.cdlInfo.cdlState || '',
+              licenseNumber: dotData.cdlInfo.cdlNumber || '',
+              typeClass: dotData.cdlInfo.cdlClass || '',
+              endorsements: dotData.cdlInfo.endorsements?.join(', ') || '',
+              expirationDate: dotData.cdlInfo.cdlExpiration || '',
+            }] : [],
+          })
+        }
+        
+        if (dotData.employmentHistory && dotData.employmentHistory.length > 0) {
+          // Form 3: Employment history
+          setForm2Data({
+            employmentHistory: dotData.employmentHistory,
+          })
+        }
+        
+        if (dotData.drivingRecord && (dotData.drivingRecord.violations?.length > 0 || 
+            dotData.drivingRecord.accidents?.length > 0)) {
+          // Form 2: Driving record (accidents, violations)
+          setForm3Data({
+            accidentHistory: dotData.drivingRecord.accidents || [],
+            trafficConvictions: dotData.drivingRecord.violations || [],
+          })
+        }
+        
+        setProfileDataLoaded(true)
+        setProfileSource(profile.lastUpdatedFrom || 'profile')
+        setShowPrefillUpload(false) // Hide the upload since we have data
+        
+        console.log('✅ [DOT APP] Forms prefilled from unified profile')
+      } catch (error) {
+        console.error('❌ [DOT APP] Failed to load from profile:', error)
+      }
+    }
+    
+    loadFromProfile()
+  }, [user?.address, form1Data, form2Data, form3Data])
 
   useEffect(() => {
     if (journeyState.resume.status === 'complete' && !hasResume) {
@@ -1342,6 +1461,44 @@ const HomeContent = () => {
         setForm3Data(prefillData.form3Data)
       }
 
+      // Sync extracted data to unified profile (fire-and-forget)
+      // This enables Resume Builder to also benefit from AI extraction
+      if (user?.address && (prefillData.form1Data || prefillData.form2Data)) {
+        try {
+          const profileData = dotApplicationToProfile({
+            personalInfo: prefillData.form1Data || {},
+            cdlInfo: prefillData.form1Data || {},
+            employmentHistory: prefillData.form2Data?.employmentHistory || [],
+            drivingRecord: prefillData.form3Data || { violations: [], accidents: [] },
+            medicalInfo: {} as any,
+            drugAlcoholTesting: {} as any,
+            trainingRecords: [],
+            references: [],
+            drivingExperience: null,
+            safetyCompliance: {} as any,
+            authorizations: {} as any,
+          })
+          
+          fetch('/api/driver/profile', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-wallet-address': user.address,
+            },
+            body: JSON.stringify({
+              profileData,
+              source: 'uploaded_resume',
+            }),
+          }).then(() => {
+            console.log('✅ [HOME] Profile synced from AI prefill')
+          }).catch((err) => {
+            console.warn('⚠️ [HOME] Profile sync failed (non-fatal):', err)
+          })
+        } catch (profileError) {
+          console.warn('⚠️ [HOME] Profile sync error (non-fatal):', profileError)
+        }
+      }
+
       // Mark as prefilled and hide upload component
       setHasPrefilled(true)
       setShowPrefillUpload(false)
@@ -1359,7 +1516,7 @@ const HomeContent = () => {
       )
       setFormResetKey((prev) => prev + 1)
     },
-    []
+    [user?.address]
   )
 
   // Handler for AI prefill error
@@ -1463,6 +1620,42 @@ const HomeContent = () => {
       }
 
       console.log('✅ [HOME] Application saved to database successfully')
+
+      // Sync to unified profile (fire-and-forget, non-blocking)
+      // This enables Resume Builder to prefill from DOT form data
+      try {
+        const profileData = dotApplicationToProfile({
+          personalInfo: form1Data,
+          cdlInfo: form1Data,
+          employmentHistory: form2Data?.employmentHistory || [],
+          drivingRecord: form3Data || { violations: [], accidents: [] },
+          medicalInfo: {} as any,
+          drugAlcoholTesting: {} as any,
+          trainingRecords: [],
+          references: form3Data?.references || [],
+          drivingExperience: form3Data?.drivingExperience || null,
+          safetyCompliance: {} as any,
+          authorizations: {} as any,
+        })
+        
+        fetch('/api/driver/profile', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-wallet-address': user.address,
+          },
+          body: JSON.stringify({
+            profileData,
+            source: 'dot_application',
+          }),
+        }).then(() => {
+          console.log('✅ [HOME] Unified profile synced from DOT application')
+        }).catch((err) => {
+          console.warn('⚠️ [HOME] Profile sync failed (non-fatal):', err)
+        })
+      } catch (profileError) {
+        console.warn('⚠️ [HOME] Profile sync error (non-fatal):', profileError)
+      }
 
       // 2. SUBMIT TO BLOCKCHAIN FOR VERIFICATION (server-side with sponsored gas)
       console.log(
@@ -2058,16 +2251,43 @@ const HomeContent = () => {
                     {resumeTab === 'create' && (
                       <ResumeBuilder
                         user={user}
-                        onBack={() => setCurrentPage(null)}
+                        existingResumeId={editingResumeId}
+                        onBack={() => {
+                          setCurrentPage(null)
+                          setEditingResumeId(undefined)
+                        }}
                         onSave={(resumeId) => {
                           console.log('Resume saved:', resumeId)
                           setHasResume(true)
+                          setEditingResumeId(undefined)
                         }}
                       />
                     )}
 
                     <ResumeDashboard
                       user={user}
+                      onEditResume={(resumeId) => {
+                        setEditingResumeId(resumeId)
+                        setResumeTab('create')
+                        setCurrentPage('resume')
+                      }}
+                      onDuplicateResume={(resumeId, structuredData) => {
+                        // Open the resume builder with duplicated data
+                        // The ResumeBuilder will need to handle receiving initial data
+                        console.log('📋 Duplicating resume:', resumeId)
+                        setEditingResumeId(undefined) // Clear any existing edit ID so it creates a new one
+                        setResumeTab('create')
+                        setCurrentPage('resume')
+                        // Store duplicated data to pass to builder - we'll handle this in ResumeBuilder
+                        // For now, just open the builder and let user know
+                      }}
+                      onVerifyResume={(resumeId) => {
+                        // Navigate to upload/verify flow with resume
+                        console.log('🔐 Verifying resume:', resumeId)
+                        setResumeTab('upload')
+                        setCurrentPage('resume')
+                        // The upload flow will handle blockchain verification
+                      }}
                       onResumesLoaded={(count, latestResume) => {
                         setHasResume(count > 0)
                         // Store the latest resume's IPFS hash for prefill

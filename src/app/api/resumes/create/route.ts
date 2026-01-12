@@ -2,7 +2,6 @@
 // Create or update a built resume (structured data storage)
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 export async function POST(req: NextRequest) {
@@ -24,9 +23,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Use admin client to bypass RLS (we validate wallet address manually)
+    const adminClient = await getAdminSupabaseClient()
+
     // Get or create user
-    const supabase = await createClient()
-    let { data: user, error: userError } = await supabase
+    let { data: user, error: userError } = await adminClient
       .from('users')
       .select('id')
       .eq('wallet_address', walletAddress)
@@ -34,7 +35,6 @@ export async function POST(req: NextRequest) {
 
     if (userError && userError.code === 'PGRST116') {
       // User doesn't exist, create them
-      const adminClient = getAdminSupabaseClient()
       const { data: newUser, error: createError } = await adminClient
         .from('users')
         .insert({
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
       if (createError || !newUser) {
         console.error('❌ Resume Builder API: Failed to create user', createError)
         return NextResponse.json(
-          { error: 'Failed to create user' },
+          { error: `Failed to create user: ${createError?.message || 'Unknown error'}` },
           { status: 500 }
         )
       }
@@ -55,13 +55,13 @@ export async function POST(req: NextRequest) {
     } else if (userError) {
       console.error('❌ Resume Builder API: Error fetching user', userError)
       return NextResponse.json(
-        { error: 'Failed to fetch user' },
+        { error: `Failed to fetch user: ${userError.message}` },
         { status: 500 }
       )
     }
 
-    // Create built resume (no file upload needed)
-    const { data: resume, error: resumeError } = await supabase
+    // Create built resume
+    const { data: resume, error: resumeError } = await adminClient
       .from('resumes')
       .insert({
         user_id: user.id,
@@ -81,8 +81,9 @@ export async function POST(req: NextRequest) {
 
     if (resumeError) {
       console.error('❌ Resume Builder API: Failed to create resume', resumeError)
+      console.error('❌ Resume Builder API: Error details:', JSON.stringify(resumeError, null, 2))
       return NextResponse.json(
-        { error: 'Failed to create resume' },
+        { error: `Failed to create resume: ${resumeError.message || 'Unknown error'}` },
         { status: 500 }
       )
     }
@@ -122,9 +123,11 @@ export async function PUT(req: NextRequest) {
       )
     }
 
-    // Verify user owns this resume
-    const supabase = await createClient()
-    const { data: user } = await supabase
+    // Use admin client to bypass RLS (we validate wallet address manually)
+    const adminClient = await getAdminSupabaseClient()
+
+    // Verify user exists
+    const { data: user } = await adminClient
       .from('users')
       .select('id')
       .eq('wallet_address', walletAddress)
@@ -135,7 +138,7 @@ export async function PUT(req: NextRequest) {
     }
 
     // Verify resume belongs to user
-    const { data: existingResume } = await supabase
+    const { data: existingResume } = await adminClient
       .from('resumes')
       .select('id, user_id, resume_type')
       .eq('id', resumeId)
@@ -150,7 +153,7 @@ export async function PUT(req: NextRequest) {
     }
 
     // Update resume
-    const { data: resume, error: resumeError } = await supabase
+    const { data: resume, error: resumeError } = await adminClient
       .from('resumes')
       .update({
         title,
@@ -165,8 +168,9 @@ export async function PUT(req: NextRequest) {
 
     if (resumeError) {
       console.error('❌ Resume Builder API: Failed to update resume', resumeError)
+      console.error('❌ Resume Builder API: Error details:', JSON.stringify(resumeError, null, 2))
       return NextResponse.json(
-        { error: 'Failed to update resume' },
+        { error: `Failed to update resume: ${resumeError.message || 'Unknown error'}` },
         { status: 500 }
       )
     }

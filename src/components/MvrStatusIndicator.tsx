@@ -75,7 +75,14 @@ export default function MvrStatusIndicator({
         }
 
         const data = await response.json()
-        console.log('[MVR INDICATOR] Status fetched:', data)
+        // Only log in development to reduce terminal noise
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[MVR INDICATOR] Status fetched:', {
+            hasMvr: data.hasMvr,
+            hasPayment: data.hasPayment,
+            ordersCount: data.orders?.length || 0,
+          })
+        }
         setMvrStatus(data)
       } catch (err: any) {
         // For network or other errors, default to "no MVR" state silently

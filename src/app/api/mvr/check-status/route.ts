@@ -35,7 +35,10 @@ export async function GET(request: NextRequest) {
 
     // If user doesn't exist yet, that's normal - just return no MVR
     if (userError || !user) {
-      console.log('[MVR CHECK] User not found for wallet:', walletAddress, userError)
+      // Only log in development or if it's an unexpected error
+      if (process.env.NODE_ENV === 'development' && userError?.code !== 'PGRST116') {
+        console.log('[MVR CHECK] User not found for wallet:', walletAddress)
+      }
       return NextResponse.json({
         hasMvr: false,
         hasPayment: false,
@@ -45,21 +48,6 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    console.log('[MVR CHECK] User found:', { userId: user.id, walletAddress })
-
-    // Query ALL payments for this user first (for debugging)
-    const { data: allPayments, error: allPaymentsError } = await supabase
-      .from('payments')
-      .select('id, tx_hash, amount_usdc, status, created_at, type, user_id')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-
-    console.log('[MVR CHECK] All payments for user (debug):', {
-      count: allPayments?.length || 0,
-      payments: allPayments,
-      error: allPaymentsError,
-    })
-
     // Now filter for MVR_ORDER type
     const { data: payments, error: paymentsError } = await supabase
       .from('payments')
@@ -67,12 +55,6 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id)
       .eq('type', 'MVR_ORDER')
       .order('created_at', { ascending: false })
-
-    console.log('[MVR CHECK] MVR payments query result:', {
-      paymentsFound: payments?.length || 0,
-      payments: payments,
-      error: paymentsError,
-    })
 
     if (paymentsError) {
       console.error('[MVR CHECK] Error fetching payments:', paymentsError)
@@ -98,11 +80,6 @@ export async function GET(request: NextRequest) {
       `)
       .eq('driver_user_id', user.id)
       .order('ordered_at', { ascending: false })
-
-    console.log('[MVR CHECK] Orders query result:', {
-      ordersFound: orders?.length || 0,
-      error: orderError,
-    })
 
     if (orderError) {
       console.error('[MVR CHECK] Error fetching MVR orders:', orderError)

@@ -82,7 +82,14 @@ export async function GET() {
       }
 
       const data = await response.json()
-      console.log('✅ [CREDITS] Balance retrieved:', data)
+      // Only log in development to reduce terminal noise
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ [CREDITS] Balance retrieved:', {
+          has_credits: data.has_credits,
+          remaining: data.remaining,
+          total: data.total,
+        })
+      }
 
       return NextResponse.json({
         wallet: account.address,
