@@ -244,21 +244,46 @@ export default function PersonalInfoForm3({
               'Please specify safety-sensitive function'
 
           // Calculate years covered (only if dates are valid)
-          // Parse MM/YYYY format dates
+          // Parse dates - handles multiple formats for robustness
           if (employer.fromDate && employer.toDate) {
             const parseDate = (dateStr: string): Date | null => {
-              if (!dateStr || dateStr === 'Present') return today
-              // Handle MM/YYYY format
-              const parts = dateStr.split('/')
-              if (parts.length === 2) {
-                const month = parseInt(parts[0]) - 1 // Month is 0-indexed
-                const year = parseInt(parts[1])
-                if (!isNaN(month) && !isNaN(year) && month >= 0 && month < 12) {
-                  return new Date(year, month, 1)
-                }
+              if (!dateStr || dateStr.toLowerCase() === 'present') return today
+              const trimmed = dateStr.trim()
+              
+              // Try MM/YYYY or MM/YY format (with slash)
+              const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{2,4})$/)
+              if (slashMatch) {
+                const month = parseInt(slashMatch[1]) - 1 // 0-indexed
+                let year = parseInt(slashMatch[2])
+                if (year < 100) year = year < 50 ? 2000 + year : 1900 + year
+                if (month >= 0 && month < 12) return new Date(year, month, 1)
               }
-              // Try ISO format as fallback
-              const isoDate = new Date(dateStr)
+              
+              // Try MM-YYYY or MM-YY format (with dash)
+              const dashMatch = trimmed.match(/^(\d{1,2})-(\d{2,4})$/)
+              if (dashMatch) {
+                const month = parseInt(dashMatch[1]) - 1
+                let year = parseInt(dashMatch[2])
+                if (year < 100) year = year < 50 ? 2000 + year : 1900 + year
+                if (month >= 0 && month < 12) return new Date(year, month, 1)
+              }
+              
+              // Try YYYY-MM or YYYY/MM format (reversed)
+              const reversedMatch = trimmed.match(/^(\d{4})[-/](\d{1,2})$/)
+              if (reversedMatch) {
+                const year = parseInt(reversedMatch[1])
+                const month = parseInt(reversedMatch[2]) - 1
+                if (month >= 0 && month < 12) return new Date(year, month, 1)
+              }
+              
+              // Try full ISO format YYYY-MM-DD
+              const isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/)
+              if (isoMatch) {
+                return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]))
+              }
+              
+              // Final fallback to native Date parsing
+              const isoDate = new Date(trimmed)
               return isNaN(isoDate.getTime()) ? null : isoDate
             }
 
@@ -409,6 +434,77 @@ export default function PersonalInfoForm3({
       ...prev,
       education: prev.education.filter((_, i) => i !== index),
     }))
+  }
+
+  /**
+   * Normalize date input to MM/YYYY format
+   * Handles various input formats users might enter:
+   * - 01/2022 → 01/2022 (already correct)
+   * - 1/2022 → 01/2022 (pad month)
+   * - 01/22 → 01/2022 (expand 2-digit year)
+   * - 01-2022 → 01/2022 (convert dash)
+   * - 2022-01 → 01/2022 (ISO format)
+   * - 2022-01-15 → 01/2022 (full ISO, extract month/year)
+   * - Present/present → Present (standardize case)
+   */
+  const normalizeDateInput = (value: string): string => {
+    if (!value) return ''
+    const trimmed = value.trim()
+    
+    // Handle "Present" (case-insensitive)
+    if (trimmed.toLowerCase() === 'present') return 'Present'
+    
+    // Try MM/YYYY or MM/YY format (with slash)
+    const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{2,4})$/)
+    if (slashMatch) {
+      const month = slashMatch[1].padStart(2, '0')
+      let year = parseInt(slashMatch[2])
+      if (year < 100) {
+        year = year < 50 ? 2000 + year : 1900 + year
+      }
+      return `${month}/${year}`
+    }
+    
+    // Try MM-YYYY or MM-YY format (with dash)
+    const dashMatch = trimmed.match(/^(\d{1,2})-(\d{2,4})$/)
+    if (dashMatch) {
+      const month = dashMatch[1].padStart(2, '0')
+      let year = parseInt(dashMatch[2])
+      if (year < 100) {
+        year = year < 50 ? 2000 + year : 1900 + year
+      }
+      return `${month}/${year}`
+    }
+    
+    // Try YYYY-MM or YYYY/MM format (reversed)
+    const reversedMatch = trimmed.match(/^(\d{4})[-/](\d{1,2})$/)
+    if (reversedMatch) {
+      const year = reversedMatch[1]
+      const month = reversedMatch[2].padStart(2, '0')
+      return `${month}/${year}`
+    }
+    
+    // Try full ISO format YYYY-MM-DD (extract month/year only)
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-\d{1,2}$/)
+    if (isoMatch) {
+      const year = isoMatch[1]
+      const month = isoMatch[2].padStart(2, '0')
+      return `${month}/${year}`
+    }
+    
+    // If nothing matched, return as-is (parser will handle or show error)
+    return trimmed
+  }
+
+  // Handle date blur - normalize the format
+  const handleDateBlur = (field: 'fromDate' | 'toDate', index: number) => {
+    const currentValue = formData.employers[index]?.[field]
+    if (currentValue) {
+      const normalized = normalizeDateInput(currentValue)
+      if (normalized !== currentValue) {
+        handleInputChange('employers', { [field]: normalized }, index)
+      }
+    }
   }
 
   const fillTestData = () => {
@@ -686,40 +782,95 @@ export default function PersonalInfoForm3({
             const today = new Date()
             const tenYearsAgo = new Date(today.getFullYear() - 10, today.getMonth(), today.getDate())
             
-            formData.employers.forEach((employer) => {
-              if (!employer.isUnemployment && employer.fromDate && employer.toDate) {
-                const parseDate = (dateStr: string): Date | null => {
-                  if (!dateStr || dateStr === 'Present') return today
-                  const parts = dateStr.split('/')
-                  if (parts.length === 2) {
-                    const month = parseInt(parts[0]) - 1
-                    const year = parseInt(parts[1])
-                    if (!isNaN(month) && !isNaN(year) && month >= 0 && month < 12) {
-                      return new Date(year, month, 1)
-                    }
-                  }
-                  const isoDate = new Date(dateStr)
-                  return isNaN(isoDate.getTime()) ? null : isoDate
-                }
-                
-                const fromDate = parseDate(employer.fromDate)
-                const toDate = parseDate(employer.toDate)
-                
-                if (fromDate && toDate) {
-                  const periodStart = fromDate > tenYearsAgo ? fromDate : tenYearsAgo
-                  const periodEnd = toDate < today ? toDate : today
-                  if (periodStart <= periodEnd) {
-                    const years = (periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
-                    totalYears += Math.max(0, years)
-                  }
-                }
+            // Parse dates - handles multiple formats for robustness
+            const parseDate = (dateStr: string): Date | null => {
+              if (!dateStr || dateStr.toLowerCase() === 'present') return today
+              const trimmed = dateStr.trim()
+              
+              // Try MM/YYYY or MM/YY format (with slash)
+              const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{2,4})$/)
+              if (slashMatch) {
+                const month = parseInt(slashMatch[1]) - 1 // 0-indexed
+                let year = parseInt(slashMatch[2])
+                if (year < 100) year = year < 50 ? 2000 + year : 1900 + year
+                if (month >= 0 && month < 12) return new Date(year, month, 1)
               }
+              
+              // Try MM-YYYY or MM-YY format (with dash)
+              const dashMatch = trimmed.match(/^(\d{1,2})-(\d{2,4})$/)
+              if (dashMatch) {
+                const month = parseInt(dashMatch[1]) - 1
+                let year = parseInt(dashMatch[2])
+                if (year < 100) year = year < 50 ? 2000 + year : 1900 + year
+                if (month >= 0 && month < 12) return new Date(year, month, 1)
+              }
+              
+              // Try YYYY-MM or YYYY/MM format (reversed)
+              const reversedMatch = trimmed.match(/^(\d{4})[-/](\d{1,2})$/)
+              if (reversedMatch) {
+                const year = parseInt(reversedMatch[1])
+                const month = parseInt(reversedMatch[2]) - 1
+                if (month >= 0 && month < 12) return new Date(year, month, 1)
+              }
+              
+              // Try full ISO format YYYY-MM-DD
+              const isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/)
+              if (isoMatch) {
+                return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]))
+              }
+              
+              // Final fallback to native Date parsing
+              const isoDate = new Date(trimmed)
+              return isNaN(isoDate.getTime()) ? null : isoDate
+            }
+            
+            const employerBreakdown: string[] = []
+            
+            formData.employers.forEach((employer, idx) => {
+              if (employer.isUnemployment) {
+                employerBreakdown.push(`#${idx + 1}: SKIP (unemployment)`)
+                return
+              }
+              if (!employer.fromDate || !employer.toDate) {
+                employerBreakdown.push(`#${idx + 1}: SKIP (missing dates: from="${employer.fromDate}" to="${employer.toDate}")`)
+                return
+              }
+              
+              const fromDate = parseDate(employer.fromDate)
+              const toDate = parseDate(employer.toDate)
+              
+              if (!fromDate || !toDate) {
+                employerBreakdown.push(`#${idx + 1}: SKIP (parse failed: from="${employer.fromDate}"→${fromDate}, to="${employer.toDate}"→${toDate})`)
+                return
+              }
+              
+              // Only count years within the 10-year window
+              const periodStart = fromDate > tenYearsAgo ? fromDate : tenYearsAgo
+              const periodEnd = toDate < today ? toDate : today
+              
+              if (periodStart > periodEnd) {
+                employerBreakdown.push(`#${idx + 1}: SKIP (outside window or invalid: ${employer.fromDate}-${employer.toDate})`)
+                return
+              }
+              
+              const years = (periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+              const addedYears = Math.max(0, years)
+              totalYears += addedYears
+              employerBreakdown.push(`#${idx + 1}: +${addedYears.toFixed(2)}yr (${employer.fromDate} to ${employer.toDate}, clamped: ${periodStart.toLocaleDateString()}-${periodEnd.toLocaleDateString()})`)
             })
+            
+            console.log('📊 [YEARS CALC] Today:', today.toLocaleDateString(), '10yr ago:', tenYearsAgo.toLocaleDateString())
+            console.log('📊 [YEARS CALC] Breakdown:', employerBreakdown)
+            console.log('📊 [YEARS CALC] TOTAL:', totalYears.toFixed(2), 'years')
+            
             return totalYears
           }
           
           const yearsCovered = calculateYearsCovered()
           const isComplete = yearsCovered >= 10
+          
+          // Debug: Log raw employers data to catch any data structure issues
+          console.log('📊 [YEARS CALC] Raw formData.employers:', JSON.stringify(formData.employers, null, 2))
           
           if (formData.employers.some(e => e.fromDate || e.toDate)) {
             return (
@@ -742,6 +893,35 @@ export default function PersonalInfoForm3({
                     : `⚠ ${yearsCovered.toFixed(1)} of 10 years covered. Add ${(10 - yearsCovered).toFixed(1)} more years to meet DOT § 383.35 requirement.`
                   }
                 </p>
+                {/* Show per-employer breakdown for debugging */}
+                <details className="mt-2">
+                  <summary className={`text-xs cursor-pointer ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    📋 Show calculation breakdown ({formData.employers.length} employer{formData.employers.length !== 1 ? 's' : ''})
+                  </summary>
+                  <div className={`text-xs mt-2 p-2 rounded ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                    <p className="font-medium mb-1">10-year window: {new Date(new Date().getFullYear() - 10, new Date().getMonth(), new Date().getDate()).toLocaleDateString()} to {new Date().toLocaleDateString()}</p>
+                    <ul className="space-y-1">
+                      {formData.employers.map((emp, idx) => {
+                        if (emp.isUnemployment) {
+                          return <li key={idx} className="text-gray-500">#{idx + 1}: ⏭ Skipped (unemployment period)</li>
+                        }
+                        if (!emp.fromDate || !emp.toDate) {
+                          return <li key={idx} className="text-orange-500">#{idx + 1}: ⚠ Missing date ({!emp.fromDate ? 'FROM' : 'TO'} is empty)</li>
+                        }
+                        // Show the employer with dates
+                        const today = new Date()
+                        const tenYearsAgo = new Date(today.getFullYear() - 10, today.getMonth(), today.getDate())
+                        // Simple display - detailed calc is in console
+                        return (
+                          <li key={idx} className="text-green-600 dark:text-green-400">
+                            #{idx + 1}: ✓ {emp.name?.slice(0, 20) || 'Unnamed'} — {emp.fromDate} to {emp.toDate}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                    <p className="mt-2 text-gray-500 italic">Check browser console (F12) for detailed calculation</p>
+                  </div>
+                </details>
               </div>
             )
           }
@@ -957,6 +1137,7 @@ export default function PersonalInfoForm3({
                     index
                   )
                 }
+                onBlur={() => handleDateBlur('fromDate', index)}
                 placeholder='MM/YYYY'
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   errors[`employer${index}FromDate`]
@@ -986,6 +1167,7 @@ export default function PersonalInfoForm3({
                     index
                   )
                 }
+                onBlur={() => handleDateBlur('toDate', index)}
                 placeholder='MM/YYYY or "Present"'
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   errors[`employer${index}ToDate`]

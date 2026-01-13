@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import type { DriverProfileRow, UnifiedDriverProfile } from '@/types/driver-profile'
 import { rowToProfile, profileToRow } from '@/types/driver-profile'
+import { mergeIntoProfile } from '@/lib/profile-mapper'
 
 /**
  * GET /api/driver/profile
@@ -208,7 +209,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const { profileData, source } = await request.json()
+    const { profileData, source, force } = await request.json()
 
     if (!profileData) {
       return NextResponse.json(
@@ -245,20 +246,78 @@ export async function PUT(request: NextRequest) {
     // Convert to database format
     const updateData = profileToRow(profileData, source || 'manual')
 
-    // Check if profile exists
-    const { data: existingProfile } = await supabase
+    // Check if profile exists and get full data for conflict detection
+    const { data: existingProfileRow } = await supabase
       .from('driver_profiles')
-      .select('id')
+      .select('*')
       .eq('user_id', user.id)
       .single()
 
     let result
     
-    if (existingProfile) {
-      // Update existing profile
+    if (existingProfileRow) {
+      // Convert existing profile to app format for conflict detection
+      const existingProfile = rowToProfile(existingProfileRow as DriverProfileRow)
+      
+      // Detect conflicts: different name, CDL number, or email
+      const conflicts: string[] = []
+      
+      if (profileData.firstName && existingProfile.firstName && 
+          profileData.firstName.toLowerCase() !== existingProfile.firstName.toLowerCase()) {
+        conflicts.push(`Name mismatch: "${existingProfile.firstName} ${existingProfile.lastName}" vs "${profileData.firstName} ${profileData.lastName || ''}"`)
+      }
+      
+      if (profileData.lastName && existingProfile.lastName && 
+          profileData.lastName.toLowerCase() !== existingProfile.lastName.toLowerCase()) {
+        // Only add if firstName didn't already catch it
+        if (!conflicts.some(c => c.includes('Name mismatch'))) {
+          conflicts.push(`Name mismatch: "${existingProfile.firstName} ${existingProfile.lastName}" vs "${profileData.firstName || ''} ${profileData.lastName}"`)
+        }
+      }
+      
+      if (profileData.cdlNumber && existingProfile.cdlNumber && 
+          profileData.cdlNumber !== existingProfile.cdlNumber) {
+        conflicts.push(`CDL Number mismatch: "${existingProfile.cdlNumber}" vs "${profileData.cdlNumber}"`)
+      }
+      
+      if (profileData.email && existingProfile.email && 
+          profileData.email.toLowerCase() !== existingProfile.email.toLowerCase()) {
+        conflicts.push(`Email mismatch: "${existingProfile.email}" vs "${profileData.email}"`)
+      }
+      
+      // If conflicts detected and source is uploaded_resume, return conflict response
+      // (Allow overwrites from resume_builder and dot_application as user is actively editing)
+      // Unless force flag is set (user explicitly chose to replace)
+      if (conflicts.length > 0 && source === 'uploaded_resume' && !force) {
+        console.warn('[DRIVER PROFILE PUT] Conflict detected:', conflicts)
+        return NextResponse.json({
+          success: false,
+          conflict: true,
+          conflicts,
+          existingProfile: {
+            name: `${existingProfile.firstName || ''} ${existingProfile.lastName || ''}`.trim(),
+            cdlNumber: existingProfile.cdlNumber,
+            email: existingProfile.email,
+            lastUpdatedFrom: existingProfile.lastUpdatedFrom,
+          },
+          incomingProfile: {
+            name: `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim(),
+            cdlNumber: profileData.cdlNumber,
+            email: profileData.email,
+            source,
+          },
+          message: 'This resume appears to be for a different person. Do you want to replace your existing profile data?',
+        }, { status: 409 }) // 409 Conflict
+      }
+      
+      // No conflicts or source is user-initiated (resume_builder/dot_application) - proceed with update
+      // Use smart merge to preserve existing data where new data is empty
+      const mergedData = mergeIntoProfile(existingProfile, profileData as Partial<UnifiedDriverProfile>)
+      const mergedUpdateData = profileToRow(mergedData, source || 'manual')
+      
       const { data: updated, error: updateError } = await supabase
         .from('driver_profiles')
-        .update(updateData)
+        .update(mergedUpdateData)
         .eq('user_id', user.id)
         .select()
         .single()

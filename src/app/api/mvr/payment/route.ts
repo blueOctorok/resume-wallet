@@ -89,6 +89,27 @@ export async function POST(request: NextRequest) {
     // If it's longer, it's likely a call ID, which we'll truncate
     const truncatedTxHash = txHash.length > 66 ? txHash.substring(0, 66) : txHash
     
+    // Check if payment with this tx_hash already exists (prevent duplicates)
+    const { data: existingPayment } = await supabase
+      .from('payments')
+      .select('id, tx_hash, amount_usdc')
+      .eq('tx_hash', truncatedTxHash)
+      .eq('type', 'MVR_ORDER')
+      .maybeSingle()
+
+    if (existingPayment) {
+      console.log('[MVR PAYMENT] ✅ Payment already exists, returning existing:', existingPayment.id)
+      return NextResponse.json({
+        success: true,
+        payment: {
+          id: existingPayment.id,
+          txHash: existingPayment.tx_hash,
+          amountUsdc: existingPayment.amount_usdc,
+        },
+        duplicate: true,
+      })
+    }
+    
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
       .insert({

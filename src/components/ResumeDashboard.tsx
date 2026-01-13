@@ -710,11 +710,11 @@ export default function ResumeDashboard({
                                 : 'bg-white/70 border-brand-sage/20 hover:border-brand-sage/40 hover:bg-white'
                           }`}
                         >
-                          <div className='flex items-start justify-between gap-3'>
-                            <div className='flex-1'>
+                          <div className='flex items-start justify-between gap-2 sm:gap-3'>
+                            <div className='flex-1 min-w-0'>
                               <div className='flex items-center gap-2'>
                                 <h4
-                                  className={`text-sm font-semibold ${
+                                  className={`text-sm font-semibold truncate ${
                                     theme === 'dark'
                                       ? 'text-brand-cream'
                                       : 'text-brand-sage'
@@ -723,7 +723,7 @@ export default function ResumeDashboard({
                                   {resume.title || resume.filename}
                                 </h4>
                                 {resume.resume_type === 'built' && (
-                                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${
+                                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium flex-shrink-0 ${
                                     theme === 'dark'
                                       ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/30'
                                       : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/20'
@@ -733,7 +733,7 @@ export default function ResumeDashboard({
                                 )}
                               </div>
                               <p
-                                className={`text-xs mt-1 ${
+                                className={`text-xs mt-1 truncate ${
                                   theme === 'dark'
                                     ? 'text-brand-cream/60'
                                     : 'text-brand-sage/70'
@@ -743,7 +743,7 @@ export default function ResumeDashboard({
                               </p>
                             </div>
                             <span
-                              className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${STATUS_STYLES[status] || STATUS_STYLES.PENDING}`}
+                              className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide flex-shrink-0 ${STATUS_STYLES[status] || STATUS_STYLES.PENDING}`}
                             >
                               {STATUS_LABELS[status] || status.toLowerCase()}
                             </span>

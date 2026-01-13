@@ -388,19 +388,19 @@ export default function MvrManagementModal({
                                       : 'bg-gray-800/30 border-gray-700'
                                 }`}
                               >
-                                <div className="flex justify-between items-start mb-3">
-                                  <div className="flex items-center gap-3">
-                                    <span className={`text-lg font-bold ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
+                                <div className="flex justify-between items-start gap-2 mb-3">
+                                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <span className={`text-sm sm:text-base font-bold ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
                                       ${payment.amount} USDC
                                     </span>
                                     {isOrphaned && (
-                                      <span className="text-xs px-3 py-1 rounded-full font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                                      <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30 whitespace-nowrap flex-shrink-0">
                                         Needs Order
                                       </span>
                                     )}
                                   </div>
                                   <span
-                                    className={`text-xs px-3 py-1 rounded-full font-semibold ${
+                                    className={`text-xs px-2.5 py-1 rounded-full font-semibold whitespace-nowrap flex-shrink-0 ${
                                       payment.status === 'completed'
                                         ? theme === 'light'
                                           ? 'bg-green-100 text-green-700'
@@ -413,17 +413,17 @@ export default function MvrManagementModal({
                                     {payment.status}
                                   </span>
                                 </div>
-                                <div className={`text-sm space-y-2 ${theme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-semibold">Transaction:</span>
-                                    <code className={`px-2 py-1 rounded font-mono text-xs ${
+                                <div className={`text-xs space-y-1.5 ${theme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-medium">Tx:</span>
+                                    <code className={`px-1.5 py-0.5 rounded font-mono text-[10px] truncate ${
                                       theme === 'light' ? 'bg-gray-200' : 'bg-gray-900/50 border border-gray-700'
                                     }`}>
-                                      {payment.txHash.slice(0, 12)}...{payment.txHash.slice(-10)}
+                                      {payment.txHash.slice(0, 6)}...{payment.txHash.slice(-4)}
                                     </code>
                                   </div>
-                                  <div className="flex items-center gap-2">
-                                    <Clock className="h-4 w-4" />
+                                  <div className="flex items-center gap-1.5">
+                                    <Clock className="h-3.5 w-3.5" />
                                     <span>{new Date(payment.createdAt).toLocaleString()}</span>
                                   </div>
                                 </div>
@@ -489,20 +489,20 @@ export default function MvrManagementModal({
                               : 'bg-gray-800/30 border-gray-700'
                         }`}
                       >
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <span className={`text-lg font-bold ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
-                              Order #{order.orderNumber}
+                        <div className="flex justify-between items-start gap-2 mb-3">
+                          <div className="flex-1 min-w-0 pr-2">
+                            <span className={`text-[10px] sm:text-xs font-mono font-medium truncate block ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
+                              #{order.orderNumber.length > 12 ? order.orderNumber.slice(0, 8) + '...' + order.orderNumber.slice(-4) : order.orderNumber}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-shrink-0">
                             {order.hasResult ? (
-                              <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                              <CheckCircle2 className="h-5 w-5 text-emerald-400 flex-shrink-0" />
                             ) : (
-                              <Clock className="h-5 w-5 text-amber-400" />
+                              <Clock className="h-5 w-5 text-amber-400 flex-shrink-0" />
                             )}
                             <span
-                              className={`text-xs px-3 py-1 rounded-full font-semibold ${
+                              className={`text-xs px-2.5 py-1 rounded-full font-semibold whitespace-nowrap flex-shrink-0 ${
                                 order.hasResult
                                   ? theme === 'light'
                                     ? 'bg-green-100 text-green-700'

@@ -3,6 +3,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { MessageCircle, Send, Loader2, X } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { 
+  routeEvent, 
+  checkInactivity, 
+  checkMilestones,
+  type AvaEvent, 
+  type UserContext 
+} from '@/lib/ava-brain'
 import type {
   AssistantHelpRequest,
   DriverJourneyState,
@@ -88,6 +95,25 @@ function TAssistantContent({
   const messageCounterRef = useRef(0)
   const lastReadMessageIdRef = useRef<string | null>(null)
   const [hasUnread, setHasUnread] = useState(false)
+  
+  // Ava Brain context - tracks user state for smart routing
+  const avaBrainContextRef = useRef<UserContext>({
+    currentPage: null,
+    currentForm: 1,
+    hasResume: hasResume ?? false,
+    formsCompleted: [],
+    profileCompleteness: profileCompleteness?.score ?? 0,
+    sessionStart: Date.now(),
+    lastActivity: Date.now(),
+    eventsThisSession: [],
+    helpTopicsShown: new Set(),
+    timeOnCurrentPage: 0,
+    fieldsFilledThisForm: 0,
+    errorsEncountered: 0,
+  })
+  const prevStepRef = useRef<string | null>(null)
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const lastInactivityPromptRef = useRef<number>(0)
 
   const nextMessageId = useCallback((prefix: string) => {
     messageCounterRef.current += 1
@@ -245,6 +271,121 @@ function TAssistantContent({
     }
   }, [mounted, userAddress])
 
+  // =====================================================
+  // AVA BRAIN: Page/Step Change Tracking
+  // =====================================================
+  useEffect(() => {
+    if (!mounted) return
+    
+    // Track page changes via Ava Brain
+    if (currentStep !== prevStepRef.current) {
+      const prevContext = { ...avaBrainContextRef.current }
+      
+      // Update context
+      avaBrainContextRef.current = {
+        ...avaBrainContextRef.current,
+        currentPage: currentStep,
+        lastActivity: Date.now(),
+        timeOnCurrentPage: 0,
+      }
+      
+      // Reset inactivity tracking for new page
+      avaBrainContextRef.current.helpTopicsShown = new Set()
+      lastInactivityPromptRef.current = 0
+      
+      // Check for milestones on page change
+      const milestoneEvent = checkMilestones(prevContext, avaBrainContextRef.current)
+      if (milestoneEvent) {
+        const response = routeEvent(milestoneEvent, avaBrainContextRef.current)
+        if ('message' in response && response.message) {
+          console.log('🏆 [AVA BRAIN] Milestone triggered:', milestoneEvent.action)
+          addAssistantMessage(response.message, {
+            actions: response.actions,
+            step: response.metadata?.step,
+          })
+        }
+      }
+      
+      console.log('📍 [AVA BRAIN] Page changed:', prevStepRef.current, '→', currentStep)
+      prevStepRef.current = currentStep
+    }
+  }, [currentStep, mounted, addAssistantMessage])
+
+  // =====================================================
+  // AVA BRAIN: Inactivity Detection
+  // =====================================================
+  useEffect(() => {
+    if (!mounted || isCollapsed) return
+    
+    // Only run inactivity checks when on forms
+    if (currentStep !== 'forms') return
+    
+    const checkForInactivity = () => {
+      const now = Date.now()
+      const timeSinceActivity = now - avaBrainContextRef.current.lastActivity
+      const timeSinceLastPrompt = now - lastInactivityPromptRef.current
+      
+      // Don't spam - wait at least 2 minutes between prompts
+      if (timeSinceLastPrompt < 120000) return
+      
+      const inactivityEvent = checkInactivity(avaBrainContextRef.current)
+      if (inactivityEvent) {
+        const response = routeEvent(inactivityEvent, avaBrainContextRef.current)
+        if ('message' in response && response.message) {
+          console.log('💤 [AVA BRAIN] Inactivity prompt:', inactivityEvent.action)
+          addAssistantMessage(response.message, {
+            actions: response.actions,
+            step: response.metadata?.step,
+          })
+          lastInactivityPromptRef.current = now
+        }
+      }
+    }
+    
+    // Check every 10 seconds
+    inactivityTimerRef.current = setInterval(checkForInactivity, 10000)
+    
+    return () => {
+      if (inactivityTimerRef.current) {
+        clearInterval(inactivityTimerRef.current)
+      }
+    }
+  }, [mounted, currentStep, isCollapsed, addAssistantMessage])
+
+  // =====================================================
+  // AVA BRAIN: Update Context on Props Change
+  // =====================================================
+  useEffect(() => {
+    if (!mounted) return
+    
+    const prevContext = { ...avaBrainContextRef.current }
+    
+    // Sync external state to Ava Brain context
+    avaBrainContextRef.current = {
+      ...avaBrainContextRef.current,
+      hasResume: hasResume ?? false,
+      profileCompleteness: profileCompleteness?.score ?? 0,
+    }
+    
+    // Check for milestones (first resume, profile completeness)
+    const milestoneEvent = checkMilestones(prevContext, avaBrainContextRef.current)
+    if (milestoneEvent) {
+      const response = routeEvent(milestoneEvent, avaBrainContextRef.current)
+      if ('message' in response && response.message) {
+        console.log('🏆 [AVA BRAIN] State milestone:', milestoneEvent.action)
+        addAssistantMessage(response.message, {
+          actions: response.actions,
+          step: response.metadata?.step,
+        })
+      }
+    }
+  }, [mounted, hasResume, profileCompleteness, addAssistantMessage])
+
+  // Reset activity timer on user input
+  const resetActivityTimer = useCallback(() => {
+    avaBrainContextRef.current.lastActivity = Date.now()
+  }, [])
+
   // Initialize with welcome message based on current step
   useEffect(() => {
     if (!mounted || messages.length > 0) return
@@ -301,6 +442,23 @@ function TAssistantContent({
     }
 
     const previous = prevJourneyRef.current
+    
+    // =====================================================
+    // AVA BRAIN: Update context from journey state
+    // =====================================================
+    // Track current form
+    if (journeyState.currentFormStep) {
+      avaBrainContextRef.current.currentForm = journeyState.currentFormStep
+    }
+    
+    // Track completed forms (1, 2, 3 based on journey state)
+    const completedForms: number[] = []
+    if (journeyState.forms.status === 'complete') {
+      completedForms.push(1, 2, 3) // All forms complete
+    }
+    avaBrainContextRef.current.formsCompleted = completedForms
+    // =====================================================
+    
     const walletChanged =
       journeyState.wallet.status === 'complete' &&
       previous.wallet.status !== 'complete'
@@ -322,6 +480,10 @@ function TAssistantContent({
       journeyState.resume.status === 'complete' &&
       previous.resume.status !== 'complete'
     if (resumeChanged) {
+      // Update Ava Brain context
+      avaBrainContextRef.current.hasResume = true
+      console.log('📄 [AVA BRAIN] Resume status changed to complete')
+      
       addAssistantMessage(
         '📄 Got it—your resume is on file. I can now prefill the DOT application to save you time.',
         {
@@ -683,6 +845,18 @@ function TAssistantContent({
           }
         )
       }
+    } else if (resumeUploadEvent.type === 'profile_conflict' && resumeUploadEvent.data) {
+      // Profile conflict detected - explain to user and guide them
+      const { conflicts, existing, incoming } = resumeUploadEvent.data
+      
+      const conflictList = conflicts.map((c: string) => `• ${c}`).join('\n')
+      
+      addAssistantMessage(
+        `⚠️ **Profile Conflict Detected**\n\nI noticed this resume appears to be for a different person than your existing profile:\n\n${conflictList}\n\n**Your existing profile:**\n• Name: ${existing.name || 'Not set'}\n• CDL: ${existing.cdlNumber || 'Not set'}\n\n**This new resume:**\n• Name: ${incoming.name || 'Not set'}\n• CDL: ${incoming.cdlNumber || 'Not set'}\n\n**What should we do?**\n\nA modal will appear asking you to choose:\n• **Keep Existing** - Keep your current profile, discard this resume's data\n• **Replace** - Replace your profile with this new resume's data\n\n💡 **Tip:** If this is your resume but with updated info, choose "Replace". If you accidentally uploaded someone else's resume, choose "Keep Existing".`,
+        {
+          step: 'resume',
+        }
+      )
     } else if (resumeUploadEvent.message) {
       // Fallback for any other events with messages
       addAssistantMessage(resumeUploadEvent.message, {
@@ -888,25 +1062,62 @@ function TAssistantContent({
     }
 
     setMessages((prev) => [...prev, userMessage])
+    const messageText = input.trim()
     setInput('')
+    
+    // Update Ava Brain context
+    avaBrainContextRef.current.lastActivity = Date.now()
+    avaBrainContextRef.current.hasResume = hasResume ?? false
+    avaBrainContextRef.current.profileCompleteness = profileCompleteness?.score ?? 0
+    avaBrainContextRef.current.currentPage = currentStep
+    
+    // Create an event for the user message
+    const event: AvaEvent = {
+      category: 'help_request',
+      action: 'user_message',
+      context: { message: messageText },
+      timestamp: Date.now(),
+    }
+    
+    // Check with Ava Brain - does this need AI or can we use a template?
+    const routeResult = routeEvent(event, avaBrainContextRef.current, messageText)
+    
+    // If the brain says we can use a template (no AI needed)
+    if ('message' in routeResult && !routeResult.useAI && routeResult.message) {
+      // Instant response from template - no loading needed!
+      addAssistantMessage(routeResult.message, {
+        actions: routeResult.actions,
+        step: routeResult.metadata?.step,
+      })
+      console.log('⚡ [AVA BRAIN] Template response (instant, no AI cost)')
+      return
+    }
+    
+    // AI is needed - show loading and call the API
     setIsLoading(true)
+    console.log('🤖 [AVA BRAIN] Escalating to AI for complex question')
 
     try {
       // Build context-aware prompt with application data
       const applicationSnapshot = buildApplicationSnapshot()
-      const contextPrompt = [
-        `You are AvA, a friendly AI assistant guiding users through the driver employment application process.`,
-        `Current step: ${currentStep}`,
-        userAddress ? `User is logged in with wallet: ${userAddress}` : `User is not logged in yet`,
-        hasResume ? `User has uploaded their resume` : `User has not uploaded their resume yet`,
-        hasForms ? `User has started filling out forms` : `User has not started forms yet`,
-        ``,
-        `=== USER'S APPLICATION DATA ===`,
-        applicationSnapshot,
-        ``,
-        `Be helpful, friendly, and guide them to the next step. You can reference their application data to provide personalized guidance.`,
-        `User message: ${userMessage.content}`,
-      ].join('\n')
+      
+      // If the brain provided a pre-built prompt, use it; otherwise build our own
+      const contextPrompt = 'prompt' in routeResult 
+        ? routeResult.prompt 
+        : [
+          `You are AvA, a friendly AI assistant guiding users through the driver employment application process.`,
+          `Current step: ${currentStep}`,
+          userAddress ? `User is logged in with wallet: ${userAddress}` : `User is not logged in yet`,
+          hasResume ? `User has uploaded their resume` : `User has not uploaded their resume yet`,
+          hasForms ? `User has started filling out forms` : `User has not started forms yet`,
+          ``,
+          `=== USER'S APPLICATION DATA ===`,
+          applicationSnapshot,
+          ``,
+          `Be helpful, friendly, and guide them to the next step. You can reference their application data to provide personalized guidance.`,
+          `Keep responses concise (2-3 paragraphs max).`,
+          `User message: ${messageText}`,
+        ].join('\n')
 
       // Build headers with wallet address if available
       const headers: Record<string, string> = {
@@ -970,6 +1181,7 @@ function TAssistantContent({
     userAddress,
     hasResume,
     hasForms,
+    profileCompleteness,
     buildApplicationSnapshot,
     addAssistantMessage,
     nextMessageId,
@@ -1389,7 +1601,10 @@ function TAssistantContent({
               ref={inputRef}
               type="text"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                setInput(e.target.value)
+                resetActivityTimer() // Track user activity
+              }}
               onKeyPress={handleKeyPress}
               placeholder="Ask me anything about the application process..."
               disabled={isLoading}
@@ -1629,7 +1844,10 @@ function TAssistantContent({
             ref={inputRef}
             type="text"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value)
+              resetActivityTimer() // Track user activity
+            }}
             onKeyPress={handleKeyPress}
             placeholder="Ask me anything about the application process..."
             disabled={isLoading}

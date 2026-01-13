@@ -2,6 +2,181 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🐛 **FIX: Employment History Date Parsing & Input Normalization** (January 13, 2026)
+
+**Fixed issues where manual date entry in Form 3 (Employment History) wasn't counting years correctly.**
+
+### **The Problem:**
+Users manually entering employment dates would see incorrect year calculations (e.g., form showing "4 years" when 10+ years were entered). The "Fill Test Data" button worked correctly, but manual entry didn't always parse properly.
+
+### **Root Causes:**
+
+1. **No input format enforcement** - Users could enter dates in any format (01/2022, 01-2022, 2022-01, etc.) but the parser only understood specific formats.
+
+2. **2-digit year issue** - `01/22` was parsed as year 22 AD, not 2022.
+
+3. **Dash separator not handled** - `01-2022` wasn't recognized, causing invalid date parsing.
+
+### **The Fix - Two-Part Solution:**
+
+**Part 1: Input Normalization (onBlur)**
+
+Added a `normalizeDateInput()` function that automatically converts various formats to MM/YYYY when the user leaves the field:
+
+```javascript
+// These all normalize to "01/2022":
+"01/2022"     → "01/2022"  (already correct)
+"1/2022"      → "01/2022"  (pad month)
+"01/22"       → "01/2022"  (expand 2-digit year)
+"01-2022"     → "01/2022"  (convert dash to slash)
+"2022-01"     → "01/2022"  (reverse ISO format)
+"2022-01-15"  → "01/2022"  (extract from full ISO)
+"present"     → "Present"  (standardize case)
+```
+
+**Part 2: Robust Date Parsing**
+
+Enhanced `parseDate()` function to handle multiple formats as fallback:
+- MM/YYYY, MM/YY (slash)
+- MM-YYYY, MM-YY (dash)  
+- YYYY-MM, YYYY/MM (reversed)
+- YYYY-MM-DD (full ISO)
+- Native Date parsing (final fallback)
+
+### **Files Modified:**
+- `src/components/driver-application/PersonalInfoForm3.tsx`
+  - Added `normalizeDateInput()` function - converts various date formats to MM/YYYY
+  - Added `handleDateBlur()` handler - normalizes dates when field loses focus
+  - Added `onBlur` handlers to FROM and TO date inputs
+  - Enhanced `parseDate()` in both `validateStep()` and `calculateYearsCovered()` with regex-based multi-format parsing
+
+### **Teaching Moment - Defensive Input Handling:**
+
+When accepting freeform user input, always:
+1. **Show expected format** (placeholder: "MM/YYYY")
+2. **Normalize on blur** - auto-correct to expected format when possible
+3. **Parse defensively** - handle common variations the parser might receive
+4. **Don't assume users read instructions** - they'll type what feels natural
+
+The test data button worked because it programmatically set dates in the exact expected format. Manual entry failed because users entered valid-looking dates that didn't match the narrow parsing logic.
+
+---
+
+## 🧠 **AVA BRAIN - SMART EVENT ROUTING** (January 2026)
+
+**Implemented intelligent routing system for AvA, the AI assistant. Now Ava appears "omniscient" while minimizing AI costs.**
+
+### **The Problem:**
+The user wanted Ava to feel like the "brain" of the application - tracking every move, proactively helping users, and guiding them when stuck. However, calling the AI API for every user action would be:
+- 💸 **Expensive** - AI API calls cost money
+- 🐌 **Slow** - Each call takes 1-3 seconds
+- 🔥 **Wasteful** - Most scenarios have predictable responses
+
+### **The Solution: Smart Routing Architecture**
+
+```
+User Action → Ava Brain Router → Template Response (instant, free)
+                      ↓
+              Complex Question? → AI API (smart, contextual)
+```
+
+**Key Principle:** Use templates for 80% of scenarios (navigation, form completion, milestones, errors). Reserve AI for the 20% that needs real intelligence (complex questions, regulation inquiries, personalized advice).
+
+### **What Gets Templates (Instant):**
+- Navigation hints ("You're on Form 2 - Driving Experience...")
+- Form saved confirmations
+- Milestone celebrations ("🎉 Form 1 Complete!")
+- Error messages with actionable guidance
+- Profile conflict explanations
+- Inactivity prompts ("Need help with this field?")
+
+### **What Uses AI (Smart):**
+- Questions starting with what/why/how/when
+- Messages ending with "?"
+- DOT/FMCSA regulation questions
+- Career advice requests
+- Complex field explanations
+
+### **Files Added:**
+
+- `src/lib/ava-brain.ts` - **Core routing engine**
+  - Event categories and types
+  - User context tracking
+  - Template library (50+ pre-written responses)
+  - AI escalation patterns
+  - Milestone/inactivity detection
+
+- `src/contexts/AvaBrainContext.tsx` - **React context provider**
+  - Tracks user context across components
+  - Manages pending Ava messages
+  - Automatic milestone detection
+  - Inactivity monitoring
+
+### **Files Modified:**
+
+- `src/components/TAssistant.tsx`
+  - Integrated Ava Brain router
+  - User messages now check templates first
+  - AI only called when `routeEvent` returns `useAI: true`
+  - Console logs show routing decision: "⚡ Template response" vs "🤖 Escalating to AI"
+
+### **Benefits:**
+1. **Cost Reduction:** ~80% fewer AI API calls
+2. **Speed:** Template responses are instant (0ms vs 1-3s)
+3. **Consistency:** Ava's voice/tone is controlled via templates
+4. **Extensibility:** Easy to add new templates for new features
+
+### **Example Flow:**
+```typescript
+// User types: "hi"
+// → Brain checks AI patterns → No match
+// → Returns empty template (no response needed)
+
+// User types: "what is FMCSR?"
+// → Brain checks AI patterns → Matches "fmcsr" keyword
+// → Returns { useAI: true, prompt: "..." }
+// → AI API called with rich context
+```
+
+### **Enhanced Features (v2):**
+
+1. **Page/Step Tracking**
+   - Automatically tracks when user navigates between steps
+   - Updates Ava Brain context for smarter responses
+   - Logs page changes: `📍 [AVA BRAIN] Page changed: wallet → forms`
+
+2. **Inactivity Detection**
+   - Monitors user activity on forms
+   - After 30s idle: "Need help with this field?"
+   - After 2min idle: "Looks like you might be stuck..."
+   - Only triggers on forms page (where users get stuck)
+   - Prevents spam: 2 minute cooldown between prompts
+
+3. **Form Completion Tracking**
+   - Syncs journey state with Ava Brain context
+   - Tracks current form and completed forms
+   - Enables milestone detection for form completions
+
+4. **Activity Reset**
+   - Typing in the chat input resets the inactivity timer
+   - User interactions keep the session "active"
+
+### **Console Logging:**
+Watch the browser console for Ava Brain activity:
+- `⚡ [AVA BRAIN] Template response (instant, no AI cost)` - Template used
+- `🤖 [AVA BRAIN] Escalating to AI for complex question` - AI called
+- `📍 [AVA BRAIN] Page changed: X → Y` - Navigation tracked
+- `💤 [AVA BRAIN] Inactivity prompt: 30s` - Inactivity detected
+- `🏆 [AVA BRAIN] Milestone: first_resume` - Milestone triggered
+
+### **Teaching Moment 🎓:**
+This is a classic pattern called **"Smart Defaults with Escape Hatch"**. You optimize for the common case (templates) while preserving the ability to handle edge cases (AI). It's similar to:
+- Database query caching
+- React's reconciliation (diff first, DOM update only if needed)
+- CDN edge caching with origin fallback
+
+---
+
 ## 📋 **RESUME MANAGEMENT DASHBOARD ENHANCEMENT** (January 2026)
 
 **Enhanced the Resume Management dashboard with full CRUD operations, blockchain verification flow, and improved UX.**
@@ -137,6 +312,21 @@ A **Unified Driver Profile** that acts as a single source of truth. Both forms r
 
 **Modified Files:**
 - `src/app/api/driver/profile/route.ts` - Full CRUD operations
+
+### **Conflict Detection & Resolution** ✅
+
+**Problem:** If a user uploads multiple resumes with different names/info (e.g., "John Doe" then "Jane Smith"), the second upload would silently overwrite the first, causing data loss and confusion.
+
+**Solution:** Added conflict detection that:
+- Detects mismatches in: Name, CDL Number, Email
+- Returns 409 Conflict response when conflicts detected
+- Shows modal to user asking which profile to keep
+- User can: Keep Existing, Replace with New, or Cancel
+- Only applies to `uploaded_resume` source (user-initiated saves from Resume Builder/DOT App always overwrite)
+
+**Files Modified:**
+- `src/app/api/driver/profile/route.ts` - Added conflict detection logic
+- `src/app/page.tsx` - Added conflict modal and resolution handler
 
 ### **Integration Complete! ✅**
 

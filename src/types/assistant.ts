@@ -41,6 +41,7 @@ export type ResumeUploadEventType =
   | 'blockchain_complete'
   | 'upload_error'
   | 'analysis_ready'
+  | 'profile_conflict'
 
 export interface ResumeUploadEvent {
   type: ResumeUploadEventType

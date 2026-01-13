@@ -343,6 +343,13 @@ const HomeContent = () => {
   // Track if data was loaded from unified profile
   const [profileDataLoaded, setProfileDataLoaded] = useState(false)
   const [profileSource, setProfileSource] = useState<string | null>(null)
+  const [showProfileConflictModal, setShowProfileConflictModal] = useState(false)
+  const [profileConflict, setProfileConflict] = useState<{
+    conflicts: string[]
+    existing: { name: string; cdlNumber?: string; email?: string; lastUpdatedFrom?: string }
+    incoming: { name: string; cdlNumber?: string; email?: string; source?: string }
+    profileData: any
+  } | null>(null)
   const profileLoadAttemptedRef = useRef(false)
 
   // Track if user has used AI prefill
@@ -1489,8 +1496,35 @@ const HomeContent = () => {
               profileData,
               source: 'uploaded_resume',
             }),
-          }).then(() => {
-            console.log('✅ [HOME] Profile synced from AI prefill')
+          }).then(async (response) => {
+            if (response.status === 409) {
+              // Conflict detected - notify Ava and show modal to user
+              const conflictData = await response.json()
+              console.warn('⚠️ [HOME] Profile conflict detected:', conflictData.conflicts)
+              
+              // Notify Ava about the conflict
+              handleResumeUploadEvent({
+                type: 'profile_conflict',
+                step: 'profile_sync',
+                data: {
+                  conflicts: conflictData.conflicts,
+                  existing: conflictData.existingProfile,
+                  incoming: conflictData.incomingProfile,
+                },
+                message: `⚠️ I noticed this resume is for a different person than your existing profile. Let me help you decide what to do.`,
+              })
+              
+              // Store conflict data for modal
+              setProfileConflict({
+                conflicts: conflictData.conflicts,
+                existing: conflictData.existingProfile,
+                incoming: conflictData.incomingProfile,
+                profileData, // Store so we can retry if user chooses to replace
+              })
+              setShowProfileConflictModal(true)
+            } else if (response.ok) {
+              console.log('✅ [HOME] Profile synced from AI prefill')
+            }
           }).catch((err) => {
             console.warn('⚠️ [HOME] Profile sync failed (non-fatal):', err)
           })
@@ -1499,10 +1533,12 @@ const HomeContent = () => {
         }
       }
 
-      // Mark as prefilled and hide upload component
-      setHasPrefilled(true)
-      setShowPrefillUpload(false)
-      setHasResume(true)
+      // Mark as prefilled and hide upload component (unless conflict modal is showing)
+      if (!showProfileConflictModal) {
+        setHasPrefilled(true)
+        setShowPrefillUpload(false)
+        setHasResume(true)
+      }
 
       // Reset submission error if any
       setSubmissionError(null)
@@ -2359,12 +2395,12 @@ const HomeContent = () => {
 
                 {currentPage === 'dotapp' && (
                   <>
-                    <div className='max-w-7xl mx-auto mb-4 px-4'>
+                    <div className='max-w-4xl mx-auto mb-4'>
                       <button
                         onClick={() => setCurrentPage(null)}
-                        className='inline-flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer'
+                        className='inline-flex items-center gap-2 px-3 py-2 sm:px-4 text-sm sm:text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer'
                       >
-                        <ArrowLeft className='w-5 h-5' />
+                        <ArrowLeft className='w-4 h-4 sm:w-5 sm:h-5' />
                         Back
                       </button>
                     </div>
@@ -2440,59 +2476,6 @@ const HomeContent = () => {
                           </div>
                         )}
 
-                        {/* Prefill option banner - show if user hasn't prefilled yet and has a resume */}
-                        {!hasPrefilled &&
-                          hasResume &&
-                          !isDriverApplicationCompleted && (
-                            <div
-                              className={`max-w-4xl mx-auto mb-6 px-4 py-3 rounded-lg border flex items-center justify-between ${
-                                theme === 'dark'
-                                  ? 'bg-brand-mint/10 border-brand-mint/30 text-brand-cream'
-                                  : 'bg-brand-sage/10 border-brand-sage/30 text-gray-800'
-                              }`}
-                            >
-                              <span>
-                                📄 Want to save time? You can prefill forms from
-                                your uploaded resume.
-                              </span>
-                              <button
-                                onClick={() => {
-                                  console.log(
-                                    '🔄 [HOME] User requested prefill from forms'
-                                  )
-                                  // Trigger analysis for the existing resume
-                                  if (latestResumeIpfsHash) {
-                                    analysisPendingRef.current = true
-                                    analysisTriggeredRef.current =
-                                      latestResumeIpfsHash
-                                    handleResumeUploadEvent({
-                                      type: 'analysis_ready',
-                                      step: 'manual_prefill_request',
-                                      data: {
-                                        ipfsHash: latestResumeIpfsHash,
-                                      },
-                                      message:
-                                        '🔍 Analyzing your resume to prefill forms...',
-                                    })
-                                    setTimeout(() => {
-                                      analysisPendingRef.current = false
-                                    }, 2000)
-                                  } else {
-                                    // No resume hash available, go back to upload
-                                    setShowPrefillUpload(true)
-                                  }
-                                }}
-                                className={`px-4 py-2 text-sm font-semibold rounded-xl border transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 whitespace-nowrap ml-4 ${
-                                  theme === 'dark'
-                                    ? 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50'
-                                    : 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage'
-                                }`}
-                              >
-                                Prefill from Resume
-                              </button>
-                            </div>
-                          )}
-
                         {renderFormNavigation()}
                         {renderFormContent()}
                       </>
@@ -2503,6 +2486,156 @@ const HomeContent = () => {
             )}
         </div>
       </div>
+
+      {/* Profile Conflict Modal */}
+      {showProfileConflictModal && profileConflict && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className={`relative w-full max-w-lg rounded-2xl border p-6 shadow-2xl ${
+            theme === 'dark'
+              ? 'bg-brand-sage-light border-brand-mint/30'
+              : 'bg-white border-gray-200'
+          }`}>
+            <h3 className={`text-xl font-semibold mb-4 ${
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}>
+              Profile Conflict Detected
+            </h3>
+            
+            <p className={`text-sm mb-4 ${
+              theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
+            }`}>
+              This resume appears to be for a different person than your existing profile:
+            </p>
+
+            <div className={`mb-4 p-4 rounded-lg border ${
+              theme === 'dark'
+                ? 'bg-brand-sage/20 border-brand-mint/20'
+                : 'bg-gray-50 border-gray-200'
+            }`}>
+              {profileConflict.conflicts.map((conflict, idx) => (
+                <div key={idx} className={`text-sm mb-2 ${
+                  theme === 'dark' ? 'text-amber-300' : 'text-amber-700'
+                }`}>
+                  ⚠️ {conflict}
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className={`p-3 rounded-lg border ${
+                theme === 'dark'
+                  ? 'bg-brand-sage/30 border-brand-mint/20'
+                  : 'bg-gray-50 border-gray-200'
+              }`}>
+                <div className={`text-xs font-semibold mb-1 ${
+                  theme === 'dark' ? 'text-brand-cream/50' : 'text-gray-500'
+                }`}>EXISTING PROFILE</div>
+                <div className={`text-sm ${
+                  theme === 'dark' ? 'text-brand-cream' : 'text-gray-800'
+                }`}>
+                  {profileConflict.existing.name || 'No name'}
+                </div>
+                {profileConflict.existing.cdlNumber && (
+                  <div className={`text-xs mt-1 ${
+                    theme === 'dark' ? 'text-brand-cream/60' : 'text-gray-600'
+                  }`}>
+                    CDL: {profileConflict.existing.cdlNumber}
+                  </div>
+                )}
+                {profileConflict.existing.lastUpdatedFrom && (
+                  <div className={`text-xs mt-1 ${
+                    theme === 'dark' ? 'text-brand-cream/50' : 'text-gray-500'
+                  }`}>
+                    From: {profileConflict.existing.lastUpdatedFrom}
+                  </div>
+                )}
+              </div>
+              
+              <div className={`p-3 rounded-lg border ${
+                theme === 'dark'
+                  ? 'bg-amber-500/10 border-amber-500/30'
+                  : 'bg-amber-50 border-amber-200'
+              }`}>
+                <div className={`text-xs font-semibold mb-1 ${
+                  theme === 'dark' ? 'text-amber-300/70' : 'text-amber-700'
+                }`}>NEW RESUME</div>
+                <div className={`text-sm ${
+                  theme === 'dark' ? 'text-amber-300' : 'text-amber-800'
+                }`}>
+                  {profileConflict.incoming.name || 'No name'}
+                </div>
+                {profileConflict.incoming.cdlNumber && (
+                  <div className={`text-xs mt-1 ${
+                    theme === 'dark' ? 'text-amber-300/70' : 'text-amber-700'
+                  }`}>
+                    CDL: {profileConflict.incoming.cdlNumber}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  // Keep existing - just close modal
+                  setShowProfileConflictModal(false)
+                  setProfileConflict(null)
+                  // Still mark as prefilled since forms were filled
+                  setHasPrefilled(true)
+                  setShowPrefillUpload(false)
+                  setHasResume(true)
+                }}
+                className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                  theme === 'dark'
+                    ? 'bg-brand-sage/30 text-brand-cream hover:bg-brand-sage/50'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Keep Existing Profile
+              </button>
+              <button
+                onClick={async () => {
+                  // Replace with new - retry the profile update with force flag
+                  if (!user?.address || !profileConflict) return
+                  
+                  try {
+                    const response = await fetch('/api/driver/profile', {
+                      method: 'PUT',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'x-wallet-address': user.address,
+                      },
+                      body: JSON.stringify({
+                        profileData: profileConflict.profileData,
+                        source: 'uploaded_resume',
+                        force: true, // Force overwrite
+                      }),
+                    })
+
+                    if (response.ok) {
+                      console.log('✅ [HOME] Profile replaced with new resume data')
+                      setShowProfileConflictModal(false)
+                      setProfileConflict(null)
+                      setHasPrefilled(true)
+                      setShowPrefillUpload(false)
+                      setHasResume(true)
+                    } else {
+                      const error = await response.json().catch(() => ({}))
+                      alert(`Failed to update profile: ${error.error || 'Unknown error'}`)
+                    }
+                  } catch (err) {
+                    console.error('Failed to replace profile:', err)
+                    alert('Failed to update profile. Please try again.')
+                  }
+                }}
+                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 transition-all"
+              >
+                Replace with New Resume
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AssistantBridgeProvider>
   )
 }
