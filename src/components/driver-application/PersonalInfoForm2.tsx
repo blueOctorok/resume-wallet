@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import SaveProgressButton from './SaveProgressButton'
 
 const STEPS = [
   {
@@ -25,12 +26,17 @@ interface PersonalInfoForm2Props {
   onNavigateToForm?: (formNumber: number) => void
   onDataChange?: (data: any) => void
   initialData?: any
+  walletAddress?: string
+  /** Centralized save function - saves ALL forms to driver profile */
+  onSaveProgress?: () => Promise<boolean | undefined>
 }
 
 export default function PersonalInfoForm2({
   onNavigateToForm,
   onDataChange,
   initialData,
+  walletAddress,
+  onSaveProgress,
 }: PersonalInfoForm2Props) {
   const { theme } = useTheme()
   const [currentStep, setCurrentStep] = useState(1)
@@ -1096,8 +1102,12 @@ export default function PersonalInfoForm2({
           COMPLETE IN FULL OR IT WILL NOT BE CONSIDERED.
         </p>
 
-        {/* Test Data Button */}
-        <div className='mt-4'>
+        {/* Save and Test Data Buttons */}
+        <div className='mt-4 flex flex-wrap items-center gap-3'>
+          <SaveProgressButton
+            onSaveProgress={onSaveProgress}
+            walletAddress={walletAddress}
+          />
           <button
             type='button'
             onClick={fillTestData}

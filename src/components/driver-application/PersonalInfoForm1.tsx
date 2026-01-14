@@ -1,9 +1,11 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
 import ResumeUploadWithPrefill from '@/components/ResumeUploadWithPrefill'
+import SaveProgressButton from './SaveProgressButton'
+import { HelpCircle } from 'lucide-react'
 
 const DEFAULT_CARRIER_INFO = {
   name: process.env.NEXT_PUBLIC_CARRIER_NAME ?? 'Your Motor Carrier Name',
@@ -36,12 +38,17 @@ interface PersonalInfoForm1Props {
   onNavigateToForm?: (formNumber: number) => void
   onDataChange?: (data: any) => void
   initialData?: any
+  walletAddress?: string
+  /** Centralized save function - saves ALL forms to driver profile */
+  onSaveProgress?: () => Promise<boolean | undefined>
 }
 
 export default function PersonalInfoForm1({
   onNavigateToForm,
   onDataChange,
   initialData,
+  walletAddress,
+  onSaveProgress,
 }: PersonalInfoForm1Props) {
   const { theme } = useTheme()
   const { requestHelp } = useAssistantBridge()
@@ -97,22 +104,6 @@ export default function PersonalInfoForm1({
       outOfServiceViolationDetails: '',
       hasMobileDeviceViolation: '',
       mobileDeviceViolationDetails: '',
-    },
-    medicalQualification: {
-      hasValidMedicalCertificate: '',
-      medicalCertificateExpiration: '',
-      hasFiledWithState: '',
-      hasMedicalVariance: '',
-      medicalVarianceDetails: '',
-      hasChronicConditions: '',
-      chronicConditionsDetails: '',
-      visionHearingCompliance: '',
-      medicationDisclosure: '',
-      medicalExamDate: '',
-      medicalExaminerName: '',
-      medicalExaminerPhone: '',
-      medicalExaminerRegistryId: '',
-      medicalExaminerType: '',
     },
   })
 
@@ -244,22 +235,6 @@ export default function PersonalInfoForm1({
           outOfServiceViolationDetails: '',
           hasMobileDeviceViolation: '',
           mobileDeviceViolationDetails: '',
-        },
-        medicalQualification: {
-          hasValidMedicalCertificate: '',
-          medicalCertificateExpiration: '',
-          hasFiledWithState: '',
-          hasMedicalVariance: '',
-          medicalVarianceDetails: '',
-          hasChronicConditions: '',
-          chronicConditionsDetails: '',
-          visionHearingCompliance: '',
-          medicationDisclosure: '',
-          medicalExamDate: '',
-          medicalExaminerName: '',
-          medicalExaminerPhone: '',
-          medicalExaminerRegistryId: '',
-          medicalExaminerType: '',
         },
       })
     }
@@ -443,77 +418,6 @@ export default function PersonalInfoForm1({
       ) {
         newErrors.mobileDeviceViolationDetails =
           'Describe the mobile device violation(s)'
-      }
-
-      const medical = formData.medicalQualification || {}
-
-      if (!medical.hasValidMedicalCertificate) {
-        newErrors.hasValidMedicalCertificate =
-          "Confirm whether you hold a current DOT medical examiner's certificate"
-      } else if (medical.hasValidMedicalCertificate === 'yes') {
-        if (!medical.medicalCertificateExpiration) {
-          newErrors.medicalCertificateExpiration =
-            'Provide the medical certificate expiration date'
-        }
-        if (!medical.hasFiledWithState) {
-          newErrors.hasFiledWithState =
-            'Tell us if your medical card has been filed with your licensing state'
-        }
-        if (!medical.medicalExamDate) {
-          newErrors.medicalExamDate =
-            'Provide the date of your most recent DOT medical examination'
-        }
-        if (!medical.medicalExaminerName?.trim()) {
-          newErrors.medicalExaminerName =
-            "Enter the medical examiner's name so we can verify registry status"
-        }
-        if (!medical.medicalExaminerType) {
-          newErrors.medicalExaminerType =
-            'Select the type of medical examiner who performed the exam'
-        }
-        if (
-          medical.medicalExaminerType === 'registry' &&
-          !medical.medicalExaminerRegistryId?.trim()
-        ) {
-          newErrors.medicalExaminerRegistryId =
-            "Provide the examiner's National Registry ID for verification"
-        }
-        if (medical.medicalExaminerPhone && !/^[+\d().\-\s]{7,}$/.test(medical.medicalExaminerPhone)) {
-          newErrors.medicalExaminerPhone =
-            'Enter a valid phone number for the medical examiner'
-        }
-      }
-
-      if (!medical.hasMedicalVariance) {
-        newErrors.hasMedicalVariance =
-          'Let us know if you have any FMCSA medical variances or exemptions'
-      } else if (
-        medical.hasMedicalVariance === 'yes' &&
-        !medical.medicalVarianceDetails.trim()
-      ) {
-        newErrors.medicalVarianceDetails =
-          'Describe the variance or exemption so we can verify documentation'
-      }
-
-      if (!medical.hasChronicConditions) {
-        newErrors.hasChronicConditions =
-          'Please indicate if you have chronic conditions we should monitor'
-      } else if (
-        medical.hasChronicConditions === 'yes' &&
-        !medical.chronicConditionsDetails.trim()
-      ) {
-        newErrors.chronicConditionsDetails =
-          'Share details about chronic conditions to ensure ongoing qualification'
-      }
-
-      if (!medical.visionHearingCompliance) {
-        newErrors.visionHearingCompliance =
-          "Confirm you meet the DOT vision and hearing standards or have a waiver"
-      }
-
-      if (!medical.medicationDisclosure?.trim()) {
-        newErrors.medicationDisclosure =
-          'List prescribed medications or state that none impact safe driving'
       }
     }
 
@@ -702,39 +606,6 @@ export default function PersonalInfoForm1({
         mobileDeviceViolationDetails:
           prev.disqualificationHistory?.mobileDeviceViolationDetails || '',
       },
-      medicalQualification: {
-        hasValidMedicalCertificate:
-          prev.medicalQualification?.hasValidMedicalCertificate || 'yes',
-        medicalCertificateExpiration:
-          prev.medicalQualification?.medicalCertificateExpiration ||
-          new Date(new Date().setFullYear(new Date().getFullYear() + 1))
-            .toISOString()
-            .slice(0, 10),
-        hasFiledWithState:
-          prev.medicalQualification?.hasFiledWithState || 'yes',
-        hasMedicalVariance:
-          prev.medicalQualification?.hasMedicalVariance || 'no',
-        medicalVarianceDetails:
-          prev.medicalQualification?.medicalVarianceDetails || '',
-        hasChronicConditions:
-          prev.medicalQualification?.hasChronicConditions || 'no',
-        chronicConditionsDetails:
-          prev.medicalQualification?.chronicConditionsDetails || '',
-        visionHearingCompliance:
-          prev.medicalQualification?.visionHearingCompliance || 'yes',
-        medicationDisclosure:
-          prev.medicalQualification?.medicationDisclosure || 'No medications that impair safe driving.',
-        medicalExamDate:
-          prev.medicalQualification?.medicalExamDate || new Date().toISOString().slice(0, 10),
-        medicalExaminerName:
-          prev.medicalQualification?.medicalExaminerName || 'Dr. Alex Carpenter, MD',
-        medicalExaminerPhone:
-          prev.medicalQualification?.medicalExaminerPhone || '(555) 987-6543',
-        medicalExaminerRegistryId:
-          prev.medicalQualification?.medicalExaminerRegistryId || '1234567890',
-        medicalExaminerType:
-          prev.medicalQualification?.medicalExaminerType || 'registry',
-      },
     }))
     setErrors({})
   }
@@ -755,37 +626,39 @@ export default function PersonalInfoForm1({
   const renderApplicantInformation = () => (
     <div className='space-y-8'>
       <div className='flex justify-end'>
-        <button
-          type='button'
-          onClick={() =>
-            requestHelp({
-              section: 'Form 1 – Personal Information',
-              question:
-                'What details are required for the personal information section of the FMCSA driver application and why does the carrier need them?',
-              regulation: '49 CFR 391.21',
-              context:
-                'Driver is completing PersonalInfoForm1 and wants clarity on the required personal details before proceeding.',
-              dataSnapshot: {
-                employingCarrier: formData.employingCarrier,
-                personalDetails: {
-                  firstName: formData.firstName,
-                  lastName: formData.lastName,
-                  phone: formData.phone,
-                  email: formData.email,
-                  dateOfBirth: formData.dateOfBirth,
+        <div className='rotating-silver-border'>
+          <button
+            type='button'
+            onClick={() =>
+              requestHelp({
+                section: 'Form 1 – Personal Information',
+                question:
+                  'What details are required for the personal information section of the FMCSA driver application and why does the carrier need them?',
+                regulation: '49 CFR 391.21',
+                context:
+                  'Driver is completing PersonalInfoForm1 and wants clarity on the required personal details before proceeding.',
+                dataSnapshot: {
+                  employingCarrier: formData.employingCarrier,
+                  personalDetails: {
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
+                    phone: formData.phone,
+                    email: formData.email,
+                    dateOfBirth: formData.dateOfBirth,
+                  },
                 },
-              },
-            })
-          }
-          className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-md border transition-colors ${
-            theme === 'dark'
-              ? 'border-brand-mint/40 text-brand-mint hover:bg-brand-mint/10'
-              : 'border-brand-sage/40 text-brand-sage hover:bg-brand-sage/10'
-          }`}
-        >
-          <span>🤔</span>
-          <span>Ask T about this section</span>
-        </button>
+              })
+            }
+            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-colors cursor-pointer ${
+              theme === 'dark'
+                ? 'bg-gray-800 text-brand-cream hover:bg-gray-700'
+                : 'bg-white text-brand-sage hover:bg-gray-50'
+            }`}
+          >
+            <HelpCircle className='w-4 h-4' strokeWidth={2} />
+            <span>Ask AvA about this section</span>
+          </button>
+        </div>
       </div>
 
       {/* Resume Upload with Prefill - Show on step 1 only */}
@@ -815,23 +688,6 @@ export default function PersonalInfoForm1({
         >
           Complete in full or it will not be considered
         </p>
-
-        {/* Test Data Button */}
-        <div className='mt-4'>
-          <button
-            type='button'
-            onClick={fillTestData}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow hover:shadow-md ${
-              theme === 'dark'
-                ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-300'
-                : 'bg-yellow-500 text-white hover:bg-yellow-400'
-            }`}
-            title='Fill test data'
-          >
-            <span>⚡</span>
-            <span>Fill Test Data</span>
-          </button>
-        </div>
       </div>
 
       {/* Employing Motor Carrier (49 CFR 391.21) */}
@@ -2181,585 +2037,6 @@ export default function PersonalInfoForm1({
           )}
         </div>
       </div>
-
-      <div
-        className={`mt-8 p-4 rounded-lg border-2 ${
-          theme === 'dark'
-            ? 'bg-brand-mint/10 border-brand-mint/30'
-            : 'bg-brand-sage/10 border-brand-sage/30'
-        }`}
-      >
-        <h3
-          className={`text-lg font-semibold mb-2 ${
-            theme === 'dark' ? 'text-white' : 'text-brand-sage'
-          }`}
-        >
-          MEDICAL QUALIFICATION (49 CFR 391.41)
-        </h3>
-        <div className='flex justify-end'>
-          <button
-            type='button'
-            onClick={() =>
-              requestHelp({
-                section: 'Form 1 – Medical Qualification',
-                question:
-                  'Explain what evidence a driver must provide to document DOT medical qualification, including variances and examiner requirements.',
-                regulation: '49 CFR 391.41 & 391.43',
-                context:
-                  'Driver is completing the medical qualification card on PersonalInfoForm1 and wants to ensure they supply compliant documentation.',
-                dataSnapshot: formData.medicalQualification,
-              })
-            }
-            className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors ${
-              theme === 'dark'
-                ? 'border-brand-mint/40 text-brand-mint hover:bg-brand-mint/10'
-                : 'border-brand-sage/40 text-brand-sage hover:bg-brand-sage/10'
-            }`}
-          >
-            <span>🩺</span>
-            <span>Need help with medical docs?</span>
-          </button>
-        </div>
-        <p
-          className={`text-sm mb-4 ${
-            theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'
-          }`}
-        >
-          DOT requires drivers to maintain a current medical examiner's certificate, meet specific physical standards, and carry variance documentation when applicable. Provide details so we can confirm your qualification status.
-        </p>
-
-        <div className='space-y-3'>
-          <label
-            className={`block text-sm font-medium ${
-              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
-            }`}
-          >
-            Do you currently hold a valid DOT medical examiner's certificate?
-          </label>
-          <div className='flex gap-6'>
-            {['yes', 'no'].map((value) => (
-              <label key={value} className='flex items-center gap-2'>
-                <input
-                  type='radio'
-                  name='hasValidMedicalCertificate'
-                  value={value}
-                  checked={
-                    formData.medicalQualification.hasValidMedicalCertificate === value
-                  }
-                  onChange={(e) =>
-                    handleInputChange('medicalQualification', {
-                      ...formData.medicalQualification,
-                      hasValidMedicalCertificate: e.target.value,
-                    })
-                  }
-                  className={`mr-1 ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
-                  } accent-brand-mint`}
-                />
-                <span
-                  className={`${
-                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
-                  }`}
-                >
-                  {value.toUpperCase()}
-                </span>
-              </label>
-            ))}
-          </div>
-          {errors.hasValidMedicalCertificate && (
-            <p className='text-sm text-red-600'>
-              {errors.hasValidMedicalCertificate}
-            </p>
-          )}
-        </div>
-
-        {formData.medicalQualification.hasValidMedicalCertificate === 'yes' && (
-          <div className='space-y-4 mt-4'>
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-              <div>
-                <label
-                  className={`block text-sm font-medium mb-2 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
-                  }`}
-                >
-                  Last DOT Medical Exam Date
-                </label>
-                <input
-                  type='date'
-                  value={formData.medicalQualification.medicalExamDate}
-                  onChange={(e) =>
-                    handleInputChange('medicalQualification', {
-                      ...formData.medicalQualification,
-                      medicalExamDate: e.target.value,
-                    })
-                  }
-                  className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                    errors.medicalExamDate
-                      ? 'border-red-500'
-                      : theme === 'dark'
-                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
-                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-                  }`}
-                />
-                {errors.medicalExamDate && (
-                  <p className='mt-1 text-sm text-red-600'>{errors.medicalExamDate}</p>
-                )}
-              </div>
-              <div>
-                <label
-                  className={`block text-sm font-medium mb-2 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
-                  }`}
-                >
-                  Medical Certificate Expiration Date
-                </label>
-                <input
-                  type='date'
-                  value={formData.medicalQualification.medicalCertificateExpiration}
-                  onChange={(e) =>
-                    handleInputChange('medicalQualification', {
-                      ...formData.medicalQualification,
-                      medicalCertificateExpiration: e.target.value,
-                    })
-                  }
-                  className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                    errors.medicalCertificateExpiration
-                      ? 'border-red-500'
-                      : theme === 'dark'
-                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
-                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-                  }`}
-                />
-                {errors.medicalCertificateExpiration && (
-                  <p className='mt-1 text-sm text-red-600'>
-                    {errors.medicalCertificateExpiration}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label
-                  className={`block text-sm font-medium mb-2 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
-                  }`}
-                >
-                  Filed with home licensing State (CDL/CLP exception)
-                </label>
-                <div className='flex gap-6'>
-                  {['yes', 'no'].map((value) => (
-                    <label key={value} className='flex items-center gap-2'>
-                      <input
-                        type='radio'
-                        name='hasFiledWithState'
-                        value={value}
-                        checked={formData.medicalQualification.hasFiledWithState === value}
-                        onChange={(e) =>
-                          handleInputChange('medicalQualification', {
-                            ...formData.medicalQualification,
-                            hasFiledWithState: e.target.value,
-                          })
-                        }
-                        className={`mr-1 ${
-                          theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
-                        } accent-brand-mint`}
-                      />
-                      <span
-                        className={`${
-                          theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
-                        }`}
-                      >
-                        {value.toUpperCase()}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-                {errors.hasFiledWithState && (
-                  <p className='mt-1 text-sm text-red-600'>
-                    {errors.hasFiledWithState}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-              <div className='md:col-span-2'>
-                <label
-                  className={`block text-sm font-medium mb-2 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
-                  }`}
-                >
-                  Medical examiner's name
-                </label>
-                <input
-                  type='text'
-                  value={formData.medicalQualification.medicalExaminerName}
-                  onChange={(e) =>
-                    handleInputChange('medicalQualification', {
-                      ...formData.medicalQualification,
-                      medicalExaminerName: e.target.value,
-                    })
-                  }
-                  className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                    errors.medicalExaminerName
-                      ? 'border-red-500'
-                      : theme === 'dark'
-                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
-                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-                  }`}
-                />
-                {errors.medicalExaminerName && (
-                  <p className='mt-1 text-sm text-red-600'>
-                    {errors.medicalExaminerName}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label
-                  className={`block text-sm font-medium mb-2 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
-                  }`}
-                >
-                  Medical examiner phone
-                </label>
-                <input
-                  type='tel'
-                  value={formData.medicalQualification.medicalExaminerPhone}
-                  onChange={(e) =>
-                    handleInputChange('medicalQualification', {
-                      ...formData.medicalQualification,
-                      medicalExaminerPhone: e.target.value,
-                    })
-                  }
-                  className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                    errors.medicalExaminerPhone
-                      ? 'border-red-500'
-                      : theme === 'dark'
-                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
-                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-                  }`}
-                />
-                {errors.medicalExaminerPhone && (
-                  <p className='mt-1 text-sm text-red-600'>
-                    {errors.medicalExaminerPhone}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-              <div>
-                <label
-                  className={`block text-sm font-medium mb-2 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
-                  }`}
-                >
-                  Examiner type
-                </label>
-                <select
-                  value={formData.medicalQualification.medicalExaminerType}
-                  onChange={(e) =>
-                    handleInputChange('medicalQualification', {
-                      ...formData.medicalQualification,
-                      medicalExaminerType: e.target.value,
-                      medicalExaminerRegistryId:
-                        e.target.value === 'registry'
-                          ? formData.medicalQualification.medicalExaminerRegistryId
-                          : '',
-                    })
-                  }
-                  className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                    errors.medicalExaminerType
-                      ? 'border-red-500'
-                      : theme === 'dark'
-                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
-                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-                  }`}
-                >
-                  <option value=''>Select examiner type…</option>
-                  <option value='registry'>National Registry medical examiner</option>
-                  <option value='ophthalmologist'>Ophthalmologist (vision only)</option>
-                  <option value='optometrist'>Optometrist (vision only)</option>
-                  <option value='va'>VA certified examiner</option>
-                  <option value='other'>Other specialist</option>
-                </select>
-                {errors.medicalExaminerType && (
-                  <p className='mt-1 text-sm text-red-600'>
-                    {errors.medicalExaminerType}
-                  </p>
-                )}
-              </div>
-              {formData.medicalQualification.medicalExaminerType === 'registry' && (
-                <div className='md:col-span-2'>
-                  <label
-                    className={`block text-sm font-medium mb-2 ${
-                      theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
-                    }`}
-                  >
-                    National Registry ID (10 digits)
-                  </label>
-                  <input
-                    type='text'
-                    value={formData.medicalQualification.medicalExaminerRegistryId}
-                    onChange={(e) =>
-                      handleInputChange('medicalQualification', {
-                        ...formData.medicalQualification,
-                        medicalExaminerRegistryId: e.target.value,
-                      })
-                    }
-                    maxLength={10}
-                    className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                      errors.medicalExaminerRegistryId
-                        ? 'border-red-500'
-                        : theme === 'dark'
-                          ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
-                          : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-                    }`}
-                  />
-                  {errors.medicalExaminerRegistryId && (
-                    <p className='mt-1 text-sm text-red-600'>
-                      {errors.medicalExaminerRegistryId}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-            <p
-              className={`text-xs ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-              }`}
-            >
-              Ensure your examiner is listed on the FMCSA National Registry unless a permitted specialist performed the applicable portion of the exam (49 CFR 391.43).
-            </p>
-          </div>
-        )}
-
-        <div className='mt-4 space-y-3'>
-          <label
-            className={`block text-sm font-medium ${
-              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
-            }`}
-          >
-            Do you have any FMCSA medical variances/exemptions (e.g., insulin, SPE certificate)?
-          </label>
-          <div className='flex gap-6'>
-            {['yes', 'no'].map((value) => (
-              <label key={value} className='flex items-center gap-2'>
-                <input
-                  type='radio'
-                  name='hasMedicalVariance'
-                  value={value}
-                  checked={formData.medicalQualification.hasMedicalVariance === value}
-                  onChange={(e) =>
-                    handleInputChange('medicalQualification', {
-                      ...formData.medicalQualification,
-                      hasMedicalVariance: e.target.value,
-                      medicalVarianceDetails:
-                        e.target.value === 'no'
-                          ? ''
-                          : formData.medicalQualification.medicalVarianceDetails,
-                    })
-                  }
-                  className={`mr-1 ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
-                  } accent-brand-mint`}
-                />
-                <span
-                  className={`${
-                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
-                  }`}
-                >
-                  {value.toUpperCase()}
-                </span>
-              </label>
-            ))}
-          </div>
-          {errors.hasMedicalVariance && (
-            <p className='text-sm text-red-600'>{errors.hasMedicalVariance}</p>
-          )}
-          {formData.medicalQualification.hasMedicalVariance === 'yes' && (
-            <div>
-              <label
-                className={`block text-sm font-medium mb-2 ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
-                }`}
-              >
-                Describe the variance and keep copies of your documentation with you while on duty
-              </label>
-              <textarea
-                value={formData.medicalQualification.medicalVarianceDetails}
-                onChange={(e) =>
-                  handleInputChange('medicalQualification', {
-                    ...formData.medicalQualification,
-                    medicalVarianceDetails: e.target.value,
-                  })
-                }
-                className={`w-full min-h-[80px] px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  errors.medicalVarianceDetails
-                    ? 'border-red-500'
-                    : theme === 'dark'
-                      ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
-                      : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-                }`}
-              />
-              {errors.medicalVarianceDetails && (
-                <p className='mt-1 text-sm text-red-600'>
-                  {errors.medicalVarianceDetails}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className='mt-4 space-y-3'>
-          <label
-            className={`block text-sm font-medium ${
-              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
-            }`}
-          >
-            Do you have chronic conditions (cardiac, respiratory, neurological, etc.) that require monitoring?
-          </label>
-          <div className='flex gap-6'>
-            {['yes', 'no'].map((value) => (
-              <label key={value} className='flex items-center gap-2'>
-                <input
-                  type='radio'
-                  name='hasChronicConditions'
-                  value={value}
-                  checked={formData.medicalQualification.hasChronicConditions === value}
-                  onChange={(e) =>
-                    handleInputChange('medicalQualification', {
-                      ...formData.medicalQualification,
-                      hasChronicConditions: e.target.value,
-                      chronicConditionsDetails:
-                        e.target.value === 'no'
-                          ? ''
-                          : formData.medicalQualification.chronicConditionsDetails,
-                    })
-                  }
-                  className={`mr-1 ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
-                  } accent-brand-mint`}
-                />
-                <span
-                  className={`${
-                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
-                  }`}
-                >
-                  {value.toUpperCase()}
-                </span>
-              </label>
-            ))}
-          </div>
-          {errors.hasChronicConditions && (
-            <p className='text-sm text-red-600'>{errors.hasChronicConditions}</p>
-          )}
-          {formData.medicalQualification.hasChronicConditions === 'yes' && (
-            <div>
-              <label
-                className={`block text-sm font-medium mb-2 ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
-                }`}
-              >
-                Provide details (diagnosis, treatment, monitoring frequency)
-              </label>
-              <textarea
-                value={formData.medicalQualification.chronicConditionsDetails}
-                onChange={(e) =>
-                  handleInputChange('medicalQualification', {
-                    ...formData.medicalQualification,
-                    chronicConditionsDetails: e.target.value,
-                  })
-                }
-                className={`w-full min-h-[80px] px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  errors.chronicConditionsDetails
-                    ? 'border-red-500'
-                    : theme === 'dark'
-                      ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
-                      : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-                }`}
-              />
-              {errors.chronicConditionsDetails && (
-                <p className='mt-1 text-sm text-red-600'>
-                  {errors.chronicConditionsDetails}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className='mt-4 space-y-3'>
-          <label
-            className={`block text-sm font-medium ${
-              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
-            }`}
-          >
-            Do you meet the DOT vision and hearing standards or have an FMCSA waiver?
-          </label>
-          <div className='flex gap-6'>
-            {['yes', 'no'].map((value) => (
-              <label key={value} className='flex items-center gap-2'>
-                <input
-                  type='radio'
-                  name='visionHearingCompliance'
-                  value={value}
-                  checked={formData.medicalQualification.visionHearingCompliance === value}
-                  onChange={(e) =>
-                    handleInputChange('medicalQualification', {
-                      ...formData.medicalQualification,
-                      visionHearingCompliance: e.target.value,
-                    })
-                  }
-                  className={`mr-1 ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
-                  } accent-brand-mint`}
-                />
-                <span
-                  className={`${
-                    theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
-                  }`}
-                >
-                  {value.toUpperCase()}
-                </span>
-              </label>
-            ))}
-          </div>
-          {errors.visionHearingCompliance && (
-            <p className='text-sm text-red-600'>
-              {errors.visionHearingCompliance}
-            </p>
-          )}
-        </div>
-
-        <div className='mt-4'>
-          <label
-            className={`block text-sm font-medium mb-2 ${
-              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'
-            }`}
-          >
-            List medications taken regularly (or state "None that impact safe driving")
-          </label>
-          <textarea
-            value={formData.medicalQualification.medicationDisclosure}
-            onChange={(e) =>
-              handleInputChange('medicalQualification', {
-                ...formData.medicalQualification,
-                medicationDisclosure: e.target.value,
-              })
-            }
-            className={`w-full min-h-[80px] px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-              errors.medicationDisclosure
-                ? 'border-red-500'
-                : theme === 'dark'
-                  ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
-                  : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-            }`}
-          />
-          {errors.medicationDisclosure && (
-            <p className='mt-1 text-sm text-red-600'>
-              {errors.medicationDisclosure}
-            </p>
-          )}
-        </div>
-      </div>
     </div>
   )
 
@@ -2806,8 +2083,12 @@ export default function PersonalInfoForm1({
           COMPLETE IN FULL OR IT WILL NOT BE CONSIDERED.
         </p>
 
-        {/* Test Data Button */}
-        <div className='mt-4'>
+        {/* Save and Test Data Buttons */}
+        <div className='mt-4 flex flex-wrap items-center gap-3'>
+          <SaveProgressButton
+            onSaveProgress={onSaveProgress}
+            walletAddress={walletAddress}
+          />
           <button
             type='button'
             onClick={fillTestData}

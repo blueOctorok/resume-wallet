@@ -417,6 +417,8 @@ const HomeContent = () => {
       createdAt: new Date().toISOString(),
     }
     setHelpRequest(request)
+    // Auto-open AvA when user clicks "Ask AvA" button
+    setIsAvaCollapsed(false)
   }, [])
 
   const handleResumeUploadEvent = useCallback((event: ResumeUploadEvent) => {
@@ -835,19 +837,47 @@ const HomeContent = () => {
         }
         
         if (dotData.employmentHistory && dotData.employmentHistory.length > 0) {
-          // Form 3: Employment history
-          setForm2Data({
-            employmentHistory: dotData.employmentHistory,
-          })
+          // Form 3: Employment history - map to employers array format
+          setForm3Data((prev: Record<string, unknown>) => ({
+            ...prev,
+            employers: dotData.employmentHistory.map((emp: Record<string, unknown>) => ({
+              name: emp.company || '',
+              phone: emp.supervisorPhone || '',
+              address: '', // DOT format doesn't have separate address
+              positionHeld: emp.position || '',
+              fromDate: emp.startDate || '',
+              toDate: emp.endDate || 'Present',
+              reasonForLeaving: emp.reasonForLeaving || '',
+              salary: '',
+              gapsInEmployment: '',
+              subjectToFMCSR: 'no',
+              safetySensitiveFunction: 'no',
+              isUnemployment: false,
+            })),
+          }))
         }
         
         if (dotData.drivingRecord && (dotData.drivingRecord.violations?.length > 0 || 
             dotData.drivingRecord.accidents?.length > 0)) {
           // Form 2: Driving record (accidents, violations)
-          setForm3Data({
-            accidentHistory: dotData.drivingRecord.accidents || [],
-            trafficConvictions: dotData.drivingRecord.violations || [],
-          })
+          setForm2Data((prev: Record<string, unknown>) => ({
+            ...prev,
+            accidents: dotData.drivingRecord.accidents?.map((acc: Record<string, unknown>) => ({
+              date: acc.date || '',
+              nature: acc.description || '',
+              fatalities: acc.fatalities || '',
+              injuries: acc.injuries || '',
+              atFault: '',
+            })) || [],
+            hasNoAccidents: !dotData.drivingRecord.accidents?.length,
+            convictions: dotData.drivingRecord.violations?.map((viol: Record<string, unknown>) => ({
+              dateConvicted: viol.date || '',
+              violation: viol.violation || '',
+              stateOfViolation: viol.location || '',
+              penalty: viol.fine || '',
+            })) || [],
+            hasNoConvictions: !dotData.drivingRecord.violations?.length,
+          }))
         }
         
         setProfileDataLoaded(true)
@@ -1795,13 +1825,63 @@ const HomeContent = () => {
     }
   }, [form1Data, form2Data, form3Data, isSubmitting, user])
 
-  // Handler for form navigation
-  const handleFormNavigation = useCallback((formNumber: number) => {
+  // Save ALL forms to driver profile - called on navigation and save button
+  const saveAllFormsToProfile = useCallback(async () => {
+    if (!user?.address) {
+      console.log('⚠️ [SAVE] No wallet address, skipping save')
+      return
+    }
+
+    try {
+      console.log('💾 [SAVE] Saving all forms to driver profile...')
+      
+      // Import mappers dynamically
+      const { form1ToProfile, form2ToProfile, form3ToProfile } = await import('@/lib/dot-form-mapper')
+      
+      // Combine all form data into profile format
+      const profileData = {
+        ...(form1Data ? form1ToProfile(form1Data) : {}),
+        ...(form2Data ? form2ToProfile(form2Data) : {}),
+        ...(form3Data ? form3ToProfile(form3Data) : {}),
+      }
+
+      console.log('💾 [SAVE] Combined profile data:', profileData)
+
+      const response = await fetch('/api/driver/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': user.address,
+        },
+        body: JSON.stringify({
+          profileData,
+          source: 'dot_application',
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to save')
+      }
+
+      console.log('✅ [SAVE] All forms saved to driver profile')
+      return true
+    } catch (error) {
+      console.error('❌ [SAVE] Failed to save forms:', error)
+      return false
+    }
+  }, [user?.address, form1Data, form2Data, form3Data])
+
+  // Handler for form navigation - auto-saves before navigating
+  const handleFormNavigation = useCallback(async (formNumber: number) => {
+    // Auto-save all forms before navigation
+    await saveAllFormsToProfile()
+    
     setCurrentForm(formNumber)
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
-  }, [])
+  }, [saveAllFormsToProfile])
 
   // Handler for navigating to employment verification
   const handleNavigateToEmploymentVerification = useCallback(() => {
@@ -1927,6 +2007,8 @@ const HomeContent = () => {
             onNavigateToForm={handleFormNavigation}
             onDataChange={setForm1Data}
             initialData={form1Data}
+            walletAddress={user?.address}
+            onSaveProgress={saveAllFormsToProfile}
           />
         )
       case 2:
@@ -1936,6 +2018,8 @@ const HomeContent = () => {
             onNavigateToForm={handleFormNavigation}
             onDataChange={setForm2Data}
             initialData={form2Data}
+            walletAddress={user?.address}
+            onSaveProgress={saveAllFormsToProfile}
           />
         )
       case 3:
@@ -1945,6 +2029,8 @@ const HomeContent = () => {
             onComplete={handleDriverApplicationCompleted}
             onDataChange={setForm3Data}
             initialData={form3Data}
+            walletAddress={user?.address}
+            onSaveProgress={saveAllFormsToProfile}
           />
         )
       default:
@@ -1954,6 +2040,8 @@ const HomeContent = () => {
             onNavigateToForm={handleFormNavigation}
             onDataChange={setForm1Data}
             initialData={form1Data}
+            walletAddress={user?.address}
+            onSaveProgress={saveAllFormsToProfile}
           />
         )
     }
@@ -2165,11 +2253,9 @@ const HomeContent = () => {
           </>
         )}
 
-        {/* Main Content - Adjusted for sidebar (desktop only) */}
+        {/* Main Content */}
         <div
-          className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-8 relative z-0 transition-all duration-300 ${
-            user && !isAvaCollapsed ? 'md:pr-[420px]' : ''
-          }`}
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-8 relative z-0"
         >
           {/* Loading Screen - Show while fetching user role/data or switching roles */}
           {user && (isRoleLoading || isSettingRole) && !showRoleSelection && (

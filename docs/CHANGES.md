@@ -2,6 +2,203 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🤖 **UPDATE: AvA Cost Optimization & UI Cleanup** (January 13, 2026)
+
+**Disabled proactive AI features that waste credits at scale.**
+
+### **Changes:**
+
+#### 1. Disabled Proactive AI Features (Cost Savings)
+- **Removed inactivity detection** - was checking every 10 seconds and prompting users
+- **Removed form navigation guidance** - was sending AI messages when entering Forms 2 & 3
+- **Removed milestone checking** - was triggering AI calls on page changes
+- Users can still ask AvA for help via "Ask AvA" buttons - on-demand only
+
+#### 2. AvA Badge - Outline Style
+- Changed from solid green/mint badge to clean outline style
+- Now uses `border-2 border-brand-mint/50` (dark) or `border-brand-sage/50` (light)
+- Transparent background, smaller size (9x9 from 10x10)
+
+### **Files Modified:**
+- `src/components/TAssistant.tsx` - Disabled proactive features, updated badge
+
+---
+
+## 🤖 **UPDATE: AvA Assistant UI Overhaul** (January 13, 2026)
+
+**Converted AvA from a narrow sidebar to a beautiful modal design with improved Ask AvA buttons.**
+
+### **Changes:**
+
+#### 1. Ask AvA Buttons - Silver Rotating Border
+- Added animated silver/platinum rotating border effect (matches Driver Options gold effect)
+- Removed emojis, replaced with `HelpCircle` outlined icon from lucide-react
+- New CSS class: `.rotating-silver-border` in `globals.css`
+- Applied to Form 1 and Form 3 Ask AvA buttons
+
+#### 2. AvA Panel Redesign - Beautiful Wide Layout
+- **Removed:** Floating collapsed AvA button from right side of screen
+- **Now:** AvA is only accessible from the navigation bar
+- **Desktop:** Wide panel (45-55vw, max 800px) - shorter height, rounded corners, NO blur backdrop
+  - Sits alongside form - users can work while referencing AvA
+  - Beautiful gradient background with brand colors
+  - Content shrinks to make room (not just shifts)
+- **Mobile:** Full-screen modal overlay with backdrop blur
+- **Design improvements:**
+  - Gradient header with brand colors
+  - Better message bubbles with shadows and larger text
+  - Rounded corners everywhere
+  - Improved loading state with "AvA is thinking..." text
+  - Cleaner input area with larger padding
+
+#### 3. Auto-Open on Ask AvA Click
+- Clicking "Ask AvA" button now automatically opens AvA modal
+- Previously: User had to manually open AvA even after clicking help button
+- Fixed in `handleHelpRequest()` by adding `setIsAvaCollapsed(false)`
+
+#### 4. Content Layout - Smart Shifting
+- Desktop: Content shifts left when AvA opens (`md:mr-[520px]` to `xl:mr-[640px]`)
+- Mobile: Content stays in place, AvA overlays on top
+- Smooth transition animation when opening/closing
+
+### **Files Modified:**
+- `src/app/globals.css` - Added `.rotating-silver-border` animation
+- `src/components/driver-application/PersonalInfoForm1.tsx` - Updated Ask AvA button
+- `src/components/driver-application/PersonalInfoForm3.tsx` - Updated Ask AvA button
+- `src/components/TAssistant.tsx` - Converted to modal design
+- `src/app/page.tsx` - Auto-open on helpRequest, removed sidebar padding
+
+---
+
+## 🔄 **UPDATE: DOT Form Improvements** (January 13, 2026)
+
+**Multiple enhancements to DOT forms including Save Progress styling, Medical Qualification removal, and bidirectional profile sync.**
+
+### **Changes:**
+
+#### 1. Save Progress Button - Brand Colors
+- Changed Save button from generic blue to brand colors
+- Dark mode: `bg-brand-mint` (mint green button with dark text)
+- Light mode: `bg-brand-sage` (sage button with white text)
+
+#### 2. Medical Qualification Section Removed
+**Form 1 (Step 3)** - Completely removed the Medical Qualification section (49 CFR 391.41)
+- Removed ~580 lines of UI code
+- Removed from form state, validation, and test data
+- **Reason:** Not allowed to collect this data
+
+#### 3. Profile → Form Pre-population Fixed
+**Fixed mapping between driver profile and form data:**
+- Employment history now correctly populates Form 3's `employers` array (was incorrectly going to Form 2)
+- Driving record (accidents/violations) now correctly populates Form 2 (was incorrectly going to Form 3)
+- Maps profile `employmentHistory` → Form 3 `employers` with proper field conversion
+
+#### 4. Auto-Save on Navigation
+- Clicking "Next" now automatically saves ALL forms to driver profile
+- No data loss when navigating between forms
+
+#### 5. Centralized Save - Saves ALL Forms
+- Save Progress button now saves data from ALL forms (Form 1, 2, 3)
+- Previously only saved the current form's data
+- New architecture: `page.tsx` has `saveAllFormsToProfile()` function passed to all forms
+
+#### 6. Removed Duplicate Save/Test Buttons
+- Form 1 page 1 had Save Progress and Fill Test Data buttons both above and below AI resume prefill
+- Removed the duplicate buttons from the top (kept only below AI prefill)
+
+### **Data Flow Summary:**
+
+```
+📥 ON LOAD (user returns):
+   API GET /api/driver/profile → 
+     profileToDotApplication() → 
+       Forms populated with saved data
+
+📤 ON SAVE (manual or auto via Next):
+   page.tsx saveAllFormsToProfile() →
+     form1Data + form2Data + form3Data combined →
+       form1ToProfile() + form2ToProfile() + form3ToProfile() →
+         API PUT /api/driver/profile →
+           All data saved to database
+
+🔄 ON NAVIGATION (Next/Previous):
+   handleFormNavigation() →
+     1. saveAllFormsToProfile() ← AUTO-SAVE
+     2. setCurrentForm(newForm)
+     3. scroll to top
+```
+
+---
+
+## 🏗️ **ARCHITECTURE: DOT Forms → Driver Profile Save System** (January 13, 2026)
+
+**Implemented "Save Progress" button on all DOT application forms that saves to the unified driver profile.**
+
+### **The Problem:**
+DOT form data existed in multiple disconnected places:
+1. Form component state
+2. localStorage (for tab persistence)
+3. Driver Profile database (supposed to be single source of truth)
+
+Employment history in Form 3 used different field names (`fromDate`/`toDate`) than the profile (`startDate`/`endDate`), causing data sync issues.
+
+### **The Solution:**
+
+#### New Files Created:
+
+**`src/lib/dot-form-mapper.ts`** - Bidirectional mappers for each DOT form:
+- `form1ToProfile()` / `profileToForm1()` - Personal info, licenses, addresses
+- `form2ToProfile()` / `profileToForm2()` - Driving experience, accidents, convictions  
+- `form3ToProfile()` / `profileToForm3()` - Employment history, education
+- Handles date format conversion between `MM/YYYY` (forms) and `YYYY-MM` (profile)
+
+**`src/components/driver-application/SaveProgressButton.tsx`** - Reusable save component:
+- Shows loading spinner while saving
+- Success checkmark on save
+- Error state with message
+- "Last saved: X:XX PM" timestamp
+- Calls `/api/driver/profile` PUT endpoint
+
+#### Files Modified:
+
+- **`PersonalInfoForm1.tsx`** - Added Save Progress button, `walletAddress` prop
+- **`PersonalInfoForm2.tsx`** - Added Save Progress button, `walletAddress` prop
+- **`PersonalInfoForm3.tsx`** - Added Save Progress button, `walletAddress` prop
+- **`page.tsx`** - Passes `walletAddress` to all DOT form components
+
+### **How It Works:**
+
+```
+User fills DOT Form → Clicks "Save Progress" → 
+  form3ToProfile() maps fields → 
+    /api/driver/profile PUT → 
+      Driver Profile updated in database
+```
+
+### **Key Mappings (Form 3 Employment):**
+
+| Form 3 Field | Profile Field |
+|--------------|---------------|
+| `name` | `companyName` |
+| `positionHeld` | `position` |
+| `fromDate` (MM/YYYY) | `startDate` (YYYY-MM) |
+| `toDate` (MM/YYYY or "Present") | `endDate` / `isCurrent` |
+| `subjectToFMCSR` (yes/no) | `subjectToFMCSR` (boolean) |
+
+### **Benefits:**
+
+1. **Single Source of Truth** - Driver Profile becomes canonical data store
+2. **Cross-Feature Access** - Resume Builder can read DOT-entered data
+3. **Employer Ready** - Profile data can be shared with employers in future
+4. **User Confidence** - Visual save feedback, timestamp shows last save
+
+### **Next Steps:**
+
+- ✅ Load forms FROM driver profile on mount (implemented Jan 13, 2026)
+- Add employer portal to view driver profiles
+
+---
+
 ## 🐛 **FIX: Employment History Date Parsing & Input Normalization** (January 13, 2026)
 
 **Fixed issues where manual date entry in Form 3 (Employment History) wasn't counting years correctly.**

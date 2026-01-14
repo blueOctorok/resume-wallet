@@ -1,11 +1,10 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { MessageCircle, Send, Loader2, X } from 'lucide-react'
+import { Send, Loader2, X } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { 
   routeEvent, 
-  checkInactivity, 
   checkMilestones,
   type AvaEvent, 
   type UserContext 
@@ -112,8 +111,6 @@ function TAssistantContent({
     errorsEncountered: 0,
   })
   const prevStepRef = useRef<string | null>(null)
-  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const lastInactivityPromptRef = useRef<number>(0)
 
   const nextMessageId = useCallback((prefix: string) => {
     messageCounterRef.current += 1
@@ -184,44 +181,8 @@ function TAssistantContent({
     }
   }, [mode, isCollapsed])
 
-  // Track which forms user has visited for proactive guidance
-  const visitedFormsRef = useRef<Set<number>>(new Set())
-
-  // Provide proactive guidance when user navigates to different forms
-  useEffect(() => {
-    if (!mounted || !journeyState?.currentFormStep) return
-
-    const currentForm = journeyState.currentFormStep
-    
-    // Only show guidance once per form
-    if (visitedFormsRef.current.has(currentForm)) return
-    visitedFormsRef.current.add(currentForm)
-
-    // Form 2: Driving Experience, Accidents, Traffic (all manual entry)
-    if (currentForm === 2) {
-      addAssistantMessage(
-        `📋 **Welcome to Form 2: Driving Experience & Safety Records**\n\n⚠️ **Heads up:** I couldn't extract this information from your resume since it's not typically included. You'll need to manually fill in:\n\n**Section 1: Driving Experience**\n• Equipment types you've operated (straight truck, tractor-trailer, etc.)\n• Years of experience with each\n\n**Section 2: Accident Record**\n• Any accidents in the past 3 years\n• Details: date, nature, injuries, if you were at fault\n\n**Section 3: Traffic Convictions**\n• Any violations or traffic citations\n• License suspensions or denials\n\n💡 **Tip:** Be honest and complete - DOT requires accurate safety records. Need help understanding any terms? Just ask!`,
-        { step: 'forms' }
-      )
-    }
-
-    // Form 3: Employment & Education (partial data)
-    if (currentForm === 3) {
-      const hasEmployment = form3Data?.employers && form3Data.employers.length > 0
-      
-      if (hasEmployment) {
-        addAssistantMessage(
-          `📋 **Welcome to Form 3: Employment History & Education**\n\n✅ **Good news:** I've filled in your employment basics from your resume (employer names, dates, positions).\n\n📝 **You'll need to add:**\n• Employer contact information (phone, full address)\n• Reason for leaving each position\n• Salary information\n• FMCSR status (more on this below)\n• Whether the role was a "safety-sensitive function"\n\n**What's FMCSR?**\nFMCSR = Federal Motor Carrier Safety Regulations. Answer "Yes" if you drove commercial vehicles (CMV) in that job. Answer "No" for non-driving jobs.\n\n**What's a safety-sensitive function?**\nJobs where you operated commercial vehicles or were subject to DOT drug/alcohol testing.\n\n**Education Section**\nYou'll also need to add your education background (high school, college, trade schools).\n\n💬 Ask me if you need clarification on any field!`,
-          { step: 'forms' }
-        )
-      } else {
-        addAssistantMessage(
-          `📋 **Welcome to Form 3: Employment History & Education**\n\nThis section requires details about your work history and education. I'll help you understand what's needed:\n\n**Employment History:**\n• List all employers for the past 3 years (or 10 years for CMV drivers)\n• Include: company name, address, phone, dates, position, salary\n• Indicate if you were subject to FMCSR (driving commercial vehicles)\n• Mark "safety-sensitive" roles (commercial driving, DOT-regulated)\n\n**Education:**\n• High school, college, trade schools\n• Courses relevant to driving (CDL training, etc.)\n\n💬 Need help with any terms like FMCSR? Just ask!`,
-          { step: 'forms' }
-        )
-      }
-    }
-  }, [journeyState?.currentFormStep, mounted, form3Data, addAssistantMessage])
+  // Proactive form guidance DISABLED - wastes AI credits at scale
+  // Users can ask AvA for help when they need it via "Ask AvA" buttons
 
   const buildApplicationSnapshot = useCallback(() => {
     const stringify = (value: unknown) => {
@@ -272,85 +233,28 @@ function TAssistantContent({
   }, [mounted, userAddress])
 
   // =====================================================
-  // AVA BRAIN: Page/Step Change Tracking
+  // AVA BRAIN: Page/Step Change Tracking (simplified - no proactive AI calls)
   // =====================================================
   useEffect(() => {
     if (!mounted) return
     
-    // Track page changes via Ava Brain
     if (currentStep !== prevStepRef.current) {
-      const prevContext = { ...avaBrainContextRef.current }
-      
-      // Update context
+      // Update context for tracking (no AI calls)
       avaBrainContextRef.current = {
         ...avaBrainContextRef.current,
         currentPage: currentStep,
         lastActivity: Date.now(),
         timeOnCurrentPage: 0,
+        helpTopicsShown: new Set(),
       }
       
-      // Reset inactivity tracking for new page
-      avaBrainContextRef.current.helpTopicsShown = new Set()
-      lastInactivityPromptRef.current = 0
-      
-      // Check for milestones on page change
-      const milestoneEvent = checkMilestones(prevContext, avaBrainContextRef.current)
-      if (milestoneEvent) {
-        const response = routeEvent(milestoneEvent, avaBrainContextRef.current)
-        if ('message' in response && response.message) {
-          console.log('🏆 [AVA BRAIN] Milestone triggered:', milestoneEvent.action)
-          addAssistantMessage(response.message, {
-            actions: response.actions,
-            step: response.metadata?.step,
-          })
-        }
-      }
-      
-      console.log('📍 [AVA BRAIN] Page changed:', prevStepRef.current, '→', currentStep)
+      console.log('📍 [AVA] Page changed:', prevStepRef.current, '→', currentStep)
       prevStepRef.current = currentStep
     }
-  }, [currentStep, mounted, addAssistantMessage])
+  }, [currentStep, mounted])
 
-  // =====================================================
-  // AVA BRAIN: Inactivity Detection
-  // =====================================================
-  useEffect(() => {
-    if (!mounted || isCollapsed) return
-    
-    // Only run inactivity checks when on forms
-    if (currentStep !== 'forms') return
-    
-    const checkForInactivity = () => {
-      const now = Date.now()
-      const timeSinceActivity = now - avaBrainContextRef.current.lastActivity
-      const timeSinceLastPrompt = now - lastInactivityPromptRef.current
-      
-      // Don't spam - wait at least 2 minutes between prompts
-      if (timeSinceLastPrompt < 120000) return
-      
-      const inactivityEvent = checkInactivity(avaBrainContextRef.current)
-      if (inactivityEvent) {
-        const response = routeEvent(inactivityEvent, avaBrainContextRef.current)
-        if ('message' in response && response.message) {
-          console.log('💤 [AVA BRAIN] Inactivity prompt:', inactivityEvent.action)
-          addAssistantMessage(response.message, {
-            actions: response.actions,
-            step: response.metadata?.step,
-          })
-          lastInactivityPromptRef.current = now
-        }
-      }
-    }
-    
-    // Check every 10 seconds
-    inactivityTimerRef.current = setInterval(checkForInactivity, 10000)
-    
-    return () => {
-      if (inactivityTimerRef.current) {
-        clearInterval(inactivityTimerRef.current)
-      }
-    }
-  }, [mounted, currentStep, isCollapsed, addAssistantMessage])
+  // Inactivity detection DISABLED - wastes AI credits at scale
+  // Users can ask AvA for help when they need it via "Ask AvA" buttons
 
   // =====================================================
   // AVA BRAIN: Update Context on Props Change
@@ -1316,56 +1220,20 @@ function TAssistantContent({
     return null
   }
 
-  // Sidebar mode
+  // Sidebar/Modal mode - only renders when not collapsed
   if (mode === 'sidebar') {
+    // When collapsed, render nothing - AvA is accessed only from nav
     if (isCollapsed) {
-      // Collapsed state - just a button that can be clicked
-      // Hidden on mobile (< md breakpoint), only visible on desktop
-      return (
-        <div className="hidden md:block fixed right-4 top-20 z-[9999] pointer-events-auto" style={{ pointerEvents: 'auto' }}>
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              e.preventDefault()
-              if (onToggleCollapse) {
-                onToggleCollapse()
-              }
-            }}
-            className={`relative rounded-2xl px-4 py-3 shadow-2xl transition-all duration-300 hover:scale-110 hover:shadow-3xl pointer-events-auto border-2 cursor-pointer ${
-              theme === 'dark'
-                ? 'bg-gradient-to-br from-brand-mint/30 to-brand-sage-light/20 backdrop-blur-xl border-brand-mint/50 hover:border-brand-mint shadow-brand-mint/20'
-                : 'bg-gradient-to-br from-brand-sage/90 to-brand-sage-dark/80 backdrop-blur-xl border-brand-sage/60 hover:border-brand-sage shadow-brand-sage/30'
-            }`}
-            type="button"
-            style={{
-              boxShadow: theme === 'dark' 
-                ? '0 0 30px rgba(20, 184, 166, 0.3), 0 8px 32px rgba(0, 0, 0, 0.3)'
-                : '0 0 30px rgba(107, 142, 35, 0.4), 0 8px 32px rgba(0, 0, 0, 0.2)',
-              pointerEvents: 'auto',
-              zIndex: 9999
-            }}
-          >
-            <span className={`text-sm font-bold tracking-wide ${
-              theme === 'dark' ? 'text-brand-cream' : 'text-white'
-            }`}>
-              AvA
-            </span>
-            {hasUnread && (
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-white shadow-lg" />
-            )}
-          </button>
-        </div>
-      )
+      return null
     }
 
-    // Expanded sidebar
-    // Mobile: Full-screen overlay
-    // Desktop: Right sidebar
+    // Desktop: Wide side panel (shorter, doesn't fill full height)
+    // Mobile: Modal overlay with blur
     return (
       <>
-        {/* Backdrop for mobile */}
+        {/* Backdrop - mobile only */}
         <div 
-          className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998]"
+          className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998]"
           onClick={(e) => {
             e.stopPropagation()
             if (onToggleCollapse) {
@@ -1373,55 +1241,58 @@ function TAssistantContent({
             }
           }}
         />
+        {/* 
+          Mobile: Full-screen modal overlay
+          Desktop: Wide panel on right, shorter height with rounded corners
+        */}
         <div
-          className={`fixed inset-0 md:inset-auto md:right-4 md:top-20 md:bottom-4 z-[9999] md:w-96 md:rounded-2xl shadow-2xl flex flex-col transition-all duration-300 pointer-events-auto border-2 ${
+          className={`fixed z-[9999] flex flex-col transition-all duration-300 pointer-events-auto
+            inset-4 sm:inset-6
+            md:top-24 md:bottom-6 md:left-auto md:right-6 md:w-[50vw] lg:w-[45vw] xl:w-[40vw] md:max-w-[700px]
+            rounded-2xl overflow-hidden border ${
             theme === 'dark'
-              ? 'bg-brand-sage-light/30 backdrop-blur-xl border-brand-mint/50'
-              : 'bg-white/95 backdrop-blur-xl border-brand-sage/40'
+              ? 'bg-gray-800 border-brand-mint/20'
+              : 'bg-gray-50 border-brand-sage/20'
           }`}
           style={{
             boxShadow: theme === 'dark'
-              ? '0 0 40px rgba(20, 184, 166, 0.2), 0 20px 60px rgba(0, 0, 0, 0.4)'
-              : '0 0 40px rgba(107, 142, 35, 0.15), 0 20px 60px rgba(0, 0, 0, 0.2)',
+              ? '0 8px 32px rgba(0, 0, 0, 0.3)'
+              : '0 8px 32px rgba(0, 0, 0, 0.1)',
             pointerEvents: 'auto',
             zIndex: 9999
           }}
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
         >
-        {/* Header */}
+        {/* Header - Clean and compact */}
         <div
-          className={`flex items-center justify-between p-4 border-b ${
-            theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+          className={`flex items-center justify-between px-5 py-3 ${
+            theme === 'dark' 
+              ? 'border-b border-brand-mint/15' 
+              : 'border-b border-brand-sage/15'
           }`}
         >
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-3">
+            {/* AvA Logo - Outline style */}
             <div
-              className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg border-2 ${
+              className={`w-9 h-9 rounded-lg flex items-center justify-center font-semibold text-xs border-2 ${
                 theme === 'dark'
-                  ? 'bg-gradient-to-br from-brand-mint to-teal-600 text-brand-cream border-brand-mint/50'
-                  : 'bg-gradient-to-br from-brand-sage to-brand-sage-dark text-white border-brand-sage/50'
+                  ? 'border-brand-mint/50 text-brand-mint bg-transparent'
+                  : 'border-brand-sage/50 text-brand-sage bg-transparent'
               }`}
-              style={{
-                boxShadow: theme === 'dark'
-                  ? '0 0 20px rgba(20, 184, 166, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.1)'
-                  : '0 0 20px rgba(107, 142, 35, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.1)'
-              }}
             >
-              <span className="text-lg font-bold">AvA</span>
+              AvA
             </div>
             <div>
-              <h3
-                className={`font-bold text-lg ${
-                  theme === 'dark' ? 'text-brand-cream' : 'text-gray-900'
-                }`}
-              >
+              <h3 className={`font-semibold text-sm ${
+                theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage-dark'
+              }`}>
                 AvA Assistant
               </h3>
               <p className={`text-xs ${
-                theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
+                theme === 'dark' ? 'text-brand-mint/70' : 'text-brand-sage/70'
               }`}>
-                Your AI helper
+                Your DOT application guide
               </p>
             </div>
           </div>
@@ -1433,89 +1304,25 @@ function TAssistantContent({
                 onToggleCollapse()
               }
             }}
-            className={`p-2 rounded-lg hover:bg-opacity-20 pointer-events-auto transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer ${
+            className={`p-2 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer ${
               theme === 'dark' 
-                ? 'hover:bg-white/20 text-brand-cream hover:text-white' 
-                : 'hover:bg-gray-200/80 text-gray-700 hover:text-gray-900'
+                ? 'hover:bg-brand-mint/20 text-brand-cream/70 hover:text-brand-cream' 
+                : 'hover:bg-brand-sage/10 text-brand-sage/70 hover:text-brand-sage'
             }`}
             aria-label="Close AvA Assistant"
             type="button"
             style={{ pointerEvents: 'auto', zIndex: 10000 }}
           >
-            <X className={`w-6 h-6 md:w-5 md:h-5`} />
+            <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="flex items-center space-x-2 px-4">
-          {currentStep === 'welcome' && (
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                theme === 'dark'
-                  ? 'bg-yellow-500/20 text-yellow-400'
-                  : 'bg-yellow-100 text-yellow-800'
-              }`}
-            >
-              Step 1: Welcome
-            </span>
-          )}
-          {currentStep === 'wallet' && (
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                theme === 'dark'
-                  ? 'bg-blue-500/20 text-blue-400'
-                  : 'bg-blue-100 text-blue-800'
-              }`}
-            >
-              Step 2: Wallet Created
-            </span>
-          )}
-          {currentStep === 'resume' && (
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                theme === 'dark'
-                  ? 'bg-green-500/20 text-green-400'
-                  : 'bg-green-100 text-green-800'
-              }`}
-            >
-              Step 3: Resume Uploaded
-            </span>
-          )}
-          {currentStep === 'forms' && (
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                theme === 'dark'
-                  ? 'bg-purple-500/20 text-purple-400'
-                  : 'bg-purple-100 text-purple-800'
-              }`}
-            >
-              Step 4: Forms
-            </span>
-          )}
-          {currentStep === 'submission' && (
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                theme === 'dark'
-                  ? 'bg-emerald-500/20 text-emerald-400'
-                  : 'bg-emerald-100 text-emerald-800'
-              }`}
-            >
-              Step 5: Submitted
-            </span>
-          )}
-        </div>
-        {journeyState && (
-          <div
-            className={`px-4 pb-2 text-xs ${
-              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-            }`}
-          >
-            Progress: {journeySummary}
-          </div>
-        )}
 
-        {/* Messages */}
+        {/* Messages - Better typography and spacing */}
         <div
           ref={messagesContainerRef}
-          className="flex-1 overflow-y-auto p-4 space-y-4"
+          className={`flex-1 overflow-y-auto px-6 py-5 space-y-5 ${
+            theme === 'dark' ? 'scrollbar-dark' : 'scrollbar-light'
+          }`}
         >
         {messages.map((message) => (
           <div
@@ -1525,26 +1332,26 @@ function TAssistantContent({
             }`}
           >
             <div
-              className={`max-w-[80%] rounded-lg px-4 py-2 ${
+              className={`max-w-[85%] rounded-2xl px-5 py-3 ${
                 message.role === 'user'
                   ? theme === 'dark'
                     ? 'bg-brand-mint text-gray-900'
                     : 'bg-brand-sage text-white'
                   : theme === 'dark'
-                    ? 'bg-gray-800 text-gray-100'
-                    : 'bg-gray-100 text-gray-900'
+                    ? 'bg-gray-700 text-brand-cream'
+                    : 'bg-white text-gray-800 shadow-sm'
               }`}
             >
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
               <p
-                className={`text-xs mt-1 ${
+                className={`text-[10px] mt-2 ${
                   message.role === 'user'
                     ? theme === 'dark'
-                      ? 'text-gray-700'
-                      : 'text-white/70'
+                      ? 'text-gray-700/80'
+                      : 'text-white/60'
                     : theme === 'dark'
-                      ? 'text-gray-400'
-                      : 'text-gray-500'
+                      ? 'text-gray-500'
+                      : 'text-gray-400'
                 }`}
               >
                 {message.timestamp.toLocaleTimeString([], {
@@ -1555,16 +1362,16 @@ function TAssistantContent({
               {message.role === 'assistant' &&
                 message.actions &&
                 message.actions.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-3">
+                  <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-gray-200/20">
                     {message.actions.map((action) => (
                       <button
                         key={action.id}
                         type="button"
                         onClick={() => handleMessageAction(action)}
-                        className={`px-3 py-1 text-xs font-medium rounded-full border transition-all cursor-pointer ${
+                        className={`px-4 py-1.5 text-xs font-medium rounded-full border transition-all cursor-pointer ${
                           theme === 'dark'
-                            ? 'border-brand-mint/50 text-brand-mint hover:bg-brand-mint/10'
-                            : 'border-brand-sage/40 text-brand-sage hover:bg-brand-sage/10'
+                            ? 'border-brand-mint/40 text-brand-mint hover:bg-brand-mint/15 hover:border-brand-mint/60'
+                            : 'border-brand-sage/30 text-brand-sage hover:bg-brand-sage/10 hover:border-brand-sage/50'
                         }`}
                       >
                         {action.label}
@@ -1578,25 +1385,36 @@ function TAssistantContent({
         {(isLoading || isProcessingHelp) && (
           <div className="flex justify-start">
             <div
-              className={`rounded-lg px-4 py-2 ${
+              className={`rounded-2xl px-5 py-3 ${
                 theme === 'dark'
-                  ? 'bg-gray-800 text-gray-100'
-                  : 'bg-gray-100 text-gray-900'
+                  ? 'bg-gray-700 text-brand-cream'
+                  : 'bg-white shadow-sm'
               }`}
             >
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <div className="flex items-center gap-2">
+                <Loader2 className={`w-4 h-4 animate-spin ${
+                  theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                }`} />
+                <span className={`text-sm ${
+                  theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-500'
+                }`}>
+                  AvA is thinking...
+                </span>
+              </div>
             </div>
           </div>
         )}
         </div>
 
-        {/* Input */}
+        {/* Input - Clean and simple */}
         <div
-          className={`p-4 border-t ${
-            theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+          className={`px-5 py-4 ${
+            theme === 'dark' 
+              ? 'border-t border-brand-mint/15' 
+              : 'border-t border-brand-sage/15'
           }`}
         >
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-3">
             <input
               ref={inputRef}
               type="text"
@@ -1606,23 +1424,23 @@ function TAssistantContent({
                 resetActivityTimer() // Track user activity
               }}
               onKeyPress={handleKeyPress}
-              placeholder="Ask me anything about the application process..."
+              placeholder="Ask AvA anything..."
               disabled={isLoading}
-              className={`flex-1 px-4 py-2 rounded-lg border-2 focus:outline-none focus:ring-2 focus:border-transparent ${
+              className={`flex-1 px-5 py-3 rounded-xl border focus:outline-none transition-all ${
                 theme === 'dark'
-                  ? 'bg-gray-800 border-gray-700 text-white focus:ring-brand-mint placeholder-gray-500'
-                  : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage placeholder-gray-400'
+                  ? 'bg-gray-700 border-brand-mint/20 text-brand-cream focus:border-brand-mint/40 placeholder-brand-cream/50'
+                  : 'bg-white border-brand-sage/20 text-gray-900 focus:border-brand-sage/40 placeholder-gray-400'
               }`}
             />
             <button
               onClick={handleSend}
               disabled={!input.trim() || isLoading}
-              className={`p-2 rounded-lg transition-colors cursor-pointer ${
+              className={`p-3 rounded-xl transition-all cursor-pointer ${
                 !input.trim() || isLoading
-                  ? 'opacity-50 cursor-not-allowed'
+                  ? 'opacity-40 cursor-not-allowed'
                   : theme === 'dark'
-                    ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                    : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+                    ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg shadow-brand-mint/20 hover:shadow-brand-mint/30'
+                    : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg shadow-brand-sage/20 hover:shadow-brand-sage/30'
               }`}
               aria-label="Send message"
             >
