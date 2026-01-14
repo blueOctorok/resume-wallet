@@ -2,6 +2,41 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🐛 **FIX: Form 3 Employment History - Clearer Messaging** (January 14, 2026)
+
+**Completely rewrote the 10-year requirement messaging to be actually helpful.**
+
+### **The Problem:**
+User enters 24 years of employment (01/2000 to 12/2024) but system says "8.9 of 10 years covered. Add 1.1 more years." This is confusing because:
+- User has WAY more than 10 years of history
+- The issue is a **gap at the end** (12/2024 to present), not lacking history
+- Message "add 1.1 more years" suggests they need MORE history
+
+### **The Fix - Better Messaging:**
+
+**Before:**
+> ⚠ 8.9 of 10 years covered. Add 1.1 more years to meet DOT § 383.35 requirement.
+
+**After:**
+> 📋 Employment history entered: **24.0 years**
+> ⚠ Gap detected: Your most recent employment ends before today. Please account for 01/2025 to Present (~13 months).
+> 💡 Tip: If you're still employed there, change the end date to "Present". Otherwise, add your current status.
+
+### **Technical Changes:**
+1. Shows TOTAL employment history entered (so users see their 24 years)
+2. Detects gaps specifically at the END (between last job and today)
+3. Gives actionable advice ("change to Present" or "add current status")
+4. Removed confusing "10-year window" terminology from main message
+
+### **Also Fixed:**
+- End dates now use last day of month ("12/2024" → Dec 31, not Dec 1)
+- Validation error now explains WHERE the gap is
+
+### **Files Modified:**
+- `src/components/driver-application/PersonalInfoForm3.tsx`
+
+---
+
 ## 🤖 **UPDATE: AvA Cost Optimization & UI Cleanup** (January 13, 2026)
 
 **Disabled proactive AI features that waste credits at scale.**

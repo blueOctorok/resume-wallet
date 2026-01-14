@@ -252,10 +252,17 @@ export default function PersonalInfoForm3({
 
           // Calculate years covered (only if dates are valid)
           // Parse dates - handles multiple formats for robustness
+          // isEndDate: when true, uses last day of month (for proper coverage calculation)
           if (employer.fromDate && employer.toDate) {
-            const parseDate = (dateStr: string): Date | null => {
+            const parseDate = (dateStr: string, isEndDate = false): Date | null => {
               if (!dateStr || dateStr.toLowerCase() === 'present') return today
               const trimmed = dateStr.trim()
+              
+              // Helper to get last day of month
+              const getLastDayOfMonth = (year: number, month: number) => {
+                // month+1, day 0 gives last day of previous month
+                return new Date(year, month + 1, 0)
+              }
               
               // Try MM/YYYY or MM/YY format (with slash)
               const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{2,4})$/)
@@ -263,7 +270,9 @@ export default function PersonalInfoForm3({
                 const month = parseInt(slashMatch[1]) - 1 // 0-indexed
                 let year = parseInt(slashMatch[2])
                 if (year < 100) year = year < 50 ? 2000 + year : 1900 + year
-                if (month >= 0 && month < 12) return new Date(year, month, 1)
+                if (month >= 0 && month < 12) {
+                  return isEndDate ? getLastDayOfMonth(year, month) : new Date(year, month, 1)
+                }
               }
               
               // Try MM-YYYY or MM-YY format (with dash)
@@ -272,7 +281,9 @@ export default function PersonalInfoForm3({
                 const month = parseInt(dashMatch[1]) - 1
                 let year = parseInt(dashMatch[2])
                 if (year < 100) year = year < 50 ? 2000 + year : 1900 + year
-                if (month >= 0 && month < 12) return new Date(year, month, 1)
+                if (month >= 0 && month < 12) {
+                  return isEndDate ? getLastDayOfMonth(year, month) : new Date(year, month, 1)
+                }
               }
               
               // Try YYYY-MM or YYYY/MM format (reversed)
@@ -280,10 +291,12 @@ export default function PersonalInfoForm3({
               if (reversedMatch) {
                 const year = parseInt(reversedMatch[1])
                 const month = parseInt(reversedMatch[2]) - 1
-                if (month >= 0 && month < 12) return new Date(year, month, 1)
+                if (month >= 0 && month < 12) {
+                  return isEndDate ? getLastDayOfMonth(year, month) : new Date(year, month, 1)
+                }
               }
               
-              // Try full ISO format YYYY-MM-DD
+              // Try full ISO format YYYY-MM-DD (exact day specified, use as-is)
               const isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/)
               if (isoMatch) {
                 return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]))
@@ -294,8 +307,8 @@ export default function PersonalInfoForm3({
               return isNaN(isoDate.getTime()) ? null : isoDate
             }
 
-            const fromDate = parseDate(employer.fromDate)
-            const toDate = parseDate(employer.toDate)
+            const fromDate = parseDate(employer.fromDate, false)
+            const toDate = parseDate(employer.toDate, true) // End dates use last day of month
             
             if (fromDate && toDate) {
               // Only count years within the 10-year window
@@ -311,11 +324,25 @@ export default function PersonalInfoForm3({
         }
       })
 
-      // DOT § 383.35: Must cover 10 years
-      if (totalYearsCovered < 10) {
-        const yearsMissing = (10 - totalYearsCovered).toFixed(1)
-        newErrors.employmentYearsCoverage = 
-          `DOT § 383.35 requires 10 years of employment history. You currently have ${totalYearsCovered.toFixed(1)} years covered. Please add ${yearsMissing} more years.`
+      // DOT § 383.35: Must cover 10 years (with small tolerance for rounding)
+      const YEARS_REQUIRED = 10
+      const TOLERANCE = 0.1 // Allow 9.9+ years to pass
+      if (totalYearsCovered < YEARS_REQUIRED - TOLERANCE) {
+        // Find most recent end date to give better guidance
+        let mostRecentEnd = ''
+        formData.employers.forEach(emp => {
+          if (!emp.isUnemployment && emp.toDate && emp.toDate.toLowerCase() !== 'present') {
+            if (!mostRecentEnd || emp.toDate > mostRecentEnd) mostRecentEnd = emp.toDate
+          }
+        })
+        
+        if (mostRecentEnd) {
+          newErrors.employmentYearsCoverage = 
+            `DOT § 383.35 requires the last 10 years to be documented. Your most recent employment ends at ${mostRecentEnd}. Please account for the period from then to present (add current employer, unemployment, or other status).`
+        } else {
+          newErrors.employmentYearsCoverage = 
+            `DOT § 383.35 requires 10 years of employment history to be documented.`
+        }
       }
     } else if (step === 2) {
       // Education validation
@@ -791,8 +818,14 @@ export default function PersonalInfoForm3({
             const today = new Date()
             const tenYearsAgo = new Date(today.getFullYear() - 10, today.getMonth(), today.getDate())
             
+            // Helper to get last day of month
+            const getLastDayOfMonth = (year: number, month: number) => {
+              return new Date(year, month + 1, 0)
+            }
+            
             // Parse dates - handles multiple formats for robustness
-            const parseDate = (dateStr: string): Date | null => {
+            // isEndDate: when true, uses last day of month (e.g., "12/2024" → Dec 31, 2024)
+            const parseDate = (dateStr: string, isEndDate = false): Date | null => {
               if (!dateStr || dateStr.toLowerCase() === 'present') return today
               const trimmed = dateStr.trim()
               
@@ -802,7 +835,9 @@ export default function PersonalInfoForm3({
                 const month = parseInt(slashMatch[1]) - 1 // 0-indexed
                 let year = parseInt(slashMatch[2])
                 if (year < 100) year = year < 50 ? 2000 + year : 1900 + year
-                if (month >= 0 && month < 12) return new Date(year, month, 1)
+                if (month >= 0 && month < 12) {
+                  return isEndDate ? getLastDayOfMonth(year, month) : new Date(year, month, 1)
+                }
               }
               
               // Try MM-YYYY or MM-YY format (with dash)
@@ -811,7 +846,9 @@ export default function PersonalInfoForm3({
                 const month = parseInt(dashMatch[1]) - 1
                 let year = parseInt(dashMatch[2])
                 if (year < 100) year = year < 50 ? 2000 + year : 1900 + year
-                if (month >= 0 && month < 12) return new Date(year, month, 1)
+                if (month >= 0 && month < 12) {
+                  return isEndDate ? getLastDayOfMonth(year, month) : new Date(year, month, 1)
+                }
               }
               
               // Try YYYY-MM or YYYY/MM format (reversed)
@@ -819,10 +856,12 @@ export default function PersonalInfoForm3({
               if (reversedMatch) {
                 const year = parseInt(reversedMatch[1])
                 const month = parseInt(reversedMatch[2]) - 1
-                if (month >= 0 && month < 12) return new Date(year, month, 1)
+                if (month >= 0 && month < 12) {
+                  return isEndDate ? getLastDayOfMonth(year, month) : new Date(year, month, 1)
+                }
               }
               
-              // Try full ISO format YYYY-MM-DD
+              // Try full ISO format YYYY-MM-DD (exact day specified, use as-is)
               const isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/)
               if (isoMatch) {
                 return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]))
@@ -845,8 +884,8 @@ export default function PersonalInfoForm3({
                 return
               }
               
-              const fromDate = parseDate(employer.fromDate)
-              const toDate = parseDate(employer.toDate)
+              const fromDate = parseDate(employer.fromDate, false)
+              const toDate = parseDate(employer.toDate, true) // End dates use last day of month
               
               if (!fromDate || !toDate) {
                 employerBreakdown.push(`#${idx + 1}: SKIP (parse failed: from="${employer.fromDate}"→${fromDate}, to="${employer.toDate}"→${toDate})`)
@@ -876,10 +915,54 @@ export default function PersonalInfoForm3({
           }
           
           const yearsCovered = calculateYearsCovered()
-          const isComplete = yearsCovered >= 10
+          // Allow small tolerance (9.9+ counts as complete) to handle rounding
+          const isComplete = yearsCovered >= 9.9
           
-          // Debug: Log raw employers data to catch any data structure issues
-          console.log('📊 [YEARS CALC] Raw formData.employers:', JSON.stringify(formData.employers, null, 2))
+          // Find the most recent employment end date to detect gaps
+          const today = new Date()
+          let mostRecentEndDate: Date | null = null
+          let totalHistoryYears = 0
+          
+          formData.employers.forEach(emp => {
+            if (emp.isUnemployment || !emp.fromDate || !emp.toDate) return
+            
+            // Parse dates to find total span and most recent end
+            const parseSimple = (dateStr: string) => {
+              if (!dateStr || dateStr.toLowerCase() === 'present') return today
+              const match = dateStr.trim().match(/^(\d{1,2})\/(\d{4})$/)
+              if (match) return new Date(parseInt(match[2]), parseInt(match[1]) - 1, 1)
+              return null
+            }
+            
+            const from = parseSimple(emp.fromDate)
+            const to = emp.toDate.toLowerCase() === 'present' ? today : parseSimple(emp.toDate)
+            
+            if (from && to) {
+              // Track total history span
+              const years = (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+              totalHistoryYears += Math.max(0, years)
+              
+              // Track most recent end date
+              if (!mostRecentEndDate || to > mostRecentEndDate) {
+                mostRecentEndDate = to
+              }
+            }
+          })
+          
+          // Check if there's a gap at the end (employment ended before today)
+          const hasRecentGap = mostRecentEndDate && mostRecentEndDate < today
+          const gapMonths = hasRecentGap 
+            ? Math.round((today.getTime() - mostRecentEndDate!.getTime()) / (1000 * 60 * 60 * 24 * 30))
+            : 0
+          
+          // Format the gap period for display
+          const formatGapPeriod = () => {
+            if (!mostRecentEndDate || !hasRecentGap) return ''
+            const endMonth = mostRecentEndDate.getMonth() + 2 // Next month after end
+            const endYear = endMonth > 12 ? mostRecentEndDate.getFullYear() + 1 : mostRecentEndDate.getFullYear()
+            const adjustedMonth = endMonth > 12 ? endMonth - 12 : endMonth
+            return `${String(adjustedMonth).padStart(2, '0')}/${endYear} to Present`
+          }
           
           if (formData.employers.some(e => e.fromDate || e.toDate)) {
             return (
@@ -892,35 +975,47 @@ export default function PersonalInfoForm3({
                     ? 'bg-yellow-900/20 border-yellow-500/50'
                     : 'bg-yellow-50 border-yellow-200'
               }`}>
+                {/* Show total history entered */}
+                <p className={`text-sm mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+                  📋 Employment history entered: <strong>{totalHistoryYears.toFixed(1)} years</strong>
+                </p>
+                
+                {/* Main status message */}
                 <p className={`text-sm font-medium ${
                   isComplete
                     ? theme === 'dark' ? 'text-green-400' : 'text-green-800'
                     : theme === 'dark' ? 'text-yellow-400' : 'text-yellow-800'
                 }`}>
                   {isComplete
-                    ? `✓ ${yearsCovered.toFixed(1)} years covered (meets DOT § 383.35 requirement)`
-                    : `⚠ ${yearsCovered.toFixed(1)} of 10 years covered. Add ${(10 - yearsCovered).toFixed(1)} more years to meet DOT § 383.35 requirement.`
+                    ? `✓ Requirement met! Last 10 years are accounted for.`
+                    : hasRecentGap && gapMonths > 0
+                      ? `⚠ Gap detected: Your most recent employment ends before today. Please account for ${formatGapPeriod()} (~${gapMonths} months).`
+                      : `⚠ ${yearsCovered.toFixed(1)} of 10 years covered within the required window.`
                   }
                 </p>
-                {/* Show per-employer breakdown for debugging */}
-                <details className="mt-2">
+                
+                {/* Helpful hint for gaps */}
+                {!isComplete && hasRecentGap && (
+                  <p className={`text-xs mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    💡 Tip: If you&apos;re still employed there, change the end date to &quot;Present&quot;. Otherwise, add your current status (new job, unemployment, etc.)
+                  </p>
+                )}
+                
+                {/* Collapsible breakdown */}
+                <details className="mt-3">
                   <summary className={`text-xs cursor-pointer ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                    📋 Show calculation breakdown ({formData.employers.length} employer{formData.employers.length !== 1 ? 's' : ''})
+                    📋 Show detailed breakdown
                   </summary>
                   <div className={`text-xs mt-2 p-2 rounded ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                    <p className="font-medium mb-1">10-year window: {new Date(new Date().getFullYear() - 10, new Date().getMonth(), new Date().getDate()).toLocaleDateString()} to {new Date().toLocaleDateString()}</p>
+                    <p className="mb-2">The DOT requires documentation of the <strong>last 10 years</strong> leading up to today.</p>
                     <ul className="space-y-1">
                       {formData.employers.map((emp, idx) => {
                         if (emp.isUnemployment) {
-                          return <li key={idx} className="text-gray-500">#{idx + 1}: ⏭ Skipped (unemployment period)</li>
+                          return <li key={idx} className="text-gray-500">#{idx + 1}: ⏭ Unemployment period</li>
                         }
                         if (!emp.fromDate || !emp.toDate) {
-                          return <li key={idx} className="text-orange-500">#{idx + 1}: ⚠ Missing date ({!emp.fromDate ? 'FROM' : 'TO'} is empty)</li>
+                          return <li key={idx} className="text-orange-500">#{idx + 1}: ⚠ Missing date</li>
                         }
-                        // Show the employer with dates
-                        const today = new Date()
-                        const tenYearsAgo = new Date(today.getFullYear() - 10, today.getMonth(), today.getDate())
-                        // Simple display - detailed calc is in console
                         return (
                           <li key={idx} className="text-green-600 dark:text-green-400">
                             #{idx + 1}: ✓ {emp.name?.slice(0, 20) || 'Unnamed'} — {emp.fromDate} to {emp.toDate}
@@ -928,7 +1023,6 @@ export default function PersonalInfoForm3({
                         )
                       })}
                     </ul>
-                    <p className="mt-2 text-gray-500 italic">Check browser console (F12) for detailed calculation</p>
                   </div>
                 </details>
               </div>
