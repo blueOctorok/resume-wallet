@@ -1,10 +1,190 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
 import SaveProgressButton from './SaveProgressButton'
-import { HelpCircle } from 'lucide-react'
+import { HelpCircle, Briefcase, Clock, GraduationCap, Truck, Shield, X, ChevronDown, Calendar } from 'lucide-react'
+
+// History entry types
+type HistoryEntryType = 'employment' | 'unemployment' | 'school' | 'drivingSchool' | 'military'
+
+const HISTORY_TYPES = [
+  { value: 'employment' as const, label: 'Employment / Contract', icon: Briefcase, color: 'bg-blue-500' },
+  { value: 'unemployment' as const, label: 'Unemployment', icon: Clock, color: 'bg-yellow-500' },
+  { value: 'school' as const, label: 'School / Education', icon: GraduationCap, color: 'bg-purple-500' },
+  { value: 'drivingSchool' as const, label: 'Driving School / CDL Training', icon: Truck, color: 'bg-green-500' },
+  { value: 'military' as const, label: 'Military Service', icon: Shield, color: 'bg-red-500' },
+]
+
+// Month/Year Picker Component
+function MonthYearPicker({
+  value,
+  onChange,
+  placeholder = 'Select date',
+  allowPresent = false,
+  error = false,
+  theme = 'dark',
+}: {
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  allowPresent?: boolean
+  error?: boolean
+  theme?: string
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [selectedYear, setSelectedYear] = useState(() => {
+    if (value && value.toLowerCase() !== 'present') {
+      const match = value.match(/(\d{4})/)
+      return match ? parseInt(match[1]) : new Date().getFullYear()
+    }
+    return new Date().getFullYear()
+  })
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ]
+  
+  const currentYear = new Date().getFullYear()
+  const years = Array.from({ length: 50 }, (_, i) => currentYear - i)
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+  
+  const handleMonthSelect = (monthIndex: number) => {
+    const formatted = `${String(monthIndex + 1).padStart(2, '0')}/${selectedYear}`
+    onChange(formatted)
+    setIsOpen(false)
+  }
+  
+  const handlePresentSelect = () => {
+    onChange('Present')
+    setIsOpen(false)
+  }
+  
+  const displayValue = value || placeholder
+  const isPresent = value?.toLowerCase() === 'present'
+  
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full px-4 py-3 border-2 rounded-md text-left flex items-center justify-between ${
+          error
+            ? 'border-red-500'
+            : theme === 'dark'
+            ? 'bg-brand-cream border-gray-300 text-gray-900'
+            : 'bg-white border-gray-300 text-gray-900'
+        } ${!value ? 'text-gray-400' : ''}`}
+      >
+        <span className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-gray-400" />
+          {displayValue}
+        </span>
+        <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      
+      {isOpen && (
+        <div className={`absolute z-50 mt-1 w-full rounded-lg shadow-xl border-2 ${
+          theme === 'dark'
+            ? 'bg-gray-800 border-gray-700'
+            : 'bg-white border-gray-200'
+        }`}>
+          {/* Present option - prominent styling */}
+          {allowPresent && (
+            <button
+              type="button"
+              onClick={handlePresentSelect}
+              className={`w-full px-4 py-3 text-left font-semibold flex items-center gap-3 ${
+                isPresent
+                  ? theme === 'dark'
+                    ? 'bg-brand-mint text-gray-900'
+                    : 'bg-brand-sage text-white'
+                  : theme === 'dark'
+                    ? 'bg-brand-mint/20 text-brand-mint hover:bg-brand-mint/30'
+                    : 'bg-brand-sage/20 text-brand-sage hover:bg-brand-sage/30'
+              }`}
+            >
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+                isPresent
+                  ? theme === 'dark' ? 'bg-gray-900/20' : 'bg-white/30'
+                  : theme === 'dark' ? 'bg-brand-mint/30' : 'bg-brand-sage/30'
+              }`}>
+                ✓
+              </span>
+              Present (Still here)
+            </button>
+          )}
+          
+          {/* Divider with "or select date" */}
+          {allowPresent && (
+            <div className={`px-4 py-2 text-xs text-center ${
+              theme === 'dark' ? 'text-gray-500 bg-gray-800/50' : 'text-gray-400 bg-gray-50'
+            }`}>
+              — or select a specific date —
+            </div>
+          )}
+          
+          {/* Year selector */}
+          <div className={`px-3 py-2 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+              className={`w-full px-2 py-1 rounded ${
+                theme === 'dark'
+                  ? 'bg-gray-700 text-brand-cream border-gray-600'
+                  : 'bg-gray-100 text-gray-900 border-gray-300'
+              } border`}
+            >
+              {years.map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
+          
+          {/* Month grid */}
+          <div className="grid grid-cols-4 gap-1 p-2">
+            {months.map((month, idx) => {
+              const monthValue = `${String(idx + 1).padStart(2, '0')}/${selectedYear}`
+              const isSelected = value === monthValue
+              return (
+                <button
+                  key={month}
+                  type="button"
+                  onClick={() => handleMonthSelect(idx)}
+                  className={`px-2 py-2 text-sm rounded transition-colors ${
+                    isSelected
+                      ? theme === 'dark'
+                        ? 'bg-brand-mint text-gray-900 font-medium'
+                        : 'bg-brand-sage text-white font-medium'
+                      : theme === 'dark'
+                        ? 'text-brand-cream hover:bg-gray-700'
+                        : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {month}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 const STEPS = [
   {
@@ -44,24 +224,32 @@ export default function PersonalInfoForm3({
   const { requestHelp } = useAssistantBridge()
   const [currentStep, setCurrentStep] = useState(1)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  // State for type selector modal
+  const [showTypeSelector, setShowTypeSelector] = useState(false)
+  
   const [formData, setFormData] = useState({
-    // Employment History
-    employers: [
-      {
-        name: '',
-        phone: '',
-        address: '',
-        positionHeld: '',
-        fromDate: '',
-        toDate: '',
-        reasonForLeaving: '',
-        salary: '',
-        gapsInEmployment: '',
-        subjectToFMCSR: '',
-        safetySensitiveFunction: '',
-        isUnemployment: false,
-      },
-    ],
+    // Employment History - now with entry type
+    employers: [] as Array<{
+      type: HistoryEntryType
+      name: string
+      phone: string
+      address: string
+      positionHeld: string
+      fromDate: string
+      toDate: string
+      reasonForLeaving: string
+      salary: string
+      gapsInEmployment: string
+      subjectToFMCSR: string
+      safetySensitiveFunction: string
+      // Legacy field - kept for backwards compatibility
+      isUnemployment: boolean
+      // Additional fields for specific types
+      schoolName?: string
+      courseOfStudy?: string
+      militaryBranch?: string
+      dischargeType?: string
+    }>,
 
     // Education
     education: [
@@ -221,14 +409,62 @@ export default function PersonalInfoForm3({
       let totalYearsCovered = 0
       const today = new Date()
       const tenYearsAgo = new Date(today.getFullYear() - 10, today.getMonth(), today.getDate())
+      
+      // Helper to parse dates
+      const parseDate = (dateStr: string, isEndDate = false): Date | null => {
+        if (!dateStr || dateStr.toLowerCase() === 'present') return today
+        const trimmed = dateStr.trim()
+        
+        const getLastDayOfMonth = (year: number, month: number) => new Date(year, month + 1, 0)
+        
+        // Try MM/YYYY or MM/YY format
+        const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{2,4})$/)
+        if (slashMatch) {
+          const month = parseInt(slashMatch[1]) - 1
+          let year = parseInt(slashMatch[2])
+          if (year < 100) year = year < 50 ? 2000 + year : 1900 + year
+          if (month >= 0 && month < 12) {
+            return isEndDate ? getLastDayOfMonth(year, month) : new Date(year, month, 1)
+          }
+        }
+        
+        // Try MM-YYYY format
+        const dashMatch = trimmed.match(/^(\d{1,2})-(\d{2,4})$/)
+        if (dashMatch) {
+          const month = parseInt(dashMatch[1]) - 1
+          let year = parseInt(dashMatch[2])
+          if (year < 100) year = year < 50 ? 2000 + year : 1900 + year
+          if (month >= 0 && month < 12) {
+            return isEndDate ? getLastDayOfMonth(year, month) : new Date(year, month, 1)
+          }
+        }
+        
+        // Try YYYY-MM format
+        const reversedMatch = trimmed.match(/^(\d{4})[-/](\d{1,2})$/)
+        if (reversedMatch) {
+          const year = parseInt(reversedMatch[1])
+          const month = parseInt(reversedMatch[2]) - 1
+          if (month >= 0 && month < 12) {
+            return isEndDate ? getLastDayOfMonth(year, month) : new Date(year, month, 1)
+          }
+        }
+        
+        // Fallback
+        const isoDate = new Date(trimmed)
+        return isNaN(isoDate.getTime()) ? null : isoDate
+      }
 
       formData.employers.forEach((employer, index) => {
-        if (!employer.isUnemployment) {
-          // DOT § 383.35(c) Requirements
+        // Check both old flag and new type field
+        const isUnemploymentEntry = employer.isUnemployment || employer.type === 'unemployment'
+        const isSchoolEntry = employer.type === 'school' || employer.type === 'drivingSchool'
+        const isMilitaryEntry = employer.type === 'military'
+        
+        // Validate employer details ONLY for actual employers (not unemployment/school/military)
+        if (!isUnemploymentEntry && !isSchoolEntry && !isMilitaryEntry) {
           if (!employer.name.trim())
             newErrors[`employer${index}Name`] = 'Employer name is required (DOT § 383.35)'
           if (!employer.address.trim()) {
-            // Address is especially critical for last 3 years (verification required)
             if (index < 3) {
               newErrors[`employer${index}Address`] = 'Employer address is required for verification (DOT § 383.35)'
             } else {
@@ -244,81 +480,45 @@ export default function PersonalInfoForm3({
           if (!employer.positionHeld.trim())
             newErrors[`employer${index}Position`] = 'Position held is required'
           if (!employer.subjectToFMCSR)
-            newErrors[`employer${index}FMCSR`] =
-              'Please specify FMCSR compliance'
+            newErrors[`employer${index}FMCSR`] = 'Please specify FMCSR compliance'
           if (!employer.safetySensitiveFunction)
-            newErrors[`employer${index}Safety`] =
-              'Please specify safety-sensitive function'
+            newErrors[`employer${index}Safety`] = 'Please specify safety-sensitive function'
+        } else if (isUnemploymentEntry) {
+          // Unemployment periods only need dates
+          if (!employer.fromDate)
+            newErrors[`employer${index}FromDate`] = 'Start date is required'
+          if (!employer.toDate)
+            newErrors[`employer${index}ToDate`] = 'End date is required (use "Present" if still unemployed)'
+        } else if (isSchoolEntry) {
+          // School entries need name and dates
+          if (!employer.name.trim())
+            newErrors[`employer${index}Name`] = 'School name is required'
+          if (!employer.fromDate)
+            newErrors[`employer${index}FromDate`] = 'Start date is required'
+          if (!employer.toDate)
+            newErrors[`employer${index}ToDate`] = 'End date is required'
+        } else if (isMilitaryEntry) {
+          // Military entries need branch and dates
+          if (!employer.militaryBranch && !employer.name.trim())
+            newErrors[`employer${index}Name`] = 'Branch of service is required'
+          if (!employer.fromDate)
+            newErrors[`employer${index}FromDate`] = 'Start date is required'
+          if (!employer.toDate)
+            newErrors[`employer${index}ToDate`] = 'End date is required'
+        }
 
-          // Calculate years covered (only if dates are valid)
-          // Parse dates - handles multiple formats for robustness
-          // isEndDate: when true, uses last day of month (for proper coverage calculation)
-          if (employer.fromDate && employer.toDate) {
-            const parseDate = (dateStr: string, isEndDate = false): Date | null => {
-              if (!dateStr || dateStr.toLowerCase() === 'present') return today
-              const trimmed = dateStr.trim()
-              
-              // Helper to get last day of month
-              const getLastDayOfMonth = (year: number, month: number) => {
-                // month+1, day 0 gives last day of previous month
-                return new Date(year, month + 1, 0)
-              }
-              
-              // Try MM/YYYY or MM/YY format (with slash)
-              const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{2,4})$/)
-              if (slashMatch) {
-                const month = parseInt(slashMatch[1]) - 1 // 0-indexed
-                let year = parseInt(slashMatch[2])
-                if (year < 100) year = year < 50 ? 2000 + year : 1900 + year
-                if (month >= 0 && month < 12) {
-                  return isEndDate ? getLastDayOfMonth(year, month) : new Date(year, month, 1)
-                }
-              }
-              
-              // Try MM-YYYY or MM-YY format (with dash)
-              const dashMatch = trimmed.match(/^(\d{1,2})-(\d{2,4})$/)
-              if (dashMatch) {
-                const month = parseInt(dashMatch[1]) - 1
-                let year = parseInt(dashMatch[2])
-                if (year < 100) year = year < 50 ? 2000 + year : 1900 + year
-                if (month >= 0 && month < 12) {
-                  return isEndDate ? getLastDayOfMonth(year, month) : new Date(year, month, 1)
-                }
-              }
-              
-              // Try YYYY-MM or YYYY/MM format (reversed)
-              const reversedMatch = trimmed.match(/^(\d{4})[-/](\d{1,2})$/)
-              if (reversedMatch) {
-                const year = parseInt(reversedMatch[1])
-                const month = parseInt(reversedMatch[2]) - 1
-                if (month >= 0 && month < 12) {
-                  return isEndDate ? getLastDayOfMonth(year, month) : new Date(year, month, 1)
-                }
-              }
-              
-              // Try full ISO format YYYY-MM-DD (exact day specified, use as-is)
-              const isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/)
-              if (isoMatch) {
-                return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]))
-              }
-              
-              // Final fallback to native Date parsing
-              const isoDate = new Date(trimmed)
-              return isNaN(isoDate.getTime()) ? null : isoDate
-            }
-
-            const fromDate = parseDate(employer.fromDate, false)
-            const toDate = parseDate(employer.toDate, true) // End dates use last day of month
+        // Calculate years covered for ALL entries (employment AND unemployment)
+        if (employer.fromDate && employer.toDate) {
+          const fromDate = parseDate(employer.fromDate, false)
+          const toDate = parseDate(employer.toDate, true)
+          
+          if (fromDate && toDate) {
+            const periodStart = fromDate > tenYearsAgo ? fromDate : tenYearsAgo
+            const periodEnd = toDate < today ? toDate : today
             
-            if (fromDate && toDate) {
-              // Only count years within the 10-year window
-              const periodStart = fromDate > tenYearsAgo ? fromDate : tenYearsAgo
-              const periodEnd = toDate < today ? toDate : today
-              
-              if (periodStart <= periodEnd) {
-                const years = (periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
-                totalYearsCovered += Math.max(0, years)
-              }
+            if (periodStart <= periodEnd) {
+              const years = (periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+              totalYearsCovered += Math.max(0, years)
             }
           }
         }
@@ -327,21 +527,34 @@ export default function PersonalInfoForm3({
       // DOT § 383.35: Must cover 10 years (with small tolerance for rounding)
       const YEARS_REQUIRED = 10
       const TOLERANCE = 0.1 // Allow 9.9+ years to pass
+      
+      // Check if user has current unemployment (covers "present")
+      const hasCurrentUnemployment = formData.employers.some(
+        emp => (emp.isUnemployment || emp.type === 'unemployment') && emp.toDate?.toLowerCase() === 'present'
+      )
+      const hasCurrentEmployment = formData.employers.some(
+        emp => !emp.isUnemployment && emp.type !== 'unemployment' && emp.toDate?.toLowerCase() === 'present'
+      )
+      const isCoveredToPresent = hasCurrentUnemployment || hasCurrentEmployment
+      
       if (totalYearsCovered < YEARS_REQUIRED - TOLERANCE) {
         // Find most recent end date to give better guidance
         let mostRecentEnd = ''
         formData.employers.forEach(emp => {
-          if (!emp.isUnemployment && emp.toDate && emp.toDate.toLowerCase() !== 'present') {
+          if (emp.toDate && emp.toDate.toLowerCase() !== 'present') {
             if (!mostRecentEnd || emp.toDate > mostRecentEnd) mostRecentEnd = emp.toDate
           }
         })
         
-        if (mostRecentEnd) {
+        if (!isCoveredToPresent && mostRecentEnd) {
           newErrors.employmentYearsCoverage = 
-            `DOT § 383.35 requires the last 10 years to be documented. Your most recent employment ends at ${mostRecentEnd}. Please account for the period from then to present (add current employer, unemployment, or other status).`
+            `DOT § 383.35 requires the last 10 years to be documented. Your most recent entry ends at ${mostRecentEnd}. Please account for the period from then to present (add current employer, mark as "Present", or add unemployment).`
+        } else if (!isCoveredToPresent) {
+          newErrors.employmentYearsCoverage = 
+            `DOT § 383.35 requires 10 years of history. Please ensure your entries cover up to the present date.`
         } else {
           newErrors.employmentYearsCoverage = 
-            `DOT § 383.35 requires 10 years of employment history to be documented.`
+            `DOT § 383.35 requires 10 years of history. You have ${totalYearsCovered.toFixed(1)} years. Please add more history.`
         }
       }
     } else if (step === 2) {
@@ -416,12 +629,13 @@ export default function PersonalInfoForm3({
     }
   }
 
-  const addEmployer = () => {
+  const addHistoryEntry = (type: HistoryEntryType) => {
     setFormData((prev) => ({
       ...prev,
       employers: [
         ...prev.employers,
         {
+          type,
           name: '',
           phone: '',
           address: '',
@@ -433,11 +647,19 @@ export default function PersonalInfoForm3({
           gapsInEmployment: '',
           subjectToFMCSR: '',
           safetySensitiveFunction: '',
-          isUnemployment: false,
+          isUnemployment: type === 'unemployment',
+          schoolName: '',
+          courseOfStudy: '',
+          militaryBranch: '',
+          dischargeType: '',
         },
       ],
     }))
+    setShowTypeSelector(false)
   }
+  
+  // Legacy function for backwards compatibility
+  const addEmployer = () => addHistoryEntry('employment')
 
   const removeEmployer = (index: number) => {
     setFormData((prev) => ({
@@ -875,10 +1097,7 @@ export default function PersonalInfoForm3({
             const employerBreakdown: string[] = []
             
             formData.employers.forEach((employer, idx) => {
-              if (employer.isUnemployment) {
-                employerBreakdown.push(`#${idx + 1}: SKIP (unemployment)`)
-                return
-              }
+              // Unemployment periods COUNT toward the 10-year requirement (they're valid history)
               if (!employer.fromDate || !employer.toDate) {
                 employerBreakdown.push(`#${idx + 1}: SKIP (missing dates: from="${employer.fromDate}" to="${employer.toDate}")`)
                 return
@@ -904,7 +1123,9 @@ export default function PersonalInfoForm3({
               const years = (periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
               const addedYears = Math.max(0, years)
               totalYears += addedYears
-              employerBreakdown.push(`#${idx + 1}: +${addedYears.toFixed(2)}yr (${employer.fromDate} to ${employer.toDate}, clamped: ${periodStart.toLocaleDateString()}-${periodEnd.toLocaleDateString()})`)
+              
+              const typeLabel = employer.isUnemployment ? 'Unemployment' : 'Employment'
+              employerBreakdown.push(`#${idx + 1}: +${addedYears.toFixed(2)}yr ${typeLabel} (${employer.fromDate} to ${employer.toDate})`)
             })
             
             console.log('📊 [YEARS CALC] Today:', today.toLocaleDateString(), '10yr ago:', tenYearsAgo.toLocaleDateString())
@@ -918,13 +1139,14 @@ export default function PersonalInfoForm3({
           // Allow small tolerance (9.9+ counts as complete) to handle rounding
           const isComplete = yearsCovered >= 9.9
           
-          // Find the most recent employment end date to detect gaps
+          // Find the most recent end date (employment OR unemployment) to detect gaps
           const today = new Date()
           let mostRecentEndDate: Date | null = null
           let totalHistoryYears = 0
+          let hasCurrentUnemployment = false
           
           formData.employers.forEach(emp => {
-            if (emp.isUnemployment || !emp.fromDate || !emp.toDate) return
+            if (!emp.fromDate || !emp.toDate) return
             
             // Parse dates to find total span and most recent end
             const parseSimple = (dateStr: string) => {
@@ -935,22 +1157,31 @@ export default function PersonalInfoForm3({
             }
             
             const from = parseSimple(emp.fromDate)
-            const to = emp.toDate.toLowerCase() === 'present' ? today : parseSimple(emp.toDate)
+            const isPresent = emp.toDate.toLowerCase() === 'present'
+            const to = isPresent ? today : parseSimple(emp.toDate)
+            
+            // Track if currently unemployed (unemployment + "Present" or current month)
+            // Check both old flag (isUnemployment) and new type field for backwards compatibility
+            const isUnemploymentEntry = emp.isUnemployment || emp.type === 'unemployment'
+            if (isUnemploymentEntry && isPresent) {
+              hasCurrentUnemployment = true
+            }
             
             if (from && to) {
-              // Track total history span
+              // Track total history span (both employment AND unemployment count)
               const years = (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
               totalHistoryYears += Math.max(0, years)
               
-              // Track most recent end date
+              // Track most recent end date (employment OR unemployment)
               if (!mostRecentEndDate || to > mostRecentEndDate) {
                 mostRecentEndDate = to
               }
             }
           })
           
-          // Check if there's a gap at the end (employment ended before today)
-          const hasRecentGap = mostRecentEndDate && mostRecentEndDate < today
+          // Check if there's a gap at the end (no coverage up to today)
+          // If currently unemployed, there's NO gap - they've accounted for present
+          const hasRecentGap = !hasCurrentUnemployment && mostRecentEndDate && mostRecentEndDate < today
           const gapMonths = hasRecentGap 
             ? Math.round((today.getTime() - mostRecentEndDate!.getTime()) / (1000 * 60 * 60 * 24 * 30))
             : 0
@@ -1010,11 +1241,15 @@ export default function PersonalInfoForm3({
                     <p className="mb-2">The DOT requires documentation of the <strong>last 10 years</strong> leading up to today.</p>
                     <ul className="space-y-1">
                       {formData.employers.map((emp, idx) => {
-                        if (emp.isUnemployment) {
-                          return <li key={idx} className="text-gray-500">#{idx + 1}: ⏭ Unemployment period</li>
-                        }
                         if (!emp.fromDate || !emp.toDate) {
-                          return <li key={idx} className="text-orange-500">#{idx + 1}: ⚠ Missing date</li>
+                          return <li key={idx} className="text-orange-500">#{idx + 1}: ⚠ Missing dates</li>
+                        }
+                        if (emp.isUnemployment || emp.type === 'unemployment') {
+                          return (
+                            <li key={idx} className="text-blue-600 dark:text-blue-400">
+                              #{idx + 1}: ✓ Unemployment — {emp.fromDate} to {emp.toDate}
+                            </li>
+                          )
                         }
                         return (
                           <li key={idx} className="text-green-600 dark:text-green-400">
@@ -1052,448 +1287,497 @@ export default function PersonalInfoForm3({
         </p>
       </div>
 
-      {formData.employers.map((employer, index) => (
-        <div key={index} className='space-y-6'>
-          <div className='flex justify-between items-center'>
-            <div className='flex items-center space-x-3'>
-              <h3
-                className={`text-xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
-              >
-                {index === 0
-                  ? 'CURRENT (MOST RECENT) EMPLOYER'
-                  : `EMPLOYER ${index + 1}`}
-              </h3>
-              {index < 3 && (
-                <span
-                  className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                    theme === 'dark'
-                      ? 'bg-brand-mint text-gray-900'
-                      : 'bg-brand-sage text-white'
-                  }`}
-                >
-                  VERIFICATION REQUIRED
-                </span>
-              )}
-              {index >= 3 && (
-                <span
-                  className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                    theme === 'dark'
-                      ? 'bg-gray-600 text-gray-300'
-                      : 'bg-gray-400 text-gray-700'
-                  }`}
-                >
-                  SELF-REPORTED
-                </span>
-              )}
+      {/* Show message if no entries yet */}
+      {formData.employers.length === 0 && (
+        <div className={`p-8 rounded-xl border-2 border-dashed text-center ${
+          theme === 'dark' ? 'border-gray-600 bg-gray-800/30' : 'border-gray-300 bg-gray-50'
+        }`}>
+          <p className={`text-lg mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+            No history entries yet
+          </p>
+          <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+            Click &quot;+ Add History Entry&quot; below to start documenting your 10-year history
+          </p>
+        </div>
+      )}
+      
+      {formData.employers.map((employer, index) => {
+        // Get type info for this entry (default to employment for legacy entries)
+        const entryType = employer.type || (employer.isUnemployment ? 'unemployment' : 'employment')
+        const typeInfo = HISTORY_TYPES.find(t => t.value === entryType) || HISTORY_TYPES[0]
+        const TypeIcon = typeInfo.icon
+        
+        return (
+        <div key={index} className={`rounded-xl border-2 overflow-hidden ${
+          theme === 'dark' ? 'border-gray-700 bg-gray-800/30' : 'border-gray-200 bg-white'
+        }`}>
+          {/* Entry Header with Type Badge */}
+          <div className={`flex items-center justify-between p-4 ${
+            theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+          }`}>
+            <div className='flex items-center gap-3'>
+              <div className={`w-10 h-10 rounded-lg ${typeInfo.color} flex items-center justify-center`}>
+                <TypeIcon className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                  {index === 0 ? 'Most Recent' : `Entry ${index + 1}`} — {typeInfo.label}
+                </h3>
+                {entryType === 'employment' && index < 3 && (
+                  <span className="text-xs text-yellow-600 dark:text-yellow-400">
+                    Verification Required
+                  </span>
+                )}
+              </div>
             </div>
-            {formData.employers.length > 1 && (
-              <button
-                type='button'
-                onClick={() => removeEmployer(index)}
-                className={`px-3 py-1 text-sm rounded-md font-medium transition-all duration-200 ${
-                  theme === 'dark'
-                    ? 'bg-red-600 text-white hover:bg-red-700'
-                    : 'bg-red-500 text-white hover:bg-red-600'
-                }`}
-              >
-                Remove
-              </button>
+            <button
+              type='button'
+              onClick={() => removeEmployer(index)}
+              className={`p-2 rounded-lg transition-colors ${
+                theme === 'dark'
+                  ? 'hover:bg-red-900/50 text-red-400'
+                  : 'hover:bg-red-50 text-red-500'
+              }`}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <div className="p-6 space-y-5">
+            {/* Date Range - Common to ALL types */}
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                  FROM <span className="text-red-500">*</span>
+                </label>
+                <MonthYearPicker
+                  value={employer.fromDate}
+                  onChange={(value) => handleInputChange('employers', { fromDate: value }, index)}
+                  placeholder="Select start date"
+                  error={!!errors[`employer${index}FromDate`]}
+                  theme={theme}
+                />
+              </div>
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                  TO <span className="text-red-500">*</span>
+                </label>
+                <MonthYearPicker
+                  value={employer.toDate}
+                  onChange={(value) => handleInputChange('employers', { toDate: value }, index)}
+                  placeholder="Select end date"
+                  allowPresent={true}
+                  error={!!errors[`employer${index}ToDate`]}
+                  theme={theme}
+                />
+              </div>
+            </div>
+            
+            {/* EMPLOYMENT-specific fields */}
+            {entryType === 'employment' && (
+              <>
+                {/* Company Name and Phone */}
+                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                  <div className='md:col-span-2'>
+                    <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                      EMPLOYER NAME <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type='text'
+                      value={employer.name}
+                      onChange={(e) => handleInputChange('employers', { name: e.target.value }, index)}
+                      className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                        theme === 'dark'
+                          ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                          : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                      PHONE
+                    </label>
+                    <input
+                      type='tel'
+                      value={employer.phone}
+                      onChange={(e) => handleInputChange('employers', { phone: e.target.value }, index)}
+                      className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                        theme === 'dark'
+                          ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                          : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                    ADDRESS <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={employer.address}
+                    onChange={(e) => handleInputChange('employers', { address: e.target.value }, index)}
+                    rows={2}
+                    placeholder="Street, City, State, ZIP"
+                    className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                      theme === 'dark'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                    }`}
+                  />
+                </div>
+
+                {/* Position and Salary */}
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                      POSITION HELD <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type='text'
+                      value={employer.positionHeld}
+                      onChange={(e) => handleInputChange('employers', { positionHeld: e.target.value }, index)}
+                      className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                        theme === 'dark'
+                          ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                          : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                      SALARY
+                    </label>
+                    <input
+                      type='text'
+                      value={employer.salary}
+                      onChange={(e) => handleInputChange('employers', { salary: e.target.value }, index)}
+                      placeholder="e.g., $50,000/year"
+                      className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                        theme === 'dark'
+                          ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                          : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Reason for Leaving */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                    REASON FOR LEAVING <span className="text-red-500">*</span>
+                    <span className="text-xs ml-2 opacity-60">(DOT § 383.35)</span>
+                  </label>
+                  <input
+                    type='text'
+                    value={employer.reasonForLeaving}
+                    onChange={(e) => handleInputChange('employers', { reasonForLeaving: e.target.value }, index)}
+                    className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                      theme === 'dark'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                    }`}
+                  />
+                </div>
+
+                {/* FMCSR Questions */}
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                    <label className={`block text-sm font-medium mb-3 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                      Subject to FMCSR? <span className="text-red-500">*</span>
+                    </label>
+                    <div className='flex gap-4'>
+                      {['yes', 'no'].map(val => (
+                        <label key={val} className='flex items-center cursor-pointer'>
+                          <input
+                            type='radio'
+                            name={`subjectToFMCSR_${index}`}
+                            value={val}
+                            checked={employer.subjectToFMCSR === val}
+                            onChange={(e) => handleInputChange('employers', { subjectToFMCSR: e.target.value }, index)}
+                            className="mr-2 accent-brand-mint"
+                          />
+                          <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+                            {val.toUpperCase()}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                    <label className={`block text-sm font-medium mb-3 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                      Safety-sensitive function? <span className="text-red-500">*</span>
+                    </label>
+                    <div className='flex gap-4'>
+                      {['yes', 'no'].map(val => (
+                        <label key={val} className='flex items-center cursor-pointer'>
+                          <input
+                            type='radio'
+                            name={`safetySensitiveFunction_${index}`}
+                            value={val}
+                            checked={employer.safetySensitiveFunction === val}
+                            onChange={(e) => handleInputChange('employers', { safetySensitiveFunction: e.target.value }, index)}
+                            className="mr-2 accent-brand-mint"
+                          />
+                          <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+                            {val.toUpperCase()}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+            
+            {/* UNEMPLOYMENT-specific fields */}
+            {entryType === 'unemployment' && (
+              <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-yellow-900/20 border border-yellow-700/30' : 'bg-yellow-50 border border-yellow-200'}`}>
+                <p className={`text-sm ${theme === 'dark' ? 'text-yellow-300' : 'text-yellow-700'}`}>
+                  <strong>Unemployment Period</strong> — This entry accounts for time between jobs. Only dates are required.
+                </p>
+                <div className="mt-3">
+                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                    Optional: Explanation
+                  </label>
+                  <input
+                    type='text'
+                    value={employer.gapsInEmployment}
+                    onChange={(e) => handleInputChange('employers', { gapsInEmployment: e.target.value }, index)}
+                    placeholder="e.g., Looking for work, Personal reasons"
+                    className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                      theme === 'dark'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                    }`}
+                  />
+                </div>
+              </div>
+            )}
+            
+            {/* SCHOOL-specific fields */}
+            {entryType === 'school' && (
+              <>
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                    SCHOOL NAME <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type='text'
+                    value={employer.name}
+                    onChange={(e) => handleInputChange('employers', { name: e.target.value }, index)}
+                    placeholder="Name of school or institution"
+                    className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                      theme === 'dark'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                    COURSE OF STUDY
+                  </label>
+                  <input
+                    type='text'
+                    value={employer.courseOfStudy || ''}
+                    onChange={(e) => handleInputChange('employers', { courseOfStudy: e.target.value }, index)}
+                    placeholder="e.g., High School Diploma, Associate Degree"
+                    className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                      theme === 'dark'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                    }`}
+                  />
+                </div>
+              </>
+            )}
+            
+            {/* DRIVING SCHOOL-specific fields */}
+            {entryType === 'drivingSchool' && (
+              <>
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                    DRIVING SCHOOL NAME <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type='text'
+                    value={employer.name}
+                    onChange={(e) => handleInputChange('employers', { name: e.target.value }, index)}
+                    placeholder="Name of CDL/driving school"
+                    className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                      theme === 'dark'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                    CDL/CERTIFICATION OBTAINED
+                  </label>
+                  <input
+                    type='text'
+                    value={employer.courseOfStudy || ''}
+                    onChange={(e) => handleInputChange('employers', { courseOfStudy: e.target.value }, index)}
+                    placeholder="e.g., Class A CDL, Hazmat endorsement"
+                    className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                      theme === 'dark'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                    }`}
+                  />
+                </div>
+              </>
+            )}
+            
+            {/* MILITARY-specific fields */}
+            {entryType === 'military' && (
+              <>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                      BRANCH OF SERVICE <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={employer.militaryBranch || ''}
+                      onChange={(e) => handleInputChange('employers', { militaryBranch: e.target.value, name: e.target.value }, index)}
+                      className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                        theme === 'dark'
+                          ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                          : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                      }`}
+                    >
+                      <option value="">Select branch...</option>
+                      <option value="Army">Army</option>
+                      <option value="Navy">Navy</option>
+                      <option value="Air Force">Air Force</option>
+                      <option value="Marines">Marines</option>
+                      <option value="Coast Guard">Coast Guard</option>
+                      <option value="Space Force">Space Force</option>
+                      <option value="National Guard">National Guard</option>
+                      <option value="Reserves">Reserves</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                      DISCHARGE TYPE
+                    </label>
+                    <select
+                      value={employer.dischargeType || ''}
+                      onChange={(e) => handleInputChange('employers', { dischargeType: e.target.value }, index)}
+                      className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                        theme === 'dark'
+                          ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                          : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                      }`}
+                    >
+                      <option value="">Select discharge type...</option>
+                      <option value="Honorable">Honorable</option>
+                      <option value="General">General (Under Honorable)</option>
+                      <option value="Other Than Honorable">Other Than Honorable</option>
+                      <option value="Currently Serving">Currently Serving</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                    POSITION / MOS
+                  </label>
+                  <input
+                    type='text'
+                    value={employer.positionHeld}
+                    onChange={(e) => handleInputChange('employers', { positionHeld: e.target.value }, index)}
+                    placeholder="e.g., 88M Motor Transport Operator"
+                    className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                      theme === 'dark'
+                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                    }`}
+                  />
+                </div>
+              </>
             )}
           </div>
-
-          {/* Company Name and Phone */}
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-            <div className='md:col-span-2'>
-              <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-              >
-                NAME
-              </label>
-              <input
-                type='text'
-                value={employer.name}
-                onChange={(e) =>
-                  handleInputChange(
-                    'employers',
-                    { name: e.target.value },
-                    index
-                  )
-                }
-                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  theme === 'dark'
-                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
-                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-                }`}
-              />
-            </div>
-            <div>
-              <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-              >
-                PHONE
-              </label>
-              <input
-                type='tel'
-                value={employer.phone}
-                onChange={(e) =>
-                  handleInputChange(
-                    'employers',
-                    { phone: e.target.value },
-                    index
-                  )
-                }
-                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  theme === 'dark'
-                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
-                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-                }`}
-              />
-            </div>
-          </div>
-
-          {/* Unemployment Checkbox */}
-          <div className='flex items-center space-x-3'>
-            <input
-              type='checkbox'
-              id={`isUnemployment-${index}`}
-              checked={employer.isUnemployment}
-              onChange={(e) =>
-                handleInputChange(
-                  'employers',
-                  { isUnemployment: e.target.checked },
-                  index
-                )
-              }
-              className={`w-4 h-4 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
-            />
-            <label
-              htmlFor={`isUnemployment-${index}`}
-              className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-            >
-              Check this box if this period was unemployment
-            </label>
-          </div>
-
-          {/* Address */}
-          <div>
-            <label
-              className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-            >
-              ADDRESS
-            </label>
-            <textarea
-              value={employer.address}
-              onChange={(e) =>
-                handleInputChange(
-                  'employers',
-                  { address: e.target.value },
-                  index
-                )
-              }
-              rows={3}
-              className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                theme === 'dark'
-                  ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
-                  : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-              }`}
-            />
-          </div>
-
-          {/* Position and Dates */}
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-            <div>
-              <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-              >
-                POSITION HELD
-              </label>
-              <input
-                type='text'
-                value={employer.positionHeld}
-                onChange={(e) =>
-                  handleInputChange(
-                    'employers',
-                    { positionHeld: e.target.value },
-                    index
-                  )
-                }
-                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  theme === 'dark'
-                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
-                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-                }`}
-              />
-            </div>
-            <div>
-              <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-              >
-                FROM (MO/YR) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type='text'
-                value={employer.fromDate}
-                onChange={(e) =>
-                  handleInputChange(
-                    'employers',
-                    { fromDate: e.target.value },
-                    index
-                  )
-                }
-                onBlur={() => handleDateBlur('fromDate', index)}
-                placeholder='MM/YYYY'
-                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  errors[`employer${index}FromDate`]
-                    ? 'border-red-500'
-                    : theme === 'dark'
-                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
-                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-                }`}
-              />
-              {errors[`employer${index}FromDate`] && (
-                <p className="mt-1 text-sm text-red-600">{errors[`employer${index}FromDate`]}</p>
-              )}
-            </div>
-            <div>
-              <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-              >
-                TO (MO/YR) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type='text'
-                value={employer.toDate}
-                onChange={(e) =>
-                  handleInputChange(
-                    'employers',
-                    { toDate: e.target.value },
-                    index
-                  )
-                }
-                onBlur={() => handleDateBlur('toDate', index)}
-                placeholder='MM/YYYY or "Present"'
-                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  errors[`employer${index}ToDate`]
-                    ? 'border-red-500'
-                    : theme === 'dark'
-                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
-                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-                }`}
-              />
-              {errors[`employer${index}ToDate`] && (
-                <p className="mt-1 text-sm text-red-600">{errors[`employer${index}ToDate`]}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Reason for Leaving and Salary */}
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-            <div>
-              <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-              >
-                REASON FOR LEAVING <span className="text-red-500">*</span>
-                <span className="text-xs ml-2 text-gray-500">(DOT § 383.35(c)(3))</span>
-              </label>
-              <input
-                type='text'
-                value={employer.reasonForLeaving}
-                onChange={(e) =>
-                  handleInputChange(
-                    'employers',
-                    { reasonForLeaving: e.target.value },
-                    index
-                  )
-                }
-                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  errors[`employer${index}Reason`]
-                    ? 'border-red-500'
-                    : theme === 'dark'
-                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
-                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-                }`}
-              />
-              {errors[`employer${index}Reason`] && (
-                <p className="mt-1 text-sm text-red-600">{errors[`employer${index}Reason`]}</p>
-              )}
-            </div>
-            <div>
-              <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-              >
-                SALARY
-              </label>
-              <input
-                type='text'
-                value={employer.salary}
-                onChange={(e) =>
-                  handleInputChange(
-                    'employers',
-                    { salary: e.target.value },
-                    index
-                  )
-                }
-                className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                  theme === 'dark'
-                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
-                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-                }`}
-              />
-            </div>
-          </div>
-
-          {/* Gaps in Employment */}
-          <div>
-            <label
-              className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-            >
-              EXPLAIN ANY GAPS IN EMPLOYMENT (Include month/year & reason)
-            </label>
-            <textarea
-              value={employer.gapsInEmployment}
-              onChange={(e) =>
-                handleInputChange(
-                  'employers',
-                  { gapsInEmployment: e.target.value },
-                  index
-                )
-              }
-              rows={3}
-              className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                theme === 'dark'
-                  ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
-                  : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-              }`}
-            />
-          </div>
-
-          {/* DOT Questions */}
-          <div className='space-y-4'>
-            <div className='space-y-3'>
-              <label
-                className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-              >
-                While employed here, were you subject to the Federal Motor
-                Carrier Safety Regulations?
-              </label>
-              <div className='flex space-x-6'>
-                <label className='flex items-center'>
-                  <input
-                    type='radio'
-                    name={`subjectToFMCSR_${index}`}
-                    value='yes'
-                    checked={employer.subjectToFMCSR === 'yes'}
-                    onChange={(e) =>
-                      handleInputChange(
-                        'employers',
-                        { subjectToFMCSR: e.target.value },
-                        index
-                      )
-                    }
-                    className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
-                  />
-                  <span
-                    className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-                  >
-                    YES
-                  </span>
-                </label>
-                <label className='flex items-center'>
-                  <input
-                    type='radio'
-                    name={`subjectToFMCSR_${index}`}
-                    value='no'
-                    checked={employer.subjectToFMCSR === 'no'}
-                    onChange={(e) =>
-                      handleInputChange(
-                        'employers',
-                        { subjectToFMCSR: e.target.value },
-                        index
-                      )
-                    }
-                    className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
-                  />
-                  <span
-                    className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-                  >
-                    NO
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            <div className='space-y-3'>
-              <label
-                className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-              >
-                Was the job designated as a safety-sensitive function in any
-                Department of Transportation-regulated mode subject to alcohol
-                and controlled substances testing as required by 49 CFR, part
-                40?
-              </label>
-              <div className='flex space-x-6'>
-                <label className='flex items-center'>
-                  <input
-                    type='radio'
-                    name={`safetySensitiveFunction_${index}`}
-                    value='yes'
-                    checked={employer.safetySensitiveFunction === 'yes'}
-                    onChange={(e) =>
-                      handleInputChange(
-                        'employers',
-                        { safetySensitiveFunction: e.target.value },
-                        index
-                      )
-                    }
-                    className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
-                  />
-                  <span
-                    className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-                  >
-                    YES
-                  </span>
-                </label>
-                <label className='flex items-center'>
-                  <input
-                    type='radio'
-                    name={`safetySensitiveFunction_${index}`}
-                    value='no'
-                    checked={employer.safetySensitiveFunction === 'no'}
-                    onChange={(e) =>
-                      handleInputChange(
-                        'employers',
-                        { safetySensitiveFunction: e.target.value },
-                        index
-                      )
-                    }
-                    className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
-                  />
-                  <span
-                    className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
-                  >
-                    NO
-                  </span>
-                </label>
-              </div>
-            </div>
-          </div>
         </div>
-      ))}
+        )
+      })}
 
       {/* Add More Button */}
       <div className='flex justify-center pt-4'>
         <button
           type='button'
-          onClick={addEmployer}
+          onClick={() => setShowTypeSelector(true)}
           className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
             theme === 'dark'
               ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
               : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
           }`}
         >
-          + Add Employer
+          + Add History Entry
         </button>
       </div>
+      
+      {/* Type Selector Modal - Using Portal to escape parent container positioning issues */}
+      {showTypeSelector && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowTypeSelector(false)}
+          />
+          
+          {/* Modal */}
+          <div className={`relative w-full max-w-md rounded-2xl shadow-2xl p-6 ${
+            theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+          }`}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className={`text-xl font-bold ${
+                theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage-dark'
+              }`}>
+                Select History Type
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowTypeSelector(false)}
+                className={`p-2 rounded-lg ${
+                  theme === 'dark' ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
+                }`}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <p className={`text-sm mb-4 ${
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            }`}>
+              What type of history entry would you like to add?
+            </p>
+            
+            <div className="space-y-2">
+              {HISTORY_TYPES.map(({ value, label, icon: Icon, color }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => addHistoryEntry(value)}
+                  className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all ${
+                    theme === 'dark'
+                      ? 'bg-gray-700/50 hover:bg-gray-700 text-brand-cream'
+                      : 'bg-gray-50 hover:bg-gray-100 text-gray-900'
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center`}>
+                    <Icon className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="font-medium">{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   )
 

@@ -2,6 +2,76 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## ✨ **FEATURE: Form 3 - Type Selector & Month Picker** (January 14, 2026)
+
+**Major UX overhaul of Employment History section - now matches Tenstreet's approach.**
+
+### **New Features:**
+
+#### 1. Type Selector Modal
+When clicking "+ Add History Entry", users now see a beautiful modal to select:
+- **Employment/Contract** - Full employer details, FMCSR questions
+- **Unemployment** - Just dates and optional explanation
+- **School/Education** - School name and course of study
+- **Driving School/CDL Training** - School name and certification obtained
+- **Military Service** - Branch, discharge type, MOS/position
+
+Each type shows only relevant fields (no more seeing employer name field for unemployment!)
+
+#### 2. Month/Year Picker
+- Beautiful dropdown date picker (no more manual typing "MM/YYYY")
+- Year selector (last 50 years)
+- Month grid for easy selection
+- "Present" option for end dates
+- Calendar icon for visual clarity
+
+#### 3. Cleaner Entry Cards
+- Color-coded type badges with icons
+- Compact header with type indicator
+- Better organized fields per type
+- Rounded card design
+
+### **Technical Details:**
+- Added `HistoryEntryType` union type
+- Added `MonthYearPicker` component
+- Added `HISTORY_TYPES` array with icons and colors
+- Updated `employers` array to include `type` field
+- Backward compatible - legacy entries default to 'employment'
+
+### **Files Modified:**
+- `src/components/driver-application/PersonalInfoForm3.tsx`
+
+---
+
+## 🐛 **FIX: Form 3 - Unemployment Periods Now Count** (January 14, 2026)
+
+**Fixed critical bug where unemployment periods were being SKIPPED in the 10-year calculation.**
+
+### **The Problem:**
+User marks entry as "Unemployment" but:
+- System showed "⏭ Skipped (unemployment)" and didn't count it
+- Current unemployment (to "Present") didn't satisfy the "no gap" requirement
+- User was told to "add more years" when they had valid unemployment coverage
+
+### **The Fix:**
+1. **Unemployment periods now COUNT** toward 10-year requirement (they're valid DOT history)
+2. **Current unemployment = Present** - if unemployed now, there's no gap to fill
+3. **Validation updated** - unemployment entries need dates but not employer details
+4. **Better breakdown display** - shows unemployment in blue, counts toward total
+
+### **Before:**
+> #1: ⏭ Unemployment period (SKIPPED)
+> ⚠ Gap detected...
+
+### **After:**
+> #1: ✓ Unemployment — 01/2025 to Present
+> ✓ Requirement met!
+
+### **Files Modified:**
+- `src/components/driver-application/PersonalInfoForm3.tsx`
+
+---
+
 ## 🐛 **FIX: Form 3 Employment History - Clearer Messaging** (January 14, 2026)
 
 **Completely rewrote the 10-year requirement messaging to be actually helpful.**

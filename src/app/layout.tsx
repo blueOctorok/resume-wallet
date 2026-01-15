@@ -3,8 +3,8 @@ import { Quicksand } from 'next/font/google'
 import './globals.css'
 import AlchemyProvider from '@/components/AlchemyProvider'
 import { ThemeProvider } from '@/contexts/ThemeContext'
-import { CreditsDisplay } from '@/components/CreditsDisplay'
 import MobileConsole from '@/components/MobileConsole'
+import ScrollToTop from '@/components/ScrollToTop'
 
 const quicksand = Quicksand({
   variable: '--font-quicksand',
@@ -67,8 +67,8 @@ export default function RootLayout({
         <ThemeProvider>
           <AlchemyProvider>
             {children}
-            <CreditsDisplay />
             <MobileConsole />
+            <ScrollToTop />
           </AlchemyProvider>
         </ThemeProvider>
       </body>
