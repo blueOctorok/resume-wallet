@@ -34,8 +34,12 @@ Veree is now architected as a **two-sided marketplace** connecting drivers with 
 
 **Driver Experience (Fully Built):**
 
+- ✅ **Driver Hub** - Unified dashboard accessible from login (NEW!)
+  - Profile completeness score with smart hints
+  - All resumes, DOT apps, MVR records, job applications in one view
+  - Quick stats cards, detail modals, payment history
 - ✅ Resume upload with blockchain verification
-- ✅ **Resume builder** - Create professional driver resumes (NEW!)
+- ✅ **Resume builder** - Create professional driver resumes
 - ✅ DOT application forms (3-step wizard)
 - ✅ AvA AI assistant for form guidance
 - ✅ Form data persistence and prefill
@@ -46,6 +50,10 @@ Veree is now architected as a **two-sided marketplace** connecting drivers with 
 
 - ✅ Placeholder dashboard with feature preview
 - ✅ "Coming soon" messaging
+- 🔜 **Employer Hub** - Unified dashboard for employers (planned)
+  - All received applications at a glance
+  - Applicant cards with driver info, MVR status, resume preview
+  - Status management (submitted, reviewing, interviewing, hired)
 - 🔜 Company profile setup
 - 🔜 Job posting creation
 - 🔜 Applicant review interface

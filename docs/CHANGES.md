@@ -2,6 +2,160 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## ✨ **FEATURE: Driver Hub - Unified Dashboard** (January 15, 2026)
+
+**Major UX overhaul: Replaced the hidden DriverDashboard with an always-accessible Driver Hub.**
+
+### **The Problem:**
+- `DriverDashboard` was only accessible AFTER completing the DOT application
+- Users had no central place to see all their data (resumes, DOT apps, MVR, job applications)
+- Confusing flow: "Complete this long form to see your dashboard"
+- Data was scattered across different views and modals
+
+### **The Solution: Driver Hub**
+A unified dashboard that's accessible from the moment a driver logs in.
+
+### **New Features:**
+
+#### 1. Always Accessible
+- Driver Hub is the default landing page for logged-in drivers
+- No prerequisites - available immediately after login
+- Empty state shows actionable CTAs to get started
+
+#### 2. Profile Completeness Score
+- Visual progress bar showing how complete their profile is
+- Weighted scoring: Basic profile (15%), Personal info (15%), CDL info (20%), Resume (20%), DOT app (15%), MVR (5%), etc.
+- Smart hints: "Add an MVR to complete your profile"
+
+#### 3. Quick Stats Dashboard
+- At-a-glance cards: Total resumes, DOT apps, Job applications, MVR records
+- Sub-stats: "2 verified", "3 interviewing", etc.
+- Color-coded by category
+
+#### 4. Unified Sections
+- **Resumes**: All uploaded/built resumes with verification status
+- **DOT Applications**: All submissions (not just latest), with progress tracking
+- **MVR Records**: Order status, results, points, expiration
+- **Job Applications**: Status badges, view counts, company names
+- **Payment History**: Collapsible section with all USDC payments
+
+#### 5. Detail Modals
+- Click any item to view details without leaving the Hub
+- Resume modal: Type, IPFS hash, blockchain tx, download link
+- DOT App modal: Progress bar, application ID, verification status
+
+### **Technical Implementation:**
+
+#### New Files:
+- `src/app/api/driver/hub/route.ts` - Aggregates all driver data in one API call
+- `src/components/DriverHub.tsx` - Main Hub component (~900 lines)
+
+#### Modified Files:
+- `src/app/page.tsx` - Replaced DriverDashboard with DriverHub as default
+- `src/components/Navigation.tsx` - Simplified navigation:
+  - Removed "Driver Options" dropdown (redundant with Hub)
+  - Replaced with "Driver Hub" button with gold rotating border
+  - Same for employers: "Employer Hub" button
+  - Cleaner nav: Status | Home | [Veree logo] | Hub | AvA | Theme
+
+#### Removed:
+- DriverDashboard no longer shown after DOT completion (Hub replaces it)
+- `showDashboard` state simplified (no longer needed for old flow)
+- Driver Options dropdown (Hub has all the same functionality)
+- Home button next to status (redundant with Hub button)
+- Unused Navigation props: `user`, `onWalletClick`, `onMvrClick`, `onSwitchRole`, `onOpenMvrManagement`
+
+### **MVR Status Badge (Simplified)**
+
+Replaced the clickable `MvrStatusIndicator` button in the nav with a simpler `MvrStatusBadge`:
+
+- **Before**: Clickable button that opens MVR management modal
+- **After**: Non-clickable badge showing status only
+
+Status displays:
+- "No MVR" — No MVR ordered
+- "MVR: Processing" — Order in progress
+- "MVR: Available" — Results ready to view
+
+Drivers access MVR details through the Hub instead of a nav button.
+
+#### Bug Fix: Hub MVR Data
+Fixed Hub API not showing MVR records:
+- Changed `order_status` → `status` (correct column name)
+- Changed `license_state` → `dl_state` (correct column name)
+
+#### Transaction History (Replaces Payment History)
+The `payments` table wasn't being populated correctly, so "Payment History" showed nothing.
+
+**Better Fix**: Derive transaction history from actual orders/purchases instead of relying on the `payments` table:
+- MVR orders → Each order becomes a transaction with fee info
+- Paid resumes → Each `is_paid: true` resume becomes a transaction
+- Sorted by date, newest first
+
+This is more reliable because it shows what the user actually purchased, even if the payment recording step failed.
+
+#### Detail Modal Improvements
+- **Fixed dark mode colors**: Changed from light mint (`bg-brand-sage-light`) to dark sage (`bg-brand-sage-dark`) for better readability
+- **Resume View**: Added "View" button to preview PDF inline within Veree (full-screen modal with iframe)
+- **Resume Delete**: Added "Delete Resume" button with confirmation modal
+- Delete confirmation prevents accidental deletion
+- After deletion, Hub data refreshes automatically
+- **PDF Viewer z-index**: Increased to z-[9999] to appear above navigation
+
+#### Resume PDF Styling Overhaul
+Completely redesigned the generated PDF for a more professional appearance:
+- **Header**: Centered name with 2px navy border, contact info on single line
+- **Color scheme**: Navy blue (#1a365d) primary, medium blue (#2b6cb0) accent
+- **Section headers**: Uppercase with colored underline, clean typography
+- **CDL Info**: Light blue background card with all info on one line
+- **Employment**: Position and company on same line, dated on right
+- **References**: Two-column grid with accent border cards
+- **Typography**: Georgia serif for headings, Arial for body text
+- **Overall**: More whitespace, better visual hierarchy, professional look
+
+#### Navigation Hub Buttons
+- Removed hover effects from Driver Hub and Employer Hub buttons
+- The rotating gold border provides enough visual interest
+
+### **API: /api/driver/hub**
+
+Single endpoint that returns:
+```typescript
+{
+  success: true,
+  isNewUser: boolean,
+  profile: UnifiedDriverProfile | null,
+  resumes: HubResume[],
+  dotApplications: HubDotApplication[],
+  mvrRecords: HubMvrRecord[],
+  jobApplications: HubJobApplication[],
+  payments: HubPayment[],
+  stats: {
+    profileCompleteness: number,
+    totalResumes: number,
+    verifiedResumes: number,
+    totalDotApps: number,
+    // ... more stats
+  },
+  memberSince: string
+}
+```
+
+### **UX Flow Changes:**
+
+**Before:**
+1. Login → Landing page
+2. Complete DOT app (3 forms) → See DriverDashboard
+3. Dashboard only shows latest DOT app
+
+**After:**
+1. Login → Driver Hub (immediate access to everything)
+2. Hub shows all data: resumes, DOT apps, MVR, job applications
+3. Empty sections have CTAs: "Start DOT Application", "Upload Resume"
+4. After completing DOT app → Success screen → "Go to Hub" button
+
+---
+
 ## ✨ **FEATURE: Form 3 - Type Selector & Month Picker** (January 14, 2026)
 
 **Major UX overhaul of Employment History section - now matches Tenstreet's approach.**

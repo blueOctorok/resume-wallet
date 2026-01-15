@@ -1,62 +1,39 @@
 'use client'
 
 import { useState } from 'react'
-import dynamic from 'next/dynamic'
-import { Home, FileText, Search, ClipboardList, FileCheck, Car } from 'lucide-react'
+import { LayoutDashboard } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 import { useTheme } from '@/contexts/ThemeContext'
-import MvrStatusIndicator from './MvrStatusIndicator'
-
-// Dynamically import MVR payment button to avoid auth conflicts
-const MvrPaymentButton = dynamic(() => import('./MvrPaymentButton'), {
-  ssr: false,
-})
+import MvrStatusBadge from './MvrStatusBadge'
 
 
 interface NavigationProps {
   isAuthenticated?: boolean
-  user?: {
-    address: string
-    message?: string
-    signature?: string
-    method?: string
-  } | null
   userRole?: 'driver' | 'employer' | null
   onStatusClick?: () => void
-  onWalletClick?: () => void
-  onNavigate?: (page: 'signin' | 'resume' | 'dotapp' | 'jobs' | 'applications' | 'home') => void
-  onMvrClick?: () => void
+  onNavigate?: (page: 'signin' | 'resume' | 'dotapp' | 'jobs' | 'applications' | 'home' | 'hub') => void
   mvrWalletAddress?: string | null
-  onOpenMvrManagement?: () => void
   tHasUnread?: boolean
   onTClick?: () => void
-  onSwitchRole?: () => void
 }
 
 export default function Navigation({
   isAuthenticated = false,
-  user,
   userRole,
   onStatusClick,
-  onWalletClick,
   onNavigate,
-  onSwitchRole,
-  onMvrClick,
   mvrWalletAddress,
-  onOpenMvrManagement,
   tHasUnread = false,
   onTClick,
 }: NavigationProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isDriverDropdownOpen, setIsDriverDropdownOpen] = useState(false)
-  const [isEmployerDropdownOpen, setIsEmployerDropdownOpen] = useState(false)
   const { theme } = useTheme()
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
   }
 
-  const handleNavigation = (page: 'signin' | 'resume' | 'dotapp' | 'jobs' | 'applications' | 'home') => {
+  const handleNavigation = (page: 'signin' | 'resume' | 'dotapp' | 'jobs' | 'applications' | 'home' | 'hub') => {
     console.log(`🔗 [NAVIGATION] handleNavigation called with page:`, page)
     setIsMenuOpen(false)
     onNavigate?.(page)
@@ -121,23 +98,6 @@ export default function Navigation({
                       </div>
                     </button>
 
-                    {/* Home Icon Button */}
-                    <button
-                      onClick={() => handleNavigation('home')}
-                      className={`relative group p-2 sm:p-2.5 rounded-lg sm:rounded-xl backdrop-blur-sm transition-all duration-300 shadow-lg hover:shadow-xl border cursor-pointer ${
-                        theme === 'light'
-                          ? 'bg-brand-sage/60 hover:bg-brand-sage/80 border-brand-sage/40 hover:border-brand-mint/70 text-white'
-                          : 'bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-mint/30 hover:border-brand-mint/50 text-brand-cream'
-                      }`}
-                      aria-label='Go to home'
-                    >
-                      <Home className='w-4 h-4 sm:w-5 sm:h-5' strokeWidth={2} />
-                      
-                      {/* Tooltip */}
-                      <div className='absolute left-0 top-full mt-2 px-3 py-1.5 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
-                        Home
-                      </div>
-                    </button>
                   </>
                 ) : (
                   <button
@@ -239,25 +199,10 @@ export default function Navigation({
                 isMenuOpen ? 'flex' : 'hidden'
               } md:flex flex-col md:flex-row items-center gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-brand-mint/30 relative`}
             >
-              {/* Desktop MVR Status - Bottom Left of nav */}
-              {isAuthenticated && mvrWalletAddress && onOpenMvrManagement && (
-                <div className="hidden md:flex w-full md:w-auto justify-start">
-                  <MvrStatusIndicator
-                    walletAddress={mvrWalletAddress}
-                    onOpenManagement={onOpenMvrManagement}
-                    placement="nav-desktop"
-                  />
-                </div>
-              )}
-
-              {/* Mobile MVR Status - First on mobile, before AvA */}
-              {isAuthenticated && mvrWalletAddress && onOpenMvrManagement && (
-                <div className="md:hidden w-full">
-                  <MvrStatusIndicator
-                    walletAddress={mvrWalletAddress}
-                    onOpenManagement={onOpenMvrManagement}
-                    placement="nav-mobile"
-                  />
+              {/* MVR Status Badge - Shows status without being a button */}
+              {isAuthenticated && userRole === 'driver' && mvrWalletAddress && (
+                <div className="w-full md:w-auto flex justify-center md:justify-start">
+                  <MvrStatusBadge walletAddress={mvrWalletAddress} />
                 </div>
               )}
 
@@ -282,206 +227,47 @@ export default function Navigation({
                 </button>
               )}
 
-              {/* Driver Options Dropdown - Last on mobile (since it's a dropdown) */}
+              {/* Driver Hub Button - Center position with gold rotating border */}
               {userRole === 'driver' && isAuthenticated && (
                 <div className="relative md:absolute md:left-1/2 md:-translate-x-1/2 w-full md:w-auto">
-                  {theme === 'dark' ? (
-                    <div className="rotating-gold-border w-full md:w-auto">
-                      <button
-                        onClick={() => {
-                          setIsDriverDropdownOpen(!isDriverDropdownOpen)
-                          setIsEmployerDropdownOpen(false)
-                        }}
-                        className="w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-[10px] text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 transition-all duration-300 flex items-center justify-center gap-2 relative z-10 cursor-pointer"
-                      >
-                        Driver Options
-                        <svg 
-                          className={`w-4 h-4 transition-transform ${isDriverDropdownOpen ? 'rotate-180' : ''}`}
-                          fill="none" 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="rotating-gold-border w-full md:w-auto">
-                      <button
-                        onClick={() => {
-                          setIsDriverDropdownOpen(!isDriverDropdownOpen)
-                          setIsEmployerDropdownOpen(false)
-                        }}
-                        className="w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-[10px] text-white bg-brand-sage hover:bg-brand-sage-dark transition-all duration-300 flex items-center justify-center gap-2 relative z-10 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer"
-                      >
-                        Driver Options
-                        <svg 
-                          className={`w-4 h-4 transition-transform ${isDriverDropdownOpen ? 'rotate-180' : ''}`}
-                          fill="none" 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </button>
-                    </div>
-                  )}
-                  
-                  {isDriverDropdownOpen && (
-                    <>
-                      <div 
-                        className="fixed inset-0 z-10" 
-                        onClick={() => setIsDriverDropdownOpen(false)}
-                      />
-                      <div className={`absolute top-full mt-2 left-1/2 -translate-x-1/2 z-20 w-[180px] rounded-xl shadow-2xl border ${
-                        theme === 'light'
-                          ? 'bg-white border-brand-sage/40'
-                          : 'bg-gray-800/95 border-gray-700'
-                      }`}>
-                        <div className="p-2 space-y-1">
-                          <button
-                            onClick={() => {
-                              handleNavigation('resume')
-                              setIsDriverDropdownOpen(false)
-                            }}
-                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2 ${
-                              theme === 'light'
-                                ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
-                                : 'text-brand-cream hover:bg-brand-sage-light/20'
-                            }`}
-                          >
-                            <FileText className='w-4 h-4' />
-                            Resume
-                          </button>
-                          <button
-                            onClick={() => {
-                              handleNavigation('jobs')
-                              setIsDriverDropdownOpen(false)
-                            }}
-                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2 ${
-                              theme === 'light'
-                                ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
-                                : 'text-brand-cream hover:bg-brand-sage-light/20'
-                            }`}
-                          >
-                            <Search className='w-4 h-4' />
-                            Browse Jobs
-                          </button>
-                          <button
-                            onClick={() => {
-                              handleNavigation('applications')
-                              setIsDriverDropdownOpen(false)
-                            }}
-                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2 ${
-                              theme === 'light'
-                                ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
-                                : 'text-brand-cream hover:bg-brand-sage-light/20'
-                            }`}
-                          >
-                            <ClipboardList className='w-4 h-4' />
-                            My Applications
-                          </button>
-                          <button
-                            onClick={() => {
-                              handleNavigation('dotapp')
-                              setIsDriverDropdownOpen(false)
-                            }}
-                            className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2 ${
-                              theme === 'light'
-                                ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
-                                : 'text-brand-cream hover:bg-brand-sage-light/20'
-                            }`}
-                          >
-                            <FileCheck className='w-4 h-4' />
-                            DOT App
-                          </button>
-                          {onMvrClick && (
-                            <button
-                              onClick={() => {
-                                onMvrClick()
-                                setIsDriverDropdownOpen(false)
-                              }}
-                              className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2 ${
-                                theme === 'light'
-                                  ? 'text-gray-700 hover:bg-brand-sage/10 hover:text-brand-sage'
-                                  : 'text-brand-cream hover:bg-brand-sage-light/20'
-                              }`}
-                            >
-                              <Car className='w-4 h-4' />
-                              Order MVR
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
+                  <div className="rotating-gold-border w-full md:w-auto">
+                    <button
+                      onClick={() => {
+                        handleNavigation('hub')
+                        setIsMenuOpen(false)
+                      }}
+                      className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2 relative z-10 cursor-pointer ${
+                        theme === 'dark'
+                          ? 'text-brand-cream bg-brand-sage-light/20'
+                          : 'text-white bg-brand-sage shadow-lg'
+                      }`}
+                    >
+                      <LayoutDashboard className="w-4 h-4" />
+                      Driver Hub
+                    </button>
+                  </div>
                 </div>
               )}
 
-              {/* Employer Options Dropdown */}
+              {/* Employer Hub Button - Center position with gold rotating border */}
               {userRole === 'employer' && isAuthenticated && (
-                <div className="relative">
-                  {theme === 'dark' ? (
-                    <div className="rotating-gold-border w-full md:w-auto">
-                      <button
-                        onClick={() => {
-                          setIsEmployerDropdownOpen(!isEmployerDropdownOpen)
-                          setIsDriverDropdownOpen(false)
-                        }}
-                        className="w-full px-6 py-2.5 text-sm font-semibold rounded-[10px] text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 transition-all duration-300 flex items-center gap-2 relative z-10 cursor-pointer"
-                      >
-                        Employer Options
-                        <svg 
-                          className={`w-4 h-4 transition-transform ${isEmployerDropdownOpen ? 'rotate-180' : ''}`}
-                          fill="none" 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </button>
-                    </div>
-                  ) : (
+                <div className="relative md:absolute md:left-1/2 md:-translate-x-1/2 w-full md:w-auto">
+                  <div className="rotating-gold-border w-full md:w-auto">
                     <button
                       onClick={() => {
-                        setIsEmployerDropdownOpen(!isEmployerDropdownOpen)
-                        setIsDriverDropdownOpen(false)
+                        handleNavigation('hub')
+                        setIsMenuOpen(false)
                       }}
-                      className="w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 flex items-center gap-2 text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer"
+                      className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2 relative z-10 cursor-pointer ${
+                        theme === 'dark'
+                          ? 'text-brand-cream bg-brand-sage-light/20'
+                          : 'text-white bg-brand-sage shadow-lg'
+                      }`}
                     >
-                      Employer Options
-                      <svg 
-                        className={`w-4 h-4 transition-transform ${isEmployerDropdownOpen ? 'rotate-180' : ''}`}
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
+                      <LayoutDashboard className="w-4 h-4" />
+                      Employer Hub
                     </button>
-                  )}
-                  
-                  {isEmployerDropdownOpen && (
-                    <>
-                      <div 
-                        className="fixed inset-0 z-10" 
-                        onClick={() => setIsEmployerDropdownOpen(false)}
-                      />
-                      <div className={`absolute top-full mt-2 left-0 z-20 min-w-[200px] rounded-xl shadow-2xl border ${
-                        theme === 'light'
-                          ? 'bg-white border-brand-sage/40'
-                          : 'bg-gray-800/95 border-gray-700'
-                      }`}>
-                        <div className="p-2">
-                          <div className={`px-4 py-2.5 text-sm ${
-                            theme === 'light' ? 'text-gray-500' : 'text-brand-cream/60'
-                          }`}>
-                            🚧 Coming soon
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
+                  </div>
                 </div>
               )}
 

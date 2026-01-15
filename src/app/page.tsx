@@ -133,15 +133,13 @@ const ApplicationSubmitted = dynamic(
   }
 )
 
-const DriverDashboard = dynamic(
-  () =>
-    import('@/components/driver-application/DriverDashboard').then(
-      (mod) => mod.default
-    ),
+// DriverHub replaces the old DriverDashboard - always accessible, shows all driver data
+const DriverHub = dynamic(
+  () => import('@/components/DriverHub').then((mod) => mod.default),
   {
     ssr: false,
     loading: () => (
-      <LoadingScreen message='Loading dashboard...' fullScreen={false} />
+      <LoadingScreen message='Loading Driver Hub...' fullScreen={false} />
     ),
   }
 )
@@ -220,13 +218,7 @@ const HomePage = dynamic(
   }
 )
 
-const DriverHomePage = dynamic(
-  () => import('@/components/DriverHomePage').then((mod) => mod.default),
-  {
-    ssr: false,
-    loading: () => <LoadingScreen message='Loading...' fullScreen={false} />,
-  }
-)
+// DriverHomePage removed - replaced by DriverHub as the default landing for drivers
 
 const EmployerDashboard = dynamic(
   () => import('@/components/EmployerDashboard').then((mod) => mod.default),
@@ -308,7 +300,7 @@ const HomeContent = () => {
   const [isMvrManagementOpen, setIsMvrManagementOpen] = useState(false)
   const [selectedMvrOrderId, setSelectedMvrOrderId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState<
-    'signin' | 'resume' | 'dotapp' | 'jobs' | 'applications' | 'mvr' | null
+    'signin' | 'resume' | 'dotapp' | 'jobs' | 'applications' | 'mvr' | 'hub' | null
   >(null)
   const [resumeTab, setResumeTab] = useState<'upload' | 'create'>('upload')
   const [editingResumeId, setEditingResumeId] = useState<string | undefined>(undefined)
@@ -490,7 +482,7 @@ const HomeContent = () => {
           }
 
           // Both drivers and employers start at home page
-          // Drivers see DriverHomePage, employers see EmployerDashboard
+          // Drivers see DriverHub, employers see EmployerDashboard
           setCurrentPage(null)
         } else {
           const errorData = await response.json().catch(() => ({}))
@@ -1002,9 +994,9 @@ const HomeContent = () => {
               if (!currentPage || currentPage === 'signin') {
                 if (normalizedRole === 'driver') {
                   console.log(
-                    '[ROLE FETCH] Driver role - showing DriverHomePage'
+                    '[ROLE FETCH] Driver role - showing DriverHub'
                   )
-                  setCurrentPage(null) // null shows DriverHomePage for drivers
+                  setCurrentPage(null) // null shows DriverHub for drivers
                 } else if (normalizedRole === 'employer') {
                   console.log(
                     '[ROLE FETCH] Employer role - showing EmployerDashboard'
@@ -1453,10 +1445,11 @@ const HomeContent = () => {
         | 'applications'
         | 'mvr'
         | 'home'
+        | 'hub'
     ) => {
       console.log(`Navigating to: ${page}`)
-      if (page === 'home') {
-        // Reset to beginning screen (landing/wallet page)
+      if (page === 'home' || page === 'hub') {
+        // Reset to beginning screen (Driver Hub for drivers, landing for others)
         setCurrentPage(null)
       } else {
         setCurrentPage(page)
@@ -1957,29 +1950,17 @@ const HomeContent = () => {
       return renderSubmissionLoading()
     }
 
-    // If dashboard is shown, show dashboard
-    if (showDashboard && isDriverApplicationCompleted) {
-      return (
-        <DriverDashboard
-          onCompleteEmploymentVerification={
-            handleNavigateToEmploymentVerification
-          }
-          userAddress={user?.address}
-          blockchainData={blockchainData}
-        />
-      )
-    }
-
-    // If driver application is completed, show application submitted page
-    if (
-      isDriverApplicationCompleted &&
-      !showEmploymentVerification &&
-      !showDashboard
-    ) {
+    // If driver application is completed, show success page then redirect to Hub
+    if (isDriverApplicationCompleted && !showEmploymentVerification) {
       return (
         <ApplicationSubmitted
           onNavigateToSafetyForm={handleNavigateToEmploymentVerification}
-          onNavigateToDashboard={handleNavigateToDashboard}
+          onNavigateToDashboard={() => {
+            // Navigate to Driver Hub (home for drivers)
+            setCurrentPage(null)
+            setIsDriverApplicationCompleted(false)
+            setShowDashboard(false)
+          }}
           blockchainData={blockchainData}
         />
       )
@@ -1991,8 +1972,10 @@ const HomeContent = () => {
         <EmploymentVerificationForm
           userAddress={user?.address}
           onComplete={() => {
+            // After employment verification, go back to Hub
             setShowEmploymentVerification(false)
-            setShowDashboard(true)
+            setCurrentPage(null)
+            setIsDriverApplicationCompleted(false)
           }}
         />
       )
@@ -2052,12 +2035,7 @@ const HomeContent = () => {
     if (currentPage !== 'dotapp') return null
 
     // Hide navigation when driver application is completed or employment verification is shown
-    if (
-      isDriverApplicationCompleted ||
-      showEmploymentVerification ||
-      showDashboard
-    )
-      return null
+    if (isDriverApplicationCompleted || showEmploymentVerification) return null
 
     return (
       <div className='flex justify-center mb-8 px-4'>
@@ -2188,20 +2166,15 @@ const HomeContent = () => {
           </div>
         )}
 
-        {/* Navigation with status indicator */}
+        {/* Navigation with Hub button */}
         <Navigation
           isAuthenticated={!!user}
-          user={user}
           userRole={userRole}
           onStatusClick={openModal}
-          onWalletClick={handleWalletClick}
           onNavigate={handleNavigation}
-          onMvrClick={() => handleNavigation('mvr')}
           mvrWalletAddress={user?.address || null}
-          onOpenMvrManagement={() => setIsMvrManagementOpen(true)}
           tHasUnread={avaHasUnread}
           onTClick={() => setIsAvaCollapsed(false)}
-          onSwitchRole={handleSwitchRole}
         />
 
         {/* User Status Modal */}
@@ -2295,10 +2268,28 @@ const HomeContent = () => {
             !isRoleLoading && (
               <>
                 {/* Conditional Content Based on Navigation */}
-                {/* Home Page - Default */}
+                {/* Home Page / Driver Hub - Default */}
                 {!currentPage &&
                   (user && userRole === 'driver' ? (
-                    <DriverHomePage onNavigate={handleNavigation} />
+                    // Driver Hub is the default landing for logged-in drivers
+                    <DriverHub
+                      userAddress={user.address}
+                      onNavigate={(page) => {
+                        // Map hub navigation to page navigation
+                        if (page === 'resume' || page === 'dotapp' || page === 'jobs' || page === 'applications' || page === 'mvr') {
+                          setCurrentPage(page)
+                        }
+                      }}
+                      onStartDotApp={() => {
+                        // Start fresh DOT application
+                        resetApplicationProgress()
+                        setCurrentPage('dotapp')
+                      }}
+                      onViewMvr={(orderId) => {
+                        setSelectedMvrOrderId(orderId)
+                        setIsMvrModalOpen(true)
+                      }}
+                    />
                   ) : (
                     <HomePage
                       isAuthenticated={!!user}

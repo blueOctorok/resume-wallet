@@ -444,90 +444,120 @@ export default function ResumeBuilder({
       // Don't await - let it run in background
       void savePromise
 
-      // Create a completely new PDF-friendly HTML structure
-      // This avoids any CSS parsing issues with html2canvas
+      // Create a professional-looking PDF structure
+      // Uses a clean, modern design with subtle color accents
       const pdfContainer = document.createElement('div')
       pdfContainer.style.width = '8.5in'
-      pdfContainer.style.padding = '1in'
+      pdfContainer.style.padding = '0.75in'
       pdfContainer.style.backgroundColor = '#ffffff'
-      pdfContainer.style.color = '#000000'
-      pdfContainer.style.fontFamily = 'Arial, sans-serif'
-      pdfContainer.style.fontSize = '12px'
-      pdfContainer.style.lineHeight = '1.6'
+      pdfContainer.style.color = '#2d3748'
+      pdfContainer.style.fontFamily = 'Georgia, "Times New Roman", serif'
+      pdfContainer.style.fontSize = '11px'
+      pdfContainer.style.lineHeight = '1.5'
 
-      // Build PDF content manually to avoid CSS issues
+      // Professional color scheme
+      const primaryColor = '#1a365d' // Dark navy blue
+      const accentColor = '#2b6cb0' // Medium blue
+      const lightAccent = '#ebf4ff' // Very light blue
+      const textDark = '#1a202c'
+      const textMedium = '#4a5568'
+      const textLight = '#718096'
+
+      // Build PDF content with professional styling
       let htmlContent = ''
 
-      // Personal Information
+      // Header with name and contact info
       const fullName = `${personalInfo.firstName || ''} ${personalInfo.lastName || ''}`.trim() || 'Your Name'
-      htmlContent += `<div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #ccc;">
-        <h1 style="font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #000;">
-          ${fullName}</h1>
-        <div style="font-size: 11px; color: #333; line-height: 1.8;">
-          ${personalInfo.email ? `<div>📧 ${personalInfo.email}</div>` : ''}
-          ${personalInfo.phone ? `<div>📞 ${personalInfo.phone}</div>` : ''}
-          ${personalInfo.address || personalInfo.city || personalInfo.state
-            ? `<div>📍 ${[personalInfo.address, personalInfo.city, personalInfo.state, personalInfo.zipCode]
-                .filter(Boolean)
-                .join(', ')}</div>`
-            : ''}
-        </div>
-        ${personalInfo.professionalSummary
-          ? `<p style="margin-top: 10px; font-size: 11px; line-height: 1.6; color: #333;">${personalInfo.professionalSummary}</p>`
-          : ''}
-      </div>`
-
-      // CDL Information - CDL number excluded for privacy/security
-      if (cdlInfo.cdlClass || cdlInfo.endorsements.length > 0 || cdlInfo.expirationDate || cdlInfo.restrictions.length > 0) {
-        htmlContent += `<div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #ccc;">
-          <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #000;">CDL & License Information</h2>
-          <div style="font-size: 11px; color: #333; line-height: 1.8;">
-            ${cdlInfo.cdlState ? `<div><strong>Licensed State:</strong> ${cdlInfo.cdlState}</div>` : ''}
-            ${cdlInfo.cdlClass ? `<div><strong>Class:</strong> ${cdlInfo.cdlClass}</div>` : ''}
-            ${cdlInfo.endorsements.length > 0 ? `<div><strong>Endorsements:</strong> ${cdlInfo.endorsements.join(', ')}</div>` : ''}
-            ${cdlInfo.expirationDate ? `<div><strong>Expiration:</strong> ${new Date(cdlInfo.expirationDate).toLocaleDateString()}</div>` : ''}
-            ${cdlInfo.restrictions.length > 0 ? `<div><strong>Restrictions:</strong> ${cdlInfo.restrictions.join(', ')}</div>` : ''}
+      
+      // Contact info line
+      const contactParts = [
+        personalInfo.email,
+        personalInfo.phone,
+        [personalInfo.city, personalInfo.state].filter(Boolean).join(', ')
+      ].filter(Boolean)
+      
+      htmlContent += `
+        <div style="text-align: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid ${primaryColor};">
+          <h1 style="font-size: 28px; font-weight: bold; color: ${primaryColor}; margin: 0 0 8px 0; letter-spacing: 1px;">
+            ${fullName}
+          </h1>
+          <div style="font-size: 11px; color: ${textMedium}; font-family: Arial, sans-serif;">
+            ${contactParts.join('  •  ')}
           </div>
+          ${personalInfo.professionalSummary
+            ? `<p style="margin: 16px 40px 0 40px; font-size: 11px; line-height: 1.6; color: ${textMedium}; font-style: italic; text-align: justify;">${personalInfo.professionalSummary}</p>`
+            : ''}
         </div>`
+
+      // Section header helper
+      const sectionHeader = (title: string) => `
+        <div style="margin-bottom: 12px; border-bottom: 1px solid ${accentColor}; padding-bottom: 4px;">
+          <h2 style="font-size: 14px; font-weight: bold; color: ${primaryColor}; margin: 0; text-transform: uppercase; letter-spacing: 1px; font-family: Arial, sans-serif;">
+            ${title}
+          </h2>
+        </div>`
+
+      // CDL Information
+      if (cdlInfo.cdlClass || cdlInfo.endorsements.length > 0 || cdlInfo.expirationDate || cdlInfo.restrictions.length > 0) {
+        htmlContent += `<div style="margin-bottom: 20px;">`
+        htmlContent += sectionHeader('CDL & License Information')
+        htmlContent += `<div style="background: ${lightAccent}; padding: 12px 16px; border-radius: 4px; font-family: Arial, sans-serif;">`
+        
+        const cdlParts = []
+        if (cdlInfo.cdlClass) cdlParts.push(`<strong>Class ${cdlInfo.cdlClass}</strong>`)
+        if (cdlInfo.cdlState) cdlParts.push(`${cdlInfo.cdlState}`)
+        if (cdlInfo.endorsements.length > 0) cdlParts.push(`Endorsements: ${cdlInfo.endorsements.join(', ')}`)
+        if (cdlInfo.expirationDate) cdlParts.push(`Exp: ${new Date(cdlInfo.expirationDate).toLocaleDateString()}`)
+        if (cdlInfo.restrictions.length > 0) cdlParts.push(`Restrictions: ${cdlInfo.restrictions.join(', ')}`)
+        
+        htmlContent += `<div style="font-size: 11px; color: ${textDark};">${cdlParts.join('  |  ')}</div>`
+        htmlContent += `</div></div>`
       }
 
       // Employment History
       if (employments.length > 0) {
-        htmlContent += `<div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #ccc;">
-          <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 15px; color: #000;">Employment History</h2>`
-        employments.forEach((emp) => {
-          const startDate = emp.startDate ? new Date(emp.startDate).toLocaleDateString() : ''
-          const endDate = emp.isCurrent ? 'Present' : emp.endDate ? new Date(emp.endDate).toLocaleDateString() : ''
-          htmlContent += `<div style="margin-bottom: 15px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-              <div>
-                <strong style="font-size: 13px;">${emp.position || 'Position'}</strong>
-                <div style="font-size: 11px; color: #666;">${emp.companyName || 'Company'}${emp.location ? ` • ${emp.location}` : ''}</div>
+        htmlContent += `<div style="margin-bottom: 20px;">`
+        htmlContent += sectionHeader('Professional Experience')
+        employments.forEach((emp, index) => {
+          const startDate = emp.startDate ? new Date(emp.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''
+          const endDate = emp.isCurrent ? 'Present' : emp.endDate ? new Date(emp.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''
+          htmlContent += `
+            <div style="margin-bottom: ${index < employments.length - 1 ? '16px' : '0'};">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+                <div>
+                  <strong style="font-size: 12px; color: ${textDark};">${emp.position || 'Position'}</strong>
+                  <span style="font-size: 11px; color: ${accentColor}; margin-left: 8px;">${emp.companyName || 'Company'}${emp.location ? `, ${emp.location}` : ''}</span>
+                </div>
+                <div style="font-size: 10px; color: ${textLight}; font-family: Arial, sans-serif; white-space: nowrap;">${startDate} – ${endDate}</div>
               </div>
-              <div style="font-size: 11px; color: #666;">${startDate} - ${endDate}</div>
-            </div>
-            ${emp.responsibilities.length > 0
-              ? `<ul style="margin: 5px 0; padding-left: 20px; font-size: 11px; color: #333;">
-                  ${emp.responsibilities.map((r) => `<li>${r}</li>`).join('')}
-                </ul>`
-              : ''}
-          </div>`
+              ${emp.responsibilities.length > 0
+                ? `<ul style="margin: 6px 0 0 0; padding-left: 18px; font-size: 10px; color: ${textMedium}; font-family: Arial, sans-serif;">
+                    ${emp.responsibilities.map((r) => `<li style="margin-bottom: 3px;">${r}</li>`).join('')}
+                  </ul>`
+                : ''}
+            </div>`
         })
         htmlContent += `</div>`
       }
 
       // Education
       if (educations.length > 0) {
-        htmlContent += `<div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #ccc;">
-          <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 15px; color: #000;">Education & Training</h2>`
-        educations.forEach((edu) => {
-          htmlContent += `<div style="margin-bottom: 10px;">
-            <strong style="font-size: 12px;">${edu.degree || 'Degree'}${edu.field ? ` in ${edu.field}` : ''}</strong>
-            <div style="font-size: 11px; color: #666;">${edu.school}${edu.year ? ` • ${edu.year}` : ''}</div>
-            ${edu.certifications.length > 0
-              ? `<div style="font-size: 11px; color: #333; margin-top: 3px;">Certifications: ${edu.certifications.join(', ')}</div>`
-              : ''}
-          </div>`
+        htmlContent += `<div style="margin-bottom: 20px;">`
+        htmlContent += sectionHeader('Education & Training')
+        educations.forEach((edu, index) => {
+          htmlContent += `
+            <div style="margin-bottom: ${index < educations.length - 1 ? '10px' : '0'};">
+              <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <div>
+                  <strong style="font-size: 11px; color: ${textDark};">${edu.degree || 'Degree'}${edu.field ? ` in ${edu.field}` : ''}</strong>
+                  <span style="font-size: 11px; color: ${textMedium}; margin-left: 8px;">– ${edu.school}</span>
+                </div>
+                ${edu.year ? `<div style="font-size: 10px; color: ${textLight}; font-family: Arial, sans-serif;">${edu.year}</div>` : ''}
+              </div>
+              ${edu.certifications.length > 0
+                ? `<div style="font-size: 10px; color: ${accentColor}; margin-top: 2px; font-family: Arial, sans-serif;">Certifications: ${edu.certifications.join(', ')}</div>`
+                : ''}
+            </div>`
         })
         htmlContent += `</div>`
       }
@@ -543,33 +573,37 @@ export default function ResumeBuilder({
           {} as Record<Skill['category'], Skill[]>
         )
 
-        htmlContent += `<div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #ccc;">
-          <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 15px; color: #000;">Skills & Equipment</h2>`
+        htmlContent += `<div style="margin-bottom: 20px;">`
+        htmlContent += sectionHeader('Skills & Equipment')
+        htmlContent += `<div style="font-family: Arial, sans-serif;">`
         SKILL_CATEGORIES.forEach((category) => {
           const categorySkills = skillsByCategory[category.value] || []
           if (categorySkills.length > 0) {
-            htmlContent += `<div style="margin-bottom: 8px;">
-              <strong style="font-size: 11px;">${category.label}:</strong>
-              <span style="font-size: 11px; color: #333;"> ${categorySkills.map((s) => s.name).join(', ')}</span>
-            </div>`
+            htmlContent += `
+              <div style="margin-bottom: 6px; font-size: 10px;">
+                <strong style="color: ${primaryColor};">${category.label}:</strong>
+                <span style="color: ${textMedium}; margin-left: 6px;">${categorySkills.map((s) => s.name).join('  •  ')}</span>
+              </div>`
           }
         })
-        htmlContent += `</div>`
+        htmlContent += `</div></div>`
       }
 
       // References
       if (references.length > 0) {
-        htmlContent += `<div style="margin-bottom: 20px;">
-          <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 15px; color: #000;">Professional References</h2>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">`
+        htmlContent += `<div style="margin-bottom: 20px;">`
+        htmlContent += sectionHeader('Professional References')
+        htmlContent += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-family: Arial, sans-serif;">`
         references.forEach((ref) => {
-          htmlContent += `<div>
-            <strong style="font-size: 12px;">${ref.name || 'Name'}</strong>
-            <div style="font-size: 11px; color: #666;">${ref.title}${ref.company ? ` at ${ref.company}` : ''}</div>
-            ${ref.relationship ? `<div style="font-size: 10px; color: #999; margin-top: 2px;">${ref.relationship}</div>` : ''}
-            ${ref.phone ? `<div style="font-size: 10px; color: #666;">📞 ${ref.phone}</div>` : ''}
-            ${ref.email ? `<div style="font-size: 10px; color: #666;">📧 ${ref.email}</div>` : ''}
-          </div>`
+          htmlContent += `
+            <div style="background: ${lightAccent}; padding: 10px 12px; border-radius: 4px; border-left: 3px solid ${accentColor};">
+              <strong style="font-size: 11px; color: ${textDark}; display: block;">${ref.name || 'Name'}</strong>
+              <div style="font-size: 10px; color: ${textMedium};">${ref.title}${ref.company ? ` at ${ref.company}` : ''}</div>
+              ${ref.relationship ? `<div style="font-size: 9px; color: ${textLight}; margin-top: 4px; font-style: italic;">${ref.relationship}</div>` : ''}
+              <div style="font-size: 9px; color: ${textMedium}; margin-top: 4px;">
+                ${ref.phone ? `${ref.phone}` : ''}${ref.phone && ref.email ? '  •  ' : ''}${ref.email ? `${ref.email}` : ''}
+              </div>
+            </div>`
         })
         htmlContent += `</div></div>`
       }
