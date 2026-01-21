@@ -21,7 +21,6 @@ import {
   Sparkles
 } from 'lucide-react'
 import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 import { profileToResumeBuilder, resumeBuilderToProfile } from '@/lib/profile-mapper'
 import type { UnifiedDriverProfile } from '@/types/driver-profile'
 
@@ -444,125 +443,193 @@ export default function ResumeBuilder({
       // Don't await - let it run in background
       void savePromise
 
-      // Create a professional-looking PDF structure
-      // Uses a clean, modern design with subtle color accents
-      const pdfContainer = document.createElement('div')
-      pdfContainer.style.width = '8.5in'
-      pdfContainer.style.padding = '0.75in'
-      pdfContainer.style.backgroundColor = '#ffffff'
-      pdfContainer.style.color = '#2d3748'
-      pdfContainer.style.fontFamily = 'Georgia, "Times New Roman", serif'
-      pdfContainer.style.fontSize = '11px'
-      pdfContainer.style.lineHeight = '1.5'
+      // Generate PDF directly using jsPDF's native text API
+      // This is more reliable than html2canvas for styling
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const margin = 20
+      const contentWidth = pageWidth - (margin * 2)
+      let y = margin
 
-      // Professional color scheme
-      const primaryColor = '#1a365d' // Dark navy blue
-      const accentColor = '#2b6cb0' // Medium blue
-      const lightAccent = '#ebf4ff' // Very light blue
-      const textDark = '#1a202c'
-      const textMedium = '#4a5568'
-      const textLight = '#718096'
+      // Color scheme (RGB values for jsPDF)
+      const primaryColor = [26, 54, 93] as [number, number, number] // Navy blue
+      const accentColor = [43, 108, 176] as [number, number, number] // Medium blue
+      const textDark = [26, 32, 44] as [number, number, number]
+      const textMedium = [74, 85, 104] as [number, number, number]
+      const textLight = [113, 128, 150] as [number, number, number]
+      const lightAccentBg = [235, 244, 255] as [number, number, number]
 
-      // Build PDF content with professional styling
-      let htmlContent = ''
+      // Helper to check if we need a new page
+      const checkPageBreak = (neededSpace: number) => {
+        if (y + neededSpace > pdf.internal.pageSize.getHeight() - margin) {
+          pdf.addPage()
+          y = margin
+        }
+      }
 
-      // Header with name and contact info
+      // Helper to draw a section header with underline
+      const drawSectionHeader = (title: string) => {
+        checkPageBreak(15)
+        pdf.setFontSize(12)
+        pdf.setFont('helvetica', 'bold')
+        pdf.setTextColor(...primaryColor)
+        pdf.text(title.toUpperCase(), margin, y)
+        y += 2
+        pdf.setDrawColor(...accentColor)
+        pdf.setLineWidth(0.5)
+        pdf.line(margin, y, pageWidth - margin, y)
+        y += 6
+      }
+
+      // === HEADER ===
       const fullName = `${personalInfo.firstName || ''} ${personalInfo.lastName || ''}`.trim() || 'Your Name'
       
-      // Contact info line
+      // Name - centered, large, navy
+      pdf.setFontSize(24)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setTextColor(...primaryColor)
+      pdf.text(fullName, pageWidth / 2, y, { align: 'center' })
+      y += 8
+
+      // Contact info - centered, smaller
       const contactParts = [
         personalInfo.email,
         personalInfo.phone,
         [personalInfo.city, personalInfo.state].filter(Boolean).join(', ')
       ].filter(Boolean)
       
-      htmlContent += `
-        <div style="text-align: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid ${primaryColor};">
-          <h1 style="font-size: 28px; font-weight: bold; color: ${primaryColor}; margin: 0 0 8px 0; letter-spacing: 1px;">
-            ${fullName}
-          </h1>
-          <div style="font-size: 11px; color: ${textMedium}; font-family: Arial, sans-serif;">
-            ${contactParts.join('  •  ')}
-          </div>
-          ${personalInfo.professionalSummary
-            ? `<p style="margin: 16px 40px 0 40px; font-size: 11px; line-height: 1.6; color: ${textMedium}; font-style: italic; text-align: justify;">${personalInfo.professionalSummary}</p>`
-            : ''}
-        </div>`
+      if (contactParts.length > 0) {
+        pdf.setFontSize(10)
+        pdf.setFont('helvetica', 'normal')
+        pdf.setTextColor(...textMedium)
+        pdf.text(contactParts.join('  •  '), pageWidth / 2, y, { align: 'center' })
+        y += 6
+      }
 
-      // Section header helper
-      const sectionHeader = (title: string) => `
-        <div style="margin-bottom: 12px; border-bottom: 1px solid ${accentColor}; padding-bottom: 4px;">
-          <h2 style="font-size: 14px; font-weight: bold; color: ${primaryColor}; margin: 0; text-transform: uppercase; letter-spacing: 1px; font-family: Arial, sans-serif;">
-            ${title}
-          </h2>
-        </div>`
+      // Professional summary
+      if (personalInfo.professionalSummary) {
+        pdf.setFontSize(9)
+        pdf.setFont('helvetica', 'italic')
+        pdf.setTextColor(...textMedium)
+        const summaryLines = pdf.splitTextToSize(personalInfo.professionalSummary, contentWidth - 20)
+        pdf.text(summaryLines, pageWidth / 2, y, { align: 'center', maxWidth: contentWidth - 20 })
+        y += summaryLines.length * 4 + 4
+      }
 
-      // CDL Information
-      if (cdlInfo.cdlClass || cdlInfo.endorsements.length > 0 || cdlInfo.expirationDate || cdlInfo.restrictions.length > 0) {
-        htmlContent += `<div style="margin-bottom: 20px;">`
-        htmlContent += sectionHeader('CDL & License Information')
-        htmlContent += `<div style="background: ${lightAccent}; padding: 12px 16px; border-radius: 4px; font-family: Arial, sans-serif;">`
+      // Header underline
+      pdf.setDrawColor(...primaryColor)
+      pdf.setLineWidth(0.8)
+      pdf.line(margin, y, pageWidth - margin, y)
+      y += 10
+
+      // === CDL INFORMATION ===
+      if (cdlInfo.cdlClass || cdlInfo.endorsements.length > 0 || cdlInfo.expirationDate) {
+        drawSectionHeader('CDL & License Information')
+        
+        // Light blue background box
+        const boxHeight = 10
+        pdf.setFillColor(...lightAccentBg)
+        pdf.rect(margin, y - 4, contentWidth, boxHeight, 'F')
         
         const cdlParts = []
-        if (cdlInfo.cdlClass) cdlParts.push(`<strong>Class ${cdlInfo.cdlClass}</strong>`)
-        if (cdlInfo.cdlState) cdlParts.push(`${cdlInfo.cdlState}`)
+        if (cdlInfo.cdlClass) cdlParts.push(`Class ${cdlInfo.cdlClass}`)
+        if (cdlInfo.cdlState) cdlParts.push(cdlInfo.cdlState)
         if (cdlInfo.endorsements.length > 0) cdlParts.push(`Endorsements: ${cdlInfo.endorsements.join(', ')}`)
         if (cdlInfo.expirationDate) cdlParts.push(`Exp: ${new Date(cdlInfo.expirationDate).toLocaleDateString()}`)
-        if (cdlInfo.restrictions.length > 0) cdlParts.push(`Restrictions: ${cdlInfo.restrictions.join(', ')}`)
         
-        htmlContent += `<div style="font-size: 11px; color: ${textDark};">${cdlParts.join('  |  ')}</div>`
-        htmlContent += `</div></div>`
+        pdf.setFontSize(10)
+        pdf.setFont('helvetica', 'normal')
+        pdf.setTextColor(...textDark)
+        pdf.text(cdlParts.join('  |  '), margin + 4, y + 2)
+        y += boxHeight + 6
       }
 
-      // Employment History
+      // === EMPLOYMENT HISTORY ===
       if (employments.length > 0) {
-        htmlContent += `<div style="margin-bottom: 20px;">`
-        htmlContent += sectionHeader('Professional Experience')
+        drawSectionHeader('Professional Experience')
+        
         employments.forEach((emp, index) => {
+          checkPageBreak(20)
+          
           const startDate = emp.startDate ? new Date(emp.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''
           const endDate = emp.isCurrent ? 'Present' : emp.endDate ? new Date(emp.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''
-          htmlContent += `
-            <div style="margin-bottom: ${index < employments.length - 1 ? '16px' : '0'};">
-              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
-                <div>
-                  <strong style="font-size: 12px; color: ${textDark};">${emp.position || 'Position'}</strong>
-                  <span style="font-size: 11px; color: ${accentColor}; margin-left: 8px;">${emp.companyName || 'Company'}${emp.location ? `, ${emp.location}` : ''}</span>
-                </div>
-                <div style="font-size: 10px; color: ${textLight}; font-family: Arial, sans-serif; white-space: nowrap;">${startDate} – ${endDate}</div>
-              </div>
-              ${emp.responsibilities.length > 0
-                ? `<ul style="margin: 6px 0 0 0; padding-left: 18px; font-size: 10px; color: ${textMedium}; font-family: Arial, sans-serif;">
-                    ${emp.responsibilities.map((r) => `<li style="margin-bottom: 3px;">${r}</li>`).join('')}
-                  </ul>`
-                : ''}
-            </div>`
+          const dateRange = `${startDate} – ${endDate}`
+
+          // Position (bold) and Company (accent color)
+          pdf.setFontSize(11)
+          pdf.setFont('helvetica', 'bold')
+          pdf.setTextColor(...textDark)
+          pdf.text(emp.position || 'Position', margin, y)
+          
+          const positionWidth = pdf.getTextWidth(emp.position || 'Position')
+          pdf.setFont('helvetica', 'normal')
+          pdf.setTextColor(...accentColor)
+          pdf.text(` – ${emp.companyName || 'Company'}${emp.location ? `, ${emp.location}` : ''}`, margin + positionWidth, y)
+          
+          // Date range (right aligned)
+          pdf.setFontSize(9)
+          pdf.setTextColor(...textLight)
+          pdf.text(dateRange, pageWidth - margin, y, { align: 'right' })
+          y += 5
+
+          // Responsibilities
+          if (emp.responsibilities.length > 0) {
+            pdf.setFontSize(9)
+            pdf.setTextColor(...textMedium)
+            emp.responsibilities.forEach(resp => {
+              checkPageBreak(6)
+              const respLines = pdf.splitTextToSize(`• ${resp}`, contentWidth - 10)
+              pdf.text(respLines, margin + 4, y)
+              y += respLines.length * 4
+            })
+          }
+          
+          if (index < employments.length - 1) y += 4
         })
-        htmlContent += `</div>`
+        y += 4
       }
 
-      // Education
+      // === EDUCATION ===
       if (educations.length > 0) {
-        htmlContent += `<div style="margin-bottom: 20px;">`
-        htmlContent += sectionHeader('Education & Training')
+        drawSectionHeader('Education & Training')
+        
         educations.forEach((edu, index) => {
-          htmlContent += `
-            <div style="margin-bottom: ${index < educations.length - 1 ? '10px' : '0'};">
-              <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                <div>
-                  <strong style="font-size: 11px; color: ${textDark};">${edu.degree || 'Degree'}${edu.field ? ` in ${edu.field}` : ''}</strong>
-                  <span style="font-size: 11px; color: ${textMedium}; margin-left: 8px;">– ${edu.school}</span>
-                </div>
-                ${edu.year ? `<div style="font-size: 10px; color: ${textLight}; font-family: Arial, sans-serif;">${edu.year}</div>` : ''}
-              </div>
-              ${edu.certifications.length > 0
-                ? `<div style="font-size: 10px; color: ${accentColor}; margin-top: 2px; font-family: Arial, sans-serif;">Certifications: ${edu.certifications.join(', ')}</div>`
-                : ''}
-            </div>`
+          checkPageBreak(12)
+          
+          // Degree and field
+          pdf.setFontSize(10)
+          pdf.setFont('helvetica', 'bold')
+          pdf.setTextColor(...textDark)
+          pdf.text(`${edu.degree || 'Degree'}${edu.field ? ` in ${edu.field}` : ''}`, margin, y)
+          
+          // School
+          const degreeWidth = pdf.getTextWidth(`${edu.degree || 'Degree'}${edu.field ? ` in ${edu.field}` : ''}`)
+          pdf.setFont('helvetica', 'normal')
+          pdf.setTextColor(...textMedium)
+          pdf.text(` – ${edu.school}`, margin + degreeWidth, y)
+          
+          // Year
+          if (edu.year) {
+            pdf.setFontSize(9)
+            pdf.setTextColor(...textLight)
+            pdf.text(edu.year, pageWidth - margin, y, { align: 'right' })
+          }
+          y += 5
+
+          // Certifications
+          if (edu.certifications.length > 0) {
+            pdf.setFontSize(9)
+            pdf.setTextColor(...accentColor)
+            pdf.text(`Certifications: ${edu.certifications.join(', ')}`, margin + 4, y)
+            y += 4
+          }
+          
+          if (index < educations.length - 1) y += 2
         })
-        htmlContent += `</div>`
+        y += 4
       }
 
-      // Skills
+      // === SKILLS ===
       if (skills.length > 0) {
         const skillsByCategory = skills.reduce(
           (acc, skill) => {
@@ -573,87 +640,93 @@ export default function ResumeBuilder({
           {} as Record<Skill['category'], Skill[]>
         )
 
-        htmlContent += `<div style="margin-bottom: 20px;">`
-        htmlContent += sectionHeader('Skills & Equipment')
-        htmlContent += `<div style="font-family: Arial, sans-serif;">`
+        drawSectionHeader('Skills & Equipment')
+        
         SKILL_CATEGORIES.forEach((category) => {
           const categorySkills = skillsByCategory[category.value] || []
           if (categorySkills.length > 0) {
-            htmlContent += `
-              <div style="margin-bottom: 6px; font-size: 10px;">
-                <strong style="color: ${primaryColor};">${category.label}:</strong>
-                <span style="color: ${textMedium}; margin-left: 6px;">${categorySkills.map((s) => s.name).join('  •  ')}</span>
-              </div>`
+            checkPageBreak(8)
+            
+            pdf.setFontSize(9)
+            pdf.setFont('helvetica', 'bold')
+            pdf.setTextColor(...primaryColor)
+            pdf.text(`${category.label}:`, margin, y)
+            
+            const labelWidth = pdf.getTextWidth(`${category.label}: `)
+            pdf.setFont('helvetica', 'normal')
+            pdf.setTextColor(...textMedium)
+            const skillText = categorySkills.map((s) => s.name).join('  •  ')
+            const skillLines = pdf.splitTextToSize(skillText, contentWidth - labelWidth - 5)
+            pdf.text(skillLines, margin + labelWidth, y)
+            y += skillLines.length * 4 + 2
           }
         })
-        htmlContent += `</div></div>`
+        y += 2
       }
 
-      // References
+      // === REFERENCES ===
       if (references.length > 0) {
-        htmlContent += `<div style="margin-bottom: 20px;">`
-        htmlContent += sectionHeader('Professional References')
-        htmlContent += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-family: Arial, sans-serif;">`
-        references.forEach((ref) => {
-          htmlContent += `
-            <div style="background: ${lightAccent}; padding: 10px 12px; border-radius: 4px; border-left: 3px solid ${accentColor};">
-              <strong style="font-size: 11px; color: ${textDark}; display: block;">${ref.name || 'Name'}</strong>
-              <div style="font-size: 10px; color: ${textMedium};">${ref.title}${ref.company ? ` at ${ref.company}` : ''}</div>
-              ${ref.relationship ? `<div style="font-size: 9px; color: ${textLight}; margin-top: 4px; font-style: italic;">${ref.relationship}</div>` : ''}
-              <div style="font-size: 9px; color: ${textMedium}; margin-top: 4px;">
-                ${ref.phone ? `${ref.phone}` : ''}${ref.phone && ref.email ? '  •  ' : ''}${ref.email ? `${ref.email}` : ''}
-              </div>
-            </div>`
+        drawSectionHeader('Professional References')
+        
+        const refWidth = (contentWidth - 10) / 2
+        let refX = margin
+        let refStartY = y
+        
+        references.forEach((ref, index) => {
+          checkPageBreak(25)
+          
+          // Alternate columns
+          if (index > 0 && index % 2 === 0) {
+            refX = margin
+            y = refStartY + 22
+            refStartY = y
+          } else if (index % 2 === 1) {
+            refX = margin + refWidth + 10
+            y = refStartY
+          }
+
+          // Light blue background with accent border
+          pdf.setFillColor(...lightAccentBg)
+          pdf.setDrawColor(...accentColor)
+          pdf.rect(refX, y - 4, refWidth, 20, 'F')
+          pdf.setLineWidth(1)
+          pdf.line(refX, y - 4, refX, y + 16)
+          
+          // Name
+          pdf.setFontSize(10)
+          pdf.setFont('helvetica', 'bold')
+          pdf.setTextColor(...textDark)
+          pdf.text(ref.name || 'Name', refX + 4, y)
+          
+          // Title and company
+          pdf.setFontSize(9)
+          pdf.setFont('helvetica', 'normal')
+          pdf.setTextColor(...textMedium)
+          pdf.text(`${ref.title}${ref.company ? ` at ${ref.company}` : ''}`, refX + 4, y + 4)
+          
+          // Contact info
+          const contactInfo = [ref.phone, ref.email].filter(Boolean).join('  •  ')
+          if (contactInfo) {
+            pdf.setFontSize(8)
+            pdf.setTextColor(...textLight)
+            pdf.text(contactInfo, refX + 4, y + 8)
+          }
         })
-        htmlContent += `</div></div>`
       }
 
-      pdfContainer.innerHTML = htmlContent
-
-      // Position off-screen
-      pdfContainer.style.position = 'absolute'
-      pdfContainer.style.left = '-9999px'
-      pdfContainer.style.top = '0'
-      document.body.appendChild(pdfContainer)
-
-      // Convert to canvas
-      const canvas = await html2canvas(pdfContainer, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        onclone: (clonedDoc) => {
-          // Ensure all styles are applied in the cloned document
-          const clonedContainer = clonedDoc.getElementById(pdfContainer.id) || clonedDoc.body.firstElementChild
-          if (clonedContainer) {
-            clonedContainer.setAttribute('style', pdfContainer.getAttribute('style') || '')
-          }
-        },
-      })
-
-      // Cleanup
-      document.body.removeChild(pdfContainer)
-
-      const imgData = canvas.toDataURL('image/png')
-      const pdf = new jsPDF('p', 'mm', 'a4')
-      const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = pdf.internal.pageSize.getHeight()
-      const imgWidth = canvas.width
-      const imgHeight = canvas.height
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight)
-      const imgScaledWidth = imgWidth * ratio
-      const imgScaledHeight = imgHeight * ratio
-
-      // Center the image
-      const xOffset = (pdfWidth - imgScaledWidth) / 2
-      const yOffset = (pdfHeight - imgScaledHeight) / 2
-
-      pdf.addImage(imgData, 'PNG', xOffset, yOffset, imgScaledWidth, imgScaledHeight)
-
-      // Generate filename
-      const firstName = (personalInfo.firstName || 'Resume').replace(/[^a-z0-9]/gi, '_')
-      const lastName = (personalInfo.lastName || 'Driver').replace(/[^a-z0-9]/gi, '_')
-      const filename = `${firstName}_${lastName}_Resume.pdf`
+      // Generate clean filename from name or fallback
+      let filename = 'Resume.pdf'
+      const firstName = personalInfo.firstName?.trim() || ''
+      const lastName = personalInfo.lastName?.trim() || ''
+      
+      if (firstName || lastName) {
+        // Only use name if it looks like a real name (not an IPFS hash or weird value)
+        const fullName = `${firstName} ${lastName}`.trim()
+        if (fullName.length < 50 && /^[a-zA-Z\s'-]+$/.test(fullName)) {
+          const cleanName = fullName.replace(/[^a-z0-9\s-]/gi, '_').replace(/\s+/g, '_').toLowerCase()
+          filename = `${cleanName}_resume.pdf`
+        }
+      }
 
       pdf.save(filename)
       setSaveSuccess(true)

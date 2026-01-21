@@ -117,6 +117,128 @@ Completely redesigned the generated PDF for a more professional appearance:
 - Removed hover effects from Driver Hub and Employer Hub buttons
 - The rotating gold border provides enough visual interest
 
+#### Built Resume IPFS Fix
+Built resumes are saved with a placeholder `ipfs_hash` like `built_1768595334400` until they're verified and uploaded to IPFS. The Hub now:
+- Detects placeholder hashes (starting with `built_`)
+- Shows "DRAFT" status badge instead of "PENDING" for unverified built resumes
+- Hides the "View / Download" button for drafts
+- Shows a helpful message: "Resume not yet on IPFS - Go to Resume Management and click Verify"
+- Only shows the IPFS hash when it's a real CID
+
+#### Resume Download Filename Fix
+Cross-origin URLs ignore the `download` attribute, so PDFs were downloading with the IPFS hash as filename. Now:
+- "View" button opens PDF in new tab
+- "Download" button uses fetch + blob to download with clean filename like `Resume_Title.pdf`
+
+#### MonthYearPicker Dropdown Fix (PersonalInfoForm3)
+The month picker in DOT application employment history was only showing Jan-Apr (first row). The dropdown was being clipped by parent containers with `overflow-hidden`.
+- Fixed by rendering dropdown via React portal to `document.body`
+- Now all 12 months display correctly in 3 rows
+
+#### Employment History Date Validation (PersonalInfoForm3)
+Added strict date validation to enforce proper chronological ordering:
+1. **Within each entry**: "To" date must be >= "From" date (can't end before you started)
+2. **Between entries**: Each entry's "To" date must be <= previous entry's "From" date (chronological order)
+3. **Only first entry can be "Present"** - subsequent entries must have ended before the current/most recent one started
+4. **Visual feedback**: Invalid months are grayed out/disabled in the picker, error messages explain what's wrong
+5. **Helper text**: First entry shows tip to select "Present" if currently employed there
+
+### Employer Hub Implementation
+
+Full employer dashboard replacing the placeholder EmployerDashboard component.
+
+#### API Endpoint (`/api/employer/hub`)
+Single endpoint that aggregates all employer data:
+- Company profile
+- Job postings with application counts
+- All applicants across all jobs
+- MVR orders placed for applicants
+- Pipeline stats (new, reviewing, interviewing, offer sent, hired, rejected)
+- Quick stats (active jobs, total applicants, hires this month)
+
+#### EmployerHub Component Features
+1. **Company Header**: Shows company name, location, DOT number, verification status
+2. **Stats Cards**: Active jobs, total applicants, interviewing, hires
+3. **Hiring Pipeline**: Visual flow showing applicants at each stage
+4. **Recent Applicants Section**: List of latest applicants with status badges
+5. **Job Postings Section**: All jobs with application counts, active/inactive status
+6. **MVR Orders Section**: Track MVR reports ordered for applicants
+7. **Quick Actions**: Post job, view all applicants, company profile, reports
+
+#### Detail Modals
+- **Applicant Detail**: Contact info, CDL details, resume status, cover letter, quick actions (order MVR)
+- **Job Detail**: Location, salary, equipment type, application stats
+- **MVR Detail**: Order status, license status, points, violations
+
+#### Company Setup Flow
+If employer hasn't created a company profile yet, shows a setup prompt instead of the hub.
+
+#### Integration
+- Replaced `EmployerDashboard` with `EmployerHub` in page.tsx
+- Both "Driver Hub" and "Employer Hub" buttons navigate to their respective hubs
+- Same navigation pattern as Driver Hub but with employer-specific pages
+
+### Veree Card - QR Code Sharing Feature
+
+Drivers can now share their verified credentials via QR code at job fairs and meetups.
+
+#### Database Migration (`008_driver_share_profile.sql`)
+- `share_token` column on `driver_profiles` - unique URL-safe 12-char token
+- `share_settings` JSONB - privacy controls for what's visible
+- `share_views_count` - track how many times profile viewed
+- `driver_leads` table - track employer connections from QR scans
+
+#### API Endpoints
+- `GET /api/driver/share` - Get current share token and settings
+- `POST /api/driver/share` - Generate new share token
+- `PATCH /api/driver/share` - Update privacy settings
+- `GET /api/driver/public/[token]` - Public profile view (no auth)
+- `POST /api/driver/public/[token]` - Create connection/lead
+- `GET /api/driver/leads` - Get all employer connections
+- `PATCH /api/driver/leads` - Update lead status
+
+#### Public Profile Page (`/d/[token]`)
+- Clean, mobile-first design for employer viewing
+- Shows verified credentials based on privacy settings:
+  - CDL information (class, state, endorsements)
+  - Resume (with view/download if verified)
+  - DOT Application completion status
+  - MVR summary (clean/violations)
+  - Employment history
+  - Contact info (if enabled)
+- "I'm Hiring - Connect" button creates a lead
+- Connection form collects: name, company, email, phone, event name, notes
+
+#### ShareProfileCard Component (Driver Hub)
+- Generate QR code with one click
+- Download QR as image for printing
+- Copy profile link to clipboard
+- Preview profile in new tab
+- Regenerate token (invalidates old links)
+- Privacy settings toggles:
+  - Show Resume
+  - Show DOT Application
+  - Show MVR Record
+  - Show Contact Info
+  - Allow Employers to Connect
+- View count display
+
+#### Lead/Connection Flow
+1. Driver generates QR in their Hub
+2. Driver shows QR at job fair
+3. Employer scans → sees verified profile
+4. Employer clicks "Connect" → fills form
+5. Lead created in `driver_leads` table
+6. Driver sees new lead in their Hub (via `/api/driver/leads`)
+7. Driver can mark lead as: contacted, interviewing, hired, archived
+
+#### Key Benefits
+- Instant credential verification at job fairs
+- No paper resumes needed
+- Verified blockchain credentials visible
+- Reduces long application processes
+- Digital "handshake" between driver and employer
+
 ### **API: /api/driver/hub**
 
 Single endpoint that returns:

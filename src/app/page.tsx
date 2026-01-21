@@ -220,12 +220,13 @@ const HomePage = dynamic(
 
 // DriverHomePage removed - replaced by DriverHub as the default landing for drivers
 
-const EmployerDashboard = dynamic(
-  () => import('@/components/EmployerDashboard').then((mod) => mod.default),
+// EmployerHub replaces EmployerDashboard - full employer functionality
+const EmployerHub = dynamic(
+  () => import('@/components/EmployerHub').then((mod) => mod.default),
   {
     ssr: false,
     loading: () => (
-      <LoadingScreen message='Loading dashboard...' fullScreen={false} />
+      <LoadingScreen message='Loading Employer Hub...' fullScreen={false} />
     ),
   }
 )
@@ -482,7 +483,7 @@ const HomeContent = () => {
           }
 
           // Both drivers and employers start at home page
-          // Drivers see DriverHub, employers see EmployerDashboard
+          // Drivers see DriverHub, employers see EmployerHub
           setCurrentPage(null)
         } else {
           const errorData = await response.json().catch(() => ({}))
@@ -999,9 +1000,9 @@ const HomeContent = () => {
                   setCurrentPage(null) // null shows DriverHub for drivers
                 } else if (normalizedRole === 'employer') {
                   console.log(
-                    '[ROLE FETCH] Employer role - showing EmployerDashboard'
+                    '[ROLE FETCH] Employer role - showing EmployerHub'
                   )
-                  setCurrentPage(null) // null shows employer dashboard
+                  setCurrentPage(null) // null shows EmployerHub
                 }
               }
             }
@@ -2253,12 +2254,20 @@ const HomeContent = () => {
               />
             )}
 
-          {/* Employer Dashboard - Show if user is an employer and on home page */}
+          {/* Employer Hub - Show if user is an employer and on home page */}
           {user &&
             userRole === 'employer' &&
             !isRoleLoading &&
             !currentPage && (
-              <EmployerDashboard companyName={companyName || undefined} />
+              <EmployerHub 
+                walletAddress={user.address}
+                onNavigate={(page) => {
+                  // Map hub navigation to page navigation
+                  if (page === 'post-job' || page === 'jobs' || page === 'applicants' || page === 'company-profile' || page === 'reports') {
+                    setCurrentPage(page)
+                  }
+                }}
+              />
             )}
 
           {/* Driver Content - Show if user is a driver or has not selected role yet */}

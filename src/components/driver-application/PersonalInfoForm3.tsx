@@ -18,7 +18,21 @@ const HISTORY_TYPES = [
   { value: 'military' as const, label: 'Military Service', icon: Shield, color: 'bg-red-500' },
 ]
 
-// Month/Year Picker Component
+// Helper to parse MM/YYYY or "Present" to comparable number (YYYYMM format)
+function parseDateToNumber(dateStr: string): number | null {
+  if (!dateStr) return null
+  if (dateStr.toLowerCase() === 'present') {
+    const now = new Date()
+    return now.getFullYear() * 100 + (now.getMonth() + 1)
+  }
+  const match = dateStr.match(/^(\d{1,2})\/(\d{4})$/)
+  if (match) {
+    return parseInt(match[2]) * 100 + parseInt(match[1])
+  }
+  return null
+}
+
+// Month/Year Picker Component - Uses portal to avoid overflow clipping
 function MonthYearPicker({
   value,
   onChange,
@@ -26,6 +40,8 @@ function MonthYearPicker({
   allowPresent = false,
   error = false,
   theme = 'dark',
+  minDate,
+  maxDate,
 }: {
   value: string
   onChange: (value: string) => void
@@ -33,6 +49,8 @@ function MonthYearPicker({
   allowPresent?: boolean
   error?: boolean
   theme?: string
+  minDate?: string  // MM/YYYY format - earliest selectable date
+  maxDate?: string  // MM/YYYY format - latest selectable date (or "Present")
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [selectedYear, setSelectedYear] = useState(() => {
@@ -42,6 +60,8 @@ function MonthYearPicker({
     }
     return new Date().getFullYear()
   })
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 })
+  const buttonRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   
   const months = [
@@ -52,10 +72,38 @@ function MonthYearPicker({
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: 50 }, (_, i) => currentYear - i)
   
+  // Parse min/max constraints
+  const minNum = parseDateToNumber(minDate || '')
+  const maxNum = parseDateToNumber(maxDate || 'Present') // Default max is present
+  
+  // Check if a month is disabled based on min/max constraints
+  const isMonthDisabled = (monthIndex: number, year: number): boolean => {
+    const dateNum = year * 100 + (monthIndex + 1)
+    if (minNum && dateNum < minNum) return true
+    if (maxNum && dateNum > maxNum) return true
+    return false
+  }
+  
+  // Update dropdown position when opening
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      })
+    }
+  }, [isOpen])
+  
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(target) &&
+        buttonRef.current && !buttonRef.current.contains(target)
+      ) {
         setIsOpen(false)
       }
     }
@@ -64,6 +112,7 @@ function MonthYearPicker({
   }, [])
   
   const handleMonthSelect = (monthIndex: number) => {
+    if (isMonthDisabled(monthIndex, selectedYear)) return
     const formatted = `${String(monthIndex + 1).padStart(2, '0')}/${selectedYear}`
     onChange(formatted)
     setIsOpen(false)
@@ -77,9 +126,111 @@ function MonthYearPicker({
   const displayValue = value || placeholder
   const isPresent = value?.toLowerCase() === 'present'
   
+  // Dropdown content rendered via portal to escape overflow:hidden containers
+  const dropdownContent = isOpen ? (
+    <div
+      ref={dropdownRef}
+      style={{
+        position: 'absolute',
+        top: dropdownPosition.top,
+        left: dropdownPosition.left,
+        width: dropdownPosition.width,
+        zIndex: 9999,
+      }}
+      className={`rounded-lg shadow-xl border-2 ${
+        theme === 'dark'
+          ? 'bg-gray-800 border-gray-700'
+          : 'bg-white border-gray-200'
+      }`}
+    >
+      {/* Present option - prominent styling */}
+      {allowPresent && (
+        <button
+          type="button"
+          onClick={handlePresentSelect}
+          className={`w-full px-4 py-3 text-left font-semibold flex items-center gap-3 rounded-t-lg ${
+            isPresent
+              ? theme === 'dark'
+                ? 'bg-brand-mint text-gray-900'
+                : 'bg-brand-sage text-white'
+              : theme === 'dark'
+                ? 'bg-brand-mint/20 text-brand-mint hover:bg-brand-mint/30'
+                : 'bg-brand-sage/20 text-brand-sage hover:bg-brand-sage/30'
+          }`}
+        >
+          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+            isPresent
+              ? theme === 'dark' ? 'bg-gray-900/20' : 'bg-white/30'
+              : theme === 'dark' ? 'bg-brand-mint/30' : 'bg-brand-sage/30'
+          }`}>
+            ✓
+          </span>
+          Present (Still here)
+        </button>
+      )}
+      
+      {/* Divider with "or select date" */}
+      {allowPresent && (
+        <div className={`px-4 py-2 text-xs text-center ${
+          theme === 'dark' ? 'text-gray-500 bg-gray-800/50' : 'text-gray-400 bg-gray-50'
+        }`}>
+          — or select a specific date —
+        </div>
+      )}
+      
+      {/* Year selector */}
+      <div className={`px-3 py-2 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+        <select
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+          className={`w-full px-2 py-1 rounded ${
+            theme === 'dark'
+              ? 'bg-gray-700 text-brand-cream border-gray-600'
+              : 'bg-gray-100 text-gray-900 border-gray-300'
+          } border`}
+        >
+          {years.map(year => (
+            <option key={year} value={year}>{year}</option>
+          ))}
+        </select>
+      </div>
+      
+      {/* Month grid - all 12 months in 4 columns x 3 rows */}
+      <div className="grid grid-cols-4 gap-1 p-2">
+        {months.map((month, idx) => {
+          const monthValue = `${String(idx + 1).padStart(2, '0')}/${selectedYear}`
+          const isSelected = value === monthValue
+          const disabled = isMonthDisabled(idx, selectedYear)
+          return (
+            <button
+              key={month}
+              type="button"
+              onClick={() => handleMonthSelect(idx)}
+              disabled={disabled}
+              className={`px-2 py-2 text-sm rounded transition-colors ${
+                disabled
+                  ? 'text-gray-400 cursor-not-allowed opacity-40'
+                  : isSelected
+                    ? theme === 'dark'
+                      ? 'bg-brand-mint text-gray-900 font-medium'
+                      : 'bg-brand-sage text-white font-medium'
+                    : theme === 'dark'
+                      ? 'text-brand-cream hover:bg-gray-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              {month}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  ) : null
+  
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative">
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`w-full px-4 py-3 border-2 rounded-md text-left flex items-center justify-between ${
@@ -97,91 +248,8 @@ function MonthYearPicker({
         <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
       
-      {isOpen && (
-        <div className={`absolute z-50 mt-1 w-full rounded-lg shadow-xl border-2 ${
-          theme === 'dark'
-            ? 'bg-gray-800 border-gray-700'
-            : 'bg-white border-gray-200'
-        }`}>
-          {/* Present option - prominent styling */}
-          {allowPresent && (
-            <button
-              type="button"
-              onClick={handlePresentSelect}
-              className={`w-full px-4 py-3 text-left font-semibold flex items-center gap-3 ${
-                isPresent
-                  ? theme === 'dark'
-                    ? 'bg-brand-mint text-gray-900'
-                    : 'bg-brand-sage text-white'
-                  : theme === 'dark'
-                    ? 'bg-brand-mint/20 text-brand-mint hover:bg-brand-mint/30'
-                    : 'bg-brand-sage/20 text-brand-sage hover:bg-brand-sage/30'
-              }`}
-            >
-              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
-                isPresent
-                  ? theme === 'dark' ? 'bg-gray-900/20' : 'bg-white/30'
-                  : theme === 'dark' ? 'bg-brand-mint/30' : 'bg-brand-sage/30'
-              }`}>
-                ✓
-              </span>
-              Present (Still here)
-            </button>
-          )}
-          
-          {/* Divider with "or select date" */}
-          {allowPresent && (
-            <div className={`px-4 py-2 text-xs text-center ${
-              theme === 'dark' ? 'text-gray-500 bg-gray-800/50' : 'text-gray-400 bg-gray-50'
-            }`}>
-              — or select a specific date —
-            </div>
-          )}
-          
-          {/* Year selector */}
-          <div className={`px-3 py-2 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className={`w-full px-2 py-1 rounded ${
-                theme === 'dark'
-                  ? 'bg-gray-700 text-brand-cream border-gray-600'
-                  : 'bg-gray-100 text-gray-900 border-gray-300'
-              } border`}
-            >
-              {years.map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
-          </div>
-          
-          {/* Month grid */}
-          <div className="grid grid-cols-4 gap-1 p-2">
-            {months.map((month, idx) => {
-              const monthValue = `${String(idx + 1).padStart(2, '0')}/${selectedYear}`
-              const isSelected = value === monthValue
-              return (
-                <button
-                  key={month}
-                  type="button"
-                  onClick={() => handleMonthSelect(idx)}
-                  className={`px-2 py-2 text-sm rounded transition-colors ${
-                    isSelected
-                      ? theme === 'dark'
-                        ? 'bg-brand-mint text-gray-900 font-medium'
-                        : 'bg-brand-sage text-white font-medium'
-                      : theme === 'dark'
-                        ? 'text-brand-cream hover:bg-gray-700'
-                        : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  {month}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
+      {/* Render dropdown via portal to escape overflow:hidden */}
+      {typeof document !== 'undefined' && createPortal(dropdownContent, document.body)}
     </div>
   )
 }
@@ -1345,33 +1413,87 @@ export default function PersonalInfoForm3({
           
           <div className="p-6 space-y-5">
             {/* Date Range - Common to ALL types */}
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
-                  FROM <span className="text-red-500">*</span>
-                </label>
-                <MonthYearPicker
-                  value={employer.fromDate}
-                  onChange={(value) => handleInputChange('employers', { fromDate: value }, index)}
-                  placeholder="Select start date"
-                  error={!!errors[`employer${index}FromDate`]}
-                  theme={theme}
-                />
-              </div>
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
-                  TO <span className="text-red-500">*</span>
-                </label>
-                <MonthYearPicker
-                  value={employer.toDate}
-                  onChange={(value) => handleInputChange('employers', { toDate: value }, index)}
-                  placeholder="Select end date"
-                  allowPresent={true}
-                  error={!!errors[`employer${index}ToDate`]}
-                  theme={theme}
-                />
-              </div>
-            </div>
+            {(() => {
+              // Calculate date constraints for this entry
+              // Rule 1: "To" date must be >= "From" date
+              // Rule 2: Entries must be chronological - each entry's "To" must be <= previous entry's "From"
+              
+              // For first entry: To can be Present, From must be <= To
+              // For subsequent entries: To must be <= previous entry's From date
+              const prevEntry = index > 0 ? formData.employers[index - 1] : null
+              const maxToDate = prevEntry?.fromDate || undefined // Entry's To can't exceed previous entry's From
+              
+              // From date must be <= this entry's To date
+              const maxFromDate = employer.toDate && employer.toDate.toLowerCase() !== 'present' 
+                ? employer.toDate 
+                : undefined
+              
+              // Show warning if dates are out of order
+              const fromNum = parseDateToNumber(employer.fromDate)
+              const toNum = parseDateToNumber(employer.toDate)
+              const dateOrderError = fromNum && toNum && fromNum > toNum
+              
+              // Show warning if entry is newer than previous entry
+              const prevFromNum = prevEntry ? parseDateToNumber(prevEntry.fromDate) : null
+              const chronologyError = prevFromNum && toNum && toNum > prevFromNum
+              
+              return (
+                <>
+                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                    <div>
+                      <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                        FROM <span className="text-red-500">*</span>
+                      </label>
+                      <MonthYearPicker
+                        value={employer.fromDate}
+                        onChange={(value) => handleInputChange('employers', { fromDate: value }, index)}
+                        placeholder="Select start date"
+                        error={!!errors[`employer${index}FromDate`] || dateOrderError}
+                        theme={theme}
+                        maxDate={maxFromDate}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                        TO <span className="text-red-500">*</span>
+                      </label>
+                      <MonthYearPicker
+                        value={employer.toDate}
+                        onChange={(value) => handleInputChange('employers', { toDate: value }, index)}
+                        placeholder="Select end date"
+                        allowPresent={index === 0} // Only first entry can be "Present"
+                        error={!!errors[`employer${index}ToDate`] || dateOrderError || chronologyError}
+                        theme={theme}
+                        maxDate={maxToDate}
+                        minDate={employer.fromDate} // To date must be >= From date
+                      />
+                    </div>
+                  </div>
+                  {/* Date validation errors */}
+                  {dateOrderError && (
+                    <div className={`p-3 rounded-lg text-sm ${
+                      theme === 'dark' ? 'bg-red-900/30 text-red-400' : 'bg-red-50 text-red-600'
+                    }`}>
+                      ⚠️ "To" date must be after "From" date
+                    </div>
+                  )}
+                  {chronologyError && !dateOrderError && (
+                    <div className={`p-3 rounded-lg text-sm ${
+                      theme === 'dark' ? 'bg-red-900/30 text-red-400' : 'bg-red-50 text-red-600'
+                    }`}>
+                      ⚠️ This entry must end before the previous entry started ({prevEntry?.fromDate}). Enter your history from most recent to oldest.
+                    </div>
+                  )}
+                  {index === 0 && !employer.toDate && (
+                    <div className={`p-3 rounded-lg text-sm ${
+                      theme === 'dark' ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600'
+                    }`}>
+                      💡 Start with your most recent/current position. Select "Present" if you're still here.
+                    </div>
+                  )}
+                </>
+              )
+            })()}
             
             {/* EMPLOYMENT-specific fields */}
             {entryType === 'employment' && (

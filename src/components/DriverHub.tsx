@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { createPortal } from 'react-dom'
 import { useTheme } from '@/contexts/ThemeContext'
+import ShareProfileCard from './ShareProfileCard'
 import {
   FileText,
   ClipboardList,
@@ -22,7 +22,6 @@ import {
   TrendingUp,
   Loader2,
   X,
-  Download,
   Trash2,
 } from 'lucide-react'
 
@@ -157,7 +156,6 @@ export default function DriverHub({
   const [selectedResume, setSelectedResume] = useState<HubResume | null>(null)
   const [selectedDotApp, setSelectedDotApp] = useState<HubDotApplication | null>(null)
   const [showPaymentHistory, setShowPaymentHistory] = useState(false)
-  const [viewingResumePdf, setViewingResumePdf] = useState<HubResume | null>(null)
   const [deletingResume, setDeletingResume] = useState<HubResume | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
@@ -436,6 +434,19 @@ export default function DriverHub({
       </div>
 
       {/* ============================================================ */}
+      {/* VEREE CARD - QR SHARE SECTION */}
+      {/* ============================================================ */}
+      <div className="mb-6">
+        <ShareProfileCard 
+          walletAddress={userAddress} 
+          driverName={data.profile?.first_name && data.profile?.last_name 
+            ? `${data.profile.first_name} ${data.profile.last_name}` 
+            : undefined
+          } 
+        />
+      </div>
+
+      {/* ============================================================ */}
       {/* MAIN SECTIONS GRID */}
       {/* ============================================================ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -482,17 +493,26 @@ export default function DriverHub({
             />
           ) : (
             <div className="space-y-3">
-              {data.resumes.slice(0, 3).map((resume) => (
-                <ItemRow
-                  key={resume.id}
-                  title={resume.title || resume.filename}
-                  subtitle={formatDate(resume.createdAt)}
-                  status={resume.verificationStatus}
-                  badge={resume.resumeType === 'built' ? 'Built' : undefined}
-                  onClick={() => setSelectedResume(resume)}
-                  theme={theme}
-                />
-              ))}
+              {data.resumes.slice(0, 3).map((resume) => {
+                // Check if resume has real IPFS hash or just a placeholder
+                const hasRealIpfs = resume.ipfsHash && !resume.ipfsHash.startsWith('built_')
+                // Show DRAFT status for built resumes not yet on IPFS
+                const displayStatus = !hasRealIpfs && resume.resumeType === 'built' 
+                  ? 'DRAFT' 
+                  : resume.verificationStatus
+                
+                return (
+                  <ItemRow
+                    key={resume.id}
+                    title={resume.title || resume.filename}
+                    subtitle={formatDate(resume.createdAt)}
+                    status={displayStatus}
+                    badge={resume.resumeType === 'built' ? 'Built' : undefined}
+                    onClick={() => setSelectedResume(resume)}
+                    theme={theme}
+                  />
+                )
+              })}
               {data.resumes.length > 3 && (
                 <button
                   onClick={() => onNavigate('resume')}
@@ -804,44 +824,11 @@ export default function DriverHub({
           <ResumeDetailContent 
             resume={selectedResume} 
             theme={theme}
-            onView={() => setViewingResumePdf(selectedResume)}
             onDelete={() => setDeletingResume(selectedResume)}
           />
         </DetailModal>
       )}
 
-      {/* Resume PDF Viewer Modal - Portal to body to escape stacking contexts */}
-      {viewingResumePdf && viewingResumePdf.ipfsHash && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className={`relative w-full max-w-4xl h-[85vh] rounded-2xl shadow-2xl overflow-hidden ${
-            theme === 'dark' ? 'bg-brand-sage-dark' : 'bg-white'
-          }`}>
-            <div className={`flex items-center justify-between p-4 border-b ${
-              theme === 'dark' ? 'border-brand-mint/20' : 'border-gray-200'
-            }`}>
-              <h3 className={`text-lg font-bold ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>
-                {viewingResumePdf.title || viewingResumePdf.filename}
-              </h3>
-              <button
-                onClick={() => setViewingResumePdf(null)}
-                className={`p-2 rounded-lg transition-colors ${
-                  theme === 'dark' ? 'hover:bg-brand-sage/50 text-gray-400' : 'hover:bg-gray-100'
-                }`}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <iframe
-              src={`https://gateway.pinata.cloud/ipfs/${viewingResumePdf.ipfsHash}`}
-              className="w-full h-[calc(100%-60px)]"
-              title="Resume Preview"
-            />
-          </div>
-        </div>,
-        document.body
-      )}
 
       {/* Delete Confirmation Modal */}
       {deletingResume && (
@@ -1120,18 +1107,22 @@ function DetailModal({
 function ResumeDetailContent({ 
   resume, 
   theme,
-  onView,
   onDelete,
 }: { 
   resume: HubResume
   theme: string
-  onView?: () => void
   onDelete?: () => void
 }) {
   const labelClass = `text-xs font-semibold uppercase tracking-wide ${
     theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
   }`
   const valueClass = `text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`
+
+  // Generate a clean filename for download
+  const downloadFilename = `${(resume.title || resume.filename || 'Resume').replace(/[^a-z0-9]/gi, '_')}.pdf`
+  
+  // Check if this is a real IPFS hash or a placeholder (built resumes start with "built_")
+  const hasRealIpfsHash = resume.ipfsHash && !resume.ipfsHash.startsWith('built_')
 
   return (
     <div className="space-y-4">
@@ -1147,7 +1138,7 @@ function ResumeDetailContent({
         <p className={labelClass}>Status</p>
         <StatusBadge status={resume.verificationStatus} theme={theme} />
       </div>
-      {resume.ipfsHash && (
+      {hasRealIpfsHash && (
         <div>
           <p className={labelClass}>IPFS Hash</p>
           <p className={`${valueClass} font-mono text-xs break-all`}>{resume.ipfsHash}</p>
@@ -1169,19 +1160,60 @@ function ResumeDetailContent({
       
       {/* Action Buttons */}
       <div className="pt-4 space-y-3">
-        {/* View Button */}
-        {resume.ipfsHash && onView && (
-          <button
-            onClick={onView}
-            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors ${
-              theme === 'dark'
-                ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/40 hover:bg-brand-mint/30'
-                : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30 hover:bg-brand-sage/20'
-            }`}
-          >
-            <Eye className="w-4 h-4" />
-            View Resume
-          </button>
+        {/* View & Download Buttons - Only show if has real IPFS hash */}
+        {hasRealIpfsHash ? (
+          <div className="flex gap-2">
+            {/* View in new tab */}
+            <a
+              href={`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors ${
+                theme === 'dark'
+                  ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/40 hover:bg-brand-mint/30'
+                  : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30 hover:bg-brand-sage/20'
+              }`}
+            >
+              <Eye className="w-4 h-4" />
+              View
+            </a>
+            {/* Download with correct filename */}
+            <button
+              onClick={async () => {
+                try {
+                  const response = await fetch(`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`)
+                  const blob = await response.blob()
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url
+                  a.download = downloadFilename
+                  a.click()
+                  URL.revokeObjectURL(url)
+                } catch (err) {
+                  console.error('Download failed:', err)
+                  // Fallback: open in new tab
+                  window.open(`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`, '_blank')
+                }
+              }}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors ${
+                theme === 'dark'
+                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40 hover:bg-blue-500/30'
+                  : 'bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              Download
+            </button>
+          </div>
+        ) : (
+          <div className={`w-full text-center px-4 py-3 rounded-xl text-sm ${
+            theme === 'dark' ? 'bg-yellow-900/20 text-yellow-400 border border-yellow-600/30' : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+          }`}>
+            <p className="font-medium">Resume not yet on IPFS</p>
+            <p className="text-xs mt-1 opacity-80">
+              Go to Resume Management and click "Verify" to upload to IPFS and blockchain
+            </p>
+          </div>
         )}
         
         {/* Delete Button */}
@@ -1350,6 +1382,12 @@ function getStatusConfig(status: string): { label: string; icon: React.ReactNode
         label: 'Completed',
         icon: <CheckCircle className="w-3 h-3" />,
         className: 'bg-green-500/10 text-green-600 dark:text-green-400',
+      }
+    case 'DRAFT':
+      return {
+        label: 'Draft',
+        icon: <FileText className="w-3 h-3" />,
+        className: 'bg-gray-500/10 text-gray-600 dark:text-gray-400',
       }
     default:
       return {
