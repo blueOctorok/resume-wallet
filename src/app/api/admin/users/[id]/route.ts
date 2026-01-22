@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireAdmin, isAdminWallet } from '@/lib/admin-auth'
 
 /**
  * GET /api/admin/users/[id]
@@ -97,6 +97,15 @@ export async function DELETE(
 
     if (userError || !user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // GUARD: Prevent deleting admin wallets
+    if (isAdminWallet(user.wallet_address)) {
+      console.warn(`[ADMIN] Blocked attempt to delete admin wallet: ${user.wallet_address} by: ${auth.walletAddress}`)
+      return NextResponse.json(
+        { error: 'Cannot delete admin accounts. Remove wallet from ADMIN_WALLETS env to revoke admin access first.' },
+        { status: 403 }
+      )
     }
 
     // Delete in order (respecting foreign key constraints)

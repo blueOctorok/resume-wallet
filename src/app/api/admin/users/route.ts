@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { requireAdmin } from '@/lib/admin-auth'
+import { requireAdmin, isAdminWallet } from '@/lib/admin-auth'
 
 /**
  * GET /api/admin/users
@@ -78,12 +78,13 @@ export async function GET(request: NextRequest) {
       dotAppCountMap.set(a.user_id, (dotAppCountMap.get(a.user_id) || 0) + 1)
     })
 
-    // Enrich users with counts
+    // Enrich users with counts and admin status
     const enrichedUsers = users?.map(user => ({
       ...user,
       hasProfile: profileMap.has(user.id),
       resumeCount: resumeCountMap.get(user.id) || 0,
       dotAppCount: dotAppCountMap.get(user.id) || 0,
+      isAdmin: isAdminWallet(user.wallet_address), // Flag admin wallets
     }))
 
     return NextResponse.json({

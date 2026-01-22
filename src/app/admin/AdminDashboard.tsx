@@ -38,6 +38,7 @@ interface User {
   hasProfile: boolean
   resumeCount: number
   dotAppCount: number
+  isAdmin: boolean // True if wallet is in ADMIN_WALLETS
 }
 
 interface DotApp {
@@ -430,15 +431,22 @@ function AdminDashboardContent() {
                             <div className="text-xs opacity-60">{user.email || '-'}</div>
                           </td>
                           <td className={tableCellClass}>
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              user.role === 'driver' 
-                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-                                : user.role === 'employer'
-                                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
-                                  : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
-                            }`}>
-                              {user.role || 'none'}
-                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {user.isAdmin && (
+                                <span className="px-2 py-1 rounded text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 font-semibold">
+                                  Admin
+                                </span>
+                              )}
+                              <span className={`px-2 py-1 rounded text-xs ${
+                                user.role === 'driver' 
+                                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                                  : user.role === 'employer'
+                                    ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                              }`}>
+                                {user.role || 'none'}
+                              </span>
+                            </div>
                           </td>
                           <td className={tableCellClass}>
                             <div className="flex gap-2 text-xs">
@@ -451,13 +459,22 @@ function AdminDashboardContent() {
                             {new Date(user.created_at).toLocaleDateString()}
                           </td>
                           <td className={tableCellClass}>
-                            <button
-                              onClick={() => setDeleteTarget({ type: 'user', id: user.id, name: user.wallet_address })}
-                              className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500"
-                              title="Delete user and all data"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {user.isAdmin ? (
+                              <span 
+                                className="p-1.5 text-gray-400 dark:text-gray-600 cursor-not-allowed"
+                                title="Cannot delete admin accounts"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => setDeleteTarget({ type: 'user', id: user.id, name: user.wallet_address })}
+                                className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500"
+                                title="Delete user and all data"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
