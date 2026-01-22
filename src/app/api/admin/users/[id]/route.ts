@@ -1,0 +1,143 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { requireAdmin } from '@/lib/admin-auth'
+
+/**
+ * GET /api/admin/users/[id]
+ * Get detailed user information including all associated data
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = requireAdmin(request)
+  if (!auth.authorized) return auth.error!
+
+  const { id } = await params
+
+  try {
+    const supabase = await getAdminSupabaseClient()
+
+    // Get user
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (userError || !user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Get profile
+    const { data: profile } = await supabase
+      .from('driver_profiles')
+      .select('*')
+      .eq('user_id', id)
+      .maybeSingle()
+
+    // Get resumes
+    const { data: resumes } = await supabase
+      .from('resumes')
+      .select('id, title, filename, verification_status, created_at, resume_type')
+      .eq('user_id', id)
+      .order('created_at', { ascending: false })
+
+    // Get DOT applications
+    const { data: dotApps } = await supabase
+      .from('driver_applications')
+      .select('id, is_complete, current_step, verification_status, created_at')
+      .eq('user_id', id)
+      .order('created_at', { ascending: false })
+
+    // Get MVR orders
+    const { data: mvrOrders } = await supabase
+      .from('mvr_orders')
+      .select('id, status, dl_state, created_at')
+      .eq('driver_user_id', id)
+      .order('created_at', { ascending: false })
+
+    return NextResponse.json({
+      success: true,
+      user,
+      profile,
+      resumes: resumes || [],
+      dotApps: dotApps || [],
+      mvrOrders: mvrOrders || [],
+    })
+
+  } catch (error) {
+    console.error('[ADMIN USER DETAIL] Unexpected error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+/**
+ * DELETE /api/admin/users/[id]
+ * Delete a user and all associated data
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = requireAdmin(request)
+  if (!auth.authorized) return auth.error!
+
+  const { id } = await params
+
+  try {
+    const supabase = await getAdminSupabaseClient()
+
+    // Verify user exists
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, wallet_address')
+      .eq('id', id)
+      .single()
+
+    if (userError || !user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Delete in order (respecting foreign key constraints)
+    // 1. Delete MVR results
+    await supabase.from('mvr_results').delete().eq('driver_user_id', id)
+    
+    // 2. Delete MVR orders
+    await supabase.from('mvr_orders').delete().eq('driver_user_id', id)
+    
+    // 3. Delete resumes
+    await supabase.from('resumes').delete().eq('user_id', id)
+    
+    // 4. Delete driver applications
+    await supabase.from('driver_applications').delete().eq('user_id', id)
+    
+    // 5. Delete driver profile
+    await supabase.from('driver_profiles').delete().eq('user_id', id)
+    
+    // 6. Delete payments
+    await supabase.from('payments').delete().eq('user_id', id)
+    
+    // 7. Delete the user
+    const { error: deleteError } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', id)
+
+    if (deleteError) {
+      console.error('[ADMIN USER DELETE] Error:', deleteError)
+      return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 })
+    }
+
+    console.log(`[ADMIN] User deleted: ${user.wallet_address} by admin: ${auth.walletAddress}`)
+
+    return NextResponse.json({
+      success: true,
+      message: `User ${user.wallet_address} and all associated data deleted`,
+    })
+
+  } catch (error) {
+    console.error('[ADMIN USER DELETE] Unexpected error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

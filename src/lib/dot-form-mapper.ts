@@ -221,20 +221,24 @@ function profileDateToForm3Date(dateStr: string, isCurrent: boolean): string {
 // =====================================================
 
 export function form1ToProfile(data: DotForm1Data): Partial<UnifiedDriverProfile> {
+  // Defensive checks for partial data
+  if (!data) return {}
+  
   const currentLicense = data.currentLicenses?.[0]
+  const mailing = data.currentMailing || {}
   
   return {
-    firstName: data.firstName,
-    middleName: data.middleName,
-    lastName: data.lastName,
-    email: data.email,
-    phone: data.phone,
-    dateOfBirth: data.dateOfBirth,
+    firstName: data.firstName || '',
+    middleName: data.middleName || '',
+    lastName: data.lastName || '',
+    email: data.email || '',
+    phone: data.phone || '',
+    dateOfBirth: data.dateOfBirth || '',
     ssnLastFour: data.socialSecurity ? data.socialSecurity.slice(-4) : undefined,
-    address: data.currentMailing.street,
-    city: data.currentMailing.city,
-    state: data.currentMailing.state,
-    zipCode: data.currentMailing.zipCode,
+    address: mailing.street || '',
+    city: mailing.city || '',
+    state: mailing.state || '',
+    zipCode: mailing.zipCode || '',
     cdlNumber: currentLicense?.licenseNumber || '',
     cdlState: currentLicense?.state || '',
     cdlClass: currentLicense?.typeClass || '',
@@ -327,8 +331,12 @@ export function profileToForm2(profile: UnifiedDriverProfile): Partial<DotForm2D
 // =====================================================
 
 export function form3ToProfile(data: DotForm3Data): Partial<UnifiedDriverProfile> {
+  // Defensive checks - form3Data might exist but have undefined arrays
+  const employers = data?.employers || []
+  const educationData = data?.education || []
+  
   // Map Form 3 employers to profile employmentHistory
-  const employmentHistory: UnifiedEmployment[] = data.employers
+  const employmentHistory: UnifiedEmployment[] = employers
     .filter(emp => !emp.isUnemployment && emp.name) // Skip unemployment periods and empty entries
     .map((emp, idx): UnifiedEmployment => ({
       id: `form3-emp-${idx}-${Date.now()}`,
@@ -337,7 +345,7 @@ export function form3ToProfile(data: DotForm3Data): Partial<UnifiedDriverProfile
       location: emp.address,
       startDate: form3DateToProfileDate(emp.fromDate),
       endDate: form3DateToProfileDate(emp.toDate),
-      isCurrent: emp.toDate.toLowerCase() === 'present' || !emp.toDate,
+      isCurrent: emp.toDate?.toLowerCase() === 'present' || !emp.toDate,
       responsibilities: [],
       equipment: [],
       reasonForLeaving: emp.reasonForLeaving,
@@ -348,7 +356,7 @@ export function form3ToProfile(data: DotForm3Data): Partial<UnifiedDriverProfile
     }))
 
   // Map Form 3 education to profile education
-  const education: UnifiedEducation[] = data.education
+  const education: UnifiedEducation[] = educationData
     .filter(edu => edu.nameAndLocation) // Skip empty entries
     .map((edu, idx): UnifiedEducation => ({
       id: `form3-edu-${idx}-${Date.now()}`,

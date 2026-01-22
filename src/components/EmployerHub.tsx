@@ -27,6 +27,7 @@ import {
   Phone,
   Mail,
   Shield,
+  Search,
 } from 'lucide-react'
 
 // ============================================================
@@ -533,6 +534,12 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
               icon={<Users className="w-5 h-5" />}
               label="View All Applicants"
               onClick={() => onNavigate('applicants')}
+              theme={theme}
+            />
+            <ActionButton
+              icon={<Search className="w-5 h-5" />}
+              label="Find Drivers"
+              onClick={() => onNavigate('find-drivers')}
               theme={theme}
             />
             <ActionButton

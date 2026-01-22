@@ -133,6 +133,13 @@ export async function GET(request: NextRequest) {
 
     // Process profile (may not exist yet)
     const profile = profileResult.data || null
+    
+    console.log('[DRIVER HUB] Profile fetch result:', {
+      hasProfile: !!profile,
+      profileError: profileResult.error?.message,
+      profileId: profile?.id,
+      userId: user.id,
+    })
 
     // Process resumes
     const resumes = (resumesResult.data || []).map(resume => ({
@@ -148,8 +155,8 @@ export async function GET(request: NextRequest) {
       isPaid: resume.is_paid,
     }))
 
-    // Process DOT applications
-    const dotApplications = (dotAppsResult.data || []).map(app => ({
+    // Process DOT applications (submitted ones from database)
+    const submittedDotApplications = (dotAppsResult.data || []).map(app => ({
       id: app.id,
       createdAt: app.created_at,
       verificationStatus: app.verification_status || 'PENDING',
@@ -157,7 +164,96 @@ export async function GET(request: NextRequest) {
       blockchainApplicationId: app.blockchain_application_id,
       isComplete: app.is_complete,
       currentStep: app.current_step,
+      applicantName: null as string | null, // Will be filled from profile if needed
+      isInProgress: false,
     }))
+    
+    // Check for in-progress application in profile (saved but not submitted)
+    // Parse employment_history safely (it's JSONB so may already be an array)
+    const employmentHistory = profile?.employment_history 
+      ? (typeof profile.employment_history === 'string' 
+          ? JSON.parse(profile.employment_history) 
+          : profile.employment_history)
+      : []
+    
+    // An in-progress app exists if profile has meaningful form data
+    const hasInProgressApp = profile && (
+      profile.first_name || 
+      profile.last_name || 
+      profile.cdl_number ||
+      employmentHistory.length > 0
+    )
+    
+    console.log('[DRIVER HUB] In-progress detection:', {
+      hasProfile: !!profile,
+      firstName: profile?.first_name,
+      lastName: profile?.last_name,
+      cdlNumber: profile?.cdl_number,
+      employmentHistoryCount: employmentHistory.length,
+      hasInProgressApp,
+      submittedAppsCount: submittedDotApplications.length,
+      // Debug: what does the profile actually contain?
+      profileKeys: profile ? Object.keys(profile).filter(k => profile[k] !== null && profile[k] !== '') : [],
+    })
+    
+    // Determine which form they're likely on based on what data exists
+    // Note: This is a best guess since profile data can come from multiple sources
+    // (DOT app, Resume Builder, AI prefill). We can't know for certain which form they left off on.
+    // Logic: Show the NEXT form they need to complete, not the last one with data
+    let inProgressCurrentForm = 1
+    if (profile) {
+      // Form 1 = Personal Info + CDL Info
+      // Form 2 = Driving Experience  
+      // Form 3 = Employment History
+      
+      // If they have CDL info, Form 1 is done → show Form 2
+      if (profile.cdl_number && profile.cdl_class) {
+        inProgressCurrentForm = 2
+      }
+      
+      // If they have driving experience data, Form 2 is done → show Form 3
+      // driving_experience is a JSON object, check if it has meaningful content
+      const drivingExp = profile.driving_experience
+      const hasDrivingExperience = drivingExp && typeof drivingExp === 'object' && (
+        drivingExp.equipmentTypes?.straightTruck?.years > 0 ||
+        drivingExp.equipmentTypes?.tractorTrailer?.years > 0 ||
+        drivingExp.equipmentTypes?.tractorTwoTrailers?.years > 0
+      )
+      if (hasDrivingExperience) {
+        inProgressCurrentForm = 3
+      }
+      
+      // Note: We don't check employment_history here because it might have been
+      // prefilled from Resume Builder, not from DOT Form 3
+    }
+    
+    // Build dotApplications list - include in-progress app at the top if profile has form data
+    // Users can have both submitted apps AND in-progress work (e.g., started a new app after submitting one)
+    const dotApplications = [...submittedDotApplications]
+    
+    if (hasInProgressApp) {
+      // Add the in-progress application to the list
+      const applicantName = profile.first_name && profile.last_name
+        ? `${profile.first_name} ${profile.last_name}`
+        : null
+      
+      console.log('[DRIVER HUB] Adding in-progress app:', {
+        applicantName,
+        currentStep: inProgressCurrentForm,
+      })
+        
+      dotApplications.unshift({
+        id: 'in-progress',
+        createdAt: profile.updated_at || profile.created_at || new Date().toISOString(),
+        verificationStatus: 'PENDING',
+        blockchainTxHash: null,
+        blockchainApplicationId: null,
+        isComplete: false,
+        currentStep: inProgressCurrentForm,
+        applicantName,
+        isInProgress: true,
+      })
+    }
 
     // Process MVR records (combine orders with results)
     const mvrResults = mvrResultsResult.data || []
@@ -253,6 +349,7 @@ export async function GET(request: NextRequest) {
       .reduce((sum, t) => sum + (t.amount || 0), 0)
 
     // Calculate stats
+    const inProgressApps = dotApplications.filter(a => a.isInProgress)
     const stats = {
       profileCompleteness,
       totalResumes: resumes.length,
@@ -260,6 +357,7 @@ export async function GET(request: NextRequest) {
       totalDotApps: dotApplications.length,
       verifiedDotApps: dotApplications.filter(a => a.verificationStatus === 'VERIFIED').length,
       completedDotApps: dotApplications.filter(a => a.isComplete).length,
+      inProgressDotApps: inProgressApps.length,
       totalMvrRecords: mvrRecords.length,
       validMvrRecords: mvrRecords.filter(m => m.licenseStatus === 'Valid' || m.orderStatus === 'completed').length,
       totalJobApplications: jobApplications.length,

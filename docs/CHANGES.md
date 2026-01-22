@@ -2,6 +2,132 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## ✨ **FEATURE: Admin Panel with Wallet-Based Access Control** (January 2026)
+
+**Complete admin panel rebuild with wallet-based authentication and data management capabilities.**
+
+### Security Model
+- **Wallet Whitelist**: Only wallets in `ADMIN_WALLETS` env variable can access `/admin`
+- **API Protection**: All admin API routes verify wallet header against whitelist
+- **Delete Confirmation**: Requires typing "DELETE" to confirm destructive actions
+
+### Features
+
+| Tab | Capabilities |
+|-----|-------------|
+| **Users** | List all users, search by wallet/email, view data counts, delete user + all data |
+| **DOT Apps** | List all applications (complete/incomplete), view applicant info, delete specific apps |
+| **Profiles** | List all driver profiles, search by name/CDL, view source, delete/clear profiles |
+| **Resumes** | List all resumes, filter by type, view verification status, delete specific resumes |
+| **Tools** | Existing reset wallet tool, T Backend setup (preserved from old admin) |
+
+### Files Created/Modified
+- `src/lib/admin-auth.ts` - Wallet whitelist verification helper
+- `src/app/admin/AdminDashboard.tsx` - New tabbed admin UI
+- `src/app/admin/page.tsx` - Updated to use new dashboard
+- `src/app/api/admin/users/route.ts` - List/search users API
+- `src/app/api/admin/users/[id]/route.ts` - User details + delete API
+- `src/app/api/admin/dot-apps/route.ts` - List DOT apps API
+- `src/app/api/admin/dot-apps/[id]/route.ts` - DOT app delete API
+- `src/app/api/admin/profiles/route.ts` - List profiles API
+- `src/app/api/admin/profiles/[id]/route.ts` - Profile delete/clear API
+- `src/app/api/admin/resumes/route.ts` - List resumes API
+- `src/app/api/admin/resumes/[id]/route.ts` - Resume delete API
+
+### Environment Variable
+Add to `.env.local`:
+```
+ADMIN_WALLETS=0x9499cD25C6737A8195e74262f3c5eAE6dA607df3
+```
+
+---
+
+## 🔧 **FIX: In-Progress DOT App Detection & Form Mapper Errors** (January 2026)
+
+**Fixed two issues with in-progress DOT application display in Driver Hub.**
+
+### Issue 1: In-progress apps not showing when submitted apps exist
+- **Problem**: `submittedDotApplications.length === 0` condition blocked showing in-progress work
+- **Fix**: Removed condition - users can have both submitted apps AND in-progress work
+
+### Issue 2: `form3ToProfile` crash when form3Data has undefined arrays
+- **Problem**: `data.education.filter()` fails when `education` is undefined
+- **Error**: `TypeError: Cannot read properties of undefined (reading 'filter')`
+- **Fix**: Added defensive checks: `const educationData = data?.education || []`
+
+### Issue 3: Form number detection showing wrong form
+- **Problem**: Showed "Form 3" because employment_history existed (from Resume Builder)
+- **Fix**: Changed logic to detect based on what forms are COMPLETE, not what data exists:
+  - If CDL info complete → Form 2
+  - If driving experience complete → Form 3
+  - Don't count employment_history since it may be from Resume Builder prefill
+
+---
+
+## ✨ **FEATURE: Resume Builder – Clear Form** (January 2026)
+
+**Adds a "Clear form" action so users can discard prefilled or manually entered data and start over.**
+
+- **When**: Shown when the form has any data (from profile/DOT prefill, AI prefill, or manual entry).
+- **Where**: Header next to "Fill Test Data"; subtle red-tinted hover to signal destructive action.
+- **Behavior**: Resets all sections to empty, clears prefill indicator, returns to step 1. Confirmation dialog before clear.
+- **Rationale**: DOT app → profile → resume prefill is useful, but users sometimes want a blank slate (different resume, wrong prefill, etc.). Clear gives them control without manually deleting every field.
+
+---
+
+## ✨ **FEATURE: In-Progress DOT Applications in Driver Hub** (January 2026)
+
+**Major UX improvement: In-progress DOT applications now appear in the Driver Hub.**
+
+### The Problem
+- Users saved their DOT application progress (e.g., completed Form 1, started Form 2)
+- But the Driver Hub only showed **submitted** applications from `driver_applications` table
+- Users had no way to see or continue their in-progress work from the Hub
+
+### The Solution
+The Hub API now detects in-progress applications from the driver profile:
+
+1. **Detection**: Checks if profile has form data (name, CDL, employment history) but no submitted application
+2. **Form Progress**: Determines which form they're on based on what data exists
+3. **Display**: Shows "Barry Burton's Application" with "In Progress" status and "Form 2 of 3" badge
+4. **Continue**: Clicking navigates to DOT application to pick up where they left off
+
+### Changes
+
+**API (`/api/driver/hub`):**
+- Checks profile for saved form data
+- Creates virtual "in-progress" application entry if data exists but not submitted
+- Includes `applicantName`, `isInProgress`, and `currentStep` fields
+- Adds `inProgressDotApps` to stats
+
+**Component (`DriverHub.tsx`):**
+- Updated `HubDotApplication` interface with new fields
+- Shows applicant name in list (e.g., "Barry Burton's Application")
+- Shows "Continue where you left off" for in-progress apps
+- Clicking in-progress app navigates to forms (not modal)
+- Quick stat shows "1 in progress" sub-value
+- Modal shows "Continue Application" button
+
+---
+
+## 🔧 **FIX: Driver Profile Sync – Form 2/3 Swap** (January 2026)
+
+**Verification pass + bug fix for unified driver profile ↔ DOT app ↔ Resume flow.**
+
+### What was verified
+- DOT app **Save Progress** and **completion** both write to driver profile via `form1ToProfile` / `form2ToProfile` / `form3ToProfile`.
+- **Resume Builder** save writes via `resumeBuilderToProfile`; **AI prefill** (uploaded resume) writes via same form mappers.
+- **DOT app** load prefills from profile when forms are empty; **Resume Builder** load prefills from profile.
+
+### Bug fixed
+- **Completion handler**: Previously used `employmentHistory` from Form 2 and `drivingRecord` from Form 3 (inverted). It now uses the same form mappers as Save Progress (Form 3 = employment, Form 2 = driving).
+- **Prefill → profile sync**: Same Form 2/3 mix-up. Prefill sync now uses form mappers on `prefillData.form1/2/3Data`.
+
+### Docs
+- `docs/DRIVER_PROFILE_VERIFICATION.md` – data flow summary and **test plan** for DOT-first, Resume-first, and AI-prefill flows.
+
+---
+
 ## ✨ **FEATURE: Driver Hub - Unified Dashboard** (January 15, 2026)
 
 **Major UX overhaul: Replaced the hidden DriverDashboard with an always-accessible Driver Hub.**
@@ -238,6 +364,68 @@ Drivers can now share their verified credentials via QR code at job fairs and me
 - Verified blockchain credentials visible
 - Reduces long application processes
 - Digital "handshake" between driver and employer
+
+### Employer Applicant Management (Option B Implementation)
+
+Implemented both "Applicants" (who applied) and "Find Drivers" (search by criteria) features for employers.
+
+#### API Endpoints
+
+**`/api/employer/applicants`**
+- `GET`: Fetches all applicants who applied to employer's jobs
+  - Filter by job posting
+  - Filter by status (new, reviewing, interviewing, hired, rejected)
+  - Sort by name, applied date
+  - Returns stats (total, new, reviewing, etc.)
+- `PATCH`: Update application status or add reviewer notes
+
+**`/api/employer/drivers/search`**
+- `GET`: Search all drivers by criteria (proactive discovery)
+  - Match to specific job (auto-fills criteria)
+  - Filter by: CDL class, CDL state, min experience, location
+  - Filter by credentials: verified resume, complete DOT app, clean MVR
+  - Returns drivers who haven't applied yet (marked if they have)
+  - Excludes drivers who already applied
+
+#### ApplicantsPage Component
+- **View**: All applicants who applied to your jobs
+- **Features**:
+  - Stats cards (total, new, reviewing, interviewing, hired)
+  - Filter by job posting
+  - Filter by status
+  - Search by name, email, location
+  - Click applicant → Detail modal with:
+    - Contact info
+    - CDL details
+    - Resume view/download
+    - Cover letter
+    - Status update buttons
+    - Private notes field
+  - Update status: New → Reviewing → Interviewing → Offer → Hired/Rejected
+
+#### FindDriversPage Component
+- **View**: Search all drivers by criteria (proactive discovery)
+- **Features**:
+  - "Match to Job" dropdown - auto-fills criteria from job posting
+  - Manual filters: CDL class, state, experience, location
+  - Checkboxes: verified resume, complete DOT app, clean MVR
+  - Results show:
+    - Driver name, location, CDL info
+    - Credential badges (verified resume, complete DOT, clean MVR)
+    - "Already Applied" badge if they've applied
+  - Click driver → Detail modal with full profile
+  - "View Full Profile" link to public profile page (if share enabled)
+
+#### Integration
+- Added "Find Drivers" button to Employer Hub Quick Actions
+- "View All Applicants" navigates to ApplicantsPage
+- Both pages accessible from Employer Hub
+- Seamless navigation back to hub
+
+#### Use Cases
+1. **Applicants Page**: Review and manage drivers who applied to your jobs
+2. **Find Drivers Page**: Proactively search for qualified drivers who match your criteria but haven't applied yet
+3. **Workflow**: Find driver → View profile → Contact → They apply → Manage in Applicants page
 
 ### **API: /api/driver/hub**
 

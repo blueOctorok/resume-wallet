@@ -1,9 +1,8 @@
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-import AdminPageClient from './AdminPageClient'
+import AdminDashboard from './AdminDashboard'
 
 export default function AdminPage() {
-  return <AdminPageClient />
+  return <AdminDashboard />
 }
-

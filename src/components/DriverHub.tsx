@@ -50,6 +50,8 @@ interface HubDotApplication {
   blockchainApplicationId: string | null
   isComplete: boolean
   currentStep: number
+  applicantName?: string | null
+  isInProgress?: boolean
 }
 
 interface HubMvrRecord {
@@ -106,6 +108,7 @@ interface HubStats {
   totalDotApps: number
   verifiedDotApps: number
   completedDotApps: number
+  inProgressDotApps: number
   totalMvrRecords: number
   validMvrRecords: number
   totalJobApplications: number
@@ -211,6 +214,16 @@ export default function DriverHub({
       }
 
       const data = await response.json()
+      console.log('[DRIVER HUB CLIENT] Received data:', {
+        dotApplicationsCount: data.dotApplications?.length,
+        dotApplications: data.dotApplications?.map((app: HubDotApplication) => ({
+          id: app.id,
+          applicantName: app.applicantName,
+          isInProgress: app.isInProgress,
+          currentStep: app.currentStep,
+        })),
+        hasProfile: !!data.profile,
+      })
       setHubData(data)
     } catch (err) {
       console.error('Error fetching hub data:', err)
@@ -289,6 +302,7 @@ export default function DriverHub({
       totalDotApps: 0,
       verifiedDotApps: 0,
       completedDotApps: 0,
+      inProgressDotApps: 0,
       totalMvrRecords: 0,
       validMvrRecords: 0,
       totalJobApplications: 0,
@@ -406,8 +420,16 @@ export default function DriverHub({
         <QuickStatCard
           icon={<ClipboardList className="w-5 h-5" />}
           label="DOT Apps"
-          value={data.stats.completedDotApps}
-          subValue={data.stats.verifiedDotApps > 0 ? `${data.stats.verifiedDotApps} verified` : undefined}
+          value={data.stats.totalDotApps}
+          subValue={
+            data.stats.inProgressDotApps > 0 
+              ? `${data.stats.inProgressDotApps} in progress`
+              : data.stats.verifiedDotApps > 0 
+                ? `${data.stats.verifiedDotApps} verified` 
+                : data.stats.completedDotApps > 0
+                  ? `${data.stats.completedDotApps} completed`
+                  : undefined
+          }
           theme={theme}
           color="purple"
         />
@@ -571,17 +593,33 @@ export default function DriverHub({
             />
           ) : (
             <div className="space-y-3">
-              {data.dotApplications.slice(0, 3).map((app, index) => (
-                <ItemRow
-                  key={app.id}
-                  title={`DOT Application ${data.dotApplications.length - index}`}
-                  subtitle={formatDate(app.createdAt)}
-                  status={app.isComplete ? app.verificationStatus : 'IN_PROGRESS'}
-                  badge={!app.isComplete ? `Step ${app.currentStep}/3` : undefined}
-                  onClick={() => setSelectedDotApp(app)}
-                  theme={theme}
-                />
-              ))}
+              {data.dotApplications.slice(0, 3).map((app, index) => {
+                // Build title: use applicant name if available, otherwise generic
+                const appTitle = app.applicantName 
+                  ? `${app.applicantName}'s Application`
+                  : `DOT Application ${data.dotApplications.length - index}`
+                
+                // For in-progress apps, clicking should continue the application
+                const handleClick = () => {
+                  if (app.isInProgress) {
+                    onNavigate('dotapp') // Continue the in-progress application
+                  } else {
+                    setSelectedDotApp(app) // View completed/submitted app details
+                  }
+                }
+                
+                return (
+                  <ItemRow
+                    key={app.id}
+                    title={appTitle}
+                    subtitle={app.isInProgress ? 'Continue where you left off' : formatDate(app.createdAt)}
+                    status={app.isComplete ? app.verificationStatus : 'IN_PROGRESS'}
+                    badge={!app.isComplete ? `Form ${app.currentStep} of 3` : undefined}
+                    onClick={handleClick}
+                    theme={theme}
+                  />
+                )
+              })}
               {data.dotApplications.length > 3 && (
                 <button
                   onClick={() => onNavigate('dotapp')}
@@ -879,11 +917,13 @@ export default function DriverHub({
       {/* DOT Application Detail Modal */}
       {selectedDotApp && (
         <DetailModal
-          title={`DOT Application`}
+          title={selectedDotApp.applicantName 
+            ? `${selectedDotApp.applicantName}'s Application`
+            : 'DOT Application'}
           onClose={() => setSelectedDotApp(null)}
           theme={theme}
         >
-          <DotAppDetailContent dotApp={selectedDotApp} theme={theme} />
+          <DotAppDetailContent dotApp={selectedDotApp} theme={theme} onNavigate={onNavigate} />
         </DetailModal>
       )}
     </div>
@@ -1231,7 +1271,15 @@ function ResumeDetailContent({
   )
 }
 
-function DotAppDetailContent({ dotApp, theme }: { dotApp: HubDotApplication; theme: string }) {
+function DotAppDetailContent({ 
+  dotApp, 
+  theme,
+  onNavigate,
+}: { 
+  dotApp: HubDotApplication
+  theme: string
+  onNavigate: (page: 'resume' | 'dotapp' | 'mvr' | 'jobs' | 'applications') => void
+}) {
   const labelClass = `text-xs font-semibold uppercase tracking-wide ${
     theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
   }`
@@ -1239,8 +1287,16 @@ function DotAppDetailContent({ dotApp, theme }: { dotApp: HubDotApplication; the
 
   return (
     <div className="space-y-4">
+      {/* Applicant name if available */}
+      {dotApp.applicantName && (
+        <div>
+          <p className={labelClass}>Applicant</p>
+          <p className={valueClass}>{dotApp.applicantName}</p>
+        </div>
+      )}
+      
       <div>
-        <p className={labelClass}>Submitted</p>
+        <p className={labelClass}>{dotApp.isInProgress ? 'Last Updated' : 'Submitted'}</p>
         <p className={valueClass}>{formatDate(dotApp.createdAt)}</p>
       </div>
       <div>
@@ -1253,7 +1309,7 @@ function DotAppDetailContent({ dotApp, theme }: { dotApp: HubDotApplication; the
       {!dotApp.isComplete && (
         <div>
           <p className={labelClass}>Progress</p>
-          <p className={valueClass}>Step {dotApp.currentStep} of 3</p>
+          <p className={valueClass}>Form {dotApp.currentStep} of 3</p>
           <div className={`mt-2 h-2 rounded-full overflow-hidden ${
             theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
           }`}>
@@ -1262,6 +1318,19 @@ function DotAppDetailContent({ dotApp, theme }: { dotApp: HubDotApplication; the
               style={{ width: `${(dotApp.currentStep / 3) * 100}%` }}
             />
           </div>
+          {/* Continue button for in-progress applications */}
+          {dotApp.isInProgress && (
+            <button
+              onClick={() => onNavigate('dotapp')}
+              className={`mt-4 w-full py-3 rounded-lg font-semibold transition-all ${
+                theme === 'dark'
+                  ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
+                  : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+              }`}
+            >
+              Continue Application
+            </button>
+          )}
         </div>
       )}
       {dotApp.blockchainApplicationId && (

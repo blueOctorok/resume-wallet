@@ -18,7 +18,8 @@ import {
   Phone,
   FileCheck,
   FileEdit,
-  Sparkles
+  Sparkles,
+  RotateCcw
 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import { profileToResumeBuilder, resumeBuilderToProfile } from '@/lib/profile-mapper'
@@ -292,6 +293,52 @@ export default function ResumeBuilder({
       ])
     }
   }
+
+  // Clear all form data (prefill or manual) and start over
+  const clearResume = () => {
+    if (typeof window !== 'undefined' && !window.confirm('Clear all form data and start over? Your form will be reset to empty.')) return
+    const emptyPersonal: PersonalInfo = {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      address: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      professionalSummary: '',
+    }
+    const emptyCDL: CDLInfo = {
+      cdlNumber: '',
+      cdlState: '',
+      cdlClass: '',
+      endorsements: [],
+      expirationDate: '',
+      restrictions: [],
+    }
+    setPersonalInfo(emptyPersonal)
+    setCDLInfo(emptyCDL)
+    setEmployments([])
+    setEducations([])
+    setSkills([])
+    setReferences([])
+    setProfileLoaded(false)
+    setProfileSource(null)
+    setCurrentStep(0)
+    setSaveError(null)
+    setSaveSuccess(false)
+  }
+
+  const hasFormData =
+    !!personalInfo.firstName ||
+    !!personalInfo.lastName ||
+    !!personalInfo.email ||
+    !!personalInfo.phone ||
+    cdlInfo.cdlNumber ||
+    employments.length > 0 ||
+    educations.length > 0 ||
+    skills.length > 0 ||
+    references.length > 0
 
   // Load data from unified profile first, then fall back to existing resume
   useEffect(() => {
@@ -914,20 +961,37 @@ export default function ResumeBuilder({
                   to PDF when done.
                 </p>
               </div>
-              {/* Test Data Button */}
-              <button
-                type='button'
-                onClick={fillTestData}
-                className={`inline-flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm rounded-lg font-medium transition-all whitespace-nowrap ${
-                  theme === 'dark'
-                    ? 'bg-brand-sage/30 text-brand-cream border border-brand-sage/40 hover:bg-brand-sage/40'
-                    : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
-                }`}
-                title='Fill test data'
-              >
-                <Sparkles className='w-4 h-4' />
-                <span>Fill Test Data</span>
-              </button>
+              <div className='flex items-center gap-2 flex-wrap'>
+                {/* Clear form — when prefilled or manually filled, lets user start over */}
+                {hasFormData && (
+                  <button
+                    type='button'
+                    onClick={clearResume}
+                    className={`inline-flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm rounded-lg font-medium transition-all whitespace-nowrap ${
+                      theme === 'dark'
+                        ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/30'
+                        : 'text-gray-500 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200'
+                    }`}
+                    title='Clear all form data and start over'
+                  >
+                    <RotateCcw className='w-4 h-4' />
+                    <span>Clear form</span>
+                  </button>
+                )}
+                <button
+                  type='button'
+                  onClick={fillTestData}
+                  className={`inline-flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm rounded-lg font-medium transition-all whitespace-nowrap ${
+                    theme === 'dark'
+                      ? 'bg-brand-sage/30 text-brand-cream border border-brand-sage/40 hover:bg-brand-sage/40'
+                      : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
+                  }`}
+                  title='Fill test data'
+                >
+                  <Sparkles className='w-4 h-4' />
+                  <span>Fill Test Data</span>
+                </button>
+              </div>
             </div>
             {/* Show prefill indicator when data loaded from profile */}
             {profileLoaded && profileSource && (

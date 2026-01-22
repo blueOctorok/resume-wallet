@@ -231,6 +231,26 @@ const EmployerHub = dynamic(
   }
 )
 
+const ApplicantsPage = dynamic(
+  () => import('@/components/employer/ApplicantsPage').then((mod) => mod.default),
+  {
+    ssr: false,
+    loading: () => (
+      <LoadingScreen message='Loading applicants...' fullScreen={false} />
+    ),
+  }
+)
+
+const FindDriversPage = dynamic(
+  () => import('@/components/employer/FindDriversPage').then((mod) => mod.default),
+  {
+    ssr: false,
+    loading: () => (
+      <LoadingScreen message='Loading driver search...' fullScreen={false} />
+    ),
+  }
+)
+
 const RoleSelectionModal = dynamic(
   () => import('@/components/RoleSelectionModal').then((mod) => mod.default),
   {
@@ -347,7 +367,7 @@ const HomeContent = () => {
 
   // Track if user has used AI prefill
   const [hasPrefilled, setHasPrefilled] = useState(false)
-  const [showPrefillUpload, setShowPrefillUpload] = useState(true)
+  const [showPrefillUpload, setShowPrefillUpload] = useState(false) // Start with forms, prefill is in Form 1
   const [journeyState, setJourneyState] = useState<DriverJourneyState>(() =>
     createInitialJourneyState()
   )
@@ -542,7 +562,7 @@ const HomeContent = () => {
     setForm3Data(null)
     console.log('🔄 [RESET] Form data set to null')
     setHasPrefilled(false)
-    setShowPrefillUpload(true)
+    setShowPrefillUpload(false) // Go straight to forms, prefill is in Form 1
     setCurrentForm(1)
     setIsDriverApplicationCompleted(false)
     setShowEmploymentVerification(false)
@@ -1242,7 +1262,7 @@ const HomeContent = () => {
         case 'resume:prefill':
           // Legacy action - navigate to forms (analysis should have already happened)
           setCurrentPage('dotapp')
-          setShowPrefillUpload(true)
+          setShowPrefillUpload(false) // Go straight to forms, prefill is in Form 1
           setShowEmploymentVerification(false)
           setShowDashboard(false)
           break
@@ -1342,16 +1362,9 @@ const HomeContent = () => {
                   )
                 })
             } else {
-              // No resume hash available, show upload component
-              setShowPrefillUpload(true)
-              setTimeout(() => {
-                handleResumeUploadEvent({
-                  type: 'analysis_ready',
-                  step: 'prefill',
-                  message:
-                    'I need your resume to prefill the forms. Please upload it below.',
-                })
-              }, 300)
+              // No resume hash available - go straight to forms (prefill is in Form 1)
+              setShowPrefillUpload(false)
+              // Note: User can still use prefill from Form 1 if they want
             }
           }
           break
@@ -1461,7 +1474,7 @@ const HomeContent = () => {
 
   // Handler for AI prefill success
   const handlePrefillSuccess = useCallback(
-    (prefillData: {
+    async (prefillData: {
       form1Data: any
       form2Data: any
       form3Data: any
@@ -1493,23 +1506,17 @@ const HomeContent = () => {
       }
 
       // Sync extracted data to unified profile (fire-and-forget)
-      // This enables Resume Builder to also benefit from AI extraction
-      if (user?.address && (prefillData.form1Data || prefillData.form2Data)) {
+      // Uses form mappers: Form 1 → personal/CDL, Form 2 → driving, Form 3 → employment
+      if (user?.address && (prefillData.form1Data || prefillData.form2Data || prefillData.form3Data)) {
         try {
-          const profileData = dotApplicationToProfile({
-            personalInfo: prefillData.form1Data || {},
-            cdlInfo: prefillData.form1Data || {},
-            employmentHistory: prefillData.form2Data?.employmentHistory || [],
-            drivingRecord: prefillData.form3Data || { violations: [], accidents: [] },
-            medicalInfo: {} as any,
-            drugAlcoholTesting: {} as any,
-            trainingRecords: [],
-            references: [],
-            drivingExperience: null,
-            safetyCompliance: {} as any,
-            authorizations: {} as any,
-          })
-          
+          const { form1ToProfile, form2ToProfile, form3ToProfile } = await import(
+            '@/lib/dot-form-mapper'
+          )
+          const profileData = {
+            ...(prefillData.form1Data ? form1ToProfile(prefillData.form1Data) : {}),
+            ...(prefillData.form2Data ? form2ToProfile(prefillData.form2Data) : {}),
+            ...(prefillData.form3Data ? form3ToProfile(prefillData.form3Data) : {}),
+          }
           fetch('/api/driver/profile', {
             method: 'PUT',
             headers: {
@@ -1682,22 +1689,16 @@ const HomeContent = () => {
       console.log('✅ [HOME] Application saved to database successfully')
 
       // Sync to unified profile (fire-and-forget, non-blocking)
-      // This enables Resume Builder to prefill from DOT form data
+      // Uses same form mappers as Save Progress: Form 1 → personal/CDL, Form 2 → driving, Form 3 → employment
       try {
-        const profileData = dotApplicationToProfile({
-          personalInfo: form1Data,
-          cdlInfo: form1Data,
-          employmentHistory: form2Data?.employmentHistory || [],
-          drivingRecord: form3Data || { violations: [], accidents: [] },
-          medicalInfo: {} as any,
-          drugAlcoholTesting: {} as any,
-          trainingRecords: [],
-          references: form3Data?.references || [],
-          drivingExperience: form3Data?.drivingExperience || null,
-          safetyCompliance: {} as any,
-          authorizations: {} as any,
-        })
-        
+        const { form1ToProfile, form2ToProfile, form3ToProfile } = await import(
+          '@/lib/dot-form-mapper'
+        )
+        const profileData = {
+          ...(form1Data ? form1ToProfile(form1Data) : {}),
+          ...(form2Data ? form2ToProfile(form2Data) : {}),
+          ...(form3Data ? form3ToProfile(form3Data) : {}),
+        }
         fetch('/api/driver/profile', {
           method: 'PUT',
           headers: {
@@ -1708,11 +1709,13 @@ const HomeContent = () => {
             profileData,
             source: 'dot_application',
           }),
-        }).then(() => {
-          console.log('✅ [HOME] Unified profile synced from DOT application')
-        }).catch((err) => {
-          console.warn('⚠️ [HOME] Profile sync failed (non-fatal):', err)
         })
+          .then(() => {
+            console.log('✅ [HOME] Unified profile synced from DOT application')
+          })
+          .catch((err) => {
+            console.warn('⚠️ [HOME] Profile sync failed (non-fatal):', err)
+          })
       } catch (profileError) {
         console.warn('⚠️ [HOME] Profile sync error (non-fatal):', profileError)
       }
@@ -2263,10 +2266,31 @@ const HomeContent = () => {
                 walletAddress={user.address}
                 onNavigate={(page) => {
                   // Map hub navigation to page navigation
-                  if (page === 'post-job' || page === 'jobs' || page === 'applicants' || page === 'company-profile' || page === 'reports') {
+                  if (page === 'post-job' || page === 'jobs' || page === 'applicants' || page === 'find-drivers' || page === 'company-profile' || page === 'reports') {
                     setCurrentPage(page)
                   }
                 }}
+              />
+            )}
+
+          {/* Employer Pages */}
+          {user &&
+            userRole === 'employer' &&
+            !isRoleLoading &&
+            currentPage === 'applicants' && (
+              <ApplicantsPage
+                walletAddress={user.address}
+                onBack={() => setCurrentPage(null)}
+              />
+            )}
+
+          {user &&
+            userRole === 'employer' &&
+            !isRoleLoading &&
+            currentPage === 'find-drivers' && (
+              <FindDriversPage
+                walletAddress={user.address}
+                onBack={() => setCurrentPage(null)}
               />
             )}
 
