@@ -6,10 +6,14 @@ import { mergeIntoProfile } from '@/lib/profile-mapper'
 
 /**
  * GET /api/driver/profile
- * Fetch the user's unified driver profile
+ * Fetch a driver profile
  * 
  * Headers:
- *   x-wallet-address: User's wallet address
+ *   x-wallet-address: User's wallet address (required)
+ * 
+ * Query params:
+ *   userId: (optional) Fetch a specific driver's profile by user ID
+ *           Useful for employers viewing applicant profiles
  * 
  * Returns:
  *   { success: true, profile: UnifiedDriverProfile } on success
@@ -26,28 +30,54 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const { searchParams } = new URL(request.url)
+    const requestedUserId = searchParams.get('userId')
+
     const supabase = await getAdminSupabaseClient()
 
-    // Get user ID from wallet address
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
+    let targetUserId: string
 
-    if (userError || !user) {
-      console.error('[DRIVER PROFILE GET] User not found:', walletAddress)
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
+    if (requestedUserId) {
+      // Employer is fetching a specific driver's profile
+      // Verify the requester exists (basic auth check)
+      const { data: requester } = await supabase
+        .from('users')
+        .select('id')
+        .ilike('wallet_address', walletAddress)
+        .single()
+
+      if (!requester) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+
+      targetUserId = requestedUserId
+    } else {
+      // User is fetching their own profile
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .ilike('wallet_address', walletAddress)
+        .single()
+
+      if (userError || !user) {
+        console.error('[DRIVER PROFILE GET] User not found:', walletAddress)
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        )
+      }
+
+      targetUserId = user.id
     }
 
     // Get driver profile
     const { data: profile, error: profileError } = await supabase
       .from('driver_profiles')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', targetUserId)
       .single()
 
     // If no profile exists, return null (not an error)

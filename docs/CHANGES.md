@@ -2,6 +2,130 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## ✨ **FEATURE: Employment Verification System** (January 2026)
+
+**Complete employment verification workflow allowing future employers to verify driver employment history with previous employers. Implements the DOT-required 6-question verification with a 3-attempt contact rule.**
+
+### The Problem
+
+Previously, "verified" just meant the driver submitted their data to blockchain - but employers never actually confirmed employment. True verification requires the **previous employer** to confirm employment details.
+
+### The Solution: Three-Party Verification
+
+```
+Driver submits employment history (self-reported)
+            ↓
+Future employer interested in hiring
+            ↓
+Future employer initiates verification
+            ↓
+System contacts previous employer (up to 3 attempts)
+            ↓
+Previous employer answers 6 FMCSA questions
+            ↓
+Results stored and shared with future employer
+```
+
+### Verification Statuses
+
+| Status | Meaning |
+|--------|---------|
+| `SELF_REPORTED` | Driver's claim, not verified by employer |
+| `VERIFICATION_REQUESTED` | Future employer initiated verification |
+| `VERIFICATION_IN_PROGRESS` | Contact attempts being made (1-3) |
+| `VERIFIED` | Previous employer confirmed all details |
+| `PARTIALLY_VERIFIED` | Some details confirmed, others disputed |
+| `VERIFICATION_DENIED` | Previous employer says details are false |
+| `ATTEMPTS_EXHAUSTED` | 3 attempts made, no response |
+| `VERIFICATION_DECLINED` | Previous employer declined to verify |
+
+### The 6 FMCSA Verification Questions
+
+1. Were the employment dates correct? (Yes/No/Partial)
+2. Were they terminated? (Yes/No)
+3. Are they eligible to return? (Yes/No/Discuss)
+4. Were they ever in an accident? (Yes/No + details)
+5. Did they fail FMCSA Clearinghouse post-accident test? (Yes/No/N/A)
+6. Were they part of random drug test pull or refused a drug test? (Yes/No/N/A)
+
+### The 3-Attempt Rule
+
+- **Attempt 1**: Initial contact (email/phone)
+- **Attempt 2**: Follow-up after 3 days if no response
+- **Attempt 3**: Final attempt after 3 more days
+- After 3 attempts with no response → `ATTEMPTS_EXHAUSTED`
+
+### Files Created
+
+**Database:**
+- `supabase/migrations/009_employment_verification.sql` - Tables, indexes, RLS policies, helper functions
+
+**Types:**
+- `src/types/employment-verification.ts` - TypeScript types, conversion helpers, display utilities
+
+**API Routes:**
+- `src/app/api/verification/initiate/route.ts` - Future employer starts verification
+- `src/app/api/verification/respond/[token]/route.ts` - Previous employer submits response
+- `src/app/api/verification/status/route.ts` - Get verification status for hubs
+- `src/app/api/verification/attempt/route.ts` - Record contact attempts
+
+**UI Components:**
+- `src/components/verification/VerificationStatusBadge.tsx` - Shared status badge
+- `src/components/verification/DriverVerificationSection.tsx` - Driver Hub section
+- `src/components/verification/EmployerVerificationSection.tsx` - Employer Hub section
+- `src/app/verify/[token]/page.tsx` - Previous employer verification portal
+
+**Files Modified:**
+- `src/components/DriverHub.tsx` - Added verification section
+- `src/components/EmployerHub.tsx` - Added verification section
+- `src/lib/ava-brain.ts` - Added verification templates and AI patterns
+
+### Key Features
+
+**For Drivers:**
+- See which employers are verifying their history
+- Track verification status for each employment
+- View verification results when completed
+
+**For Future Employers:**
+- Initiate verification from driver profile
+- Track attempts and responses
+- View detailed verification results
+- Manage multiple verifications
+
+**For Previous Employers:**
+- Secure token-based portal (no login required)
+- Answer 6 FMCSA questions
+- Option to verify, deny, or decline
+- Professional, mobile-friendly interface
+
+**AVA Integration:**
+- 20+ new templates for verification events
+- Guidance for drivers and employers
+- Help explanations for verification process
+
+### Database Schema
+
+```sql
+-- Main verification requests table
+employment_verification_requests (
+  id, driver_id, employment_id, requesting_company_id,
+  previous_employer_*, claimed_*, status, attempt_count,
+  verified_at, verified_by_*, 
+  dates_correct, was_terminated, eligible_to_return,
+  had_accident, failed_clearinghouse_test, random_drug_test_or_refused,
+  verification_token, blockchain_hash, ...
+)
+
+-- Attempt tracking
+verification_attempts (
+  id, verification_request_id, attempt_number, method,
+  contact_*, sent_at, response_received, responded_at, ...
+)
+```
+
+---
+
 ## ✨ **FEATURE: Admin Panel with Wallet-Based Access Control** (January 2026)
 
 **Complete admin panel rebuild with wallet-based authentication and data management capabilities.**

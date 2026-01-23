@@ -269,6 +269,93 @@ const TEMPLATES: Record<string, AvaResponse> = {
       { id: 'new', label: 'Upload different', value: 'upload_new' },
     ],
   },
+
+  // =====================================================
+  // EMPLOYMENT VERIFICATION TEMPLATES
+  // For drivers and employers
+  // =====================================================
+
+  // Driver-facing templates
+  'verification:driver_intro': {
+    message: "📋 Your employment history is self-reported. When companies are interested in hiring you, they may verify this information with your previous employers.",
+    useAI: false,
+  },
+  'verification:driver_request_started': {
+    message: "📨 A company is verifying your employment history. This is normal during the hiring process - it means they're seriously considering you!",
+    useAI: false,
+  },
+  'verification:driver_verified': {
+    message: "✅ Great news! Your previous employer verified your employment. This strengthens your profile and shows employers you're trustworthy.",
+    useAI: false,
+  },
+  'verification:driver_partially_verified': {
+    message: "⚠️ Your employment was partially verified - some details matched, others were corrected. Check the verification section for details.",
+    useAI: false,
+  },
+  'verification:driver_denied': {
+    message: "❌ Your previous employer disputed some of your employment details. You may want to review and update your employment history.",
+    useAI: false,
+  },
+  'verification:driver_exhausted': {
+    message: "⚠️ After 3 attempts, your previous employer hasn't responded to the verification request. Your employment remains self-reported.",
+    useAI: false,
+  },
+  'verification:driver_multiple_active': {
+    message: "📊 Multiple companies are currently verifying your employment history. You can track all verifications in your Driver Hub.",
+    useAI: false,
+  },
+
+  // Employer-facing templates
+  'verification:employer_intro': {
+    message: "📋 Employment verification helps you confirm drivers actually worked where they claim. You can verify with previous employers through email or phone - up to 3 attempts per request.",
+    useAI: false,
+  },
+  'verification:employer_initiated': {
+    message: "📨 Verification request created! I'll help you track the status. The previous employer will receive a secure link to verify the driver's employment.",
+    useAI: false,
+  },
+  'verification:employer_attempt_sent': {
+    message: "📧 Contact attempt sent to the previous employer. You'll be notified when they respond. If no response in 3 days, you can send another attempt (max 3 total).",
+    useAI: false,
+  },
+  'verification:employer_response_received': {
+    message: "🔔 Previous employer responded to your verification request! Check the verification section for the results.",
+    useAI: false,
+  },
+  'verification:employer_verified': {
+    message: "✅ Employment verified! The previous employer confirmed the driver's employment details. All 6 FMCSA questions have been answered.",
+    useAI: false,
+  },
+  'verification:employer_denied': {
+    message: "❌ The previous employer disputed this driver's employment claims. Review the details carefully before making a hiring decision.",
+    useAI: false,
+  },
+  'verification:employer_exhausted': {
+    message: "⚠️ After 3 attempts, no response from the previous employer. The employment remains unverified - consider this in your hiring decision.",
+    useAI: false,
+  },
+  'verification:employer_declined': {
+    message: "🚫 The previous employer declined to verify employment. This sometimes happens due to company policy.",
+    useAI: false,
+  },
+  'verification:employer_no_contact': {
+    message: "📞 No contact information for this previous employer. The driver may need to provide updated contact details.",
+    useAI: false,
+  },
+
+  // General verification help
+  'verification:help_what_is': {
+    message: "**What is Employment Verification?**\n\nIt's the process where a future employer contacts your previous employers to confirm:\n\n1. ✅ Employment dates were correct\n2. ✅ Whether you were terminated\n3. ✅ If you're eligible to return\n4. ✅ Any accident history\n5. ✅ FMCSA Clearinghouse test results\n6. ✅ Drug test history\n\nThis is required for DOT-regulated positions and helps build trust in the hiring process.",
+    useAI: false,
+  },
+  'verification:help_3_attempts': {
+    message: "**The 3-Attempt Rule**\n\nWhen verifying employment:\n\n• **Attempt 1**: Initial contact (email/phone)\n• **Attempt 2**: Follow-up after 3 days\n• **Attempt 3**: Final attempt after 3 more days\n\nIf no response after 3 attempts, the verification is marked as 'No Response' and the employment remains self-reported.",
+    useAI: false,
+  },
+  'verification:help_self_reported': {
+    message: "**Self-Reported Employment**\n\nThis means the driver submitted their employment history, but it hasn't been verified by the previous employer yet.\n\nIt's not bad - it just means no one has verified it. Future employers can initiate verification when they're interested in hiring.",
+    useAI: false,
+  },
 }
 
 // =====================================================
@@ -292,6 +379,10 @@ const AI_REQUIRED_PATTERNS = [
   
   // Specific form field help (context-dependent)
   /hazmat|endorsement|medical.*card|physical|drug test|accident.*report/i,
+  
+  // Verification-related complex questions
+  /verification.*failed|employer.*not respond|dispute.*employment|wrong.*dates|clearinghouse/i,
+  /what if.*employer|previous.*employer.*respond|verify.*employment.*history/i,
 ]
 
 // =====================================================

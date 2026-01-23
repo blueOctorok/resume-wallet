@@ -17,6 +17,8 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  X,
+  Eye,
 } from 'lucide-react'
 import AdminResetWallet from '@/components/admin/AdminResetWallet'
 import dynamic from 'next/dynamic'
@@ -32,6 +34,8 @@ interface User {
   wallet_address: string
   email: string | null
   name: string | null
+  displayName: string | null  // From driver_profiles first/last name
+  displayEmail: string | null // From driver_profiles or users.email
   role: string | null
   is_active: boolean
   created_at: string
@@ -39,6 +43,14 @@ interface User {
   resumeCount: number
   dotAppCount: number
   isAdmin: boolean // True if wallet is in ADMIN_WALLETS
+}
+
+// User detail data when viewing a specific user
+interface UserDetail {
+  user: User
+  profile: Profile | null
+  resumes: Resume[]
+  dotApps: DotApp[]
 }
 
 interface DotApp {
@@ -58,7 +70,9 @@ interface Profile {
   first_name: string | null
   last_name: string | null
   email: string | null
+  phone: string | null
   cdl_number: string | null
+  cdl_state: string | null
   last_updated_from: string | null
   updated_at: string
   walletAddress: string
@@ -106,6 +120,37 @@ function AdminDashboardContent() {
   const [deleteTarget, setDeleteTarget] = useState<{ type: string; id: string; name: string } | null>(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleting, setDeleting] = useState(false)
+
+  // User detail view
+  const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null)
+  const [loadingUserDetail, setLoadingUserDetail] = useState(false)
+
+  // Fetch user detail when user is selected
+  const fetchUserDetail = useCallback(async (userId: string) => {
+    if (!walletAddress) return
+    
+    setLoadingUserDetail(true)
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        headers: { 'x-wallet-address': walletAddress },
+      })
+      const data = await response.json()
+      if (data.success) {
+        // Find the user from our list to include admin status
+        const userFromList = users.find(u => u.id === userId)
+        setSelectedUser({
+          user: { ...data.user, isAdmin: userFromList?.isAdmin || false, displayName: userFromList?.displayName, displayEmail: userFromList?.displayEmail },
+          profile: data.profile,
+          resumes: data.resumes || [],
+          dotApps: data.dotApps || [],
+        })
+      }
+    } catch (err) {
+      console.error('Failed to fetch user detail:', err)
+    } finally {
+      setLoadingUserDetail(false)
+    }
+  }, [walletAddress, users])
 
   // Check admin status
   useEffect(() => {
@@ -422,13 +467,17 @@ function AdminDashboardContent() {
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                       {users.map(user => (
-                        <tr key={user.id} className={theme === 'dark' ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'}>
+                        <tr 
+                          key={user.id} 
+                          className={`cursor-pointer ${theme === 'dark' ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'}`}
+                          onClick={() => fetchUserDetail(user.id)}
+                        >
                           <td className={tableCellClass}>
                             <code className="text-xs">{user.wallet_address.slice(0, 8)}...{user.wallet_address.slice(-6)}</code>
                           </td>
                           <td className={tableCellClass}>
-                            <div>{user.name || '-'}</div>
-                            <div className="text-xs opacity-60">{user.email || '-'}</div>
+                            <div className={user.displayName ? '' : 'opacity-50'}>{user.displayName || 'No name'}</div>
+                            <div className="text-xs opacity-60">{user.displayEmail || '-'}</div>
                           </td>
                           <td className={tableCellClass}>
                             <div className="flex flex-wrap gap-1">
@@ -458,7 +507,7 @@ function AdminDashboardContent() {
                           <td className={tableCellClass}>
                             {new Date(user.created_at).toLocaleDateString()}
                           </td>
-                          <td className={tableCellClass}>
+                          <td className={tableCellClass} onClick={e => e.stopPropagation()}>
                             {user.isAdmin ? (
                               <span 
                                 className="p-1.5 text-gray-400 dark:text-gray-600 cursor-not-allowed"
@@ -468,7 +517,7 @@ function AdminDashboardContent() {
                               </span>
                             ) : (
                               <button
-                                onClick={() => setDeleteTarget({ type: 'user', id: user.id, name: user.wallet_address })}
+                                onClick={() => setDeleteTarget({ type: 'user', id: user.id, name: user.displayName || user.wallet_address })}
                                 className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500"
                                 title="Delete user and all data"
                               >
@@ -675,6 +724,193 @@ function AdminDashboardContent() {
           )}
         </div>
       </div>
+
+      {/* User Detail Modal */}
+      {(selectedUser || loadingUserDetail) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className={`rounded-xl border ${
+            theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+          } p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto`}>
+            {loadingUserDetail ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-brand-mint" />
+              </div>
+            ) : selectedUser && (
+              <>
+                {/* Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className={`text-xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                      {selectedUser.user.displayName || 'Unnamed User'}
+                      {selectedUser.user.isAdmin && (
+                        <span className="ml-2 px-2 py-1 rounded text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 font-semibold">
+                          Admin
+                        </span>
+                      )}
+                    </h3>
+                    <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                      <code>{selectedUser.user.wallet_address}</code>
+                    </p>
+                    {selectedUser.user.displayEmail && (
+                      <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {selectedUser.user.displayEmail}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setSelectedUser(null)}
+                    className={`p-2 rounded-lg ${theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Profile Section */}
+                {selectedUser.profile && (
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                        Driver Profile
+                      </h4>
+                      {!selectedUser.user.isAdmin && (
+                        <button
+                          onClick={() => {
+                            setSelectedUser(null)
+                            setDeleteTarget({ type: 'profile', id: selectedUser.profile!.id, name: `${selectedUser.user.displayName}'s profile` })
+                          }}
+                          className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
+                        >
+                          Delete Profile
+                        </button>
+                      )}
+                    </div>
+                    <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="opacity-60">CDL:</span> {selectedUser.profile.cdl_number || '-'}
+                        </div>
+                        <div>
+                          <span className="opacity-60">State:</span> {selectedUser.profile.cdl_state || '-'}
+                        </div>
+                        <div>
+                          <span className="opacity-60">Phone:</span> {selectedUser.profile.phone || '-'}
+                        </div>
+                        <div>
+                          <span className="opacity-60">Updated:</span> {selectedUser.profile.updated_at ? new Date(selectedUser.profile.updated_at).toLocaleDateString() : '-'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* DOT Applications */}
+                <div className="mb-6">
+                  <h4 className={`font-semibold mb-3 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                    DOT Applications ({selectedUser.dotApps.length})
+                  </h4>
+                  {selectedUser.dotApps.length === 0 ? (
+                    <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>No DOT applications</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedUser.dotApps.map(app => (
+                        <div 
+                          key={app.id}
+                          className={`flex items-center justify-between p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-50'}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              app.is_complete
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                            }`}>
+                              {app.is_complete ? 'Complete' : `Step ${app.current_step}`}
+                            </span>
+                            <span className="text-sm">{new Date(app.created_at).toLocaleDateString()}</span>
+                            <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                              {app.verification_status}
+                            </span>
+                          </div>
+                          {!selectedUser.user.isAdmin && (
+                            <button
+                              onClick={() => {
+                                setSelectedUser(null)
+                                setDeleteTarget({ type: 'dotApp', id: app.id, name: `DOT application from ${new Date(app.created_at).toLocaleDateString()}` })
+                              }}
+                              className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Resumes */}
+                <div className="mb-6">
+                  <h4 className={`font-semibold mb-3 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                    Resumes ({selectedUser.resumes.length})
+                  </h4>
+                  {selectedUser.resumes.length === 0 ? (
+                    <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>No resumes</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedUser.resumes.map(resume => (
+                        <div 
+                          key={resume.id}
+                          className={`flex items-center justify-between p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-50'}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <FileText className="w-4 h-4 opacity-60" />
+                            <span className="text-sm">{resume.title || resume.filename || 'Untitled'}</span>
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              resume.resume_type === 'built'
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                            }`}>
+                              {resume.resume_type || 'uploaded'}
+                            </span>
+                            {resume.verification_status === 'VERIFIED' && (
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                            )}
+                          </div>
+                          {!selectedUser.user.isAdmin && (
+                            <button
+                              onClick={() => {
+                                setSelectedUser(null)
+                                setDeleteTarget({ type: 'resume', id: resume.id, name: resume.title || resume.filename || 'resume' })
+                              }}
+                              className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Delete All User Data Button */}
+                {!selectedUser.user.isAdmin && (
+                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={() => {
+                        setSelectedUser(null)
+                        setDeleteTarget({ type: 'user', id: selectedUser.user.id, name: selectedUser.user.displayName || selectedUser.user.wallet_address })
+                      }}
+                      className="w-full px-4 py-2 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700"
+                    >
+                      Delete User and All Data
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteTarget && (

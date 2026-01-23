@@ -38,6 +38,7 @@ Veree is now architected as a **two-sided marketplace** connecting drivers with 
   - Profile completeness score with smart hints
   - All resumes, DOT apps, MVR records, job applications in one view
   - Quick stats cards, detail modals, payment history
+  - **Employment verification status tracking (NEW!)**
 - ✅ Resume upload with blockchain verification
 - ✅ **Resume builder** - Create professional driver resumes
 - ✅ DOT application forms (3-step wizard)
@@ -46,17 +47,21 @@ Veree is now architected as a **two-sided marketplace** connecting drivers with 
 - ✅ Blockchain submission and verification
 - ✅ Transaction history and wallet management
 
-**Employer Experience (Placeholder):**
+**Employer Experience:**
 
-- ✅ Placeholder dashboard with feature preview
-- ✅ "Coming soon" messaging
-- 🔜 **Employer Hub** - Unified dashboard for employers (planned)
+- ✅ Employer Hub - Unified dashboard for employers
   - All received applications at a glance
   - Applicant cards with driver info, MVR status, resume preview
   - Status management (submitted, reviewing, interviewing, hired)
-- 🔜 Company profile setup
-- 🔜 Job posting creation
-- 🔜 Applicant review interface
+  - **Employment verification management (NEW!)**
+- ✅ Company profile setup
+- ✅ Job posting creation
+- ✅ Applicant review interface
+- ✅ **Employment Verification System (NEW!)**
+  - Initiate verification from driver profiles
+  - Track contact attempts (up to 3 per request)
+  - View 6 FMCSA verification question results
+  - Previous employer portal (token-based, no login required)
 
 ---
 
@@ -112,6 +117,52 @@ Veree is now architected as a **two-sided marketplace** connecting drivers with 
 - Search and filter logic
 - Application submission flow
 - Notification system for new applications
+
+---
+
+#### ✅ **Employment Verification System (COMPLETE - January 2026)**
+
+**Three-Party Verification Flow:**
+
+The system enables future employers to verify a driver's employment history with their previous employers, implementing the DOT-required verification process.
+
+```
+Driver submits employment history (self-reported)
+            ↓
+Future employer initiates verification
+            ↓
+System contacts previous employer (up to 3 attempts)
+            ↓
+Previous employer answers 6 FMCSA questions
+            ↓
+Results stored and shared with future employer
+```
+
+**The 6 FMCSA Verification Questions:**
+
+1. Were the employment dates correct?
+2. Were they terminated?
+3. Are they eligible to return?
+4. Were they ever in an accident?
+5. Did they fail FMCSA Clearinghouse post-accident test?
+6. Were they part of random drug test pull or refused a drug test?
+
+**Verification Statuses:**
+
+| Status | Meaning |
+|--------|---------|
+| `SELF_REPORTED` | Driver's claim, not yet verified |
+| `VERIFICATION_IN_PROGRESS` | Contact attempts being made (1-3) |
+| `VERIFIED` | Previous employer confirmed details |
+| `PARTIALLY_VERIFIED` | Some details confirmed, others disputed |
+| `ATTEMPTS_EXHAUSTED` | 3 attempts, no response |
+
+**Key Features:**
+
+- **For Drivers:** Track verification status, see which employers are verifying
+- **For Future Employers:** Initiate verification, track attempts, view results
+- **For Previous Employers:** Token-based portal, answer questions without login
+- **AVA Integration:** Templates and guidance for all parties
 
 ---
 

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import ShareProfileCard from './ShareProfileCard'
+import DriverVerificationSection from './verification/DriverVerificationSection'
 import {
   FileText,
   ClipboardList,
@@ -466,6 +467,13 @@ export default function DriverHub({
             : undefined
           } 
         />
+      </div>
+
+      {/* ============================================================ */}
+      {/* EMPLOYMENT VERIFICATION STATUS */}
+      {/* ============================================================ */}
+      <div className="mb-6">
+        <DriverVerificationSection userAddress={userAddress} />
       </div>
 
       {/* ============================================================ */}

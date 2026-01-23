@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import EmployerVerificationSection from './verification/EmployerVerificationSection'
 import {
   Briefcase,
   Users,
@@ -28,6 +29,7 @@ import {
   Mail,
   Shield,
   Search,
+  ClipboardCheck,
 } from 'lucide-react'
 
 // ============================================================
@@ -161,6 +163,13 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   const [selectedApplicant, setSelectedApplicant] = useState<HubApplicant | null>(null)
   const [selectedJob, setSelectedJob] = useState<HubJobPosting | null>(null)
   const [selectedMvr, setSelectedMvr] = useState<HubMvrOrder | null>(null)
+  
+  // Employment verification states
+  const [showVerifyModal, setShowVerifyModal] = useState(false)
+  const [verifyingDriverId, setVerifyingDriverId] = useState<string | null>(null)
+  const [driverEmployments, setDriverEmployments] = useState<any[]>([])
+  const [loadingEmployments, setLoadingEmployments] = useState(false)
+  const [initiatingVerification, setInitiatingVerification] = useState(false)
 
   // Fetch hub data
   const fetchHubData = useCallback(async () => {
@@ -193,6 +202,69 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       fetchHubData()
     }
   }, [walletAddress, fetchHubData])
+
+  // Open employment verification modal
+  const openVerifyEmploymentModal = async (driverUserId: string) => {
+    setVerifyingDriverId(driverUserId)
+    setShowVerifyModal(true)
+    setLoadingEmployments(true)
+    setDriverEmployments([])
+
+    try {
+      // Fetch driver's employment history
+      const response = await fetch(`/api/driver/profile?userId=${driverUserId}`, {
+        headers: { 'x-wallet-address': walletAddress },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setDriverEmployments(data.profile?.employmentHistory || [])
+      }
+    } catch (err) {
+      console.error('Error fetching driver employment:', err)
+    } finally {
+      setLoadingEmployments(false)
+    }
+  }
+
+  // Initiate verification for selected employment
+  const initiateVerification = async (employmentId: string, employment: any) => {
+    if (!verifyingDriverId) return
+
+    setInitiatingVerification(true)
+    try {
+      const response = await fetch('/api/verification/initiate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': walletAddress,
+        },
+        body: JSON.stringify({
+          driverId: verifyingDriverId,
+          employmentId: employmentId,
+          previousEmployerEmail: employment.supervisorEmail,
+          previousEmployerPhone: employment.supervisorPhone,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        alert('Verification request created successfully!')
+        setShowVerifyModal(false)
+        setSelectedApplicant(null)
+        // Refresh the page to show updated verification status
+        fetchHubData()
+      } else {
+        alert(data.error || 'Failed to create verification request')
+      }
+    } catch (err) {
+      console.error('Error initiating verification:', err)
+      alert('Failed to create verification request')
+    } finally {
+      setInitiatingVerification(false)
+    }
+  }
 
   // Loading state
   if (loading) {
@@ -381,6 +453,11 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             {data.pipeline.rejected} rejected
           </p>
         )}
+      </div>
+
+      {/* Employment Verification Section */}
+      <div className="mb-8">
+        <EmployerVerificationSection userAddress={walletAddress} />
       </div>
 
       {/* Main Content Grid */}
@@ -573,6 +650,9 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
               // TODO: Implement MVR ordering
               console.log('Order MVR for', selectedApplicant.driverUserId)
             }}
+            onVerifyEmployment={() => {
+              openVerifyEmploymentModal(selectedApplicant.driverUserId)
+            }}
           />
         </DetailModal>
       )}
@@ -597,6 +677,105 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         >
           <MvrDetailContent mvr={selectedMvr} theme={theme} />
         </DetailModal>
+      )}
+
+      {/* Employment Verification Modal */}
+      {showVerifyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-black/50" 
+            onClick={() => setShowVerifyModal(false)} 
+          />
+          <div className={`relative w-full max-w-lg rounded-2xl p-6 ${
+            theme === 'dark'
+              ? 'bg-gray-900 border border-gray-700'
+              : 'bg-white shadow-2xl'
+          }`}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className={`text-lg font-semibold ${
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
+              }`}>
+                Verify Employment History
+              </h3>
+              <button
+                onClick={() => setShowVerifyModal(false)}
+                className={`p-1 rounded-lg ${
+                  theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
+                }`}
+              >
+                <X className={`w-5 h-5 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`} />
+              </button>
+            </div>
+
+            <p className={`text-sm mb-4 ${
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            }`}>
+              Select an employment record to verify with the previous employer:
+            </p>
+
+            {loadingEmployments ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className={`w-8 h-8 animate-spin ${
+                  theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                }`} />
+              </div>
+            ) : driverEmployments.length === 0 ? (
+              <div className={`text-center py-8 ${
+                theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+              }`}>
+                <Building2 className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>No employment history found for this driver</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {driverEmployments.map((emp: any) => (
+                  <button
+                    key={emp.id}
+                    onClick={() => initiateVerification(emp.id, emp)}
+                    disabled={initiatingVerification}
+                    className={`w-full text-left p-4 rounded-xl border transition-colors ${
+                      theme === 'dark'
+                        ? 'bg-gray-800/50 border-gray-700 hover:border-brand-mint/50 hover:bg-gray-800'
+                        : 'bg-gray-50 border-gray-200 hover:border-brand-sage/50 hover:bg-gray-100'
+                    } ${initiatingVerification ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className={`font-medium ${
+                          theme === 'dark' ? 'text-white' : 'text-gray-900'
+                        }`}>
+                          {emp.companyName}
+                        </p>
+                        <p className={`text-sm ${
+                          theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                        }`}>
+                          {emp.position}
+                        </p>
+                        <p className={`text-xs mt-1 ${
+                          theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                        }`}>
+                          {emp.startDate} - {emp.endDate || 'Present'}
+                        </p>
+                      </div>
+                      <ChevronRight className={`w-5 h-5 ${
+                        theme === 'dark' ? 'text-gray-600' : 'text-gray-400'
+                      }`} />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {initiatingVerification && (
+              <div className={`mt-4 flex items-center justify-center gap-2 text-sm ${
+                theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+              }`}>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Creating verification request...
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )
@@ -1002,10 +1181,12 @@ function ApplicantDetailContent({
   applicant, 
   theme,
   onOrderMvr,
+  onVerifyEmployment,
 }: { 
   applicant: HubApplicant
   theme: string
   onOrderMvr: () => void
+  onVerifyEmployment: () => void
 }) {
   const labelClass = `text-xs font-semibold uppercase tracking-wide ${
     theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
@@ -1125,6 +1306,17 @@ function ApplicantDetailContent({
 
       {/* Actions */}
       <div className="pt-4 space-y-3">
+        <button
+          onClick={onVerifyEmployment}
+          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm ${
+            theme === 'dark'
+              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
+              : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+          }`}
+        >
+          <ClipboardCheck className="w-4 h-4" />
+          Verify Employment History
+        </button>
         <button
           onClick={onOrderMvr}
           className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm ${

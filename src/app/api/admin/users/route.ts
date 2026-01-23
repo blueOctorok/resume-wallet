@@ -43,13 +43,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
     }
 
-    // Get counts for each user (profiles, resumes, dot apps)
+    // Get counts and profile data for each user
     const userIds = users?.map(u => u.id) || []
     
-    // Get profile counts
+    // Get profile data (including names for display)
     const { data: profiles } = await supabase
       .from('driver_profiles')
-      .select('user_id')
+      .select('user_id, first_name, last_name, email')
       .in('user_id', userIds)
 
     // Get resume counts
@@ -58,15 +58,15 @@ export async function GET(request: NextRequest) {
       .select('user_id')
       .in('user_id', userIds)
 
-    // Get DOT app counts
+    // Get DOT app counts (submitted applications)
     const { data: dotApps } = await supabase
       .from('driver_applications')
       .select('user_id')
       .in('user_id', userIds)
 
-    // Build count maps
-    const profileMap = new Map<string, boolean>()
-    profiles?.forEach(p => profileMap.set(p.user_id, true))
+    // Build lookup maps
+    const profileMap = new Map<string, { first_name: string | null; last_name: string | null; email: string | null }>()
+    profiles?.forEach(p => profileMap.set(p.user_id, p))
 
     const resumeCountMap = new Map<string, number>()
     resumes?.forEach(r => {
@@ -78,14 +78,26 @@ export async function GET(request: NextRequest) {
       dotAppCountMap.set(a.user_id, (dotAppCountMap.get(a.user_id) || 0) + 1)
     })
 
-    // Enrich users with counts and admin status
-    const enrichedUsers = users?.map(user => ({
-      ...user,
-      hasProfile: profileMap.has(user.id),
-      resumeCount: resumeCountMap.get(user.id) || 0,
-      dotAppCount: dotAppCountMap.get(user.id) || 0,
-      isAdmin: isAdminWallet(user.wallet_address), // Flag admin wallets
-    }))
+    // Enrich users with counts, profile data, and admin status
+    const enrichedUsers = users?.map(user => {
+      const profile = profileMap.get(user.id)
+      // Build display name from profile or fall back to users.name
+      const displayName = profile?.first_name && profile?.last_name
+        ? `${profile.first_name} ${profile.last_name}`
+        : profile?.first_name || user.name || null
+      // Use profile email if available, fall back to users.email
+      const displayEmail = profile?.email || user.email || null
+      
+      return {
+        ...user,
+        displayName,
+        displayEmail,
+        hasProfile: profileMap.has(user.id),
+        resumeCount: resumeCountMap.get(user.id) || 0,
+        dotAppCount: dotAppCountMap.get(user.id) || 0,
+        isAdmin: isAdminWallet(user.wallet_address),
+      }
+    })
 
     return NextResponse.json({
       success: true,
