@@ -545,7 +545,9 @@ export default function PersonalInfoForm3({
             newErrors[`employer${index}FromDate`] = 'Start date is required (DOT § 383.35)'
           if (!employer.toDate)
             newErrors[`employer${index}ToDate`] = 'End date is required (DOT § 383.35)'
-          if (!employer.reasonForLeaving.trim())
+          // Only require reason for leaving for PAST jobs (not current employment with "Present")
+          const isCurrentJob = employer.toDate?.toLowerCase() === 'present'
+          if (!isCurrentJob && !employer.reasonForLeaving.trim())
             newErrors[`employer${index}Reason`] = 'Reason for leaving is required (DOT § 383.35(c)(3))'
           if (!employer.positionHeld.trim())
             newErrors[`employer${index}Position`] = 'Position held is required'
@@ -835,48 +837,16 @@ export default function PersonalInfoForm3({
   }
 
   const fillTestData = () => {
-    // Smart fill: only fill EMPTY fields, preserve existing data (especially AI-extracted employment history)
+    // Fill with complete test data for testing Form 3 validation
+    // This REPLACES any existing data to allow proper form testing
     setFormData((prev) => {
-      const hasExistingHistory = prev.employers?.length > 0 && prev.employers.some(
-        emp => emp.fromDate || emp.toDate || emp.name || emp.positionHeld
-      )
-      if (hasExistingHistory) {
-        return {
-          ...prev,
-          employers: prev.employers.map((employer) => {
-            const entryType = employer.type || (employer.isUnemployment ? 'unemployment' : 'employment')
-            const isPastJob = employer.toDate && employer.toDate.toLowerCase() !== 'present' && employer.toDate.trim() !== ''
-            const needsReason = isPastJob && entryType === 'employment' && (!employer.reasonForLeaving || employer.reasonForLeaving.trim() === '')
-            return {
-              type: entryType,
-              name: employer.name || '',
-              phone: employer.phone || '',
-              email: employer.email ?? '',
-              address: employer.address || '',
-              positionHeld: employer.positionHeld || '',
-              fromDate: employer.fromDate || '',
-              toDate: employer.toDate || '',
-              reasonForLeaving: needsReason ? 'Better opportunity' : (employer.reasonForLeaving || ''),
-              salary: employer.salary || '',
-              gapsInEmployment: employer.gapsInEmployment || '',
-              subjectToFMCSR: employer.subjectToFMCSR || 'yes',
-              safetySensitiveFunction: employer.safetySensitiveFunction || 'yes',
-              isUnemployment: entryType === 'unemployment',
-              schoolName: employer.schoolName || '',
-              courseOfStudy: employer.courseOfStudy || '',
-              militaryBranch: employer.militaryBranch || '',
-              dischargeType: employer.dischargeType || '',
-            }
-          }),
-        }
-      }
-
-      // New test data: type-based entries (Form 3 Tenstreet-style structure)
+      // Test data: type-based entries covering 10+ years (Form 3 Tenstreet-style structure)
+      // Timeline is CONTINUOUS with no gaps: Present → Jan 2015 (11 years)
       const cy = new Date().getFullYear()
       return {
         ...prev,
         employers: [
-          // 1. Current job (employment) — Present
+          // 1. Current job (employment) — Jan 2023 to Present (3 years)
           {
             type: 'employment' as const,
             name: 'ABC Trucking Company',
@@ -897,7 +867,7 @@ export default function PersonalInfoForm3({
             militaryBranch: '',
             dischargeType: '',
           },
-          // 2. Previous job (employment)
+          // 2. Previous job (employment) — Jan 2020 to Dec 2022 (3 years)
           {
             type: 'employment' as const,
             name: 'XYZ Logistics',
@@ -905,8 +875,8 @@ export default function PersonalInfoForm3({
             email: 'verification@xyzlogistics.com',
             address: '456 Freight Lane, Cleveland, OH 44101',
             positionHeld: 'Delivery Driver',
-            fromDate: `06/${cy - 6}`,
-            toDate: `12/${cy - 3}`,
+            fromDate: `01/${cy - 6}`,
+            toDate: `12/${cy - 4}`,
             reasonForLeaving: 'Better opportunity',
             salary: '$48,000',
             gapsInEmployment: '',
@@ -918,7 +888,7 @@ export default function PersonalInfoForm3({
             militaryBranch: '',
             dischargeType: '',
           },
-          // 3. Unemployment period — type-based, dates + optional explanation only
+          // 3. Unemployment period — Jul 2019 to Dec 2019 (6 months)
           {
             type: 'unemployment' as const,
             name: '',
@@ -926,11 +896,11 @@ export default function PersonalInfoForm3({
             email: '',
             address: '',
             positionHeld: '',
-            fromDate: `01/${cy - 8}`,
-            toDate: `05/${cy - 6}`,
+            fromDate: `07/${cy - 7}`,
+            toDate: `12/${cy - 7}`,
             reasonForLeaving: '',
             salary: '',
-            gapsInEmployment: 'Between jobs; relocating',
+            gapsInEmployment: 'Between jobs; relocating to Ohio',
             subjectToFMCSR: '',
             safetySensitiveFunction: '',
             isUnemployment: true,
@@ -939,7 +909,7 @@ export default function PersonalInfoForm3({
             militaryBranch: '',
             dischargeType: '',
           },
-          // 4. Earlier job (employment)
+          // 4. Earlier job (employment) — Jan 2017 to Jun 2019 (2.5 years)
           {
             type: 'employment' as const,
             name: 'Midwest Transport Solutions',
@@ -947,8 +917,8 @@ export default function PersonalInfoForm3({
             email: 'employment@midwesttransport.com',
             address: '789 Industrial Blvd, Indianapolis, IN 46225',
             positionHeld: 'Regional Driver',
-            fromDate: `03/${cy - 9}`,
-            toDate: `12/${cy - 8}`,
+            fromDate: `01/${cy - 9}`,
+            toDate: `06/${cy - 7}`,
             reasonForLeaving: 'Relocated for better pay',
             salary: '$45,000',
             gapsInEmployment: '',
@@ -960,16 +930,16 @@ export default function PersonalInfoForm3({
             militaryBranch: '',
             dischargeType: '',
           },
-          // 5. Driving school (CDL training)
+          // 5. Driving school (CDL training) — Mar 2016 to Dec 2016 (10 months)
           {
             type: 'drivingSchool' as const,
             name: 'Ohio Commercial Driving Academy',
             phone: '',
             email: '',
-            address: 'Columbus, OH',
+            address: '100 Training Center Dr, Columbus, OH 43215',
             positionHeld: '',
-            fromDate: `09/${cy - 10}`,
-            toDate: `02/${cy - 9}`,
+            fromDate: `03/${cy - 10}`,
+            toDate: `12/${cy - 10}`,
             reasonForLeaving: '',
             salary: '',
             gapsInEmployment: '',
@@ -981,7 +951,7 @@ export default function PersonalInfoForm3({
             militaryBranch: '',
             dischargeType: '',
           },
-          // 6. Oldest job (employment) — 10+ years coverage
+          // 6. Oldest job (employment) — Jan 2015 to Feb 2016 (1+ year, covers 10+ years total)
           {
             type: 'employment' as const,
             name: 'First Transport Inc',
@@ -990,8 +960,8 @@ export default function PersonalInfoForm3({
             address: '555 Main Street, Toledo, OH 43601',
             positionHeld: 'Entry Level Driver',
             fromDate: `01/${cy - 11}`,
-            toDate: `08/${cy - 10}`,
-            reasonForLeaving: 'Found better opportunity',
+            toDate: `02/${cy - 10}`,
+            reasonForLeaving: 'Attended CDL training school',
             salary: '$40,000',
             gapsInEmployment: '',
             subjectToFMCSR: 'yes',

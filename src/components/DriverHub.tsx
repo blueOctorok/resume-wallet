@@ -147,6 +147,8 @@ interface DriverHubProps {
   onEditResume?: (resumeId: string) => void
   /** Called when user wants to verify a resume (upload to IPFS/blockchain) */
   onVerifyResume?: (resumeId: string) => void
+  /** Called when user wants to complete employment verification for a submitted DOT app */
+  onStartEmploymentVerification?: () => void
 }
 
 // ============================================================
@@ -161,6 +163,7 @@ export default function DriverHub({
   onDeleteInProgressDotApp,
   onEditResume,
   onVerifyResume,
+  onStartEmploymentVerification,
 }: DriverHubProps) {
   const { theme } = useTheme()
   const [hubData, setHubData] = useState<HubData | null>(null)
@@ -1211,7 +1214,12 @@ export default function DriverHub({
           onClose={() => setSelectedDotApp(null)}
           theme={theme}
         >
-          <DotAppDetailContent dotApp={selectedDotApp} theme={theme} onNavigate={onNavigate} />
+          <DotAppDetailContent 
+            dotApp={selectedDotApp} 
+            theme={theme} 
+            onNavigate={onNavigate}
+            onStartEmploymentVerification={onStartEmploymentVerification}
+          />
         </DetailModal>
       )}
     </div>
@@ -1625,15 +1633,23 @@ function DotAppDetailContent({
   dotApp, 
   theme,
   onNavigate,
+  onStartEmploymentVerification,
 }: { 
   dotApp: HubDotApplication
   theme: string
   onNavigate: (page: 'resume' | 'dotapp' | 'mvr' | 'jobs' | 'applications') => void
+  onStartEmploymentVerification?: () => void
 }) {
   const labelClass = `text-xs font-semibold uppercase tracking-wide ${
     theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
   }`
   const valueClass = `text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`
+
+  // Check if this completed app needs employment verification
+  // (submitted but not yet fully verified)
+  const needsEmploymentVerification = dotApp.isComplete && 
+    dotApp.verificationStatus === 'PENDING' && 
+    !dotApp.isInProgress
 
   return (
     <div className="space-y-4">
@@ -1683,6 +1699,37 @@ function DotAppDetailContent({
           )}
         </div>
       )}
+      
+      {/* Employment Verification CTA for completed apps */}
+      {needsEmploymentVerification && onStartEmploymentVerification && (
+        <div className={`p-4 rounded-lg border ${
+          theme === 'dark' 
+            ? 'bg-yellow-900/20 border-yellow-500/30' 
+            : 'bg-yellow-50 border-yellow-200'
+        }`}>
+          <p className={`text-sm font-medium mb-2 ${
+            theme === 'dark' ? 'text-yellow-400' : 'text-yellow-800'
+          }`}>
+            Employment Verification Required
+          </p>
+          <p className={`text-xs mb-3 ${
+            theme === 'dark' ? 'text-yellow-400/70' : 'text-yellow-700'
+          }`}>
+            Complete employment verification to finalize your DOT application and allow employers to verify your work history.
+          </p>
+          <button
+            onClick={onStartEmploymentVerification}
+            className={`w-full py-2.5 rounded-lg font-semibold transition-all ${
+              theme === 'dark'
+                ? 'bg-yellow-500 text-gray-900 hover:bg-yellow-400'
+                : 'bg-yellow-500 text-white hover:bg-yellow-600'
+            }`}
+          >
+            Complete Employment Verification
+          </button>
+        </div>
+      )}
+      
       {dotApp.blockchainApplicationId && (
         <div>
           <p className={labelClass}>Application ID</p>

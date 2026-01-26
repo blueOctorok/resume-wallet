@@ -2476,6 +2476,12 @@ const HomeContent = () => {
                         setResumeTab('create')
                         setCurrentPage('resume')
                       }}
+                      onStartEmploymentVerification={() => {
+                        // Navigate to DOT app page and show employment verification
+                        setIsDriverApplicationCompleted(true)
+                        setShowEmploymentVerification(true)
+                        setCurrentPage('dotapp')
+                      }}
                     />
                   ) : (
                     <HomePage

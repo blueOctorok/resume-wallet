@@ -2,6 +2,24 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## ✨ **FEATURE: Employment Verification from Driver Hub** (January 2026)
+
+**Employment verification is now accessible from the Driver Hub for completed DOT applications.**
+
+### Problem
+After completing a DOT application, the user was prompted to do employment verification. If they navigated to the Hub instead, there was no way to get back to employment verification - a significant UX gap.
+
+### Solution
+- Added "Complete Employment Verification" button to the DOT application detail modal in Driver Hub
+- Button appears for completed applications with "PENDING" status
+- Clicking the button navigates directly to the employment verification form
+
+### Files
+- `src/components/DriverHub.tsx` – added `onStartEmploymentVerification` prop, employment verification CTA in `DotAppDetailContent`
+- `src/app/page.tsx` – added handler to navigate to employment verification from Hub
+
+---
+
 ## ✨ **UX: Save Indicator & Unsaved Changes Warning** (January 2026)
 
 **Added subtle feedback when data is saved and warnings when navigating away with unsaved changes.**
