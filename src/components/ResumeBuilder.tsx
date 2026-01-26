@@ -1,12 +1,11 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { 
   ArrowLeft, 
   ArrowRight, 
   Save, 
-  Download, 
   Plus, 
   X, 
   Check,
@@ -21,7 +20,6 @@ import {
   Sparkles,
   RotateCcw
 } from 'lucide-react'
-import jsPDF from 'jspdf'
 import { profileToResumeBuilder, resumeBuilderToProfile } from '@/lib/profile-mapper'
 import type { UnifiedDriverProfile } from '@/types/driver-profile'
 
@@ -135,6 +133,10 @@ export default function ResumeBuilder({
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  
+  // Track resume ID internally - starts with prop value, updated after first save
+  // This prevents duplicate resumes when exporting/saving multiple times
+  const [internalResumeId, setInternalResumeId] = useState<string | undefined>(existingResumeId)
 
   // Form state
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
@@ -162,9 +164,45 @@ export default function ResumeBuilder({
   const [educations, setEducations] = useState<Education[]>([])
   const [skills, setSkills] = useState<Skill[]>([])
   const [references, setReferences] = useState<Reference[]>([])
-  const [isExporting, setIsExporting] = useState(false)
   const [profileLoaded, setProfileLoaded] = useState(false)
   const [profileSource, setProfileSource] = useState<string | null>(null)
+  
+  // Track if form has unsaved changes
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const lastSavedRef = useRef<string>('')
+  
+  // Track changes - compare current form data to last saved
+  useEffect(() => {
+    const currentData = JSON.stringify({ personalInfo, cdlInfo, employments, educations, skills, references })
+    if (lastSavedRef.current && currentData !== lastSavedRef.current) {
+      setHasUnsavedChanges(true)
+    }
+  }, [personalInfo, cdlInfo, employments, educations, skills, references])
+  
+  // Handler for back button with unsaved changes warning
+  const handleBack = useCallback(() => {
+    if (hasUnsavedChanges) {
+      const confirmed = window.confirm(
+        'You have unsaved changes. Are you sure you want to leave?\n\nYour changes will be lost.'
+      )
+      if (!confirmed) return
+    }
+    onBack?.()
+  }, [hasUnsavedChanges, onBack])
+  
+  // Warn user before closing browser with unsaved changes
+  useEffect(() => {
+    if (!hasUnsavedChanges) return
+    
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'
+      return e.returnValue
+    }
+    
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
 
   // Fill test data function - smart fill that only fills empty fields
   const fillTestData = () => {
@@ -415,377 +453,6 @@ export default function ResumeBuilder({
     loadData()
   }, [existingResumeId, user?.address])
 
-  const handleExportPDF = async () => {
-    if (!user?.address) {
-      setSaveError('Please connect your wallet first')
-      return
-    }
-
-    setIsExporting(true)
-    setSaveError(null)
-
-    try {
-      // Try to save silently in the background, but don't block on it
-      // Export can work without saving - we'll save after export succeeds
-      const savePromise = (async () => {
-        try {
-          if (!user?.address) return
-          
-          const structuredData = {
-            personalInfo,
-            cdlInfo,
-            employments,
-            educations,
-            skills,
-            references,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-
-          const response = await fetch('/api/resumes/create', {
-            method: existingResumeId ? 'PUT' : 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-wallet-address': user.address,
-            },
-            body: JSON.stringify({
-              resumeId: existingResumeId,
-              title: `${personalInfo.firstName} ${personalInfo.lastName} - Resume`,
-              structuredData,
-              resumeType: 'built',
-            }),
-          })
-
-          if (response.ok) {
-            const result = await response.json()
-            // Sync to profile in background
-            const profileData = resumeBuilderToProfile({
-              personalInfo,
-              cdlInfo,
-              employments,
-              educations,
-              skills,
-              references,
-            })
-            fetch('/api/driver/profile', {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-wallet-address': user.address,
-              },
-              body: JSON.stringify({
-                profileData,
-                source: 'resume_builder',
-              }),
-            }).catch(() => {
-              // Silent fail for profile sync
-            })
-          }
-        } catch (err) {
-          // Silent fail - don't block export
-          console.warn('[PDF Export] Background save failed (non-fatal):', err)
-        }
-      })()
-      
-      // Don't await - let it run in background
-      void savePromise
-
-      // Generate PDF directly using jsPDF's native text API
-      // This is more reliable than html2canvas for styling
-      const pdf = new jsPDF('p', 'mm', 'a4')
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      const margin = 20
-      const contentWidth = pageWidth - (margin * 2)
-      let y = margin
-
-      // Color scheme (RGB values for jsPDF)
-      const primaryColor = [26, 54, 93] as [number, number, number] // Navy blue
-      const accentColor = [43, 108, 176] as [number, number, number] // Medium blue
-      const textDark = [26, 32, 44] as [number, number, number]
-      const textMedium = [74, 85, 104] as [number, number, number]
-      const textLight = [113, 128, 150] as [number, number, number]
-      const lightAccentBg = [235, 244, 255] as [number, number, number]
-
-      // Helper to check if we need a new page
-      const checkPageBreak = (neededSpace: number) => {
-        if (y + neededSpace > pdf.internal.pageSize.getHeight() - margin) {
-          pdf.addPage()
-          y = margin
-        }
-      }
-
-      // Helper to draw a section header with underline
-      const drawSectionHeader = (title: string) => {
-        checkPageBreak(15)
-        pdf.setFontSize(12)
-        pdf.setFont('helvetica', 'bold')
-        pdf.setTextColor(...primaryColor)
-        pdf.text(title.toUpperCase(), margin, y)
-        y += 2
-        pdf.setDrawColor(...accentColor)
-        pdf.setLineWidth(0.5)
-        pdf.line(margin, y, pageWidth - margin, y)
-        y += 6
-      }
-
-      // === HEADER ===
-      const fullName = `${personalInfo.firstName || ''} ${personalInfo.lastName || ''}`.trim() || 'Your Name'
-      
-      // Name - centered, large, navy
-      pdf.setFontSize(24)
-      pdf.setFont('helvetica', 'bold')
-      pdf.setTextColor(...primaryColor)
-      pdf.text(fullName, pageWidth / 2, y, { align: 'center' })
-      y += 8
-
-      // Contact info - centered, smaller
-      const contactParts = [
-        personalInfo.email,
-        personalInfo.phone,
-        [personalInfo.city, personalInfo.state].filter(Boolean).join(', ')
-      ].filter(Boolean)
-      
-      if (contactParts.length > 0) {
-        pdf.setFontSize(10)
-        pdf.setFont('helvetica', 'normal')
-        pdf.setTextColor(...textMedium)
-        pdf.text(contactParts.join('  •  '), pageWidth / 2, y, { align: 'center' })
-        y += 6
-      }
-
-      // Professional summary
-      if (personalInfo.professionalSummary) {
-        pdf.setFontSize(9)
-        pdf.setFont('helvetica', 'italic')
-        pdf.setTextColor(...textMedium)
-        const summaryLines = pdf.splitTextToSize(personalInfo.professionalSummary, contentWidth - 20)
-        pdf.text(summaryLines, pageWidth / 2, y, { align: 'center', maxWidth: contentWidth - 20 })
-        y += summaryLines.length * 4 + 4
-      }
-
-      // Header underline
-      pdf.setDrawColor(...primaryColor)
-      pdf.setLineWidth(0.8)
-      pdf.line(margin, y, pageWidth - margin, y)
-      y += 10
-
-      // === CDL INFORMATION ===
-      if (cdlInfo.cdlClass || cdlInfo.endorsements.length > 0 || cdlInfo.expirationDate) {
-        drawSectionHeader('CDL & License Information')
-        
-        // Light blue background box
-        const boxHeight = 10
-        pdf.setFillColor(...lightAccentBg)
-        pdf.rect(margin, y - 4, contentWidth, boxHeight, 'F')
-        
-        const cdlParts = []
-        if (cdlInfo.cdlClass) cdlParts.push(`Class ${cdlInfo.cdlClass}`)
-        if (cdlInfo.cdlState) cdlParts.push(cdlInfo.cdlState)
-        if (cdlInfo.endorsements.length > 0) cdlParts.push(`Endorsements: ${cdlInfo.endorsements.join(', ')}`)
-        if (cdlInfo.expirationDate) cdlParts.push(`Exp: ${new Date(cdlInfo.expirationDate).toLocaleDateString()}`)
-        
-        pdf.setFontSize(10)
-        pdf.setFont('helvetica', 'normal')
-        pdf.setTextColor(...textDark)
-        pdf.text(cdlParts.join('  |  '), margin + 4, y + 2)
-        y += boxHeight + 6
-      }
-
-      // === EMPLOYMENT HISTORY ===
-      if (employments.length > 0) {
-        drawSectionHeader('Professional Experience')
-        
-        employments.forEach((emp, index) => {
-          checkPageBreak(20)
-          
-          const startDate = emp.startDate ? new Date(emp.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''
-          const endDate = emp.isCurrent ? 'Present' : emp.endDate ? new Date(emp.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''
-          const dateRange = `${startDate} – ${endDate}`
-
-          // Position (bold) and Company (accent color)
-          pdf.setFontSize(11)
-          pdf.setFont('helvetica', 'bold')
-          pdf.setTextColor(...textDark)
-          pdf.text(emp.position || 'Position', margin, y)
-          
-          const positionWidth = pdf.getTextWidth(emp.position || 'Position')
-          pdf.setFont('helvetica', 'normal')
-          pdf.setTextColor(...accentColor)
-          pdf.text(` – ${emp.companyName || 'Company'}${emp.location ? `, ${emp.location}` : ''}`, margin + positionWidth, y)
-          
-          // Date range (right aligned)
-          pdf.setFontSize(9)
-          pdf.setTextColor(...textLight)
-          pdf.text(dateRange, pageWidth - margin, y, { align: 'right' })
-          y += 5
-
-          // Responsibilities
-          if (emp.responsibilities.length > 0) {
-            pdf.setFontSize(9)
-            pdf.setTextColor(...textMedium)
-            emp.responsibilities.forEach(resp => {
-              checkPageBreak(6)
-              const respLines = pdf.splitTextToSize(`• ${resp}`, contentWidth - 10)
-              pdf.text(respLines, margin + 4, y)
-              y += respLines.length * 4
-            })
-          }
-          
-          if (index < employments.length - 1) y += 4
-        })
-        y += 4
-      }
-
-      // === EDUCATION ===
-      if (educations.length > 0) {
-        drawSectionHeader('Education & Training')
-        
-        educations.forEach((edu, index) => {
-          checkPageBreak(12)
-          
-          // Degree and field
-          pdf.setFontSize(10)
-          pdf.setFont('helvetica', 'bold')
-          pdf.setTextColor(...textDark)
-          pdf.text(`${edu.degree || 'Degree'}${edu.field ? ` in ${edu.field}` : ''}`, margin, y)
-          
-          // School
-          const degreeWidth = pdf.getTextWidth(`${edu.degree || 'Degree'}${edu.field ? ` in ${edu.field}` : ''}`)
-          pdf.setFont('helvetica', 'normal')
-          pdf.setTextColor(...textMedium)
-          pdf.text(` – ${edu.school}`, margin + degreeWidth, y)
-          
-          // Year
-          if (edu.year) {
-            pdf.setFontSize(9)
-            pdf.setTextColor(...textLight)
-            pdf.text(edu.year, pageWidth - margin, y, { align: 'right' })
-          }
-          y += 5
-
-          // Certifications
-          if (edu.certifications.length > 0) {
-            pdf.setFontSize(9)
-            pdf.setTextColor(...accentColor)
-            pdf.text(`Certifications: ${edu.certifications.join(', ')}`, margin + 4, y)
-            y += 4
-          }
-          
-          if (index < educations.length - 1) y += 2
-        })
-        y += 4
-      }
-
-      // === SKILLS ===
-      if (skills.length > 0) {
-        const skillsByCategory = skills.reduce(
-          (acc, skill) => {
-            if (!acc[skill.category]) acc[skill.category] = []
-            acc[skill.category].push(skill)
-            return acc
-          },
-          {} as Record<Skill['category'], Skill[]>
-        )
-
-        drawSectionHeader('Skills & Equipment')
-        
-        SKILL_CATEGORIES.forEach((category) => {
-          const categorySkills = skillsByCategory[category.value] || []
-          if (categorySkills.length > 0) {
-            checkPageBreak(8)
-            
-            pdf.setFontSize(9)
-            pdf.setFont('helvetica', 'bold')
-            pdf.setTextColor(...primaryColor)
-            pdf.text(`${category.label}:`, margin, y)
-            
-            const labelWidth = pdf.getTextWidth(`${category.label}: `)
-            pdf.setFont('helvetica', 'normal')
-            pdf.setTextColor(...textMedium)
-            const skillText = categorySkills.map((s) => s.name).join('  •  ')
-            const skillLines = pdf.splitTextToSize(skillText, contentWidth - labelWidth - 5)
-            pdf.text(skillLines, margin + labelWidth, y)
-            y += skillLines.length * 4 + 2
-          }
-        })
-        y += 2
-      }
-
-      // === REFERENCES ===
-      if (references.length > 0) {
-        drawSectionHeader('Professional References')
-        
-        const refWidth = (contentWidth - 10) / 2
-        let refX = margin
-        let refStartY = y
-        
-        references.forEach((ref, index) => {
-          checkPageBreak(25)
-          
-          // Alternate columns
-          if (index > 0 && index % 2 === 0) {
-            refX = margin
-            y = refStartY + 22
-            refStartY = y
-          } else if (index % 2 === 1) {
-            refX = margin + refWidth + 10
-            y = refStartY
-          }
-
-          // Light blue background with accent border
-          pdf.setFillColor(...lightAccentBg)
-          pdf.setDrawColor(...accentColor)
-          pdf.rect(refX, y - 4, refWidth, 20, 'F')
-          pdf.setLineWidth(1)
-          pdf.line(refX, y - 4, refX, y + 16)
-          
-          // Name
-          pdf.setFontSize(10)
-          pdf.setFont('helvetica', 'bold')
-          pdf.setTextColor(...textDark)
-          pdf.text(ref.name || 'Name', refX + 4, y)
-          
-          // Title and company
-          pdf.setFontSize(9)
-          pdf.setFont('helvetica', 'normal')
-          pdf.setTextColor(...textMedium)
-          pdf.text(`${ref.title}${ref.company ? ` at ${ref.company}` : ''}`, refX + 4, y + 4)
-          
-          // Contact info
-          const contactInfo = [ref.phone, ref.email].filter(Boolean).join('  •  ')
-          if (contactInfo) {
-            pdf.setFontSize(8)
-            pdf.setTextColor(...textLight)
-            pdf.text(contactInfo, refX + 4, y + 8)
-          }
-        })
-      }
-
-      // Generate clean filename from name or fallback
-      let filename = 'Resume.pdf'
-      const firstName = personalInfo.firstName?.trim() || ''
-      const lastName = personalInfo.lastName?.trim() || ''
-      
-      if (firstName || lastName) {
-        // Only use name if it looks like a real name (not an IPFS hash or weird value)
-        const fullName = `${firstName} ${lastName}`.trim()
-        if (fullName.length < 50 && /^[a-zA-Z\s'-]+$/.test(fullName)) {
-          const cleanName = fullName.replace(/[^a-z0-9\s-]/gi, '_').replace(/\s+/g, '_').toLowerCase()
-          filename = `${cleanName}_resume.pdf`
-        }
-      }
-
-      pdf.save(filename)
-      setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 3000)
-    } catch (error) {
-      console.error('PDF export error:', error)
-      setSaveError(error instanceof Error ? error.message : 'Failed to export PDF')
-    } finally {
-      setIsExporting(false)
-    }
-  }
-
   const handleSave = async () => {
     if (!user?.address) {
       setSaveError('Please connect your wallet first')
@@ -808,15 +475,15 @@ export default function ResumeBuilder({
         updatedAt: new Date().toISOString(),
       }
 
-      // Save to resumes table
+      // Save to resumes table (use internal ID to prevent duplicates)
       const response = await fetch('/api/resumes/create', {
-        method: existingResumeId ? 'PUT' : 'POST',
+        method: internalResumeId ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-wallet-address': user.address,
         },
         body: JSON.stringify({
-          resumeId: existingResumeId,
+          resumeId: internalResumeId,
           title: `${personalInfo.firstName} ${personalInfo.lastName} - Resume`,
           structuredData,
           resumeType: 'built',
@@ -829,9 +496,14 @@ export default function ResumeBuilder({
       }
 
       const result = await response.json()
+      
+      // Update internal ID so subsequent saves update instead of creating duplicates
+      if (result.resumeId && !internalResumeId) {
+        setInternalResumeId(result.resumeId)
+      }
 
-      // Also save to unified profile (fire-and-forget, don't block on this)
-      // This enables bidirectional data flow to DOT Application
+      // Sync to unified profile - WAIT for this to complete so DOT app can read it immediately
+      // This enables bidirectional data flow: Resume Builder → Profile → DOT Application
       const profileData = resumeBuilderToProfile({
         personalInfo,
         cdlInfo,
@@ -841,24 +513,33 @@ export default function ResumeBuilder({
         references,
       })
 
-      fetch('/api/driver/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': user.address,
-        },
-        body: JSON.stringify({
-          profileData,
-          source: 'resume_builder',
-        }),
-      }).then(() => {
-        console.log('✅ [RESUME BUILDER] Profile synced')
-      }).catch((err) => {
+      try {
+        const profileResponse = await fetch('/api/driver/profile', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-wallet-address': user.address,
+          },
+          body: JSON.stringify({
+            profileData,
+            source: 'resume_builder',
+          }),
+        })
+        if (profileResponse.ok) {
+          console.log('✅ [RESUME BUILDER] Profile synced - DOT app will auto-populate from this')
+        } else {
+          console.warn('⚠️ [RESUME BUILDER] Profile sync returned error (non-fatal)')
+        }
+      } catch (err) {
         console.warn('⚠️ [RESUME BUILDER] Profile sync failed (non-fatal):', err)
-      })
+      }
 
       setSaveSuccess(true)
       onSave?.(result.resumeId)
+      
+      // Mark data as saved (no longer dirty)
+      lastSavedRef.current = JSON.stringify({ personalInfo, cdlInfo, employments, educations, skills, references })
+      setHasUnsavedChanges(false)
       
       // Clear success message after 3 seconds
       setTimeout(() => setSaveSuccess(false), 3000)
@@ -921,7 +602,7 @@ export default function ResumeBuilder({
     <>
       {onBack && (
         <button
-          onClick={onBack}
+          onClick={handleBack}
           className={`inline-flex items-center gap-2 px-3 py-2 sm:px-4 text-sm sm:text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-4 cursor-pointer ${
             theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
           }`}
@@ -1052,7 +733,7 @@ export default function ResumeBuilder({
                     : 'bg-green-50 text-green-700 border border-green-200'
               }`}
             >
-              {saveError || (saveSuccess && '✅ Resume saved successfully!')}
+              {saveError || (saveSuccess && '✅ Resume saved & synced to profile')}
             </div>
           )}
 
@@ -1075,21 +756,8 @@ export default function ResumeBuilder({
             </button>
 
             <div className='flex items-stretch sm:items-center gap-2 flex-1 sm:flex-initial justify-end'>
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className={`inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg font-medium transition-all disabled:opacity-50 flex-1 sm:flex-initial ${
-                  theme === 'dark'
-                    ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/40 hover:bg-brand-mint/30'
-                    : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30 hover:bg-brand-sage/20'
-                }`}
-              >
-                <Save className='w-4 h-4' />
-                <span className='hidden xs:inline'>{isSaving ? 'Saving...' : 'Save Progress'}</span>
-                <span className='xs:hidden'>{isSaving ? 'Saving...' : 'Save'}</span>
-              </button>
-
-              {currentStep < STEPS.length - 1 ? (
+              {/* Next button for all steps except the last */}
+              {currentStep < STEPS.length - 1 && (
                 <button
                   onClick={handleNext}
                   className={`inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg font-medium transition-all flex-1 sm:flex-initial ${
@@ -1101,23 +769,26 @@ export default function ResumeBuilder({
                   <span>Next</span>
                   <ArrowRight className='w-4 h-4' />
                 </button>
-              ) : (
-                <button
-                  onClick={handleExportPDF}
-                  disabled={isExporting}
-                  className={`inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg font-medium transition-all flex-1 sm:flex-initial disabled:opacity-50 disabled:cursor-not-allowed ${
-                    theme === 'dark'
+              )}
+
+              {/* Save button - shown on all steps, more prominent on last step */}
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className={`inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg font-medium transition-all disabled:opacity-50 flex-1 sm:flex-initial ${
+                  currentStep === STEPS.length - 1
+                    ? theme === 'dark'
                       ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
                       : 'bg-brand-sage text-white hover:bg-brand-sage/90'
-                  }`}
-                >
-                  <Download className='w-4 h-4' />
-                  <span className='hidden xs:inline'>
-                    {isExporting ? 'Exporting...' : 'Export PDF'}
-                  </span>
-                  <span className='xs:hidden'>{isExporting ? 'Exporting...' : 'Export'}</span>
-                </button>
-              )}
+                    : theme === 'dark'
+                      ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/40 hover:bg-brand-mint/30'
+                      : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30 hover:bg-brand-sage/20'
+                }`}
+              >
+                <Save className='w-4 h-4' />
+                <span className='hidden xs:inline'>{isSaving ? 'Saving...' : currentStep === STEPS.length - 1 ? 'Save Resume' : 'Save Progress'}</span>
+                <span className='xs:hidden'>{isSaving ? 'Saving...' : 'Save'}</span>
+              </button>
             </div>
           </div>
         </div>

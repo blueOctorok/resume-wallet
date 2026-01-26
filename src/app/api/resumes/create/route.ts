@@ -160,10 +160,10 @@ export async function PUT(req: NextRequest) {
         filename: `${title.replace(/[^a-z0-9]/gi, '_')}.json`,
         file_size: JSON.stringify(structuredData).length,
         structured_data: structuredData,
-        updated_at: new Date().toISOString(),
+        // Note: resumes table doesn't have updated_at column, only created_at
       })
       .eq('id', resumeId)
-      .select('id, updated_at')
+      .select('id, created_at')
       .single()
 
     if (resumeError) {

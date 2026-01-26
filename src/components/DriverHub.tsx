@@ -24,6 +24,7 @@ import {
   Loader2,
   X,
   Trash2,
+  Edit,
 } from 'lucide-react'
 
 // ============================================================
@@ -124,6 +125,7 @@ interface HubData {
   success: boolean
   isNewUser: boolean
   profile: any
+  displayNameFallback?: string | null
   resumes: HubResume[]
   dotApplications: HubDotApplication[]
   mvrRecords: HubMvrRecord[]
@@ -139,6 +141,12 @@ interface DriverHubProps {
   onNavigate: (page: 'resume' | 'dotapp' | 'mvr' | 'jobs' | 'applications') => void
   onStartDotApp?: () => void
   onViewMvr?: (orderId: string) => void
+  /** Called when user discards an in-progress (unsaved) DOT application. Should clear profile + localStorage + form state. */
+  onDeleteInProgressDotApp?: () => Promise<void>
+  /** Called when user wants to edit a resume in the Resume Builder */
+  onEditResume?: (resumeId: string) => void
+  /** Called when user wants to verify a resume (upload to IPFS/blockchain) */
+  onVerifyResume?: (resumeId: string) => void
 }
 
 // ============================================================
@@ -150,6 +158,9 @@ export default function DriverHub({
   onNavigate,
   onStartDotApp,
   onViewMvr,
+  onDeleteInProgressDotApp,
+  onEditResume,
+  onVerifyResume,
 }: DriverHubProps) {
   const { theme } = useTheme()
   const [hubData, setHubData] = useState<HubData | null>(null)
@@ -162,6 +173,10 @@ export default function DriverHub({
   const [showPaymentHistory, setShowPaymentHistory] = useState(false)
   const [deletingResume, setDeletingResume] = useState<HubResume | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deletingInProgressDotApp, setDeletingInProgressDotApp] = useState(false)
+  const [verifyingResume, setVerifyingResume] = useState(false)
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const [resumeActionMessage, setResumeActionMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   // Handle resume deletion
   const handleDeleteResume = async (resume: HubResume) => {
@@ -191,6 +206,243 @@ export default function DriverHub({
       alert(err instanceof Error ? err.message : 'Failed to delete resume')
     } finally {
       setDeleteLoading(false)
+    }
+  }
+
+  // Handle verify resume (upload to IPFS and blockchain)
+  const handleVerifyResume = async (resume: HubResume) => {
+    if (!userAddress) return
+    
+    setVerifyingResume(true)
+    setResumeActionMessage({ type: 'success', text: 'Generating PDF and uploading to blockchain...' })
+    
+    try {
+      const response = await fetch(`/api/resumes/${resume.id}/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': userAddress,
+        },
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Verification failed')
+      }
+
+      setResumeActionMessage({ 
+        type: 'success', 
+        text: `Resume verified! Transaction: ${data.txHash?.slice(0, 10)}...` 
+      })
+      
+      // Clear message after 5 seconds and refresh data
+      setTimeout(() => {
+        setResumeActionMessage(null)
+        setSelectedResume(null)
+        fetchHubData()
+      }, 5000)
+    } catch (err: unknown) {
+      console.error('Verify error:', err)
+      setResumeActionMessage({ 
+        type: 'error', 
+        text: err instanceof Error ? err.message : 'Verification failed' 
+      })
+    } finally {
+      setVerifyingResume(false)
+    }
+  }
+
+  // Handle download PDF for built resumes using styled generator
+  const handleDownloadPdf = async (resume: HubResume) => {
+    // If already verified with IPFS hash, download from IPFS
+    const hasRealIpfsHash = resume.ipfsHash && !resume.ipfsHash.startsWith('built_')
+    
+    if (hasRealIpfsHash) {
+      try {
+        const response = await fetch(`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`)
+        const blob = await response.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${(resume.title || resume.filename || 'Resume').replace(/[^a-z0-9]/gi, '_')}.pdf`
+        a.click()
+        URL.revokeObjectURL(url)
+      } catch (err) {
+        console.error('Download failed:', err)
+        window.open(`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`, '_blank')
+      }
+      return
+    }
+    
+    // For built resumes without IPFS, generate styled PDF from structured data
+    if (resume.resumeType !== 'built') {
+      setResumeActionMessage({ type: 'error', text: 'Cannot download unverified uploaded resume' })
+      return
+    }
+    
+    setDownloadingPdf(true)
+    try {
+      // Fetch the resume's structured data
+      const response = await fetch(`/api/resumes/${resume.id}`, {
+        headers: {
+          'x-wallet-address': userAddress || '',
+        },
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch resume data')
+      }
+      
+      const data = await response.json()
+      // API returns resume directly, not wrapped in a 'resume' property
+      const structuredData = data.structured_data
+      
+      if (!structuredData) {
+        console.error('Resume data received:', data)
+        throw new Error('No structured data found in resume')
+      }
+      
+      // Dynamically import the styled PDF generator
+      const { generateStyledResumePDF } = await import('@/lib/resume-pdf-generator')
+      
+      // Detect format and map data
+      const isResumeBuilderFormat = Array.isArray(structuredData.employments) && 
+        structuredData.employments.length > 0 && 
+        'companyName' in (structuredData.employments[0] || {})
+      
+      const hasResumeBuilderSkillsFormat = Array.isArray(structuredData.skills) &&
+        structuredData.skills.length > 0 &&
+        'name' in (structuredData.skills[0] || {})
+      
+      let resumeData
+      
+      if (isResumeBuilderFormat) {
+        resumeData = {
+          personalInfo: {
+            firstName: structuredData.personalInfo?.firstName,
+            lastName: structuredData.personalInfo?.lastName,
+            email: structuredData.personalInfo?.email,
+            phone: structuredData.personalInfo?.phone,
+            address: structuredData.personalInfo?.address,
+            city: structuredData.personalInfo?.city,
+            state: structuredData.personalInfo?.state,
+            zipCode: structuredData.personalInfo?.zipCode,
+            professionalSummary: structuredData.personalInfo?.professionalSummary,
+          },
+          cdlInfo: {
+            cdlClass: structuredData.cdlInfo?.cdlClass,
+            cdlState: structuredData.cdlInfo?.cdlState,
+            cdlExpiration: structuredData.cdlInfo?.expirationDate,
+            endorsements: structuredData.cdlInfo?.endorsements || [],
+          },
+          employments: (structuredData.employments || []).map((emp: Record<string, unknown>) => ({
+            companyName: emp.companyName,
+            position: emp.position,
+            location: emp.location,
+            startDate: emp.startDate,
+            endDate: emp.endDate,
+            isCurrent: emp.isCurrent,
+            responsibilities: emp.responsibilities || [],
+          })),
+          educations: (structuredData.educations || []).map((edu: Record<string, unknown>) => ({
+            school: edu.school,
+            degree: edu.degree,
+            field: edu.field,
+            year: edu.year,
+            certifications: edu.certifications || [],
+          })),
+          skills: hasResumeBuilderSkillsFormat 
+            ? (structuredData.skills || []).map((skill: Record<string, unknown>) => ({
+                name: skill.name,
+                category: skill.category || 'other',
+              }))
+            : [],
+          references: (structuredData.references || []).map((ref: Record<string, unknown>) => ({
+            name: ref.name,
+            title: ref.title,
+            company: ref.company,
+            phone: ref.phone,
+            email: ref.email,
+          })),
+        }
+      } else {
+        // Old format mapping
+        resumeData = {
+          personalInfo: {
+            firstName: structuredData.personalInfo?.firstName,
+            lastName: structuredData.personalInfo?.lastName,
+            email: structuredData.personalInfo?.email,
+            phone: structuredData.personalInfo?.phone,
+            address: structuredData.personalInfo?.address,
+            city: structuredData.personalInfo?.city,
+            state: structuredData.personalInfo?.state,
+            zipCode: structuredData.personalInfo?.zipCode,
+            professionalSummary: structuredData.personalInfo?.summary,
+          },
+          cdlInfo: {
+            cdlClass: structuredData.cdlInfo?.cdlClass,
+            cdlState: structuredData.cdlInfo?.cdlState,
+            cdlExpiration: structuredData.cdlInfo?.cdlExpiration,
+            endorsements: structuredData.cdlInfo?.endorsements || [],
+          },
+          employments: (structuredData.employments || []).map((emp: Record<string, unknown>) => ({
+            companyName: emp.company,
+            position: emp.position,
+            location: undefined,
+            startDate: emp.startDate,
+            endDate: emp.endDate,
+            isCurrent: emp.current,
+            responsibilities: emp.description ? [emp.description] : [],
+          })),
+          educations: (structuredData.educations || []).map((edu: Record<string, unknown>) => ({
+            school: edu.school,
+            degree: edu.degree,
+            field: edu.field,
+            year: edu.graduationDate,
+            certifications: [],
+          })),
+          skills: (structuredData.skills || []).flatMap((skillGroup: Record<string, unknown>) => 
+            ((skillGroup.items as string[]) || []).map(item => ({
+              name: item,
+              category: skillGroup.category || 'other',
+            }))
+          ),
+          references: (structuredData.references || []).map((ref: Record<string, unknown>) => ({
+            name: ref.name,
+            title: ref.relationship,
+            company: ref.company,
+            phone: ref.phone,
+            email: ref.email,
+          })),
+        }
+      }
+      
+      // Generate styled PDF
+      const pdfBuffer = generateStyledResumePDF(resumeData)
+      
+      // Create blob and trigger download
+      const blob = new Blob([pdfBuffer], { type: 'application/pdf' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const fullName = `${resumeData.personalInfo.firstName || ''} ${resumeData.personalInfo.lastName || ''}`.trim()
+      a.download = `${fullName.replace(/\s+/g, '_') || 'Resume'}_Resume.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      
+      setResumeActionMessage({ type: 'success', text: 'PDF downloaded!' })
+      setTimeout(() => setResumeActionMessage(null), 3000)
+    } catch (err: unknown) {
+      console.error('PDF generation error:', err)
+      setResumeActionMessage({ 
+        type: 'error', 
+        text: err instanceof Error ? err.message : 'Failed to generate PDF' 
+      })
+    } finally {
+      setDownloadingPdf(false)
     }
   }
 
@@ -233,6 +485,23 @@ export default function DriverHub({
       setLoading(false)
     }
   }, [userAddress])
+
+  const handleDiscardInProgressDotApp = useCallback(async () => {
+    if (!onDeleteInProgressDotApp) return
+    if (!window.confirm('Discard this in-progress application? Your unsaved form data will be removed.')) return
+
+    setDeletingInProgressDotApp(true)
+    setSelectedDotApp(null)
+    try {
+      await onDeleteInProgressDotApp()
+      await fetchHubData()
+    } catch (err) {
+      console.error('Discard in-progress error:', err)
+      alert(err instanceof Error ? err.message : 'Failed to discard application')
+    } finally {
+      setDeletingInProgressDotApp(false)
+    }
+  }, [onDeleteInProgressDotApp, fetchHubData])
 
   useEffect(() => {
     fetchHubData()
@@ -288,8 +557,10 @@ export default function DriverHub({
   }
 
   const data = hubData || {
+    success: true,
     isNewUser: true,
     profile: null,
+    displayNameFallback: null,
     resumes: [],
     dotApplications: [],
     mvrRecords: [],
@@ -315,10 +586,11 @@ export default function DriverHub({
     },
   }
 
-  // Get display name from profile
-  const displayName = data.profile?.first_name 
-    ? `${data.profile.first_name}${data.profile.last_name ? ' ' + data.profile.last_name : ''}`
-    : 'Driver'
+  // Display name: profile first+last, else fallback from submitted app, else 'Driver'
+  const profileName = data.profile?.first_name || data.profile?.last_name
+    ? `${data.profile.first_name ?? ''} ${data.profile.last_name ?? ''}`.trim()
+    : ''
+  const displayName = profileName || (data.displayNameFallback ?? '') || 'Driver'
 
   const cdlSummary = data.profile?.cdl_class 
     ? `CDL Class ${data.profile.cdl_class}${data.profile.endorsements?.length ? ' • ' + data.profile.endorsements.join(', ') : ''}`
@@ -462,10 +734,7 @@ export default function DriverHub({
       <div className="mb-6">
         <ShareProfileCard 
           walletAddress={userAddress} 
-          driverName={data.profile?.first_name && data.profile?.last_name 
-            ? `${data.profile.first_name} ${data.profile.last_name}` 
-            : undefined
-          } 
+          driverName={profileName || (data.displayNameFallback ?? '') || undefined} 
         />
       </div>
 
@@ -624,6 +893,8 @@ export default function DriverHub({
                     status={app.isComplete ? app.verificationStatus : 'IN_PROGRESS'}
                     badge={!app.isComplete ? `Form ${app.currentStep} of 3` : undefined}
                     onClick={handleClick}
+                    onDelete={app.isInProgress && onDeleteInProgressDotApp ? handleDiscardInProgressDotApp : undefined}
+                    deleteDisabled={deletingInProgressDotApp}
                     theme={theme}
                   />
                 )
@@ -871,6 +1142,15 @@ export default function DriverHub({
             resume={selectedResume} 
             theme={theme}
             onDelete={() => setDeletingResume(selectedResume)}
+            onDownload={() => handleDownloadPdf(selectedResume)}
+            onEdit={onEditResume ? () => {
+              onEditResume(selectedResume.id)
+              setSelectedResume(null)
+            } : undefined}
+            onVerify={() => handleVerifyResume(selectedResume)}
+            isDownloading={downloadingPdf}
+            isVerifying={verifyingResume}
+            actionMessage={resumeActionMessage}
           />
         </DetailModal>
       )}
@@ -1053,6 +1333,8 @@ function ItemRow({
   status,
   badge,
   onClick,
+  onDelete,
+  deleteDisabled,
   theme,
 }: {
   title: string
@@ -1060,52 +1342,78 @@ function ItemRow({
   status: string
   badge?: string
   onClick?: () => void
+  onDelete?: () => void
+  deleteDisabled?: boolean
   theme: string
 }) {
   const statusConfig = getStatusConfig(status)
+  const rowClass = `flex items-center justify-between p-3 rounded-xl transition-all ${
+    theme === 'dark'
+      ? 'bg-brand-sage/20 hover:bg-brand-sage/30'
+      : 'bg-gray-50 hover:bg-gray-100'
+  }`
+
+  const left = (
+    <div className="flex-1 text-left min-w-0">
+      <div className="flex items-center gap-2">
+        <p className={`font-medium truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+          {title}
+        </p>
+        {badge && (
+          <span className={`flex-shrink-0 px-2 py-0.5 text-xs rounded-full ${
+            theme === 'dark' ? 'bg-brand-mint/20 text-brand-mint' : 'bg-brand-sage/10 text-brand-sage'
+          }`}>
+            {badge}
+          </span>
+        )}
+      </div>
+      <p className={`text-xs truncate ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+        {subtitle}
+      </p>
+    </div>
+  )
+
+  const statusAndChevron = (
+    <div className="flex items-center gap-2 ml-3">
+      <span className={`px-2 py-1 text-xs font-medium rounded-lg flex items-center gap-1 ${statusConfig.className}`}>
+        {statusConfig.icon}
+        {statusConfig.label}
+      </span>
+      <ChevronRight className={`w-4 h-4 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`} />
+    </div>
+  )
+
+  if (onClick) {
+    return (
+      <div className={`flex items-center gap-1 rounded-xl overflow-hidden ${rowClass}`}>
+        <button type="button" onClick={onClick} className="flex-1 flex items-center justify-between text-left min-w-0">
+          {left}
+          {statusAndChevron}
+        </button>
+        {onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={deleteDisabled}
+            title="Discard in-progress application"
+            className={`flex-shrink-0 p-1.5 rounded-lg transition-colors ${
+              theme === 'dark'
+                ? 'hover:bg-red-900/30 text-red-400 disabled:opacity-50'
+                : 'hover:bg-red-50 text-red-500 disabled:opacity-50'
+            }`}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    )
+  }
 
   return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center justify-between p-3 rounded-xl transition-all ${
-        theme === 'dark'
-          ? 'bg-brand-sage/20 hover:bg-brand-sage/30'
-          : 'bg-gray-50 hover:bg-gray-100'
-      }`}
-    >
-      <div className="flex-1 text-left min-w-0">
-        <div className="flex items-center gap-2">
-          <p className={`font-medium truncate ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            {title}
-          </p>
-          {badge && (
-            <span className={`flex-shrink-0 px-2 py-0.5 text-xs rounded-full ${
-              theme === 'dark'
-                ? 'bg-brand-mint/20 text-brand-mint'
-                : 'bg-brand-sage/10 text-brand-sage'
-            }`}>
-              {badge}
-            </span>
-          )}
-        </div>
-        <p className={`text-xs truncate ${
-          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-        }`}>
-          {subtitle}
-        </p>
-      </div>
-      <div className="flex items-center gap-2 ml-3">
-        <span className={`px-2 py-1 text-xs font-medium rounded-lg flex items-center gap-1 ${statusConfig.className}`}>
-          {statusConfig.icon}
-          {statusConfig.label}
-        </span>
-        <ChevronRight className={`w-4 h-4 ${
-          theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-        }`} />
-      </div>
-    </button>
+    <div className={`flex w-full ${rowClass}`}>
+      {left}
+      {statusAndChevron}
+    </div>
   )
 }
 
@@ -1156,27 +1464,53 @@ function ResumeDetailContent({
   resume, 
   theme,
   onDelete,
+  onDownload,
+  onEdit,
+  onVerify,
+  isDownloading,
+  isVerifying,
+  actionMessage,
 }: { 
   resume: HubResume
   theme: string
   onDelete?: () => void
+  onDownload?: () => void
+  onEdit?: () => void
+  onVerify?: () => void
+  isDownloading?: boolean
+  isVerifying?: boolean
+  actionMessage?: { type: 'success' | 'error', text: string } | null
 }) {
   const labelClass = `text-xs font-semibold uppercase tracking-wide ${
     theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
   }`
   const valueClass = `text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`
-
-  // Generate a clean filename for download
-  const downloadFilename = `${(resume.title || resume.filename || 'Resume').replace(/[^a-z0-9]/gi, '_')}.pdf`
   
   // Check if this is a real IPFS hash or a placeholder (built resumes start with "built_")
   const hasRealIpfsHash = resume.ipfsHash && !resume.ipfsHash.startsWith('built_')
+  const isVerified = resume.verificationStatus === 'VERIFIED' || hasRealIpfsHash
+  const isBuiltResume = resume.resumeType === 'built'
 
   return (
     <div className="space-y-4">
+      {/* Action Message */}
+      {actionMessage && (
+        <div className={`p-3 rounded-lg text-sm ${
+          actionMessage.type === 'success'
+            ? theme === 'dark'
+              ? 'bg-green-900/20 text-green-400 border border-green-500/40'
+              : 'bg-green-50 text-green-700 border border-green-200'
+            : theme === 'dark'
+              ? 'bg-red-900/20 text-red-400 border border-red-500/40'
+              : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          {actionMessage.text}
+        </div>
+      )}
+      
       <div>
         <p className={labelClass}>Type</p>
-        <p className={valueClass}>{resume.resumeType === 'built' ? 'Built with Resume Builder' : 'Uploaded'}</p>
+        <p className={valueClass}>{isBuiltResume ? 'Built with Resume Builder' : 'Uploaded'}</p>
       </div>
       <div>
         <p className={labelClass}>Created</p>
@@ -1208,60 +1542,68 @@ function ResumeDetailContent({
       
       {/* Action Buttons */}
       <div className="pt-4 space-y-3">
-        {/* View & Download Buttons - Only show if has real IPFS hash */}
-        {hasRealIpfsHash ? (
-          <div className="flex gap-2">
-            {/* View in new tab */}
-            <a
-              href={`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors ${
-                theme === 'dark'
-                  ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/40 hover:bg-brand-mint/30'
-                  : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30 hover:bg-brand-sage/20'
-              }`}
-            >
-              <Eye className="w-4 h-4" />
-              View
-            </a>
-            {/* Download with correct filename */}
-            <button
-              onClick={async () => {
-                try {
-                  const response = await fetch(`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`)
-                  const blob = await response.blob()
-                  const url = URL.createObjectURL(blob)
-                  const a = document.createElement('a')
-                  a.href = url
-                  a.download = downloadFilename
-                  a.click()
-                  URL.revokeObjectURL(url)
-                } catch (err) {
-                  console.error('Download failed:', err)
-                  // Fallback: open in new tab
-                  window.open(`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`, '_blank')
-                }
-              }}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors ${
-                theme === 'dark'
-                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40 hover:bg-blue-500/30'
-                  : 'bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100'
-              }`}
-            >
-              <FileText className="w-4 h-4" />
-              Download
-            </button>
-          </div>
-        ) : (
-          <div className={`w-full text-center px-4 py-3 rounded-xl text-sm ${
-            theme === 'dark' ? 'bg-yellow-900/20 text-yellow-400 border border-yellow-600/30' : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-          }`}>
-            <p className="font-medium">Resume not yet on IPFS</p>
-            <p className="text-xs mt-1 opacity-80">
-              Go to Resume Management and click "Verify" to upload to IPFS and blockchain
-            </p>
-          </div>
+        {/* View Button - Only for verified resumes with IPFS hash */}
+        {hasRealIpfsHash && (
+          <a
+            href={`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors ${
+              theme === 'dark'
+                ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/40 hover:bg-brand-mint/30'
+                : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30 hover:bg-brand-sage/20'
+            }`}
+          >
+            <Eye className="w-4 h-4" />
+            View in Browser
+          </a>
+        )}
+        
+        {/* Download PDF - Available for all resumes */}
+        {onDownload && (
+          <button
+            onClick={onDownload}
+            disabled={isDownloading}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-50 ${
+              theme === 'dark'
+                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40 hover:bg-blue-500/30'
+                : 'bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            {isDownloading ? 'Generating PDF...' : 'Download PDF'}
+          </button>
+        )}
+        
+        {/* Edit Button - Only for built resumes */}
+        {isBuiltResume && onEdit && (
+          <button
+            onClick={onEdit}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors ${
+              theme === 'dark'
+                ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40 hover:bg-purple-500/30'
+                : 'bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            Edit Resume
+          </button>
+        )}
+        
+        {/* Verify Button - Only for unverified built resumes */}
+        {isBuiltResume && !isVerified && onVerify && (
+          <button
+            onClick={onVerify}
+            disabled={isVerifying}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-50 ${
+              theme === 'dark'
+                ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
+                : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            {isVerifying ? 'Verifying...' : 'Verify on Blockchain'}
+          </button>
         )}
         
         {/* Delete Button */}

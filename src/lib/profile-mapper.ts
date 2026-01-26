@@ -266,12 +266,15 @@ export function profileToDotApplication(profile: UnifiedDriverProfile): Partial<
     },
     employmentHistory: profile.employmentHistory.map((emp) => ({
       company: emp.companyName,
+      companyName: emp.companyName,
       position: emp.position,
+      location: emp.location,
       startDate: emp.startDate,
       endDate: emp.isCurrent ? '' : emp.endDate,
       reasonForLeaving: emp.reasonForLeaving || '',
       supervisorName: emp.supervisorName || '',
       supervisorPhone: emp.supervisorPhone || '',
+      supervisorEmail: emp.supervisorEmail || '',
       duties: emp.responsibilities?.join('; ') || '',
     })),
     // Map MVR data to driving record if available

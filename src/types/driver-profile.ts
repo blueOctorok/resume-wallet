@@ -29,6 +29,7 @@ export interface UnifiedEmployment {
   reasonForLeaving?: string
   supervisorName?: string
   supervisorPhone?: string
+  supervisorEmail?: string
   subjectToFMCSR?: boolean
   subjectToDrugTest?: boolean
 }

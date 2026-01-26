@@ -228,151 +228,155 @@ export default function ResumeDashboard({
     }
   }
 
-  // Handle download PDF for built resumes
+  // Handle download PDF for built resumes - uses shared styled PDF generator
   const handleDownloadPDF = async (resume: ResumeRecord) => {
     if (!resume.structured_data) return
 
     setIsDownloading(true)
     try {
-      // Dynamically import jspdf to avoid SSR issues
-      const { default: jsPDF } = await import('jspdf')
+      // Dynamically import the shared styled PDF generator
+      const { generateStyledResumePDF } = await import('@/lib/resume-pdf-generator')
       
-      const data = resume.structured_data as {
-        personalInfo?: { firstName?: string; lastName?: string; email?: string; phone?: string; address?: string; city?: string; state?: string; zipCode?: string; summary?: string }
-        cdlInfo?: { cdlClass?: string; cdlState?: string; cdlExpiration?: string; endorsements?: string[] }
-        employments?: Array<{ company?: string; position?: string; startDate?: string; endDate?: string; current?: boolean; description?: string }>
-        educations?: Array<{ school?: string; degree?: string; field?: string; graduationDate?: string }>
-        skills?: Array<{ category?: string; items?: string[] }>
-        references?: Array<{ name?: string; relationship?: string; company?: string; phone?: string; email?: string }>
-      }
-
-      const pdf = new jsPDF()
-      let y = 20
-
-      // Helper to add text with word wrap
-      const addText = (text: string, x: number, maxWidth: number, fontSize: number = 10) => {
-        pdf.setFontSize(fontSize)
-        const lines = pdf.splitTextToSize(text, maxWidth)
-        pdf.text(lines, x, y)
-        y += lines.length * (fontSize * 0.4) + 2
-      }
-
-      // Header - Name
-      const fullName = `${data.personalInfo?.firstName || ''} ${data.personalInfo?.lastName || ''}`.trim()
-      if (fullName) {
-        pdf.setFontSize(24)
-        pdf.setFont('helvetica', 'bold')
-        pdf.text(fullName, 105, y, { align: 'center' })
-        y += 10
-      }
-
-      // Contact info
-      pdf.setFont('helvetica', 'normal')
-      pdf.setFontSize(10)
-      const contactParts = [
-        data.personalInfo?.email,
-        data.personalInfo?.phone,
-        [data.personalInfo?.city, data.personalInfo?.state].filter(Boolean).join(', ')
-      ].filter(Boolean)
-      if (contactParts.length > 0) {
-        pdf.text(contactParts.join(' | '), 105, y, { align: 'center' })
-        y += 8
-      }
-
-      // Summary
-      if (data.personalInfo?.summary) {
-        y += 5
-        pdf.setFont('helvetica', 'bold')
-        pdf.setFontSize(12)
-        pdf.text('PROFESSIONAL SUMMARY', 20, y)
-        y += 6
-        pdf.setFont('helvetica', 'normal')
-        addText(data.personalInfo.summary, 20, 170, 10)
-      }
-
-      // CDL Info
-      if (data.cdlInfo?.cdlClass) {
-        y += 5
-        pdf.setFont('helvetica', 'bold')
-        pdf.setFontSize(12)
-        pdf.text('CDL INFORMATION', 20, y)
-        y += 6
-        pdf.setFont('helvetica', 'normal')
-        pdf.setFontSize(10)
-        const cdlParts = [
-          `Class ${data.cdlInfo.cdlClass}`,
-          data.cdlInfo.cdlState,
-          data.cdlInfo.cdlExpiration ? `Expires: ${data.cdlInfo.cdlExpiration}` : null,
-          data.cdlInfo.endorsements?.length ? `Endorsements: ${data.cdlInfo.endorsements.join(', ')}` : null
-        ].filter(Boolean)
-        pdf.text(cdlParts.join(' | '), 20, y)
-        y += 6
-      }
-
-      // Employment
-      if (data.employments && data.employments.length > 0) {
-        y += 5
-        pdf.setFont('helvetica', 'bold')
-        pdf.setFontSize(12)
-        pdf.text('EMPLOYMENT HISTORY', 20, y)
-        y += 6
-        
-        for (const job of data.employments) {
-          if (y > 270) { pdf.addPage(); y = 20 }
-          pdf.setFont('helvetica', 'bold')
-          pdf.setFontSize(11)
-          pdf.text(job.position || 'Position', 20, y)
-          y += 5
-          pdf.setFont('helvetica', 'normal')
-          pdf.setFontSize(10)
-          const jobLine = [job.company, `${job.startDate || ''} - ${job.current ? 'Present' : job.endDate || ''}`].filter(Boolean).join(' | ')
-          pdf.text(jobLine, 20, y)
-          y += 5
-          if (job.description) {
-            addText(job.description, 20, 170, 9)
-          }
-          y += 3
+      const structuredData = resume.structured_data as Record<string, unknown>
+      
+      // Detect format: Resume Builder format has `employments` with `companyName`, 
+      // old format (from uploaded resumes) has `employments` with `company`
+      const isResumeBuilderFormat = Array.isArray(structuredData.employments) && 
+        structuredData.employments.length > 0 && 
+        'companyName' in (structuredData.employments[0] as Record<string, unknown>)
+      
+      // Detect if skills are in Resume Builder format (array of {name, category}) 
+      // vs old format (array of {category, items[]})
+      const hasResumeBuilderSkillsFormat = Array.isArray(structuredData.skills) &&
+        structuredData.skills.length > 0 &&
+        'name' in (structuredData.skills[0] as Record<string, unknown>)
+      
+      let resumeData
+      
+      if (isResumeBuilderFormat) {
+        // Resume Builder format - data is already in the correct shape
+        resumeData = {
+          personalInfo: {
+            firstName: (structuredData.personalInfo as Record<string, unknown>)?.firstName as string | undefined,
+            lastName: (structuredData.personalInfo as Record<string, unknown>)?.lastName as string | undefined,
+            email: (structuredData.personalInfo as Record<string, unknown>)?.email as string | undefined,
+            phone: (structuredData.personalInfo as Record<string, unknown>)?.phone as string | undefined,
+            address: (structuredData.personalInfo as Record<string, unknown>)?.address as string | undefined,
+            city: (structuredData.personalInfo as Record<string, unknown>)?.city as string | undefined,
+            state: (structuredData.personalInfo as Record<string, unknown>)?.state as string | undefined,
+            zipCode: (structuredData.personalInfo as Record<string, unknown>)?.zipCode as string | undefined,
+            professionalSummary: (structuredData.personalInfo as Record<string, unknown>)?.professionalSummary as string | undefined,
+          },
+          cdlInfo: {
+            cdlClass: (structuredData.cdlInfo as Record<string, unknown>)?.cdlClass as string | undefined,
+            cdlState: (structuredData.cdlInfo as Record<string, unknown>)?.cdlState as string | undefined,
+            cdlExpiration: (structuredData.cdlInfo as Record<string, unknown>)?.expirationDate as string | undefined,
+            endorsements: ((structuredData.cdlInfo as Record<string, unknown>)?.endorsements as string[]) || [],
+          },
+          employments: (structuredData.employments as Array<Record<string, unknown>> || []).map(emp => ({
+            companyName: emp.companyName as string | undefined,
+            position: emp.position as string | undefined,
+            location: emp.location as string | undefined,
+            startDate: emp.startDate as string | undefined,
+            endDate: emp.endDate as string | undefined,
+            isCurrent: emp.isCurrent as boolean | undefined,
+            responsibilities: (emp.responsibilities as string[]) || [],
+          })),
+          educations: (structuredData.educations as Array<Record<string, unknown>> || []).map(edu => ({
+            school: edu.school as string | undefined,
+            degree: edu.degree as string | undefined,
+            field: edu.field as string | undefined,
+            year: edu.year as string | undefined,
+            certifications: (edu.certifications as string[]) || [],
+          })),
+          skills: hasResumeBuilderSkillsFormat 
+            ? (structuredData.skills as Array<Record<string, unknown>> || []).map(skill => ({
+                name: skill.name as string | undefined,
+                category: (skill.category || 'other') as 'equipment' | 'route' | 'technology' | 'safety' | 'other',
+              }))
+            : [], // Will be converted from old format below
+          references: (structuredData.references as Array<Record<string, unknown>> || []).map(ref => ({
+            name: ref.name as string | undefined,
+            title: ref.title as string | undefined,
+            company: ref.company as string | undefined,
+            phone: ref.phone as string | undefined,
+            email: ref.email as string | undefined,
+          })),
+        }
+      } else {
+        // Old format from uploaded/analyzed resumes - needs mapping
+        const oldData = structuredData as {
+          personalInfo?: { firstName?: string; lastName?: string; email?: string; phone?: string; address?: string; city?: string; state?: string; zipCode?: string; summary?: string }
+          cdlInfo?: { cdlClass?: string; cdlState?: string; cdlExpiration?: string; endorsements?: string[] }
+          employments?: Array<{ company?: string; position?: string; startDate?: string; endDate?: string; current?: boolean; description?: string }>
+          educations?: Array<{ school?: string; degree?: string; field?: string; graduationDate?: string }>
+          skills?: Array<{ category?: string; items?: string[] }>
+          references?: Array<{ name?: string; relationship?: string; company?: string; phone?: string; email?: string }>
+        }
+        resumeData = {
+          personalInfo: {
+            firstName: oldData.personalInfo?.firstName,
+            lastName: oldData.personalInfo?.lastName,
+            email: oldData.personalInfo?.email,
+            phone: oldData.personalInfo?.phone,
+            address: oldData.personalInfo?.address,
+            city: oldData.personalInfo?.city,
+            state: oldData.personalInfo?.state,
+            zipCode: oldData.personalInfo?.zipCode,
+            professionalSummary: oldData.personalInfo?.summary,
+          },
+          cdlInfo: {
+            cdlClass: oldData.cdlInfo?.cdlClass,
+            cdlState: oldData.cdlInfo?.cdlState,
+            cdlExpiration: oldData.cdlInfo?.cdlExpiration,
+            endorsements: oldData.cdlInfo?.endorsements || [],
+          },
+          employments: (oldData.employments || []).map(emp => ({
+            companyName: emp.company,
+            position: emp.position,
+            location: undefined,
+            startDate: emp.startDate,
+            endDate: emp.endDate,
+            isCurrent: emp.current,
+            responsibilities: emp.description ? [emp.description] : [],
+          })),
+          educations: (oldData.educations || []).map(edu => ({
+            school: edu.school,
+            degree: edu.degree,
+            field: edu.field,
+            year: edu.graduationDate,
+            certifications: [],
+          })),
+          skills: (oldData.skills || []).flatMap(skillGroup => 
+            (skillGroup.items || []).map(item => ({
+              name: item,
+              category: (skillGroup.category || 'other') as 'equipment' | 'route' | 'technology' | 'safety' | 'other',
+            }))
+          ),
+          references: (oldData.references || []).map(ref => ({
+            name: ref.name,
+            title: ref.relationship,
+            company: ref.company,
+            phone: ref.phone,
+            email: ref.email,
+          })),
         }
       }
-
-      // Education
-      if (data.educations && data.educations.length > 0) {
-        y += 5
-        pdf.setFont('helvetica', 'bold')
-        pdf.setFontSize(12)
-        pdf.text('EDUCATION', 20, y)
-        y += 6
-        
-        for (const edu of data.educations) {
-          if (y > 270) { pdf.addPage(); y = 20 }
-          pdf.setFont('helvetica', 'normal')
-          pdf.setFontSize(10)
-          const eduLine = [edu.degree, edu.field, edu.school, edu.graduationDate].filter(Boolean).join(' | ')
-          pdf.text(eduLine, 20, y)
-          y += 5
-        }
-      }
-
-      // Skills
-      if (data.skills && data.skills.length > 0) {
-        y += 5
-        pdf.setFont('helvetica', 'bold')
-        pdf.setFontSize(12)
-        pdf.text('SKILLS', 20, y)
-        y += 6
-        pdf.setFont('helvetica', 'normal')
-        pdf.setFontSize(10)
-        
-        for (const skillGroup of data.skills) {
-          if (y > 270) { pdf.addPage(); y = 20 }
-          const skillLine = `${skillGroup.category}: ${skillGroup.items?.join(', ') || ''}`
-          addText(skillLine, 20, 170, 10)
-        }
-      }
-
-      // Generate filename
-      const fileName = `${fullName.replace(/\s+/g, '_') || 'Resume'}_Resume.pdf`
-      pdf.save(fileName)
+      
+      // Generate styled PDF using the shared utility
+      const pdfBuffer = generateStyledResumePDF(resumeData)
+      
+      // Create blob and trigger download
+      const blob = new Blob([pdfBuffer], { type: 'application/pdf' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const fullName = `${resumeData.personalInfo.firstName || ''} ${resumeData.personalInfo.lastName || ''}`.trim()
+      a.download = `${fullName.replace(/\s+/g, '_') || 'Resume'}_Resume.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
       
       setActionMessage({ type: 'success', text: 'PDF downloaded successfully' })
     } catch (err) {

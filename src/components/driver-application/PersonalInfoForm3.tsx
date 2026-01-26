@@ -301,6 +301,7 @@ export default function PersonalInfoForm3({
       type: HistoryEntryType
       name: string
       phone: string
+      email: string
       address: string
       positionHeld: string
       fromDate: string
@@ -310,9 +311,7 @@ export default function PersonalInfoForm3({
       gapsInEmployment: string
       subjectToFMCSR: string
       safetySensitiveFunction: string
-      // Legacy field - kept for backwards compatibility
       isUnemployment: boolean
-      // Additional fields for specific types
       schoolName?: string
       courseOfStudy?: string
       militaryBranch?: string
@@ -416,6 +415,7 @@ export default function PersonalInfoForm3({
           {
             name: '',
             phone: '',
+            email: '',
             address: '',
             positionHeld: '',
             fromDate: '',
@@ -539,6 +539,8 @@ export default function PersonalInfoForm3({
               newErrors[`employer${index}Address`] = 'Employer address is required (DOT § 383.35)'
             }
           }
+          if (!(employer.email || '').trim())
+            newErrors[`employer${index}Email`] = 'Employer email is required (DOT § 383.35)'
           if (!employer.fromDate)
             newErrors[`employer${index}FromDate`] = 'Start date is required (DOT § 383.35)'
           if (!employer.toDate)
@@ -706,6 +708,7 @@ export default function PersonalInfoForm3({
           type,
           name: '',
           phone: '',
+          email: '',
           address: '',
           positionHeld: '',
           fromDate: '',
@@ -833,132 +836,173 @@ export default function PersonalInfoForm3({
 
   const fillTestData = () => {
     // Smart fill: only fill EMPTY fields, preserve existing data (especially AI-extracted employment history)
-    setFormData((prev) => ({
-      // Employment History - preserve if exists, especially from AI
-      employers: prev.employers?.length > 0 && prev.employers.some(emp => emp.name || emp.positionHeld)
-        ? prev.employers.map((employer) => {
-            // Check if this is a past job (not current) that needs reasonForLeaving
-            const isPastJob = employer.toDate && employer.toDate !== 'Present' && employer.toDate.trim() !== ''
-            const needsReason = isPastJob && !employer.isUnemployment && (!employer.reasonForLeaving || employer.reasonForLeaving.trim() === '')
-            
+    setFormData((prev) => {
+      const hasExistingHistory = prev.employers?.length > 0 && prev.employers.some(
+        emp => emp.fromDate || emp.toDate || emp.name || emp.positionHeld
+      )
+      if (hasExistingHistory) {
+        return {
+          ...prev,
+          employers: prev.employers.map((employer) => {
+            const entryType = employer.type || (employer.isUnemployment ? 'unemployment' : 'employment')
+            const isPastJob = employer.toDate && employer.toDate.toLowerCase() !== 'present' && employer.toDate.trim() !== ''
+            const needsReason = isPastJob && entryType === 'employment' && (!employer.reasonForLeaving || employer.reasonForLeaving.trim() === '')
             return {
-              // Fill missing fields within existing employers
+              type: entryType,
               name: employer.name || '',
               phone: employer.phone || '',
+              email: employer.email ?? '',
               address: employer.address || '',
               positionHeld: employer.positionHeld || '',
               fromDate: employer.fromDate || '',
               toDate: employer.toDate || '',
-              // Fill reasonForLeaving for past jobs if missing
-              reasonForLeaving: needsReason 
-                ? 'Better opportunity' 
-                : (employer.reasonForLeaving || ''),
+              reasonForLeaving: needsReason ? 'Better opportunity' : (employer.reasonForLeaving || ''),
               salary: employer.salary || '',
               gapsInEmployment: employer.gapsInEmployment || '',
               subjectToFMCSR: employer.subjectToFMCSR || 'yes',
               safetySensitiveFunction: employer.safetySensitiveFunction || 'yes',
-              isUnemployment: employer.isUnemployment ?? false,
+              isUnemployment: entryType === 'unemployment',
+              schoolName: employer.schoolName || '',
+              courseOfStudy: employer.courseOfStudy || '',
+              militaryBranch: employer.militaryBranch || '',
+              dischargeType: employer.dischargeType || '',
             }
-          })
-        : (() => {
-            // Calculate dates relative to today to ensure 10+ years coverage
-            const today = new Date()
-            const currentYear = today.getFullYear()
-            const currentMonth = today.getMonth() + 1 // 1-12
-            
-            return [
-              // Current Job (starts 3 years ago)
-              {
-                name: 'ABC Trucking Company',
-                phone: '(555) 123-4567',
-                address: '123 Highway Road, Columbus, OH 43215',
-                positionHeld: 'Commercial Driver',
-                fromDate: `01/${currentYear - 3}`,
-                toDate: 'Present',
-                reasonForLeaving: '', // Current job doesn't need reason
-                salary: '$55,000',
-                gapsInEmployment: 'None',
-                subjectToFMCSR: 'yes',
-                safetySensitiveFunction: 'yes',
-                isUnemployment: false,
-              },
-              // Previous Job (2.5 years)
-              {
-                name: 'XYZ Logistics',
-                phone: '(555) 987-6543',
-                address: '456 Freight Lane, Cleveland, OH 44101',
-                positionHeld: 'Delivery Driver',
-                fromDate: `06/${currentYear - 6}`,
-                toDate: `12/${currentYear - 3}`,
-                reasonForLeaving: 'Better opportunity',
-                salary: '$48,000',
-                gapsInEmployment: 'None',
-                subjectToFMCSR: 'yes',
-                safetySensitiveFunction: 'yes',
-                isUnemployment: false,
-              },
-              // Earlier Job (2.2 years)
-              {
-                name: 'Midwest Transport Solutions',
-                phone: '(555) 456-7890',
-                address: '789 Industrial Blvd, Indianapolis, IN 46225',
-                positionHeld: 'Regional Driver',
-                fromDate: `03/${currentYear - 8}`,
-                toDate: `05/${currentYear - 6}`,
-                reasonForLeaving: 'Relocated for better pay',
-                salary: '$45,000',
-                gapsInEmployment: 'None',
-                subjectToFMCSR: 'yes',
-                safetySensitiveFunction: 'yes',
-                isUnemployment: false,
-              },
-              // Unemployment Period (0.2 years) - Tests checkbox functionality
-              {
-                name: 'Unemployment',
-                phone: '',
-                address: '',
-                positionHeld: 'Unemployed',
-                fromDate: `01/${currentYear - 8}`,
-                toDate: `02/${currentYear - 8}`,
-                reasonForLeaving: 'Between jobs',
-                salary: '',
-                gapsInEmployment: 'Short gap between positions',
-                subjectToFMCSR: 'no',
-                safetySensitiveFunction: 'no',
-                isUnemployment: true, // Checkbox will be checked
-              },
-              // Earlier Job (1.2 years)
-              {
-                name: 'Swift Delivery Services',
-                phone: '(555) 234-5678',
-                address: '321 Commerce Dr, Cincinnati, OH 45202',
-                positionHeld: 'Local Delivery Driver',
-                fromDate: `11/${currentYear - 9}`,
-                toDate: `12/${currentYear - 8}`,
-                reasonForLeaving: 'Seeking long-haul opportunities',
-                salary: '$42,000',
-                gapsInEmployment: 'None',
-                subjectToFMCSR: 'yes',
-                safetySensitiveFunction: 'yes',
-                isUnemployment: false,
-              },
-              // Additional Job to reach 10+ years (0.7 years)
-              {
-                name: 'First Transport Inc',
-                phone: '(555) 345-6789',
-                address: '555 Main Street, Toledo, OH 43601',
-                positionHeld: 'Entry Level Driver',
-                fromDate: `03/${currentYear - 10}`,
-                toDate: `09/${currentYear - 9}`,
-                reasonForLeaving: 'Found better opportunity',
-                salary: '$40,000',
-                gapsInEmployment: 'None',
-                subjectToFMCSR: 'yes',
-                safetySensitiveFunction: 'yes',
-                isUnemployment: false,
-              },
-            ]
-          })(),
+          }),
+        }
+      }
+
+      // New test data: type-based entries (Form 3 Tenstreet-style structure)
+      const cy = new Date().getFullYear()
+      return {
+        ...prev,
+        employers: [
+          // 1. Current job (employment) — Present
+          {
+            type: 'employment' as const,
+            name: 'ABC Trucking Company',
+            phone: '(555) 123-4567',
+            email: 'hr@abctrucking.com',
+            address: '123 Highway Road, Columbus, OH 43215',
+            positionHeld: 'Commercial Driver',
+            fromDate: `01/${cy - 3}`,
+            toDate: 'Present',
+            reasonForLeaving: '',
+            salary: '$55,000',
+            gapsInEmployment: '',
+            subjectToFMCSR: 'yes',
+            safetySensitiveFunction: 'yes',
+            isUnemployment: false,
+            schoolName: '',
+            courseOfStudy: '',
+            militaryBranch: '',
+            dischargeType: '',
+          },
+          // 2. Previous job (employment)
+          {
+            type: 'employment' as const,
+            name: 'XYZ Logistics',
+            phone: '(555) 987-6543',
+            email: 'verification@xyzlogistics.com',
+            address: '456 Freight Lane, Cleveland, OH 44101',
+            positionHeld: 'Delivery Driver',
+            fromDate: `06/${cy - 6}`,
+            toDate: `12/${cy - 3}`,
+            reasonForLeaving: 'Better opportunity',
+            salary: '$48,000',
+            gapsInEmployment: '',
+            subjectToFMCSR: 'yes',
+            safetySensitiveFunction: 'yes',
+            isUnemployment: false,
+            schoolName: '',
+            courseOfStudy: '',
+            militaryBranch: '',
+            dischargeType: '',
+          },
+          // 3. Unemployment period — type-based, dates + optional explanation only
+          {
+            type: 'unemployment' as const,
+            name: '',
+            phone: '',
+            email: '',
+            address: '',
+            positionHeld: '',
+            fromDate: `01/${cy - 8}`,
+            toDate: `05/${cy - 6}`,
+            reasonForLeaving: '',
+            salary: '',
+            gapsInEmployment: 'Between jobs; relocating',
+            subjectToFMCSR: '',
+            safetySensitiveFunction: '',
+            isUnemployment: true,
+            schoolName: '',
+            courseOfStudy: '',
+            militaryBranch: '',
+            dischargeType: '',
+          },
+          // 4. Earlier job (employment)
+          {
+            type: 'employment' as const,
+            name: 'Midwest Transport Solutions',
+            phone: '(555) 456-7890',
+            email: 'employment@midwesttransport.com',
+            address: '789 Industrial Blvd, Indianapolis, IN 46225',
+            positionHeld: 'Regional Driver',
+            fromDate: `03/${cy - 9}`,
+            toDate: `12/${cy - 8}`,
+            reasonForLeaving: 'Relocated for better pay',
+            salary: '$45,000',
+            gapsInEmployment: '',
+            subjectToFMCSR: 'yes',
+            safetySensitiveFunction: 'yes',
+            isUnemployment: false,
+            schoolName: '',
+            courseOfStudy: '',
+            militaryBranch: '',
+            dischargeType: '',
+          },
+          // 5. Driving school (CDL training)
+          {
+            type: 'drivingSchool' as const,
+            name: 'Ohio Commercial Driving Academy',
+            phone: '',
+            email: '',
+            address: 'Columbus, OH',
+            positionHeld: '',
+            fromDate: `09/${cy - 10}`,
+            toDate: `02/${cy - 9}`,
+            reasonForLeaving: '',
+            salary: '',
+            gapsInEmployment: '',
+            subjectToFMCSR: '',
+            safetySensitiveFunction: '',
+            isUnemployment: false,
+            schoolName: '',
+            courseOfStudy: 'Class A CDL',
+            militaryBranch: '',
+            dischargeType: '',
+          },
+          // 6. Oldest job (employment) — 10+ years coverage
+          {
+            type: 'employment' as const,
+            name: 'First Transport Inc',
+            phone: '(555) 345-6789',
+            email: 'hr@firsttransport.com',
+            address: '555 Main Street, Toledo, OH 43601',
+            positionHeld: 'Entry Level Driver',
+            fromDate: `01/${cy - 11}`,
+            toDate: `08/${cy - 10}`,
+            reasonForLeaving: 'Found better opportunity',
+            salary: '$40,000',
+            gapsInEmployment: '',
+            subjectToFMCSR: 'yes',
+            safetySensitiveFunction: 'yes',
+            isUnemployment: false,
+            schoolName: '',
+            courseOfStudy: '',
+            militaryBranch: '',
+            dischargeType: '',
+          },
+        ],
       
       // Education - add test data only if empty
       education: prev.education?.length > 0 && prev.education.some(edu => edu.nameAndLocation || edu.courseOfStudy)
@@ -1016,7 +1060,8 @@ export default function PersonalInfoForm3({
         prev.dqHasInvestigationRecords || 'yes',
       dqUnderstandsAccessControls:
         prev.dqUnderstandsAccessControls || 'yes',
-    }))
+    }
+    })
     setErrors({})
   }
 
@@ -1498,8 +1543,8 @@ export default function PersonalInfoForm3({
             {/* EMPLOYMENT-specific fields */}
             {entryType === 'employment' && (
               <>
-                {/* Company Name and Phone */}
-                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                {/* Company Name, Phone, Email */}
+                <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
                   <div className='md:col-span-2'>
                     <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
                       EMPLOYER NAME <span className="text-red-500">*</span>
@@ -1512,8 +1557,11 @@ export default function PersonalInfoForm3({
                         theme === 'dark'
                           ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
                           : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
-                      }`}
+                      } ${errors[`employer${index}Name`] ? 'border-red-500' : ''}`}
                     />
+                    {errors[`employer${index}Name`] && (
+                      <p className="mt-1 text-sm text-red-500">{errors[`employer${index}Name`]}</p>
+                    )}
                   </div>
                   <div>
                     <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
@@ -1529,6 +1577,25 @@ export default function PersonalInfoForm3({
                           : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
                       }`}
                     />
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}>
+                      EMAIL <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type='email'
+                      value={employer.email ?? ''}
+                      onChange={(e) => handleInputChange('employers', { email: e.target.value }, index)}
+                      placeholder="hr@company.com"
+                      className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                        theme === 'dark'
+                          ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
+                          : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                      } ${errors[`employer${index}Email`] ? 'border-red-500' : ''}`}
+                    />
+                    {errors[`employer${index}Email`] && (
+                      <p className="mt-1 text-sm text-red-500">{errors[`employer${index}Email`]}</p>
+                    )}
                   </div>
                 </div>
 

@@ -128,6 +128,7 @@ export interface DotForm2Data {
 export interface DotForm3Employer {
   name: string
   phone: string
+  email: string
   address: string
   positionHeld: string
   fromDate: string
@@ -351,6 +352,7 @@ export function form3ToProfile(data: DotForm3Data): Partial<UnifiedDriverProfile
       reasonForLeaving: emp.reasonForLeaving,
       supervisorName: '',
       supervisorPhone: emp.phone,
+      supervisorEmail: emp.email || undefined,
       subjectToFMCSR: emp.subjectToFMCSR === 'yes',
       subjectToDrugTest: emp.safetySensitiveFunction === 'yes',
     }))
@@ -382,6 +384,7 @@ export function profileToForm3(profile: UnifiedDriverProfile): Partial<DotForm3D
   const employers: DotForm3Employer[] = profile.employmentHistory.map(emp => ({
     name: emp.companyName,
     phone: emp.supervisorPhone || '',
+    email: emp.supervisorEmail || '',
     address: emp.location,
     positionHeld: emp.position,
     fromDate: profileDateToForm3Date(emp.startDate, false),
@@ -462,7 +465,7 @@ export function getFormCompletionStats(
   // Form 3 key fields (employment)
   if (form3Data?.employers) {
     const hasValidEmployers = form3Data.employers.some(emp => 
-      emp.name && emp.fromDate && emp.toDate && !emp.isUnemployment
+      emp.name && emp.email && emp.fromDate && emp.toDate && !emp.isUnemployment
     )
     total += 1
     if (hasValidEmployers) completed += 1

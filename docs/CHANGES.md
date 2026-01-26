@@ -2,6 +2,183 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## ✨ **UX: Save Indicator & Unsaved Changes Warning** (January 2026)
+
+**Added subtle feedback when data is saved and warnings when navigating away with unsaved changes.**
+
+### Features
+1. **Sync Indicator Toast**
+   - Shows "Saving..." during save operation
+   - Shows "✓ Saved to profile" on success (auto-hides after 3s)
+   - Shows error message on failure
+   - Appears as a subtle toast near the top of the screen
+
+2. **Unsaved Changes Warning**
+   - Tracks when form data changes after last save
+   - Shows browser's native "Leave site?" dialog when closing tab/browser
+   - Shows confirmation dialog when navigating away via Back button or nav links
+   - Works for both DOT Application and Resume Builder
+
+### Files
+- `src/components/SyncIndicator.tsx` – new reusable sync indicator component with `useSyncIndicator` hook
+- `src/app/page.tsx` – added sync indicator to DOT form saves, dirty state tracking, beforeunload handler, navigation warning
+- `src/components/ResumeBuilder.tsx` – added dirty state tracking, beforeunload handler, back button warning
+
+---
+
+## 🔧 **FIX: DOT App Prefill Race Condition** (January 2026)
+
+**Fixed issue where DOT app wasn't being prefilled from Resume Builder data due to timing conflicts.**
+
+### Problem
+1. **Reset timing**: When clicking "Start DOT Application" from the Hub, `resetApplicationProgress()` set `resetInProgressRef = true`. The profile load effect would see this and return early.
+2. **Concurrent loads race condition**: The `profileLoadAttemptedRef.current = true` was being set AFTER a 100ms async wait, allowing multiple concurrent effect runs to pass the initial check and interfere with each other.
+
+### Solution
+- When navigating to DOT app while reset is in progress, wait 150ms before triggering profile load
+- **Set `profileLoadAttemptedRef.current = true` EARLY** (before the async wait) to prevent race conditions from concurrent effect runs
+- Keep the `forceProfileLoadRef` flag intact when returning early due to reset
+- Reset the attempted flag when skipping due to active reset, allowing retry after reset completes
+
+### Files
+- `src/app/page.tsx` – fixed profile load race condition, improved timing for reset scenarios
+- `src/components/driver-application/PersonalInfoForm1.tsx` – added debug logging for hydration (can be removed later)
+
+---
+
+## ✨ **UX: Resume Management Modal in Driver Hub** (January 2026)
+
+**Resume management is now handled through a modal in the Driver Hub instead of a separate section below the Resume Builder.**
+
+### Changes
+- **Removed Export button from Resume Builder**: Users now only "Save" their resume. Downloading PDFs is handled in the Hub modal.
+- **Removed Resume Management section**: The separate section below Resume Builder has been removed for a cleaner UX.
+- **Enhanced Driver Hub resume modal**: Clicking a resume in the Hub now opens a full management modal with:
+  - **Download PDF**: Generates styled PDF from structured data for any resume
+  - **Edit Resume**: Opens the resume in Resume Builder for editing (built resumes only)
+  - **Verify on Blockchain**: One-click verification to IPFS and blockchain (unverified built resumes only)
+  - **View in Browser**: Opens the IPFS-hosted PDF (verified resumes only)
+  - **Delete Resume**: Remove the resume
+- **Better UX flow**: Users build → save → manage from Hub instead of managing inline below the builder
+
+### Files
+- `src/components/ResumeBuilder.tsx` – removed Export button, removed unused `handleExportPDF` function
+- `src/components/DriverHub.tsx` – added `onEditResume` prop, enhanced `ResumeDetailContent` with full management actions, added handlers for verify/download
+- `src/app/page.tsx` – removed `ResumeDashboard` import and usage, wired up `onEditResume` callback to DriverHub
+
+---
+
+## ✨ **FEATURE: Unified Styled PDF Generation** (January 2026)
+
+**Resume PDFs now use consistent, professional styling whether exported from Resume Builder or downloaded from the Hub after verification.**
+
+### Problem
+- Exporting from Resume Builder created a nicely styled PDF with colors, proper formatting, and visual hierarchy
+- Downloading from the Hub (after verification) showed a plain, unstyled PDF
+- Two different PDF generation functions meant inconsistent output and maintenance burden
+
+### Solution
+- **Created shared PDF utility** (`src/lib/resume-pdf-generator.ts`): Extracted the styled PDF generation logic into a reusable function
+- **Updated verification API**: Now uses the shared utility with format detection (Resume Builder vs uploaded resume formats)
+- **Updated ResumeBuilder**: Refactored to use the shared utility for consistency
+- **Updated ResumeDashboard**: The "Download PDF" button in Resume Management was using its own plain PDF generator - now uses the shared styled utility
+- **Format detection**: All PDF generation points now detect whether data is in Resume Builder format (`companyName`, `responsibilities`, `professionalSummary`) vs old format (`company`, `description`, `summary`) and map accordingly
+- **Result**: All PDF download/export paths now produce identical, professionally styled PDFs with:
+  - Navy blue headers and accent colors
+  - Light blue background boxes for CDL info
+  - Proper typography hierarchy
+  - Styled reference cards
+  - Consistent spacing and formatting
+
+### Files
+- `src/lib/resume-pdf-generator.ts` – new shared utility
+- `src/app/api/resumes/[id]/verify/route.ts` – uses shared utility with format detection
+- `src/components/ResumeBuilder.tsx` – uses shared utility, removed inline PDF code
+- `src/components/ResumeDashboard.tsx` – `handleDownloadPDF` now uses shared utility instead of plain inline generator
+
+---
+
+## ✨ **FEATURE: Auto-Prefill DOT App from Resume Builder** (January 2026)
+
+**When a user builds and saves a resume in the Resume Builder, navigating to the DOT Application now auto-populates the forms with their data - no need to export and re-upload.**
+
+### Problem
+Users who built a resume in Veree's Resume Builder had to export the PDF and drag-drop it into the AI prefill on Form 1 to populate their DOT application. This was redundant since the data already existed in the system.
+
+### Solution
+1. **Profile sync is now blocking**: Resume Builder `handleSave` now awaits the profile sync before showing success. This ensures the profile is updated before the user navigates away.
+2. **Meaningful data check**: The DOT app profile-load effect now checks for *meaningful* form data (actual name/CDL/employer), not just any truthy value. Empty/partial localStorage data no longer blocks profile prefill.
+3. **Page navigation trigger**: When navigating TO the DOT app from another page (e.g., Resume Builder), we reset the profile load attempt and trigger a fresh check. This handles the flow: build resume → save → navigate to DOT app.
+4. **Force profile load on navigation**: Added `forceProfileLoadRef` that bypasses localStorage data check when user navigates to DOT app. This ensures fresh profile data always wins over stale localStorage.
+
+### How It Works
+- User fills Resume Builder → clicks Save → profile syncs (awaited)
+- User clicks "DOT Application" in nav
+- DOT app detects page transition → sets force flag → triggers profile load
+- Force flag bypasses localStorage check → profile data loads
+- User sees their name, CDL, employment pre-filled
+
+### Files
+- `src/components/ResumeBuilder.tsx` – made profile sync blocking in `handleSave`
+- `src/app/page.tsx` – `profileLoadTrigger` state, `forceProfileLoadRef`, meaningful data check, page transition effect
+
+---
+
+## 🔧 **FIX: Duplicate Resumes on Export** (January 2026)
+
+**Exporting or saving a resume multiple times no longer creates duplicate entries in the Hub.**
+
+### Problem
+Every click of "Export PDF" or "Save" in the Resume Builder created a new resume record. Clicking export 3 times resulted in 3 separate resumes in the Hub.
+
+### Solution
+- Added `internalResumeId` state to track the resume ID after first save
+- Both `handleSave` and `handleExportPDF` now use `internalResumeId` instead of just the prop
+- After creating a new resume, we update `internalResumeId` so subsequent saves/exports UPDATE the existing record instead of creating new ones
+
+### Files
+- `src/components/ResumeBuilder.tsx` – `internalResumeId` state, updated save/export to use it
+
+---
+
+## 🔧 **FIX: DOT App & Profile Name After Submit** (January 2026)
+
+**Submitted DOT applications now keep the applicant name (e.g. "Barry Burton's Application") instead of reverting to "DOT Application 1". Profile display in the Hub also falls back correctly when the profile lacks a name.**
+
+### Problem
+- After submitting a DOT app, the list showed "DOT Application 1" instead of "Barry Burton's Application".
+- The profile name in the Hub could appear as "Unnamed" / "Driver" when it should reflect the applicant.
+
+### Solution
+- **Hub API** fetches `application_data` for `driver_applications` and derives `applicantName` from `form1.firstName` / `form1.lastName` for each submitted app. Falls back to profile `first_name` + `last_name` when `application_data` has no name.
+- **`displayNameFallback`**: When the profile has no first/last name, the API computes a fallback from the first DOT app (submitted or in-progress) that has an applicant name. Hub uses this for the header ("X's Driver Hub") and ShareProfileCard.
+- **DriverHub** uses `profileName || displayNameFallback || 'Driver'` for the header and `driverName` prop.
+
+### Files
+- `src/app/api/driver/hub/route.ts` – select `application_data`, `getApplicantNameFromApp`, `displayNameFallback`
+- `src/components/DriverHub.tsx` – `displayNameFallback` in `HubData`, `profileName` / `displayName` / `driverName` logic
+
+---
+
+## ✨ **FEATURE: Discard In-Progress DOT Application from Hub** (January 2026)
+
+**Users can delete an unsaved (in-progress) DOT application directly from the Driver Hub.**
+
+### Problem
+If a user accidentally started a new DOT application after already submitting one, the in-progress draft stayed in the Hub with no way to remove it.
+
+### Solution
+- **Trash icon** on in-progress DOT app rows in the Hub. Click → confirm → profile + localStorage + form state cleared, hub refetches.
+- **`POST /api/driver/profile/clear-dot-progress`**: Clears DOT-related driver profile fields for the authenticated user. Wallet auth via `x-wallet-address`.
+- **`onDeleteInProgressDotApp`** callback: Page calls API, clears `forms-*` / `journey-*` localStorage, then `resetApplicationProgress()`. Hub refetches after.
+
+### Files
+- `src/app/api/driver/profile/clear-dot-progress/route.ts` – new API
+- `src/components/DriverHub.tsx` – `onDeleteInProgressDotApp` prop, `ItemRow` `onDelete`/`deleteDisabled`, discard handler
+- `src/app/page.tsx` – `handleDeleteInProgressDotApp`, passed to DriverHub
+
+---
+
 ## ✨ **FEATURE: Employment Verification System** (January 2026)
 
 **Complete employment verification workflow allowing future employers to verify driver employment history with previous employers. Implements the DOT-required 6-question verification with a 3-attempt contact rule.**

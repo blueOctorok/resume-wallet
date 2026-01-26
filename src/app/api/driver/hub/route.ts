@@ -89,10 +89,10 @@ export async function GET(request: NextRequest) {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
 
-      // 3. All DOT applications
+      // 3. All DOT applications (include application_data to extract applicant name)
       supabase
         .from('driver_applications')
-        .select('id, created_at, verification_status, blockchain_tx_hash, blockchain_application_id, is_complete, current_step')
+        .select('id, created_at, verification_status, blockchain_tx_hash, blockchain_application_id, is_complete, current_step, application_data')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
 
@@ -155,18 +155,33 @@ export async function GET(request: NextRequest) {
       isPaid: resume.is_paid,
     }))
 
+    // Extract applicant name from application_data.form1 (DOT form1 first/last name)
+    const getApplicantNameFromApp = (app: { application_data?: { form1?: { firstName?: string; lastName?: string } } }): string | null => {
+      const form1 = app.application_data?.form1
+      if (!form1) return null
+      const name = `${form1.firstName ?? ''} ${form1.lastName ?? ''}`.trim()
+      return name || null
+    }
+
+    const profileFallbackName = profile?.first_name && profile?.last_name
+      ? `${profile.first_name} ${profile.last_name}`
+      : null
+
     // Process DOT applications (submitted ones from database)
-    const submittedDotApplications = (dotAppsResult.data || []).map(app => ({
-      id: app.id,
-      createdAt: app.created_at,
-      verificationStatus: app.verification_status || 'PENDING',
-      blockchainTxHash: app.blockchain_tx_hash,
-      blockchainApplicationId: app.blockchain_application_id,
-      isComplete: app.is_complete,
-      currentStep: app.current_step,
-      applicantName: null as string | null, // Will be filled from profile if needed
-      isInProgress: false,
-    }))
+    const submittedDotApplications = (dotAppsResult.data || []).map((app: Record<string, unknown>) => {
+      const applicantName = getApplicantNameFromApp(app as { application_data?: { form1?: { firstName?: string; lastName?: string } } }) ?? profileFallbackName
+      return {
+        id: app.id,
+        createdAt: app.created_at,
+        verificationStatus: app.verification_status || 'PENDING',
+        blockchainTxHash: app.blockchain_tx_hash,
+        blockchainApplicationId: app.blockchain_application_id,
+        isComplete: app.is_complete,
+        currentStep: app.current_step,
+        applicantName,
+        isInProgress: false,
+      }
+    })
     
     // Check for in-progress application in profile (saved but not submitted)
     // Parse employment_history safely (it's JSONB so may already be an array)
@@ -176,13 +191,20 @@ export async function GET(request: NextRequest) {
           : profile.employment_history)
       : []
     
-    // An in-progress app exists if profile has meaningful form data
-    const hasInProgressApp = profile && (
+    // An in-progress DOT app exists ONLY if the profile was last updated from DOT application
+    // Profile data from Resume Builder alone does NOT count as in-progress DOT app
+    // This prevents showing "in-progress" after user discards a DOT app but keeps their resume
+    const hasProfileData = profile && (
       profile.first_name || 
       profile.last_name || 
       profile.cdl_number ||
       employmentHistory.length > 0
     )
+    
+    // Only show as in-progress if:
+    // 1. Profile has data AND
+    // 2. Last update was from DOT application (not resume_builder)
+    const hasInProgressApp = hasProfileData && profile?.last_updated_from === 'dot_application'
     
     console.log('[DRIVER HUB] In-progress detection:', {
       hasProfile: !!profile,
@@ -190,6 +212,8 @@ export async function GET(request: NextRequest) {
       lastName: profile?.last_name,
       cdlNumber: profile?.cdl_number,
       employmentHistoryCount: employmentHistory.length,
+      lastUpdatedFrom: profile?.last_updated_from,
+      hasProfileData,
       hasInProgressApp,
       submittedAppsCount: submittedDotApplications.length,
       // Debug: what does the profile actually contain?
@@ -340,6 +364,13 @@ export async function GET(request: NextRequest) {
       createdAt: payment.created_at,
     }))
 
+    // Fallback display name when profile first/last are missing (e.g. after submit)
+    const profileName = profile?.first_name && profile?.last_name
+      ? `${profile.first_name} ${profile.last_name}`
+      : null
+    const latestAppWithName = dotApplications.find(a => a.applicantName)
+    const displayNameFallback = profileName ?? latestAppWithName?.applicantName ?? null
+
     // Calculate profile completeness
     const profileCompleteness = calculateProfileCompleteness(profile, resumes, dotApplications, mvrRecords)
 
@@ -372,6 +403,7 @@ export async function GET(request: NextRequest) {
       success: true,
       isNewUser: false,
       profile,
+      displayNameFallback, // Use when profile first/last missing (e.g. from submitted app)
       resumes,
       dotApplications,
       mvrRecords,

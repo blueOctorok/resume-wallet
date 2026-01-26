@@ -29,6 +29,7 @@ import type {
 } from '@/types/assistant'
 import { profileToDotApplication, dotApplicationToProfile } from '@/lib/profile-mapper'
 import type { UnifiedDriverProfile } from '@/types/driver-profile'
+import SyncIndicator, { useSyncIndicator } from '@/components/SyncIndicator'
 
 // Dynamic imports to avoid SSR issues with Alchemy hooks
 const ResumeUploadWithVerification = dynamic(
@@ -166,16 +167,6 @@ const ResumeUploadWithPrefill = dynamic(
     ssr: false,
     loading: () => (
       <LoadingScreen message='Loading resume upload...' fullScreen={false} />
-    ),
-  }
-)
-
-const ResumeDashboard = dynamic(
-  () => import('@/components/ResumeDashboard').then((mod) => mod.default),
-  {
-    ssr: false,
-    loading: () => (
-      <LoadingScreen message='Loading your resumes...' fullScreen={false} />
     ),
   }
 )
@@ -353,6 +344,13 @@ const HomeContent = () => {
   const [form3Data, setForm3Data] = useState<any>(null)
   const [formResetKey, setFormResetKey] = useState(0)
   
+  // Sync indicator for save feedback
+  const { startSync, syncSuccess, syncError, indicatorProps } = useSyncIndicator()
+  
+  // Track unsaved changes (dirty state)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const lastSavedDataRef = useRef<{ form1: any; form2: any; form3: any }>({ form1: null, form2: null, form3: null })
+  
   // Track if data was loaded from unified profile
   const [profileDataLoaded, setProfileDataLoaded] = useState(false)
   const [profileSource, setProfileSource] = useState<string | null>(null)
@@ -364,6 +362,8 @@ const HomeContent = () => {
     profileData: any
   } | null>(null)
   const profileLoadAttemptedRef = useRef(false)
+  const [profileLoadTrigger, setProfileLoadTrigger] = useState(0) // Increment to force profile reload
+  const forceProfileLoadRef = useRef(false) // When true, load from profile even if forms have data
 
   // Track if user has used AI prefill
   const [hasPrefilled, setHasPrefilled] = useState(false)
@@ -640,6 +640,24 @@ const HomeContent = () => {
     form3Data,
   ])
 
+  const handleDeleteInProgressDotApp = useCallback(async () => {
+    if (!user?.address) return
+    const res = await fetch('/api/driver/profile/clear-dot-progress', {
+      method: 'POST',
+      headers: { 'x-wallet-address': user.address },
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data.error || 'Failed to clear in-progress application')
+    }
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(`forms-${user.address}`)
+      window.localStorage.removeItem(`journey-${user.address}`)
+      window.localStorage.removeItem(`journey-primer-${user.address}`)
+    }
+    resetApplicationProgress()
+  }, [user?.address, resetApplicationProgress])
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (!user?.address) {
@@ -767,28 +785,51 @@ const HomeContent = () => {
     }
   }, [form1Data, form2Data, form3Data, user?.address])
 
-  // Load from unified profile if no localStorage form data exists
+  // Load from unified profile if no meaningful localStorage form data exists
   // This enables DOT form prefill from Resume Builder data
   useEffect(() => {
     const loadFromProfile = async () => {
-      // Only attempt once per session
-      if (profileLoadAttemptedRef.current) return
+      // Only attempt once per session (set early to prevent race conditions)
+      if (profileLoadAttemptedRef.current) {
+        console.log('📋 [DOT APP] Profile load already attempted, skipping')
+        return
+      }
       if (!user?.address) return
+      
+      // Mark as attempted EARLY to prevent race conditions from concurrent effect runs
+      profileLoadAttemptedRef.current = true
       
       // Wait a tick to let localStorage load complete first
       await new Promise(resolve => setTimeout(resolve, 100))
       
-      // Don't load from profile if forms already have data (from localStorage or AI prefill)
-      if (form1Data || form2Data || form3Data) {
-        console.log('📋 [DOT APP] Forms already have data, skipping profile load')
-        profileLoadAttemptedRef.current = true
+      // Check if forms have MEANINGFUL data (not just empty objects)
+      // Skip this check if forceProfileLoadRef is true (navigating from Resume Builder)
+      if (!forceProfileLoadRef.current) {
+        const hasMeaningfulForm1 = form1Data && (
+          form1Data.firstName || form1Data.lastName || form1Data.cdlNumber ||
+          (form1Data.currentLicenses?.length > 0 && form1Data.currentLicenses[0]?.licenseNumber)
+        )
+        const hasMeaningfulForm3 = form3Data && (
+          form3Data.employers?.length > 0 && form3Data.employers[0]?.name
+        )
+        
+        if (hasMeaningfulForm1 || hasMeaningfulForm3) {
+          console.log('📋 [DOT APP] Forms already have meaningful data, skipping profile load')
+          return
+        }
+      } else {
+        console.log('🔄 [DOT APP] Force load enabled - will check profile regardless of form data')
+      }
+      
+      // Don't load during reset - reset the attempted flag so we can retry
+      if (resetInProgressRef.current) {
+        console.log('🔄 [DOT APP] Reset in progress, skipping profile load (will retry)')
+        profileLoadAttemptedRef.current = false // Allow retry after reset completes
         return
       }
       
-      // Don't load during reset
-      if (resetInProgressRef.current) return
-      
-      profileLoadAttemptedRef.current = true
+      // Reset force flag after use (only after we've passed the reset check)
+      forceProfileLoadRef.current = false
       
       try {
         console.log('📦 [DOT APP] Checking unified profile for prefill data...')
@@ -818,9 +859,21 @@ const HomeContent = () => {
         
         console.log('✅ [DOT APP] Profile found with data, prefilling forms...')
         console.log('   Source:', profile.lastUpdatedFrom || 'unknown')
+        console.log('   Profile data:', {
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          email: profile.email,
+          cdlNumber: profile.cdlNumber,
+          employmentCount: profile.employmentHistory?.length || 0,
+        })
         
         // Convert profile to DOT application format
         const dotData = profileToDotApplication(profile as UnifiedDriverProfile)
+        console.log('   Converted DOT data:', {
+          hasPersonalInfo: !!dotData.personalInfo,
+          hasCdlInfo: !!dotData.cdlInfo,
+          employmentHistoryLength: dotData.employmentHistory?.length || 0,
+        })
         
         // Set form data - only set forms that have data
         if (dotData.personalInfo || dotData.cdlInfo) {
@@ -854,9 +907,10 @@ const HomeContent = () => {
           setForm3Data((prev: Record<string, unknown>) => ({
             ...prev,
             employers: dotData.employmentHistory.map((emp: Record<string, unknown>) => ({
-              name: emp.company || '',
+              name: emp.company || emp.companyName || '',
               phone: emp.supervisorPhone || '',
-              address: '', // DOT format doesn't have separate address
+              email: emp.supervisorEmail || '',
+              address: (emp.location as string) || '',
               positionHeld: emp.position || '',
               fromDate: emp.startDate || '',
               toDate: emp.endDate || 'Present',
@@ -904,7 +958,38 @@ const HomeContent = () => {
     }
     
     loadFromProfile()
-  }, [user?.address, form1Data, form2Data, form3Data])
+  }, [user?.address, form1Data, form2Data, form3Data, profileLoadTrigger])
+
+  // Reset profile load attempt when navigating TO DOT app (enables fresh profile check)
+  // This handles: User builds resume → saves → navigates to DOT app → should see prefilled data
+  const prevPageRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (currentPage === 'dotapp' && prevPageRef.current !== 'dotapp') {
+      // Entering DOT app from another page - FORCE profile reload
+      // This ensures fresh data from Resume Builder overrides stale localStorage
+      console.log('🔄 [DOT APP] Entering DOT app view, preparing to load profile...')
+      
+      // If a reset is in progress (e.g., from onStartDotApp), wait for it to complete
+      // before triggering profile load. The reset clears forms but we want to refill from profile.
+      const triggerProfileLoad = () => {
+        profileLoadAttemptedRef.current = false
+        forceProfileLoadRef.current = true // Force load even if forms have data
+        setProfileLoadTrigger(prev => prev + 1) // Trigger the profile load effect
+        console.log('🔄 [DOT APP] FORCING profile check for prefill')
+      }
+      
+      if (resetInProgressRef.current) {
+        // Wait for reset to complete (reset clears after 100ms)
+        console.log('🔄 [DOT APP] Reset in progress, waiting before profile load...')
+        setTimeout(() => {
+          triggerProfileLoad()
+        }, 150) // Wait slightly longer than the reset timeout (100ms)
+      } else {
+        triggerProfileLoad()
+      }
+    }
+    prevPageRef.current = currentPage
+  }, [currentPage])
 
   useEffect(() => {
     if (journeyState.resume.status === 'complete' && !hasResume) {
@@ -938,6 +1023,45 @@ const HomeContent = () => {
       updateJourneyStep('wallet', 'complete')
     }
   }, [user?.address, updateJourneyStep])
+
+  // Track dirty state - detect when form data changes from last saved version
+  useEffect(() => {
+    // Only track dirty state when on DOT app page
+    if (currentPage !== 'dotapp') return
+    
+    // Skip during reset
+    if (resetInProgressRef.current) return
+    
+    // Check if any form data exists and differs from last saved
+    const hasData = form1Data || form2Data || form3Data
+    if (!hasData) {
+      setHasUnsavedChanges(false)
+      return
+    }
+    
+    // Simple comparison - if we have data and it's different from what was last saved, it's dirty
+    const isDifferent = 
+      JSON.stringify(form1Data) !== JSON.stringify(lastSavedDataRef.current.form1) ||
+      JSON.stringify(form2Data) !== JSON.stringify(lastSavedDataRef.current.form2) ||
+      JSON.stringify(form3Data) !== JSON.stringify(lastSavedDataRef.current.form3)
+    
+    setHasUnsavedChanges(isDifferent)
+  }, [form1Data, form2Data, form3Data, currentPage])
+
+  // Warn user before leaving page with unsaved changes (browser close/refresh)
+  useEffect(() => {
+    if (!hasUnsavedChanges) return
+    
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      // Modern browsers show their own message, but we need to return a string for older ones
+      e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'
+      return e.returnValue
+    }
+    
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
 
   // Fetch user role when they log in
   useEffect(() => {
@@ -1448,7 +1572,7 @@ const HomeContent = () => {
     }
   }, [])
 
-  // Navigation handler
+  // Navigation handler - warns user if there are unsaved changes
   const handleNavigation = useCallback(
     (
       page:
@@ -1462,6 +1586,19 @@ const HomeContent = () => {
         | 'hub'
     ) => {
       console.log(`Navigating to: ${page}`)
+      
+      // Check for unsaved changes when leaving DOT app
+      if (currentPage === 'dotapp' && page !== 'dotapp' && hasUnsavedChanges) {
+        const confirmed = window.confirm(
+          'You have unsaved changes in your DOT application. Are you sure you want to leave?\n\nYour changes will be lost.'
+        )
+        if (!confirmed) {
+          return // Cancel navigation
+        }
+        // User confirmed - clear dirty state
+        setHasUnsavedChanges(false)
+      }
+      
       if (page === 'home' || page === 'hub') {
         // Reset to beginning screen (Driver Hub for drivers, landing for others)
         setCurrentPage(null)
@@ -1469,7 +1606,7 @@ const HomeContent = () => {
         setCurrentPage(page)
       }
     },
-    []
+    [currentPage, hasUnsavedChanges]
   )
 
   // Handler for AI prefill success
@@ -1823,13 +1960,14 @@ const HomeContent = () => {
   }, [form1Data, form2Data, form3Data, isSubmitting, user])
 
   // Save ALL forms to driver profile - called on navigation and save button
-  const saveAllFormsToProfile = useCallback(async () => {
+  const saveAllFormsToProfile = useCallback(async (showIndicator = true) => {
     if (!user?.address) {
       console.log('⚠️ [SAVE] No wallet address, skipping save')
       return
     }
 
     try {
+      if (showIndicator) startSync()
       console.log('💾 [SAVE] Saving all forms to driver profile...')
       
       // Import mappers dynamically
@@ -1862,12 +2000,17 @@ const HomeContent = () => {
       }
 
       console.log('✅ [SAVE] All forms saved to driver profile')
+      if (showIndicator) syncSuccess()
+      // Mark data as saved (no longer dirty)
+      lastSavedDataRef.current = { form1: form1Data, form2: form2Data, form3: form3Data }
+      setHasUnsavedChanges(false)
       return true
     } catch (error) {
       console.error('❌ [SAVE] Failed to save forms:', error)
+      if (showIndicator) syncError()
       return false
     }
-  }, [user?.address, form1Data, form2Data, form3Data])
+  }, [user?.address, form1Data, form2Data, form3Data, startSync, syncSuccess, syncError])
 
   // Handler for form navigation - auto-saves before navigating
   const handleFormNavigation = useCallback(async (formNumber: number) => {
@@ -2112,6 +2255,13 @@ const HomeContent = () => {
         {/* Animated Background */}
         <AnimatedBackground />
 
+        {/* Sync Status Indicator - Fixed position toast */}
+        {indicatorProps.status !== 'idle' && (
+          <div className='fixed top-20 left-1/2 -translate-x-1/2 z-[70]'>
+            <SyncIndicator {...indicatorProps} />
+          </div>
+        )}
+
         {/* Wallet Info - Top Left Corner (Desktop Only) */}
         {user?.address && (
           <div className='fixed top-4 left-4 z-[60] pointer-events-none'>
@@ -2308,19 +2458,23 @@ const HomeContent = () => {
                     <DriverHub
                       userAddress={user.address}
                       onNavigate={(page) => {
-                        // Map hub navigation to page navigation
                         if (page === 'resume' || page === 'dotapp' || page === 'jobs' || page === 'applications' || page === 'mvr') {
                           setCurrentPage(page)
                         }
                       }}
                       onStartDotApp={() => {
-                        // Start fresh DOT application
                         resetApplicationProgress()
                         setCurrentPage('dotapp')
                       }}
                       onViewMvr={(orderId) => {
                         setSelectedMvrOrderId(orderId)
                         setIsMvrModalOpen(true)
+                      }}
+                      onDeleteInProgressDotApp={handleDeleteInProgressDotApp}
+                      onEditResume={(resumeId) => {
+                        setEditingResumeId(resumeId)
+                        setResumeTab('create')
+                        setCurrentPage('resume')
                       }}
                     />
                   ) : (
@@ -2410,68 +2564,6 @@ const HomeContent = () => {
                       />
                     )}
 
-                    <ResumeDashboard
-                      user={user}
-                      onEditResume={(resumeId) => {
-                        setEditingResumeId(resumeId)
-                        setResumeTab('create')
-                        setCurrentPage('resume')
-                      }}
-                      onDuplicateResume={(resumeId, structuredData) => {
-                        // Open the resume builder with duplicated data
-                        // The ResumeBuilder will need to handle receiving initial data
-                        console.log('📋 Duplicating resume:', resumeId)
-                        setEditingResumeId(undefined) // Clear any existing edit ID so it creates a new one
-                        setResumeTab('create')
-                        setCurrentPage('resume')
-                        // Store duplicated data to pass to builder - we'll handle this in ResumeBuilder
-                        // For now, just open the builder and let user know
-                      }}
-                      onVerifyResume={(resumeId) => {
-                        // Navigate to upload/verify flow with resume
-                        console.log('🔐 Verifying resume:', resumeId)
-                        setResumeTab('upload')
-                        setCurrentPage('resume')
-                        // The upload flow will handle blockchain verification
-                      }}
-                      onResumesLoaded={(count, latestResume) => {
-                        setHasResume(count > 0)
-                        // Store the latest resume's IPFS hash for prefill
-                        if (latestResume?.ipfs_hash) {
-                          setLatestResumeIpfsHash(latestResume.ipfs_hash)
-
-                          // If forms are empty and we have a resume, trigger analysis to prefill
-                          // DISABLED: Auto-trigger removed for better UX - users should manually request prefill via T Assistant
-                          // Automatic prefill was pushy and unexpected. Manual trigger (via DOT form conversation) gives users control.
-                          //
-                          // if (
-                          //   !form1Data &&
-                          //   !form2Data &&
-                          //   !form3Data &&
-                          //   latestResume.ipfs_hash &&
-                          //   analysisTriggeredRef.current !== latestResume.ipfs_hash && // Only trigger once per resume
-                          //   !analysisPendingRef.current // Prevent simultaneous triggers
-                          // ) {
-                          //   console.log('📋 [HOME] Existing resume detected, triggering analysis for prefill...')
-                          //   analysisPendingRef.current = true // Set flag immediately to prevent race
-                          //   analysisTriggeredRef.current = latestResume.ipfs_hash
-                          //   handleResumeUploadEvent({
-                          //     type: 'analysis_ready',
-                          //     step: 'existing_resume',
-                          //     data: {
-                          //       ipfsHash: latestResume.ipfs_hash,
-                          //       resumeId: latestResume.id,
-                          //     },
-                          //     message: '🔍 I found your uploaded resume! Analyzing it to prefill your forms...',
-                          //   })
-                          //   // Reset pending flag after a delay (analysis will complete)
-                          //   setTimeout(() => {
-                          //     analysisPendingRef.current = false
-                          //   }, 2000)
-                          // }
-                        }
-                      }}
-                    />
                     {user && <WalletTransactions />}
                   </div>
                 )}
@@ -2507,7 +2599,7 @@ const HomeContent = () => {
                   <>
                     <div className='max-w-4xl mx-auto mb-4'>
                       <button
-                        onClick={() => setCurrentPage(null)}
+                        onClick={() => handleNavigation('hub')}
                         className='inline-flex items-center gap-2 px-3 py-2 sm:px-4 text-sm sm:text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer'
                       >
                         <ArrowLeft className='w-4 h-4 sm:w-5 sm:h-5' />

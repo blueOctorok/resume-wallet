@@ -187,8 +187,17 @@ export default function PersonalInfoForm1({
   const hasHydratedRef = useRef(false)
   const previousInitialDataRef = useRef<any>(null)
   useEffect(() => {
+    console.log('📋 [FORM1] Hydration effect:', {
+      hasHydrated: hasHydratedRef.current,
+      hasInitialData: !!initialData,
+      initialDataKeys: initialData ? Object.keys(initialData) : [],
+      initialDataFirstName: initialData?.firstName,
+      hasPreviousData: !!previousInitialDataRef.current,
+    })
+    
     // If initialData becomes null/undefined after having data, reset the form
     if (previousInitialDataRef.current && !initialData) {
+      console.log('📋 [FORM1] Resetting form (initialData became null)')
       hasHydratedRef.current = false
       setFormData({
         employingCarrier: {
@@ -240,8 +249,31 @@ export default function PersonalInfoForm1({
     }
     previousInitialDataRef.current = initialData
     
-    if (hasHydratedRef.current) return
+    // Check if initialData has MEANINGFUL content (not just empty strings)
+    const hasMeaningfulData = initialData && (
+      initialData.firstName || 
+      initialData.lastName || 
+      initialData.currentLicenses?.[0]?.licenseNumber
+    )
+    
+    // Allow re-hydration if:
+    // 1. Never hydrated before, OR
+    // 2. New data has meaningful content AND current form doesn't have that data
+    const shouldHydrate = !hasHydratedRef.current || (
+      hasMeaningfulData && 
+      !formData.firstName && 
+      initialData.firstName
+    )
+    
+    if (!shouldHydrate) {
+      if (hasHydratedRef.current) {
+        console.log('📋 [FORM1] Already hydrated, skipping')
+      }
+      return
+    }
+    
     if (initialData && Object.keys(initialData).length > 0) {
+      console.log('📋 [FORM1] Hydrating form with initialData:', initialData.firstName, initialData.lastName)
       hasHydratedRef.current = true
       setFormData((prev) => ({ ...prev, ...initialData }))
     }
