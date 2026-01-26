@@ -2,6 +2,44 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## ✨ **FEATURE: Edit Pending DOT Applications** (January 2026)
+
+**Added ability to edit DOT applications that are complete but not yet submitted to blockchain.**
+
+### Problem
+Users who completed a DOT application but hadn't yet submitted it to blockchain had no way to edit the application from the Driver Hub. They could only view it in the detail modal.
+
+### Solution
+- Added "Edit DOT Application" button in the DOT application detail modal
+- Button appears for applications that are:
+  - Complete (`isComplete === true`)
+  - Not yet submitted to blockchain (`blockchainTxHash === null`)
+  - Not currently in progress (`isInProgress === false`)
+- Clicking the button navigates to the DOT application form where users can edit their data
+- The form automatically loads existing application data when navigating
+
+### Files
+- `src/components/DriverHub.tsx` – added `canEdit` check and edit button in `DotAppDetailContent`
+
+---
+
+## 🔧 **FIX: Remove Console Error from Employment Verification** (January 2026)
+
+**Removed console.error that was exposing error details to users in the browser console.**
+
+### Problem
+When employment verification save failed, a `console.error` was logging raw error data to the browser console, which users could see in their developer tools.
+
+### Solution
+- Removed `console.error` statement from `handleSubmitToBlockchain` function
+- Error handling still works correctly - errors are caught and displayed to users via the UI error state (`setSubmitError`)
+- Users now see user-friendly error messages in the UI instead of raw console errors
+
+### Files
+- `src/components/driver-application/EmploymentVerificationForm.tsx` – removed console.error on line 257
+
+---
+
 ## ✨ **FEATURE: Employment Verification from Driver Hub** (January 2026)
 
 **Employment verification is now accessible from the Driver Hub for completed DOT applications.**
@@ -17,6 +55,29 @@ After completing a DOT application, the user was prompted to do employment verif
 ### Files
 - `src/components/DriverHub.tsx` – added `onStartEmploymentVerification` prop, employment verification CTA in `DotAppDetailContent`
 - `src/app/page.tsx` – added handler to navigate to employment verification from Hub
+
+---
+
+## 🔧 **FIX: Duplicate DOT Applications in Hub** (January 2026)
+
+**Fixed issue where both "in-progress" and "submitted" versions of the same DOT app appeared in the Hub.**
+
+### Problem
+1. When a DOT app was submitted to blockchain, both an "in-progress" draft AND the "submitted" app showed in the Hub
+2. Trying to re-submit an already-on-chain app showed a confusing generic error instead of explaining it's already verified
+
+### Root Cause
+- After successful blockchain submission, the profile's `last_updated_from: 'dot_application'` wasn't being cleared
+- The Hub checks this field to detect "in-progress" apps, so it showed the submitted app twice
+- The blockchain API returned specific duplicate errors (409), but page.tsx wasn't passing them through
+
+### Solution
+1. **Clear in-progress state after successful submission**: Call `/api/driver/profile/clear-dot-progress` after blockchain submission succeeds
+2. **Better duplicate detection**: Check for 409 status and show the API's specific message
+3. **Handle already-verified apps gracefully**: If blockchain says "already submitted", mark as complete and clear in-progress
+
+### Files
+- `src/app/page.tsx` – added clear-dot-progress call after blockchain success, improved duplicate error handling
 
 ---
 

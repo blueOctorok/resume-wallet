@@ -1651,6 +1651,11 @@ function DotAppDetailContent({
     dotApp.verificationStatus === 'PENDING' && 
     !dotApp.isInProgress
 
+  // Check if this app can be edited (complete but not yet submitted to blockchain)
+  const canEdit = dotApp.isComplete && 
+    !dotApp.blockchainTxHash && 
+    !dotApp.isInProgress
+
   return (
     <div className="space-y-4">
       {/* Applicant name if available */}
@@ -1698,6 +1703,21 @@ function DotAppDetailContent({
             </button>
           )}
         </div>
+      )}
+      
+      {/* Edit button for completed apps not yet submitted to blockchain */}
+      {canEdit && (
+        <button
+          onClick={() => onNavigate('dotapp')}
+          className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold transition-all ${
+            theme === 'dark'
+              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
+              : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+          }`}
+        >
+          <Edit className="w-4 h-4" />
+          Edit DOT Application
+        </button>
       )}
       
       {/* Employment Verification CTA for completed apps */}

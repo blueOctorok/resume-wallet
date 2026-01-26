@@ -1879,8 +1879,33 @@ const HomeContent = () => {
         if (!blockchainResponse.ok) {
           const errorData = await blockchainResponse.json().catch(() => ({}))
           console.error('⚠️ [HOME] Blockchain submission failed:', errorData)
+          
+          // Check if this is a duplicate hash error (already on blockchain)
+          if (blockchainResponse.status === 409 || errorData.error?.includes('Duplicate')) {
+            setSubmissionError(
+              errorData.details || 
+              'This application has already been submitted to the blockchain. Your application is complete and verified.'
+            )
+            // For duplicates, the app IS complete - just show success
+            setIsDriverApplicationCompleted(true)
+            setShowEmploymentVerification(false)
+            setShowDashboard(false)
+            setIsSubmitting(false)
+            // Clear the in-progress state since it's actually already done
+            try {
+              await fetch('/api/driver/profile/clear-dot-progress', {
+                method: 'POST',
+                headers: { 'x-wallet-address': user.address },
+              })
+            } catch (e) {
+              console.warn('⚠️ [HOME] Failed to clear DOT progress (non-fatal):', e)
+            }
+            return
+          }
+          
           // Database save succeeded, so don't fail completely
           setSubmissionError(
+            errorData.details || 
             'Application saved to database, but blockchain verification failed. You can retry verification later.'
           )
           // Still mark as completed since data is saved
@@ -1929,6 +1954,18 @@ const HomeContent = () => {
           console.log(
             '✅ [HOME] Database updated with blockchain verification details'
           )
+          
+          // Clear the in-progress DOT application state from profile
+          // This prevents showing both "in-progress" and "submitted" in the Hub
+          try {
+            await fetch('/api/driver/profile/clear-dot-progress', {
+              method: 'POST',
+              headers: { 'x-wallet-address': user.address },
+            })
+            console.log('✅ [HOME] Cleared in-progress DOT state from profile')
+          } catch (clearError) {
+            console.warn('⚠️ [HOME] Failed to clear DOT progress (non-fatal):', clearError)
+          }
         } else {
           console.warn(
             '⚠️ [HOME] Failed to update database with blockchain details (non-critical)'

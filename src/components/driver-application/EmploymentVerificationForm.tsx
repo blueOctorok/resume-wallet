@@ -254,7 +254,6 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
 
       if (!saveResponse.ok) {
         const errorData = await saveResponse.json().catch(() => ({}))
-        console.error('❌ Failed to save to Supabase:', errorData)
         throw new Error(errorData.error || 'Failed to save employment verification to database')
       }
 
