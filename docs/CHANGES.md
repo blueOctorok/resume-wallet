@@ -2,6 +2,36 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🎨 **IMPROVE: Resume PDF Export and Hub Preview Modal** (January 2026)
+
+**Fixed PDF export layout to match the clean preview in Resume Builder, and replaced the Hub resume modal with a full preview.**
+
+### Problem
+1. **PDF Export Layout Issues**: When exporting a resume to PDF, the employment dates appeared underneath the company name/address instead of aligned to the right on the same row as the position title. This looked messy compared to the clean "Review & Export" preview in the Resume Builder.
+
+2. **Hub Modal Showed Metadata Instead of Preview**: Clicking on a resume in the Driver Hub opened a modal showing metadata (type, created date, IPFS hash) with a "Download PDF" button. Users couldn't see what the resume looked like before downloading.
+
+### Solution
+
+#### PDF Layout Fix
+Updated `resume-pdf-generator.ts` to match the HTML preview layout:
+- **Employment**: Position title and date range on line 1, Company/Location on line 2 (previously tried to fit everything on one line which caused overflow)
+- **Education**: Degree/Field on line 1, School/Year on line 2 (same fix)
+
+#### Hub Preview Modal
+Created new `ResumePreviewModal` component that:
+- Shows the full resume content in a clean preview (matching the Review & Export step)
+- Has Download PDF button in the header
+- Includes Edit, Verify, and Delete action buttons
+- Replaces the old metadata-only `ResumeDetailContent` 
+
+### Files
+- `src/lib/resume-pdf-generator.ts` – fixed employment and education layout
+- `src/components/ResumePreviewModal.tsx` – new component for resume preview modal
+- `src/components/DriverHub.tsx` – integrated preview modal, removed unused ResumeDetailContent
+
+---
+
 ## 🔧 **FIX: DOT App Modal Button Layout in Hub** (January 2026)
 
 **Improved the DOT application detail modal buttons for apps not yet on blockchain.**

@@ -226,21 +226,25 @@ export function generateStyledResumePDF(data: ResumeData): Buffer {
       const endDate = emp.isCurrent ? 'Present' : emp.endDate ? new Date(emp.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''
       const dateRange = `${startDate} – ${endDate}`
 
-      // Position (bold) and Company (accent color)
+      // Line 1: Position (bold, left) and Date (gray, right)
+      // This matches the HTML preview layout
       pdf.setFontSize(11)
       pdf.setFont('helvetica', 'bold')
       pdf.setTextColor(...textDark)
       pdf.text(emp.position || 'Position', margin, y)
       
-      const positionWidth = pdf.getTextWidth(emp.position || 'Position')
-      pdf.setFont('helvetica', 'normal')
-      pdf.setTextColor(...accentColor)
-      pdf.text(` – ${emp.companyName || 'Company'}${emp.location ? `, ${emp.location}` : ''}`, margin + positionWidth, y)
-      
-      // Date range (right aligned)
+      // Date range (right aligned on same line as position)
       pdf.setFontSize(9)
       pdf.setTextColor(...textLight)
       pdf.text(dateRange, pageWidth - margin, y, { align: 'right' })
+      y += 4.5
+      
+      // Line 2: Company • Location (smaller, gray)
+      pdf.setFontSize(9)
+      pdf.setFont('helvetica', 'normal')
+      pdf.setTextColor(...textMedium)
+      const companyLocation = [emp.companyName, emp.location].filter(Boolean).join(' • ')
+      pdf.text(companyLocation || 'Company', margin, y)
       y += 5
 
       // Responsibilities
@@ -268,25 +272,20 @@ export function generateStyledResumePDF(data: ResumeData): Buffer {
     data.educations.forEach((edu, index) => {
       checkPageBreak(12)
       
-      // Degree and field
+      // Line 1: Degree in Field (bold)
       pdf.setFontSize(10)
       pdf.setFont('helvetica', 'bold')
       pdf.setTextColor(...textDark)
       pdf.text(`${edu.degree || 'Degree'}${edu.field ? ` in ${edu.field}` : ''}`, margin, y)
+      y += 4
       
-      // School
-      const degreeWidth = pdf.getTextWidth(`${edu.degree || 'Degree'}${edu.field ? ` in ${edu.field}` : ''}`)
+      // Line 2: School • Year (gray)
+      pdf.setFontSize(9)
       pdf.setFont('helvetica', 'normal')
       pdf.setTextColor(...textMedium)
-      pdf.text(` – ${edu.school}`, margin + degreeWidth, y)
-      
-      // Year
-      if (edu.year) {
-        pdf.setFontSize(9)
-        pdf.setTextColor(...textLight)
-        pdf.text(edu.year, pageWidth - margin, y, { align: 'right' })
-      }
-      y += 5
+      const schoolYear = [edu.school, edu.year].filter(Boolean).join(' • ')
+      pdf.text(schoolYear, margin, y)
+      y += 4
 
       // Certifications
       const certifications = edu.certifications || []

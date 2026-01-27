@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import ShareProfileCard from './ShareProfileCard'
 import DriverVerificationSection from './verification/DriverVerificationSection'
+import ResumePreviewModal from './ResumePreviewModal'
 import {
   FileText,
   ClipboardList,
@@ -172,6 +173,8 @@ export default function DriverHub({
   
   // Modal states
   const [selectedResume, setSelectedResume] = useState<HubResume | null>(null)
+  const [selectedResumeData, setSelectedResumeData] = useState<Record<string, unknown> | null>(null)
+  const [loadingResumeData, setLoadingResumeData] = useState(false)
   const [selectedDotApp, setSelectedDotApp] = useState<HubDotApplication | null>(null)
   const [showPaymentHistory, setShowPaymentHistory] = useState(false)
   const [deletingResume, setDeletingResume] = useState<HubResume | null>(null)
@@ -561,6 +564,52 @@ export default function DriverHub({
     }
   }
 
+  // Handle selecting a resume - fetch structured data for preview
+  const handleSelectResume = async (resume: HubResume) => {
+    // Only built resumes have structured data for preview
+    if (resume.resumeType !== 'built') {
+      // For uploaded resumes, just open in browser if we have IPFS hash
+      const hasRealIpfsHash = resume.ipfsHash && !resume.ipfsHash.startsWith('built_')
+      if (hasRealIpfsHash) {
+        window.open(`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`, '_blank')
+      } else {
+        setResumeActionMessage({ type: 'error', text: 'Cannot preview uploaded resume without IPFS hash' })
+      }
+      return
+    }
+
+    setSelectedResume(resume)
+    setLoadingResumeData(true)
+    setSelectedResumeData(null)
+
+    try {
+      const response = await fetch(`/api/resumes/${resume.id}`, {
+        headers: {
+          'x-wallet-address': userAddress || '',
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch resume data')
+      }
+
+      const data = await response.json()
+      setSelectedResumeData(data.structured_data || null)
+    } catch (err) {
+      console.error('Error fetching resume data:', err)
+      setResumeActionMessage({ type: 'error', text: 'Failed to load resume preview' })
+      setSelectedResume(null)
+    } finally {
+      setLoadingResumeData(false)
+    }
+  }
+
+  // Close resume preview modal
+  const handleCloseResumePreview = () => {
+    setSelectedResume(null)
+    setSelectedResumeData(null)
+  }
+
   const fetchHubData = useCallback(async () => {
     if (!userAddress) {
       setLoading(false)
@@ -922,7 +971,7 @@ export default function DriverHub({
                     subtitle={formatDate(resume.createdAt)}
                     status={displayStatus}
                     badge={resume.resumeType === 'built' ? 'Built' : undefined}
-                    onClick={() => setSelectedResume(resume)}
+                    onClick={() => handleSelectResume(resume)}
                     theme={theme}
                   />
                 )
@@ -1246,28 +1295,30 @@ export default function DriverHub({
       {/* MODALS */}
       {/* ============================================================ */}
       
-      {/* Resume Detail Modal */}
+      {/* Resume Preview Modal */}
       {selectedResume && (
-        <DetailModal
+        <ResumePreviewModal
           title={selectedResume.title || selectedResume.filename}
-          onClose={() => setSelectedResume(null)}
+          structuredData={selectedResumeData}
+          onClose={handleCloseResumePreview}
+          onDownload={() => handleDownloadPdf(selectedResume)}
+          isDownloading={downloadingPdf || loadingResumeData}
           theme={theme}
-        >
-          <ResumeDetailContent 
-            resume={selectedResume} 
-            theme={theme}
-            onDelete={() => setDeletingResume(selectedResume)}
-            onDownload={() => handleDownloadPdf(selectedResume)}
-            onEdit={onEditResume ? () => {
-              onEditResume(selectedResume.id)
-              setSelectedResume(null)
-            } : undefined}
-            onVerify={() => handleVerifyResume(selectedResume)}
-            isDownloading={downloadingPdf}
-            isVerifying={verifyingResume}
-            actionMessage={resumeActionMessage}
-          />
-        </DetailModal>
+          onEdit={onEditResume ? () => {
+            onEditResume(selectedResume.id)
+            handleCloseResumePreview()
+          } : undefined}
+          onVerify={() => handleVerifyResume(selectedResume)}
+          onDelete={() => {
+            handleCloseResumePreview()
+            setDeletingResume(selectedResume)
+          }}
+          isVerifying={verifyingResume}
+          canVerify={
+            selectedResume.resumeType === 'built' && 
+            (!selectedResume.ipfsHash || selectedResume.ipfsHash.startsWith('built_'))
+          }
+        />
       )}
 
 
@@ -1580,167 +1631,6 @@ function DetailModal({
         <div className="p-4">
           {children}
         </div>
-      </div>
-    </div>
-  )
-}
-
-function ResumeDetailContent({ 
-  resume, 
-  theme,
-  onDelete,
-  onDownload,
-  onEdit,
-  onVerify,
-  isDownloading,
-  isVerifying,
-  actionMessage,
-}: { 
-  resume: HubResume
-  theme: string
-  onDelete?: () => void
-  onDownload?: () => void
-  onEdit?: () => void
-  onVerify?: () => void
-  isDownloading?: boolean
-  isVerifying?: boolean
-  actionMessage?: { type: 'success' | 'error', text: string } | null
-}) {
-  const labelClass = `text-xs font-semibold uppercase tracking-wide ${
-    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-  }`
-  const valueClass = `text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`
-  
-  // Check if this is a real IPFS hash or a placeholder (built resumes start with "built_")
-  const hasRealIpfsHash = resume.ipfsHash && !resume.ipfsHash.startsWith('built_')
-  const isVerified = resume.verificationStatus === 'VERIFIED' || hasRealIpfsHash
-  const isBuiltResume = resume.resumeType === 'built'
-
-  return (
-    <div className="space-y-4">
-      {/* Action Message */}
-      {actionMessage && (
-        <div className={`p-3 rounded-lg text-sm ${
-          actionMessage.type === 'success'
-            ? theme === 'dark'
-              ? 'bg-green-900/20 text-green-400 border border-green-500/40'
-              : 'bg-green-50 text-green-700 border border-green-200'
-            : theme === 'dark'
-              ? 'bg-red-900/20 text-red-400 border border-red-500/40'
-              : 'bg-red-50 text-red-700 border border-red-200'
-        }`}>
-          {actionMessage.text}
-        </div>
-      )}
-      
-      <div>
-        <p className={labelClass}>Type</p>
-        <p className={valueClass}>{isBuiltResume ? 'Built with Resume Builder' : 'Uploaded'}</p>
-      </div>
-      <div>
-        <p className={labelClass}>Created</p>
-        <p className={valueClass}>{formatDate(resume.createdAt)}</p>
-      </div>
-      <div>
-        <p className={labelClass}>Status</p>
-        <StatusBadge status={resume.verificationStatus} theme={theme} />
-      </div>
-      {hasRealIpfsHash && (
-        <div>
-          <p className={labelClass}>IPFS Hash</p>
-          <p className={`${valueClass} font-mono text-xs break-all`}>{resume.ipfsHash}</p>
-        </div>
-      )}
-      {resume.blockchainTxHash && (
-        <div>
-          <p className={labelClass}>Blockchain Transaction</p>
-          <a
-            href={`https://sepolia.basescan.org/tx/${resume.blockchainTxHash}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-blue-500 hover:underline flex items-center gap-1"
-          >
-            View on BaseScan <ExternalLink className="w-3 h-3" />
-          </a>
-        </div>
-      )}
-      
-      {/* Action Buttons */}
-      <div className="pt-4 space-y-3">
-        {/* View Button - Only for verified resumes with IPFS hash */}
-        {hasRealIpfsHash && (
-          <a
-            href={`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors ${
-              theme === 'dark'
-                ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/40 hover:bg-brand-mint/30'
-                : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30 hover:bg-brand-sage/20'
-            }`}
-          >
-            <Eye className="w-4 h-4" />
-            View in Browser
-          </a>
-        )}
-        
-        {/* Download PDF - Available for all resumes */}
-        {onDownload && (
-          <button
-            onClick={onDownload}
-            disabled={isDownloading}
-            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-50 ${
-              theme === 'dark'
-                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40 hover:bg-blue-500/30'
-                : 'bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            {isDownloading ? 'Generating PDF...' : 'Download PDF'}
-          </button>
-        )}
-        
-        {/* Edit Button - Only for built resumes */}
-        {isBuiltResume && onEdit && (
-          <button
-            onClick={onEdit}
-            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors ${
-              theme === 'dark'
-                ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40 hover:bg-purple-500/30'
-                : 'bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            Edit Resume
-          </button>
-        )}
-        
-        {/* Verify Button - Only for unverified built resumes */}
-        {isBuiltResume && !isVerified && onVerify && (
-          <button
-            onClick={onVerify}
-            disabled={isVerifying}
-            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors disabled:opacity-50 ${
-              theme === 'dark'
-                ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                : 'bg-brand-sage text-white hover:bg-brand-sage/90'
-            }`}
-          >
-            <Shield className="w-4 h-4" />
-            {isVerifying ? 'Verifying...' : 'Verify on Blockchain'}
-          </button>
-        )}
-        
-        {/* Delete Button */}
-        {onDelete && (
-          <button
-            onClick={onDelete}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm text-red-500 border border-red-500/30 hover:bg-red-500/10 transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete Resume
-          </button>
-        )}
       </div>
     </div>
   )
