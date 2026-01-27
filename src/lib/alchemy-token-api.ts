@@ -69,7 +69,24 @@ export async function getUSDCBalanceMainnet(walletAddress: string): Promise<{
     return parseUSDCBalanceResponse(balances, metadata)
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.error('❌ Failed to get Base Mainnet USDC balance:', errorMessage)
+    
+    // Check if this is a transient network error (503, 502, timeout, etc.)
+    const isTransientError = 
+      errorMessage.includes('503') ||
+      errorMessage.includes('502') ||
+      errorMessage.includes('504') ||
+      errorMessage.includes('timeout') ||
+      errorMessage.includes('connection') ||
+      errorMessage.includes('upstream')
+    
+    // Log transient errors as warnings (expected to happen occasionally)
+    // Log other errors as errors (actual API issues)
+    if (isTransientError) {
+      console.warn('⚠️ Base Mainnet USDC balance check failed (transient):', errorMessage)
+    } else {
+      console.error('❌ Failed to get Base Mainnet USDC balance:', errorMessage)
+    }
+    
     return {
       balance: '0',
       balanceFormatted: '0.00',
@@ -104,7 +121,24 @@ export async function getUSDCBalanceSepolia(walletAddress: string): Promise<{
     return parseUSDCBalanceResponse(balances, metadata)
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.error('❌ Failed to get Base Sepolia USDC balance:', errorMessage)
+    
+    // Check if this is a transient network error (503, 502, timeout, etc.)
+    const isTransientError = 
+      errorMessage.includes('503') ||
+      errorMessage.includes('502') ||
+      errorMessage.includes('504') ||
+      errorMessage.includes('timeout') ||
+      errorMessage.includes('connection') ||
+      errorMessage.includes('upstream')
+    
+    // Log transient errors as warnings (expected to happen occasionally)
+    // Log other errors as errors (actual API issues)
+    if (isTransientError) {
+      console.warn('⚠️ Base Sepolia USDC balance check failed (transient):', errorMessage)
+    } else {
+      console.error('❌ Failed to get Base Sepolia USDC balance:', errorMessage)
+    }
+    
     return {
       balance: '0',
       balanceFormatted: '0.00',

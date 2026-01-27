@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { Shield } from 'lucide-react'
 
 interface ApplicationSubmittedProps {
   onNavigateToSafetyForm: () => void
@@ -19,20 +20,9 @@ const ApplicationSubmitted = ({
   blockchainData,
 }: ApplicationSubmittedProps) => {
   const { theme } = useTheme()
-  const [isVerifying, setIsVerifying] = useState(!blockchainData)
-  const [verificationStatus, setVerificationStatus] = useState<
-    'pending' | 'verified' | 'error'
-  >(blockchainData ? 'verified' : 'pending')
-
-  useEffect(() => {
-    if (blockchainData) {
-      setIsVerifying(false)
-      setVerificationStatus('verified')
-    } else {
-      setIsVerifying(true)
-      setVerificationStatus('pending')
-    }
-  }, [blockchainData])
+  // Since we now save first and verify manually, we always show success (saved)
+  // blockchainData will only be present if manually verified before showing this screen
+  const verificationStatus = blockchainData ? 'verified' : 'saved'
 
   return (
     <div
@@ -47,47 +37,23 @@ const ApplicationSubmitted = ({
       {/* Header */}
       <div className='text-center mb-8'>
         <div className='mb-6'>
-          {isVerifying ? (
-            <div className='flex justify-center mb-4'>
-              <div className='animate-spin rounded-full h-16 w-16 border-b-2 border-brand-mint'></div>
+          <div className='flex justify-center mb-4'>
+            <div className='rounded-full h-16 w-16 bg-green-500 flex items-center justify-center'>
+              <svg
+                className='h-8 w-8 text-white'
+                fill='none'
+                stroke='currentColor'
+                viewBox='0 0 24 24'
+              >
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth={2}
+                  d='M5 13l4 4L19 7'
+                />
+              </svg>
             </div>
-          ) : verificationStatus === 'verified' ? (
-            <div className='flex justify-center mb-4'>
-              <div className='rounded-full h-16 w-16 bg-green-500 flex items-center justify-center'>
-                <svg
-                  className='h-8 w-8 text-white'
-                  fill='none'
-                  stroke='currentColor'
-                  viewBox='0 0 24 24'
-                >
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth={2}
-                    d='M5 13l4 4L19 7'
-                  />
-                </svg>
-              </div>
-            </div>
-          ) : (
-            <div className='flex justify-center mb-4'>
-              <div className='rounded-full h-16 w-16 bg-red-500 flex items-center justify-center'>
-                <svg
-                  className='h-8 w-8 text-white'
-                  fill='none'
-                  stroke='currentColor'
-                  viewBox='0 0 24 24'
-                >
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth={2}
-                    d='M6 18L18 6M6 6l12 12'
-                  />
-                </svg>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
 
         <h1
@@ -95,11 +61,9 @@ const ApplicationSubmitted = ({
             theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}
         >
-          {isVerifying
-            ? 'Submitting Application...'
-            : verificationStatus === 'verified'
-              ? 'Application Submitted Successfully!'
-              : 'Submission Failed'}
+          {verificationStatus === 'verified'
+            ? 'Application Verified on Blockchain!'
+            : 'Application Saved Successfully!'}
         </h1>
 
         <p
@@ -107,11 +71,9 @@ const ApplicationSubmitted = ({
             theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
           }`}
         >
-          {isVerifying
-            ? 'Your driver application is being submitted to the blockchain for verification.'
-            : verificationStatus === 'verified'
-              ? 'Your application has been recorded on the blockchain and is ready for DOT verification.'
-              : 'There was an error submitting your application. Please try again.'}
+          {verificationStatus === 'verified'
+            ? 'Your application has been recorded on the blockchain and is ready for DOT verification.'
+            : 'Your application has been saved. Verify it on the blockchain from your Hub to make it permanent and tamper-proof.'}
         </p>
       </div>
 
@@ -227,17 +189,43 @@ const ApplicationSubmitted = ({
       )}
 
       {/* Next Steps */}
-      {verificationStatus === 'verified' && (
-        <div className='mb-8'>
-          <h2
-            className={`text-xl font-semibold mb-4 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}
-          >
-            Next Steps
-          </h2>
+      <div className='mb-8'>
+        <h2
+          className={`text-xl font-semibold mb-4 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}
+        >
+          Next Steps
+        </h2>
 
-          <div className='space-y-4'>
+        <div className='space-y-4'>
+          {verificationStatus === 'saved' && (
+            <div
+              className={`p-4 rounded-lg border-2 ${
+                theme === 'dark'
+                  ? 'bg-brand-mint/10 border-brand-mint/30'
+                  : 'bg-brand-sage/10 border-brand-sage/30'
+              }`}
+            >
+              <h3
+                className={`font-semibold mb-2 flex items-center gap-2 ${
+                  theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                }`}
+              >
+                <Shield className="w-5 h-5" />
+                1. Verify on Blockchain
+              </h3>
+              <p
+                className={`text-sm ${
+                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                }`}
+              >
+                Go to your Hub and click "Verify on Blockchain" to submit your application to the blockchain. This makes it permanent and tamper-proof.
+              </p>
+            </div>
+          )}
+
+          {verificationStatus === 'verified' && (
             <div
               className={`p-4 rounded-lg ${
                 theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
@@ -259,72 +247,57 @@ const ApplicationSubmitted = ({
                 process typically takes 3-5 business days.
               </p>
             </div>
+          )}
 
-            <div
-              className={`p-4 rounded-lg ${
-                theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+          <div
+            className={`p-4 rounded-lg ${
+              theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+            }`}
+          >
+            <h3
+              className={`font-semibold mb-2 ${
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
               }`}
             >
-              <h3
-                className={`font-semibold mb-2 ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}
-              >
-                2. Employment Verification
-              </h3>
-              <p
-                className={`text-sm ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                }`}
-              >
-                Complete the employment verification form to have your previous
-                employers verify your work history.
-              </p>
-            </div>
+              {verificationStatus === 'saved' ? '2' : '2'}. Employment Verification
+            </h3>
+            <p
+              className={`text-sm ${
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+              }`}
+            >
+              Complete the employment verification form to have your previous
+              employers verify your work history.
+            </p>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Action Buttons */}
       <div className='flex flex-col sm:flex-row gap-4 justify-center'>
-        {verificationStatus === 'verified' && (
-          <>
-            <button
-              onClick={onNavigateToSafetyForm}
-              className={`px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 ${
-                theme === 'dark'
-                  ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                  : 'bg-brand-sage text-white hover:bg-brand-sage/90'
-              }`}
-            >
-              Complete Employment Verification
-            </button>
-
-            {onNavigateToDashboard && (
-              <button
-                onClick={onNavigateToDashboard}
-                className={`px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 ${
-                  theme === 'dark'
-                    ? 'bg-gray-700 text-white hover:bg-gray-600'
-                    : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                }`}
-              >
-                View Dashboard
-              </button>
-            )}
-          </>
-        )}
-
-        {verificationStatus === 'error' && (
+        {onNavigateToDashboard && (
           <button
-            onClick={() => window.location.reload()}
+            onClick={onNavigateToDashboard}
             className={`px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 ${
               theme === 'dark'
-                ? 'bg-red-600 text-white hover:bg-red-700'
-                : 'bg-red-500 text-white hover:bg-red-600'
+                ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
+                : 'bg-brand-sage text-white hover:bg-brand-sage/90'
             }`}
           >
-            Try Again
+            {verificationStatus === 'saved' ? 'Go to Hub to Verify' : 'View Dashboard'}
+          </button>
+        )}
+
+        {verificationStatus === 'verified' && (
+          <button
+            onClick={onNavigateToSafetyForm}
+            className={`px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 ${
+              theme === 'dark'
+                ? 'bg-gray-700 text-white hover:bg-gray-600'
+                : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+            }`}
+          >
+            Complete Employment Verification
           </button>
         )}
       </div>
@@ -336,8 +309,9 @@ const ApplicationSubmitted = ({
             theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
           }`}
         >
-          Your application data is securely stored on the blockchain and cannot
-          be tampered with.
+          {verificationStatus === 'verified'
+            ? 'Your application data is securely stored on the blockchain and cannot be tampered with.'
+            : 'Your application is saved. Verify it on the blockchain to make it permanent and tamper-proof.'}
         </p>
       </div>
     </div>

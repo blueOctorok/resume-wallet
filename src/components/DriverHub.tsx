@@ -178,8 +178,11 @@ export default function DriverHub({
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deletingInProgressDotApp, setDeletingInProgressDotApp] = useState(false)
   const [verifyingResume, setVerifyingResume] = useState(false)
+  const [verifyingDotApp, setVerifyingDotApp] = useState(false)
+  const [deletingDotApp, setDeletingDotApp] = useState(false)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [resumeActionMessage, setResumeActionMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [dotAppActionMessage, setDotAppActionMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   // Handle resume deletion
   const handleDeleteResume = async (resume: HubResume) => {
@@ -253,6 +256,115 @@ export default function DriverHub({
       })
     } finally {
       setVerifyingResume(false)
+    }
+  }
+
+  // Handle verify DOT application (submit to blockchain)
+  const handleVerifyDotApp = async (dotApp: HubDotApplication) => {
+    if (!userAddress) return
+    
+    setVerifyingDotApp(true)
+    setDotAppActionMessage({ type: 'success', text: 'Submitting to blockchain...' })
+    
+    try {
+      const response = await fetch(`/api/driver-applications/${dotApp.id}/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': userAddress,
+        },
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        // Handle duplicate case gracefully
+        if (response.status === 409) {
+          setDotAppActionMessage({ 
+            type: 'success', 
+            text: 'Application already verified on blockchain' 
+          })
+          // Still refresh to show updated status
+          setTimeout(() => {
+            setDotAppActionMessage(null)
+            fetchHubData()
+          }, 3000)
+          return
+        }
+        throw new Error(data.details || data.error || 'Verification failed')
+      }
+
+      setDotAppActionMessage({ 
+        type: 'success', 
+        text: `Application verified! Transaction: ${data.transactionHash?.slice(0, 10)}...` 
+      })
+      
+      // Clear message after 5 seconds and refresh data
+      setTimeout(() => {
+        setDotAppActionMessage(null)
+        setSelectedDotApp(null)
+        fetchHubData()
+      }, 5000)
+    } catch (err: unknown) {
+      console.error('DOT verify error:', err)
+      setDotAppActionMessage({ 
+        type: 'error', 
+        text: err instanceof Error ? err.message : 'Verification failed' 
+      })
+    } finally {
+      setVerifyingDotApp(false)
+    }
+  }
+
+  // Handle delete DOT application (only for apps not yet on blockchain)
+  const handleDeleteDotApp = async (dotApp: HubDotApplication) => {
+    if (!userAddress) return
+    
+    // Double-check: don't allow deleting apps already on blockchain
+    if (dotApp.blockchainTxHash) {
+      setDotAppActionMessage({ 
+        type: 'error', 
+        text: 'Cannot delete an application that has been verified on blockchain' 
+      })
+      return
+    }
+    
+    if (!window.confirm('Delete this DOT application? This cannot be undone.')) {
+      return
+    }
+    
+    setDeletingDotApp(true)
+    setDotAppActionMessage({ type: 'success', text: 'Deleting application...' })
+    
+    try {
+      const response = await fetch(`/api/driver-applications/${dotApp.id}`, {
+        method: 'DELETE',
+        headers: {
+          'x-wallet-address': userAddress,
+        },
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.details || data.error || 'Failed to delete application')
+      }
+
+      setDotAppActionMessage({ type: 'success', text: 'Application deleted' })
+      
+      // Close modal and refresh data
+      setTimeout(() => {
+        setDotAppActionMessage(null)
+        setSelectedDotApp(null)
+        fetchHubData()
+      }, 1500)
+    } catch (err: unknown) {
+      console.error('DOT delete error:', err)
+      setDotAppActionMessage({ 
+        type: 'error', 
+        text: err instanceof Error ? err.message : 'Delete failed' 
+      })
+    } finally {
+      setDeletingDotApp(false)
     }
   }
 
@@ -1219,6 +1331,11 @@ export default function DriverHub({
             theme={theme} 
             onNavigate={onNavigate}
             onStartEmploymentVerification={onStartEmploymentVerification}
+            onVerify={() => handleVerifyDotApp(selectedDotApp)}
+            isVerifying={verifyingDotApp}
+            actionMessage={dotAppActionMessage}
+            onDelete={() => handleDeleteDotApp(selectedDotApp)}
+            isDeleting={deletingDotApp}
           />
         </DetailModal>
       )}
@@ -1634,30 +1751,57 @@ function DotAppDetailContent({
   theme,
   onNavigate,
   onStartEmploymentVerification,
+  onVerify,
+  isVerifying,
+  actionMessage,
+  onDelete,
+  isDeleting,
 }: { 
   dotApp: HubDotApplication
   theme: string
   onNavigate: (page: 'resume' | 'dotapp' | 'mvr' | 'jobs' | 'applications') => void
   onStartEmploymentVerification?: () => void
+  onVerify?: () => void
+  isVerifying?: boolean
+  actionMessage?: { type: 'success' | 'error', text: string } | null
+  onDelete?: () => void
+  isDeleting?: boolean
 }) {
   const labelClass = `text-xs font-semibold uppercase tracking-wide ${
     theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
   }`
   const valueClass = `text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`
 
-  // Check if this completed app needs employment verification
-  // (submitted but not yet fully verified)
-  const needsEmploymentVerification = dotApp.isComplete && 
-    dotApp.verificationStatus === 'PENDING' && 
-    !dotApp.isInProgress
-
   // Check if this app can be edited (complete but not yet submitted to blockchain)
   const canEdit = dotApp.isComplete && 
     !dotApp.blockchainTxHash && 
     !dotApp.isInProgress
 
+  // Check if this app can be verified (complete but not yet on blockchain)
+  const canVerify = dotApp.isComplete && 
+    !dotApp.blockchainTxHash && 
+    !dotApp.isInProgress &&
+    onVerify
+  
+  // Check if this app can be deleted (not yet on blockchain)
+  const canDelete = !dotApp.blockchainTxHash && onDelete
+
   return (
     <div className="space-y-4">
+      {/* Action Message Toast */}
+      {actionMessage && (
+        <div className={`p-3 rounded-lg text-sm ${
+          actionMessage.type === 'success'
+            ? theme === 'dark'
+              ? 'bg-green-900/30 border border-green-500/30 text-green-400'
+              : 'bg-green-50 border border-green-200 text-green-800'
+            : theme === 'dark'
+              ? 'bg-red-900/30 border border-red-500/30 text-red-400'
+              : 'bg-red-50 border border-red-200 text-red-800'
+        }`}>
+          {actionMessage.text}
+        </div>
+      )}
       {/* Applicant name if available */}
       {dotApp.applicantName && (
         <div>
@@ -1705,23 +1849,8 @@ function DotAppDetailContent({
         </div>
       )}
       
-      {/* Edit button for completed apps not yet submitted to blockchain */}
-      {canEdit && (
-        <button
-          onClick={() => onNavigate('dotapp')}
-          className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold transition-all ${
-            theme === 'dark'
-              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-              : 'bg-brand-sage text-white hover:bg-brand-sage/90'
-          }`}
-        >
-          <Edit className="w-4 h-4" />
-          Edit DOT Application
-        </button>
-      )}
-      
-      {/* Employment Verification CTA for completed apps */}
-      {needsEmploymentVerification && onStartEmploymentVerification && (
+      {/* Verify on Blockchain - Primary CTA for completed apps not yet on chain */}
+      {canVerify && (
         <div className={`p-4 rounded-lg border ${
           theme === 'dark' 
             ? 'bg-yellow-900/20 border-yellow-500/30' 
@@ -1730,24 +1859,75 @@ function DotAppDetailContent({
           <p className={`text-sm font-medium mb-2 ${
             theme === 'dark' ? 'text-yellow-400' : 'text-yellow-800'
           }`}>
-            Employment Verification Required
+            Ready to Verify
           </p>
           <p className={`text-xs mb-3 ${
             theme === 'dark' ? 'text-yellow-400/70' : 'text-yellow-700'
           }`}>
-            Complete employment verification to finalize your DOT application and allow employers to verify your work history.
+            Submit your application to the blockchain to make it permanent and tamper-proof.
           </p>
           <button
-            onClick={onStartEmploymentVerification}
-            className={`w-full py-2.5 rounded-lg font-semibold transition-all ${
+            onClick={onVerify}
+            disabled={isVerifying}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold transition-all disabled:opacity-50 ${
               theme === 'dark'
                 ? 'bg-yellow-500 text-gray-900 hover:bg-yellow-400'
                 : 'bg-yellow-500 text-white hover:bg-yellow-600'
             }`}
           >
-            Complete Employment Verification
+            {isVerifying ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Verifying...
+              </>
+            ) : (
+              <>
+                <Shield className="w-4 h-4" />
+                Verify on Blockchain
+              </>
+            )}
           </button>
         </div>
+      )}
+
+      {/* Edit button for completed apps not yet submitted to blockchain */}
+      {canEdit && (
+        <button
+          onClick={() => onNavigate('dotapp')}
+          className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold transition-all ${
+            theme === 'dark'
+              ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/30 hover:bg-brand-mint/30'
+              : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30 hover:bg-brand-sage/20'
+          }`}
+        >
+          <Edit className="w-4 h-4" />
+          Edit DOT Application
+        </button>
+      )}
+      
+      {/* Delete button for apps not yet on blockchain */}
+      {canDelete && (
+        <button
+          onClick={onDelete}
+          disabled={isDeleting}
+          className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold transition-all disabled:opacity-50 ${
+            theme === 'dark'
+              ? 'bg-red-900/20 text-red-400 border border-red-500/30 hover:bg-red-900/30'
+              : 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
+          }`}
+        >
+          {isDeleting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Deleting...
+            </>
+          ) : (
+            <>
+              <Trash2 className="w-4 h-4" />
+              Delete Application
+            </>
+          )}
+        </button>
       )}
       
       {dotApp.blockchainApplicationId && (

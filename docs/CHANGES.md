@@ -2,6 +2,269 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🔧 **FIX: DOT App Modal Button Layout in Hub** (January 2026)
+
+**Improved the DOT application detail modal buttons for apps not yet on blockchain.**
+
+### Problem
+The modal had:
+- "Verify on Blockchain" button (teal/mint)
+- "Complete Employment Verification" button (yellow)
+
+These seemed redundant and the modal was missing an edit option and delete button.
+
+### Solution
+Reorganized the modal buttons for apps not yet on blockchain:
+
+1. **Yellow "Verify on Blockchain" section** - Primary CTA with explanation
+2. **"Edit DOT Application" button** - Allows user to make changes before verifying
+3. **"Delete Application" button** - Allows deletion if not yet on blockchain
+
+Also added:
+- New DELETE API endpoint `/api/driver-applications/[id]` - safely deletes apps not yet on blockchain
+- Protection: Cannot delete applications that have been verified on blockchain
+
+### Files
+- `src/components/DriverHub.tsx` – reorganized modal buttons, added delete handler
+- `src/app/api/driver-applications/[id]/route.ts` – new DELETE endpoint
+
+---
+
+## 🔧 **FIX: Loading Message Shows "Submitting to Blockchain" During Save** (January 2026)
+
+**Updated loading message to reflect that DOT app completion now saves to database, not blockchain.**
+
+### Problem
+When completing a DOT application, the loading screen showed:
+- "Submitting Application to Blockchain..."
+- "Your driver application is being submitted to Base Sepolia for verification"
+
+But the actual flow now just saves to the database (blockchain verification is manual from the Hub).
+
+### Solution
+Updated the loading message to:
+- "Saving Application..."
+- "Your driver application is being saved to your profile. This will only take a moment."
+
+This accurately reflects what's happening during completion.
+
+### Files
+- `src/app/page.tsx` – updated `renderSubmissionLoading` message and comment
+
+---
+
+## 🔧 **FIX: Duplicate DOT Applications Showing in Hub** (January 2026)
+
+**Fixed bug where saving a DOT app would create two entries in the Hub.**
+
+### Problem
+When a user:
+1. Started a new DOT app
+2. Filled out Form 1 and saved
+3. Returned to the Hub
+
+Two DOT applications would appear:
+- One with a delete button (clickable to continue)
+- One without delete button (just shows modal)
+
+### Root Cause
+The Hub API was creating **two separate entries**:
+1. A database record from `driver_applications` table (created by save-progress API)
+2. A synthetic "in-progress" entry based on profile data having `last_updated_from: 'dot_application'`
+
+The database record was always marked `isInProgress: false`, even for incomplete apps.
+
+### Solution
+1. Use the database `is_complete` field to correctly mark apps as in-progress
+2. Remove synthetic entry creation - database is the source of truth
+
+### Files
+- `src/app/api/driver/hub/route.ts` – fixed `isInProgress` logic, removed synthetic entry creation
+
+---
+
+## 🔧 **FIX: Deleted DOT App Data Still Pre-filling New Applications** (January 2026)
+
+**Fixed issue where deleting a DOT app would still pre-fill new applications with old data.**
+
+### Problem
+When a user:
+1. Created a DOT app (e.g., with John Doe's info)
+2. Deleted the DOT app
+3. Started a new DOT app
+
+Form 1 would still show John Doe's info partially pre-filled, even though they expected to start fresh.
+
+### Root Cause
+When a DOT app is saved, it syncs core data (name, contact, CDL info) to the unified `driver_profiles` table. When the DOT app is deleted, the profile data remains. The `loadFromProfile` function was loading this stale data for new DOT apps.
+
+### Solution
+Modified the profile prefill logic to only load data if it came from a **resume** (not a deleted DOT app):
+- `resume_builder` source → prefill (user built a resume, expects data to carry over)
+- `uploaded_resume` source → prefill (user uploaded a resume)
+- `dot_application` source → DON'T prefill (the DOT app might be deleted, start fresh)
+
+This ensures:
+- Resume data flows to DOT apps (expected behavior)
+- Deleted DOT app data doesn't contaminate new apps (user's expectation)
+
+### Files
+- `src/app/page.tsx` – added source check in `loadFromProfile` to only prefill from resume data
+
+---
+
+## ✨ **FEATURE: Database Persistence for In-Progress DOT Applications** (January 2026)
+
+**Added database backup for DOT application progress to enable cross-device and cross-session persistence.**
+
+### Problem
+Previously, DOT application form data was only stored in:
+1. **localStorage** - Persists across browser sessions but can be lost if:
+   - User clears browser data
+   - User switches devices
+   - Browser storage quota is exceeded
+   - User uses incognito/private mode
+2. **Database** - Only saved when application was **completed**, not during progress
+
+This meant users could lose hours of work if they cleared browser data or switched devices.
+
+### Solution
+1. **Added database persistence during progress**
+   - Created `/api/driver-applications/save-progress` endpoint
+   - Saves full form data (form1, form2, form3) to `driver_applications` table during navigation/save
+   - Updates `current_step` to track progress
+   - Saves even when application is incomplete
+
+2. **Updated save function**
+   - `saveAllFormsToProfile` now saves to both:
+     - Unified driver profile (for cross-feature sharing)
+     - Database (for permanent persistence)
+   - Database save is non-blocking - if it fails, profile save still succeeds
+
+3. **Added database fallback on load**
+   - When loading form data, checks localStorage first (fast)
+   - If localStorage is empty, loads from database (cross-device recovery)
+   - Syncs database data back to localStorage for faster future loads
+
+### Benefits
+- **Cross-device**: Users can start on one device, finish on another
+- **Data safety**: Progress persists even if browser data is cleared
+- **No data loss**: Multiple layers of persistence (localStorage + database)
+- **Fast loading**: localStorage for speed, database for safety
+
+### Technical Details
+- Database saves happen automatically during form navigation
+- Only saves in-progress applications (not completed ones, which are already saved)
+- Uses existing `saveDriverApplicationClient` function
+- Non-blocking - database save failures don't prevent profile saves
+
+### Files
+- `src/app/api/driver-applications/save-progress/route.ts` – new API endpoint for saving progress
+- `src/app/page.tsx` – updated `saveAllFormsToProfile` to also save to database, added database fallback on load
+
+---
+
+## 🔧 **FIX: DOT Form 1 Fields Not Persisting After Hub Navigation** (January 2026)
+
+**Fixed issue where SSN, dates, and other Form 1 fields were lost when navigating to Hub and back.**
+
+### Problem
+When users filled out Form 1 (including SSN, date of application, date available for work, etc.), then went to the Hub and came back, only some fields persisted (first, middle, last name) while others were lost (SSN, dates, legal right to work, etc.).
+
+### Root Cause
+When navigating TO the DOT app, the code was FORCING a profile reload (`forceProfileLoadRef.current = true`) to support Resume Builder → DOT app prefill. However, the profile only stores a **subset** of Form 1 fields (name, contact, DOB, CDL info), not all fields like:
+- `socialSecurity` (full SSN - only last 4 saved to profile)
+- `dateOfApplication`
+- `dateAvailableForWork`
+- `hasLegalRightToWork`
+- `positionAppliedFor`
+- `previousAddresses`
+- `disqualificationHistory`
+- `medicalQualification`
+
+The profile data was OVERWRITING the localStorage data (which had the complete form) every time the user returned to the DOT app.
+
+### Solution
+Modified the navigation logic to check if localStorage already has form data before forcing profile load:
+- If localStorage has form data → preserve it (it's complete)
+- If localStorage is empty → load from profile (for Resume Builder prefill)
+
+This preserves the complete form data in localStorage while still supporting the Resume Builder prefill flow.
+
+### Technical Detail
+The unified driver profile is intentionally limited to core driver info (name, contact, CDL, employment) for sharing across features. DOT-application-specific fields (dates, disqualification history, medical info) stay in the raw form data stored in localStorage and the `driver_applications` table.
+
+### Files
+- `src/app/page.tsx` – added localStorage check before forcing profile load
+
+---
+
+## ✨ **FEATURE: Manual Blockchain Verification for DOT Applications** (January 2026)
+
+**Changed DOT application flow to save first, verify on blockchain manually (similar to resumes).**
+
+### Problem
+- When DOT app was completed, it automatically tried to submit to blockchain
+- If already on-chain, it threw an error but got stuck in "submitting application" state
+- No user control over when verification happens
+- Inconsistent with resume flow (which uses manual verification)
+
+### Solution
+1. **Removed automatic blockchain submission** from `handleDriverApplicationCompleted`
+   - Application now saves to database and marks as complete
+   - No blockchain submission happens automatically
+   
+2. **Added manual verification button** in Driver Hub
+   - "Verify on Blockchain" button appears for completed apps without blockchain transaction
+   - Similar UX to resume verification flow
+   - Button shows loading state during verification
+   
+3. **Created verification API endpoint** `/api/driver-applications/[id]/verify`
+   - Fetches application from database
+   - Submits to blockchain
+   - Updates database with transaction details
+   - Handles duplicate errors gracefully
+   
+4. **Updated success message** in ApplicationSubmitted component
+   - Shows "Application Saved Successfully!" instead of "Submitting..."
+   - Instructs users to verify from Hub
+   - Clear next steps guidance
+
+### Benefits
+- **Better UX**: Users see immediate success, no stuck states
+- **User control**: Users decide when to verify
+- **Consistent flow**: Matches resume verification pattern
+- **Error handling**: Easier to handle errors when verification is separate from save
+- **No stuck states**: Application is saved even if verification fails
+
+### Files
+- `src/app/page.tsx` – removed automatic blockchain submission from `handleDriverApplicationCompleted`
+- `src/components/DriverHub.tsx` – added `handleVerifyDotApp` function and verify button in `DotAppDetailContent`
+- `src/app/api/driver-applications/[id]/verify/route.ts` – new API endpoint for manual verification
+- `src/components/driver-application/ApplicationSubmitted.tsx` – updated to show save success and manual verification instructions
+
+---
+
+## 🔧 **CONFIG: Increased Max Applications Per User** (January 2026)
+
+**Increased the smart contract limit for applications per user from 1,000 to 100,000 for testing.**
+
+### Problem
+Users were seeing "max apps reached" error when testing on veree.io.
+
+### Solution
+- Ran `setMaxApplicationsPerUser(100000)` on the ProductionDriverRegistry contract
+- Created `scripts/update-max-apps-limit.js` for future limit changes
+- Transaction: `0xbf7f52227523b86e28fbe35ef813de7d9bbf93fad69295c1a1819718b321ec68`
+
+### Note
+This high limit (100,000) is for testing only. Should be lowered for production (e.g., 10-50).
+
+### Files
+- `scripts/update-max-apps-limit.js` – script to update the limit (requires ADMIN_ROLE)
+
+---
+
 ## ✨ **FEATURE: Edit Pending DOT Applications** (January 2026)
 
 **Added ability to edit DOT applications that are complete but not yet submitted to blockchain.**

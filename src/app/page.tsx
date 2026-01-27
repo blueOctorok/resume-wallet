@@ -729,6 +729,54 @@ const HomeContent = () => {
         ) {
           setShowPrefillUpload(false)
         }
+      } else {
+        // No localStorage data - try loading from database
+        console.log('📦 [LOAD] No localStorage data, checking database...')
+        // Wrap async code in IIFE since useEffect callback can't be async
+        ;(async () => {
+          try {
+            const { getDriverApplicationClient } = await import('@/lib/supabase-client-db')
+            const dbApp = await getDriverApplicationClient(user.address)
+            
+            if (dbApp && !dbApp.is_complete && dbApp.application_data) {
+              console.log('✅ [LOAD] Found in-progress application in database, loading...')
+              const appData = dbApp.application_data as {
+                form1?: unknown
+                form2?: unknown
+                form3?: unknown
+              }
+              
+              if (appData.form1) setForm1Data(appData.form1)
+              if (appData.form2) setForm2Data(appData.form2)
+              if (appData.form3) setForm3Data(appData.form3)
+              if (dbApp.current_step) {
+                setCurrentForm(dbApp.current_step)
+              }
+              setShowPrefillUpload(false)
+              
+              // Also save to localStorage for faster future loads
+              try {
+                window.localStorage.setItem(
+                  `forms-${user.address}`,
+                  JSON.stringify({
+                    form1Data: appData.form1,
+                    form2Data: appData.form2,
+                    form3Data: appData.form3,
+                    currentForm: dbApp.current_step,
+                  })
+                )
+                console.log('✅ [LOAD] Synced database data to localStorage')
+              } catch (lsError) {
+                console.warn('⚠️ [LOAD] Failed to sync to localStorage:', lsError)
+              }
+            } else {
+              console.log('📭 [LOAD] No in-progress application in database')
+            }
+          } catch (dbError) {
+            console.warn('⚠️ [LOAD] Failed to load from database:', dbError)
+            // Continue - user can start fresh
+          }
+        })()
       }
 
       const storedPrimer = window.localStorage.getItem(
@@ -857,8 +905,22 @@ const HomeContent = () => {
           return
         }
         
-        console.log('✅ [DOT APP] Profile found with data, prefilling forms...')
-        console.log('   Source:', profile.lastUpdatedFrom || 'unknown')
+        // IMPORTANT: Only prefill from profile if data came from a RESUME, not a deleted DOT app
+        // If the profile was only updated from a DOT app (which might now be deleted),
+        // we should NOT prefill - the user wants to start fresh
+        const profileSource = profile.lastUpdatedFrom || 'unknown'
+        const isFromResume = profileSource === 'resume_builder' || 
+                            profileSource === 'uploaded_resume' ||
+                            profileSource === 'resume'
+        
+        if (!isFromResume) {
+          console.log('📭 [DOT APP] Profile data is from DOT app, not resume - starting fresh')
+          console.log('   Source was:', profileSource)
+          return
+        }
+        
+        console.log('✅ [DOT APP] Profile found with RESUME data, prefilling forms...')
+        console.log('   Source:', profileSource)
         console.log('   Profile data:', {
           firstName: profile.firstName,
           lastName: profile.lastName,
@@ -962,20 +1024,45 @@ const HomeContent = () => {
 
   // Reset profile load attempt when navigating TO DOT app (enables fresh profile check)
   // This handles: User builds resume → saves → navigates to DOT app → should see prefilled data
+  // BUT: We should NOT force profile load if localStorage already has form data
+  //      (profile data is incomplete - missing SSN, dates, etc.)
   const prevPageRef = useRef<string | null>(null)
   useEffect(() => {
     if (currentPage === 'dotapp' && prevPageRef.current !== 'dotapp') {
-      // Entering DOT app from another page - FORCE profile reload
-      // This ensures fresh data from Resume Builder overrides stale localStorage
-      console.log('🔄 [DOT APP] Entering DOT app view, preparing to load profile...')
+      console.log('🔄 [DOT APP] Entering DOT app view, checking for existing data...')
       
-      // If a reset is in progress (e.g., from onStartDotApp), wait for it to complete
-      // before triggering profile load. The reset clears forms but we want to refill from profile.
+      // Check if localStorage already has form data
+      // If so, DON'T force profile load - localStorage has complete data, profile doesn't
+      const storedForms = window.localStorage.getItem(`forms-${user?.address}`)
+      const hasLocalStorageData = storedForms && (() => {
+        try {
+          const parsed = JSON.parse(storedForms)
+          // Check for meaningful form1 data (any field filled)
+          return parsed.form1Data && (
+            parsed.form1Data.firstName || 
+            parsed.form1Data.lastName ||
+            parsed.form1Data.socialSecurity ||
+            parsed.form1Data.dateOfApplication ||
+            parsed.form1Data.dateOfBirth
+          )
+        } catch {
+          return false
+        }
+      })()
+      
+      if (hasLocalStorageData) {
+        console.log('📋 [DOT APP] localStorage has form data - preserving it (not forcing profile load)')
+        // Don't trigger profile load - let localStorage data persist
+        prevPageRef.current = currentPage
+        return
+      }
+      
+      // No localStorage data - trigger profile load for prefill from Resume Builder
       const triggerProfileLoad = () => {
         profileLoadAttemptedRef.current = false
         forceProfileLoadRef.current = true // Force load even if forms have data
         setProfileLoadTrigger(prev => prev + 1) // Trigger the profile load effect
-        console.log('🔄 [DOT APP] FORCING profile check for prefill')
+        console.log('🔄 [DOT APP] No localStorage data - FORCING profile check for prefill')
       }
       
       if (resetInProgressRef.current) {
@@ -989,7 +1076,7 @@ const HomeContent = () => {
       }
     }
     prevPageRef.current = currentPage
-  }, [currentPage])
+  }, [currentPage, user?.address])
 
   useEffect(() => {
     if (journeyState.resume.status === 'complete' && !hasResume) {
@@ -1857,132 +1944,20 @@ const HomeContent = () => {
         console.warn('⚠️ [HOME] Profile sync error (non-fatal):', profileError)
       }
 
-      // 2. SUBMIT TO BLOCKCHAIN FOR VERIFICATION (server-side with sponsored gas)
-      console.log(
-        '📝 [HOME] Submitting to blockchain for verification (server-side)...'
-      )
-
+      // Clear the in-progress DOT application state from profile
+      // This prevents showing both "in-progress" and "submitted" in the Hub
       try {
-        const blockchainResponse = await fetch(
-          '/api/blockchain/submit-driver-application',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              applicationHash,
-              ipfsHash,
-              userAddress: user.address,
-            }),
-          }
-        )
-
-        if (!blockchainResponse.ok) {
-          const errorData = await blockchainResponse.json().catch(() => ({}))
-          console.error('⚠️ [HOME] Blockchain submission failed:', errorData)
-          
-          // Check if this is a duplicate hash error (already on blockchain)
-          if (blockchainResponse.status === 409 || errorData.error?.includes('Duplicate')) {
-            setSubmissionError(
-              errorData.details || 
-              'This application has already been submitted to the blockchain. Your application is complete and verified.'
-            )
-            // For duplicates, the app IS complete - just show success
-            setIsDriverApplicationCompleted(true)
-            setShowEmploymentVerification(false)
-            setShowDashboard(false)
-            setIsSubmitting(false)
-            // Clear the in-progress state since it's actually already done
-            try {
-              await fetch('/api/driver/profile/clear-dot-progress', {
-                method: 'POST',
-                headers: { 'x-wallet-address': user.address },
-              })
-            } catch (e) {
-              console.warn('⚠️ [HOME] Failed to clear DOT progress (non-fatal):', e)
-            }
-            return
-          }
-          
-          // Database save succeeded, so don't fail completely
-          setSubmissionError(
-            errorData.details || 
-            'Application saved to database, but blockchain verification failed. You can retry verification later.'
-          )
-          // Still mark as completed since data is saved
-          setIsDriverApplicationCompleted(true)
-          setShowEmploymentVerification(false)
-          setShowDashboard(false)
-          setIsSubmitting(false)
-          return
-        }
-
-        const blockchainData = await blockchainResponse.json()
-        console.log(
-          '✅ [HOME] Blockchain verification successful:',
-          blockchainData
-        )
-
-        const txData = {
-          transactionHash: blockchainData.transactionHash,
-          blockNumber: blockchainData.blockNumber,
-          applicationId: blockchainData.applicationId,
-        }
-
-        setBlockchainData(txData)
-
-        // 3. UPDATE DATABASE WITH BLOCKCHAIN TRANSACTION DETAILS
-        console.log(
-          '💾 [HOME] Updating database with blockchain verification details...'
-        )
-        const updateResponse = await fetch(
-          '/api/blockchain/persist-driver-application',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userAddress: user.address,
-              applicationHash,
-              ipfsHash,
-              transactionHash: txData.transactionHash,
-              applicationId: txData.applicationId,
-              blockNumber: txData.blockNumber,
-            }),
-          }
-        )
-
-        if (updateResponse.ok) {
-          console.log(
-            '✅ [HOME] Database updated with blockchain verification details'
-          )
-          
-          // Clear the in-progress DOT application state from profile
-          // This prevents showing both "in-progress" and "submitted" in the Hub
-          try {
-            await fetch('/api/driver/profile/clear-dot-progress', {
-              method: 'POST',
-              headers: { 'x-wallet-address': user.address },
-            })
-            console.log('✅ [HOME] Cleared in-progress DOT state from profile')
-          } catch (clearError) {
-            console.warn('⚠️ [HOME] Failed to clear DOT progress (non-fatal):', clearError)
-          }
-        } else {
-          console.warn(
-            '⚠️ [HOME] Failed to update database with blockchain details (non-critical)'
-          )
-        }
-      } catch (blockchainError) {
-        console.error(
-          '⚠️ [HOME] Blockchain verification error:',
-          blockchainError
-        )
-        // Database save succeeded, so we can continue
-        setSubmissionError(
-          'Application saved successfully. Blockchain verification will be retried automatically.'
-        )
+        await fetch('/api/driver/profile/clear-dot-progress', {
+          method: 'POST',
+          headers: { 'x-wallet-address': user.address },
+        })
+        console.log('✅ [HOME] Cleared in-progress DOT state from profile')
+      } catch (clearError) {
+        console.warn('⚠️ [HOME] Failed to clear DOT progress (non-fatal):', clearError)
       }
 
       // Mark as completed and show the submission confirmation screen
+      // Note: Blockchain verification is now manual - user can verify from the Hub
       setIsDriverApplicationCompleted(true)
       setShowEmploymentVerification(false)
       setShowDashboard(false)
@@ -1996,7 +1971,7 @@ const HomeContent = () => {
     }
   }, [form1Data, form2Data, form3Data, isSubmitting, user])
 
-  // Save ALL forms to driver profile - called on navigation and save button
+  // Save ALL forms to driver profile AND database - called on navigation and save button
   const saveAllFormsToProfile = useCallback(async (showIndicator = true) => {
     if (!user?.address) {
       console.log('⚠️ [SAVE] No wallet address, skipping save')
@@ -2005,7 +1980,7 @@ const HomeContent = () => {
 
     try {
       if (showIndicator) startSync()
-      console.log('💾 [SAVE] Saving all forms to driver profile...')
+      console.log('💾 [SAVE] Saving all forms to driver profile and database...')
       
       // Import mappers dynamically
       const { form1ToProfile, form2ToProfile, form3ToProfile } = await import('@/lib/dot-form-mapper')
@@ -2019,7 +1994,8 @@ const HomeContent = () => {
 
       console.log('💾 [SAVE] Combined profile data:', profileData)
 
-      const response = await fetch('/api/driver/profile', {
+      // 1. Save to unified driver profile (for cross-feature sharing)
+      const profileResponse = await fetch('/api/driver/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -2031,9 +2007,38 @@ const HomeContent = () => {
         }),
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to save')
+      if (!profileResponse.ok) {
+        const errorData = await profileResponse.json()
+        throw new Error(errorData.error || 'Failed to save to profile')
+      }
+
+      // 2. Save full form data to database (for cross-device persistence)
+      // This ensures data persists even if localStorage is cleared
+      try {
+        const progressResponse = await fetch('/api/driver-applications/save-progress', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-wallet-address': user.address,
+          },
+          body: JSON.stringify({
+            form1Data,
+            form2Data,
+            form3Data,
+            currentStep: currentForm,
+          }),
+        })
+
+        if (!progressResponse.ok) {
+          // Log but don't fail - profile save succeeded, database save is bonus
+          const errorData = await progressResponse.json().catch(() => ({}))
+          console.warn('⚠️ [SAVE] Failed to save progress to database (non-fatal):', errorData.error || 'Unknown error')
+        } else {
+          console.log('✅ [SAVE] Progress saved to database')
+        }
+      } catch (dbError) {
+        // Database save failed, but profile save succeeded - log and continue
+        console.warn('⚠️ [SAVE] Database save error (non-fatal):', dbError)
       }
 
       console.log('✅ [SAVE] All forms saved to driver profile')
@@ -2047,7 +2052,7 @@ const HomeContent = () => {
       if (showIndicator) syncError()
       return false
     }
-  }, [user?.address, form1Data, form2Data, form3Data, startSync, syncSuccess, syncError])
+  }, [user?.address, form1Data, form2Data, form3Data, currentForm, startSync, syncSuccess, syncError])
 
   // Handler for form navigation - auto-saves before navigating
   const handleFormNavigation = useCallback(async (formNumber: number) => {
@@ -2079,7 +2084,7 @@ const HomeContent = () => {
     setShowDashboard(false)
   }, [])
 
-  // Render loading screen during blockchain submission
+  // Render loading screen during application save
   const renderSubmissionLoading = () => (
     <div
       className={`max-w-4xl mx-auto p-6 ${
@@ -2102,7 +2107,7 @@ const HomeContent = () => {
             theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}
         >
-          Submitting Application to Blockchain...
+          Saving Application...
         </h1>
 
         <p
@@ -2110,8 +2115,7 @@ const HomeContent = () => {
             theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
           }`}
         >
-          Your driver application is being submitted to Base Sepolia for
-          verification. This may take a few moments.
+          Your driver application is being saved to your profile. This will only take a moment.
         </p>
 
         <div
@@ -2129,7 +2133,7 @@ const HomeContent = () => {
 
   // Render form content based on current form
   const renderFormContent = () => {
-    // Show loading screen during blockchain submission
+    // Show loading screen during application save
     if (isSubmitting) {
       return renderSubmissionLoading()
     }
