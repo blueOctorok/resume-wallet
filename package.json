@@ -30,6 +30,7 @@
     "@account-kit/react": "^4.64.0",
     "@base-org/account": "^2.2.0",
     "@base-org/account-ui": "^1.0.1",
+    "@coinbase/onchainkit": "^1.1.2",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.2.1",
     "@radix-ui/react-dialog": "^1.1.15",

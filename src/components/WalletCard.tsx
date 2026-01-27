@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { Wallet, Copy, Check, Eye, EyeOff } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
+import BuyUSDCButton from './BuyUSDCButton'
 
 interface WalletCardProps {
   user: {
@@ -16,6 +17,8 @@ interface WalletCardProps {
   isMobile?: boolean
   userRole?: 'driver' | 'employer' | null
   onSwitchRole?: () => void
+  /** Show the Buy USDC button (default: true for desktop, false for mobile) */
+  showBuyUSDC?: boolean
 }
 
 export default function WalletCard({
@@ -24,7 +27,10 @@ export default function WalletCard({
   isMobile = false,
   userRole,
   onSwitchRole,
+  showBuyUSDC,
 }: WalletCardProps) {
+  // Default: show Buy USDC on desktop, hide on mobile
+  const shouldShowBuyUSDC = showBuyUSDC ?? !isMobile
   const [copied, setCopied] = useState(false)
   const [showFullAddress, setShowFullAddress] = useState(false)
   const { theme } = useTheme()
@@ -269,6 +275,18 @@ export default function WalletCard({
           >
             Switch to {userRole === 'driver' ? 'Employer' : 'Driver'}
           </button>
+        </div>
+      )}
+
+      {/* Buy USDC Button */}
+      {shouldShowBuyUSDC && user?.address && (
+        <div
+          className={`mt-4 pt-4 border-t ${
+            theme === 'light' ? 'border-brand-sage/20' : 'border-brand-mint/20'
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <BuyUSDCButton walletAddress={user.address} />
         </div>
       )}
 

@@ -2,6 +2,60 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 💳 **FEATURE: Coinbase Onramp - Buy USDC In-App** (January 2026)
+
+**Added ability for users to buy USDC directly in their wallet using Coinbase Onramp.**
+
+### What This Does
+
+Users can now click "Buy USDC" in their wallet card and purchase USDC with:
+- Credit/debit card
+- Apple Pay
+- Google Pay
+- Bank transfer
+
+The USDC goes directly to their Alchemy Smart Wallet on Base — no external transfers needed.
+
+### Implementation
+
+1. **Backend API Route** (`src/app/api/onramp/session/route.ts`)
+   - Generates JWT for Coinbase Developer Platform authentication
+   - Requests one-time session token from Coinbase
+   - Passes wallet address and restricts to USDC on Base
+
+2. **BuyUSDCButton Component** (`src/components/BuyUSDCButton.tsx`)
+   - Simple button that requests session token
+   - Opens Coinbase Onramp in popup window
+   - Handles errors gracefully (shows "Coming soon" if not configured)
+
+3. **WalletCard Integration** (`src/components/WalletCard.tsx`)
+   - Added Buy USDC button below wallet info (desktop only by default)
+   - Optional `showBuyUSDC` prop to control visibility
+
+### Setup Required
+
+To enable Coinbase Onramp, add these to `.env.local`:
+
+```bash
+# Get these from https://portal.cdp.coinbase.com/
+CDP_API_KEY_NAME="your-api-key-name"
+CDP_API_KEY_PRIVATE_KEY="-----BEGIN EC PRIVATE KEY-----
+...your private key...
+-----END EC PRIVATE KEY-----"
+```
+
+See `docs/COINBASE_ONRAMP_SETUP.md` for detailed setup instructions.
+
+### Files Changed
+
+- `src/app/api/onramp/session/route.ts` (new)
+- `src/components/BuyUSDCButton.tsx` (new)
+- `src/components/WalletCard.tsx` (modified)
+- `docs/COINBASE_ONRAMP_SETUP.md` (new)
+- `package.json` (added @coinbase/onchainkit)
+
+---
+
 ## 🎨 **IMPROVE: Resume PDF Export and Hub Preview Modal** (January 2026)
 
 **Fixed PDF export layout to match the clean preview in Resume Builder, and replaced the Hub resume modal with a full preview.**

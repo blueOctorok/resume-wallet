@@ -5,6 +5,7 @@ import USDCBalance from './USDCBalance'
 import SendUSDC from './wallet/SendUSDC'
 import ReceiveUSDC from './wallet/ReceiveUSDC'
 import TransactionHistory from './TransactionHistory'
+import BuyUSDCButton from './BuyUSDCButton'
 import { useTheme } from '@/contexts/ThemeContext'
 import { Wallet, Send, QrCode, History } from 'lucide-react'
 
@@ -231,6 +232,19 @@ export default function UserStatusModal({
                     <USDCBalance 
                       walletAddress={user.address}
                       refreshInterval={60000} // Auto-refresh every 60 seconds
+                    />
+                  </div>
+                )}
+
+                {/* Buy USDC Button */}
+                {user.address && (
+                  <div className='bg-brand-sage/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-brand-mint/20 shadow-lg'>
+                    <BuyUSDCButton 
+                      walletAddress={user.address}
+                      onSuccess={() => {
+                        // Optionally refresh balance after purchase
+                        window.location.reload()
+                      }}
                     />
                   </div>
                 )}
