@@ -10,6 +10,7 @@ import WalletCard from '@/components/WalletCard'
 import TLoadingModal from '@/components/TLoadingModal'
 import LoadingScreen from '@/components/LoadingScreen'
 import ResumeTabSelector from '@/components/ResumeTabSelector'
+import VereeView from '@/components/VereeView'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   useSendUserOperation,
@@ -27,9 +28,13 @@ import type {
   PrimerPrompt,
   ResumeUploadEvent,
 } from '@/types/assistant'
-import { profileToDotApplication, dotApplicationToProfile } from '@/lib/profile-mapper'
+import {
+  profileToDotApplication,
+  dotApplicationToProfile,
+} from '@/lib/profile-mapper'
 import type { UnifiedDriverProfile } from '@/types/driver-profile'
 import SyncIndicator, { useSyncIndicator } from '@/components/SyncIndicator'
+import { useAvaAssistant } from '@/hooks/useAvaAssistant'
 
 // Dynamic imports to avoid SSR issues with Alchemy hooks
 const ResumeUploadWithVerification = dynamic(
@@ -39,18 +44,15 @@ const ResumeUploadWithVerification = dynamic(
     loading: () => (
       <LoadingScreen message='Loading resume upload...' fullScreen={false} />
     ),
-  }
+  },
 )
 
-const ResumeBuilder = dynamic(
-  () => import('@/components/ResumeBuilder'),
-  {
-    ssr: false,
-    loading: () => (
-      <LoadingScreen message='Loading resume builder...' fullScreen={false} />
-    ),
-  }
-)
+const ResumeBuilder = dynamic(() => import('@/components/ResumeBuilder'), {
+  ssr: false,
+  loading: () => (
+    <LoadingScreen message='Loading resume builder...' fullScreen={false} />
+  ),
+})
 
 const AlchemyAuth = dynamic(
   () => import('@/components/AlchemyAuth').then((mod) => mod.default),
@@ -59,46 +61,46 @@ const AlchemyAuth = dynamic(
     loading: () => (
       <LoadingScreen message='Loading authentication...' fullScreen={false} />
     ),
-  }
+  },
 )
 
 const PersonalInfoForm1 = dynamic(
   () =>
     import('@/components/driver-application/PersonalInfoForm1').then(
-      (mod) => mod.default
+      (mod) => mod.default,
     ),
   {
     ssr: false,
     loading: () => (
       <LoadingScreen message='Loading DOT application...' fullScreen={false} />
     ),
-  }
+  },
 )
 
 const PersonalInfoForm2 = dynamic(
   () =>
     import('@/components/driver-application/PersonalInfoForm2').then(
-      (mod) => mod.default
+      (mod) => mod.default,
     ),
   {
     ssr: false,
     loading: () => (
       <LoadingScreen message='Loading DOT application...' fullScreen={false} />
     ),
-  }
+  },
 )
 
 const PersonalInfoForm3 = dynamic(
   () =>
     import('@/components/driver-application/PersonalInfoForm3').then(
-      (mod) => mod.default
+      (mod) => mod.default,
     ),
   {
     ssr: false,
     loading: () => (
       <LoadingScreen message='Loading DOT application...' fullScreen={false} />
     ),
-  }
+  },
 )
 
 const JobListings = dynamic(
@@ -108,7 +110,7 @@ const JobListings = dynamic(
     loading: () => (
       <LoadingScreen message='Loading job listings...' fullScreen={false} />
     ),
-  }
+  },
 )
 
 const MyApplications = dynamic(
@@ -118,20 +120,20 @@ const MyApplications = dynamic(
     loading: () => (
       <LoadingScreen message='Loading applications...' fullScreen={false} />
     ),
-  }
+  },
 )
 
 const ApplicationSubmitted = dynamic(
   () =>
     import('@/components/driver-application/ApplicationSubmitted').then(
-      (mod) => mod.default
+      (mod) => mod.default,
     ),
   {
     ssr: false,
     loading: () => (
       <LoadingScreen message='Loading application...' fullScreen={false} />
     ),
-  }
+  },
 )
 
 // DriverHub replaces the old DriverDashboard - always accessible, shows all driver data
@@ -142,13 +144,13 @@ const DriverHub = dynamic(
     loading: () => (
       <LoadingScreen message='Loading Driver Hub...' fullScreen={false} />
     ),
-  }
+  },
 )
 
 const EmploymentVerificationForm = dynamic(
   () =>
     import('@/components/driver-application/EmploymentVerificationForm').then(
-      (mod) => mod.default
+      (mod) => mod.default,
     ),
   {
     ssr: false,
@@ -158,7 +160,7 @@ const EmploymentVerificationForm = dynamic(
         fullScreen={false}
       />
     ),
-  }
+  },
 )
 
 const ResumeUploadWithPrefill = dynamic(
@@ -168,20 +170,20 @@ const ResumeUploadWithPrefill = dynamic(
     loading: () => (
       <LoadingScreen message='Loading resume upload...' fullScreen={false} />
     ),
-  }
+  },
 )
 
 const WalletTransactions = dynamic(
   () =>
     import('@/components/WalletTransactions').then(
-      (mod) => mod.WalletTransactions
+      (mod) => mod.WalletTransactions,
     ),
   {
     ssr: false,
     loading: () => (
       <LoadingScreen message='Loading transactions...' fullScreen={false} />
     ),
-  }
+  },
 )
 
 const TAssistant = dynamic(
@@ -191,14 +193,14 @@ const TAssistant = dynamic(
     loading: () => (
       <LoadingScreen message='Loading AvA Assistant...' fullScreen={false} />
     ),
-  }
+  },
 )
 
 const WalletInfo = dynamic(
   () => import('@/components/WalletInfo').then((mod) => mod.default),
   {
     ssr: false,
-  }
+  },
 )
 
 const HomePage = dynamic(
@@ -206,7 +208,7 @@ const HomePage = dynamic(
   {
     ssr: false,
     loading: () => <LoadingScreen message='Loading...' fullScreen={false} />,
-  }
+  },
 )
 
 // DriverHomePage removed - replaced by DriverHub as the default landing for drivers
@@ -219,27 +221,29 @@ const EmployerHub = dynamic(
     loading: () => (
       <LoadingScreen message='Loading Employer Hub...' fullScreen={false} />
     ),
-  }
+  },
 )
 
 const ApplicantsPage = dynamic(
-  () => import('@/components/employer/ApplicantsPage').then((mod) => mod.default),
+  () =>
+    import('@/components/employer/ApplicantsPage').then((mod) => mod.default),
   {
     ssr: false,
     loading: () => (
       <LoadingScreen message='Loading applicants...' fullScreen={false} />
     ),
-  }
+  },
 )
 
 const FindDriversPage = dynamic(
-  () => import('@/components/employer/FindDriversPage').then((mod) => mod.default),
+  () =>
+    import('@/components/employer/FindDriversPage').then((mod) => mod.default),
   {
     ssr: false,
     loading: () => (
       <LoadingScreen message='Loading driver search...' fullScreen={false} />
     ),
-  }
+  },
 )
 
 const RoleSelectionModal = dynamic(
@@ -247,36 +251,45 @@ const RoleSelectionModal = dynamic(
   {
     ssr: false,
     loading: () => <LoadingScreen message='Loading...' fullScreen={false} />,
-  }
+  },
 )
 
 const MvrOrderForm = dynamic(
   () => import('@/components/MvrOrderForm').then((mod) => mod.default),
   {
     ssr: false,
-    loading: () => <LoadingScreen message='Loading MVR order form...' fullScreen={false} />,
-  }
+    loading: () => (
+      <LoadingScreen message='Loading MVR order form...' fullScreen={false} />
+    ),
+  },
 )
 
 const MvrStatusIndicator = dynamic(
   () => import('@/components/MvrStatusIndicator').then((mod) => mod.default),
   {
     ssr: false,
-  }
+  },
 )
 
 const MvrViewModal = dynamic(
   () => import('@/components/MvrViewModal').then((mod) => mod.default),
   {
     ssr: false,
-  }
+  },
 )
 
 const MvrManagementModal = dynamic(
   () => import('@/components/MvrManagementModal').then((mod) => mod.default),
   {
     ssr: false,
-  }
+  },
+)
+
+const ProfileConflictModal = dynamic(
+  () => import('@/components/ProfileConflictModal').then((mod) => mod.default),
+  {
+    ssr: false,
+  },
 )
 
 const createInitialJourneyState = (): DriverJourneyState => {
@@ -310,12 +323,23 @@ const HomeContent = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isMvrModalOpen, setIsMvrModalOpen] = useState(false)
   const [isMvrManagementOpen, setIsMvrManagementOpen] = useState(false)
-  const [selectedMvrOrderId, setSelectedMvrOrderId] = useState<string | null>(null)
+  const [selectedMvrOrderId, setSelectedMvrOrderId] = useState<string | null>(
+    null,
+  )
   const [currentPage, setCurrentPage] = useState<
-    'signin' | 'resume' | 'dotapp' | 'jobs' | 'applications' | 'mvr' | 'hub' | null
+    | 'signin'
+    | 'resume'
+    | 'dotapp'
+    | 'jobs'
+    | 'applications'
+    | 'mvr'
+    | 'hub'
+    | null
   >(null)
   const [resumeTab, setResumeTab] = useState<'upload' | 'create'>('upload')
-  const [editingResumeId, setEditingResumeId] = useState<string | undefined>(undefined)
+  const [editingResumeId, setEditingResumeId] = useState<string | undefined>(
+    undefined,
+  )
 
   // Role-based access control
   const [userRole, setUserRole] = useState<'driver' | 'employer' | null>(null)
@@ -343,22 +367,38 @@ const HomeContent = () => {
   const [form2Data, setForm2Data] = useState<any>(null)
   const [form3Data, setForm3Data] = useState<any>(null)
   const [formResetKey, setFormResetKey] = useState(0)
-  
+
   // Sync indicator for save feedback
-  const { startSync, syncSuccess, syncError, indicatorProps } = useSyncIndicator()
-  
+  const { startSync, syncSuccess, syncError, indicatorProps } =
+    useSyncIndicator()
+
   // Track unsaved changes (dirty state)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  const lastSavedDataRef = useRef<{ form1: any; form2: any; form3: any }>({ form1: null, form2: null, form3: null })
-  
+  const lastSavedDataRef = useRef<{ form1: any; form2: any; form3: any }>({
+    form1: null,
+    form2: null,
+    form3: null,
+  })
+
   // Track if data was loaded from unified profile
   const [profileDataLoaded, setProfileDataLoaded] = useState(false)
   const [profileSource, setProfileSource] = useState<string | null>(null)
-  const [showProfileConflictModal, setShowProfileConflictModal] = useState(false)
+  const [showProfileConflictModal, setShowProfileConflictModal] =
+    useState(false)
   const [profileConflict, setProfileConflict] = useState<{
     conflicts: string[]
-    existing: { name: string; cdlNumber?: string; email?: string; lastUpdatedFrom?: string }
-    incoming: { name: string; cdlNumber?: string; email?: string; source?: string }
+    existing: {
+      name: string
+      cdlNumber?: string
+      email?: string
+      lastUpdatedFrom?: string
+    }
+    incoming: {
+      name: string
+      cdlNumber?: string
+      email?: string
+      source?: string
+    }
     profileData: any
   } | null>(null)
   const profileLoadAttemptedRef = useRef(false)
@@ -369,25 +409,35 @@ const HomeContent = () => {
   const [hasPrefilled, setHasPrefilled] = useState(false)
   const [showPrefillUpload, setShowPrefillUpload] = useState(false) // Start with forms, prefill is in Form 1
   const [journeyState, setJourneyState] = useState<DriverJourneyState>(() =>
-    createInitialJourneyState()
+    createInitialJourneyState(),
   )
 
-  // AvA Assistant state
-  const [isAvaCollapsed, setIsAvaCollapsed] = useState(true) // Start collapsed
-  const [avaHasUnread, setAvaHasUnread] = useState(false)
-  const [avaIsWorking, setAvaIsWorking] = useState(false)
-  const [avaWorkingMessage, setAvaWorkingMessage] =
-    useState('AvA is thinking...')
-  const [helpRequest, setHelpRequest] = useState<AssistantHelpRequest | null>(
-    null
-  )
-  const [primerSeen, setPrimerSeen] = useState(false)
-  const [primerRequest, setPrimerRequest] = useState<PrimerPrompt | null>(null)
+  // AvA Assistant state (extracted to custom hook)
+  const {
+    isAvaCollapsed,
+    setIsAvaCollapsed,
+    toggleAvaCollapse,
+    avaHasUnread,
+    setAvaHasUnread,
+    avaIsWorking,
+    avaWorkingMessage,
+    setAvaWorking,
+    helpRequest,
+    handleHelpRequest,
+    clearHelpRequest,
+    primerSeen,
+    primerRequest,
+    setPrimerSeen,
+    triggerPrimer,
+    handlePrimerAction,
+    isPrimerTriggered,
+    resetAvaState,
+  } = useAvaAssistant({ userAddress: user?.address })
+
   const [hasResume, setHasResume] = useState(false)
   const [latestResumeIpfsHash, setLatestResumeIpfsHash] = useState<
     string | null
   >(null)
-  const primerTriggeredRef = useRef(false)
   const [resumeUploadEvent, setResumeUploadEvent] =
     useState<ResumeUploadEvent | null>(null)
   const resetInProgressRef = useRef(false)
@@ -407,32 +457,8 @@ const HomeContent = () => {
         }
       })
     },
-    []
+    [],
   )
-
-  const handleSetPrimerSeen = useCallback(
-    (value: boolean) => {
-      setPrimerSeen(value)
-      if (typeof window !== 'undefined' && user?.address) {
-        window.localStorage.setItem(
-          `journey-primer-${user.address}`,
-          value ? 'seen' : 'pending'
-        )
-      }
-    },
-    [user?.address]
-  )
-
-  const handleHelpRequest = useCallback((payload: AssistantHelpPayload) => {
-    const request: AssistantHelpRequest = {
-      ...payload,
-      id: `help-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    }
-    setHelpRequest(request)
-    // Auto-open AvA when user clicks "Ask AvA" button
-    setIsAvaCollapsed(false)
-  }, [])
 
   const handleResumeUploadEvent = useCallback((event: ResumeUploadEvent) => {
     setResumeUploadEvent(event)
@@ -442,7 +468,7 @@ const HomeContent = () => {
       setLatestResumeIpfsHash(event.data.ipfsHash)
       console.log(
         '💾 [PREFILL] Stored IPFS hash from analysis event:',
-        event.data.ipfsHash
+        event.data.ipfsHash,
       )
     }
 
@@ -493,11 +519,11 @@ const HomeContent = () => {
             if (verifyData.success && verifyData.profile?.role === role) {
               console.log(
                 '[ROLE SELECTION] Role verified in database:',
-                verifyData.profile.role
+                verifyData.profile.role,
               )
             } else {
               console.warn(
-                '[ROLE SELECTION] Role verification failed - role may not have persisted'
+                '[ROLE SELECTION] Role verification failed - role may not have persisted',
               )
             }
           }
@@ -510,10 +536,10 @@ const HomeContent = () => {
           console.error(
             'Failed to set user role:',
             response.statusText,
-            errorData
+            errorData,
           )
           alert(
-            `Failed to set role: ${errorData.error || response.statusText}. Please try again.`
+            `Failed to set role: ${errorData.error || response.statusText}. Please try again.`,
           )
           // Keep modal open so user can retry
           setIsSettingRole(false)
@@ -525,7 +551,7 @@ const HomeContent = () => {
         setIsSettingRole(false)
       }
     },
-    [user]
+    [user],
   )
 
   // Handle role switching from WalletCard
@@ -534,7 +560,7 @@ const HomeContent = () => {
 
     const newRole = userRole === 'driver' ? 'employer' : 'driver'
     const confirmed = confirm(
-      `Switch to ${newRole === 'driver' ? 'Driver' : 'Employer'} role?\n\nThis will change your account type and navigate you to the ${newRole} dashboard.`
+      `Switch to ${newRole === 'driver' ? 'Driver' : 'Employer'} role?\n\nThis will change your account type and navigate you to the ${newRole} dashboard.`,
     )
 
     if (confirmed) {
@@ -544,7 +570,7 @@ const HomeContent = () => {
 
   const resetApplicationProgress = useCallback(() => {
     console.log(
-      '🔄 [RESET] ==================== START RESET ===================='
+      '🔄 [RESET] ==================== START RESET ====================',
     )
     console.log('🔄 [RESET] User address:', user?.address)
     console.log('🔄 [RESET] Current form1Data:', form1Data)
@@ -570,9 +596,7 @@ const HomeContent = () => {
     setSubmissionError(null)
     setHasResume(false)
     setLatestResumeIpfsHash(null) // Clear stored IPFS hash
-    setHelpRequest(null)
-    setPrimerRequest(null)
-    primerTriggeredRef.current = false
+    resetAvaState() // Clear AvA assistant state
     analysisTriggeredRef.current = null // Reset analysis trigger
     analysisPendingRef.current = false // Reset pending flag
 
@@ -581,15 +605,15 @@ const HomeContent = () => {
       console.log('🔄 [RESET] Clearing localStorage for:', user.address)
       const beforeForms = window.localStorage.getItem(`forms-${user.address}`)
       const beforeJourney = window.localStorage.getItem(
-        `journey-${user.address}`
+        `journey-${user.address}`,
       )
       console.log(
         '🔄 [RESET] Before clear - forms:',
-        beforeForms?.substring(0, 100)
+        beforeForms?.substring(0, 100),
       )
       console.log(
         '🔄 [RESET] Before clear - journey:',
-        beforeJourney?.substring(0, 100)
+        beforeJourney?.substring(0, 100),
       )
 
       // Clear all localStorage items for this user
@@ -599,7 +623,7 @@ const HomeContent = () => {
 
       const afterForms = window.localStorage.getItem(`forms-${user.address}`)
       const afterJourney = window.localStorage.getItem(
-        `journey-${user.address}`
+        `journey-${user.address}`,
       )
       console.log('✅ [RESET] After clear - forms:', afterForms)
       console.log('✅ [RESET] After clear - journey:', afterJourney)
@@ -617,14 +641,14 @@ const HomeContent = () => {
       '🔄 [RESET] Incremented formResetKey from',
       oldKey,
       'to',
-      oldKey + 1
+      oldKey + 1,
     )
 
     // Clear the reset flag after a brief delay to allow state updates to complete
     setTimeout(() => {
       resetInProgressRef.current = false
       console.log(
-        '✅ [RESET] ==================== END RESET ===================='
+        '✅ [RESET] ==================== END RESET ====================',
       )
       console.log('✅ [RESET] Reset flag cleared')
       console.log('✅ [RESET] form1Data should now be:', form1Data)
@@ -662,16 +686,14 @@ const HomeContent = () => {
     if (typeof window === 'undefined') return
     if (!user?.address) {
       setJourneyState(createInitialJourneyState())
-      setHelpRequest(null)
-      setPrimerRequest(null)
-      primerTriggeredRef.current = false
+      resetAvaState() // Clear AvA assistant state
       setHasResume(false)
       return
     }
 
     try {
       const storedJourney = window.localStorage.getItem(
-        `journey-${user.address}`
+        `journey-${user.address}`,
       )
       if (storedJourney) {
         const parsed = JSON.parse(storedJourney) as DriverJourneyState
@@ -714,7 +736,7 @@ const HomeContent = () => {
         }
         if (typeof parsedForms.isDriverApplicationCompleted === 'boolean') {
           setIsDriverApplicationCompleted(
-            parsedForms.isDriverApplicationCompleted
+            parsedForms.isDriverApplicationCompleted,
           )
         }
         if (typeof parsedForms.hasPrefilled === 'boolean') {
@@ -735,17 +757,21 @@ const HomeContent = () => {
         // Wrap async code in IIFE since useEffect callback can't be async
         ;(async () => {
           try {
-            const { getDriverApplicationClient } = await import('@/lib/supabase-client-db')
+            const { getDriverApplicationClient } = await import(
+              '@/lib/supabase-client-db'
+            )
             const dbApp = await getDriverApplicationClient(user.address)
-            
+
             if (dbApp && !dbApp.is_complete && dbApp.application_data) {
-              console.log('✅ [LOAD] Found in-progress application in database, loading...')
+              console.log(
+                '✅ [LOAD] Found in-progress application in database, loading...',
+              )
               const appData = dbApp.application_data as {
                 form1?: unknown
                 form2?: unknown
                 form3?: unknown
               }
-              
+
               if (appData.form1) setForm1Data(appData.form1)
               if (appData.form2) setForm2Data(appData.form2)
               if (appData.form3) setForm3Data(appData.form3)
@@ -753,7 +779,7 @@ const HomeContent = () => {
                 setCurrentForm(dbApp.current_step)
               }
               setShowPrefillUpload(false)
-              
+
               // Also save to localStorage for faster future loads
               try {
                 window.localStorage.setItem(
@@ -763,11 +789,14 @@ const HomeContent = () => {
                     form2Data: appData.form2,
                     form3Data: appData.form3,
                     currentForm: dbApp.current_step,
-                  })
+                  }),
                 )
                 console.log('✅ [LOAD] Synced database data to localStorage')
               } catch (lsError) {
-                console.warn('⚠️ [LOAD] Failed to sync to localStorage:', lsError)
+                console.warn(
+                  '⚠️ [LOAD] Failed to sync to localStorage:',
+                  lsError,
+                )
               }
             } else {
               console.log('📭 [LOAD] No in-progress application in database')
@@ -780,10 +809,9 @@ const HomeContent = () => {
       }
 
       const storedPrimer = window.localStorage.getItem(
-        `journey-primer-${user.address}`
+        `journey-primer-${user.address}`,
       )
-      setPrimerSeen(storedPrimer === 'seen')
-      primerTriggeredRef.current = storedPrimer === 'seen'
+      setPrimerSeen(storedPrimer === 'seen') // Also sets primerTriggered internally
     } catch (error) {
       console.error('⚠️ Failed to restore journey state from storage', error)
     }
@@ -794,7 +822,7 @@ const HomeContent = () => {
     try {
       window.localStorage.setItem(
         `journey-${user.address}`,
-        JSON.stringify(journeyState)
+        JSON.stringify(journeyState),
       )
     } catch (error) {
       console.warn('⚠️ Failed to persist journey state', error)
@@ -825,7 +853,7 @@ const HomeContent = () => {
       }
       window.localStorage.setItem(
         `forms-${user.address}`,
-        JSON.stringify(formsToSave)
+        JSON.stringify(formsToSave),
       )
       // Saved to localStorage silently
     } catch (error) {
@@ -843,42 +871,52 @@ const HomeContent = () => {
         return
       }
       if (!user?.address) return
-      
+
       // Mark as attempted EARLY to prevent race conditions from concurrent effect runs
       profileLoadAttemptedRef.current = true
-      
+
       // Wait a tick to let localStorage load complete first
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
       // Check if forms have MEANINGFUL data (not just empty objects)
       // Skip this check if forceProfileLoadRef is true (navigating from Resume Builder)
       if (!forceProfileLoadRef.current) {
-        const hasMeaningfulForm1 = form1Data && (
-          form1Data.firstName || form1Data.lastName || form1Data.cdlNumber ||
-          (form1Data.currentLicenses?.length > 0 && form1Data.currentLicenses[0]?.licenseNumber)
-        )
-        const hasMeaningfulForm3 = form3Data && (
-          form3Data.employers?.length > 0 && form3Data.employers[0]?.name
-        )
-        
+        const hasMeaningfulForm1 =
+          form1Data &&
+          (form1Data.firstName ||
+            form1Data.lastName ||
+            form1Data.cdlNumber ||
+            (form1Data.currentLicenses?.length > 0 &&
+              form1Data.currentLicenses[0]?.licenseNumber))
+        const hasMeaningfulForm3 =
+          form3Data &&
+          form3Data.employers?.length > 0 &&
+          form3Data.employers[0]?.name
+
         if (hasMeaningfulForm1 || hasMeaningfulForm3) {
-          console.log('📋 [DOT APP] Forms already have meaningful data, skipping profile load')
+          console.log(
+            '📋 [DOT APP] Forms already have meaningful data, skipping profile load',
+          )
           return
         }
       } else {
-        console.log('🔄 [DOT APP] Force load enabled - will check profile regardless of form data')
+        console.log(
+          '🔄 [DOT APP] Force load enabled - will check profile regardless of form data',
+        )
       }
-      
+
       // Don't load during reset - reset the attempted flag so we can retry
       if (resetInProgressRef.current) {
-        console.log('🔄 [DOT APP] Reset in progress, skipping profile load (will retry)')
+        console.log(
+          '🔄 [DOT APP] Reset in progress, skipping profile load (will retry)',
+        )
         profileLoadAttemptedRef.current = false // Allow retry after reset completes
         return
       }
-      
+
       // Reset force flag after use (only after we've passed the reset check)
       forceProfileLoadRef.current = false
-      
+
       try {
         console.log('📦 [DOT APP] Checking unified profile for prefill data...')
         const response = await fetch('/api/driver/profile', {
@@ -886,40 +924,48 @@ const HomeContent = () => {
             'x-wallet-address': user.address,
           },
         })
-        
+
         if (!response.ok) return
-        
+
         const { profile } = await response.json()
-        
+
         if (!profile) {
           console.log('📭 [DOT APP] No profile found')
           return
         }
-        
+
         // Check if profile has meaningful data
-        const hasProfileData = profile.firstName || profile.lastName || 
-          profile.cdlNumber || profile.employmentHistory?.length > 0
-          
+        const hasProfileData =
+          profile.firstName ||
+          profile.lastName ||
+          profile.cdlNumber ||
+          profile.employmentHistory?.length > 0
+
         if (!hasProfileData) {
           console.log('📭 [DOT APP] Profile exists but has no data')
           return
         }
-        
+
         // IMPORTANT: Only prefill from profile if data came from a RESUME, not a deleted DOT app
         // If the profile was only updated from a DOT app (which might now be deleted),
         // we should NOT prefill - the user wants to start fresh
         const profileSource = profile.lastUpdatedFrom || 'unknown'
-        const isFromResume = profileSource === 'resume_builder' || 
-                            profileSource === 'uploaded_resume' ||
-                            profileSource === 'resume'
-        
+        const isFromResume =
+          profileSource === 'resume_builder' ||
+          profileSource === 'uploaded_resume' ||
+          profileSource === 'resume'
+
         if (!isFromResume) {
-          console.log('📭 [DOT APP] Profile data is from DOT app, not resume - starting fresh')
+          console.log(
+            '📭 [DOT APP] Profile data is from DOT app, not resume - starting fresh',
+          )
           console.log('   Source was:', profileSource)
           return
         }
-        
-        console.log('✅ [DOT APP] Profile found with RESUME data, prefilling forms...')
+
+        console.log(
+          '✅ [DOT APP] Profile found with RESUME data, prefilling forms...',
+        )
         console.log('   Source:', profileSource)
         console.log('   Profile data:', {
           firstName: profile.firstName,
@@ -928,7 +974,7 @@ const HomeContent = () => {
           cdlNumber: profile.cdlNumber,
           employmentCount: profile.employmentHistory?.length || 0,
         })
-        
+
         // Convert profile to DOT application format
         const dotData = profileToDotApplication(profile as UnifiedDriverProfile)
         console.log('   Converted DOT data:', {
@@ -936,7 +982,7 @@ const HomeContent = () => {
           hasCdlInfo: !!dotData.cdlInfo,
           employmentHistoryLength: dotData.employmentHistory?.length || 0,
         })
-        
+
         // Set form data - only set forms that have data
         if (dotData.personalInfo || dotData.cdlInfo) {
           // Form 1: Personal info, residency, license
@@ -954,71 +1000,87 @@ const HomeContent = () => {
               zipCode: dotData.personalInfo?.zipCode || '',
               yearsAtAddress: '',
             },
-            currentLicenses: dotData.cdlInfo ? [{
-              state: dotData.cdlInfo.cdlState || '',
-              licenseNumber: dotData.cdlInfo.cdlNumber || '',
-              typeClass: dotData.cdlInfo.cdlClass || '',
-              endorsements: dotData.cdlInfo.endorsements?.join(', ') || '',
-              expirationDate: dotData.cdlInfo.cdlExpiration || '',
-            }] : [],
+            currentLicenses: dotData.cdlInfo
+              ? [
+                  {
+                    state: dotData.cdlInfo.cdlState || '',
+                    licenseNumber: dotData.cdlInfo.cdlNumber || '',
+                    typeClass: dotData.cdlInfo.cdlClass || '',
+                    endorsements:
+                      dotData.cdlInfo.endorsements?.join(', ') || '',
+                    expirationDate: dotData.cdlInfo.cdlExpiration || '',
+                  },
+                ]
+              : [],
           })
         }
-        
+
         if (dotData.employmentHistory && dotData.employmentHistory.length > 0) {
           // Form 3: Employment history - map to employers array format
           setForm3Data((prev: Record<string, unknown>) => ({
             ...prev,
-            employers: dotData.employmentHistory.map((emp: Record<string, unknown>) => ({
-              name: emp.company || emp.companyName || '',
-              phone: emp.supervisorPhone || '',
-              email: emp.supervisorEmail || '',
-              address: (emp.location as string) || '',
-              positionHeld: emp.position || '',
-              fromDate: emp.startDate || '',
-              toDate: emp.endDate || 'Present',
-              reasonForLeaving: emp.reasonForLeaving || '',
-              salary: '',
-              gapsInEmployment: '',
-              subjectToFMCSR: 'no',
-              safetySensitiveFunction: 'no',
-              isUnemployment: false,
-            })),
+            employers: dotData.employmentHistory.map(
+              (emp: Record<string, unknown>) => ({
+                name: emp.company || emp.companyName || '',
+                phone: emp.supervisorPhone || '',
+                email: emp.supervisorEmail || '',
+                address: (emp.location as string) || '',
+                positionHeld: emp.position || '',
+                fromDate: emp.startDate || '',
+                toDate: emp.endDate || 'Present',
+                reasonForLeaving: emp.reasonForLeaving || '',
+                salary: '',
+                gapsInEmployment: '',
+                subjectToFMCSR: 'no',
+                safetySensitiveFunction: 'no',
+                isUnemployment: false,
+              }),
+            ),
           }))
         }
-        
-        if (dotData.drivingRecord && (dotData.drivingRecord.violations?.length > 0 || 
-            dotData.drivingRecord.accidents?.length > 0)) {
+
+        if (
+          dotData.drivingRecord &&
+          (dotData.drivingRecord.violations?.length > 0 ||
+            dotData.drivingRecord.accidents?.length > 0)
+        ) {
           // Form 2: Driving record (accidents, violations)
           setForm2Data((prev: Record<string, unknown>) => ({
             ...prev,
-            accidents: dotData.drivingRecord.accidents?.map((acc: Record<string, unknown>) => ({
-              date: acc.date || '',
-              nature: acc.description || '',
-              fatalities: acc.fatalities || '',
-              injuries: acc.injuries || '',
-              atFault: '',
-            })) || [],
+            accidents:
+              dotData.drivingRecord.accidents?.map(
+                (acc: Record<string, unknown>) => ({
+                  date: acc.date || '',
+                  nature: acc.description || '',
+                  fatalities: acc.fatalities || '',
+                  injuries: acc.injuries || '',
+                  atFault: '',
+                }),
+              ) || [],
             hasNoAccidents: !dotData.drivingRecord.accidents?.length,
-            convictions: dotData.drivingRecord.violations?.map((viol: Record<string, unknown>) => ({
-              dateConvicted: viol.date || '',
-              violation: viol.violation || '',
-              stateOfViolation: viol.location || '',
-              penalty: viol.fine || '',
-            })) || [],
+            convictions:
+              dotData.drivingRecord.violations?.map(
+                (viol: Record<string, unknown>) => ({
+                  dateConvicted: viol.date || '',
+                  violation: viol.violation || '',
+                  stateOfViolation: viol.location || '',
+                  penalty: viol.fine || '',
+                }),
+              ) || [],
             hasNoConvictions: !dotData.drivingRecord.violations?.length,
           }))
         }
-        
+
         setProfileDataLoaded(true)
         setProfileSource(profile.lastUpdatedFrom || 'profile')
         setShowPrefillUpload(false) // Hide the upload since we have data
-        
+
         console.log('✅ [DOT APP] Forms prefilled from unified profile')
       } catch (error) {
         console.error('❌ [DOT APP] Failed to load from profile:', error)
       }
     }
-    
+
     loadFromProfile()
   }, [user?.address, form1Data, form2Data, form3Data, profileLoadTrigger])
 
@@ -1029,45 +1091,56 @@ const HomeContent = () => {
   const prevPageRef = useRef<string | null>(null)
   useEffect(() => {
     if (currentPage === 'dotapp' && prevPageRef.current !== 'dotapp') {
-      console.log('🔄 [DOT APP] Entering DOT app view, checking for existing data...')
-      
+      console.log(
+        '🔄 [DOT APP] Entering DOT app view, checking for existing data...',
+      )
+
       // Check if localStorage already has form data
       // If so, DON'T force profile load - localStorage has complete data, profile doesn't
       const storedForms = window.localStorage.getItem(`forms-${user?.address}`)
-      const hasLocalStorageData = storedForms && (() => {
-        try {
-          const parsed = JSON.parse(storedForms)
-          // Check for meaningful form1 data (any field filled)
-          return parsed.form1Data && (
-            parsed.form1Data.firstName || 
-            parsed.form1Data.lastName ||
-            parsed.form1Data.socialSecurity ||
-            parsed.form1Data.dateOfApplication ||
-            parsed.form1Data.dateOfBirth
-          )
-        } catch {
-          return false
-        }
-      })()
-      
+      const hasLocalStorageData =
+        storedForms &&
+        (() => {
+          try {
+            const parsed = JSON.parse(storedForms)
+            // Check for meaningful form1 data (any field filled)
+            return (
+              parsed.form1Data &&
+              (parsed.form1Data.firstName ||
+                parsed.form1Data.lastName ||
+                parsed.form1Data.socialSecurity ||
+                parsed.form1Data.dateOfApplication ||
+                parsed.form1Data.dateOfBirth)
+            )
+          } catch {
+            return false
+          }
+        })()
+
       if (hasLocalStorageData) {
-        console.log('📋 [DOT APP] localStorage has form data - preserving it (not forcing profile load)')
+        console.log(
+          '📋 [DOT APP] localStorage has form data - preserving it (not forcing profile load)',
+        )
         // Don't trigger profile load - let localStorage data persist
         prevPageRef.current = currentPage
         return
       }
-      
+
       // No localStorage data - trigger profile load for prefill from Resume Builder
       const triggerProfileLoad = () => {
         profileLoadAttemptedRef.current = false
         forceProfileLoadRef.current = true // Force load even if forms have data
-        setProfileLoadTrigger(prev => prev + 1) // Trigger the profile load effect
-        console.log('🔄 [DOT APP] No localStorage data - FORCING profile check for prefill')
+        setProfileLoadTrigger((prev) => prev + 1) // Trigger the profile load effect
+        console.log(
+          '🔄 [DOT APP] No localStorage data - FORCING profile check for prefill',
+        )
       }
-      
+
       if (resetInProgressRef.current) {
         // Wait for reset to complete (reset clears after 100ms)
-        console.log('🔄 [DOT APP] Reset in progress, waiting before profile load...')
+        console.log(
+          '🔄 [DOT APP] Reset in progress, waiting before profile load...',
+        )
         setTimeout(() => {
           triggerProfileLoad()
         }, 150) // Wait slightly longer than the reset timeout (100ms)
@@ -1115,37 +1188,41 @@ const HomeContent = () => {
   useEffect(() => {
     // Only track dirty state when on DOT app page
     if (currentPage !== 'dotapp') return
-    
+
     // Skip during reset
     if (resetInProgressRef.current) return
-    
+
     // Check if any form data exists and differs from last saved
     const hasData = form1Data || form2Data || form3Data
     if (!hasData) {
       setHasUnsavedChanges(false)
       return
     }
-    
+
     // Simple comparison - if we have data and it's different from what was last saved, it's dirty
-    const isDifferent = 
-      JSON.stringify(form1Data) !== JSON.stringify(lastSavedDataRef.current.form1) ||
-      JSON.stringify(form2Data) !== JSON.stringify(lastSavedDataRef.current.form2) ||
-      JSON.stringify(form3Data) !== JSON.stringify(lastSavedDataRef.current.form3)
-    
+    const isDifferent =
+      JSON.stringify(form1Data) !==
+        JSON.stringify(lastSavedDataRef.current.form1) ||
+      JSON.stringify(form2Data) !==
+        JSON.stringify(lastSavedDataRef.current.form2) ||
+      JSON.stringify(form3Data) !==
+        JSON.stringify(lastSavedDataRef.current.form3)
+
     setHasUnsavedChanges(isDifferent)
   }, [form1Data, form2Data, form3Data, currentPage])
 
   // Warn user before leaving page with unsaved changes (browser close/refresh)
   useEffect(() => {
     if (!hasUnsavedChanges) return
-    
+
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault()
       // Modern browsers show their own message, but we need to return a string for older ones
-      e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'
+      e.returnValue =
+        'You have unsaved changes. Are you sure you want to leave?'
       return e.returnValue
     }
-    
+
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [hasUnsavedChanges])
@@ -1193,7 +1270,7 @@ const HomeContent = () => {
               'Normalized:',
               normalizedRole,
               'Type:',
-              typeof roleValue
+              typeof roleValue,
             )
 
             setUserRole(normalizedRole)
@@ -1209,7 +1286,7 @@ const HomeContent = () => {
             // Show role selection if role is missing or invalid
             if (!normalizedRole) {
               console.log(
-                '[ROLE FETCH] No valid role found - showing role selection'
+                '[ROLE FETCH] No valid role found - showing role selection',
               )
               setShowRoleSelection(true)
               // Don't navigate if no role - wait for user to select
@@ -1217,7 +1294,7 @@ const HomeContent = () => {
               console.log(
                 '[ROLE FETCH] Valid role exists:',
                 normalizedRole,
-                '- NOT showing role selection'
+                '- NOT showing role selection',
               )
               setShowRoleSelection(false) // Explicitly hide modal if role exists
 
@@ -1225,13 +1302,11 @@ const HomeContent = () => {
               // Both drivers and employers start at home page
               if (!currentPage || currentPage === 'signin') {
                 if (normalizedRole === 'driver') {
-                  console.log(
-                    '[ROLE FETCH] Driver role - showing DriverHub'
-                  )
+                  console.log('[ROLE FETCH] Driver role - showing DriverHub')
                   setCurrentPage(null) // null shows DriverHub for drivers
                 } else if (normalizedRole === 'employer') {
                   console.log(
-                    '[ROLE FETCH] Employer role - showing EmployerHub'
+                    '[ROLE FETCH] Employer role - showing EmployerHub',
                   )
                   setCurrentPage(null) // null shows EmployerHub
                 }
@@ -1240,7 +1315,7 @@ const HomeContent = () => {
           } else {
             // API returned success but no profile data - treat as new user
             console.log(
-              '[ROLE FETCH] API success but no profile data - showing role selection'
+              '[ROLE FETCH] API success but no profile data - showing role selection',
             )
             setUserRole(null)
             setShowRoleSelection(true)
@@ -1258,7 +1333,7 @@ const HomeContent = () => {
           } else {
             // For other errors, still show role selection as fallback
             console.log(
-              '[ROLE FETCH] Error fetching profile - showing role selection as fallback'
+              '[ROLE FETCH] Error fetching profile - showing role selection as fallback',
             )
             setUserRole(null)
             setShowRoleSelection(true)
@@ -1273,7 +1348,7 @@ const HomeContent = () => {
         console.error('Error fetching user role:', error)
         // On any error, show role selection as fallback
         console.log(
-          '[ROLE FETCH] Exception caught - showing role selection as fallback'
+          '[ROLE FETCH] Exception caught - showing role selection as fallback',
         )
         setUserRole(null)
         setShowRoleSelection(true)
@@ -1341,7 +1416,7 @@ const HomeContent = () => {
         : {
             ...prev,
             currentFormStep: nextStep,
-          }
+          },
     )
   }, [currentForm, currentPage])
 
@@ -1353,7 +1428,7 @@ const HomeContent = () => {
           : {
               ...prev,
               lastCompletedForm: 3,
-            }
+            },
       )
     } else {
       setJourneyState((prev) => {
@@ -1368,26 +1443,16 @@ const HomeContent = () => {
     }
   }, [currentForm, isDriverApplicationCompleted])
 
+  // Trigger primer when wallet is connected and primer hasn't been shown
   useEffect(() => {
     if (
       !primerSeen &&
       journeyState.wallet.status === 'complete' &&
-      !primerTriggeredRef.current
+      !isPrimerTriggered()
     ) {
-      setPrimerRequest({
-        id: `primer-${Date.now()}`,
-        message:
-          'Curious why DriverAppChain uses Base smart wallets? I can explain how it keeps your records portable and gas-free.',
-      })
-      primerTriggeredRef.current = true
+      triggerPrimer()
     }
-  }, [journeyState.wallet.status, primerSeen])
-
-  useEffect(() => {
-    if (primerSeen) {
-      setPrimerRequest(null)
-    }
-  }, [primerSeen])
+  }, [journeyState.wallet.status, primerSeen, isPrimerTriggered, triggerPrimer])
 
   // Determine current step for T Assistant
   const getCurrentStep = useCallback(():
@@ -1445,16 +1510,6 @@ const HomeContent = () => {
   //   }
   // }, [currentPage, latestResumeIpfsHash, form1Data, form2Data, form3Data, user, handleResumeUploadEvent])
 
-  const handlePrimerAction = useCallback(
-    (action: 'primer:learn_more' | 'primer:skip') => {
-      handleSetPrimerSeen(true)
-      setPrimerRequest(null)
-      primerTriggeredRef.current = true
-      console.log('🎓 [HOME] Primer action:', action)
-    },
-    [handleSetPrimerSeen]
-  )
-
   // T Assistant action handler
   const handleTAssistantAction = useCallback(
     (action: string, data?: any) => {
@@ -1492,7 +1547,7 @@ const HomeContent = () => {
           if (data) {
             // T Assistant passed the extracted data directly - use it!
             console.log(
-              '📥 [HOME] Using prefill data from T Assistant (no API call needed)'
+              '📥 [HOME] Using prefill data from T Assistant (no API call needed)',
             )
             console.log('   Data received:', {
               hasForm1Data: !!data.form1Data,
@@ -1531,7 +1586,7 @@ const HomeContent = () => {
           } else {
             // Fallback: T Assistant didn't pass data, try API (shouldn't happen)
             console.warn(
-              '⚠️ [HOME] No data from T Assistant, falling back to API call'
+              '⚠️ [HOME] No data from T Assistant, falling back to API call',
             )
             if (latestResumeIpfsHash) {
               fetch('/api/ai/prefill-resume', {
@@ -1560,7 +1615,7 @@ const HomeContent = () => {
                       .json()
                       .catch(() => ({ error: 'Unknown error' }))
                     handlePrefillError(
-                      errorData.error || 'Failed to prefill forms'
+                      errorData.error || 'Failed to prefill forms',
                     )
                   }
                 })
@@ -1569,7 +1624,7 @@ const HomeContent = () => {
                   handlePrefillError(
                     error instanceof Error
                       ? error.message
-                      : 'Failed to prefill forms'
+                      : 'Failed to prefill forms',
                   )
                 })
             } else {
@@ -1597,7 +1652,7 @@ const HomeContent = () => {
           break
       }
     },
-    [handlePrimerAction]
+    [handlePrimerAction],
   )
 
   // Debug: Log user state changes
@@ -1624,7 +1679,7 @@ const HomeContent = () => {
     const timeout = setTimeout(() => {
       if (!user) {
         console.log(
-          '🔓 [AUTH] No existing session found after timeout, showing sign-in'
+          '🔓 [AUTH] No existing session found after timeout, showing sign-in',
         )
         setIsCheckingSession(false)
       }
@@ -1671,13 +1726,14 @@ const HomeContent = () => {
         | 'mvr'
         | 'home'
         | 'hub'
+        | 'veree',
     ) => {
       console.log(`Navigating to: ${page}`)
-      
+
       // Check for unsaved changes when leaving DOT app
       if (currentPage === 'dotapp' && page !== 'dotapp' && hasUnsavedChanges) {
         const confirmed = window.confirm(
-          'You have unsaved changes in your DOT application. Are you sure you want to leave?\n\nYour changes will be lost.'
+          'You have unsaved changes in your DOT application. Are you sure you want to leave?\n\nYour changes will be lost.',
         )
         if (!confirmed) {
           return // Cancel navigation
@@ -1685,7 +1741,7 @@ const HomeContent = () => {
         // User confirmed - clear dirty state
         setHasUnsavedChanges(false)
       }
-      
+
       if (page === 'home' || page === 'hub') {
         // Reset to beginning screen (Driver Hub for drivers, landing for others)
         setCurrentPage(null)
@@ -1693,7 +1749,7 @@ const HomeContent = () => {
         setCurrentPage(page)
       }
     },
-    [currentPage, hasUnsavedChanges]
+    [currentPage, hasUnsavedChanges],
   )
 
   // Handler for AI prefill success
@@ -1707,7 +1763,7 @@ const HomeContent = () => {
       console.log('✅ [HOME] Prefill successful, populating forms')
       console.log('   Full prefill data:', JSON.stringify(prefillData, null, 2))
       console.log(
-        `   Fields extracted: ${prefillData.stats?.extracted || 0}/${prefillData.stats?.total || 0}`
+        `   Fields extracted: ${prefillData.stats?.extracted || 0}/${prefillData.stats?.total || 0}`,
       )
       console.log('   Form1Data:', prefillData.form1Data)
       console.log('   Form2Data:', prefillData.form2Data)
@@ -1731,15 +1787,25 @@ const HomeContent = () => {
 
       // Sync extracted data to unified profile (fire-and-forget)
       // Uses form mappers: Form 1 → personal/CDL, Form 2 → driving, Form 3 → employment
-      if (user?.address && (prefillData.form1Data || prefillData.form2Data || prefillData.form3Data)) {
+      if (
+        user?.address &&
+        (prefillData.form1Data ||
+          prefillData.form2Data ||
+          prefillData.form3Data)
+      ) {
         try {
-          const { form1ToProfile, form2ToProfile, form3ToProfile } = await import(
-            '@/lib/dot-form-mapper'
-          )
+          const { form1ToProfile, form2ToProfile, form3ToProfile } =
+            await import('@/lib/dot-form-mapper')
           const profileData = {
-            ...(prefillData.form1Data ? form1ToProfile(prefillData.form1Data) : {}),
-            ...(prefillData.form2Data ? form2ToProfile(prefillData.form2Data) : {}),
-            ...(prefillData.form3Data ? form3ToProfile(prefillData.form3Data) : {}),
+            ...(prefillData.form1Data
+              ? form1ToProfile(prefillData.form1Data)
+              : {}),
+            ...(prefillData.form2Data
+              ? form2ToProfile(prefillData.form2Data)
+              : {}),
+            ...(prefillData.form3Data
+              ? form3ToProfile(prefillData.form3Data)
+              : {}),
           }
           fetch('/api/driver/profile', {
             method: 'PUT',
@@ -1751,40 +1817,48 @@ const HomeContent = () => {
               profileData,
               source: 'uploaded_resume',
             }),
-          }).then(async (response) => {
-            if (response.status === 409) {
-              // Conflict detected - notify Ava and show modal to user
-              const conflictData = await response.json()
-              console.warn('⚠️ [HOME] Profile conflict detected:', conflictData.conflicts)
-              
-              // Notify Ava about the conflict
-              handleResumeUploadEvent({
-                type: 'profile_conflict',
-                step: 'profile_sync',
-                data: {
+          })
+            .then(async (response) => {
+              if (response.status === 409) {
+                // Conflict detected - notify Ava and show modal to user
+                const conflictData = await response.json()
+                console.warn(
+                  '⚠️ [HOME] Profile conflict detected:',
+                  conflictData.conflicts,
+                )
+
+                // Notify Ava about the conflict
+                handleResumeUploadEvent({
+                  type: 'profile_conflict',
+                  step: 'profile_sync',
+                  data: {
+                    conflicts: conflictData.conflicts,
+                    existing: conflictData.existingProfile,
+                    incoming: conflictData.incomingProfile,
+                  },
+                  message: `⚠️ I noticed this resume is for a different person than your existing profile. Let me help you decide what to do.`,
+                })
+
+                // Store conflict data for modal
+                setProfileConflict({
                   conflicts: conflictData.conflicts,
                   existing: conflictData.existingProfile,
                   incoming: conflictData.incomingProfile,
-                },
-                message: `⚠️ I noticed this resume is for a different person than your existing profile. Let me help you decide what to do.`,
-              })
-              
-              // Store conflict data for modal
-              setProfileConflict({
-                conflicts: conflictData.conflicts,
-                existing: conflictData.existingProfile,
-                incoming: conflictData.incomingProfile,
-                profileData, // Store so we can retry if user chooses to replace
-              })
-              setShowProfileConflictModal(true)
-            } else if (response.ok) {
-              console.log('✅ [HOME] Profile synced from AI prefill')
-            }
-          }).catch((err) => {
-            console.warn('⚠️ [HOME] Profile sync failed (non-fatal):', err)
-          })
+                  profileData, // Store so we can retry if user chooses to replace
+                })
+                setShowProfileConflictModal(true)
+              } else if (response.ok) {
+                console.log('✅ [HOME] Profile synced from AI prefill')
+              }
+            })
+            .catch((err) => {
+              console.warn('⚠️ [HOME] Profile sync failed (non-fatal):', err)
+            })
         } catch (profileError) {
-          console.warn('⚠️ [HOME] Profile sync error (non-fatal):', profileError)
+          console.warn(
+            '⚠️ [HOME] Profile sync error (non-fatal):',
+            profileError,
+          )
         }
       }
 
@@ -1803,11 +1877,11 @@ const HomeContent = () => {
 
       // Force remount forms to pick up new data
       console.log(
-        '   🔄 Incrementing formResetKey to remount forms with new data'
+        '   🔄 Incrementing formResetKey to remount forms with new data',
       )
       setFormResetKey((prev) => prev + 1)
     },
-    [user?.address]
+    [user?.address],
   )
 
   // Handler for AI prefill error
@@ -1867,13 +1941,13 @@ const HomeContent = () => {
 
       const duplicateCheck = await checkDuplicateApplicationHash(
         user.address,
-        applicationHash
+        applicationHash,
       )
 
       if (duplicateCheck.exists) {
         console.warn('⚠️ [HOME] Duplicate application hash found in database')
         setSubmissionError(
-          'This application has already been submitted. Please modify your application data before resubmitting.'
+          'This application has already been submitted. Please modify your application data before resubmitting.',
         )
         setCurrentForm(1)
         if (typeof window !== 'undefined') {
@@ -1898,13 +1972,13 @@ const HomeContent = () => {
         user.address,
         combinedData,
         ipfsHash,
-        applicationHash // Pass application hash so persist endpoint can find the record
+        applicationHash, // Pass application hash so persist endpoint can find the record
       )
 
       if (!dbResult.success) {
         console.error('❌ [HOME] Failed to save to database:', dbResult.error)
         setSubmissionError(
-          'Failed to save application to database: ' + dbResult.error
+          'Failed to save application to database: ' + dbResult.error,
         )
         setIsSubmitting(false)
         return
@@ -1953,7 +2027,10 @@ const HomeContent = () => {
         })
         console.log('✅ [HOME] Cleared in-progress DOT state from profile')
       } catch (clearError) {
-        console.warn('⚠️ [HOME] Failed to clear DOT progress (non-fatal):', clearError)
+        console.warn(
+          '⚠️ [HOME] Failed to clear DOT progress (non-fatal):',
+          clearError,
+        )
       }
 
       // Mark as completed and show the submission confirmation screen
@@ -1972,98 +2049,127 @@ const HomeContent = () => {
   }, [form1Data, form2Data, form3Data, isSubmitting, user])
 
   // Save ALL forms to driver profile AND database - called on navigation and save button
-  const saveAllFormsToProfile = useCallback(async (showIndicator = true) => {
-    if (!user?.address) {
-      console.log('⚠️ [SAVE] No wallet address, skipping save')
-      return
-    }
-
-    try {
-      if (showIndicator) startSync()
-      console.log('💾 [SAVE] Saving all forms to driver profile and database...')
-      
-      // Import mappers dynamically
-      const { form1ToProfile, form2ToProfile, form3ToProfile } = await import('@/lib/dot-form-mapper')
-      
-      // Combine all form data into profile format
-      const profileData = {
-        ...(form1Data ? form1ToProfile(form1Data) : {}),
-        ...(form2Data ? form2ToProfile(form2Data) : {}),
-        ...(form3Data ? form3ToProfile(form3Data) : {}),
+  const saveAllFormsToProfile = useCallback(
+    async (showIndicator = true) => {
+      if (!user?.address) {
+        console.log('⚠️ [SAVE] No wallet address, skipping save')
+        return
       }
 
-      console.log('💾 [SAVE] Combined profile data:', profileData)
-
-      // 1. Save to unified driver profile (for cross-feature sharing)
-      const profileResponse = await fetch('/api/driver/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': user.address,
-        },
-        body: JSON.stringify({
-          profileData,
-          source: 'dot_application',
-        }),
-      })
-
-      if (!profileResponse.ok) {
-        const errorData = await profileResponse.json()
-        throw new Error(errorData.error || 'Failed to save to profile')
-      }
-
-      // 2. Save full form data to database (for cross-device persistence)
-      // This ensures data persists even if localStorage is cleared
       try {
-        const progressResponse = await fetch('/api/driver-applications/save-progress', {
-          method: 'POST',
+        if (showIndicator) startSync()
+        console.log(
+          '💾 [SAVE] Saving all forms to driver profile and database...',
+        )
+
+        // Import mappers dynamically
+        const { form1ToProfile, form2ToProfile, form3ToProfile } = await import(
+          '@/lib/dot-form-mapper'
+        )
+
+        // Combine all form data into profile format
+        const profileData = {
+          ...(form1Data ? form1ToProfile(form1Data) : {}),
+          ...(form2Data ? form2ToProfile(form2Data) : {}),
+          ...(form3Data ? form3ToProfile(form3Data) : {}),
+        }
+
+        console.log('💾 [SAVE] Combined profile data:', profileData)
+
+        // 1. Save to unified driver profile (for cross-feature sharing)
+        const profileResponse = await fetch('/api/driver/profile', {
+          method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
             'x-wallet-address': user.address,
           },
           body: JSON.stringify({
-            form1Data,
-            form2Data,
-            form3Data,
-            currentStep: currentForm,
+            profileData,
+            source: 'dot_application',
           }),
         })
 
-        if (!progressResponse.ok) {
-          // Log but don't fail - profile save succeeded, database save is bonus
-          const errorData = await progressResponse.json().catch(() => ({}))
-          console.warn('⚠️ [SAVE] Failed to save progress to database (non-fatal):', errorData.error || 'Unknown error')
-        } else {
-          console.log('✅ [SAVE] Progress saved to database')
+        if (!profileResponse.ok) {
+          const errorData = await profileResponse.json()
+          throw new Error(errorData.error || 'Failed to save to profile')
         }
-      } catch (dbError) {
-        // Database save failed, but profile save succeeded - log and continue
-        console.warn('⚠️ [SAVE] Database save error (non-fatal):', dbError)
-      }
 
-      console.log('✅ [SAVE] All forms saved to driver profile')
-      if (showIndicator) syncSuccess()
-      // Mark data as saved (no longer dirty)
-      lastSavedDataRef.current = { form1: form1Data, form2: form2Data, form3: form3Data }
-      setHasUnsavedChanges(false)
-      return true
-    } catch (error) {
-      console.error('❌ [SAVE] Failed to save forms:', error)
-      if (showIndicator) syncError()
-      return false
-    }
-  }, [user?.address, form1Data, form2Data, form3Data, currentForm, startSync, syncSuccess, syncError])
+        // 2. Save full form data to database (for cross-device persistence)
+        // This ensures data persists even if localStorage is cleared
+        try {
+          const progressResponse = await fetch(
+            '/api/driver-applications/save-progress',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-wallet-address': user.address,
+              },
+              body: JSON.stringify({
+                form1Data,
+                form2Data,
+                form3Data,
+                currentStep: currentForm,
+              }),
+            },
+          )
+
+          if (!progressResponse.ok) {
+            // Log but don't fail - profile save succeeded, database save is bonus
+            const errorData = await progressResponse.json().catch(() => ({}))
+            console.warn(
+              '⚠️ [SAVE] Failed to save progress to database (non-fatal):',
+              errorData.error || 'Unknown error',
+            )
+          } else {
+            console.log('✅ [SAVE] Progress saved to database')
+          }
+        } catch (dbError) {
+          // Database save failed, but profile save succeeded - log and continue
+          console.warn('⚠️ [SAVE] Database save error (non-fatal):', dbError)
+        }
+
+        console.log('✅ [SAVE] All forms saved to driver profile')
+        if (showIndicator) syncSuccess()
+        // Mark data as saved (no longer dirty)
+        lastSavedDataRef.current = {
+          form1: form1Data,
+          form2: form2Data,
+          form3: form3Data,
+        }
+        setHasUnsavedChanges(false)
+        return true
+      } catch (error) {
+        console.error('❌ [SAVE] Failed to save forms:', error)
+        if (showIndicator) syncError()
+        return false
+      }
+    },
+    [
+      user?.address,
+      form1Data,
+      form2Data,
+      form3Data,
+      currentForm,
+      startSync,
+      syncSuccess,
+      syncError,
+    ],
+  )
 
   // Handler for form navigation - auto-saves before navigating
-  const handleFormNavigation = useCallback(async (formNumber: number) => {
-    // Auto-save all forms before navigation
-    await saveAllFormsToProfile()
-    
-    setCurrentForm(formNumber)
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-  }, [saveAllFormsToProfile])
+  const handleFormNavigation = useCallback(
+    async (formNumber: number) => {
+      // Auto-save all forms before navigation
+      await saveAllFormsToProfile()
+
+      setCurrentForm(formNumber)
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    },
+    [saveAllFormsToProfile],
+  )
 
   // Handler for navigating to employment verification
   const handleNavigateToEmploymentVerification = useCallback(() => {
@@ -2115,7 +2221,8 @@ const HomeContent = () => {
             theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
           }`}
         >
-          Your driver application is being saved to your profile. This will only take a moment.
+          Your driver application is being saved to your profile. This will only
+          take a moment.
         </p>
 
         <div
@@ -2289,7 +2396,7 @@ const HomeContent = () => {
       journey={journeyState}
       requestHelp={handleHelpRequest}
       primerSeen={primerSeen}
-      setPrimerSeen={handleSetPrimerSeen}
+      setPrimerSeen={setPrimerSeen}
       notifyResumeUploadEvent={handleResumeUploadEvent}
     >
       <div className='min-h-screen overflow-x-hidden relative'>
@@ -2370,6 +2477,7 @@ const HomeContent = () => {
           mvrWalletAddress={user?.address || null}
           tHasUnread={avaHasUnread}
           onTClick={() => setIsAvaCollapsed(false)}
+          vereeTokens={0} // TODO: Replace with actual token balance when implemented
         />
 
         {/* User Status Modal */}
@@ -2405,11 +2513,10 @@ const HomeContent = () => {
               resumeUploadEvent={resumeUploadEvent}
               mode='sidebar'
               isCollapsed={isAvaCollapsed}
-              onToggleCollapse={() => setIsAvaCollapsed(!isAvaCollapsed)}
+              onToggleCollapse={toggleAvaCollapse}
               onUnreadChange={setAvaHasUnread}
               onLoadingChange={(isLoading, message) => {
-                setAvaIsWorking(isLoading)
-                if (message) setAvaWorkingMessage(message)
+                setAvaWorking(isLoading, message)
               }}
             />
 
@@ -2422,9 +2529,7 @@ const HomeContent = () => {
         )}
 
         {/* Main Content */}
-        <div
-          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-8 relative z-0"
-        >
+        <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-8 relative z-0'>
           {/* Loading Screen - Show while fetching user role/data or switching roles */}
           {user && (isRoleLoading || isSettingRole) && !showRoleSelection && (
             <LoadingScreen
@@ -2453,11 +2558,18 @@ const HomeContent = () => {
             userRole === 'employer' &&
             !isRoleLoading &&
             !currentPage && (
-              <EmployerHub 
+              <EmployerHub
                 walletAddress={user.address}
                 onNavigate={(page) => {
                   // Map hub navigation to page navigation
-                  if (page === 'post-job' || page === 'jobs' || page === 'applicants' || page === 'find-drivers' || page === 'company-profile' || page === 'reports') {
+                  if (
+                    page === 'post-job' ||
+                    page === 'jobs' ||
+                    page === 'applicants' ||
+                    page === 'find-drivers' ||
+                    page === 'company-profile' ||
+                    page === 'reports'
+                  ) {
                     setCurrentPage(page)
                   }
                 }}
@@ -2499,7 +2611,14 @@ const HomeContent = () => {
                     <DriverHub
                       userAddress={user.address}
                       onNavigate={(page) => {
-                        if (page === 'resume' || page === 'dotapp' || page === 'jobs' || page === 'applications' || page === 'mvr') {
+                        if (
+                          page === 'resume' ||
+                          page === 'dotapp' ||
+                          page === 'jobs' ||
+                          page === 'applications' ||
+                          page === 'mvr' ||
+                          page === 'veree'
+                        ) {
                           setCurrentPage(page)
                         }
                       }}
@@ -2587,7 +2706,9 @@ const HomeContent = () => {
                           setHasResume(true)
                           // Store the IPFS hash for later prefill use
                           if (payload?.finalResult?.ipfsHash) {
-                            setLatestResumeIpfsHash(payload.finalResult.ipfsHash)
+                            setLatestResumeIpfsHash(
+                              payload.finalResult.ipfsHash,
+                            )
                           }
                           // Note: analysis_ready event is now triggered by ResumeUploadWithVerification itself
                           // after blockchain verification completes, so we don't need to trigger it here
@@ -2640,6 +2761,10 @@ const HomeContent = () => {
                       onBack={() => setCurrentPage(null)}
                     />
                   </div>
+                )}
+
+                {currentPage === 'veree' && (
+                  <VereeView onBack={() => handleNavigation('hub')} />
                 )}
 
                 {currentPage === 'dotapp' && (
@@ -2737,154 +2862,25 @@ const HomeContent = () => {
       </div>
 
       {/* Profile Conflict Modal */}
-      {showProfileConflictModal && profileConflict && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className={`relative w-full max-w-lg rounded-2xl border p-6 shadow-2xl ${
-            theme === 'dark'
-              ? 'bg-brand-sage-light border-brand-mint/30'
-              : 'bg-white border-gray-200'
-          }`}>
-            <h3 className={`text-xl font-semibold mb-4 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}>
-              Profile Conflict Detected
-            </h3>
-            
-            <p className={`text-sm mb-4 ${
-              theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
-            }`}>
-              This resume appears to be for a different person than your existing profile:
-            </p>
-
-            <div className={`mb-4 p-4 rounded-lg border ${
-              theme === 'dark'
-                ? 'bg-brand-sage/20 border-brand-mint/20'
-                : 'bg-gray-50 border-gray-200'
-            }`}>
-              {profileConflict.conflicts.map((conflict, idx) => (
-                <div key={idx} className={`text-sm mb-2 ${
-                  theme === 'dark' ? 'text-amber-300' : 'text-amber-700'
-                }`}>
-                  ⚠️ {conflict}
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className={`p-3 rounded-lg border ${
-                theme === 'dark'
-                  ? 'bg-brand-sage/30 border-brand-mint/20'
-                  : 'bg-gray-50 border-gray-200'
-              }`}>
-                <div className={`text-xs font-semibold mb-1 ${
-                  theme === 'dark' ? 'text-brand-cream/50' : 'text-gray-500'
-                }`}>EXISTING PROFILE</div>
-                <div className={`text-sm ${
-                  theme === 'dark' ? 'text-brand-cream' : 'text-gray-800'
-                }`}>
-                  {profileConflict.existing.name || 'No name'}
-                </div>
-                {profileConflict.existing.cdlNumber && (
-                  <div className={`text-xs mt-1 ${
-                    theme === 'dark' ? 'text-brand-cream/60' : 'text-gray-600'
-                  }`}>
-                    CDL: {profileConflict.existing.cdlNumber}
-                  </div>
-                )}
-                {profileConflict.existing.lastUpdatedFrom && (
-                  <div className={`text-xs mt-1 ${
-                    theme === 'dark' ? 'text-brand-cream/50' : 'text-gray-500'
-                  }`}>
-                    From: {profileConflict.existing.lastUpdatedFrom}
-                  </div>
-                )}
-              </div>
-              
-              <div className={`p-3 rounded-lg border ${
-                theme === 'dark'
-                  ? 'bg-amber-500/10 border-amber-500/30'
-                  : 'bg-amber-50 border-amber-200'
-              }`}>
-                <div className={`text-xs font-semibold mb-1 ${
-                  theme === 'dark' ? 'text-amber-300/70' : 'text-amber-700'
-                }`}>NEW RESUME</div>
-                <div className={`text-sm ${
-                  theme === 'dark' ? 'text-amber-300' : 'text-amber-800'
-                }`}>
-                  {profileConflict.incoming.name || 'No name'}
-                </div>
-                {profileConflict.incoming.cdlNumber && (
-                  <div className={`text-xs mt-1 ${
-                    theme === 'dark' ? 'text-amber-300/70' : 'text-amber-700'
-                  }`}>
-                    CDL: {profileConflict.incoming.cdlNumber}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  // Keep existing - just close modal
-                  setShowProfileConflictModal(false)
-                  setProfileConflict(null)
-                  // Still mark as prefilled since forms were filled
-                  setHasPrefilled(true)
-                  setShowPrefillUpload(false)
-                  setHasResume(true)
-                }}
-                className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                  theme === 'dark'
-                    ? 'bg-brand-sage/30 text-brand-cream hover:bg-brand-sage/50'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Keep Existing Profile
-              </button>
-              <button
-                onClick={async () => {
-                  // Replace with new - retry the profile update with force flag
-                  if (!user?.address || !profileConflict) return
-                  
-                  try {
-                    const response = await fetch('/api/driver/profile', {
-                      method: 'PUT',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'x-wallet-address': user.address,
-                      },
-                      body: JSON.stringify({
-                        profileData: profileConflict.profileData,
-                        source: 'uploaded_resume',
-                        force: true, // Force overwrite
-                      }),
-                    })
-
-                    if (response.ok) {
-                      console.log('✅ [HOME] Profile replaced with new resume data')
-                      setShowProfileConflictModal(false)
-                      setProfileConflict(null)
-                      setHasPrefilled(true)
-                      setShowPrefillUpload(false)
-                      setHasResume(true)
-                    } else {
-                      const error = await response.json().catch(() => ({}))
-                      alert(`Failed to update profile: ${error.error || 'Unknown error'}`)
-                    }
-                  } catch (err) {
-                    console.error('Failed to replace profile:', err)
-                    alert('Failed to update profile. Please try again.')
-                  }
-                }}
-                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 transition-all"
-              >
-                Replace with New Resume
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ProfileConflictModal
+        isOpen={showProfileConflictModal}
+        conflict={profileConflict}
+        userAddress={user?.address ?? null}
+        onKeepExisting={() => {
+          setShowProfileConflictModal(false)
+          setProfileConflict(null)
+          setHasPrefilled(true)
+          setShowPrefillUpload(false)
+          setHasResume(true)
+        }}
+        onReplaceWithNew={() => {
+          setShowProfileConflictModal(false)
+          setProfileConflict(null)
+          setHasPrefilled(true)
+          setShowPrefillUpload(false)
+          setHasResume(true)
+        }}
+      />
     </AssistantBridgeProvider>
   )
 }

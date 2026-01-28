@@ -1,8 +1,8 @@
-# VERIFY Token Strategy & Tokenomics
+# Veree Token Strategy & Tokenomics
 
 ## Executive Summary
 
-The VERIFY token is designed as a dual-purpose asset that enhances the DriverAppChain platform without compromising user experience. Users earn tokens through paid platform activities (USDC payments), creating a revenue-backed token with natural anti-spam protection and genuine utility.
+The **Veree** token is designed as a dual-purpose asset that enhances the DriverAppChain platform without compromising user experience. **Only drivers** earn tokens—through their own paid platform activities (USDC). Employer spend generates tokens that flow into a platform bucket (treasury, liquidity, or random driver perks), not to employers, keeping B2B relationships simple and avoiding token/compliance complexity for companies.
 
 ## Core Principles
 
@@ -12,126 +12,209 @@ The VERIFY token is designed as a dual-purpose asset that enhances the DriverApp
 - Resume verification: $2.99 USDC
 - Premium subscriptions: $9.99/month USDC
 - Employer plans: $199/month USDC
-- **VERIFY tokens are earned rewards, not payment requirements**
+- **Veree tokens are earned rewards, not payment requirements**
 
-### 2. Anti-Gaming Mechanism
+### 2. Driver-Only Earning
 
-- **Tokens can ONLY be earned through paid USDC actions**
-- Prevents spam, bot farming, and Sybil attacks
-- Every token represents real economic activity
-- Natural cost basis of ~$0.30 per token minimum
+- **Only drivers receive Veree tokens as rewards.** Employers never earn or receive tokens from their spend.
+- Keeps employer relationships clean: they pay USDC for verification/services without token accounting, tax, or compliance friction.
+- Avoids complicating employer business models or creating reasons for them to avoid the platform.
 
-### 3. Low Supply Scarcity Model
+### 3. Anti-Gaming Mechanism
 
-- **Total supply: 10 million tokens**
+- **Tokens can ONLY be earned through paid USDC actions** (by drivers) or allocated to the employer-spend bucket.
+- Prevents spam, bot farming, and Sybil attacks.
+- Every token represents real economic activity.
+
+### 4. Low Supply Scarcity Model
+
+- **Total supply: 15 million tokens**
 - Creates premium psychology vs. billion-token projects
 - Follows Bitcoin scarcity principle
 - Higher price per token at equivalent market caps
 
 ## Token Distribution
 
-### Total Supply Allocation (10M tokens)
+### Total Supply Allocation (15M tokens)
 
-| Allocation        | Amount    | Percentage | Purpose                               |
-| ----------------- | --------- | ---------- | ------------------------------------- |
-| User Rewards      | 6M tokens | 60%        | Earned through platform usage         |
-| Platform Treasury | 2M tokens | 20%        | Buybacks, partnerships, liquidity     |
-| Team Allocation   | 1M tokens | 10%        | Founders + employees (4-year vesting) |
-| DEX Liquidity     | 1M tokens | 10%        | Initial trading liquidity             |
+| Allocation        | Amount    | Percentage | Purpose                                       |
+| ----------------- | --------- | ---------- | --------------------------------------------- |
+| Driver Rewards    | 9M tokens | 60%        | Earned by drivers through platform usage      |
+| Platform Treasury | 3M tokens | 20%        | Buybacks, partnerships, liquidity             |
+| Founders          | 2M tokens | ~13.3%     | 1M each to two founders (allocated at launch) |
+| DEX Liquidity     | 1M tokens | ~6.7%      | Initial trading liquidity                     |
 
-### Team Vesting Schedule
+### Founder Allocation
 
-- **4-year vesting with 1-year cliff**
-- Year 1: 0% unlocked (commitment period)
-- Year 2: 25% unlocked
-- Year 3: 50% unlocked
-- Year 4: 75% unlocked
-- Year 5: 100% unlocked
+- **Two founders: 1M Veree each** (2M total), allocated from token launch.
+- **1-year lock**: Founders cannot transfer tokens for the first 12 months.
+- **2-year vesting after lock**: 50% unlocks at end of Year 2; remaining 50% unlocks at end of Year 3.
+- We are a **real-world application** with blockchain and token capability—not a crypto-first project. The token is something we offer for free as a bonus to drivers. Founders hold tokens as fair reward for building the platform.
+
+| Year | Cumulative Unlocked | Notes                   |
+| ---- | ------------------- | ----------------------- |
+| 1    | 0%                  | Lock period (no access) |
+| 2    | 50%                 | First half vests        |
+| 3    | 100%                | Fully vested            |
 
 ## Token Earning Mechanics
 
-### Dynamic Token Reward Adjustment
+### Smooth Decay Emission Model (Bitcoin-Inspired)
 
-| Current Token Price | USDC Spent | Tokens Earned | USDC Value Received |
-| ------------------- | ---------- | ------------- | ------------------- |
-| $0.30               | $2.99      | 10.0 tokens   | $3.00               |
-| $1.00               | $2.99      | 3.0 tokens    | $3.00               |
-| $3.00               | $2.99      | 1.0 tokens    | $3.00               |
-| $10.00              | $2.99      | 0.3 tokens    | $3.00               |
-| $30.00              | $2.99      | 0.1 tokens    | $3.00               |
-| $100.00             | $2.99      | 0.03 tokens   | $3.00               |
+Veree uses a **smooth decay model** for token rewards—similar to Bitcoin's diminishing block rewards, but with gradual decay instead of sudden halvings. This creates:
 
-**Key insight**: As token price rises, users get fewer tokens but same dollar value. Early adopters who earned 10 tokens at $0.30 benefit massively if token reaches $100+ (their 10 tokens worth $1,000+).
+- **Fairness**: Early users are rewarded, but not drastically more than slightly later users
+- **Scarcity**: Rewards decrease over time, creating urgency to join sooner
+- **Sustainability**: The reward pool lasts across millions of transactions
 
-### Dynamic Adjustment Formula
+### The Formula
 
 ```
-Tokens Earned = Target USDC Value ÷ Current Token Price
-Target USDC Value = $3.00 for resume verification
+reward = baseReward × (remainingPool / totalPool)^0.5
+
+Where:
+- baseReward = 10 tokens (starting reward for resume verification)
+- totalPool = 9,000,000 (driver rewards allocation)
+- remainingPool = totalPool - tokensAlreadyDistributed
 ```
 
-### Premium Service Token Earnings
+### Decay Curve
 
-| Service               | USDC Cost | Tokens at $0.30 | Tokens at $10 | Tokens at $100 |
-| --------------------- | --------- | --------------- | ------------- | -------------- |
-| Resume Verification   | $2.99     | 10.0 tokens     | 0.3 tokens    | 0.03 tokens    |
-| Premium Subscription  | $9.99     | 33.3 tokens     | 1.0 tokens    | 0.1 tokens     |
-| Employer Verification | $19.99    | 66.6 tokens     | 2.0 tokens    | 0.2 tokens     |
+| Tokens Distributed | % of Pool Used | Reward per Transaction |
+| ------------------ | -------------- | ---------------------- |
+| 0                  | 0%             | **10.00 tokens**       |
+| 100,000            | 1%             | 9.94 tokens            |
+| 500,000            | 5.5%           | 9.72 tokens            |
+| 1,000,000          | 11%            | 9.43 tokens            |
+| 2,000,000          | 22%            | 8.82 tokens            |
+| 3,000,000          | 33%            | 8.16 tokens            |
+| 4,500,000          | 50%            | 7.07 tokens            |
+| 6,000,000          | 67%            | 5.77 tokens            |
+| 7,500,000          | 83%            | 4.08 tokens            |
+| 8,500,000          | 94%            | 2.36 tokens            |
+| 8,900,000          | 99%            | 1.05 tokens            |
+| 8,990,000          | 99.9%          | 0.33 tokens            |
+
+**Key characteristics:**
+
+- First user earns ~10 tokens
+- Second user earns ~9.9999 tokens (barely different)
+- Gradual decline over hundreds of thousands of transactions
+- Rewards approach but never reach zero (like Bitcoin mining)
+- Goes into decimals for late adopters
+
+### Service-Based Rewards
+
+Base rewards scale with transaction value:
+
+| Service              | USDC Cost | Base Reward (at 0% distributed) |
+| -------------------- | --------- | ------------------------------- |
+| Resume Verification  | $2.99     | 10 tokens                       |
+| Premium Subscription | $9.99     | 33 tokens                       |
+
+_Actual rewards decrease based on the decay formula as more tokens are distributed._
+
+### Why Smooth Decay vs. Halvings?
+
+| Aspect      | Smooth Decay (Veree)     | Halvings (Bitcoin-style)    |
+| ----------- | ------------------------ | --------------------------- |
+| Fairness    | Gradual, no cliff edges  | Sudden 50% drops            |
+| User 1 vs 2 | Nearly identical rewards | Identical until halving     |
+| Psychology  | Steady urgency           | "Halving event" speculation |
+| Simplicity  | Continuous formula       | Era-based tracking          |
+
+We chose smooth decay because **it's fairer**—the first user shouldn't get dramatically more than the hundredth user.
+
+### Employer Spend → Platform Bucket (no tokens to employers)
+
+When employers pay USDC (e.g. verification, employer plans), tokens are **not** awarded to the employer. Instead, the same formula generates tokens that go into a **platform bucket**. This bucket is used only for:
+
+- **Treasury** — buybacks, partnerships, runway
+- **Future liquidity pools** — DEX liquidity, stability
+- **Random driver perks** — rewards to drivers (e.g. surprise bonuses, lotteries, "driver of the month")
+
+Employers never hold or see tokens—they just pay USDC. This keeps their accounting simple and removes any friction from the B2B relationship.
 
 ### Anti-Spam Protection
 
 - **Every token earned requires real USDC expenditure**
 - No free claiming or farming possible
 - Sustainable token distribution tied to revenue
-- Cost basis provides natural price floor
+- Scarcity from day one
+
+## Token Value & Pricing
+
+### Pre-Trading Phase: No Market Price
+
+**Important**: Until DEX trading is enabled, Veree tokens have **no market price**. They are:
+
+- Accumulated in user wallets
+- Not tradeable
+- Represent future value, not current value
+
+### How Token Price Gets Established
+
+1. **Revenue accumulation**: Platform collects USDC from user payments
+2. **Liquidity provision**: Platform uses portion of revenue to create DEX liquidity pool
+3. **Price discovery**: Initial price = USDC in pool ÷ Tokens in pool
+4. **Market trading**: Supply/demand determines ongoing price
+
+Example:
+
+- Platform puts 1M tokens + $100K USDC in liquidity pool
+- Initial trading price = $0.10 per token
+- Market then determines price based on buy/sell activity
+
+### Revenue-Backed Model
+
+This is a **revenue-backed token**:
+
+- Every token earned represents real USDC revenue
+- Liquidity is funded by actual business income
+- Not speculation-driven or VC-funded
+- Sustainable economics
 
 ## Economic Model
 
-### Revenue-Backed Token Value
-
-- Each token represents minimum $0.30 in platform revenue
-- Token supply grows with platform success
-- Natural correlation between usage and token value
-- Sustainable economics vs. speculative tokens
-
-### Market Dynamics
+### The Flywheel
 
 ```
-Platform Growth → More USDC Revenue → More Token Earning →
-Higher Token Demand → Increased Token Value → More User Attraction →
-Platform Growth (flywheel effect)
+Platform Growth → More USDC Revenue → Treasury Grows →
+DEX Liquidity Funded → Token Has Market Value →
+Early Users Rewarded → More User Attraction →
+Platform Growth (cycle repeats)
 ```
 
-### Cost Basis Protection
+### Why This Works
 
-- Users spend $2.99 to earn 10 tokens
-- Unlikely to sell below $2.99 (taking a loss)
-- Creates natural support levels
-- Unlike free tokens with no floor value
+1. **Real revenue**: Tokens only generated when real money is spent
+2. **Scarcity**: 15M cap + decay creates premium
+3. **Backing**: Liquidity funded by actual revenue
+4. **Utility**: Tokens have platform benefits (discounts, governance)
 
 ## Launch Strategy
 
-### Phase 1: Internal Accumulation (Months 1-6)
+### Phase 1: Internal Accumulation (Current)
 
 - **No DEX trading available**
 - Users earn tokens through platform usage
-- Build organic supply of 1-2M tokens
-- Establish utility and user behavior patterns
+- Build organic supply through real activity
+- Platform accumulates revenue
 - Focus on product development without speculation noise
 
-### Phase 2: Strategic DEX Launch (Month 6+)
+### Phase 2: DEX Launch (Future)
 
-- **Platform provides initial liquidity**
+- **Platform provides initial liquidity** from accumulated revenue
 - Proven utility before speculation begins
 - Real user base ready to trade
 - Controlled price discovery
 - Treasury management for stability
 
-### Pre-Launch Metrics to Achieve
+### Pre-Launch Goals
 
-- 1,000+ active users earning tokens
-- $50k+ monthly USDC revenue
-- 1M+ tokens earned by real users
+- Strong active user base earning tokens
+- Healthy monthly USDC revenue
+- Significant tokens earned by real users
 - Clear token utility patterns established
 
 ## DEX Trading Strategy
@@ -139,17 +222,16 @@ Platform Growth (flywheel effect)
 ### Why Allow DEX Trading
 
 - **Real price discovery** based on platform metrics
-- **Liquidity for users** - monetize platform activity
-- **Marketing amplification** - token price creates buzz
-- **Investment appeal** - attracts serious DeFi attention
-- **Treasury benefits** - trading fees and market operations
+- **Liquidity for users** — drivers can monetize platform activity
+- **Marketing amplification** — token price creates buzz
+- **Treasury benefits** — trading fees and market operations
 
-### Initial Liquidity Provision
+### Liquidity Provision
 
-- Platform provides: 1M VERIFY + $300k USDC
-- Starting price: ~$0.30 (matches cost basis)
-- Maintains 20-30% of total liquidity
-- Prevents whale manipulation
+- Platform will provide initial liquidity when DEX trading begins
+- Funded by accumulated platform revenue
+- Exact amounts determined by revenue and growth at that time
+- Goal: enough liquidity for fair price discovery without overcommitting
 
 ### Treasury Market Operations
 
@@ -166,7 +248,6 @@ Platform Growth (flywheel effect)
 - **Priority support**: Token holders get enhanced customer service
 - **Governance rights**: Vote on platform features and updates
 - **Exclusive access**: Early access to new features
-- **Employer benefits**: Companies can buy tokens for discounted services
 
 ### Future Utility Expansion
 
@@ -192,12 +273,6 @@ Platform Growth (flywheel effect)
 - **Mitigation**: Strong utility features create ongoing demand
 - **Strategy**: Treasury operations maintain stability
 
-#### Market Manipulation
-
-- **Issue**: Large holders manipulating price
-- **Mitigation**: Controlled liquidity reduces impact
-- **Protection**: Gradual distribution prevents whale concentration
-
 #### Regulatory Concerns
 
 - **Issue**: Token regulation uncertainty
@@ -210,7 +285,7 @@ Platform Growth (flywheel effect)
 
 - **Verification**: Cryptographic proof vs. self-reported claims
 - **Ownership**: Users control their data and credentials
-- **Incentives**: Users earn value through platform activity
+- **Incentives**: Drivers earn value through platform activity; employers stay token-free (no accounting/compliance friction)
 - **Trust**: Immutable employment history
 
 ### vs. Other Crypto Projects
@@ -222,36 +297,25 @@ Platform Growth (flywheel effect)
 
 ## Financial Projections
 
-### Token Value Scenarios
+### Market Cap Scenarios (15M supply)
 
-#### Conservative Growth
+| Token Price | Market Cap | Notes                  |
+| ----------- | ---------- | ---------------------- |
+| $0.10       | $1.5M      | Early DEX launch       |
+| $1.00       | $15M       | Established user base  |
+| $5.00       | $75M       | Strong platform growth |
+| $20.00      | $300M      | Major market adoption  |
 
-- **Launch**: $0.30/token (cost basis)
-- **Year 1**: $1.00/token ($100k monthly revenue)
-- **Year 2**: $5.00/token ($500k monthly revenue)
-- **Year 3**: $20/token ($2M monthly revenue)
-
-#### Market Cap Analysis
-
-- **At $1/token**: $10M market cap
-- **At $5/token**: $50M market cap
-- **At $20/token**: $200M market cap
-- **Comparison**: Reasonable for successful hiring platform
-
-### Revenue Impact
-
-- **Token earning represents platform usage**
-- **Higher token value = more user attraction**
-- **Trading fees supplement platform revenue**
-- **Treasury operations provide additional funding**
+_Actual price determined by market at DEX launch, backed by platform revenue._
 
 ## Implementation Strategy
 
 ### Smart Contract Features
 
-- Dynamic token reward calculation based on price feeds
+- Smooth decay token reward calculation
+- Track total tokens distributed for decay formula
 - Anti-spam protection (USDC payment required)
-- Team vesting (4-year schedule with 1-year cliff)
+- Founder allocation (2M at launch, 1M each; 1-year lock, 2-year vest)
 - Treasury management functions
 
 ### Communication Framework
@@ -264,10 +328,10 @@ Platform Growth (flywheel effect)
 
 - Monthly USDC revenue growth
 - Active users earning tokens
-- Token price stability vs. platform fundamentals
+- Total tokens distributed (decay curve progress)
 - User retention and engagement
 - Employer adoption rates
 
 ---
 
-_VERIFY token combines sustainable platform economics with unlimited market speculation potential. Early users get maximum token quantities while the platform maintains user-friendly policies and revenue-backed fundamentals. This creates the optimal environment for both platform growth and token appreciation._
+_Veree token combines sustainable platform economics with market potential. Early users earn the most tokens through the smooth decay model while the platform maintains user-friendly policies and revenue-backed fundamentals. This creates the optimal environment for both platform growth and token appreciation._

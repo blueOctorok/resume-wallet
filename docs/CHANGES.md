@@ -2,6 +2,183 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🪙 **UPDATE: Smooth Decay Emission Model** (January 2026)
+
+**Replaced price-based reward formula with Bitcoin-inspired smooth decay model.**
+
+### Key Changes
+
+- **Smooth decay formula**: `reward = 10 × (remaining / total)^0.5`
+- **Starting reward**: 10 tokens for resume verification
+- **Gradual decrease**: First user gets ~10, second gets ~9.9999, slowly declines to decimals
+- **No price until DEX**: Tokens have no market price until liquidity is provided
+- **Revenue-backed**: Platform revenue funds eventual DEX liquidity
+
+### Why Smooth Decay?
+
+- Fairer than halvings (no sudden 50% drops)
+- Creates scarcity from day one
+- Early adopters rewarded, but not unfairly vs. slightly later users
+
+### Files Changed
+
+- `docs/TOKEN_STRATEGY.md` (complete rewrite of emission mechanics)
+- `src/components/VereeView.tsx` (updated whitepaper with decay curve)
+- `docs/VEREE_EXPLAINER_FOR_BOSS.md` (new executive summary document)
+- `docs/CHANGES.md` (this entry)
+
+---
+
+## 🪙 **ENHANCE: Veree Whitepaper + Hub Tokens Section** (January 2026)
+
+**Made the Veree whitepaper more professional with tokenomics details; added Veree Tokens section to Driver Hub.**
+
+### VereeView Enhancements
+
+- **Key Stats Row**: 4 stat cards (Total Supply, Driver Rewards %, Launch Price, Cost Basis)
+- **Visual Distribution Bars**: Color-coded progress bars showing token allocation
+- **Distribution Table**: Detailed breakdown with amounts and percentages
+- **How Rewards Are Calculated**: Formula box + dynamic rewards table showing token earnings at different prices
+- **Vesting Timeline Visual**: Color-coded year bars for founder vesting
+- **Anti-Gaming Protection**: Bullet points explaining spam prevention
+- **Utility Cards**: Grid layout for token use cases
+
+### Driver Hub Changes
+
+- **Veree Tokens Section**: New card showing token balance (0 for now) with "Coming Soon" badge
+- **Learn More Link**: Navigates to the Veree whitepaper view
+- **Token Button Hidden for Employers**: Only drivers see the Token nav button
+
+### Files Changed
+
+- `src/components/VereeView.tsx` (enhanced with professional tokenomics)
+- `src/components/DriverHub.tsx` (added Veree Tokens section)
+- `src/components/Navigation.tsx` (Token button only for drivers)
+- `docs/CHANGES.md` (this entry)
+
+---
+
+## 🧹 **REFACTOR: Extract AvA Assistant state into useAvaAssistant hook** (January 2026)
+
+**Extracted AvA assistant state management from page.tsx into a custom hook.**
+
+### What This Does
+
+- Created `useAvaAssistant` hook with all AvA-related state:
+  - Collapse state (isAvaCollapsed)
+  - Unread indicator (avaHasUnread)
+  - Loading state (avaIsWorking, avaWorkingMessage)
+  - Help request state
+  - Primer state (primerSeen, primerRequest, primerTriggered)
+- Removed ~8 useState calls and ~3 callbacks from page.tsx
+- Same behavior, just organized
+
+### Files Changed
+
+- `src/hooks/useAvaAssistant.ts` (new)
+- `src/app/page.tsx` (uses hook instead of inline state)
+- `docs/CHANGES.md` (this entry)
+
+---
+
+## 🧹 **REFACTOR: Extract ProfileConflictModal from page.tsx** (January 2026)
+
+**Started breaking up the massive page.tsx (2,900+ lines) into components.**
+
+### What This Does
+
+- Extracted `ProfileConflictModal` (~120 lines) from `page.tsx` into its own component
+- First step in ongoing refactoring to keep page.tsx clean
+
+### Files Changed
+
+- `src/app/page.tsx` (removed inline modal, added dynamic import)
+- `src/components/ProfileConflictModal.tsx` (new)
+- `docs/CHANGES.md` (this entry)
+
+---
+
+## 🪙 **FEATURE: Veree Token Whitepaper View** (January 2026)
+
+**Added Veree token whitepaper as an SPA view (not a separate route).**
+
+### What This Does
+
+- **SPA view** (not separate route): Veree page is now a view within the main app, accessed via navigation like Hub/Resume/DOT
+- Explains the Veree token in plain English
+- Covers: what it is, how you earn, early adopter advantage, who earns, supply distribution, founder commitment, utility, and important notes
+- No crypto jargon—written for drivers who may not know crypto
+- Added "Token" button in Navigation (bottom row, next to theme toggle)
+
+### Token Strategy Updates
+
+- **Founder vesting**: 1-year lock + 2-year vesting (50% Year 2, 50% Year 3)
+- **Removed aggressive liquidity numbers**: No longer specifying $300k USDC; will provide liquidity "when ready, amount TBD"
+- **Early adopter advantage**: Emphasized that earliest users earn most tokens, amounts decrease over time
+- **Cleaned up doc**: Removed corrupted lines, simplified language
+
+### Files Changed
+
+- `src/components/VereeView.tsx` (new component)
+- `src/components/Navigation.tsx` (Token link now uses SPA navigation, not route)
+- `src/app/page.tsx` (added 'veree' page type, renders VereeView)
+- `docs/TOKEN_STRATEGY.md` (updated vesting, removed specific liquidity numbers)
+- `docs/CHANGES.md` (this entry)
+
+---
+
+## 📄 **DOC: Veree – No Founder Vesting; Real-World App Positioning** (January 2026)
+
+**Updated `docs/TOKEN_STRATEGY.md`: founder vesting removed; positioning as real-world app with blockchain/token, not crypto-first.**
+
+- **No vesting**: Founders hold 1M Veree each from launch. No cliff, no vesting schedule.
+- **Positioning**: We are a **real-world application** with blockchain and token capability—not a crypto-first project. Nobody expects a token; it is something we offer for free as a bonus. We do not need crypto-style vesting to "build trust." Founders hold from the start as fair reward for building the platform.
+- Smart Contract section: founder allocation now "no vesting."
+- **Manual edit**: Delete the obsolete vesting bullet in Founder Allocation (line ~51: `- **Vesting**: from the start (no separate "team" pool beyond this).`) if it still appears.
+
+### Files Changed
+
+- `docs/TOKEN_STRATEGY.md`
+- `docs/CHANGES.md` (this entry)
+
+---
+
+## 📄 **DOC: Token Renamed to Veree, 15M Supply, Founder Allocation** (January 2026)
+
+**Updated `docs/TOKEN_STRATEGY.md`: token name Veree (not VERIFY), 15M total supply, 2M to founders (1M each at launch).**
+
+- Renamed VERIFY → **Veree** throughout.
+- Total supply **15M** (was 10M). Distribution: Driver Rewards 9M (60%), Treasury 3M (20%), Founders 2M (~13.3%, 1M each), DEX Liquidity 1M (~6.7%).
+- **Founders**: two founders hold 1M Veree each from launch (allocated at start). Doc notes optional lock/vesting for credibility.
+- Market cap examples updated for 15M supply.
+
+### Files Changed
+
+- `docs/TOKEN_STRATEGY.md`
+- `docs/CHANGES.md` (this entry)
+
+---
+
+## 📄 **DOC: VERIFY Token Strategy – Driver-Only Earning, Employer Bucket** (January 2026)
+
+**Updated `docs/TOKEN_STRATEGY.md` so only drivers earn VERIFY tokens; employer spend feeds a platform bucket.**
+
+### Changes
+
+- **Driver-only earning**: Only drivers receive tokens as rewards. Employers never earn or receive tokens from their spend (avoids complicating employer business models and token/accounting friction).
+- **Employer spend bucket**: When employers pay USDC, tokens are still generated by the same formula but go into a **platform bucket**, not to employers. Bucket uses:
+  - Treasury (buybacks, partnerships)
+  - Future liquidity pools
+  - Random driver perks (e.g. surprise bonuses, lotteries)
+- **Docs**: Executive summary, Core Principles (new “Driver-Only Earning”), Token Distribution (“Driver Rewards”), Premium tables split into “Driver Token Earnings” vs “Employer Spend → Platform Bucket” with example allocation.
+
+### Files Changed
+
+- `docs/TOKEN_STRATEGY.md`
+- `docs/CHANGES.md` (this entry)
+
+---
+
 ## 💳 **FEATURE: Coinbase Onramp - Buy USDC In-App** (January 2026)
 
 **Added ability for users to buy USDC directly in their wallet using Coinbase Onramp.**
@@ -9,6 +186,7 @@ This file tracks major modifications made to the ResumeWallet codebase.
 ### What This Does
 
 Users can now click "Buy USDC" in their wallet card and purchase USDC with:
+
 - Credit/debit card
 - Apple Pay
 - Google Pay
@@ -61,6 +239,7 @@ See `docs/COINBASE_ONRAMP_SETUP.md` for detailed setup instructions.
 **Fixed PDF export layout to match the clean preview in Resume Builder, and replaced the Hub resume modal with a full preview.**
 
 ### Problem
+
 1. **PDF Export Layout Issues**: When exporting a resume to PDF, the employment dates appeared underneath the company name/address instead of aligned to the right on the same row as the position title. This looked messy compared to the clean "Review & Export" preview in the Resume Builder.
 
 2. **Hub Modal Showed Metadata Instead of Preview**: Clicking on a resume in the Driver Hub opened a modal showing metadata (type, created date, IPFS hash) with a "Download PDF" button. Users couldn't see what the resume looked like before downloading.
@@ -68,18 +247,23 @@ See `docs/COINBASE_ONRAMP_SETUP.md` for detailed setup instructions.
 ### Solution
 
 #### PDF Layout Fix
+
 Updated `resume-pdf-generator.ts` to match the HTML preview layout:
+
 - **Employment**: Position title and date range on line 1, Company/Location on line 2 (previously tried to fit everything on one line which caused overflow)
 - **Education**: Degree/Field on line 1, School/Year on line 2 (same fix)
 
 #### Hub Preview Modal
+
 Created new `ResumePreviewModal` component that:
+
 - Shows the full resume content in a clean preview (matching the Review & Export step)
 - Has Download PDF button in the header
 - Includes Edit, Verify, and Delete action buttons
-- Replaces the old metadata-only `ResumeDetailContent` 
+- Replaces the old metadata-only `ResumeDetailContent`
 
 ### Files
+
 - `src/lib/resume-pdf-generator.ts` – fixed employment and education layout
 - `src/components/ResumePreviewModal.tsx` – new component for resume preview modal
 - `src/components/DriverHub.tsx` – integrated preview modal, removed unused ResumeDetailContent
@@ -91,13 +275,16 @@ Created new `ResumePreviewModal` component that:
 **Improved the DOT application detail modal buttons for apps not yet on blockchain.**
 
 ### Problem
+
 The modal had:
+
 - "Verify on Blockchain" button (teal/mint)
 - "Complete Employment Verification" button (yellow)
 
 These seemed redundant and the modal was missing an edit option and delete button.
 
 ### Solution
+
 Reorganized the modal buttons for apps not yet on blockchain:
 
 1. **Yellow "Verify on Blockchain" section** - Primary CTA with explanation
@@ -105,10 +292,12 @@ Reorganized the modal buttons for apps not yet on blockchain:
 3. **"Delete Application" button** - Allows deletion if not yet on blockchain
 
 Also added:
+
 - New DELETE API endpoint `/api/driver-applications/[id]` - safely deletes apps not yet on blockchain
 - Protection: Cannot delete applications that have been verified on blockchain
 
 ### Files
+
 - `src/components/DriverHub.tsx` – reorganized modal buttons, added delete handler
 - `src/app/api/driver-applications/[id]/route.ts` – new DELETE endpoint
 
@@ -119,20 +308,25 @@ Also added:
 **Updated loading message to reflect that DOT app completion now saves to database, not blockchain.**
 
 ### Problem
+
 When completing a DOT application, the loading screen showed:
+
 - "Submitting Application to Blockchain..."
 - "Your driver application is being submitted to Base Sepolia for verification"
 
 But the actual flow now just saves to the database (blockchain verification is manual from the Hub).
 
 ### Solution
+
 Updated the loading message to:
+
 - "Saving Application..."
 - "Your driver application is being saved to your profile. This will only take a moment."
 
 This accurately reflects what's happening during completion.
 
 ### Files
+
 - `src/app/page.tsx` – updated `renderSubmissionLoading` message and comment
 
 ---
@@ -142,27 +336,34 @@ This accurately reflects what's happening during completion.
 **Fixed bug where saving a DOT app would create two entries in the Hub.**
 
 ### Problem
+
 When a user:
+
 1. Started a new DOT app
 2. Filled out Form 1 and saved
 3. Returned to the Hub
 
 Two DOT applications would appear:
+
 - One with a delete button (clickable to continue)
 - One without delete button (just shows modal)
 
 ### Root Cause
+
 The Hub API was creating **two separate entries**:
+
 1. A database record from `driver_applications` table (created by save-progress API)
 2. A synthetic "in-progress" entry based on profile data having `last_updated_from: 'dot_application'`
 
 The database record was always marked `isInProgress: false`, even for incomplete apps.
 
 ### Solution
+
 1. Use the database `is_complete` field to correctly mark apps as in-progress
 2. Remove synthetic entry creation - database is the source of truth
 
 ### Files
+
 - `src/app/api/driver/hub/route.ts` – fixed `isInProgress` logic, removed synthetic entry creation
 
 ---
@@ -172,7 +373,9 @@ The database record was always marked `isInProgress: false`, even for incomplete
 **Fixed issue where deleting a DOT app would still pre-fill new applications with old data.**
 
 ### Problem
+
 When a user:
+
 1. Created a DOT app (e.g., with John Doe's info)
 2. Deleted the DOT app
 3. Started a new DOT app
@@ -180,19 +383,24 @@ When a user:
 Form 1 would still show John Doe's info partially pre-filled, even though they expected to start fresh.
 
 ### Root Cause
+
 When a DOT app is saved, it syncs core data (name, contact, CDL info) to the unified `driver_profiles` table. When the DOT app is deleted, the profile data remains. The `loadFromProfile` function was loading this stale data for new DOT apps.
 
 ### Solution
+
 Modified the profile prefill logic to only load data if it came from a **resume** (not a deleted DOT app):
+
 - `resume_builder` source → prefill (user built a resume, expects data to carry over)
 - `uploaded_resume` source → prefill (user uploaded a resume)
 - `dot_application` source → DON'T prefill (the DOT app might be deleted, start fresh)
 
 This ensures:
+
 - Resume data flows to DOT apps (expected behavior)
 - Deleted DOT app data doesn't contaminate new apps (user's expectation)
 
 ### Files
+
 - `src/app/page.tsx` – added source check in `loadFromProfile` to only prefill from resume data
 
 ---
@@ -202,7 +410,9 @@ This ensures:
 **Added database backup for DOT application progress to enable cross-device and cross-session persistence.**
 
 ### Problem
+
 Previously, DOT application form data was only stored in:
+
 1. **localStorage** - Persists across browser sessions but can be lost if:
    - User clears browser data
    - User switches devices
@@ -213,6 +423,7 @@ Previously, DOT application form data was only stored in:
 This meant users could lose hours of work if they cleared browser data or switched devices.
 
 ### Solution
+
 1. **Added database persistence during progress**
    - Created `/api/driver-applications/save-progress` endpoint
    - Saves full form data (form1, form2, form3) to `driver_applications` table during navigation/save
@@ -231,18 +442,21 @@ This meant users could lose hours of work if they cleared browser data or switch
    - Syncs database data back to localStorage for faster future loads
 
 ### Benefits
+
 - **Cross-device**: Users can start on one device, finish on another
 - **Data safety**: Progress persists even if browser data is cleared
 - **No data loss**: Multiple layers of persistence (localStorage + database)
 - **Fast loading**: localStorage for speed, database for safety
 
 ### Technical Details
+
 - Database saves happen automatically during form navigation
 - Only saves in-progress applications (not completed ones, which are already saved)
 - Uses existing `saveDriverApplicationClient` function
 - Non-blocking - database save failures don't prevent profile saves
 
 ### Files
+
 - `src/app/api/driver-applications/save-progress/route.ts` – new API endpoint for saving progress
 - `src/app/page.tsx` – updated `saveAllFormsToProfile` to also save to database, added database fallback on load
 
@@ -253,10 +467,13 @@ This meant users could lose hours of work if they cleared browser data or switch
 **Fixed issue where SSN, dates, and other Form 1 fields were lost when navigating to Hub and back.**
 
 ### Problem
+
 When users filled out Form 1 (including SSN, date of application, date available for work, etc.), then went to the Hub and came back, only some fields persisted (first, middle, last name) while others were lost (SSN, dates, legal right to work, etc.).
 
 ### Root Cause
+
 When navigating TO the DOT app, the code was FORCING a profile reload (`forceProfileLoadRef.current = true`) to support Resume Builder → DOT app prefill. However, the profile only stores a **subset** of Form 1 fields (name, contact, DOB, CDL info), not all fields like:
+
 - `socialSecurity` (full SSN - only last 4 saved to profile)
 - `dateOfApplication`
 - `dateAvailableForWork`
@@ -269,16 +486,20 @@ When navigating TO the DOT app, the code was FORCING a profile reload (`forcePro
 The profile data was OVERWRITING the localStorage data (which had the complete form) every time the user returned to the DOT app.
 
 ### Solution
+
 Modified the navigation logic to check if localStorage already has form data before forcing profile load:
+
 - If localStorage has form data → preserve it (it's complete)
 - If localStorage is empty → load from profile (for Resume Builder prefill)
 
 This preserves the complete form data in localStorage while still supporting the Resume Builder prefill flow.
 
 ### Technical Detail
+
 The unified driver profile is intentionally limited to core driver info (name, contact, CDL, employment) for sharing across features. DOT-application-specific fields (dates, disqualification history, medical info) stay in the raw form data stored in localStorage and the `driver_applications` table.
 
 ### Files
+
 - `src/app/page.tsx` – added localStorage check before forcing profile load
 
 ---
@@ -288,33 +509,33 @@ The unified driver profile is intentionally limited to core driver info (name, c
 **Changed DOT application flow to save first, verify on blockchain manually (similar to resumes).**
 
 ### Problem
+
 - When DOT app was completed, it automatically tried to submit to blockchain
 - If already on-chain, it threw an error but got stuck in "submitting application" state
 - No user control over when verification happens
 - Inconsistent with resume flow (which uses manual verification)
 
 ### Solution
+
 1. **Removed automatic blockchain submission** from `handleDriverApplicationCompleted`
    - Application now saves to database and marks as complete
    - No blockchain submission happens automatically
-   
 2. **Added manual verification button** in Driver Hub
    - "Verify on Blockchain" button appears for completed apps without blockchain transaction
    - Similar UX to resume verification flow
    - Button shows loading state during verification
-   
 3. **Created verification API endpoint** `/api/driver-applications/[id]/verify`
    - Fetches application from database
    - Submits to blockchain
    - Updates database with transaction details
    - Handles duplicate errors gracefully
-   
 4. **Updated success message** in ApplicationSubmitted component
    - Shows "Application Saved Successfully!" instead of "Submitting..."
    - Instructs users to verify from Hub
    - Clear next steps guidance
 
 ### Benefits
+
 - **Better UX**: Users see immediate success, no stuck states
 - **User control**: Users decide when to verify
 - **Consistent flow**: Matches resume verification pattern
@@ -322,6 +543,7 @@ The unified driver profile is intentionally limited to core driver info (name, c
 - **No stuck states**: Application is saved even if verification fails
 
 ### Files
+
 - `src/app/page.tsx` – removed automatic blockchain submission from `handleDriverApplicationCompleted`
 - `src/components/DriverHub.tsx` – added `handleVerifyDotApp` function and verify button in `DotAppDetailContent`
 - `src/app/api/driver-applications/[id]/verify/route.ts` – new API endpoint for manual verification
@@ -334,17 +556,21 @@ The unified driver profile is intentionally limited to core driver info (name, c
 **Increased the smart contract limit for applications per user from 1,000 to 100,000 for testing.**
 
 ### Problem
+
 Users were seeing "max apps reached" error when testing on veree.io.
 
 ### Solution
+
 - Ran `setMaxApplicationsPerUser(100000)` on the ProductionDriverRegistry contract
 - Created `scripts/update-max-apps-limit.js` for future limit changes
 - Transaction: `0xbf7f52227523b86e28fbe35ef813de7d9bbf93fad69295c1a1819718b321ec68`
 
 ### Note
+
 This high limit (100,000) is for testing only. Should be lowered for production (e.g., 10-50).
 
 ### Files
+
 - `scripts/update-max-apps-limit.js` – script to update the limit (requires ADMIN_ROLE)
 
 ---
@@ -354,9 +580,11 @@ This high limit (100,000) is for testing only. Should be lowered for production 
 **Added ability to edit DOT applications that are complete but not yet submitted to blockchain.**
 
 ### Problem
+
 Users who completed a DOT application but hadn't yet submitted it to blockchain had no way to edit the application from the Driver Hub. They could only view it in the detail modal.
 
 ### Solution
+
 - Added "Edit DOT Application" button in the DOT application detail modal
 - Button appears for applications that are:
   - Complete (`isComplete === true`)
@@ -366,6 +594,7 @@ Users who completed a DOT application but hadn't yet submitted it to blockchain 
 - The form automatically loads existing application data when navigating
 
 ### Files
+
 - `src/components/DriverHub.tsx` – added `canEdit` check and edit button in `DotAppDetailContent`
 
 ---
@@ -375,14 +604,17 @@ Users who completed a DOT application but hadn't yet submitted it to blockchain 
 **Removed console.error that was exposing error details to users in the browser console.**
 
 ### Problem
+
 When employment verification save failed, a `console.error` was logging raw error data to the browser console, which users could see in their developer tools.
 
 ### Solution
+
 - Removed `console.error` statement from `handleSubmitToBlockchain` function
 - Error handling still works correctly - errors are caught and displayed to users via the UI error state (`setSubmitError`)
 - Users now see user-friendly error messages in the UI instead of raw console errors
 
 ### Files
+
 - `src/components/driver-application/EmploymentVerificationForm.tsx` – removed console.error on line 257
 
 ---
@@ -392,14 +624,17 @@ When employment verification save failed, a `console.error` was logging raw erro
 **Employment verification is now accessible from the Driver Hub for completed DOT applications.**
 
 ### Problem
+
 After completing a DOT application, the user was prompted to do employment verification. If they navigated to the Hub instead, there was no way to get back to employment verification - a significant UX gap.
 
 ### Solution
+
 - Added "Complete Employment Verification" button to the DOT application detail modal in Driver Hub
 - Button appears for completed applications with "PENDING" status
 - Clicking the button navigates directly to the employment verification form
 
 ### Files
+
 - `src/components/DriverHub.tsx` – added `onStartEmploymentVerification` prop, employment verification CTA in `DotAppDetailContent`
 - `src/app/page.tsx` – added handler to navigate to employment verification from Hub
 
@@ -410,20 +645,24 @@ After completing a DOT application, the user was prompted to do employment verif
 **Fixed issue where both "in-progress" and "submitted" versions of the same DOT app appeared in the Hub.**
 
 ### Problem
+
 1. When a DOT app was submitted to blockchain, both an "in-progress" draft AND the "submitted" app showed in the Hub
 2. Trying to re-submit an already-on-chain app showed a confusing generic error instead of explaining it's already verified
 
 ### Root Cause
+
 - After successful blockchain submission, the profile's `last_updated_from: 'dot_application'` wasn't being cleared
 - The Hub checks this field to detect "in-progress" apps, so it showed the submitted app twice
 - The blockchain API returned specific duplicate errors (409), but page.tsx wasn't passing them through
 
 ### Solution
+
 1. **Clear in-progress state after successful submission**: Call `/api/driver/profile/clear-dot-progress` after blockchain submission succeeds
 2. **Better duplicate detection**: Check for 409 status and show the API's specific message
 3. **Handle already-verified apps gracefully**: If blockchain says "already submitted", mark as complete and clear in-progress
 
 ### Files
+
 - `src/app/page.tsx` – added clear-dot-progress call after blockchain success, improved duplicate error handling
 
 ---
@@ -433,6 +672,7 @@ After completing a DOT application, the user was prompted to do employment verif
 **Added subtle feedback when data is saved and warnings when navigating away with unsaved changes.**
 
 ### Features
+
 1. **Sync Indicator Toast**
    - Shows "Saving..." during save operation
    - Shows "✓ Saved to profile" on success (auto-hides after 3s)
@@ -446,6 +686,7 @@ After completing a DOT application, the user was prompted to do employment verif
    - Works for both DOT Application and Resume Builder
 
 ### Files
+
 - `src/components/SyncIndicator.tsx` – new reusable sync indicator component with `useSyncIndicator` hook
 - `src/app/page.tsx` – added sync indicator to DOT form saves, dirty state tracking, beforeunload handler, navigation warning
 - `src/components/ResumeBuilder.tsx` – added dirty state tracking, beforeunload handler, back button warning
@@ -457,16 +698,19 @@ After completing a DOT application, the user was prompted to do employment verif
 **Fixed issue where DOT app wasn't being prefilled from Resume Builder data due to timing conflicts.**
 
 ### Problem
+
 1. **Reset timing**: When clicking "Start DOT Application" from the Hub, `resetApplicationProgress()` set `resetInProgressRef = true`. The profile load effect would see this and return early.
 2. **Concurrent loads race condition**: The `profileLoadAttemptedRef.current = true` was being set AFTER a 100ms async wait, allowing multiple concurrent effect runs to pass the initial check and interfere with each other.
 
 ### Solution
+
 - When navigating to DOT app while reset is in progress, wait 150ms before triggering profile load
 - **Set `profileLoadAttemptedRef.current = true` EARLY** (before the async wait) to prevent race conditions from concurrent effect runs
 - Keep the `forceProfileLoadRef` flag intact when returning early due to reset
 - Reset the attempted flag when skipping due to active reset, allowing retry after reset completes
 
 ### Files
+
 - `src/app/page.tsx` – fixed profile load race condition, improved timing for reset scenarios
 - `src/components/driver-application/PersonalInfoForm1.tsx` – added debug logging for hydration (can be removed later)
 
@@ -477,6 +721,7 @@ After completing a DOT application, the user was prompted to do employment verif
 **Resume management is now handled through a modal in the Driver Hub instead of a separate section below the Resume Builder.**
 
 ### Changes
+
 - **Removed Export button from Resume Builder**: Users now only "Save" their resume. Downloading PDFs is handled in the Hub modal.
 - **Removed Resume Management section**: The separate section below Resume Builder has been removed for a cleaner UX.
 - **Enhanced Driver Hub resume modal**: Clicking a resume in the Hub now opens a full management modal with:
@@ -488,6 +733,7 @@ After completing a DOT application, the user was prompted to do employment verif
 - **Better UX flow**: Users build → save → manage from Hub instead of managing inline below the builder
 
 ### Files
+
 - `src/components/ResumeBuilder.tsx` – removed Export button, removed unused `handleExportPDF` function
 - `src/components/DriverHub.tsx` – added `onEditResume` prop, enhanced `ResumeDetailContent` with full management actions, added handlers for verify/download
 - `src/app/page.tsx` – removed `ResumeDashboard` import and usage, wired up `onEditResume` callback to DriverHub
@@ -499,11 +745,13 @@ After completing a DOT application, the user was prompted to do employment verif
 **Resume PDFs now use consistent, professional styling whether exported from Resume Builder or downloaded from the Hub after verification.**
 
 ### Problem
+
 - Exporting from Resume Builder created a nicely styled PDF with colors, proper formatting, and visual hierarchy
 - Downloading from the Hub (after verification) showed a plain, unstyled PDF
 - Two different PDF generation functions meant inconsistent output and maintenance burden
 
 ### Solution
+
 - **Created shared PDF utility** (`src/lib/resume-pdf-generator.ts`): Extracted the styled PDF generation logic into a reusable function
 - **Updated verification API**: Now uses the shared utility with format detection (Resume Builder vs uploaded resume formats)
 - **Updated ResumeBuilder**: Refactored to use the shared utility for consistency
@@ -517,6 +765,7 @@ After completing a DOT application, the user was prompted to do employment verif
   - Consistent spacing and formatting
 
 ### Files
+
 - `src/lib/resume-pdf-generator.ts` – new shared utility
 - `src/app/api/resumes/[id]/verify/route.ts` – uses shared utility with format detection
 - `src/components/ResumeBuilder.tsx` – uses shared utility, removed inline PDF code
@@ -529,15 +778,18 @@ After completing a DOT application, the user was prompted to do employment verif
 **When a user builds and saves a resume in the Resume Builder, navigating to the DOT Application now auto-populates the forms with their data - no need to export and re-upload.**
 
 ### Problem
+
 Users who built a resume in Veree's Resume Builder had to export the PDF and drag-drop it into the AI prefill on Form 1 to populate their DOT application. This was redundant since the data already existed in the system.
 
 ### Solution
+
 1. **Profile sync is now blocking**: Resume Builder `handleSave` now awaits the profile sync before showing success. This ensures the profile is updated before the user navigates away.
-2. **Meaningful data check**: The DOT app profile-load effect now checks for *meaningful* form data (actual name/CDL/employer), not just any truthy value. Empty/partial localStorage data no longer blocks profile prefill.
+2. **Meaningful data check**: The DOT app profile-load effect now checks for _meaningful_ form data (actual name/CDL/employer), not just any truthy value. Empty/partial localStorage data no longer blocks profile prefill.
 3. **Page navigation trigger**: When navigating TO the DOT app from another page (e.g., Resume Builder), we reset the profile load attempt and trigger a fresh check. This handles the flow: build resume → save → navigate to DOT app.
 4. **Force profile load on navigation**: Added `forceProfileLoadRef` that bypasses localStorage data check when user navigates to DOT app. This ensures fresh profile data always wins over stale localStorage.
 
 ### How It Works
+
 - User fills Resume Builder → clicks Save → profile syncs (awaited)
 - User clicks "DOT Application" in nav
 - DOT app detects page transition → sets force flag → triggers profile load
@@ -545,6 +797,7 @@ Users who built a resume in Veree's Resume Builder had to export the PDF and dra
 - User sees their name, CDL, employment pre-filled
 
 ### Files
+
 - `src/components/ResumeBuilder.tsx` – made profile sync blocking in `handleSave`
 - `src/app/page.tsx` – `profileLoadTrigger` state, `forceProfileLoadRef`, meaningful data check, page transition effect
 
@@ -555,14 +808,17 @@ Users who built a resume in Veree's Resume Builder had to export the PDF and dra
 **Exporting or saving a resume multiple times no longer creates duplicate entries in the Hub.**
 
 ### Problem
+
 Every click of "Export PDF" or "Save" in the Resume Builder created a new resume record. Clicking export 3 times resulted in 3 separate resumes in the Hub.
 
 ### Solution
+
 - Added `internalResumeId` state to track the resume ID after first save
 - Both `handleSave` and `handleExportPDF` now use `internalResumeId` instead of just the prop
 - After creating a new resume, we update `internalResumeId` so subsequent saves/exports UPDATE the existing record instead of creating new ones
 
 ### Files
+
 - `src/components/ResumeBuilder.tsx` – `internalResumeId` state, updated save/export to use it
 
 ---
@@ -572,15 +828,18 @@ Every click of "Export PDF" or "Save" in the Resume Builder created a new resume
 **Submitted DOT applications now keep the applicant name (e.g. "Barry Burton's Application") instead of reverting to "DOT Application 1". Profile display in the Hub also falls back correctly when the profile lacks a name.**
 
 ### Problem
+
 - After submitting a DOT app, the list showed "DOT Application 1" instead of "Barry Burton's Application".
 - The profile name in the Hub could appear as "Unnamed" / "Driver" when it should reflect the applicant.
 
 ### Solution
+
 - **Hub API** fetches `application_data` for `driver_applications` and derives `applicantName` from `form1.firstName` / `form1.lastName` for each submitted app. Falls back to profile `first_name` + `last_name` when `application_data` has no name.
 - **`displayNameFallback`**: When the profile has no first/last name, the API computes a fallback from the first DOT app (submitted or in-progress) that has an applicant name. Hub uses this for the header ("X's Driver Hub") and ShareProfileCard.
 - **DriverHub** uses `profileName || displayNameFallback || 'Driver'` for the header and `driverName` prop.
 
 ### Files
+
 - `src/app/api/driver/hub/route.ts` – select `application_data`, `getApplicantNameFromApp`, `displayNameFallback`
 - `src/components/DriverHub.tsx` – `displayNameFallback` in `HubData`, `profileName` / `displayName` / `driverName` logic
 
@@ -591,14 +850,17 @@ Every click of "Export PDF" or "Save" in the Resume Builder created a new resume
 **Users can delete an unsaved (in-progress) DOT application directly from the Driver Hub.**
 
 ### Problem
+
 If a user accidentally started a new DOT application after already submitting one, the in-progress draft stayed in the Hub with no way to remove it.
 
 ### Solution
+
 - **Trash icon** on in-progress DOT app rows in the Hub. Click → confirm → profile + localStorage + form state cleared, hub refetches.
 - **`POST /api/driver/profile/clear-dot-progress`**: Clears DOT-related driver profile fields for the authenticated user. Wallet auth via `x-wallet-address`.
 - **`onDeleteInProgressDotApp`** callback: Page calls API, clears `forms-*` / `journey-*` localStorage, then `resetApplicationProgress()`. Hub refetches after.
 
 ### Files
+
 - `src/app/api/driver/profile/clear-dot-progress/route.ts` – new API
 - `src/components/DriverHub.tsx` – `onDeleteInProgressDotApp` prop, `ItemRow` `onDelete`/`deleteDisabled`, discard handler
 - `src/app/page.tsx` – `handleDeleteInProgressDotApp`, passed to DriverHub
@@ -631,16 +893,16 @@ Results stored and shared with future employer
 
 ### Verification Statuses
 
-| Status | Meaning |
-|--------|---------|
-| `SELF_REPORTED` | Driver's claim, not verified by employer |
-| `VERIFICATION_REQUESTED` | Future employer initiated verification |
-| `VERIFICATION_IN_PROGRESS` | Contact attempts being made (1-3) |
-| `VERIFIED` | Previous employer confirmed all details |
-| `PARTIALLY_VERIFIED` | Some details confirmed, others disputed |
-| `VERIFICATION_DENIED` | Previous employer says details are false |
-| `ATTEMPTS_EXHAUSTED` | 3 attempts made, no response |
-| `VERIFICATION_DECLINED` | Previous employer declined to verify |
+| Status                     | Meaning                                  |
+| -------------------------- | ---------------------------------------- |
+| `SELF_REPORTED`            | Driver's claim, not verified by employer |
+| `VERIFICATION_REQUESTED`   | Future employer initiated verification   |
+| `VERIFICATION_IN_PROGRESS` | Contact attempts being made (1-3)        |
+| `VERIFIED`                 | Previous employer confirmed all details  |
+| `PARTIALLY_VERIFIED`       | Some details confirmed, others disputed  |
+| `VERIFICATION_DENIED`      | Previous employer says details are false |
+| `ATTEMPTS_EXHAUSTED`       | 3 attempts made, no response             |
+| `VERIFICATION_DECLINED`    | Previous employer declined to verify     |
 
 ### The 6 FMCSA Verification Questions
 
@@ -661,24 +923,29 @@ Results stored and shared with future employer
 ### Files Created
 
 **Database:**
+
 - `supabase/migrations/009_employment_verification.sql` - Tables, indexes, RLS policies, helper functions
 
 **Types:**
+
 - `src/types/employment-verification.ts` - TypeScript types, conversion helpers, display utilities
 
 **API Routes:**
+
 - `src/app/api/verification/initiate/route.ts` - Future employer starts verification
 - `src/app/api/verification/respond/[token]/route.ts` - Previous employer submits response
 - `src/app/api/verification/status/route.ts` - Get verification status for hubs
 - `src/app/api/verification/attempt/route.ts` - Record contact attempts
 
 **UI Components:**
+
 - `src/components/verification/VerificationStatusBadge.tsx` - Shared status badge
 - `src/components/verification/DriverVerificationSection.tsx` - Driver Hub section
 - `src/components/verification/EmployerVerificationSection.tsx` - Employer Hub section
 - `src/app/verify/[token]/page.tsx` - Previous employer verification portal
 
 **Files Modified:**
+
 - `src/components/DriverHub.tsx` - Added verification section
 - `src/components/EmployerHub.tsx` - Added verification section
 - `src/lib/ava-brain.ts` - Added verification templates and AI patterns
@@ -686,23 +953,27 @@ Results stored and shared with future employer
 ### Key Features
 
 **For Drivers:**
+
 - See which employers are verifying their history
 - Track verification status for each employment
 - View verification results when completed
 
 **For Future Employers:**
+
 - Initiate verification from driver profile
 - Track attempts and responses
 - View detailed verification results
 - Manage multiple verifications
 
 **For Previous Employers:**
+
 - Secure token-based portal (no login required)
 - Answer 6 FMCSA questions
 - Option to verify, deny, or decline
 - Professional, mobile-friendly interface
 
 **AVA Integration:**
+
 - 20+ new templates for verification events
 - Guidance for drivers and employers
 - Help explanations for verification process
@@ -714,7 +985,7 @@ Results stored and shared with future employer
 employment_verification_requests (
   id, driver_id, employment_id, requesting_company_id,
   previous_employer_*, claimed_*, status, attempt_count,
-  verified_at, verified_by_*, 
+  verified_at, verified_by_*,
   dates_correct, was_terminated, eligible_to_return,
   had_accident, failed_clearinghouse_test, random_drug_test_or_refused,
   verification_token, blockchain_hash, ...
@@ -734,21 +1005,23 @@ verification_attempts (
 **Complete admin panel rebuild with wallet-based authentication and data management capabilities.**
 
 ### Security Model
+
 - **Wallet Whitelist**: Only wallets in `ADMIN_WALLETS` env variable can access `/admin`
 - **API Protection**: All admin API routes verify wallet header against whitelist
 - **Delete Confirmation**: Requires typing "DELETE" to confirm destructive actions
 
 ### Features
 
-| Tab | Capabilities |
-|-----|-------------|
-| **Users** | List all users, search by wallet/email, view data counts, delete user + all data |
+| Tab          | Capabilities                                                                           |
+| ------------ | -------------------------------------------------------------------------------------- |
+| **Users**    | List all users, search by wallet/email, view data counts, delete user + all data       |
 | **DOT Apps** | List all applications (complete/incomplete), view applicant info, delete specific apps |
-| **Profiles** | List all driver profiles, search by name/CDL, view source, delete/clear profiles |
-| **Resumes** | List all resumes, filter by type, view verification status, delete specific resumes |
-| **Tools** | Existing reset wallet tool, T Backend setup (preserved from old admin) |
+| **Profiles** | List all driver profiles, search by name/CDL, view source, delete/clear profiles       |
+| **Resumes**  | List all resumes, filter by type, view verification status, delete specific resumes    |
+| **Tools**    | Existing reset wallet tool, T Backend setup (preserved from old admin)                 |
 
 ### Files Created/Modified
+
 - `src/lib/admin-auth.ts` - Wallet whitelist verification helper
 - `src/app/admin/AdminDashboard.tsx` - New tabbed admin UI
 - `src/app/admin/page.tsx` - Updated to use new dashboard
@@ -762,7 +1035,9 @@ verification_attempts (
 - `src/app/api/admin/resumes/[id]/route.ts` - Resume delete API
 
 ### Environment Variable
+
 Add to `.env.local`:
+
 ```
 ADMIN_WALLETS=0x9499cD25C6737A8195e74262f3c5eAE6dA607df3
 ```
@@ -774,15 +1049,18 @@ ADMIN_WALLETS=0x9499cD25C6737A8195e74262f3c5eAE6dA607df3
 **Fixed two issues with in-progress DOT application display in Driver Hub.**
 
 ### Issue 1: In-progress apps not showing when submitted apps exist
+
 - **Problem**: `submittedDotApplications.length === 0` condition blocked showing in-progress work
 - **Fix**: Removed condition - users can have both submitted apps AND in-progress work
 
 ### Issue 2: `form3ToProfile` crash when form3Data has undefined arrays
+
 - **Problem**: `data.education.filter()` fails when `education` is undefined
 - **Error**: `TypeError: Cannot read properties of undefined (reading 'filter')`
 - **Fix**: Added defensive checks: `const educationData = data?.education || []`
 
 ### Issue 3: Form number detection showing wrong form
+
 - **Problem**: Showed "Form 3" because employment_history existed (from Resume Builder)
 - **Fix**: Changed logic to detect based on what forms are COMPLETE, not what data exists:
   - If CDL info complete → Form 2
@@ -807,11 +1085,13 @@ ADMIN_WALLETS=0x9499cD25C6737A8195e74262f3c5eAE6dA607df3
 **Major UX improvement: In-progress DOT applications now appear in the Driver Hub.**
 
 ### The Problem
+
 - Users saved their DOT application progress (e.g., completed Form 1, started Form 2)
 - But the Driver Hub only showed **submitted** applications from `driver_applications` table
 - Users had no way to see or continue their in-progress work from the Hub
 
 ### The Solution
+
 The Hub API now detects in-progress applications from the driver profile:
 
 1. **Detection**: Checks if profile has form data (name, CDL, employment history) but no submitted application
@@ -822,12 +1102,14 @@ The Hub API now detects in-progress applications from the driver profile:
 ### Changes
 
 **API (`/api/driver/hub`):**
+
 - Checks profile for saved form data
 - Creates virtual "in-progress" application entry if data exists but not submitted
 - Includes `applicantName`, `isInProgress`, and `currentStep` fields
 - Adds `inProgressDotApps` to stats
 
 **Component (`DriverHub.tsx`):**
+
 - Updated `HubDotApplication` interface with new fields
 - Shows applicant name in list (e.g., "Barry Burton's Application")
 - Shows "Continue where you left off" for in-progress apps
@@ -842,15 +1124,18 @@ The Hub API now detects in-progress applications from the driver profile:
 **Verification pass + bug fix for unified driver profile ↔ DOT app ↔ Resume flow.**
 
 ### What was verified
+
 - DOT app **Save Progress** and **completion** both write to driver profile via `form1ToProfile` / `form2ToProfile` / `form3ToProfile`.
 - **Resume Builder** save writes via `resumeBuilderToProfile`; **AI prefill** (uploaded resume) writes via same form mappers.
 - **DOT app** load prefills from profile when forms are empty; **Resume Builder** load prefills from profile.
 
 ### Bug fixed
+
 - **Completion handler**: Previously used `employmentHistory` from Form 2 and `drivingRecord` from Form 3 (inverted). It now uses the same form mappers as Save Progress (Form 3 = employment, Form 2 = driving).
 - **Prefill → profile sync**: Same Form 2/3 mix-up. Prefill sync now uses form mappers on `prefillData.form1/2/3Data`.
 
 ### Docs
+
 - `docs/DRIVER_PROFILE_VERIFICATION.md` – data flow summary and **test plan** for DOT-first, Resume-first, and AI-prefill flows.
 
 ---
@@ -860,32 +1145,38 @@ The Hub API now detects in-progress applications from the driver profile:
 **Major UX overhaul: Replaced the hidden DriverDashboard with an always-accessible Driver Hub.**
 
 ### **The Problem:**
+
 - `DriverDashboard` was only accessible AFTER completing the DOT application
 - Users had no central place to see all their data (resumes, DOT apps, MVR, job applications)
 - Confusing flow: "Complete this long form to see your dashboard"
 - Data was scattered across different views and modals
 
 ### **The Solution: Driver Hub**
+
 A unified dashboard that's accessible from the moment a driver logs in.
 
 ### **New Features:**
 
 #### 1. Always Accessible
+
 - Driver Hub is the default landing page for logged-in drivers
 - No prerequisites - available immediately after login
 - Empty state shows actionable CTAs to get started
 
 #### 2. Profile Completeness Score
+
 - Visual progress bar showing how complete their profile is
 - Weighted scoring: Basic profile (15%), Personal info (15%), CDL info (20%), Resume (20%), DOT app (15%), MVR (5%), etc.
 - Smart hints: "Add an MVR to complete your profile"
 
 #### 3. Quick Stats Dashboard
+
 - At-a-glance cards: Total resumes, DOT apps, Job applications, MVR records
 - Sub-stats: "2 verified", "3 interviewing", etc.
 - Color-coded by category
 
 #### 4. Unified Sections
+
 - **Resumes**: All uploaded/built resumes with verification status
 - **DOT Applications**: All submissions (not just latest), with progress tracking
 - **MVR Records**: Order status, results, points, expiration
@@ -893,6 +1184,7 @@ A unified dashboard that's accessible from the moment a driver logs in.
 - **Payment History**: Collapsible section with all USDC payments
 
 #### 5. Detail Modals
+
 - Click any item to view details without leaving the Hub
 - Resume modal: Type, IPFS hash, blockchain tx, download link
 - DOT App modal: Progress bar, application ID, verification status
@@ -900,10 +1192,12 @@ A unified dashboard that's accessible from the moment a driver logs in.
 ### **Technical Implementation:**
 
 #### New Files:
+
 - `src/app/api/driver/hub/route.ts` - Aggregates all driver data in one API call
 - `src/components/DriverHub.tsx` - Main Hub component (~900 lines)
 
 #### Modified Files:
+
 - `src/app/page.tsx` - Replaced DriverDashboard with DriverHub as default
 - `src/components/Navigation.tsx` - Simplified navigation:
   - Removed "Driver Options" dropdown (redundant with Hub)
@@ -912,6 +1206,7 @@ A unified dashboard that's accessible from the moment a driver logs in.
   - Cleaner nav: Status | Home | [Veree logo] | Hub | AvA | Theme
 
 #### Removed:
+
 - DriverDashboard no longer shown after DOT completion (Hub replaces it)
 - `showDashboard` state simplified (no longer needed for old flow)
 - Driver Options dropdown (Hub has all the same functionality)
@@ -926,6 +1221,7 @@ Replaced the clickable `MvrStatusIndicator` button in the nav with a simpler `Mv
 - **After**: Non-clickable badge showing status only
 
 Status displays:
+
 - "No MVR" — No MVR ordered
 - "MVR: Processing" — Order in progress
 - "MVR: Available" — Results ready to view
@@ -933,14 +1229,18 @@ Status displays:
 Drivers access MVR details through the Hub instead of a nav button.
 
 #### Bug Fix: Hub MVR Data
+
 Fixed Hub API not showing MVR records:
+
 - Changed `order_status` → `status` (correct column name)
 - Changed `license_state` → `dl_state` (correct column name)
 
 #### Transaction History (Replaces Payment History)
+
 The `payments` table wasn't being populated correctly, so "Payment History" showed nothing.
 
 **Better Fix**: Derive transaction history from actual orders/purchases instead of relying on the `payments` table:
+
 - MVR orders → Each order becomes a transaction with fee info
 - Paid resumes → Each `is_paid: true` resume becomes a transaction
 - Sorted by date, newest first
@@ -948,6 +1248,7 @@ The `payments` table wasn't being populated correctly, so "Payment History" show
 This is more reliable because it shows what the user actually purchased, even if the payment recording step failed.
 
 #### Detail Modal Improvements
+
 - **Fixed dark mode colors**: Changed from light mint (`bg-brand-sage-light`) to dark sage (`bg-brand-sage-dark`) for better readability
 - **Resume View**: Added "View" button to preview PDF inline within Veree (full-screen modal with iframe)
 - **Resume Delete**: Added "Delete Resume" button with confirmation modal
@@ -956,7 +1257,9 @@ This is more reliable because it shows what the user actually purchased, even if
 - **PDF Viewer z-index**: Increased to z-[9999] to appear above navigation
 
 #### Resume PDF Styling Overhaul
+
 Completely redesigned the generated PDF for a more professional appearance:
+
 - **Header**: Centered name with 2px navy border, contact info on single line
 - **Color scheme**: Navy blue (#1a365d) primary, medium blue (#2b6cb0) accent
 - **Section headers**: Uppercase with colored underline, clean typography
@@ -967,11 +1270,14 @@ Completely redesigned the generated PDF for a more professional appearance:
 - **Overall**: More whitespace, better visual hierarchy, professional look
 
 #### Navigation Hub Buttons
+
 - Removed hover effects from Driver Hub and Employer Hub buttons
 - The rotating gold border provides enough visual interest
 
 #### Built Resume IPFS Fix
+
 Built resumes are saved with a placeholder `ipfs_hash` like `built_1768595334400` until they're verified and uploaded to IPFS. The Hub now:
+
 - Detects placeholder hashes (starting with `built_`)
 - Shows "DRAFT" status badge instead of "PENDING" for unverified built resumes
 - Hides the "View / Download" button for drafts
@@ -979,17 +1285,23 @@ Built resumes are saved with a placeholder `ipfs_hash` like `built_1768595334400
 - Only shows the IPFS hash when it's a real CID
 
 #### Resume Download Filename Fix
+
 Cross-origin URLs ignore the `download` attribute, so PDFs were downloading with the IPFS hash as filename. Now:
+
 - "View" button opens PDF in new tab
 - "Download" button uses fetch + blob to download with clean filename like `Resume_Title.pdf`
 
 #### MonthYearPicker Dropdown Fix (PersonalInfoForm3)
+
 The month picker in DOT application employment history was only showing Jan-Apr (first row). The dropdown was being clipped by parent containers with `overflow-hidden`.
+
 - Fixed by rendering dropdown via React portal to `document.body`
 - Now all 12 months display correctly in 3 rows
 
 #### Employment History Date Validation (PersonalInfoForm3)
+
 Added strict date validation to enforce proper chronological ordering:
+
 1. **Within each entry**: "To" date must be >= "From" date (can't end before you started)
 2. **Between entries**: Each entry's "To" date must be <= previous entry's "From" date (chronological order)
 3. **Only first entry can be "Present"** - subsequent entries must have ended before the current/most recent one started
@@ -1001,7 +1313,9 @@ Added strict date validation to enforce proper chronological ordering:
 Full employer dashboard replacing the placeholder EmployerDashboard component.
 
 #### API Endpoint (`/api/employer/hub`)
+
 Single endpoint that aggregates all employer data:
+
 - Company profile
 - Job postings with application counts
 - All applicants across all jobs
@@ -1010,6 +1324,7 @@ Single endpoint that aggregates all employer data:
 - Quick stats (active jobs, total applicants, hires this month)
 
 #### EmployerHub Component Features
+
 1. **Company Header**: Shows company name, location, DOT number, verification status
 2. **Stats Cards**: Active jobs, total applicants, interviewing, hires
 3. **Hiring Pipeline**: Visual flow showing applicants at each stage
@@ -1019,14 +1334,17 @@ Single endpoint that aggregates all employer data:
 7. **Quick Actions**: Post job, view all applicants, company profile, reports
 
 #### Detail Modals
+
 - **Applicant Detail**: Contact info, CDL details, resume status, cover letter, quick actions (order MVR)
 - **Job Detail**: Location, salary, equipment type, application stats
 - **MVR Detail**: Order status, license status, points, violations
 
 #### Company Setup Flow
+
 If employer hasn't created a company profile yet, shows a setup prompt instead of the hub.
 
 #### Integration
+
 - Replaced `EmployerDashboard` with `EmployerHub` in page.tsx
 - Both "Driver Hub" and "Employer Hub" buttons navigate to their respective hubs
 - Same navigation pattern as Driver Hub but with employer-specific pages
@@ -1036,12 +1354,14 @@ If employer hasn't created a company profile yet, shows a setup prompt instead o
 Drivers can now share their verified credentials via QR code at job fairs and meetups.
 
 #### Database Migration (`008_driver_share_profile.sql`)
+
 - `share_token` column on `driver_profiles` - unique URL-safe 12-char token
 - `share_settings` JSONB - privacy controls for what's visible
 - `share_views_count` - track how many times profile viewed
 - `driver_leads` table - track employer connections from QR scans
 
 #### API Endpoints
+
 - `GET /api/driver/share` - Get current share token and settings
 - `POST /api/driver/share` - Generate new share token
 - `PATCH /api/driver/share` - Update privacy settings
@@ -1051,6 +1371,7 @@ Drivers can now share their verified credentials via QR code at job fairs and me
 - `PATCH /api/driver/leads` - Update lead status
 
 #### Public Profile Page (`/d/[token]`)
+
 - Clean, mobile-first design for employer viewing
 - Shows verified credentials based on privacy settings:
   - CDL information (class, state, endorsements)
@@ -1063,6 +1384,7 @@ Drivers can now share their verified credentials via QR code at job fairs and me
 - Connection form collects: name, company, email, phone, event name, notes
 
 #### ShareProfileCard Component (Driver Hub)
+
 - Generate QR code with one click
 - Download QR as image for printing
 - Copy profile link to clipboard
@@ -1077,6 +1399,7 @@ Drivers can now share their verified credentials via QR code at job fairs and me
 - View count display
 
 #### Lead/Connection Flow
+
 1. Driver generates QR in their Hub
 2. Driver shows QR at job fair
 3. Employer scans → sees verified profile
@@ -1086,6 +1409,7 @@ Drivers can now share their verified credentials via QR code at job fairs and me
 7. Driver can mark lead as: contacted, interviewing, hired, archived
 
 #### Key Benefits
+
 - Instant credential verification at job fairs
 - No paper resumes needed
 - Verified blockchain credentials visible
@@ -1099,6 +1423,7 @@ Implemented both "Applicants" (who applied) and "Find Drivers" (search by criter
 #### API Endpoints
 
 **`/api/employer/applicants`**
+
 - `GET`: Fetches all applicants who applied to employer's jobs
   - Filter by job posting
   - Filter by status (new, reviewing, interviewing, hired, rejected)
@@ -1107,6 +1432,7 @@ Implemented both "Applicants" (who applied) and "Find Drivers" (search by criter
 - `PATCH`: Update application status or add reviewer notes
 
 **`/api/employer/drivers/search`**
+
 - `GET`: Search all drivers by criteria (proactive discovery)
   - Match to specific job (auto-fills criteria)
   - Filter by: CDL class, CDL state, min experience, location
@@ -1115,6 +1441,7 @@ Implemented both "Applicants" (who applied) and "Find Drivers" (search by criter
   - Excludes drivers who already applied
 
 #### ApplicantsPage Component
+
 - **View**: All applicants who applied to your jobs
 - **Features**:
   - Stats cards (total, new, reviewing, interviewing, hired)
@@ -1131,6 +1458,7 @@ Implemented both "Applicants" (who applied) and "Find Drivers" (search by criter
   - Update status: New → Reviewing → Interviewing → Offer → Hired/Rejected
 
 #### FindDriversPage Component
+
 - **View**: Search all drivers by criteria (proactive discovery)
 - **Features**:
   - "Match to Job" dropdown - auto-fills criteria from job posting
@@ -1144,12 +1472,14 @@ Implemented both "Applicants" (who applied) and "Find Drivers" (search by criter
   - "View Full Profile" link to public profile page (if share enabled)
 
 #### Integration
+
 - Added "Find Drivers" button to Employer Hub Quick Actions
 - "View All Applicants" navigates to ApplicantsPage
 - Both pages accessible from Employer Hub
 - Seamless navigation back to hub
 
 #### Use Cases
+
 1. **Applicants Page**: Review and manage drivers who applied to your jobs
 2. **Find Drivers Page**: Proactively search for qualified drivers who match your criteria but haven't applied yet
 3. **Workflow**: Find driver → View profile → Contact → They apply → Manage in Applicants page
@@ -1157,6 +1487,7 @@ Implemented both "Applicants" (who applied) and "Find Drivers" (search by criter
 ### **API: /api/driver/hub**
 
 Single endpoint that returns:
+
 ```typescript
 {
   success: true,
@@ -1181,11 +1512,13 @@ Single endpoint that returns:
 ### **UX Flow Changes:**
 
 **Before:**
+
 1. Login → Landing page
 2. Complete DOT app (3 forms) → See DriverDashboard
 3. Dashboard only shows latest DOT app
 
 **After:**
+
 1. Login → Driver Hub (immediate access to everything)
 2. Hub shows all data: resumes, DOT apps, MVR, job applications
 3. Empty sections have CTAs: "Start DOT Application", "Upload Resume"
@@ -1200,7 +1533,9 @@ Single endpoint that returns:
 ### **New Features:**
 
 #### 1. Type Selector Modal
+
 When clicking "+ Add History Entry", users now see a beautiful modal to select:
+
 - **Employment/Contract** - Full employer details, FMCSR questions
 - **Unemployment** - Just dates and optional explanation
 - **School/Education** - School name and course of study
@@ -1210,6 +1545,7 @@ When clicking "+ Add History Entry", users now see a beautiful modal to select:
 Each type shows only relevant fields (no more seeing employer name field for unemployment!)
 
 #### 2. Month/Year Picker
+
 - Beautiful dropdown date picker (no more manual typing "MM/YYYY")
 - Year selector (last 50 years)
 - Month grid for easy selection
@@ -1217,12 +1553,14 @@ Each type shows only relevant fields (no more seeing employer name field for une
 - Calendar icon for visual clarity
 
 #### 3. Cleaner Entry Cards
+
 - Color-coded type badges with icons
 - Compact header with type indicator
 - Better organized fields per type
 - Rounded card design
 
 ### **Technical Details:**
+
 - Added `HistoryEntryType` union type
 - Added `MonthYearPicker` component
 - Added `HISTORY_TYPES` array with icons and colors
@@ -1230,6 +1568,7 @@ Each type shows only relevant fields (no more seeing employer name field for une
 - Backward compatible - legacy entries default to 'employment'
 
 ### **Files Modified:**
+
 - `src/components/driver-application/PersonalInfoForm3.tsx`
 
 ---
@@ -1239,26 +1578,32 @@ Each type shows only relevant fields (no more seeing employer name field for une
 **Fixed critical bug where unemployment periods were being SKIPPED in the 10-year calculation.**
 
 ### **The Problem:**
+
 User marks entry as "Unemployment" but:
+
 - System showed "⏭ Skipped (unemployment)" and didn't count it
 - Current unemployment (to "Present") didn't satisfy the "no gap" requirement
 - User was told to "add more years" when they had valid unemployment coverage
 
 ### **The Fix:**
+
 1. **Unemployment periods now COUNT** toward 10-year requirement (they're valid DOT history)
 2. **Current unemployment = Present** - if unemployed now, there's no gap to fill
 3. **Validation updated** - unemployment entries need dates but not employer details
 4. **Better breakdown display** - shows unemployment in blue, counts toward total
 
 ### **Before:**
+
 > #1: ⏭ Unemployment period (SKIPPED)
 > ⚠ Gap detected...
 
 ### **After:**
+
 > #1: ✓ Unemployment — 01/2025 to Present
 > ✓ Requirement met!
 
 ### **Files Modified:**
+
 - `src/components/driver-application/PersonalInfoForm3.tsx`
 
 ---
@@ -1268,7 +1613,9 @@ User marks entry as "Unemployment" but:
 **Completely rewrote the 10-year requirement messaging to be actually helpful.**
 
 ### **The Problem:**
+
 User enters 24 years of employment (01/2000 to 12/2024) but system says "8.9 of 10 years covered. Add 1.1 more years." This is confusing because:
+
 - User has WAY more than 10 years of history
 - The issue is a **gap at the end** (12/2024 to present), not lacking history
 - Message "add 1.1 more years" suggests they need MORE history
@@ -1276,24 +1623,29 @@ User enters 24 years of employment (01/2000 to 12/2024) but system says "8.9 of 
 ### **The Fix - Better Messaging:**
 
 **Before:**
+
 > ⚠ 8.9 of 10 years covered. Add 1.1 more years to meet DOT § 383.35 requirement.
 
 **After:**
+
 > 📋 Employment history entered: **24.0 years**
 > ⚠ Gap detected: Your most recent employment ends before today. Please account for 01/2025 to Present (~13 months).
 > 💡 Tip: If you're still employed there, change the end date to "Present". Otherwise, add your current status.
 
 ### **Technical Changes:**
+
 1. Shows TOTAL employment history entered (so users see their 24 years)
 2. Detects gaps specifically at the END (between last job and today)
 3. Gives actionable advice ("change to Present" or "add current status")
 4. Removed confusing "10-year window" terminology from main message
 
 ### **Also Fixed:**
+
 - End dates now use last day of month ("12/2024" → Dec 31, not Dec 1)
 - Validation error now explains WHERE the gap is
 
 ### **Files Modified:**
+
 - `src/components/driver-application/PersonalInfoForm3.tsx`
 
 ---
@@ -1305,17 +1657,20 @@ User enters 24 years of employment (01/2000 to 12/2024) but system says "8.9 of 
 ### **Changes:**
 
 #### 1. Disabled Proactive AI Features (Cost Savings)
+
 - **Removed inactivity detection** - was checking every 10 seconds and prompting users
 - **Removed form navigation guidance** - was sending AI messages when entering Forms 2 & 3
 - **Removed milestone checking** - was triggering AI calls on page changes
 - Users can still ask AvA for help via "Ask AvA" buttons - on-demand only
 
 #### 2. AvA Badge - Outline Style
+
 - Changed from solid green/mint badge to clean outline style
 - Now uses `border-2 border-brand-mint/50` (dark) or `border-brand-sage/50` (light)
 - Transparent background, smaller size (9x9 from 10x10)
 
 ### **Files Modified:**
+
 - `src/components/TAssistant.tsx` - Disabled proactive features, updated badge
 
 ---
@@ -1327,12 +1682,14 @@ User enters 24 years of employment (01/2000 to 12/2024) but system says "8.9 of 
 ### **Changes:**
 
 #### 1. Ask AvA Buttons - Silver Rotating Border
+
 - Added animated silver/platinum rotating border effect (matches Driver Options gold effect)
 - Removed emojis, replaced with `HelpCircle` outlined icon from lucide-react
 - New CSS class: `.rotating-silver-border` in `globals.css`
 - Applied to Form 1 and Form 3 Ask AvA buttons
 
 #### 2. AvA Panel Redesign - Beautiful Wide Layout
+
 - **Removed:** Floating collapsed AvA button from right side of screen
 - **Now:** AvA is only accessible from the navigation bar
 - **Desktop:** Wide panel (45-55vw, max 800px) - shorter height, rounded corners, NO blur backdrop
@@ -1348,16 +1705,19 @@ User enters 24 years of employment (01/2000 to 12/2024) but system says "8.9 of 
   - Cleaner input area with larger padding
 
 #### 3. Auto-Open on Ask AvA Click
+
 - Clicking "Ask AvA" button now automatically opens AvA modal
 - Previously: User had to manually open AvA even after clicking help button
 - Fixed in `handleHelpRequest()` by adding `setIsAvaCollapsed(false)`
 
 #### 4. Content Layout - Smart Shifting
+
 - Desktop: Content shifts left when AvA opens (`md:mr-[520px]` to `xl:mr-[640px]`)
 - Mobile: Content stays in place, AvA overlays on top
 - Smooth transition animation when opening/closing
 
 ### **Files Modified:**
+
 - `src/app/globals.css` - Added `.rotating-silver-border` animation
 - `src/components/driver-application/PersonalInfoForm1.tsx` - Updated Ask AvA button
 - `src/components/driver-application/PersonalInfoForm3.tsx` - Updated Ask AvA button
@@ -1373,32 +1733,40 @@ User enters 24 years of employment (01/2000 to 12/2024) but system says "8.9 of 
 ### **Changes:**
 
 #### 1. Save Progress Button - Brand Colors
+
 - Changed Save button from generic blue to brand colors
 - Dark mode: `bg-brand-mint` (mint green button with dark text)
 - Light mode: `bg-brand-sage` (sage button with white text)
 
 #### 2. Medical Qualification Section Removed
+
 **Form 1 (Step 3)** - Completely removed the Medical Qualification section (49 CFR 391.41)
+
 - Removed ~580 lines of UI code
 - Removed from form state, validation, and test data
 - **Reason:** Not allowed to collect this data
 
 #### 3. Profile → Form Pre-population Fixed
+
 **Fixed mapping between driver profile and form data:**
+
 - Employment history now correctly populates Form 3's `employers` array (was incorrectly going to Form 2)
 - Driving record (accidents/violations) now correctly populates Form 2 (was incorrectly going to Form 3)
 - Maps profile `employmentHistory` → Form 3 `employers` with proper field conversion
 
 #### 4. Auto-Save on Navigation
+
 - Clicking "Next" now automatically saves ALL forms to driver profile
 - No data loss when navigating between forms
 
 #### 5. Centralized Save - Saves ALL Forms
+
 - Save Progress button now saves data from ALL forms (Form 1, 2, 3)
 - Previously only saved the current form's data
 - New architecture: `page.tsx` has `saveAllFormsToProfile()` function passed to all forms
 
 #### 6. Removed Duplicate Save/Test Buttons
+
 - Form 1 page 1 had Save Progress and Fill Test Data buttons both above and below AI resume prefill
 - Removed the duplicate buttons from the top (kept only below AI prefill)
 
@@ -1406,8 +1774,8 @@ User enters 24 years of employment (01/2000 to 12/2024) but system says "8.9 of 
 
 ```
 📥 ON LOAD (user returns):
-   API GET /api/driver/profile → 
-     profileToDotApplication() → 
+   API GET /api/driver/profile →
+     profileToDotApplication() →
        Forms populated with saved data
 
 📤 ON SAVE (manual or auto via Next):
@@ -1431,7 +1799,9 @@ User enters 24 years of employment (01/2000 to 12/2024) but system says "8.9 of 
 **Implemented "Save Progress" button on all DOT application forms that saves to the unified driver profile.**
 
 ### **The Problem:**
+
 DOT form data existed in multiple disconnected places:
+
 1. Form component state
 2. localStorage (for tab persistence)
 3. Driver Profile database (supposed to be single source of truth)
@@ -1443,12 +1813,14 @@ Employment history in Form 3 used different field names (`fromDate`/`toDate`) th
 #### New Files Created:
 
 **`src/lib/dot-form-mapper.ts`** - Bidirectional mappers for each DOT form:
+
 - `form1ToProfile()` / `profileToForm1()` - Personal info, licenses, addresses
-- `form2ToProfile()` / `profileToForm2()` - Driving experience, accidents, convictions  
+- `form2ToProfile()` / `profileToForm2()` - Driving experience, accidents, convictions
 - `form3ToProfile()` / `profileToForm3()` - Employment history, education
 - Handles date format conversion between `MM/YYYY` (forms) and `YYYY-MM` (profile)
 
 **`src/components/driver-application/SaveProgressButton.tsx`** - Reusable save component:
+
 - Shows loading spinner while saving
 - Success checkmark on save
 - Error state with message
@@ -1465,21 +1837,21 @@ Employment history in Form 3 used different field names (`fromDate`/`toDate`) th
 ### **How It Works:**
 
 ```
-User fills DOT Form → Clicks "Save Progress" → 
-  form3ToProfile() maps fields → 
-    /api/driver/profile PUT → 
+User fills DOT Form → Clicks "Save Progress" →
+  form3ToProfile() maps fields →
+    /api/driver/profile PUT →
       Driver Profile updated in database
 ```
 
 ### **Key Mappings (Form 3 Employment):**
 
-| Form 3 Field | Profile Field |
-|--------------|---------------|
-| `name` | `companyName` |
-| `positionHeld` | `position` |
-| `fromDate` (MM/YYYY) | `startDate` (YYYY-MM) |
-| `toDate` (MM/YYYY or "Present") | `endDate` / `isCurrent` |
-| `subjectToFMCSR` (yes/no) | `subjectToFMCSR` (boolean) |
+| Form 3 Field                    | Profile Field              |
+| ------------------------------- | -------------------------- |
+| `name`                          | `companyName`              |
+| `positionHeld`                  | `position`                 |
+| `fromDate` (MM/YYYY)            | `startDate` (YYYY-MM)      |
+| `toDate` (MM/YYYY or "Present") | `endDate` / `isCurrent`    |
+| `subjectToFMCSR` (yes/no)       | `subjectToFMCSR` (boolean) |
 
 ### **Benefits:**
 
@@ -1500,6 +1872,7 @@ User fills DOT Form → Clicks "Save Progress" →
 **Fixed issues where manual date entry in Form 3 (Employment History) wasn't counting years correctly.**
 
 ### **The Problem:**
+
 Users manually entering employment dates would see incorrect year calculations (e.g., form showing "4 years" when 10+ years were entered). The "Fill Test Data" button worked correctly, but manual entry didn't always parse properly.
 
 ### **Root Causes:**
@@ -1530,13 +1903,15 @@ Added a `normalizeDateInput()` function that automatically converts various form
 **Part 2: Robust Date Parsing**
 
 Enhanced `parseDate()` function to handle multiple formats as fallback:
+
 - MM/YYYY, MM/YY (slash)
-- MM-YYYY, MM-YY (dash)  
+- MM-YYYY, MM-YY (dash)
 - YYYY-MM, YYYY/MM (reversed)
 - YYYY-MM-DD (full ISO)
 - Native Date parsing (final fallback)
 
 ### **Files Modified:**
+
 - `src/components/driver-application/PersonalInfoForm3.tsx`
   - Added `normalizeDateInput()` function - converts various date formats to MM/YYYY
   - Added `handleDateBlur()` handler - normalizes dates when field loses focus
@@ -1546,6 +1921,7 @@ Enhanced `parseDate()` function to handle multiple formats as fallback:
 ### **Teaching Moment - Defensive Input Handling:**
 
 When accepting freeform user input, always:
+
 1. **Show expected format** (placeholder: "MM/YYYY")
 2. **Normalize on blur** - auto-correct to expected format when possible
 3. **Parse defensively** - handle common variations the parser might receive
@@ -1560,7 +1936,9 @@ The test data button worked because it programmatically set dates in the exact e
 **Implemented intelligent routing system for AvA, the AI assistant. Now Ava appears "omniscient" while minimizing AI costs.**
 
 ### **The Problem:**
+
 The user wanted Ava to feel like the "brain" of the application - tracking every move, proactively helping users, and guiding them when stuck. However, calling the AI API for every user action would be:
+
 - 💸 **Expensive** - AI API calls cost money
 - 🐌 **Slow** - Each call takes 1-3 seconds
 - 🔥 **Wasteful** - Most scenarios have predictable responses
@@ -1576,6 +1954,7 @@ User Action → Ava Brain Router → Template Response (instant, free)
 **Key Principle:** Use templates for 80% of scenarios (navigation, form completion, milestones, errors). Reserve AI for the 20% that needs real intelligence (complex questions, regulation inquiries, personalized advice).
 
 ### **What Gets Templates (Instant):**
+
 - Navigation hints ("You're on Form 2 - Driving Experience...")
 - Form saved confirmations
 - Milestone celebrations ("🎉 Form 1 Complete!")
@@ -1584,6 +1963,7 @@ User Action → Ava Brain Router → Template Response (instant, free)
 - Inactivity prompts ("Need help with this field?")
 
 ### **What Uses AI (Smart):**
+
 - Questions starting with what/why/how/when
 - Messages ending with "?"
 - DOT/FMCSA regulation questions
@@ -1614,12 +1994,14 @@ User Action → Ava Brain Router → Template Response (instant, free)
   - Console logs show routing decision: "⚡ Template response" vs "🤖 Escalating to AI"
 
 ### **Benefits:**
+
 1. **Cost Reduction:** ~80% fewer AI API calls
 2. **Speed:** Template responses are instant (0ms vs 1-3s)
 3. **Consistency:** Ava's voice/tone is controlled via templates
 4. **Extensibility:** Easy to add new templates for new features
 
 ### **Example Flow:**
+
 ```typescript
 // User types: "hi"
 // → Brain checks AI patterns → No match
@@ -1655,7 +2037,9 @@ User Action → Ava Brain Router → Template Response (instant, free)
    - User interactions keep the session "active"
 
 ### **Console Logging:**
+
 Watch the browser console for Ava Brain activity:
+
 - `⚡ [AVA BRAIN] Template response (instant, no AI cost)` - Template used
 - `🤖 [AVA BRAIN] Escalating to AI for complex question` - AI called
 - `📍 [AVA BRAIN] Page changed: X → Y` - Navigation tracked
@@ -1663,7 +2047,9 @@ Watch the browser console for Ava Brain activity:
 - `🏆 [AVA BRAIN] Milestone: first_resume` - Milestone triggered
 
 ### **Teaching Moment 🎓:**
+
 This is a classic pattern called **"Smart Defaults with Escape Hatch"**. You optimize for the common case (templates) while preserving the ability to handle edge cases (AI). It's similar to:
+
 - Database query caching
 - React's reconciliation (diff first, DOM update only if needed)
 - CDN edge caching with origin fallback
@@ -1727,9 +2113,11 @@ This is a classic pattern called **"Smart Defaults with Escape Hatch"**. You opt
 **Implemented unified driver profile enabling bidirectional data flow between Resume Builder and DOT Application.**
 
 ### **The Problem:**
+
 Users could start with either the Resume Builder or DOT Application, but data didn't flow between them. If a user filled out their DOT application first, they'd have to re-enter everything in the Resume Builder, and vice versa.
 
 ### **The Solution:**
+
 A **Unified Driver Profile** that acts as a single source of truth. Both forms read from and write to this profile.
 
 ```
@@ -1758,6 +2146,7 @@ A **Unified Driver Profile** that acts as a single source of truth. Both forms r
 ### **Technical Implementation:**
 
 **Database Migration** (`supabase/migrations/007_unified_driver_profile.sql`):
+
 - Added new columns to `driver_profiles` table for all shared fields
 - Personal info, address, CDL, emergency contact
 - JSONB fields for employment history, references, education, skills
@@ -1765,12 +2154,14 @@ A **Unified Driver Profile** that acts as a single source of truth. Both forms r
 - `last_updated_from` tracking field
 
 **TypeScript Types** (`src/types/driver-profile.ts`):
+
 - `UnifiedDriverProfile` - Main profile type
 - `UnifiedEmployment` - Superset of Resume + DOT employment fields
 - `UnifiedReference` - Superset of Resume + DOT reference fields
 - Helper functions: `rowToProfile()`, `profileToRow()`
 
 **Mapping Utilities** (`src/lib/profile-mapper.ts`):
+
 - `profileToResumeBuilder()` - Profile → Resume Builder format
 - `resumeBuilderToProfile()` - Resume Builder → Profile format
 - `profileToDotApplication()` - Profile → DOT Application format
@@ -1779,31 +2170,34 @@ A **Unified Driver Profile** that acts as a single source of truth. Both forms r
 - `mergeEmploymentHistory()` - Merge employment while preserving fields from both forms
 
 **API Endpoint** (`src/app/api/driver/profile/route.ts`):
+
 - `GET` - Fetch user's unified profile
 - `POST` - Create or fetch profile (upsert)
 - `PUT` - Update profile with source tracking
 
 ### **Field Mapping:**
 
-| Field Category | Resume Builder | DOT Application | Profile Storage |
-|---------------|----------------|-----------------|-----------------|
-| **Name** | firstName, lastName | firstName, middleName, lastName | All three |
-| **Contact** | email, phone | email, phone | Both |
-| **Address** | address, city, state, zip | address, city, state, zip | Same |
-| **CDL** | number, state, class, endorsements | number, state, class, endorsements | Same |
-| **Employment** | responsibilities[], equipment[] | reasonForLeaving, supervisor | Superset |
-| **References** | title, company | yearsKnown | Superset |
-| **DOT Only** | - | dateOfBirth, SSN, emergencyContact | Stored |
-| **Resume Only** | professionalSummary, education, skills | - | Stored |
+| Field Category  | Resume Builder                         | DOT Application                    | Profile Storage |
+| --------------- | -------------------------------------- | ---------------------------------- | --------------- |
+| **Name**        | firstName, lastName                    | firstName, middleName, lastName    | All three       |
+| **Contact**     | email, phone                           | email, phone                       | Both            |
+| **Address**     | address, city, state, zip              | address, city, state, zip          | Same            |
+| **CDL**         | number, state, class, endorsements     | number, state, class, endorsements | Same            |
+| **Employment**  | responsibilities[], equipment[]        | reasonForLeaving, supervisor       | Superset        |
+| **References**  | title, company                         | yearsKnown                         | Superset        |
+| **DOT Only**    | -                                      | dateOfBirth, SSN, emergencyContact | Stored          |
+| **Resume Only** | professionalSummary, education, skills | -                                  | Stored          |
 
 ### **Files Added/Modified:**
 
 **New Files:**
+
 - `supabase/migrations/007_unified_driver_profile.sql` - Database migration
 - `src/types/driver-profile.ts` - TypeScript types
 - `src/lib/profile-mapper.ts` - Bidirectional mapping utilities
 
 **Modified Files:**
+
 - `src/app/api/driver/profile/route.ts` - Full CRUD operations
 
 ### **Conflict Detection & Resolution** ✅
@@ -1811,6 +2205,7 @@ A **Unified Driver Profile** that acts as a single source of truth. Both forms r
 **Problem:** If a user uploads multiple resumes with different names/info (e.g., "John Doe" then "Jane Smith"), the second upload would silently overwrite the first, causing data loss and confusion.
 
 **Solution:** Added conflict detection that:
+
 - Detects mismatches in: Name, CDL Number, Email
 - Returns 409 Conflict response when conflicts detected
 - Shows modal to user asking which profile to keep
@@ -1818,6 +2213,7 @@ A **Unified Driver Profile** that acts as a single source of truth. Both forms r
 - Only applies to `uploaded_resume` source (user-initiated saves from Resume Builder/DOT App always overwrite)
 
 **Files Modified:**
+
 - `src/app/api/driver/profile/route.ts` - Added conflict detection logic
 - `src/app/page.tsx` - Added conflict modal and resolution handler
 
@@ -1844,12 +2240,12 @@ All components now use the unified profile:
 
 ### **How Users Experience This:**
 
-| User Journey | What Happens |
-|--------------|--------------|
-| Build resume → Open DOT form | DOT form is prefilled with resume data |
-| Fill DOT form → Open Resume Builder | Resume Builder is prefilled with DOT data |
-| Upload resume (AI extract) → Both forms | Both forms prefilled from extracted data |
-| Any changes saved | Profile updates, other forms get the new data next time |
+| User Journey                            | What Happens                                            |
+| --------------------------------------- | ------------------------------------------------------- |
+| Build resume → Open DOT form            | DOT form is prefilled with resume data                  |
+| Fill DOT form → Open Resume Builder     | Resume Builder is prefilled with DOT data               |
+| Upload resume (AI extract) → Both forms | Both forms prefilled from extracted data                |
+| Any changes saved                       | Profile updates, other forms get the new data next time |
 
 ---
 
@@ -1858,19 +2254,23 @@ All components now use the unified profile:
 **Improved error handling for T Backend API outages in credits routes.**
 
 ### **Problem:**
+
 When T Backend (`api-v2.fluxpointstudios.com`) experiences outages (502/503/504 errors), raw nginx HTML errors were being passed through to the frontend, causing confusing error displays.
 
 ### **Solution:**
+
 - ✅ **Added timeout handling** - 10 second timeout with `AbortController` prevents hanging requests
 - ✅ **Graceful server error handling** - 5xx errors now return clean 503 "Service Unavailable" responses
 - ✅ **Environment variable consistency** - Now uses `T_BACKEND_BASE_URL` env var instead of hardcoded URL
 - ✅ **Better error messages** - User-friendly messages instead of raw nginx HTML
 
 ### **Files Updated:**
+
 - `src/app/api/credits/route.ts` - Public credits endpoint
 - `src/app/api/admin/credits/route.ts` - Admin credits endpoint
 
 ### **Note:**
+
 If you see 502/503 errors for AI features, it means T Backend (Flux Point Studios) is down. This is an external service issue - contact them or wait for it to resolve.
 
 ---
@@ -1880,13 +2280,16 @@ If you see 502/503 errors for AI features, it means T Backend (Flux Point Studio
 **Fully implemented resume builder functionality allowing drivers to create professional resumes directly in the platform.**
 
 ### **Why This Matters:**
+
 Many drivers don't have good resumes, and providing a resume builder creates significant value:
+
 - **Driver-specific sections** - Tailored for trucking industry (CDL info, equipment types, route experience)
 - **Structured data storage** - Better than PDF extraction for form prefill
 - **Professional output** - Export to PDF when complete
 - **Integration with existing flow** - Built resumes can be used for DOT form prefill
 
 ### **What's Implemented:**
+
 - ✅ **Database Schema**: Added `resume_type` (uploaded/built), `structured_data` (JSONB), and `source_resume_id` columns
 - ✅ **ResumeBuilder Component**: Complete multi-step form builder with all driver-specific sections:
   - ✅ Personal Information (name, contact, address, professional summary)
@@ -1897,7 +2300,7 @@ Many drivers don't have good resumes, and providing a resume builder creates sig
   - ✅ References (name, title, company, relationship, contact info)
   - ✅ Review & Export (complete preview with PDF export functionality)
 - ✅ **Tab Navigation**: Added tabs to resume page (Upload Resume | Create Resume)
-- ✅ **API Endpoints**: 
+- ✅ **API Endpoints**:
   - `/api/resumes/create` - POST/PUT for creating and updating built resumes
   - `/api/resumes/[id]` - GET for fetching single resume by ID
 - ✅ **Progress Saving**: Users can save progress and return to edit later
@@ -1905,16 +2308,18 @@ Many drivers don't have good resumes, and providing a resume builder creates sig
 - ✅ **PDF Export**: Full PDF generation using jsPDF and html2canvas with professional formatting
 
 ### **Technical Implementation:**
+
 - **Migration**: `supabase/migrations/006_resume_builder_support.sql` - Adds resume builder columns to database
 - **Component**: `src/components/ResumeBuilder.tsx` - Complete resume builder with all steps implemented
 - **Tab Selector**: `src/components/ResumeTabSelector.tsx` - UI for switching between upload/create
-- **API Routes**: 
+- **API Routes**:
   - `src/app/api/resumes/create/route.ts` - Handles POST (create) and PUT (update) operations
   - `src/app/api/resumes/[id]/route.ts` - Handles GET for single resume retrieval
 - **Page Integration**: Updated `src/app/page.tsx` to support resume tabs
 - **PDF Libraries**: Added `jspdf` and `html2canvas` for client-side PDF generation
 
 ### **Database Changes:**
+
 ```sql
 -- New columns added to resumes table
 ALTER TABLE resumes ADD COLUMN resume_type VARCHAR(20) DEFAULT 'uploaded';
@@ -1923,6 +2328,7 @@ ALTER TABLE resumes ADD COLUMN source_resume_id UUID REFERENCES resumes(id);
 ```
 
 ### **User Experience:**
+
 - **Step-by-step wizard** with progress indicators
 - **Mobile-responsive** design with proper breakpoints
 - **Save anytime** - progress is saved to database
@@ -1931,6 +2337,7 @@ ALTER TABLE resumes ADD COLUMN source_resume_id UUID REFERENCES resumes(id);
 - **Review before export** - complete preview of all resume sections
 
 ### **Future Enhancements:**
+
 - 🔜 **Template Selection**: Multiple resume templates for different job types
 - 🔜 **AI Suggestions**: Auto-complete and suggestions based on job descriptions
 - 🔜 **Form Prefill Integration**: Use structured data to prefill DOT forms (better than PDF extraction)
@@ -1944,17 +2351,21 @@ ALTER TABLE resumes ADD COLUMN source_resume_id UUID REFERENCES resumes(id);
 **The complete MVR (Motor Vehicle Record) integration with KeyBackground/Accio is now working end-to-end with real DMV data!**
 
 ### **The Journey:**
+
 After extensive debugging and collaboration with KeyBackground support, we resolved the final issue:
+
 - KeyBackground had an internal safeguard blocking production data from flowing through
 - They removed the safeguard and data now flows correctly
 
 ### **What's Working:**
+
 - ✅ **Order Placement**: MVR orders successfully submitted to Accio
 - ✅ **Webhook Reception**: Results received and processed automatically
 - ✅ **XML Parsing**: Full extraction of license, violation, accident, and suspension data
 - ✅ **UI Display**: Professional MVR report display matching industry standards
 
 ### **First Successful Real Order:**
+
 - Order #: `17677958398180551`
 - Driver: Samuel Blaha (Ohio)
 - License: RZ273847, Class D, VALID, expires 2031
@@ -1963,11 +2374,13 @@ After extensive debugging and collaboration with KeyBackground support, we resol
 - Full parsed_data stored in database with all structured fields
 
 ### **Technical Validation:**
+
 ```
 [MVR WEBHOOK] MVR result processed successfully: fc5b82f6-eee6-445c-9744-c8ab70fc1270
 ```
 
 All components working:
+
 - `src/lib/accio-xml-parser.ts` - Parses all MVR data formats
 - `src/app/api/mvr/webhook/route.ts` - Receives and processes webhooks
 - `src/app/api/mvr/status/[orderId]/route.ts` - Serves data to UI
@@ -1980,14 +2393,18 @@ All components working:
 **Comprehensive overhaul of MVR display and parsing based on real MVR report comparison**
 
 ### **Problem:**
+
 After comparing our MVR display to a real KeyBackground MVR report (Acevedo_Natanael_53863.pdf), we discovered:
+
 - We only showed summary counts (violations: 1), not actual violation details
 - Missing accident and suspension extraction functions
 - Missing CDL-specific info (multiple license classes, medical certificate, restrictions)
 - UI was barebones compared to professional MVR reports
 
 ### **Raw XML Analysis:**
+
 Received actual raw XML from KeyBackground (MVR.xml) which revealed the exact structure:
+
 ```xml
 <postResults order="53901" subOrder="893073" type="MVR" filledStatus="filled" filledCode="discrepancy">
   <mvr_license>
@@ -2013,6 +2430,7 @@ Received actual raw XML from KeyBackground (MVR.xml) which revealed the exact st
 ### **Changes Made:**
 
 #### **Parser Enhancements (`src/lib/accio-xml-parser.ts`)**:
+
 - **NEW: `<postResults>` format support** - Accio sends results in this format, not just `<ScreeningResults>`
 - Added `extractMvrAccidents()` function with multiple tag pattern support
 - Added `extractMvrSuspensions()` function with multiple tag pattern support
@@ -2033,16 +2451,19 @@ Received actual raw XML from KeyBackground (MVR.xml) which revealed the exact st
   - `medicalCertSelfCertification` - e.g., "NON-EXCEPTED INTERSTATE"
 
 #### **Webhook Enhancements (`src/app/api/mvr/webhook/route.ts`)**:
+
 - Now detects and handles `<postResults>` format in addition to `<ScreeningResults>`
 - Improved logging for format detection
 
 #### **API Enhancements (`src/app/api/mvr/status/[orderId]/route.ts`)**:
+
 - Now returns full violation/accident/suspension arrays (not just counts)
 - Added `licenses` array from parsed data
 - Added full medical certificate fields from parsed_data
 - Added `cdlEndorsements` and `cdlRestrictions` arrays
 
 #### **UI Overhaul (`src/components/MvrViewModal.tsx`)**:
+
 - **License Section**: Shows all license classes (CDL drivers often have B, C, D)
 - **Medical Certificate Section**: Shows status, issue date, expiration, self-certification type
 - **Summary Stats**: Visual cards for Points, Violations, Accidents, Suspensions
@@ -2059,20 +2480,22 @@ Received actual raw XML from KeyBackground (MVR.xml) which revealed the exact st
   - Collapsible payment history
 
 ### **What a Real MVR Shows (Reference: Acevedo + MVR.xml):**
-| Data | In Real Report | We Now Display |
-|------|----------------|----------------|
-| Multiple license classes | B, C, D | ✅ |
-| License type (COMMERCIAL/PERSONAL) | ✅ | ✅ |
-| CDL Status | VALID | ✅ |
-| Restrictions | CORR LENSES | ✅ |
-| Medical Certificate | Issue/Expiration/Status | ✅ |
-| Self Certification | NON-EXCEPTED INTERSTATE | ✅ |
-| Violation description | "NO OR IMPROPER LIGHTS" | ✅ |
-| Violation dates | Issue + Conviction | ✅ |
-| Points | 3.00 | ✅ |
-| State/ACD codes | IL/E55 | ✅ |
+
+| Data                               | In Real Report          | We Now Display |
+| ---------------------------------- | ----------------------- | -------------- |
+| Multiple license classes           | B, C, D                 | ✅             |
+| License type (COMMERCIAL/PERSONAL) | ✅                      | ✅             |
+| CDL Status                         | VALID                   | ✅             |
+| Restrictions                       | CORR LENSES             | ✅             |
+| Medical Certificate                | Issue/Expiration/Status | ✅             |
+| Self Certification                 | NON-EXCEPTED INTERSTATE | ✅             |
+| Violation description              | "NO OR IMPROPER LIGHTS" | ✅             |
+| Violation dates                    | Issue + Conviction      | ✅             |
+| Points                             | 3.00                    | ✅             |
+| State/ACD codes                    | IL/E55                  | ✅             |
 
 ### **Impact:**
+
 - MVR reports now show professional-level detail matching KeyBackground's PDF reports
 - Trucking companies can see the actual violations, not just counts
 - CDL-specific info (medical cert, endorsements, restrictions) now visible
@@ -2085,12 +2508,15 @@ Received actual raw XML from KeyBackground (MVR.xml) which revealed the exact st
 **Added middle name field to MVR order form for accurate DMV matching**
 
 ### **Problem:**
+
 MVR orders were returning `status=unknown` from the Ohio BMV because the name submitted didn't match the BMV records. The form only collected First Name and Last Name, but driver licenses include the middle name.
 
 ### **Solution:**
+
 Added a middle name field to the MVR order form.
 
 ### **Changes:**
+
 - **`src/components/MvrOrderForm.tsx`**:
   - Added `middleName` state variable
   - Added middle name input field (3-column layout: first, middle, last)
@@ -2098,6 +2524,7 @@ Added a middle name field to the MVR order form.
   - Middle name is passed to the API in the order payload
 
 ### **Impact:**
+
 - Users can now enter their full name as it appears on their license
 - Should resolve `unknown` status from DMV when middle name is required for matching
 
@@ -2108,9 +2535,11 @@ Added a middle name field to the MVR order form.
 **End-to-end MVR order processing is now functional!**
 
 ### **Summary:**
+
 After extensive debugging and multiple fixes over the past week, the MVR (Motor Vehicle Report) integration with Accio/KeyBackground is now fully operational. Orders are placed, results are received via webhook, and data is stored correctly.
 
 ### **Successful Test:**
+
 - **Order Number:** `17671950189337937`
 - **Accio Remote Number:** `53825`
 - **Status:** `needs_review` (expected for fake test license)
@@ -2118,6 +2547,7 @@ After extensive debugging and multiple fixes over the past week, the MVR (Motor 
 - **Result:** Full XML response saved to `result_xml`
 
 ### **What's Working:**
+
 1. ✅ Order placement to Accio API
 2. ✅ Webhook receives results from Accio
 3. ✅ Order matching via multiple strategies (order number, remote number, DL+state)
@@ -2126,6 +2556,7 @@ After extensive debugging and multiple fixes over the past week, the MVR (Motor 
 6. ✅ Remote order number storage for reliable future matching
 
 ### **Key Lessons Learned:**
+
 - **DOB Validation:** Accio rejects orders where DOB results in age < 16 (error 104)
 - **Test Mode vs PROD Mode:** `<mode>PROD</mode>` required even with test credentials
 - **Portal From Applicant:** Must be `N` for webhook postback to work
@@ -2133,6 +2564,7 @@ After extensive debugging and multiple fixes over the past week, the MVR (Motor 
 - **Fake License Numbers:** Result in `filledCode="unknown"` status (expected behavior)
 
 ### **Status Meanings:**
+
 - `completed` = MVR returned with clear/known status
 - `needs_review` = MVR returned with unknown or flagged status
 - `pending` = Waiting for Accio response
@@ -2145,12 +2577,15 @@ After extensive debugging and multiple fixes over the past week, the MVR (Motor 
 **Fixed parser to extract license numbers from MVR subOrder block, not entire XML**
 
 ### **Problem:**
+
 The webhook parser was extracting `dlnum` and `dlstate` from the entire XML document, which caused it to match wrong tags (e.g., empty `<dlnum/>` in the `<subject>` block) and extract huge chunks of XML text instead of the actual license values. This caused Strategy 3 (DL number matching) to fail because `licenseNumber` and `licenseState` contained malformed data.
 
 ### **Solution:**
+
 Updated the parser to extract `dlnum` and `dlstate` specifically from the MVR subOrder block content, not from the entire XML. This ensures we get the correct license values that were sent in the order.
 
 ### **Changes:**
+
 - **`src/lib/accio-xml-parser.ts`**:
   - Modified `findMvrSubOrder()` to return the subOrder content block
   - Updated license extraction to use `mvrSubOrder.content` instead of entire XML
@@ -2160,6 +2595,7 @@ Updated the parser to extract `dlnum` and `dlstate` specifically from the MVR su
   - Added warning log if `accioOrderId` cannot be extracted from Accio's response
 
 ### **Impact:**
+
 - License number and state are now correctly extracted from webhook XML
 - Strategy 3 (DL number matching) will work correctly
 - Better handling of cases where Accio doesn't return orderID in initial response
@@ -2172,24 +2608,30 @@ Updated the parser to extract `dlnum` and `dlstate` specifically from the MVR su
 **Fixed webhook to handle orders where Accio didn't return order/suborder IDs in initial response**
 
 ### **Problem:**
+
 Some MVR orders are created with `accio_suborder_number = NULL` and `accio_remote_order_number = NULL` because Accio doesn't always return these IDs in their initial order response. When Accio later sends the webhook result with their internal order numbers (`53818`), the webhook's matching logic failed:
+
 - Strategy 1 failed because it matches by our order number, but Accio sends their internal number
 - Strategy 2 failed because it requires `accio_remote_order_number` to exist in DB, but it's NULL
 - Strategy 3 (DL matching) worked but didn't update the remote order numbers for future matching
 
 ### **Solution:**
+
 Enhanced webhook matching with multiple improvements:
+
 - **Strategy 1**: Updated to handle NULL suborder numbers using `.or()` query
 - **Strategy 3**: Improved DL number matching to update `accio_remote_order_number` and `accio_remote_suborder_number` when a match is found, making future webhook calls more reliable
 - **Better Logging**: Added detailed logging of all matching strategies and extracted values for debugging
 
 ### **Changes:**
+
 - **`src/app/api/mvr/webhook/route.ts`**:
   - Strategy 1: Updated matching logic to use `.or()` query that handles NULL suborder numbers
   - Strategy 3: Now updates `accio_remote_order_number` and `accio_remote_suborder_number` when matching by DL number
   - Enhanced error logging to include licenseNumber, licenseState, and all strategies attempted
 
 ### **Impact:**
+
 - Webhook can now successfully match orders even when initial Accio response didn't include order/suborder IDs
 - Strategy 3 matches update the database with Accio's remote numbers, improving future matching
 - More resilient order matching handles variations in Accio's initial order responses
@@ -2202,16 +2644,20 @@ Enhanced webhook matching with multiple improvements:
 **Fixed webhook parser to handle Accio XML with empty number attributes**
 
 ### **Problem:**
+
 Accio was sending XML results with empty `number=""` attributes on `<subOrder>` elements, instead using `remote_number` for identification. The parser was extracting empty strings and failing with "Missing order numbers in result" error.
 
 ### **Solution:**
+
 Enhanced the XML parser to:
+
 - Find MVR subOrder specifically by type="MVR" or by content indicators (dlnum/dlstate)
 - Use `remote_number` as fallback when `number` attribute is empty
 - Try multiple matching strategies in webhook (direct number match, then remote_number match)
 - Handle cases where Accio sends multiple subOrders with varying structures
 
 ### **Changes:**
+
 - **`src/lib/accio-xml-parser.ts`:**
   - Added `findMvrSubOrder()` function to locate MVR-specific subOrder in XML
   - Updated parser to use `remote_number` when `number` is empty
@@ -2224,6 +2670,7 @@ Enhanced the XML parser to:
   - Uses `remoteSubOrderNumber` as fallback when `subOrderNumber` is missing
 
 ### **Impact:**
+
 - Webhook now successfully processes Accio XML results even when `number` attributes are empty
 - More resilient parsing handles variations in Accio's XML format
 - Better error messages help diagnose matching issues
@@ -2235,6 +2682,7 @@ Enhanced the XML parser to:
 **Comprehensive MVR management modal with full payment and order visibility**
 
 ### **Overview:**
+
 Created a dedicated MVR Management Modal that provides complete transparency into all MVR-related activities. Users can see all payments made, all orders placed, identify orphaned payments, and take action to complete pending orders or view completed MVRs.
 
 ### **Features:**
@@ -2269,6 +2717,7 @@ Created a dedicated MVR Management Modal that provides complete transparency int
   - Seamless flow between modal and forms
 
 ### **User Benefits:**
+
 1. **Complete Transparency**: See every payment and order in one place
 2. **No Lost Payments**: Orphaned payments highlighted with clear recovery path
 3. **Easy Management**: One-click access to all MVR-related actions
@@ -2276,9 +2725,11 @@ Created a dedicated MVR Management Modal that provides complete transparency int
 5. **Informed Decisions**: See total USDC spent and order completion rates
 
 ### **Files Created:**
+
 - `src/components/MvrManagementModal.tsx` - Comprehensive MVR dashboard modal
 
 ### **Files Modified:**
+
 - `src/app/api/mvr/check-status/route.ts` - Return all payments and orders
 - `src/components/MvrStatusIndicator.tsx` - Simplified to open management modal
 - `src/components/MvrOrderForm.tsx` - Auto-detect pending payments from localStorage
@@ -2291,6 +2742,7 @@ Created a dedicated MVR Management Modal that provides complete transparency int
 **AI-powered prefilling of DOT application from MVR results**
 
 ### **Overview:**
+
 Implemented automatic prefilling of DOT application Form 1 using verified data from MVR (Motor Vehicle Record) results. When drivers receive MVR results from Accio, they can now automatically prefill their DOT application with verified license and personal information.
 
 ### **Features:**
@@ -2323,6 +2775,7 @@ Implemented automatic prefilling of DOT application Form 1 using verified data f
   - Properly formats dates for database storage
 
 ### **Data Flow:**
+
 1. Driver orders MVR → Accio processes → Webhook receives XML
 2. XML parsed → Full structured data stored in `mvr_results.parsed_data`
 3. Driver opens DOT application → Can call prefill API
@@ -2330,14 +2783,17 @@ Implemented automatic prefilling of DOT application Form 1 using verified data f
 5. Client merges with existing form data → User reviews and saves
 
 ### **Files Created:**
+
 - `src/lib/mvr-to-dot-mapper.ts` - Maps MVR results to DOT Form 1 structure
 - `src/app/api/driver/prefill-from-mvr/route.ts` - API endpoint for prefilling
 
 ### **Files Modified:**
+
 - `src/lib/accio-xml-parser.ts` - Enhanced to parse full MVR XML structure (subject, mvr_license, mvr_violation blocks)
 - `src/app/api/mvr/webhook/route.ts` - Updated to store complete parsed data including subject information
 
 ### **Next Steps:**
+
 - Add UI button in DOT application to trigger prefill
 - Show extraction summary to user (e.g., "15 fields extracted from MVR")
 - Handle date format conversions (YYYYMMDD → YYYY-MM-DD)
@@ -2350,6 +2806,7 @@ Implemented automatic prefilling of DOT application Form 1 using verified data f
 **Created dedicated home page for drivers with clear instructions and navigation**
 
 ### **Overview:**
+
 When a driver logs in and views the home page, they now see a driver-specific landing page instead of the generic home page. This page provides clear instructions on what to do and where to find features.
 
 ### **Features:**
@@ -2380,36 +2837,43 @@ When a driver logs in and views the home page, they now see a driver-specific la
   - Theme-aware (light/dark mode)
 
 ### **User Flow:**
+
 1. Driver logs in → sees DriverHomePage (instead of generic HomePage)
 2. Sees clear instructions and quick action buttons
 3. Can click cards to navigate directly OR use "Driver Options" dropdown in nav
 4. Better onboarding experience for new drivers
 
 ### **Files Created:**
+
 - `src/components/DriverHomePage.tsx` - New driver-specific home page component
 
 ### **Files Modified:**
+
 - `src/app/page.tsx` - Conditional rendering: shows DriverHomePage when `userRole === 'driver'` and `!currentPage`
 
 ## 📱 **MOBILE UX FIX: Role Selection Modal** (December 10, 2024)
 
 ### Summary
+
 Fixed critical mobile scrolling issues with role selection modal where users were unable to scroll the modal content.
 
 ### Changes
 
 #### **1. Body Scroll Lock**
+
 - ✅ Added `useEffect` to lock body scroll when modal is open
 - ✅ Prevents background page from scrolling on mobile
 - ✅ Automatically restores scroll on unmount
 
 #### **2. Modal Scroll Container**
+
 - ✅ Made modal content independently scrollable
 - ✅ Added `overflow-y-auto` and `overscroll-contain` to modal
 - ✅ Set `max-h-[95vh]` to prevent modal from exceeding viewport
 - ✅ Added `touchAction` styles to prevent touch event conflicts
 
 #### **3. Mobile-First Responsive Design**
+
 - ✅ Reduced padding on mobile (`p-4` → `p-3 sm:p-4`)
 - ✅ Smaller text sizes on mobile (responsive with `sm:` breakpoints)
 - ✅ Smaller icons on mobile (`w-10 h-10` on mobile, `sm:w-14 sm:h-14` on desktop)
@@ -2418,11 +2882,13 @@ Fixed critical mobile scrolling issues with role selection modal where users wer
 - ✅ Changed hover effects to `active:` states for mobile
 
 #### **4. Better Touch Interactions**
+
 - ✅ Added `active:scale-[0.98]` for visual feedback on touch
 - ✅ Preserved `sm:hover:scale-[1.02]` for desktop hover states
 - ✅ Proper touch event handling with `touchAction` styles
 
 #### **Files Changed**
+
 - `src/components/RoleSelectionModal.tsx` - Complete mobile UX overhaul
 
 ---
@@ -2430,17 +2896,20 @@ Fixed critical mobile scrolling issues with role selection modal where users wer
 ## 🏗️ **ARCHITECTURE REFACTOR: DB-FIRST + SPONSORED GAS** (December 10, 2024)
 
 ### Summary
+
 Major architectural improvement to make blockchain completely invisible to users with sponsored transactions and database-first approach.
 
 ### Changes
 
 #### **1. Employment Verification Form - DB First**
+
 - ✅ Now saves to Supabase BEFORE blockchain submission
 - ✅ Uses server-side sponsored gas (no user payment)
 - ✅ Blockchain verification happens in background
 - ✅ Updates DB with blockchain transaction details after verification
 
 #### **2. Driver Application (page.tsx) - Sponsored Gas**
+
 - ✅ **REMOVED** user-paid transactions via `sendUserOperationAsync`
 - ✅ Saves all form data to DB first (source of truth)
 - ✅ Submits to blockchain via API route with **server-sponsored gas**
@@ -2448,6 +2917,7 @@ Major architectural improvement to make blockchain completely invisible to users
 - ✅ Graceful fallback: If blockchain fails, data is still saved
 
 #### **3. Architecture Principles**
+
 - 🎯 **Database = Source of Truth** - All data saves to DB first
 - 🎯 **Blockchain = Verification Layer** - Invisible to users, tamper-proof record
 - 🎯 **Sponsored Gas** - Server pays all gas fees, users never see crypto
@@ -2455,6 +2925,7 @@ Major architectural improvement to make blockchain completely invisible to users
 - 🎯 **User Experience** - Users just fill forms and submit, no blockchain knowledge needed
 
 #### **4. Flow for All Forms**
+
 ```
 1. Validate data
 2. Check for duplicates in DB
@@ -2464,6 +2935,7 @@ Major architectural improvement to make blockchain completely invisible to users
 ```
 
 #### **5. Benefits**
+
 - ✅ **Better UX** - Instant feedback, no waiting for blockchain
 - ✅ **Cost Effective** - Server controls gas spending
 - ✅ **Reliable** - Data saved even if blockchain fails
@@ -2471,6 +2943,7 @@ Major architectural improvement to make blockchain completely invisible to users
 - ✅ **Simple** - Users never know blockchain exists
 
 #### **Files Changed**
+
 - `src/components/driver-application/EmploymentVerificationForm.tsx` - DB first flow
 - `src/app/page.tsx` - Removed user wallet transactions, added sponsored gas
 - `src/app/api/driver-applications/save-employment-verification/route.ts` - New save endpoint
@@ -2482,11 +2955,13 @@ Major architectural improvement to make blockchain completely invisible to users
 Fixed "g:invalid crv: undefined" error that occurs during OTP verification on mobile devices.
 
 ### **Problem:**
+
 - Mobile users getting "g:invalid crv: undefined" error when entering OTP code
 - This is a Web Crypto API compatibility issue with mobile browsers (especially iOS Safari)
 - Elliptic curve operations not fully supported on some mobile browsers
 
 ### **Solution:**
+
 - Added global error handler to catch crypto errors
 - Added error detection in AlchemyAuth component
 - Display user-friendly error message with workaround suggestions
@@ -2494,18 +2969,21 @@ Fixed "g:invalid crv: undefined" error that occurs during OTP verification on mo
 - Added sessionStorage flag to persist error state across page interactions
 
 ### **Technical Details:**
+
 - Error occurs in Alchemy's AuthCard when using Web Crypto API for key generation
 - Mobile browsers (iOS Safari, some Android browsers) have limited Web Crypto API support
 - Error is caught at multiple levels: global error handler, component error listener, and promise rejection handler
 - Users are directed to use Google sign-in as a workaround (uses OAuth instead of Web Crypto)
 
 ### **User Experience:**
+
 - Clear error message explaining the issue
 - Suggestion to use Google sign-in instead
 - Option to refresh page
 - Error persists until user takes action
 
 ### **Files Modified:**
+
 - `src/components/AlchemyAuth.tsx` - Added crypto error detection and user-friendly error display
 - `src/app/layout.tsx` - Added global error handler for crypto errors
 
@@ -2514,11 +2992,13 @@ Fixed "g:invalid crv: undefined" error that occurs during OTP verification on mo
 Fixed issue where email sign-in button wasn't working on mobile devices.
 
 ### **Problem:**
+
 - Clicking "Sign in with Email" on mobile devices did nothing
 - Desktop worked fine (possibly due to cookies/localStorage)
 - Touch events weren't being handled properly by Alchemy AuthCard
 
 ### **Solution:**
+
 - Added mobile-specific CSS fixes for Alchemy AuthCard components
 - Ensured proper touch event handling with `touch-action: manipulation`
 - Fixed iOS Safari input zoom issue by setting font-size to 16px
@@ -2526,12 +3006,14 @@ Fixed issue where email sign-in button wasn't working on mobile devices.
 - Improved AuthCard container styling for better mobile interaction
 
 ### **Technical Details:**
+
 - Mobile breakpoint: `@media (max-width: 768px)`
 - Applied fixes to all Alchemy UI buttons, inputs, and interactive elements
 - Ensured AuthCard container doesn't block pointer events
 - Fixed iOS Safari zoom-on-focus issue for email inputs
 
 ### **Files Modified:**
+
 - `src/components/AlchemyAuth.tsx` - Added mobile touch handling styles
 - `src/app/globals.css` - Added comprehensive mobile fixes for Alchemy AuthCard
 
@@ -2540,22 +3022,26 @@ Fixed issue where email sign-in button wasn't working on mobile devices.
 Fixed issue where desktop was defaulting to light mode instead of dark mode on initial page load.
 
 ### **Problem:**
+
 - Desktop users were seeing light mode by default on veree.io
 - Should be dark mode default on desktop, light mode default on mobile
 
 ### **Solution:**
+
 - Added blocking script in `layout.tsx` that runs before React hydrates
 - Script immediately sets `data-theme` attribute based on device type
 - Prevents flash of wrong theme and ensures correct default
 - Updated `ThemeContext` to read from `data-theme` attribute if localStorage is empty
 
 ### **Technical Details:**
+
 - Script checks `window.innerWidth < 768` to detect mobile
 - Mobile (< 768px) = light mode default
 - Desktop (≥ 768px) = dark mode default
 - User saved preferences still take priority over device defaults
 
 ### **Files Modified:**
+
 - `src/app/layout.tsx` - Added blocking script for immediate theme setting
 - `src/contexts/ThemeContext.tsx` - Updated to read from data-theme attribute
 
@@ -2575,6 +3061,7 @@ Implemented a premium rotating multi-tone gold border with glow effect for the "
 ### **Technical Notes:**
 
 The `rotating-gold-border` class in `globals.css` uses:
+
 1. CSS Houdini `@property --rotate` for smooth custom property animation
 2. 5-stop gradient with contrasting gold tones:
    - Dark Gold (`#B8860B`) → Bright Gold (`#FFD700`) → Light Gold (`#FFED4E`) → Medium Gold (`#DAA520`) → Dark Gold
@@ -2647,6 +3134,7 @@ Patched critical security vulnerability (CVSS 10.0) that could allow remote code
 **If your application was online and unpatched as of December 4, 2025 at 1:00 PM PT, you MUST rotate all secrets:**
 
 #### **Priority 1 - Rotate Immediately:**
+
 - `X402_PAYMENT_PRIVATE_KEY` - Payment wallet private key
 - `PRIVATE_KEY` - Deployment wallet private key
 - `SUPABASE_SERVICE_ROLE_KEY` - Database service role key
@@ -2654,6 +3142,7 @@ Patched critical security vulnerability (CVSS 10.0) that could allow remote code
 - `T_BACKEND_API_KEY` - AI service API key
 
 #### **Priority 2 - Rotate Soon:**
+
 - `ALCHEMY_API_KEY` - Blockchain RPC key
 - `ACCIO_PASSWORD` - MVR service password
 - `ADZUNA_APP_KEY` - Job search API key
@@ -2663,6 +3152,7 @@ Patched critical security vulnerability (CVSS 10.0) that could allow remote code
 #### **How to Rotate:**
 
 1. **Payment Wallet** (`X402_PAYMENT_PRIVATE_KEY`):
+
    ```bash
    npm run payment:create
    # Generate new wallet, fund it, update .env.local
@@ -2727,6 +3217,7 @@ Resolved security issues flagged by Vercel by adding proper authentication to ad
 ### **Authentication Pattern:**
 
 Both routes now follow the same pattern as `/api/admin/reset-wallet`:
+
 - Check for `ADMIN_API_KEY` environment variable
 - Validate key from `x-admin-key` or `Authorization` header
 - Return 401 Unauthorized if key is missing or invalid
@@ -2769,7 +3260,6 @@ Implemented automatic server-side payment handling for T Backend AI requests. Wh
   - USDC payment function using viem on Base Mainnet
   - Payment requirements parser from 402 responses
   - Automatic transaction confirmation
-  
 - **Chat Route Updated**: Modified `src/app/api/ai/chat/route.ts` to:
   - Add `X-Partner: pace_drivers` header to all requests
   - Detect 402 Payment Required responses
@@ -2802,6 +3292,7 @@ Implemented automatic server-side payment handling for T Backend AI requests. Wh
 ### **Setup Required:**
 
 1. Configure payment wallet in `.env.local`:
+
    ```bash
    X402_PAYMENT_PRIVATE_KEY="0x..." # Optional: dedicated wallet
    # OR use existing PRIVATE_KEY
@@ -2936,6 +3427,7 @@ Updated the Accio XML builder to match the latest production XML format provided
 ### **Backward Compatibility:**
 
 All changes are backward compatible. New fields have sensible defaults:
+
 - `gender` defaults to 'U' (Unknown)
 - `race` defaults to 'U' (Unknown)
 - `jobstate` defaults to residential state
@@ -4491,7 +4983,7 @@ useEffect(() => {
     const formsToSave = { form1Data, form2Data, form3Data }
     window.localStorage.setItem(
       `forms-${user.address}`,
-      JSON.stringify(formsToSave)
+      JSON.stringify(formsToSave),
     )
     console.log('💾 [FORMS] Saved form data to localStorage')
   }
@@ -4708,7 +5200,7 @@ if (tBackendData.file_id && tBackendData.vector_store_id && !tBackendData.raw) {
       userMessage: "We've seen this resume before...",
       actionRequired: 'Please make a small edit...',
     },
-    { status: 409 }
+    { status: 409 },
   )
 }
 
@@ -4725,7 +5217,7 @@ if (error.errorType === 'T_BACKEND_CACHE_LOCK') {
         },
         { id: 'resume-continue', label: 'Fill manually', value: 'forms' },
       ],
-    }
+    },
   )
 }
 ```
@@ -5544,7 +6036,7 @@ updateStep(
   'blockchain',
   'error',
   undefined,
-  'Cannot upload the same file twice. This file has already been uploaded to the blockchain. Please select a different file or rename your current file.'
+  'Cannot upload the same file twice. This file has already been uploaded to the blockchain. Please select a different file or rename your current file.',
 )
 setUploading(false)
 return // Exit gracefully
@@ -5965,12 +6457,14 @@ Users → Email + OTP → Alchemy Smart Wallets → Alchemy RPC → Base Sepolia
 - ✅ **Headers Integration** - Added X-Partner, X-Wallet-Address, X-Invoice-Id, X-Payment headers
 
 **Technical Details:**
+
 - Payment library: `src/lib/x402-payment.ts` (USDC transfers via viem)
 - API integration: `src/app/api/ai/chat/route.ts` (402 detection + payment + retry)
 - Scripts: `payment:create`, `payment:address`, `payment:list`, `payment:test`
 - Documentation: `docs/X402_PAYMENT_INTEGRATION.md`, `docs/X402_PAYMENT_SETUP.md`
 
 **⚠️ Current Issue - Credits Not Activating:**
+
 - Payments send successfully and verify (200 OK responses)
 - Credits don't activate - each request still triggers new payment
 - Total spent: ~$21 USDC (4+ payments × 5 USDC each)
@@ -5978,6 +6472,7 @@ Users → Email + OTP → Alchemy Smart Wallets → Alchemy RPC → Base Sepolia
 - Actual: 0 credits (still getting 402 on every request)
 
 **Payments Made (Pending Manual Reconciliation):**
+
 1. Invoice: 5ab154a8cb2f49b1913f86535a0197a9, Tx: 0x5a067856c33f9b3814314568a3eb9203d8f3a435c8bd30c8f552003c42b130d7
 2. Invoice: 03d0dad67f0b4034bf58c33ff3cf2e2a, Tx: 0xdf8f3b4d267210d0f332b263948abb9c203e4f7717c7a7addd4b4e456b37aee1
 3. Invoice: bd27f6cc3de74bdfa87b9db9c1fadece, Tx: 0xc14bb60a6c34125b47ea5a8bb2c1e0617404b35d2d7100cd239f2990efb11aa4
@@ -5985,6 +6480,7 @@ Users → Email + OTP → Alchemy Smart Wallets → Alchemy RPC → Base Sepolia
 **Status**: Automatic payments DISABLED until team fixes credit activation. Backend needs to reconcile payments and activate credits for wallet 0x18d60e6064BC398E4cf42e8355f094F0dc193337.
 
 **Retest After Team "Fix" (Dec 9, 2025):**
+
 - Team refunded previous payments and claimed fix was deployed
 - Retest results: STILL BROKEN
   - Request 1 → 402 → paid 5 USDC → got 200 OK ✅
@@ -5996,6 +6492,7 @@ Users → Email + OTP → Alchemy Smart Wallets → Alchemy RPC → Base Sepolia
 **Conclusion**: The credit system is fundamentally broken on the backend. Integration is complete on our end, but backend cannot track or activate credits after payment verification. Need backend team to demonstrate credits working on their end with consecutive requests BEFORE enabling automatic payments again.
 
 **✅ FIXED - Credits Working (Dec 9, 2025):**
+
 - Team fixed the credit activation system
 - Confirmed working with live request: got 200 OK (no 402)
 - Credit balance endpoint available: `/payments/credits?partner=pace_drivers&wallet=<address>`
@@ -6004,6 +6501,7 @@ Users → Email + OTP → Alchemy Smart Wallets → Alchemy RPC → Base Sepolia
 - Automatic payments RE-ENABLED
 
 **Final Status**: ✅ x402 Payment Integration COMPLETE and WORKING
+
 - Credits activate properly after payment
 - Consecutive requests use credits (no repeated payments)
 - Balance tracking working

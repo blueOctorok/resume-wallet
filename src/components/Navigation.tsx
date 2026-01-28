@@ -1,28 +1,32 @@
 'use client'
 
 import { useState } from 'react'
-import { LayoutDashboard } from 'lucide-react'
+import { LayoutDashboard, Coins } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 import { useTheme } from '@/contexts/ThemeContext'
 import MvrStatusBadge from './MvrStatusBadge'
+
+// Define the navigation page type
+type NavPage =
+  | 'signin'
+  | 'resume'
+  | 'dotapp'
+  | 'jobs'
+  | 'applications'
+  | 'home'
+  | 'hub'
+  | 'veree'
 
 interface NavigationProps {
   isAuthenticated?: boolean
   userRole?: 'driver' | 'employer' | null
   onStatusClick?: () => void
-  onNavigate?: (
-    page:
-      | 'signin'
-      | 'resume'
-      | 'dotapp'
-      | 'jobs'
-      | 'applications'
-      | 'home'
-      | 'hub',
-  ) => void
+  onNavigate?: (page: NavPage) => void
   mvrWalletAddress?: string | null
   tHasUnread?: boolean
   onTClick?: () => void
+  /** Veree token balance for drivers - shown in nav */
+  vereeTokens?: number
 }
 
 export default function Navigation({
@@ -33,6 +37,7 @@ export default function Navigation({
   mvrWalletAddress,
   tHasUnread = false,
   onTClick,
+  vereeTokens = 0,
 }: NavigationProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { theme } = useTheme()
@@ -41,16 +46,7 @@ export default function Navigation({
     setIsMenuOpen(!isMenuOpen)
   }
 
-  const handleNavigation = (
-    page:
-      | 'signin'
-      | 'resume'
-      | 'dotapp'
-      | 'jobs'
-      | 'applications'
-      | 'home'
-      | 'hub',
-  ) => {
+  const handleNavigation = (page: NavPage) => {
     console.log(`🔗 [NAVIGATION] handleNavigation called with page:`, page)
     setIsMenuOpen(false)
     onNavigate?.(page)
@@ -300,8 +296,28 @@ export default function Navigation({
                 </div>
               )}
 
-              {/* Theme Toggle - Bottom Right */}
-              <div className='w-full md:w-auto flex justify-end md:ml-auto'>
+              {/* Veree Token Counter (drivers only) & Theme Toggle - Bottom Right */}
+              <div className='w-full md:w-auto flex items-center justify-end gap-3 md:ml-auto'>
+                {/* Only show Token counter for drivers - employers don't earn tokens */}
+                {userRole === 'driver' && (
+                  <button
+                    onClick={() => handleNavigation('veree')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-300 cursor-pointer ${
+                      theme === 'light'
+                        ? 'text-brand-sage bg-brand-sage/10 hover:bg-brand-sage/20 border border-brand-sage/20'
+                        : 'text-brand-mint bg-brand-mint/10 hover:bg-brand-mint/20 border border-brand-mint/30'
+                    }`}
+                    title='View Veree tokens'
+                  >
+                    <Coins className='w-3.5 h-3.5' />
+                    <span className='font-mono'>
+                      {vereeTokens.toLocaleString()}
+                    </span>
+                    <span className='hidden sm:inline text-[10px] opacity-70'>
+                      Veree
+                    </span>
+                  </button>
+                )}
                 <ThemeToggle />
               </div>
             </div>
