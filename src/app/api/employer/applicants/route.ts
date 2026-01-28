@@ -3,7 +3,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 /**
  * GET /api/employer/applicants
- * 
+ *
  * Fetches all applicants who have applied to this employer's job postings.
  * Includes filtering, sorting, and status management.
  */
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   try {
     const walletAddress = request.headers.get('x-wallet-address')
     const { searchParams } = new URL(request.url)
-    
+
     // Query params
     const jobId = searchParams.get('jobId')
     const status = searchParams.get('status')
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     if (!walletAddress) {
       return NextResponse.json(
         { error: 'Wallet address is required' },
-        { status: 401 }
+        { status: 401 },
       )
     }
 
@@ -35,10 +35,7 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (userError || !user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     const { data: company, error: companyError } = await supabase
@@ -48,16 +45,16 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (companyError || !company) {
-      return NextResponse.json(
-        { error: 'Company not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
     // Build query
+    // applications has driver_user_id → users; driver_profiles has user_id → users
+    // So we get driver_profiles via users (no direct FK from applications to driver_profiles)
     let query = supabase
       .from('applications')
-      .select(`
+      .select(
+        `
         id,
         status,
         applied_at,
@@ -76,21 +73,21 @@ export async function GET(request: NextRequest) {
         users!applications_driver_user_id_fkey (
           id,
           wallet_address,
-          email
-        ),
-        driver_profiles (
-          first_name,
-          last_name,
-          phone,
           email,
-          cdl_number,
-          cdl_class,
-          cdl_state,
-          cdl_expiration,
-          experience_years,
-          city,
-          state,
-          professional_summary
+          driver_profiles (
+            first_name,
+            last_name,
+            phone,
+            email,
+            cdl_number,
+            cdl_class,
+            cdl_state,
+            cdl_expiration,
+            experience_years,
+            city,
+            state,
+            professional_summary
+          )
         ),
         resumes (
           id,
@@ -99,7 +96,8 @@ export async function GET(request: NextRequest) {
           ipfs_hash,
           verification_status
         )
-      `)
+      `,
+      )
       .eq('job_postings.company_id', company.id)
 
     // Filter by job if specified
@@ -112,8 +110,8 @@ export async function GET(request: NextRequest) {
       query = query.eq('status', status)
     }
 
-    // Sort
-    const orderBy = sortBy === 'name' ? 'driver_profiles.first_name' : sortBy
+    // Sort (only by application fields; name sort done in JS below)
+    const orderBy = sortBy === 'name' ? 'applied_at' : sortBy
     query = query.order(orderBy, { ascending: sortOrder === 'asc' })
 
     const { data: applications, error: appsError } = await query
@@ -122,18 +120,24 @@ export async function GET(request: NextRequest) {
       console.error('[APPLICANTS] Error:', appsError)
       return NextResponse.json(
         { error: 'Failed to fetch applicants' },
-        { status: 500 }
+        { status: 500 },
       )
     }
 
-    // Process applicants
-    const applicants = (applications || []).map(app => {
-      const driverProfile = Array.isArray(app.driver_profiles) 
-        ? app.driver_profiles[0] 
-        : app.driver_profiles
+    // Process applicants (driver_profiles is nested under users)
+    const applicants = (applications || []).map((app) => {
+      const driverUser = app.users as {
+        id: string
+        wallet_address?: string
+        email?: string
+        driver_profiles?: unknown
+      } | null
+      const driverProfiles = driverUser?.driver_profiles
+      const driverProfile = Array.isArray(driverProfiles)
+        ? driverProfiles[0]
+        : driverProfiles
       const resume = Array.isArray(app.resumes) ? app.resumes[0] : app.resumes
       const jobPosting = app.job_postings as any
-      const driverUser = app.users as any
 
       return {
         applicationId: app.id,
@@ -146,14 +150,16 @@ export async function GET(request: NextRequest) {
         shareToken: app.share_token,
         // Driver info
         driverUserId: app.driver_user_id,
-        driverName: driverProfile 
-          ? `${driverProfile.first_name || ''} ${driverProfile.last_name || ''}`.trim() || 'Unknown'
+        driverName: driverProfile
+          ? `${driverProfile.first_name || ''} ${driverProfile.last_name || ''}`.trim() ||
+            'Unknown'
           : 'Unknown',
         driverEmail: driverProfile?.email || driverUser?.email || null,
         driverPhone: driverProfile?.phone || null,
-        driverLocation: driverProfile?.city && driverProfile?.state
-          ? `${driverProfile.city}, ${driverProfile.state}`
-          : driverProfile?.state || null,
+        driverLocation:
+          driverProfile?.city && driverProfile?.state
+            ? `${driverProfile.city}, ${driverProfile.state}`
+            : driverProfile?.state || null,
         // CDL info
         cdlClass: driverProfile?.cdl_class || null,
         cdlState: driverProfile?.cdl_state || null,
@@ -172,6 +178,17 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // Sort by name client-side if requested (driver_profiles is nested, not in DB order)
+    if (sortBy === 'name' && applicants.length > 0) {
+      applicants.sort((a, b) => {
+        const nameA = (a.driverName || '').toLowerCase()
+        const nameB = (b.driverName || '').toLowerCase()
+        return sortOrder === 'asc'
+          ? nameA.localeCompare(nameB)
+          : nameB.localeCompare(nameA)
+      })
+    }
+
     // Get job postings for filter dropdown
     const { data: jobs } = await supabase
       .from('job_postings')
@@ -182,12 +199,18 @@ export async function GET(request: NextRequest) {
     // Stats
     const stats = {
       total: applicants.length,
-      new: applicants.filter(a => a.status === 'submitted').length,
-      reviewing: applicants.filter(a => ['reviewing', 'viewed'].includes(a.status)).length,
-      interviewing: applicants.filter(a => ['interview', 'interviewing'].includes(a.status)).length,
-      offerSent: applicants.filter(a => ['offer_sent', 'offer'].includes(a.status)).length,
-      hired: applicants.filter(a => a.status === 'hired').length,
-      rejected: applicants.filter(a => a.status === 'rejected').length,
+      new: applicants.filter((a) => a.status === 'submitted').length,
+      reviewing: applicants.filter((a) =>
+        ['reviewing', 'viewed'].includes(a.status),
+      ).length,
+      interviewing: applicants.filter((a) =>
+        ['interview', 'interviewing'].includes(a.status),
+      ).length,
+      offerSent: applicants.filter((a) =>
+        ['offer_sent', 'offer'].includes(a.status),
+      ).length,
+      hired: applicants.filter((a) => a.status === 'hired').length,
+      rejected: applicants.filter((a) => a.status === 'rejected').length,
     }
 
     return NextResponse.json({
@@ -196,19 +219,18 @@ export async function GET(request: NextRequest) {
       jobs: jobs || [],
       stats,
     })
-
   } catch (error) {
     console.error('[APPLICANTS] Unexpected error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
 
 /**
  * PATCH /api/employer/applicants
- * 
+ *
  * Updates an application's status or adds reviewer notes.
  */
 export async function PATCH(request: NextRequest) {
@@ -220,14 +242,14 @@ export async function PATCH(request: NextRequest) {
     if (!walletAddress) {
       return NextResponse.json(
         { error: 'Wallet address is required' },
-        { status: 401 }
+        { status: 401 },
       )
     }
 
     if (!applicationId) {
       return NextResponse.json(
         { error: 'applicationId is required' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -241,10 +263,7 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     const { data: company } = await supabase
@@ -254,35 +273,31 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (!company) {
-      return NextResponse.json(
-        { error: 'Company not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
     // Verify application belongs to this company
     const { data: application } = await supabase
       .from('applications')
-      .select(`
+      .select(
+        `
         id,
         job_postings!inner (company_id)
-      `)
+      `,
+      )
       .eq('id', applicationId)
       .single()
 
     if (!application) {
       return NextResponse.json(
         { error: 'Application not found' },
-        { status: 404 }
+        { status: 404 },
       )
     }
 
     const jobPosting = application.job_postings as any
     if (jobPosting.company_id !== company.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
     // Update application
@@ -304,7 +319,7 @@ export async function PATCH(request: NextRequest) {
       console.error('[APPLICANTS] Update error:', updateError)
       return NextResponse.json(
         { error: 'Failed to update application' },
-        { status: 500 }
+        { status: 500 },
       )
     }
 
@@ -312,12 +327,11 @@ export async function PATCH(request: NextRequest) {
       success: true,
       message: 'Application updated successfully',
     })
-
   } catch (error) {
     console.error('[APPLICANTS] Update error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

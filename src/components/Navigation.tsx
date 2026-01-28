@@ -6,12 +6,20 @@ import ThemeToggle from './ThemeToggle'
 import { useTheme } from '@/contexts/ThemeContext'
 import MvrStatusBadge from './MvrStatusBadge'
 
-
 interface NavigationProps {
   isAuthenticated?: boolean
   userRole?: 'driver' | 'employer' | null
   onStatusClick?: () => void
-  onNavigate?: (page: 'signin' | 'resume' | 'dotapp' | 'jobs' | 'applications' | 'home' | 'hub') => void
+  onNavigate?: (
+    page:
+      | 'signin'
+      | 'resume'
+      | 'dotapp'
+      | 'jobs'
+      | 'applications'
+      | 'home'
+      | 'hub',
+  ) => void
   mvrWalletAddress?: string | null
   tHasUnread?: boolean
   onTClick?: () => void
@@ -33,7 +41,16 @@ export default function Navigation({
     setIsMenuOpen(!isMenuOpen)
   }
 
-  const handleNavigation = (page: 'signin' | 'resume' | 'dotapp' | 'jobs' | 'applications' | 'home' | 'hub') => {
+  const handleNavigation = (
+    page:
+      | 'signin'
+      | 'resume'
+      | 'dotapp'
+      | 'jobs'
+      | 'applications'
+      | 'home'
+      | 'hub',
+  ) => {
     console.log(`🔗 [NAVIGATION] handleNavigation called with page:`, page)
     setIsMenuOpen(false)
     onNavigate?.(page)
@@ -56,7 +73,10 @@ export default function Navigation({
       : 'absolute -inset-[1px] rounded-3xl bg-gradient-to-b from-brand-mint/20 to-transparent opacity-50 blur-sm -z-10'
 
   return (
-    <header className='sticky top-4 z-50 px-4 sm:px-6 pointer-events-none' style={{ transform: 'translate3d(0,0,0)', backfaceVisibility: 'hidden' }}>
+    <header
+      className='sticky top-4 z-50 px-4 sm:px-6 pointer-events-none'
+      style={{ transform: 'translate3d(0,0,0)', backfaceVisibility: 'hidden' }}
+    >
       <nav className={`${navClasses} pointer-events-auto`}>
         {/* Extra depth layer - inner shadow */}
         <div className={innerShadowClasses} />
@@ -81,23 +101,23 @@ export default function Navigation({
                       className='relative group flex flex-col items-center space-y-1 sm:space-y-1.5 p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-brand-sage/90 backdrop-blur-sm hover:bg-brand-sage/95 hover:border-brand-mint/70 transition-all duration-300 border-2 border-white/30 cursor-pointer'
                       aria-label='View account status'
                       style={{
-                        boxShadow: '0 0 20px rgba(255, 255, 255, 0.25), 0 0 40px rgba(255, 255, 255, 0.15), 0 0 60px rgba(255, 255, 255, 0.05), inset 0 0 15px rgba(255, 255, 255, 0.1), 0 4px 12px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.15)'
+                        boxShadow:
+                          '0 0 20px rgba(255, 255, 255, 0.25), 0 0 40px rgba(255, 255, 255, 0.15), 0 0 60px rgba(255, 255, 255, 0.05), inset 0 0 15px rgba(255, 255, 255, 0.1), 0 4px 12px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.15)',
                       }}
                     >
-                      {/* Blinking green dot */}
+                      {/* Green dot */}
                       <div className='w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50' />
 
-                      {/* "Logged in" text */}
+                      {/* "Wallet" text */}
                       <span className='text-[10px] sm:text-xs text-brand-cream/90 font-medium'>
-                        Logged in
+                        Wallet
                       </span>
 
                       {/* Tooltip */}
                       <div className='absolute left-0 top-full mt-2 px-3 py-1.5 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
-                        Click to view account
+                        Click to view wallet
                       </div>
                     </button>
-
                   </>
                 ) : (
                   <button
@@ -144,26 +164,33 @@ export default function Navigation({
                         : 'bg-gradient-to-br from-brand-mint/30 to-brand-sage-light/20 backdrop-blur-sm hover:from-brand-mint/40 hover:to-brand-sage-light/30 border-brand-mint/50 shadow-lg shadow-brand-mint/20'
                     } ${tHasUnread ? 'animate-pulse' : ''}`}
                     aria-label='Open AvA Assistant'
-                    type="button"
+                    type='button'
                     style={{
-                      boxShadow: theme === 'light'
-                        ? '0 0 25px rgba(107, 142, 35, 0.4), 0 8px 24px rgba(0, 0, 0, 0.2)'
-                        : '0 0 25px rgba(20, 184, 166, 0.3), 0 8px 24px rgba(0, 0, 0, 0.3)',
+                      boxShadow:
+                        theme === 'light'
+                          ? '0 0 25px rgba(107, 142, 35, 0.4), 0 8px 24px rgba(0, 0, 0, 0.2)'
+                          : '0 0 25px rgba(20, 184, 166, 0.3), 0 8px 24px rgba(0, 0, 0, 0.3)',
                       pointerEvents: 'auto',
-                      zIndex: 9999
+                      zIndex: 9999,
                     }}
                   >
-                    <span className={`text-sm font-bold tracking-wide ${
-                      theme === 'light' ? 'text-white drop-shadow-md' : 'text-brand-cream drop-shadow-md'
-                    }`}>
+                    <span
+                      className={`text-sm font-bold tracking-wide ${
+                        theme === 'light'
+                          ? 'text-white drop-shadow-md'
+                          : 'text-brand-cream drop-shadow-md'
+                      }`}
+                    >
                       AvA
                     </span>
                     {tHasUnread && (
-                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-white shadow-lg" />
+                      <span className='absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-white shadow-lg' />
                     )}
                     {/* Tooltip */}
                     <div className='absolute right-0 top-full mt-2 px-3 py-1.5 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50'>
-                      {tHasUnread ? 'AvA has a new message' : 'Open AvA Assistant'}
+                      {tHasUnread
+                        ? 'AvA has a new message'
+                        : 'Open AvA Assistant'}
                     </div>
                   </button>
                 )}
@@ -201,7 +228,7 @@ export default function Navigation({
             >
               {/* MVR Status Badge - Shows status without being a button */}
               {isAuthenticated && userRole === 'driver' && mvrWalletAddress && (
-                <div className="w-full md:w-auto flex justify-center md:justify-start">
+                <div className='w-full md:w-auto flex justify-center md:justify-start'>
                   <MvrStatusBadge walletAddress={mvrWalletAddress} />
                 </div>
               )}
@@ -220,7 +247,9 @@ export default function Navigation({
                   }`}
                 >
                   <span className='text-sm'>🤖</span>
-                  <span>{tHasUnread ? 'AvA has updates' : 'Chat with AvA'}</span>
+                  <span>
+                    {tHasUnread ? 'AvA has updates' : 'Chat with AvA'}
+                  </span>
                   {tHasUnread && (
                     <span className='ml-1 w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse' />
                   )}
@@ -229,8 +258,8 @@ export default function Navigation({
 
               {/* Driver Hub Button - Center position with gold rotating border */}
               {userRole === 'driver' && isAuthenticated && (
-                <div className="relative md:absolute md:left-1/2 md:-translate-x-1/2 w-full md:w-auto">
-                  <div className="rotating-gold-border w-full md:w-auto">
+                <div className='relative md:absolute md:left-1/2 md:-translate-x-1/2 w-full md:w-auto'>
+                  <div className='rotating-gold-border w-full md:w-auto'>
                     <button
                       onClick={() => {
                         handleNavigation('hub')
@@ -242,7 +271,7 @@ export default function Navigation({
                           : 'text-white bg-brand-sage shadow-lg'
                       }`}
                     >
-                      <LayoutDashboard className="w-4 h-4" />
+                      <LayoutDashboard className='w-4 h-4' />
                       Driver Hub
                     </button>
                   </div>
@@ -251,8 +280,8 @@ export default function Navigation({
 
               {/* Employer Hub Button - Center position with gold rotating border */}
               {userRole === 'employer' && isAuthenticated && (
-                <div className="relative md:absolute md:left-1/2 md:-translate-x-1/2 w-full md:w-auto">
-                  <div className="rotating-gold-border w-full md:w-auto">
+                <div className='relative md:absolute md:left-1/2 md:-translate-x-1/2 w-full md:w-auto'>
+                  <div className='rotating-gold-border w-full md:w-auto'>
                     <button
                       onClick={() => {
                         handleNavigation('hub')
@@ -264,7 +293,7 @@ export default function Navigation({
                           : 'text-white bg-brand-sage shadow-lg'
                       }`}
                     >
-                      <LayoutDashboard className="w-4 h-4" />
+                      <LayoutDashboard className='w-4 h-4' />
                       Employer Hub
                     </button>
                   </div>
