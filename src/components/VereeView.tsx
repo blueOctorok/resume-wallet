@@ -223,16 +223,16 @@ export default function VereeView({ onBack }: VereeViewProps) {
           <p
             className={`text-lg font-bold ${isDark ? 'text-brand-mint' : 'text-brand-sage'}`}
           >
-            reward = 10 × (remaining / total)^0.5
+            reward = 10 × (remaining / total)^0.7
           </p>
         </div>
 
         <p
           className={`text-sm mb-4 ${isDark ? 'text-brand-cream/70' : 'text-brand-sage/70'}`}
         >
-          <strong>What this means:</strong> The first user gets ~10 tokens. The
-          second user gets ~9.9999 tokens. Rewards decrease smoothly over
-          hundreds of thousands of transactions, eventually reaching decimals.
+          <strong>What this means:</strong> The first user gets ~10 tokens.
+          Rewards decrease aggressively—by the time 50% of tokens are
+          distributed, rewards have dropped to ~6 tokens.
         </p>
 
         {/* Decay Curve Table */}
@@ -264,33 +264,40 @@ export default function VereeView({ onBack }: VereeViewProps) {
               >
                 <td className='py-2'>1,000,000</td>
                 <td className='py-2 text-right'>11%</td>
-                <td className='py-2 text-right font-mono'>9.43</td>
+                <td className='py-2 text-right font-mono'>9.21</td>
               </tr>
               <tr
                 className={`border-b ${isDark ? 'border-brand-mint/10' : 'border-brand-sage/10'}`}
               >
                 <td className='py-2'>3,000,000</td>
                 <td className='py-2 text-right'>33%</td>
-                <td className='py-2 text-right font-mono'>8.16</td>
+                <td className='py-2 text-right font-mono'>7.52</td>
+              </tr>
+              <tr
+                className={`border-b ${isDark ? 'border-brand-mint/10' : 'border-brand-sage/10'}`}
+              >
+                <td className='py-2'>4,500,000</td>
+                <td className='py-2 text-right'>50%</td>
+                <td className='py-2 text-right font-mono'>6.16</td>
               </tr>
               <tr
                 className={`border-b ${isDark ? 'border-brand-mint/10' : 'border-brand-sage/10'}`}
               >
                 <td className='py-2'>6,000,000</td>
                 <td className='py-2 text-right'>67%</td>
-                <td className='py-2 text-right font-mono'>5.77</td>
+                <td className='py-2 text-right font-mono'>4.63</td>
               </tr>
               <tr
                 className={`border-b ${isDark ? 'border-brand-mint/10' : 'border-brand-sage/10'}`}
               >
-                <td className='py-2'>8,500,000</td>
-                <td className='py-2 text-right'>94%</td>
-                <td className='py-2 text-right font-mono'>2.36</td>
+                <td className='py-2'>8,000,000</td>
+                <td className='py-2 text-right'>89%</td>
+                <td className='py-2 text-right font-mono'>2.15</td>
               </tr>
               <tr>
-                <td className='py-2'>8,990,000</td>
-                <td className='py-2 text-right'>99.9%</td>
-                <td className='py-2 text-right font-mono'>0.33</td>
+                <td className='py-2'>8,900,000</td>
+                <td className='py-2 text-right'>99%</td>
+                <td className='py-2 text-right font-mono'>0.44</td>
               </tr>
             </tbody>
           </table>

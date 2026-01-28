@@ -70,12 +70,13 @@ Veree uses a **smooth decay model** for token rewards—similar to Bitcoin's dim
 ### The Formula
 
 ```
-reward = baseReward × (remainingPool / totalPool)^0.5
+reward = baseReward × (remainingPool / totalPool)^0.7
 
 Where:
 - baseReward = 10 tokens (starting reward for resume verification)
 - totalPool = 9,000,000 (driver rewards allocation)
 - remainingPool = totalPool - tokensAlreadyDistributed
+- Exponent 0.7 = more aggressive decay for scarcity
 ```
 
 ### Decay Curve
@@ -83,23 +84,23 @@ Where:
 | Tokens Distributed | % of Pool Used | Reward per Transaction |
 | ------------------ | -------------- | ---------------------- |
 | 0                  | 0%             | **10.00 tokens**       |
-| 100,000            | 1%             | 9.94 tokens            |
-| 500,000            | 5.5%           | 9.72 tokens            |
-| 1,000,000          | 11%            | 9.43 tokens            |
-| 2,000,000          | 22%            | 8.82 tokens            |
-| 3,000,000          | 33%            | 8.16 tokens            |
-| 4,500,000          | 50%            | 7.07 tokens            |
-| 6,000,000          | 67%            | 5.77 tokens            |
-| 7,500,000          | 83%            | 4.08 tokens            |
-| 8,500,000          | 94%            | 2.36 tokens            |
-| 8,900,000          | 99%            | 1.05 tokens            |
-| 8,990,000          | 99.9%          | 0.33 tokens            |
+| 500,000            | 5.5%           | 9.60 tokens            |
+| 1,000,000          | 11%            | 9.21 tokens            |
+| 2,000,000          | 22%            | 8.41 tokens            |
+| 3,000,000          | 33%            | 7.52 tokens            |
+| 4,500,000          | 50%            | 6.16 tokens            |
+| 6,000,000          | 67%            | 4.63 tokens            |
+| 7,000,000          | 78%            | 3.52 tokens            |
+| 8,000,000          | 89%            | 2.15 tokens            |
+| 8,500,000          | 94%            | 1.36 tokens            |
+| 8,900,000          | 99%            | 0.44 tokens            |
+| 8,990,000          | 99.9%          | 0.10 tokens            |
 
 **Key characteristics:**
 
 - First user earns ~10 tokens
-- Second user earns ~9.9999 tokens (barely different)
-- Gradual decline over hundreds of thousands of transactions
+- Aggressive decay: by 50% distributed, rewards drop to ~6 tokens
+- Protects against rapid pool depletion from viral growth
 - Rewards approach but never reach zero (like Bitcoin mining)
 - Goes into decimals for late adopters
 

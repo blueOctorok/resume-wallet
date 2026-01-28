@@ -35,17 +35,21 @@ Early drivers who accumulated tokens can sell them—potentially at a profit if 
 
 ---
 
-## The Smooth Decay Model
+## The Smooth Decay Model (Aggressive)
 
-We want **scarcity from day one**, so rewards decrease over time:
+We want **scarcity from day one**, so rewards decrease over time using an aggressive decay formula:
+
+```
+reward = 10 × (remaining / total)^0.7
+```
 
 - **First user**: Earns ~10 tokens
-- **Second user**: Earns ~9.9999 tokens (barely less)
-- **Later users**: Gradually earn less as the pool depletes
+- **At 50% pool used**: Rewards drop to ~6 tokens
+- **At 90% pool used**: Rewards drop to ~2 tokens
 
-This is fairer than Bitcoin's sudden "halvings" where rewards drop 50% overnight. Our approach is gradual—the first user and the hundredth user earn nearly the same amount.
+This is more aggressive than standard decay models, protecting against rapid pool depletion if we get viral attention from crypto communities.
 
-**Why this matters**: Creates urgency to join early, but doesn't unfairly punish people who join slightly later.
+**Why this matters**: Creates strong urgency to join early, while remaining fair (no sudden cliff drops like Bitcoin halvings).
 
 ---
 

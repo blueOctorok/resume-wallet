@@ -2,29 +2,41 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
-## 🪙 **UPDATE: Smooth Decay Emission Model** (January 2026)
+## 🪙 **UPDATE: Aggressive Smooth Decay Emission Model** (January 2026)
 
-**Replaced price-based reward formula with Bitcoin-inspired smooth decay model.**
+**Replaced price-based reward formula with aggressive smooth decay model (exponent 0.7).**
 
 ### Key Changes
 
-- **Smooth decay formula**: `reward = 10 × (remaining / total)^0.5`
+- **Aggressive decay formula**: `reward = 10 × (remaining / total)^0.7`
 - **Starting reward**: 10 tokens for resume verification
-- **Gradual decrease**: First user gets ~10, second gets ~9.9999, slowly declines to decimals
+- **Aggressive decrease**: At 50% pool used → ~6 tokens; at 90% → ~2 tokens
 - **No price until DEX**: Tokens have no market price until liquidity is provided
 - **Revenue-backed**: Platform revenue funds eventual DEX liquidity
 
-### Why Smooth Decay?
+### Why Aggressive Decay (0.7 exponent)?
 
-- Fairer than halvings (no sudden 50% drops)
-- Creates scarcity from day one
-- Early adopters rewarded, but not unfairly vs. slightly later users
+- Protects against rapid pool depletion from crypto farmers
+- Future expansion to other job types needs token reserves
+- Still fair (no sudden halvings), just faster decline
+- Standard decay (0.5) would be: 50% → 7 tokens; aggressive (0.7): 50% → 6 tokens
+
+### Decay Curve
+
+| Pool Used | Reward |
+| --------- | ------ |
+| 0%        | 10.00  |
+| 33%       | 7.52   |
+| 50%       | 6.16   |
+| 67%       | 4.63   |
+| 89%       | 2.15   |
+| 99%       | 0.44   |
 
 ### Files Changed
 
-- `docs/TOKEN_STRATEGY.md` (complete rewrite of emission mechanics)
-- `src/components/VereeView.tsx` (updated whitepaper with decay curve)
-- `docs/VEREE_EXPLAINER_FOR_BOSS.md` (new executive summary document)
+- `docs/TOKEN_STRATEGY.md` (updated formula to ^0.7)
+- `src/components/VereeView.tsx` (updated whitepaper with aggressive decay)
+- `docs/VEREE_EXPLAINER_FOR_BOSS.md` (updated decay explanation)
 - `docs/CHANGES.md` (this entry)
 
 ---
