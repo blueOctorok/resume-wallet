@@ -2,6 +2,20 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🪙 **ENHANCE: Employer section in Veree whitepaper** (January 2026)
+
+**Expanded the "For Employers" section in the Veree whitepaper with a clear benefits callout.**
+
+- Kept existing copy: employers don't earn tokens; they can buy Veree on the DEX for discounts when utility is live.
+- Added "Why this matters for employers" box with three bullets: no token accounting, optional DEX purchase for discounts, and how employer spend supports platform and token demand.
+
+### Files Changed
+
+- `src/components/VereeView.tsx` (employer section callout)
+- `docs/CHANGES.md` (this entry)
+
+---
+
 ## 🪙 **UPDATE: Aggressive Smooth Decay Emission Model** (January 2026)
 
 **Replaced price-based reward formula with aggressive smooth decay model (exponent 0.7).**

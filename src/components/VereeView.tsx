@@ -3,6 +3,7 @@
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   ArrowLeft,
+  Briefcase,
   Coins,
   Users,
   Shield,
@@ -464,6 +465,55 @@ export default function VereeView({ onBack }: VereeViewProps) {
             <li>• "Driver of the Month" rewards</li>
             <li>• Treasury for platform growth</li>
             <li>• Future liquidity provisions</li>
+          </ul>
+        </div>
+      </Section>
+
+      {/* For Employers */}
+      <Section
+        isDark={isDark}
+        title='For Employers'
+        icon={<Briefcase className='w-5 h-5' />}
+      >
+        <p>
+          Employers don't earn Veree when they pay for platform services—those
+          tokens go to the platform fund. When token utility is live (e.g. pay
+          with Veree for a discount), employers can{' '}
+          <strong>buy Veree on the DEX</strong> and use it on the platform on
+          their own terms.
+        </p>
+        <p className='mt-3'>
+          Employer costs (plans, bulk verification) are higher than a driver's,
+          so the discount from paying in Veree is meaningful. That gives
+          employers a reason to buy tokens when it makes sense—and creates
+          demand that supports the token for everyone.
+        </p>
+        <div
+          className={`mt-4 p-4 rounded-lg ${
+            isDark
+              ? 'bg-brand-sage/50 border border-brand-mint/30'
+              : 'bg-brand-sage/10 border border-brand-sage/30'
+          }`}
+        >
+          <p
+            className={`font-medium mb-2 ${isDark ? 'text-brand-cream' : 'text-brand-sage'}`}
+          >
+            Why this matters for employers
+          </p>
+          <ul
+            className={`text-sm space-y-1 ${isDark ? 'text-brand-cream/80' : 'text-brand-sage/80'}`}
+          >
+            <li>
+              • No token accounting—you pay in USDC; drivers earn the rewards
+            </li>
+            <li>
+              • Optional: buy Veree on the DEX later for discounts on plans and
+              bulk verification
+            </li>
+            <li>
+              • Your spend still drives platform value; token demand comes from
+              employers who choose to use Veree
+            </li>
           </ul>
         </div>
       </Section>
