@@ -67,53 +67,58 @@ Veree uses a **smooth decay model** for token rewards—similar to Bitcoin's dim
 - **Scarcity**: Rewards decrease over time, creating urgency to join sooner
 - **Sustainability**: The reward pool lasts across millions of transactions
 
-### The Formula
+### The Formula: Tokens Based on USDC Spent
+
+Token rewards are **based on how much USDC you spend**, not on which product you buy. One rule for everything:
 
 ```
-reward = baseReward × (remainingPool / totalPool)^0.7
+tokens = (USDC_spent × baseRate) × (remainingPool / totalPool)^0.7
 
 Where:
-- baseReward = 10 tokens (starting reward for resume verification)
+- USDC_spent = amount paid in USDC (any product: verification, subscription, etc.)
+- baseRate = ~3.33 tokens per $1 USDC at 0% distributed (e.g. $3 spend → 10 tokens)
 - totalPool = 9,000,000 (driver rewards allocation)
 - remainingPool = totalPool - tokensAlreadyDistributed
 - Exponent 0.7 = more aggressive decay for scarcity
 ```
 
-### Decay Curve
+**Examples at 0% distributed:** $3 USDC → 10 tokens; $10 USDC → ~33 tokens. Same formula applies to any future product—tokens scale with spend.
 
-| Tokens Distributed | % of Pool Used | Reward per Transaction |
-| ------------------ | -------------- | ---------------------- |
-| 0                  | 0%             | **10.00 tokens**       |
-| 500,000            | 5.5%           | 9.60 tokens            |
-| 1,000,000          | 11%            | 9.21 tokens            |
-| 2,000,000          | 22%            | 8.41 tokens            |
-| 3,000,000          | 33%            | 7.52 tokens            |
-| 4,500,000          | 50%            | 6.16 tokens            |
-| 6,000,000          | 67%            | 4.63 tokens            |
-| 7,000,000          | 78%            | 3.52 tokens            |
-| 8,000,000          | 89%            | 2.15 tokens            |
-| 8,500,000          | 94%            | 1.36 tokens            |
-| 8,900,000          | 99%            | 0.44 tokens            |
-| 8,990,000          | 99.9%          | 0.10 tokens            |
+### Decay Curve (tokens per $3 USDC spent)
+
+| Tokens Distributed | % of Pool Used | Tokens per $3 USDC |
+| ------------------ | -------------- | ------------------ |
+| 0                  | 0%             | **10.00 tokens**   |
+| 500,000            | 5.5%           | 9.60 tokens        |
+| 1,000,000          | 11%            | 9.21 tokens        |
+| 2,000,000          | 22%            | 8.41 tokens        |
+| 3,000,000          | 33%            | 7.52 tokens        |
+| 4,500,000          | 50%            | 6.16 tokens        |
+| 6,000,000          | 67%            | 4.63 tokens        |
+| 7,000,000          | 78%            | 3.52 tokens        |
+| 8,000,000          | 89%            | 2.15 tokens        |
+| 8,500,000          | 94%            | 1.36 tokens        |
+| 8,900,000          | 99%            | 0.44 tokens        |
+| 8,990,000          | 99.9%          | 0.10 tokens        |
 
 **Key characteristics:**
 
-- First user earns ~10 tokens
-- Aggressive decay: by 50% distributed, rewards drop to ~6 tokens
+- Spend $3 USDC → ~10 tokens at the start (then decay applies)
+- Aggressive decay: by 50% distributed, $3 spend → ~6 tokens
 - Protects against rapid pool depletion from viral growth
 - Rewards approach but never reach zero (like Bitcoin mining)
 - Goes into decimals for late adopters
+- **One rule:** more USDC spent = more tokens; product type doesn’t change the formula
 
-### Service-Based Rewards
+### USDC-Based Rewards (Not Per-Product)
 
-Base rewards scale with transaction value:
+| USDC Spent | Tokens at 0% distributed | Tokens at 50% distributed |
+| ---------- | ------------------------ | ------------------------- |
+| $1         | ~3.33 tokens             | ~2.05 tokens              |
+| $3         | 10 tokens                | 6.16 tokens               |
+| $10        | ~33 tokens               | ~20.5 tokens              |
 
-| Service              | USDC Cost | Base Reward (at 0% distributed) |
-| -------------------- | --------- | ------------------------------- |
-| Resume Verification  | $2.99     | 10 tokens                       |
-| Premium Subscription | $9.99     | 33 tokens                       |
-
-_Actual rewards decrease based on the decay formula as more tokens are distributed._
+_Any product, any price: tokens = f(USDC spent) with decay. No separate rules per service._
 
 ### Why Smooth Decay vs. Halvings?
 
@@ -152,6 +157,15 @@ Employers never hold or see tokens—they just pay USDC. This keeps their accoun
 - Accumulated in user wallets
 - Not tradeable
 - Represent future value, not current value
+
+### Reference Price (Target, Not Real)
+
+We set **how many tokens** to give per transaction (e.g. 10 for resume verification). That implies a **reference value** per token if we want "~$3 value for a $3 purchase":
+
+- 10 tokens for $3 → **$0.30 per token** (reference)
+- That implies **$4.5M FDV** (15M × $0.30) if we used that as launch price
+
+This "reference price" is **not** a market price—it's the number that makes our reward math consistent. We should choose it by first picking a **realistic target market cap** at DEX launch, then backing into the reference price and base reward. See **docs/VEREE_MARKET_CAP_AND_PRICE.md** for the full model (supply, distribution, target FDV, and how to set the algorithm).
 
 ### How Token Price Gets Established
 

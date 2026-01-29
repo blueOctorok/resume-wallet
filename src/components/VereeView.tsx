@@ -81,7 +81,7 @@ export default function VereeView({ onBack }: VereeViewProps) {
       <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-8'>
         <StatCard isDark={isDark} label='Total Supply' value='15M' />
         <StatCard isDark={isDark} label='Driver Rewards' value='60%' />
-        <StatCard isDark={isDark} label='Starting Reward' value='10' />
+        <StatCard isDark={isDark} label='Per $3 USDC' value='~10' />
         <StatCard isDark={isDark} label='Decay Model' value='Smooth' />
       </div>
 
@@ -92,13 +92,55 @@ export default function VereeView({ onBack }: VereeViewProps) {
         icon={<Coins className='w-5 h-5' />}
       >
         <p>
-          Veree is a bonus token you earn when you use the platform. When you
-          verify your resume or pay for premium features, you automatically
-          receive Veree tokens as a thank-you reward.
+          Veree is a bonus token you earn when you spend USDC on the platform.
+          The more you spend, the more tokens you earn—resume verification,
+          premium subscriptions, or any future product all use the same rule.
         </p>
         <p className='mt-3'>
           Think of it like airline miles or credit card points—except Veree can
           be traded and may increase in value as more people use the platform.
+        </p>
+      </Section>
+
+      {/* How You Earn (USDC-based) */}
+      <Section
+        isDark={isDark}
+        title='How You Earn'
+        icon={<Coins className='w-5 h-5' />}
+      >
+        <p className='mb-4'>
+          <strong>
+            Tokens are based on how much USDC you spend, not which product you
+            buy.
+          </strong>{' '}
+          One formula for everything: spend $X USDC → earn Y tokens (with decay
+          as the pool depletes).
+        </p>
+        <div
+          className={`p-4 rounded-lg mb-4 ${
+            isDark
+              ? 'bg-brand-sage/50 border border-brand-mint/30'
+              : 'bg-brand-sage/10 border border-brand-sage/30'
+          }`}
+        >
+          <p
+            className={`font-medium mb-2 ${isDark ? 'text-brand-cream' : 'text-brand-sage'}`}
+          >
+            Examples at current rate (before decay)
+          </p>
+          <ul
+            className={`text-sm space-y-1 ${isDark ? 'text-brand-cream/80' : 'text-brand-sage/80'}`}
+          >
+            <li>• $3 USDC spent → ~10 tokens</li>
+            <li>• $10 USDC spent → ~33 tokens</li>
+            <li>• Any product, any price: same rule</li>
+          </ul>
+        </div>
+        <p
+          className={`text-sm ${isDark ? 'text-brand-cream/70' : 'text-brand-sage/70'}`}
+        >
+          As more tokens are distributed, the rate decreases (smooth decay).
+          Early spenders earn more tokens per dollar.
         </p>
       </Section>
 
@@ -202,9 +244,9 @@ export default function VereeView({ onBack }: VereeViewProps) {
         icon={<TrendingDown className='w-5 h-5' />}
       >
         <p className='mb-4'>
-          Veree uses a <strong>smooth decay model</strong>—inspired by Bitcoin,
-          but fairer. Instead of sudden halvings, rewards decrease gradually
-          with each transaction.
+          Token rewards are based on <strong>USDC spent</strong>, with a{' '}
+          <strong>smooth decay</strong>—inspired by Bitcoin, but fairer. As more
+          tokens are distributed, the rate per dollar decreases gradually.
         </p>
 
         {/* Formula Box */}
@@ -221,18 +263,23 @@ export default function VereeView({ onBack }: VereeViewProps) {
             The Formula
           </p>
           <p
-            className={`text-lg font-bold ${isDark ? 'text-brand-mint' : 'text-brand-sage'}`}
+            className={`text-sm font-bold ${isDark ? 'text-brand-mint' : 'text-brand-sage'}`}
           >
-            reward = 10 × (remaining / total)^0.7
+            tokens = (USDC_spent × rate) × (remaining / total)^0.7
+          </p>
+          <p
+            className={`text-xs mt-2 ${isDark ? 'text-brand-cream/60' : 'text-brand-sage/60'}`}
+          >
+            rate ≈ 3.33 tokens per $1 USDC at start (e.g. $3 → 10 tokens)
           </p>
         </div>
 
         <p
           className={`text-sm mb-4 ${isDark ? 'text-brand-cream/70' : 'text-brand-sage/70'}`}
         >
-          <strong>What this means:</strong> The first user gets ~10 tokens.
-          Rewards decrease aggressively—by the time 50% of tokens are
-          distributed, rewards have dropped to ~6 tokens.
+          <strong>What this means:</strong> Spend $3 USDC → ~10 tokens at the
+          start. By the time 50% of the pool is distributed, $3 spend → ~6
+          tokens. One rule for any product.
         </p>
 
         {/* Decay Curve Table */}
@@ -248,14 +295,16 @@ export default function VereeView({ onBack }: VereeViewProps) {
                   Tokens Distributed
                 </th>
                 <th className='text-right py-2 font-semibold'>% Used</th>
-                <th className='text-right py-2 font-semibold'>Reward</th>
+                <th className='text-right py-2 font-semibold'>
+                  Tokens per $3 USDC
+                </th>
               </tr>
             </thead>
             <tbody>
               <tr
                 className={`border-b ${isDark ? 'border-brand-mint/10' : 'border-brand-sage/10'} ${isDark ? 'bg-green-900/20' : 'bg-green-50'}`}
               >
-                <td className='py-2 font-medium'>0 (First user)</td>
+                <td className='py-2 font-medium'>0</td>
                 <td className='py-2 text-right'>0%</td>
                 <td className='py-2 text-right font-mono font-bold'>10.00</td>
               </tr>
