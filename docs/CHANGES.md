@@ -2,16 +2,18 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
-## 🪙 **ENHANCE: Employer section in Veree whitepaper** (January 2026)
+## 🪙 **UPDATE: Employer Veree model — hold for lower USDC costs** (January 2026)
 
-**Expanded the "For Employers" section in the Veree whitepaper with a clear benefits callout.**
+**Employers never pay in Veree; they hold it to get lower USDC transaction costs. All platform spend stays in USDC.**
 
-- Kept existing copy: employers don't earn tokens; they can buy Veree on the DEX for discounts when utility is live.
-- Added "Why this matters for employers" box with three bullets: no token accounting, optional DEX purchase for discounts, and how employer spend supports platform and token demand.
+- **Whitepaper (VereeView)**: "For Employers" section rewritten: employers always pay in USDC; optional buy-and-hold Veree on DEX to qualify for lower USDC fees (plans, bulk verification). Rationale: holding keeps token scarcer and simplifies company books and taxes.
+- **TOKEN_STRATEGY**: Employer Spend section and Platform Benefits updated to hold-for-discount model; competitive advantage line updated (employers pay USDC only, optional hold for lower fees).
+- **Employer rewards from bucket**: From the platform rewards bucket we can reward employers who do well on Veree (e.g. quality, engagement) with discounts. Added to For Employers section, Platform Fund Uses list, and TOKEN_STRATEGY platform bucket.
 
 ### Files Changed
 
-- `src/components/VereeView.tsx` (employer section callout)
+- `src/components/VereeView.tsx` (For Employers section, Platform Fund Uses)
+- `docs/TOKEN_STRATEGY.md` (employer utility, platform benefits, competitive advantages, platform bucket uses)
 - `docs/CHANGES.md` (this entry)
 
 ---

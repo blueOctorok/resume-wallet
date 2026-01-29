@@ -463,6 +463,9 @@ export default function VereeView({ onBack }: VereeViewProps) {
           >
             <li>• Surprise bonuses for active drivers</li>
             <li>• "Driver of the Month" rewards</li>
+            <li>
+              • Rewards for employers who do well on Veree (e.g. discounts)
+            </li>
             <li>• Treasury for platform growth</li>
             <li>• Future liquidity provisions</li>
           </ul>
@@ -477,16 +480,22 @@ export default function VereeView({ onBack }: VereeViewProps) {
       >
         <p>
           Employers don't earn Veree when they pay for platform services—those
-          tokens go to the platform fund. When token utility is live (e.g. pay
-          with Veree for a discount), employers can{' '}
-          <strong>buy Veree on the DEX</strong> and use it on the platform on
-          their own terms.
+          tokens go to the platform fund. You always{' '}
+          <strong>pay in USDC</strong>. When token utility is live, employers
+          who <strong>hold Veree</strong> in their wallet get{' '}
+          <strong>lower USDC transaction costs</strong> on the platform (e.g.
+          plans, bulk verification). You never pay in Veree—just hold it to
+          qualify for the discount.
         </p>
         <p className='mt-3'>
-          Employer costs (plans, bulk verification) are higher than a driver's,
-          so the discount from paying in Veree is meaningful. That gives
-          employers a reason to buy tokens when it makes sense—and creates
-          demand that supports the token for everyone.
+          Holding (instead of spending tokens at checkout) keeps Veree scarcer
+          and makes company books and taxes simpler: all platform spend stays in
+          USDC.
+        </p>
+        <p className='mt-3'>
+          From the same platform rewards bucket we could also reward employers
+          who do well on Veree (e.g. quality, engagement) with discounts—so
+          performing well on the platform can earn you lower USDC costs too.
         </p>
         <div
           className={`mt-4 p-4 rounded-lg ${
@@ -504,15 +513,19 @@ export default function VereeView({ onBack }: VereeViewProps) {
             className={`text-sm space-y-1 ${isDark ? 'text-brand-cream/80' : 'text-brand-sage/80'}`}
           >
             <li>
-              • No token accounting—you pay in USDC; drivers earn the rewards
+              • Pay only in USDC—no token accounting; drivers earn the rewards
             </li>
             <li>
-              • Optional: buy Veree on the DEX later for discounts on plans and
-              bulk verification
+              • Optional: buy and hold Veree on the DEX to get lower USDC fees
+              on plans and bulk verification
             </li>
             <li>
-              • Your spend still drives platform value; token demand comes from
-              employers who choose to use Veree
+              • Do well on Veree and you could get rewards from the platform
+              bucket (e.g. discounts)
+            </li>
+            <li>
+              • Holding keeps tokens scarce and simplifies taxes and company
+              books
             </li>
           </ul>
         </div>

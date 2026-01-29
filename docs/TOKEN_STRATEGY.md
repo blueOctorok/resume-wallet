@@ -138,8 +138,9 @@ When employers pay USDC (e.g. verification, employer plans), tokens are **not** 
 - **Treasury** — buybacks, partnerships, runway
 - **Future liquidity pools** — DEX liquidity, stability
 - **Random driver perks** — rewards to drivers (e.g. surprise bonuses, lotteries, "driver of the month")
+- **Employer rewards** — reward employers who do well on Veree (e.g. quality, engagement) with discounts
 
-Employers never hold or see tokens—they just pay USDC. This keeps their accounting simple and removes any friction from the B2B relationship.
+Employers never earn tokens from their spend. When token utility is live, employers can optionally **buy and hold Veree** on the DEX; holding Veree in their wallet gives them **lower USDC transaction costs** on the platform. They never pay in Veree—only in USDC. Holding (instead of spending tokens at checkout) keeps the token scarcer and keeps company books and taxes simple: all platform spend stays in one currency.
 
 ### Anti-Spam Protection
 
@@ -259,7 +260,8 @@ Platform Growth (cycle repeats)
 
 ### Platform Benefits
 
-- **Subscription discounts**: Pay fees with tokens at 10% discount
+- **Drivers**: Use tokens for subscription discounts (e.g. pay with Veree at 10% off).
+- **Employers**: Hold Veree in wallet to get lower USDC transaction costs on plans and bulk verification; employers always pay in USDC only (simpler books and taxes, token stays scarcer).
 - **Priority support**: Token holders get enhanced customer service
 - **Governance rights**: Vote on platform features and updates
 - **Exclusive access**: Early access to new features
@@ -300,7 +302,7 @@ Platform Growth (cycle repeats)
 
 - **Verification**: Cryptographic proof vs. self-reported claims
 - **Ownership**: Users control their data and credentials
-- **Incentives**: Drivers earn value through platform activity; employers stay token-free (no accounting/compliance friction)
+- **Incentives**: Drivers earn value through platform activity; employers pay USDC only, optional hold for lower fees (simple accounting, no pay-in-token complexity)
 - **Trust**: Immutable employment history
 
 ### vs. Other Crypto Projects
