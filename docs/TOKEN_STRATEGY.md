@@ -1,8 +1,8 @@
-# Veree Token Strategy & Tokenomics
+# StormChain Token Strategy & Tokenomics
 
 ## Executive Summary
 
-The **Veree** token is designed as a dual-purpose asset that enhances the DriverAppChain platform without compromising user experience. **Only drivers** earn tokens—through their own paid platform activities (USDC). Employer spend generates tokens that flow into a platform bucket (treasury, liquidity, or random driver perks), not to employers, keeping B2B relationships simple and avoiding token/compliance complexity for companies.
+The **STORM** token is designed as a dual-purpose asset that enhances the StormChain platform without compromising user experience. **Only applicants** (drivers, devs, and future verticals) earn tokens—through their own paid platform activities (USDC). Employer spend generates tokens that flow into a platform bucket (treasury, liquidity, or random user perks), not to employers, keeping B2B relationships simple and avoiding token/compliance complexity for companies.
 
 ## Core Principles
 
@@ -12,17 +12,17 @@ The **Veree** token is designed as a dual-purpose asset that enhances the Driver
 - Resume verification: $2.99 USDC
 - Premium subscriptions: $9.99/month USDC
 - Employer plans: $199/month USDC
-- **Veree tokens are earned rewards, not payment requirements**
+- **STORM tokens are earned rewards, not payment requirements**
 
-### 2. Driver-Only Earning
+### 2. Applicant-Only Earning
 
-- **Only drivers receive Veree tokens as rewards.** Employers never earn or receive tokens from their spend.
+- **Only applicants (drivers, devs) receive STORM tokens as rewards.** Employers never earn or receive tokens from their spend.
 - Keeps employer relationships clean: they pay USDC for verification/services without token accounting, tax, or compliance friction.
 - Avoids complicating employer business models or creating reasons for them to avoid the platform.
 
 ### 3. Anti-Gaming Mechanism
 
-- **Tokens can ONLY be earned through paid USDC actions** (by drivers) or allocated to the employer-spend bucket.
+- **Tokens can ONLY be earned through paid USDC actions** (by applicants) or allocated to the employer-spend bucket.
 - Prevents spam, bot farming, and Sybil attacks.
 - Every token represents real economic activity.
 
@@ -39,17 +39,17 @@ The **Veree** token is designed as a dual-purpose asset that enhances the Driver
 
 | Allocation        | Amount    | Percentage | Purpose                                       |
 | ----------------- | --------- | ---------- | --------------------------------------------- |
-| Driver Rewards    | 9M tokens | 60%        | Earned by drivers through platform usage      |
+| User Rewards      | 9M tokens | 60%        | Earned by users through platform usage        |
 | Platform Treasury | 3M tokens | 20%        | Buybacks, partnerships, liquidity             |
 | Founders          | 2M tokens | ~13.3%     | 1M each to two founders (allocated at launch) |
 | DEX Liquidity     | 1M tokens | ~6.7%      | Initial trading liquidity                     |
 
 ### Founder Allocation
 
-- **Two founders: 1M Veree each** (2M total), allocated from token launch.
+- **Two founders: 1M STORM each** (2M total), allocated from token launch.
 - **1-year lock**: Founders cannot transfer tokens for the first 12 months.
 - **2-year vesting after lock**: 50% unlocks at end of Year 2; remaining 50% unlocks at end of Year 3.
-- We are a **real-world application** with blockchain and token capability—not a crypto-first project. The token is something we offer for free as a bonus to drivers. Founders hold tokens as fair reward for building the platform.
+- We are a **real-world application** with blockchain and token capability—not a crypto-first project. The token is something we offer for free as a bonus to users. Founders hold tokens as fair reward for building the platform.
 
 | Year | Cumulative Unlocked | Notes                   |
 | ---- | ------------------- | ----------------------- |

@@ -55,13 +55,13 @@ export default function LoadingScreen({
               style={{ animationDuration: '1.5s' }}
             />
             
-            {/* Center "V" for Veree */}
+            {/* Center "S" for StormChain */}
             <div
               className={`absolute inset-0 flex items-center justify-center text-2xl font-bold ${
                 theme === 'dark' ? 'text-white' : 'text-brand-sage'
               }`}
             >
-              V
+              S
             </div>
           </div>
 

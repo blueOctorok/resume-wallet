@@ -18,7 +18,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === 'undefined') return 'dark'
     
     // Check if user has a saved preference (takes priority)
-    const savedTheme = localStorage.getItem('veree-theme') as Theme
+    const savedTheme = localStorage.getItem('stormchain-theme') as Theme
     if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
       return savedTheme
     }
@@ -40,7 +40,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // But we still apply theme to document on changes
   useEffect(() => {
     // Recheck on mount in case window wasn't available during SSR
-    const savedTheme = localStorage.getItem('veree-theme') as Theme
+    const savedTheme = localStorage.getItem('stormchain-theme') as Theme
     if (!savedTheme) {
       // Only update if no saved preference exists
       // Default to dark mode for all devices
@@ -54,7 +54,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Apply theme to document and save to localStorage
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('veree-theme', theme)
+    localStorage.setItem('stormchain-theme', theme)
   }, [theme])
 
   const toggleTheme = () => {

@@ -25,8 +25,8 @@ interface NavigationProps {
   mvrWalletAddress?: string | null
   tHasUnread?: boolean
   onTClick?: () => void
-  /** Veree token balance for drivers - shown in nav */
-  vereeTokens?: number
+  /** StormChain token balance for drivers - shown in nav */
+  stormTokens?: number
 }
 
 export default function Navigation({
@@ -37,7 +37,7 @@ export default function Navigation({
   mvrWalletAddress,
   tHasUnread = false,
   onTClick,
-  vereeTokens = 0,
+  stormTokens = 0,
 }: NavigationProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { theme } = useTheme()
@@ -138,7 +138,7 @@ export default function Navigation({
                       : 'text-brand-cream drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]'
                   }`}
                 >
-                  Veree
+                  StormChain
                 </h1>
               </div>
 
@@ -307,14 +307,14 @@ export default function Navigation({
                         ? 'text-brand-sage bg-brand-sage/10 hover:bg-brand-sage/20 border border-brand-sage/20'
                         : 'text-brand-mint bg-brand-mint/10 hover:bg-brand-mint/20 border border-brand-mint/30'
                     }`}
-                    title='View Veree tokens'
+                    title='View StormChain tokens'
                   >
                     <Coins className='w-3.5 h-3.5' />
                     <span className='font-mono'>
-                      {vereeTokens.toLocaleString()}
+                      {stormTokens.toLocaleString()}
                     </span>
                     <span className='hidden sm:inline text-[10px] opacity-70'>
-                      Veree
+                      STORM
                     </span>
                   </button>
                 )}

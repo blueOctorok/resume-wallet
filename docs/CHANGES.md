@@ -2,6 +2,92 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## ⛈️ **ADD: StormBackground + Storm Theme Colors** (January 2026)
+
+**Created storm-themed background and updated color palette for StormChain brand.**
+
+### StormBackground.tsx
+- **Cloud layer:** Overlapping ellipse SVG for organic billowy storm clouds
+  - Dark heavy base, billowy bumps on top
+  - Color: `#1f2937` (dark) / `#475569` (light)
+  - Size: 200px, opacity 0.6, slow drift left
+- **Rain layer:** Subtle circles (size 2.3, opacity 0.3, 50 drops)
+- **Lightning flashes:** Infrequent (25–50 sec), single brief flash (accessibility-safe)
+
+### Theme Colors Updated (globals.css)
+- **Dark mode:** Deep storm sky (`#1e2530` → `#0f1419`) — near-black with blue-gray undertones
+- **Light mode:** Overcast sky (`#e2e8f0` → `#cbd5e1`) — whitish-grey storm clouds
+- Scrollbar colors updated to match new palette
+
+### Swapping Backgrounds
+Edit `page.tsx` and use either:
+- `<AnimatedBackground />` for original bubbles
+- `<StormBackground />` for storm clouds + rain + lightning
+
+---
+
+## 🔤 **FONT: Quicksand → Montserrat** (January 2026)
+
+**Switched app font to Montserrat for StormChain brand.**
+
+- Quicksand (rounded, soft) fit Veree; StormChain needed a more assertive look.
+- Montserrat: geometric, sharp, more aggressive—better fit for StormChain.
+- Updated `layout.tsx` (Next.js font import + CSS variable) and `globals.css` (body + universal `*` font-family).
+- Weights unchanged: 300, 400, 500, 600, 700.
+
+---
+
+## 📄 **ADD: StormChain Whitepaper (distributable MD)** (January 2026)
+
+**Created `docs/STORMCHAIN_WHITEPAPER.md` for easy distribution.**
+
+- Single markdown file containing full STORM token whitepaper
+- Content aligned with in-app token view (VereeView/StormChainView)
+- Sections: What is STORM, How You Earn, Distribution, Smooth Decay, Early Adopters, Token Value, Who Earns, For Employers, Founder Commitment, Utility, Anti-Gaming, Important Notes
+- No React/JSX; plain markdown for sharing, GitHub, or conversion to PDF
+
+---
+
+## 🔄 **REBRAND: Veree → StormChain** (January 2026)
+
+**Major rebrand from Veree to StormChain. App name, token name, and positioning updated.**
+
+### Brand Changes
+
+- **App name**: Veree → StormChain
+- **Token name**: Veree → stormchain (display: STORM)
+- **Tagline**: "We make hard-to-get jobs easy"
+- **Focus**: Two verticals (drivers + devs), employers for both
+
+### Strategy
+
+Created `docs/STORMCHAIN_STRATEGY.md` documenting:
+- Two verticals: Drivers (DOT/MVR/DQ) and Devs (portfolio/GitHub)
+- Same employer experience for both
+- Unified tagline that works for multiple industries
+- Future expansion path
+
+### Files Changed
+
+- `src/app/layout.tsx` (title, description, theme localStorage key)
+- `src/components/Navigation.tsx` (logo text, token display)
+- `src/components/LoadingScreen.tsx` (center letter V → S)
+- `src/components/HomePage.tsx` (Why Choose section)
+- `src/components/DriverHub.tsx` (token section)
+- `src/components/VereeView.tsx` (token whitepaper - all Veree → STORM)
+- `src/components/ApplyWithVereeModal.tsx` (modal title and text)
+- `src/contexts/ThemeContext.tsx` (localStorage key)
+- `docs/STORMCHAIN_STRATEGY.md` (new - strategy document)
+- `docs/CHANGES.md` (this entry)
+
+### UI Updates
+
+- Logo: "StormChain" in nav
+- Token display: "STORM" instead of "Veree"
+- All user-facing copy updated to StormChain/STORM
+
+---
+
 ## 🪙 **UPDATE: Employer Veree model — hold for lower USDC costs** (January 2026)
 
 **Employers never pay in Veree; they hold it to get lower USDC transaction costs. All platform spend stays in USDC.**

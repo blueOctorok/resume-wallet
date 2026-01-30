@@ -255,7 +255,7 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
               theme === 'dark' ? 'text-white' : 'text-gray-900'
             }`}
           >
-            Why Choose Veree?
+            Why Choose StormChain?
           </h2>
 
           <div className="grid sm:grid-cols-2 gap-6 max-w-4xl mx-auto">

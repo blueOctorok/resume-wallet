@@ -1004,7 +1004,7 @@ export default function DriverHub({
       </div>
 
       {/* ============================================================ */}
-      {/* VEREE TOKENS SECTION */}
+      {/* STORMCHAIN TOKENS SECTION */}
       {/* ============================================================ */}
       <div className={`${cardClass} p-6`}>
         <div className='flex items-center justify-between'>
@@ -1024,7 +1024,7 @@ export default function DriverHub({
               <h2
                 className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
               >
-                Veree Tokens
+                StormChain Tokens
               </h2>
               <div className='flex items-center gap-2 mt-1'>
                 <span
@@ -1035,7 +1035,7 @@ export default function DriverHub({
                 <span
                   className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}
                 >
-                  Veree
+                  STORM
                 </span>
               </div>
             </div>
@@ -1063,7 +1063,7 @@ export default function DriverHub({
                   : 'text-brand-sage hover:text-brand-sage/80'
               }`}
             >
-              Learn about Veree →
+              Learn about STORM →
             </button>
           </div>
         </div>
@@ -1072,13 +1072,13 @@ export default function DriverHub({
         <p
           className={`mt-4 text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}
         >
-          Earn Veree tokens every time you verify your resume or use premium
+          Earn STORM tokens every time you verify your resume or use premium
           features. Early adopters earn the most rewards!
         </p>
       </div>
 
       {/* ============================================================ */}
-      {/* VEREE CARD - QR SHARE SECTION */}
+      {/* STORMCHAIN CARD - QR SHARE SECTION */}
       {/* ============================================================ */}
       <div className='mb-6'>
         <ShareProfileCard

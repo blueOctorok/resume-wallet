@@ -5,12 +5,13 @@ import dynamic from 'next/dynamic'
 import { ArrowLeft } from 'lucide-react'
 import Navigation from '@/components/Navigation'
 import AnimatedBackground from '@/components/AnimatedBackground'
+import StormBackground from '@/components/StormBackground'
 import UserStatusModal from '@/components/UserStatusModal'
 import WalletCard from '@/components/WalletCard'
 import TLoadingModal from '@/components/TLoadingModal'
 import LoadingScreen from '@/components/LoadingScreen'
 import ResumeTabSelector from '@/components/ResumeTabSelector'
-import VereeView from '@/components/VereeView'
+import StormChainView from '@/components/VereeView'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   useSendUserOperation,
@@ -2400,8 +2401,11 @@ const HomeContent = () => {
       notifyResumeUploadEvent={handleResumeUploadEvent}
     >
       <div className='min-h-screen overflow-x-hidden relative'>
-        {/* Animated Background */}
-        <AnimatedBackground />
+        {/* Animated Background - swap between themes:
+            <AnimatedBackground /> = original bubbles (Veree style)
+            <StormBackground />   = storm clouds + rain + lightning (StormChain style)
+        */}
+        <StormBackground />
 
         {/* Sync Status Indicator - Fixed position toast */}
         {indicatorProps.status !== 'idle' && (
@@ -2477,7 +2481,7 @@ const HomeContent = () => {
           mvrWalletAddress={user?.address || null}
           tHasUnread={avaHasUnread}
           onTClick={() => setIsAvaCollapsed(false)}
-          vereeTokens={0} // TODO: Replace with actual token balance when implemented
+          stormTokens={0} // TODO: Replace with actual token balance when implemented
         />
 
         {/* User Status Modal */}
@@ -2764,7 +2768,7 @@ const HomeContent = () => {
                 )}
 
                 {currentPage === 'veree' && (
-                  <VereeView onBack={() => handleNavigation('hub')} />
+                  <StormChainView onBack={() => handleNavigation('hub')} />
                 )}
 
                 {currentPage === 'dotapp' && (

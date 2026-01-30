@@ -140,7 +140,7 @@ export default function ShareProfileCard({ walletAddress, driverName }: SharePro
     const qrUrl = getQRUrl()
     const link = document.createElement('a')
     link.href = qrUrl
-    link.download = `veree-card-${driverName?.replace(/\s+/g, '-').toLowerCase() || 'driver'}.png`
+    link.download = `stormchain-card-${driverName?.replace(/\s+/g, '-').toLowerCase() || 'driver'}.png`
     link.click()
   }
 
@@ -183,7 +183,7 @@ export default function ShareProfileCard({ walletAddress, driverName }: SharePro
           <div className="flex items-center gap-2">
             <QrCode className={`w-5 h-5 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`} />
             <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              Veree Card
+              StormChain Card
             </h3>
           </div>
           <button
@@ -261,7 +261,7 @@ export default function ShareProfileCard({ walletAddress, driverName }: SharePro
               <QrCode className={`w-8 h-8 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`} />
             </div>
             <h4 className={`font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              Create Your Veree Card
+              Create Your StormChain Card
             </h4>
             <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
               Generate a QR code to share your verified credentials at job fairs and meetups
@@ -294,7 +294,7 @@ export default function ShareProfileCard({ walletAddress, driverName }: SharePro
             >
               <img
                 src={getQRUrl()}
-                alt="Veree Card QR Code"
+                alt="StormChain Card QR Code"
                 className="w-48 h-48 mx-auto"
               />
               {driverName && (

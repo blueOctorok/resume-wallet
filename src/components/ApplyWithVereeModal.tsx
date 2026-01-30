@@ -16,7 +16,7 @@ interface Job {
   redirect_url?: string
 }
 
-interface ApplyWithVereeModalProps {
+interface ApplyWithStormChainModalProps {
   isOpen: boolean
   onClose: () => void
   job: Job | null
@@ -34,13 +34,13 @@ interface DriverProfile {
   dot_application_data: any
 }
 
-export default function ApplyWithVereeModal({
+export default function ApplyWithStormChainModal({
   isOpen,
   onClose,
   job,
   userAddress,
   onApplicationSubmitted
-}: ApplyWithVereeModalProps) {
+}: ApplyWithStormChainModalProps) {
   const { theme } = useTheme()
   const [profile, setProfile] = useState<DriverProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -152,7 +152,7 @@ export default function ApplyWithVereeModal({
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Apply with Veree
+                Apply with StormChain
               </h2>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Your verified application
@@ -176,7 +176,7 @@ export default function ApplyWithVereeModal({
                 Application Submitted!
               </h3>
               <p className="text-green-700 dark:text-green-300">
-                Your Veree application has been sent to {job.company}
+                Your StormChain application has been sent to {job.company}
               </p>
             </div>
           </div>
@@ -292,7 +292,7 @@ export default function ApplyWithVereeModal({
                 <div className="flex items-center gap-3 text-sm">
                   <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
                   <span className="text-gray-700 dark:text-gray-300">
-                    Shareable Veree profile link
+                    Shareable StormChain profile link
                   </span>
                 </div>
               </div>
@@ -353,7 +353,7 @@ export default function ApplyWithVereeModal({
 
             {/* Disclaimer */}
             <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-              By submitting, your Veree application will be sent directly to {job.company}.
+              By submitting, your StormChain application will be sent directly to {job.company}.
               <br />
               You can track the status in "My Applications".
             </p>

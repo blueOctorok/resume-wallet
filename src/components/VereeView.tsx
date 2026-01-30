@@ -17,11 +17,11 @@ import {
   TrendingDown,
 } from 'lucide-react'
 
-interface VereeViewProps {
+interface StormChainViewProps {
   onBack: () => void
 }
 
-export default function VereeView({ onBack }: VereeViewProps) {
+export default function StormChainView({ onBack }: StormChainViewProps) {
   const { isDark } = useTheme()
 
   return (
@@ -59,12 +59,12 @@ export default function VereeView({ onBack }: VereeViewProps) {
         <h1
           className={`text-4xl sm:text-5xl font-bold mb-3 ${isDark ? 'text-brand-cream' : 'text-brand-sage'}`}
         >
-          Veree Token
+          StormChain Token
         </h1>
         <p
           className={`text-xl ${isDark ? 'text-brand-cream/80' : 'text-brand-sage/70'}`}
         >
-          The reward token for verified drivers
+          The reward token for verified professionals
         </p>
         <div
           className={`mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
@@ -74,7 +74,7 @@ export default function VereeView({ onBack }: VereeViewProps) {
           }`}
         >
           <Lock className='w-4 h-4' />
-          Total Supply: 15,000,000 Veree
+          Total Supply: 15,000,000 STORM
         </div>
       </div>
 
@@ -86,19 +86,19 @@ export default function VereeView({ onBack }: VereeViewProps) {
         <StatCard isDark={isDark} label='Decay Model' value='Smooth' />
       </div>
 
-      {/* What is Veree */}
+      {/* What is STORM */}
       <Section
         isDark={isDark}
-        title='What is Veree?'
+        title='What is STORM?'
         icon={<Coins className='w-5 h-5' />}
       >
         <p>
-          Veree is a bonus token you earn when you spend USDC on the platform.
+          STORM is a bonus token you earn when you spend USDC on the platform.
           The more you spend, the more tokens you earn—resume verification,
           premium subscriptions, or any future product all use the same rule.
         </p>
         <p className='mt-3'>
-          Think of it like airline miles or credit card points—except Veree can
+          Think of it like airline miles or credit card points—except STORM can
           be traded and may increase in value as more people use the platform.
         </p>
       </Section>
@@ -152,7 +152,7 @@ export default function VereeView({ onBack }: VereeViewProps) {
         icon={<PieChart className='w-5 h-5' />}
       >
         <p className='mb-4'>
-          There will only ever be <strong>15 million Veree tokens</strong>. No
+          There will only ever be <strong>15 million STORM tokens</strong>. No
           more can be created. Here's how they're allocated:
         </p>
 
@@ -160,11 +160,11 @@ export default function VereeView({ onBack }: VereeViewProps) {
         <div className='space-y-3 mb-6'>
           <DistributionBar
             isDark={isDark}
-            label='Driver Rewards'
+            label='User Rewards'
             amount='9M'
             percentage={60}
             color='green'
-            description='Earned by drivers through platform usage'
+            description='Earned by users through platform usage'
           />
           <DistributionBar
             isDark={isDark}
@@ -210,7 +210,7 @@ export default function VereeView({ onBack }: VereeViewProps) {
               <tr
                 className={`border-b ${isDark ? 'border-brand-mint/10' : 'border-brand-sage/10'}`}
               >
-                <td className='py-2'>Driver Rewards</td>
+                <td className='py-2'>User Rewards</td>
                 <td className='py-2 text-right font-mono'>9,000,000</td>
                 <td className='py-2 text-right'>60%</td>
               </tr>
@@ -415,18 +415,18 @@ export default function VereeView({ onBack }: VereeViewProps) {
               : 'bg-brand-sage/10 border border-brand-sage/30'
           }`}
         >
-          <p
-            className={`font-medium mb-2 ${isDark ? 'text-brand-cream' : 'text-brand-sage'}`}
-          >
-            Revenue-Backed Model
-          </p>
-          <p
-            className={`text-sm ${isDark ? 'text-brand-cream/70' : 'text-brand-sage/70'}`}
-          >
-            Unlike speculative tokens, Veree liquidity is funded by actual
-            platform revenue. Every token earned represents real economic
-            activity on the platform.
-          </p>
+        <p
+          className={`font-medium mb-2 ${isDark ? 'text-brand-cream' : 'text-brand-sage'}`}
+        >
+          Revenue-Backed Model
+        </p>
+        <p
+          className={`text-sm ${isDark ? 'text-brand-cream/70' : 'text-brand-sage/70'}`}
+        >
+          Unlike speculative tokens, STORM liquidity is funded by actual
+          platform revenue. Every token earned represents real economic
+          activity on the platform.
+        </p>
         </div>
       </Section>
 
@@ -437,13 +437,13 @@ export default function VereeView({ onBack }: VereeViewProps) {
         icon={<Users className='w-5 h-5' />}
       >
         <p>
-          <strong>Only drivers earn Veree tokens.</strong> When employers pay
+          <strong>Only applicants earn STORM tokens.</strong> When employers pay
           for services, those tokens go into a platform fund—not to the
           employer.
         </p>
         <p className='mt-3'>
           This keeps things simple for companies (no token accounting) and
-          directs all rewards to the drivers who actually use the platform.
+          directs all rewards to the users who actually use the platform.
         </p>
 
         <div
@@ -461,10 +461,10 @@ export default function VereeView({ onBack }: VereeViewProps) {
           <ul
             className={`text-sm space-y-1 ${isDark ? 'text-brand-cream/80' : 'text-brand-sage/80'}`}
           >
-            <li>• Surprise bonuses for active drivers</li>
-            <li>• "Driver of the Month" rewards</li>
+            <li>• Surprise bonuses for active users</li>
+            <li>• "User of the Month" rewards</li>
             <li>
-              • Rewards for employers who do well on Veree (e.g. discounts)
+              • Rewards for employers who do well on StormChain (e.g. discounts)
             </li>
             <li>• Treasury for platform growth</li>
             <li>• Future liquidity provisions</li>
@@ -479,22 +479,22 @@ export default function VereeView({ onBack }: VereeViewProps) {
         icon={<Briefcase className='w-5 h-5' />}
       >
         <p>
-          Employers don't earn Veree when they pay for platform services—those
+          Employers don't earn STORM when they pay for platform services—those
           tokens go to the platform fund. You always{' '}
           <strong>pay in USDC</strong>. When token utility is live, employers
-          who <strong>hold Veree</strong> in their wallet get{' '}
+          who <strong>hold STORM</strong> in their wallet get{' '}
           <strong>lower USDC transaction costs</strong> on the platform (e.g.
-          plans, bulk verification). You never pay in Veree—just hold it to
+          plans, bulk verification). You never pay in STORM—just hold it to
           qualify for the discount.
         </p>
         <p className='mt-3'>
-          Holding (instead of spending tokens at checkout) keeps Veree scarcer
+          Holding (instead of spending tokens at checkout) keeps STORM scarcer
           and makes company books and taxes simpler: all platform spend stays in
           USDC.
         </p>
         <p className='mt-3'>
           From the same platform rewards bucket we could also reward employers
-          who do well on Veree (e.g. quality, engagement) with discounts—so
+          who do well on StormChain (e.g. quality, engagement) with discounts—so
           performing well on the platform can earn you lower USDC costs too.
         </p>
         <div
@@ -513,14 +513,14 @@ export default function VereeView({ onBack }: VereeViewProps) {
             className={`text-sm space-y-1 ${isDark ? 'text-brand-cream/80' : 'text-brand-sage/80'}`}
           >
             <li>
-              • Pay only in USDC—no token accounting; drivers earn the rewards
+              • Pay only in USDC—no token accounting; applicants earn the rewards
             </li>
             <li>
-              • Optional: buy and hold Veree on the DEX to get lower USDC fees
+              • Optional: buy and hold STORM on the DEX to get lower USDC fees
               on plans and bulk verification
             </li>
             <li>
-              • Do well on Veree and you could get rewards from the platform
+              • Do well on StormChain and you could get rewards from the platform
               bucket (e.g. discounts)
             </li>
             <li>
@@ -538,7 +538,7 @@ export default function VereeView({ onBack }: VereeViewProps) {
         icon={<Clock className='w-5 h-5' />}
       >
         <p>
-          The two founders each receive 1 million Veree tokens. To show
+          The two founders each receive 1 million STORM tokens. To show
           commitment, these tokens are locked and vest over time:
         </p>
 
@@ -668,7 +668,7 @@ export default function VereeView({ onBack }: VereeViewProps) {
         icon={<Shield className='w-5 h-5' />}
       >
         <p className='mb-3'>
-          Every Veree token represents real economic activity. Our anti-spam
+          Every STORM token represents real economic activity. Our anti-spam
           mechanisms ensure fair distribution:
         </p>
         <ul
@@ -715,7 +715,7 @@ export default function VereeView({ onBack }: VereeViewProps) {
         >
           <ul className='space-y-2 text-sm'>
             <li>
-              • Veree is a <strong>bonus reward</strong>, not a requirement. The
+              • STORM is a <strong>bonus reward</strong>, not a requirement. The
               platform works fine without it.
             </li>
             <li>
@@ -727,7 +727,7 @@ export default function VereeView({ onBack }: VereeViewProps) {
               financial advice.
             </li>
             <li>
-              • You don't need to understand crypto to use the platform. Veree
+              • You don't need to understand crypto to use the platform. STORM
               is just a bonus.
             </li>
           </ul>
@@ -741,7 +741,7 @@ export default function VereeView({ onBack }: VereeViewProps) {
         <p
           className={`text-sm ${isDark ? 'text-brand-cream/50' : 'text-brand-sage/60'}`}
         >
-          Questions? Contact us at support@veree.io
+          Questions? Contact us at support@stormchain.io
         </p>
       </div>
     </div>
