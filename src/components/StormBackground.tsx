@@ -16,30 +16,14 @@ import { useTheme } from '@/contexts/ThemeContext'
  * Fits the StormChain brand — aggressive, dynamic, powerful
  */
 
-// Storm cloud SVG - overlapping ellipses for organic billowy shape
-const cloudSvg = (color: string) =>
-  `data:image/svg+xml,${encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 80">
-      <!-- Dark base layer - flat bottom -->
-      <ellipse cx="80" cy="58" rx="75" ry="22" fill="${color}"/>
-      <!-- Billowy top bumps -->
-      <ellipse cx="35" cy="42" rx="28" ry="24" fill="${color}"/>
-      <ellipse cx="70" cy="32" rx="32" ry="28" fill="${color}"/>
-      <ellipse cx="110" cy="38" rx="30" ry="26" fill="${color}"/>
-      <ellipse cx="135" cy="48" rx="22" ry="20" fill="${color}"/>
-      <!-- Extra irregular bumps -->
-      <ellipse cx="52" cy="25" rx="18" ry="16" fill="${color}"/>
-      <ellipse cx="95" cy="22" rx="20" ry="18" fill="${color}"/>
-    </svg>
-  `)}`
+// Storm cloud SVGs - loaded from public folder
+const CLOUD_SVGS = [
+  { src: '/storm_cloud.svg', width: 128, height: 89 },   // 1280:894 aspect
+  { src: '/storm_cloud_2.svg', width: 115, height: 100 }, // 1280:1109 aspect
+]
 
-// Rain drop SVG - thin subtle streak
-const rainDropSvg = (color: string) =>
-  `data:image/svg+xml,${encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 8">
-      <line x1="0.5" y1="0" x2="0.5" y2="8" stroke="${color}" stroke-width="0.8" stroke-linecap="round"/>
-    </svg>
-  `)}`
+// Wide thin cloud for top of screen only
+const TOP_CLOUD_SVG = { src: '/storm_cloud_3.svg', width: 200, height: 100 } // 1280:640 = 2:1 aspect
 
 export default function StormBackground() {
   const { theme } = useTheme()
@@ -74,9 +58,6 @@ export default function StormBackground() {
 
   // Theme-aware colors
   const isDark = theme === 'dark'
-
-  // Cloud colors per theme - dark heavy storm clouds
-  const cloudColor = isDark ? '#1f2937' : '#475569'
 
   // Rain color - subtle blue-gray tint
   const rainColor = isDark ? '#a0aec0' : '#64748b'
@@ -118,19 +99,15 @@ export default function StormBackground() {
             },
             shape: {
               type: 'image',
-              image: {
-                src: cloudSvg(cloudColor),
-                width: 160,
-                height: 80,
-              },
+              image: CLOUD_SVGS, // Randomly picks from both cloud shapes
             },
             opacity: {
-              value: 0.6,
+              value: isDark ? 0.4 : 0.25, // Lower opacity since SVG is black
               random: true,
               anim: {
                 enable: true,
                 speed: 0.1,
-                opacity_min: 0.3,
+                opacity_min: isDark ? 0.2 : 0.1,
                 sync: false,
               },
             },
@@ -161,6 +138,63 @@ export default function StormBackground() {
           retina_detect: true,
         }}
       />
+
+      {/* Top cloud banner - large wide cloud drifting under header */}
+      <div className='fixed top-12 left-0 right-0 h-[25vh] pointer-events-none overflow-hidden' style={{ zIndex: -2 }}>
+        <Particles
+          id='storm-clouds-top'
+          init={particlesInit}
+          options={{
+            fullScreen: {
+              enable: false, // Contained in parent div
+            },
+            background: {
+              color: { value: '' },
+            },
+            fpsLimit: 30,
+            particles: {
+              number: {
+                value: 2, // Just 1-2 big clouds scrolling
+              },
+              shape: {
+                type: 'image',
+                image: TOP_CLOUD_SVG,
+              },
+              opacity: {
+                value: isDark ? 0.6 : 0.35,
+                random: false,
+                anim: {
+                  enable: false,
+                },
+              },
+              size: {
+                value: 800, // Very large - spans most of the width
+                random: false,
+                anim: {
+                  enable: false,
+                },
+              },
+              move: {
+                enable: true,
+                speed: 0.5, // Slow steady drift
+                direction: 'left',
+                random: false,
+                straight: true,
+                out_mode: 'out',
+                bounce: false,
+              },
+            },
+            interactivity: {
+              events: {
+                onhover: { enable: false },
+                onclick: { enable: false },
+                resize: true,
+              },
+            },
+            retina_detect: true,
+          }}
+        />
+      </div>
 
       {/* Rain layer - very subtle, gentle rain */}
       <Particles
