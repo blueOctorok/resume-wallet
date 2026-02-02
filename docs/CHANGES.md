@@ -2,11 +2,24 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🌐 **DOC: Alchemy Google Auth after domain change (veree.io → stormchain.ai)** (January 2026)
+
+**Google sign-in broke after moving to stormchain.ai because OAuth origins must be whitelisted.**
+
+- **Cause:** Alchemy Account Kit / Google OAuth only allow requests from configured origins. New domain was not whitelisted.
+- **Docs added:**
+  - `docs/ALCHEMY_GOOGLE_AUTH_DOMAIN.md` — step-by-step fix (env URL, Alchemy Dashboard allowed origins, optional Google Cloud Console).
+  - `VERCEL_ENV_CHECKLIST.md` — updated `NEXT_PUBLIC_APP_URL` to stormchain.ai and expanded "Google OAuth" section with Alchemy + Google Console steps.
+- **What you must do:** Set `NEXT_PUBLIC_APP_URL=https://stormchain.ai` in .env.local and Vercel; add `https://stormchain.ai` (and www if used) to **Allowed origins** in Alchemy Dashboard; optionally update Google OAuth client origins.
+
+---
+
 ## ⛈️ **ADD: StormBackground + Storm Theme Colors** (January 2026)
 
 **Created storm-themed background and updated color palette for StormChain brand.**
 
 ### StormBackground.tsx
+
 - **Cloud layer:** Overlapping ellipse SVG for organic billowy storm clouds
   - Dark heavy base, billowy bumps on top
   - Color: `#1f2937` (dark) / `#475569` (light)
@@ -15,12 +28,15 @@ This file tracks major modifications made to the ResumeWallet codebase.
 - **Lightning flashes:** Infrequent (25–50 sec), single brief flash (accessibility-safe)
 
 ### Theme Colors Updated (globals.css)
+
 - **Dark mode:** Deep storm sky (`#1e2530` → `#0f1419`) — near-black with blue-gray undertones
 - **Light mode:** Overcast sky (`#e2e8f0` → `#cbd5e1`) — whitish-grey storm clouds
 - Scrollbar colors updated to match new palette
 
 ### Swapping Backgrounds
+
 Edit `page.tsx` and use either:
+
 - `<AnimatedBackground />` for original bubbles
 - `<StormBackground />` for storm clouds + rain + lightning
 
@@ -62,6 +78,7 @@ Edit `page.tsx` and use either:
 ### Strategy
 
 Created `docs/STORMCHAIN_STRATEGY.md` documenting:
+
 - Two verticals: Drivers (DOT/MVR/DQ) and Devs (portfolio/GitHub)
 - Same employer experience for both
 - Unified tagline that works for multiple industries
@@ -5097,7 +5114,7 @@ useEffect(() => {
     const formsToSave = { form1Data, form2Data, form3Data }
     window.localStorage.setItem(
       `forms-${user.address}`,
-      JSON.stringify(formsToSave),
+      JSON.stringify(formsToSave)
     )
     console.log('💾 [FORMS] Saved form data to localStorage')
   }
@@ -5314,7 +5331,7 @@ if (tBackendData.file_id && tBackendData.vector_store_id && !tBackendData.raw) {
       userMessage: "We've seen this resume before...",
       actionRequired: 'Please make a small edit...',
     },
-    { status: 409 },
+    { status: 409 }
   )
 }
 
@@ -5331,7 +5348,7 @@ if (error.errorType === 'T_BACKEND_CACHE_LOCK') {
         },
         { id: 'resume-continue', label: 'Fill manually', value: 'forms' },
       ],
-    },
+    }
   )
 }
 ```
@@ -6150,7 +6167,7 @@ updateStep(
   'blockchain',
   'error',
   undefined,
-  'Cannot upload the same file twice. This file has already been uploaded to the blockchain. Please select a different file or rename your current file.',
+  'Cannot upload the same file twice. This file has already been uploaded to the blockchain. Please select a different file or rename your current file.'
 )
 setUploading(false)
 return // Exit gracefully

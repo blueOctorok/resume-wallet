@@ -13,7 +13,7 @@ NEXT_PUBLIC_DRIVER_APP_CONTRACT_ADDRESS=
 NEXT_PUBLIC_RESUME_REGISTRY_ADDRESS=
 NEXT_PUBLIC_PINATA_JWT=
 NEXT_PUBLIC_PINATA_GATEWAY=
-NEXT_PUBLIC_APP_URL=               # ⚠️ Update to your Vercel URL: https://your-app.vercel.app
+NEXT_PUBLIC_APP_URL=               # Production: https://stormchain.ai (no trailing slash)
 NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID=
 ```
 
@@ -48,13 +48,29 @@ ADZUNA_APP_KEY=
 4. Click "Save"
 5. Redeploy your project
 
-## Google OAuth Issue:
+## Google OAuth (Alchemy) – Required after domain change
 
-The error `OauthFailedError: Opener origin not allowed: https://veree.vercel.app` means:
+If Google sign-in fails with **`OauthFailedError: Opener origin not allowed`** after moving to stormchain.ai:
 
-- Go to Alchemy Dashboard
-- Add `https://veree.vercel.app` to allowed origins
-- Save and try again
+1. **Set app URL everywhere**
+   - In **.env.local**: `NEXT_PUBLIC_APP_URL=https://stormchain.ai` (no trailing slash)
+   - In **Vercel** → Project → Settings → Environment Variables: set `NEXT_PUBLIC_APP_URL` to `https://stormchain.ai` for Production (and Preview if you use it)
+   - Redeploy after changing env vars.
+
+2. **Whitelist the new domain in Alchemy**
+   - Go to [Alchemy Dashboard](https://dashboard.alchemy.com/) → your app → **Account Kit** / **Authentication** (or **APIs** → Account Kit).
+   - Find **Allowed origins** / **Authorized JavaScript origins** / **Redirect URIs**.
+   - Add:
+     - `https://stormchain.ai`
+     - `https://www.stormchain.ai` (if you use www)
+   - Remove or keep old veree.io entries as needed. Save.
+
+3. **Google Cloud Console** (if you use your own OAuth client)
+   - In [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials → your OAuth 2.0 Client ID:
+   - **Authorized JavaScript origins**: add `https://stormchain.ai` and `https://www.stormchain.ai`
+   - **Authorized redirect URIs**: add whatever Alchemy or Google shows (e.g. `https://auth.alchemy.com/...` or your callback URL). Save.
+
+Without the new origin in Alchemy (and in Google if applicable), the popup is blocked and login breaks.
 
 ## ⚠️ Security Notes:
 
@@ -74,6 +90,7 @@ The error `OauthFailedError: Opener origin not allowed: https://veree.vercel.app
 ## Important for x402 Payments:
 
 If you're using the x402 payment system:
+
 1. Make sure `X402_PAYMENT_PRIVATE_KEY` is set
 2. Make sure `ALCHEMY_BASE_MAINNET_URL` is set (for Base Mainnet payments)
 3. Ensure the payment wallet has USDC and ETH on Base Mainnet
