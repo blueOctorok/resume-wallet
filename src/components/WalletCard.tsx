@@ -15,7 +15,7 @@ interface WalletCardProps {
   } | null
   onClick?: () => void
   isMobile?: boolean
-  userRole?: 'driver' | 'employer' | null
+  userRole?: 'driver' | 'developer' | 'employer' | null
   onSwitchRole?: () => void
   /** Show the Buy USDC button (default: true for desktop, false for mobile) */
   showBuyUSDC?: boolean
@@ -86,7 +86,6 @@ export default function WalletCard({
             View wallet details
           </div>
         </button>
-
       </div>
     )
   }

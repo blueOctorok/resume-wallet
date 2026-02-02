@@ -19,7 +19,7 @@ type NavPage =
 
 interface NavigationProps {
   isAuthenticated?: boolean
-  userRole?: 'driver' | 'employer' | null
+  userRole?: 'driver' | 'developer' | 'employer' | null
   onStatusClick?: () => void
   onNavigate?: (page: NavPage) => void
   mvrWalletAddress?: string | null
@@ -296,10 +296,32 @@ export default function Navigation({
                 </div>
               )}
 
-              {/* Veree Token Counter (drivers only) & Theme Toggle - Bottom Right */}
+              {/* Developer Hub Button - Center position with purple/indigo border */}
+              {userRole === 'developer' && isAuthenticated && (
+                <div className='relative md:absolute md:left-1/2 md:-translate-x-1/2 w-full md:w-auto'>
+                  <div className='rotating-gold-border w-full md:w-auto'>
+                    <button
+                      onClick={() => {
+                        handleNavigation('hub')
+                        setIsMenuOpen(false)
+                      }}
+                      className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2 relative z-10 cursor-pointer ${
+                        theme === 'dark'
+                          ? 'text-brand-cream bg-indigo-600/30'
+                          : 'text-white bg-indigo-600 shadow-lg'
+                      }`}
+                    >
+                      <LayoutDashboard className='w-4 h-4' />
+                      Developer Hub
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* StormChain Token Counter & Theme Toggle - Bottom Right */}
               <div className='w-full md:w-auto flex items-center justify-end gap-3 md:ml-auto'>
-                {/* Only show Token counter for drivers - employers don't earn tokens */}
-                {userRole === 'driver' && (
+                {/* Show Token counter for drivers and developers - employers don't earn tokens */}
+                {(userRole === 'driver' || userRole === 'developer') && (
                   <button
                     onClick={() => handleNavigation('veree')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-300 cursor-pointer ${

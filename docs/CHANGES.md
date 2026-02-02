@@ -2,6 +2,108 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 📂 **ADD: Developer Portfolio System** (January 2026)
+
+**Full portfolio system for Software Engineers — database, API, and UI.**
+
+### Database Migration (011_developer_profiles_and_projects.sql)
+
+- **`developer_profiles` table:** Personal info, GitHub username, skills (JSONB), job preferences, education, certifications
+- **`developer_projects` table:** Portfolio projects with title, description, tech_stack[], URLs, screenshots, role, featured flag
+- **RLS policies:** Secure access (users own their data, employers can view public)
+- **Triggers:** Auto-update timestamps, auto-create profile on role selection
+
+### API Endpoints
+
+- **`/api/developer/hub`** — Aggregates all developer data (profile, projects, stats) for hub view
+- **`/api/developer/projects`** — Full CRUD (GET, POST, PUT, DELETE) for portfolio projects
+
+### Components
+
+- **`DeveloperHub.tsx`** — Updated to fetch real data from API, displays project cards
+- **`PortfolioPage.tsx` (NEW)** — Full portfolio management:
+  - Project form modal (title, description, tech stack, URLs, role, dates, featured toggle)
+  - Tech stack autocomplete with common technologies
+  - Project grid with thumbnails, tech tags, links
+  - Star/unstar featured projects
+  - Edit and delete projects
+
+### Routing (page.tsx)
+
+- Added `PortfolioPage` dynamic import
+- Added routing for `currentPage === 'portfolio'` (developers only)
+
+### To run:
+
+1. Run migration `011_developer_profiles_and_projects.sql` in Supabase SQL Editor
+2. Log in as a developer → Developer Hub → Portfolio → Add Project
+
+---
+
+## 💻 **ADD: DeveloperHub component + routing** (January 2026)
+
+**Created Developer Hub — the dashboard for Software Engineers, mirroring the Driver Hub structure.**
+
+### DeveloperHub.tsx
+
+- **Layout:** Same hub pattern as `DriverHub.tsx` — stats, sections, Career Card
+- **Sections:**
+  - Profile Completeness (calculated from projects, GitHub, etc.)
+  - Quick Stats (Projects, Resumes, GitHub connection, Applications)
+  - StormChain Tokens (coming soon)
+  - Career Card (via `ShareProfileCard`)
+  - Portfolio section (shows projects or empty state)
+  - Tech Resume section (coming soon)
+  - GitHub Connect section (coming soon)
+  - Job Applications section
+- **Color scheme:** Indigo/purple to differentiate from driver (green/gold)
+
+### page.tsx
+
+- Added dynamic import for `DeveloperHub` and `PortfolioPage`
+- Added rendering block for `userRole === 'developer'`
+- Routes developer to hub on home (null) page
+
+### Navigation.tsx
+
+- Added "Developer Hub" button (indigo background) for developers
+- Token counter now shows for both drivers and developers
+
+---
+
+## 👤 **EXPAND: Add Software Engineer role + Career Card rename** (January 2026)
+
+**Expanded platform to support Software Engineers alongside Drivers. Renamed StormChain Card → Career Card.**
+
+### RoleSelectionModal.tsx
+
+- **New role:** Software Engineer (indigo/purple theme, `💻` icon)
+- **Three cards:** Driver | Software Engineer | Employer
+- **Employer gating:** Personal email domains (gmail, yahoo, outlook, etc.) → disabled with "Requires company email"
+- **Branding:** Updated to "Welcome to StormChain!" and new role question
+
+### Career Card (formerly StormChain Card)
+
+- Renamed concept from "StormChain Card" → **Career Card**
+- `ShareProfileCard.tsx` updated: title, button text, download filename, alt text
+- Same concept for both verticals: one card, one link, proof at a glance
+
+### Type Changes
+
+- `userRole` type: `'driver' | 'employer'` → `'driver' | 'developer' | 'employer'`
+- Updated in: `page.tsx`, `Navigation.tsx`, `UserStatusModal.tsx`, `WalletCard.tsx`, `TAssistant.tsx`
+
+### API + DB (fix for "Failed to set user role" when selecting Software Engineer)
+
+- **`/api/user/set-role`** — now accepts `'developer'` (was returning 400)
+- **Migration 010** — `supabase/migrations/010_remove_role_check_constraint.sql` removes the CHECK on `users.role` so any role (driver, developer, employer, future roles) is accepted. Validation now happens in the API. **Run this migration on Supabase** or selecting Software Engineer will fail at the database level.
+
+### Strategy Doc Updated
+
+- `docs/STORMCHAIN_STRATEGY.md` — reflects three user roles, Career Card naming, employer email gating
+
+---
+
 ## 🌐 **DOC: Alchemy Google Auth after domain change (veree.io → stormchain.ai)** (January 2026)
 
 **Google sign-in broke after moving to stormchain.ai because OAuth origins must be whitelisted.**

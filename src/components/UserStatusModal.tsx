@@ -18,7 +18,7 @@ interface UserStatusModalProps {
     address?: string
     chain?: string
   }
-  userRole?: 'driver' | 'employer' | null
+  userRole?: 'driver' | 'developer' | 'employer' | null
   onSwitchRole?: () => void
 }
 
@@ -34,7 +34,7 @@ export default function UserStatusModal({
 }: UserStatusModalProps) {
   const { theme } = useTheme()
   const [activeTab, setActiveTab] = useState<WalletTab>('overview')
-  
+
   const handleLogout = () => {
     onLogout()
     onClose()
@@ -63,7 +63,7 @@ export default function UserStatusModal({
       document.body.style.position = 'fixed'
       document.body.style.top = `-${scrollY}px`
       document.body.style.width = '100%'
-      
+
       return () => {
         // Restore body scroll
         document.body.style.overflow = originalStyle
@@ -114,7 +114,6 @@ export default function UserStatusModal({
 
           {/* Inner shadow for depth */}
           <div className='absolute inset-0 sm:rounded-3xl shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)] pointer-events-none' />
-
 
           {/* Header */}
           <div className='p-4 sm:p-6 border-b border-brand-mint/20'>
@@ -174,12 +173,9 @@ export default function UserStatusModal({
           )}
 
           {/* Tab Content - Scrollable area */}
-          <div 
-            className='flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-hide-mobile min-h-0'
-          >
+          <div className='flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-hide-mobile min-h-0'>
             {activeTab === 'overview' && (
               <div className='space-y-4 sm:space-y-6'>
-
                 {/* User Info Card */}
                 <div className='bg-brand-sage/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 border border-brand-mint/20 shadow-lg'>
                   <div className='space-y-2 sm:space-y-3 md:space-y-4 text-xs sm:text-sm'>
@@ -219,7 +215,11 @@ export default function UserStatusModal({
                           Role:
                         </span>
                         <span className='text-brand-cream text-xs sm:text-sm'>
-                          {userRole === 'driver' ? '🚗 Driver' : '🏢 Employer'}
+                          {userRole === 'driver'
+                            ? '🚗 Driver'
+                            : userRole === 'developer'
+                              ? '💻 Software Engineer'
+                              : '🏢 Employer'}
                         </span>
                       </div>
                     )}
@@ -229,7 +229,7 @@ export default function UserStatusModal({
                 {/* USDC Balance Display */}
                 {user.address && (
                   <div>
-                    <USDCBalance 
+                    <USDCBalance
                       walletAddress={user.address}
                       refreshInterval={60000} // Auto-refresh every 60 seconds
                     />
@@ -239,7 +239,7 @@ export default function UserStatusModal({
                 {/* Buy USDC Button */}
                 {user.address && (
                   <div className='bg-brand-sage/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-brand-mint/20 shadow-lg'>
-                    <BuyUSDCButton 
+                    <BuyUSDCButton
                       walletAddress={user.address}
                       onSuccess={() => {
                         // Optionally refresh balance after purchase
@@ -255,7 +255,7 @@ export default function UserStatusModal({
                     onClick={handleSwitchRole}
                     className='w-full px-4 sm:px-6 py-3 sm:py-4 text-brand-cream font-semibold bg-brand-sage/60 backdrop-blur-sm border border-brand-mint/30 rounded-lg sm:rounded-xl hover:bg-brand-sage/80 hover:border-brand-mint/50 transition-all duration-300 shadow-lg hover:shadow-xl text-sm sm:text-base'
                   >
-                    Switch to {userRole === 'driver' ? 'Employer' : 'Driver'}
+                    Change Role
                   </button>
                 )}
 
@@ -263,22 +263,30 @@ export default function UserStatusModal({
                 {userRole && user?.address && (
                   <button
                     onClick={async () => {
-                      if (confirm('Clear your role? This will show the role selection modal again. (For testing)')) {
+                      if (
+                        confirm(
+                          'Clear your role? This will show the role selection modal again. (For testing)'
+                        )
+                      ) {
                         try {
                           const response = await fetch('/api/user/set-role', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ 
+                            body: JSON.stringify({
                               role: null,
-                              walletAddress: user.address 
+                              walletAddress: user.address,
                             }),
                           })
                           if (response.ok) {
                             // Reload page to trigger role fetch and show modal
                             window.location.reload()
                           } else {
-                            const errorData = await response.json().catch(() => ({}))
-                            alert(`Failed to clear role: ${errorData.error || 'Unknown error'}`)
+                            const errorData = await response
+                              .json()
+                              .catch(() => ({}))
+                            alert(
+                              `Failed to clear role: ${errorData.error || 'Unknown error'}`
+                            )
                           }
                         } catch (error) {
                           console.error('Error clearing role:', error)
@@ -332,7 +340,9 @@ export default function UserStatusModal({
                       <div>
                         <div
                           className={`font-semibold ${
-                            theme === 'dark' ? 'text-brand-cream' : 'text-gray-900'
+                            theme === 'dark'
+                              ? 'text-brand-cream'
+                              : 'text-gray-900'
                           }`}
                         >
                           USDC
@@ -342,7 +352,9 @@ export default function UserStatusModal({
                         </div>
                         <div
                           className={`text-[11px] ${
-                            theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
+                            theme === 'dark'
+                              ? 'text-brand-cream/70'
+                              : 'text-gray-600'
                           }`}
                         >
                           Current send flow uses this asset for testing.
@@ -370,7 +382,9 @@ export default function UserStatusModal({
                       <div>
                         <div
                           className={`font-semibold ${
-                            theme === 'dark' ? 'text-brand-cream/80' : 'text-gray-800'
+                            theme === 'dark'
+                              ? 'text-brand-cream/80'
+                              : 'text-gray-800'
                           }`}
                         >
                           USDC
@@ -380,10 +394,13 @@ export default function UserStatusModal({
                         </div>
                         <div
                           className={`text-[11px] ${
-                            theme === 'dark' ? 'text-brand-cream/60' : 'text-gray-500'
+                            theme === 'dark'
+                              ? 'text-brand-cream/60'
+                              : 'text-gray-500'
                           }`}
                         >
-                          View-only for now. Sending from Veree will use this in production.
+                          View-only for now. Sending from Veree will use this in
+                          production.
                         </div>
                       </div>
                       <span
@@ -418,7 +435,7 @@ export default function UserStatusModal({
 
             {activeTab === 'history' && user.address && (
               <div>
-                <TransactionHistory 
+                <TransactionHistory
                   walletAddress={user.address}
                   maxTransactions={50}
                   showFilters={true}

@@ -3,11 +3,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Send, Loader2, X } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
-import { 
-  routeEvent, 
+import {
+  routeEvent,
   checkMilestones,
-  type AvaEvent, 
-  type UserContext 
+  type AvaEvent,
+  type UserContext,
 } from '@/lib/ava-brain'
 import type {
   AssistantHelpRequest,
@@ -33,10 +33,16 @@ interface Message {
 }
 
 interface TAssistantProps {
-  currentStep?: 'welcome' | 'wallet' | 'resume' | 'forms' | 'submission' | 'complete'
+  currentStep?:
+    | 'welcome'
+    | 'wallet'
+    | 'resume'
+    | 'forms'
+    | 'submission'
+    | 'complete'
   onAction?: (action: string, data?: any) => void
   userAddress?: string | null
-  userRole?: 'driver' | 'employer' | null
+  userRole?: 'driver' | 'developer' | 'employer' | null
   hasResume?: boolean
   hasForms?: boolean
   form1Data?: any
@@ -94,7 +100,7 @@ function TAssistantContent({
   const messageCounterRef = useRef(0)
   const lastReadMessageIdRef = useRef<string | null>(null)
   const [hasUnread, setHasUnread] = useState(false)
-  
+
   // Ava Brain context - tracks user state for smart routing
   const avaBrainContextRef = useRef<UserContext>({
     currentPage: null,
@@ -118,7 +124,10 @@ function TAssistantContent({
   }, [])
 
   const addAssistantMessage = useCallback(
-    (content: string, options?: { actions?: MessageAction[]; step?: string }) => {
+    (
+      content: string,
+      options?: { actions?: MessageAction[]; step?: string }
+    ) => {
       const newMessage = {
         id: nextMessageId('assistant'),
         role: 'assistant' as const,
@@ -128,7 +137,7 @@ function TAssistantContent({
         actions: options?.actions,
       }
       setMessages((prev) => [...prev, newMessage])
-      
+
       // Mark as unread if collapsed
       if (isCollapsed) {
         setHasUnread(true)
@@ -137,7 +146,7 @@ function TAssistantContent({
     },
     [nextMessageId, isCollapsed, onUnreadChange]
   )
-  
+
   // Track unread messages
   useEffect(() => {
     if (!isCollapsed && hasUnread) {
@@ -155,7 +164,7 @@ function TAssistantContent({
   useEffect(() => {
     const isWorking = isLoading || isProcessingHelp || isAnalyzing
     let message = 'AvA is thinking...'
-    
+
     if (isAnalyzing) {
       message = 'Analyzing your resume...'
     } else if (isProcessingHelp) {
@@ -163,7 +172,7 @@ function TAssistantContent({
     } else if (isLoading) {
       message = 'AvA is thinking...'
     }
-    
+
     onLoadingChange?.(isWorking, message)
   }, [isLoading, isProcessingHelp, isAnalyzing, onLoadingChange])
 
@@ -237,7 +246,7 @@ function TAssistantContent({
   // =====================================================
   useEffect(() => {
     if (!mounted) return
-    
+
     if (currentStep !== prevStepRef.current) {
       // Update context for tracking (no AI calls)
       avaBrainContextRef.current = {
@@ -247,8 +256,13 @@ function TAssistantContent({
         timeOnCurrentPage: 0,
         helpTopicsShown: new Set(),
       }
-      
-      console.log('📍 [AVA] Page changed:', prevStepRef.current, '→', currentStep)
+
+      console.log(
+        '📍 [AVA] Page changed:',
+        prevStepRef.current,
+        '→',
+        currentStep
+      )
       prevStepRef.current = currentStep
     }
   }, [currentStep, mounted])
@@ -261,18 +275,21 @@ function TAssistantContent({
   // =====================================================
   useEffect(() => {
     if (!mounted) return
-    
+
     const prevContext = { ...avaBrainContextRef.current }
-    
+
     // Sync external state to Ava Brain context
     avaBrainContextRef.current = {
       ...avaBrainContextRef.current,
       hasResume: hasResume ?? false,
       profileCompleteness: profileCompleteness?.score ?? 0,
     }
-    
+
     // Check for milestones (first resume, profile completeness)
-    const milestoneEvent = checkMilestones(prevContext, avaBrainContextRef.current)
+    const milestoneEvent = checkMilestones(
+      prevContext,
+      avaBrainContextRef.current
+    )
     if (milestoneEvent) {
       const response = routeEvent(milestoneEvent, avaBrainContextRef.current)
       if ('message' in response && response.message) {
@@ -295,22 +312,30 @@ function TAssistantContent({
     if (!mounted || messages.length > 0) return
 
     const welcomeMessages: Record<string, string> = {
-      welcome: "👋 Hi! I'm AvA, your AI assistant. I'm here to guide you through the entire driver employment process.\n\nLet's get started! First, you'll need to:\n\n1️⃣ **Log in** to create your secure wallet\n2️⃣ **Upload your resume** (I can help prefill your application!)\n3️⃣ **Complete your driver application** (I'll guide you through each form)\n4️⃣ **Submit and verify** your application\n\nReady to begin? Click 'Sign In' to get started!",
-      wallet: "✅ Great! You're logged in. Now let's move to the next step.\n\n2️⃣ **Upload your resume** - I can automatically extract information from your resume to prefill your application forms, saving you time!\n\nClick 'Upload Resume' when you're ready.",
-      resume: "✅ Excellent! Your resume is uploaded. I've extracted your information and prefilled your application forms.\n\n3️⃣ **Complete your driver application** - I'll guide you through each form step by step. Let's start with Form 1: Personal Information.\n\nClick 'Start Application' to begin!",
-      forms: "✅ You're making great progress! Continue filling out your driver application forms.\n\nI'm here to help if you have any questions about:\n• DOT compliance requirements\n• Form field explanations\n• What information is needed\n\nJust ask me anything!",
-      submission: "🎉 Congratulations! Your application has been submitted to the blockchain.\n\n4️⃣ **Next steps:**\n• Complete employment verification\n• Wait for DOT review\n• Check your dashboard for updates\n\nI'll be here if you need help with anything else!",
-      complete: "🎊 Amazing! You've completed the entire process!\n\nYour driver application is now:\n✅ Submitted to blockchain\n✅ Verified and secure\n✅ Ready for employer review\n\nIs there anything else I can help you with?",
+      welcome:
+        "👋 Hi! I'm AvA, your AI assistant. I'm here to guide you through the entire driver employment process.\n\nLet's get started! First, you'll need to:\n\n1️⃣ **Log in** to create your secure wallet\n2️⃣ **Upload your resume** (I can help prefill your application!)\n3️⃣ **Complete your driver application** (I'll guide you through each form)\n4️⃣ **Submit and verify** your application\n\nReady to begin? Click 'Sign In' to get started!",
+      wallet:
+        "✅ Great! You're logged in. Now let's move to the next step.\n\n2️⃣ **Upload your resume** - I can automatically extract information from your resume to prefill your application forms, saving you time!\n\nClick 'Upload Resume' when you're ready.",
+      resume:
+        "✅ Excellent! Your resume is uploaded. I've extracted your information and prefilled your application forms.\n\n3️⃣ **Complete your driver application** - I'll guide you through each form step by step. Let's start with Form 1: Personal Information.\n\nClick 'Start Application' to begin!",
+      forms:
+        "✅ You're making great progress! Continue filling out your driver application forms.\n\nI'm here to help if you have any questions about:\n• DOT compliance requirements\n• Form field explanations\n• What information is needed\n\nJust ask me anything!",
+      submission:
+        "🎉 Congratulations! Your application has been submitted to the blockchain.\n\n4️⃣ **Next steps:**\n• Complete employment verification\n• Wait for DOT review\n• Check your dashboard for updates\n\nI'll be here if you need help with anything else!",
+      complete:
+        "🎊 Amazing! You've completed the entire process!\n\nYour driver application is now:\n✅ Submitted to blockchain\n✅ Verified and secure\n✅ Ready for employer review\n\nIs there anything else I can help you with?",
     }
 
     const welcomeActions: Record<string, MessageAction[] | undefined> = {
-      welcome: [
-        { id: 'welcome-signin', label: 'Sign In', value: 'signin' },
-      ],
+      welcome: [{ id: 'welcome-signin', label: 'Sign In', value: 'signin' }],
       wallet: [
         { id: 'wallet-resume', label: 'Upload resume', value: 'resume' },
         { id: 'wallet-forms', label: 'Start application', value: 'forms' },
-        { id: 'wallet-primer', label: 'Why blockchain?', value: 'primer:learn_more' },
+        {
+          id: 'wallet-primer',
+          label: 'Why blockchain?',
+          value: 'primer:learn_more',
+        },
       ],
       resume: [
         { id: 'resume-forms', label: 'Continue to forms', value: 'forms' },
@@ -319,10 +344,18 @@ function TAssistantContent({
         { id: 'forms-progress', label: 'Open DOT forms', value: 'forms' },
       ],
       submission: [
-        { id: 'submission-dashboard', label: 'View dashboard', value: 'dashboard' },
+        {
+          id: 'submission-dashboard',
+          label: 'View dashboard',
+          value: 'dashboard',
+        },
       ],
       complete: [
-        { id: 'complete-dashboard', label: 'Open dashboard', value: 'dashboard' },
+        {
+          id: 'complete-dashboard',
+          label: 'Open dashboard',
+          value: 'dashboard',
+        },
       ],
     }
 
@@ -346,7 +379,7 @@ function TAssistantContent({
     }
 
     const previous = prevJourneyRef.current
-    
+
     // =====================================================
     // AVA BRAIN: Update context from journey state
     // =====================================================
@@ -354,7 +387,7 @@ function TAssistantContent({
     if (journeyState.currentFormStep) {
       avaBrainContextRef.current.currentForm = journeyState.currentFormStep
     }
-    
+
     // Track completed forms (1, 2, 3 based on journey state)
     const completedForms: number[] = []
     if (journeyState.forms.status === 'complete') {
@@ -362,7 +395,7 @@ function TAssistantContent({
     }
     avaBrainContextRef.current.formsCompleted = completedForms
     // =====================================================
-    
+
     const walletChanged =
       journeyState.wallet.status === 'complete' &&
       previous.wallet.status !== 'complete'
@@ -372,9 +405,21 @@ function TAssistantContent({
         {
           step: 'wallet',
           actions: [
-            { id: 'journey-wallet-resume', label: 'Upload resume', value: 'resume' },
-            { id: 'journey-wallet-forms', label: 'Start application', value: 'forms' },
-            { id: 'journey-wallet-primer', label: 'Why blockchain?', value: 'primer:learn_more' },
+            {
+              id: 'journey-wallet-resume',
+              label: 'Upload resume',
+              value: 'resume',
+            },
+            {
+              id: 'journey-wallet-forms',
+              label: 'Start application',
+              value: 'forms',
+            },
+            {
+              id: 'journey-wallet-primer',
+              label: 'Why blockchain?',
+              value: 'primer:learn_more',
+            },
           ],
         }
       )
@@ -387,13 +432,17 @@ function TAssistantContent({
       // Update Ava Brain context
       avaBrainContextRef.current.hasResume = true
       console.log('📄 [AVA BRAIN] Resume status changed to complete')
-      
+
       addAssistantMessage(
         '📄 Got it—your resume is on file. I can now prefill the DOT application to save you time.',
         {
           step: 'resume',
           actions: [
-            { id: 'journey-resume-forms', label: 'Continue to forms', value: 'forms' },
+            {
+              id: 'journey-resume-forms',
+              label: 'Continue to forms',
+              value: 'forms',
+            },
           ],
         }
       )
@@ -441,7 +490,11 @@ function TAssistantContent({
         {
           step: 'complete',
           actions: [
-            { id: 'journey-dashboard', label: 'Open dashboard', value: 'dashboard' },
+            {
+              id: 'journey-dashboard',
+              label: 'Open dashboard',
+              value: 'dashboard',
+            },
           ],
         }
       )
@@ -457,7 +510,11 @@ function TAssistantContent({
     addAssistantMessage(primerRequest.message, {
       step: currentStep,
       actions: [
-        { id: 'primer-learn', label: 'Tell me more', value: 'primer:learn_more' },
+        {
+          id: 'primer-learn',
+          label: 'Tell me more',
+          value: 'primer:learn_more',
+        },
         { id: 'primer-skip', label: 'Skip for now', value: 'primer:skip' },
       ],
     })
@@ -466,7 +523,7 @@ function TAssistantContent({
   // Handle resume upload events
   useEffect(() => {
     if (!mounted || !resumeUploadEvent) return
-    
+
     // Create a unique key for this event to prevent duplicates
     // Use timestamp + type + step to ensure uniqueness while allowing same type/step combinations at different times
     const eventKey = `${resumeUploadEvent.type}-${resumeUploadEvent.step}-${Date.now()}`
@@ -483,59 +540,80 @@ function TAssistantContent({
         setIsAnalyzing(false)
         setAnalysisPreview(data)
 
-          // Build insights from extracted data
-          const insights: string[] = []
-          const stats = data.stats || { extracted: 0, total: 0 }
+        // Build insights from extracted data
+        const insights: string[] = []
+        const stats = data.stats || { extracted: 0, total: 0 }
 
-          if (data.form1Data) {
-            if (data.form1Data.firstName || data.form1Data.lastName) {
-              insights.push(`✓ Found name: ${data.form1Data.firstName || ''} ${data.form1Data.lastName || ''}`.trim())
-            }
-            if (data.form1Data.email) insights.push(`✓ Found email: ${data.form1Data.email}`)
-            if (data.form1Data.phone) insights.push(`✓ Found phone: ${data.form1Data.phone}`)
-            if (data.form1Data.currentLicenses?.[0]?.licenseNumber) {
-              const license = data.form1Data.currentLicenses[0]
-              insights.push(`✓ Found license: ${license.licenseNumber} (${license.state || 'State'}) - ${license.typeClass || 'Class'}`)
-            }
-            if (data.form1Data.currentLicenses?.[0]?.endorsements) {
-              insights.push(`✓ Found endorsements: ${data.form1Data.currentLicenses[0].endorsements}`)
-            }
-            if (data.form1Data.medicalQualification?.medicalCertificateExpiration) {
-              insights.push(`✓ Found medical cert expiration: ${data.form1Data.medicalQualification.medicalCertificateExpiration}`)
-            }
+        if (data.form1Data) {
+          if (data.form1Data.firstName || data.form1Data.lastName) {
+            insights.push(
+              `✓ Found name: ${data.form1Data.firstName || ''} ${data.form1Data.lastName || ''}`.trim()
+            )
           }
-
-          if (data.form2Data?.workHistory && data.form2Data.workHistory.length > 0) {
-            insights.push(`✓ Found ${data.form2Data.workHistory.length} employment record(s)`)
+          if (data.form1Data.email)
+            insights.push(`✓ Found email: ${data.form1Data.email}`)
+          if (data.form1Data.phone)
+            insights.push(`✓ Found phone: ${data.form1Data.phone}`)
+          if (data.form1Data.currentLicenses?.[0]?.licenseNumber) {
+            const license = data.form1Data.currentLicenses[0]
+            insights.push(
+              `✓ Found license: ${license.licenseNumber} (${license.state || 'State'}) - ${license.typeClass || 'Class'}`
+            )
           }
+          if (data.form1Data.currentLicenses?.[0]?.endorsements) {
+            insights.push(
+              `✓ Found endorsements: ${data.form1Data.currentLicenses[0].endorsements}`
+            )
+          }
+          if (
+            data.form1Data.medicalQualification?.medicalCertificateExpiration
+          ) {
+            insights.push(
+              `✓ Found medical cert expiration: ${data.form1Data.medicalQualification.medicalCertificateExpiration}`
+            )
+          }
+        }
 
-          const insightsText = insights.length > 0
+        if (
+          data.form2Data?.workHistory &&
+          data.form2Data.workHistory.length > 0
+        ) {
+          insights.push(
+            `✓ Found ${data.form2Data.workHistory.length} employment record(s)`
+          )
+        }
+
+        const insightsText =
+          insights.length > 0
             ? `\n\n**Here's what I found:**\n${insights.join('\n')}\n\nI extracted ${stats.extracted} out of ${stats.total} fields. Would you like me to prefill your forms with this information?`
             : `\n\nI extracted ${stats.extracted} out of ${stats.total} fields. Would you like me to prefill your forms with this information?`
 
-            // Automatically prefill after analysis - no confirmation needed
-            // User already uploaded resume, so just prefill it
-            console.log('✅ [T ASSISTANT] Analysis complete, auto-prefilling forms...')
-            
-            // Create detailed, transparent summary
-            const fieldCount = stats.extracted || 0
-            const successMessage = fieldCount > 0
-              ? `🎉 Perfect! I found ${fieldCount} pieces of information from your resume.${insightsText}\n\n✨ **Filling out your forms now!**\n\n**What I filled:**\n• Form 1: Personal info, address, license basics\n• Form 3: Employment history (names, dates, roles)\n\n**What you'll need to add:**\n• Form 1: License details, years at address\n• Form 2: Driving experience, accident/traffic records (not on resumes)\n• Form 3: Employer contact info, reason for leaving\n\nI'll help guide you through the rest! 🚗`
-              : `✅ I've reviewed your resume and filled in what I could. I'll guide you through the remaining fields!`
-            
-            addAssistantMessage(successMessage, {
-              step: 'resume',
-            })
-          
-          // Auto-prefill with the extracted data
-          setTimeout(() => {
-            onAction?.('resume:prefill:confirm', data)
-          }, 500)
+        // Automatically prefill after analysis - no confirmation needed
+        // User already uploaded resume, so just prefill it
+        console.log(
+          '✅ [T ASSISTANT] Analysis complete, auto-prefilling forms...'
+        )
+
+        // Create detailed, transparent summary
+        const fieldCount = stats.extracted || 0
+        const successMessage =
+          fieldCount > 0
+            ? `🎉 Perfect! I found ${fieldCount} pieces of information from your resume.${insightsText}\n\n✨ **Filling out your forms now!**\n\n**What I filled:**\n• Form 1: Personal info, address, license basics\n• Form 3: Employment history (names, dates, roles)\n\n**What you'll need to add:**\n• Form 1: License details, years at address\n• Form 2: Driving experience, accident/traffic records (not on resumes)\n• Form 3: Employer contact info, reason for leaving\n\nI'll help guide you through the rest! 🚗`
+            : `✅ I've reviewed your resume and filled in what I could. I'll guide you through the remaining fields!`
+
+        addAssistantMessage(successMessage, {
+          step: 'resume',
+        })
+
+        // Auto-prefill with the extracted data
+        setTimeout(() => {
+          onAction?.('resume:prefill:confirm', data)
+        }, 500)
       } else if (resumeUploadEvent.data?.ipfsHash) {
         // Need to extract data via API (from ResumeUploadWithVerification)
         setIsAnalyzing(true)
         addAssistantMessage(
-          '🔍 Reading your resume now...\n\nI\'ll automatically pull out your name, contact info, work history, licenses, and more. This usually takes 15-20 seconds.',
+          "🔍 Reading your resume now...\n\nI'll automatically pull out your name, contact info, work history, licenses, and more. This usually takes 15-20 seconds.",
           {
             step: 'resume',
           }
@@ -577,55 +655,82 @@ function TAssistantContent({
 
             if (data.form1Data) {
               if (data.form1Data.firstName || data.form1Data.lastName) {
-                insights.push(`✓ Found name: ${data.form1Data.firstName || ''} ${data.form1Data.lastName || ''}`.trim())
+                insights.push(
+                  `✓ Found name: ${data.form1Data.firstName || ''} ${data.form1Data.lastName || ''}`.trim()
+                )
               }
-              if (data.form1Data.email) insights.push(`✓ Found email: ${data.form1Data.email}`)
-              if (data.form1Data.phone) insights.push(`✓ Found phone: ${data.form1Data.phone}`)
+              if (data.form1Data.email)
+                insights.push(`✓ Found email: ${data.form1Data.email}`)
+              if (data.form1Data.phone)
+                insights.push(`✓ Found phone: ${data.form1Data.phone}`)
               if (data.form1Data.currentLicenses?.[0]?.licenseNumber) {
                 const license = data.form1Data.currentLicenses[0]
-                insights.push(`✓ Found license: ${license.licenseNumber} (${license.state || 'State'}) - ${license.typeClass || 'Class'}`)
+                insights.push(
+                  `✓ Found license: ${license.licenseNumber} (${license.state || 'State'}) - ${license.typeClass || 'Class'}`
+                )
               }
               if (data.form1Data.currentLicenses?.[0]?.endorsements) {
-                insights.push(`✓ Found endorsements: ${data.form1Data.currentLicenses[0].endorsements}`)
+                insights.push(
+                  `✓ Found endorsements: ${data.form1Data.currentLicenses[0].endorsements}`
+                )
               }
-              if (data.form1Data.medicalQualification?.medicalCertificateExpiration) {
-                insights.push(`✓ Found medical cert expiration: ${data.form1Data.medicalQualification.medicalCertificateExpiration}`)
+              if (
+                data.form1Data.medicalQualification
+                  ?.medicalCertificateExpiration
+              ) {
+                insights.push(
+                  `✓ Found medical cert expiration: ${data.form1Data.medicalQualification.medicalCertificateExpiration}`
+                )
               }
             }
 
-            if (data.form2Data?.workHistory && data.form2Data.workHistory.length > 0) {
-              insights.push(`✓ Found ${data.form2Data.workHistory.length} employment record(s)`)
+            if (
+              data.form2Data?.workHistory &&
+              data.form2Data.workHistory.length > 0
+            ) {
+              insights.push(
+                `✓ Found ${data.form2Data.workHistory.length} employment record(s)`
+              )
             }
 
-            const insightsText = insights.length > 0
-              ? `\n\n**Here's what I found:**\n${insights.join('\n')}\n\nI extracted ${stats.extracted} out of ${stats.total} fields.`
-              : `\n\nI extracted ${stats.extracted} out of ${stats.total} fields.`
+            const insightsText =
+              insights.length > 0
+                ? `\n\n**Here's what I found:**\n${insights.join('\n')}\n\nI extracted ${stats.extracted} out of ${stats.total} fields.`
+                : `\n\nI extracted ${stats.extracted} out of ${stats.total} fields.`
 
             // Automatically prefill after analysis - no confirmation needed
             // User already uploaded resume, so just prefill it
-            console.log('✅ [T ASSISTANT] Analysis complete, auto-prefilling forms...')
-            
+            console.log(
+              '✅ [T ASSISTANT] Analysis complete, auto-prefilling forms...'
+            )
+
             // Create detailed, transparent summary
             const fieldCount = stats.extracted || 0
-            const successMessage = fieldCount > 0
-              ? `🎉 Great news! I found ${fieldCount} pieces of information from your resume.${insightsText}\n\n✨ **Filling out your forms now!**\n\n**What I filled:**\n• Form 1: Personal info, address, license basics\n• Form 3: Employment history (names, dates, roles)\n\n**What you'll need to add:**\n• Form 1: License details, years at address\n• Form 2: Driving experience, accident/traffic records (not on resumes)\n• Form 3: Employer contact info, reason for leaving\n\nI'll help guide you through the rest! 🚗`
-              : `✅ I've reviewed your resume and filled in what I could. I'll guide you through the remaining fields!`
-            
+            const successMessage =
+              fieldCount > 0
+                ? `🎉 Great news! I found ${fieldCount} pieces of information from your resume.${insightsText}\n\n✨ **Filling out your forms now!**\n\n**What I filled:**\n• Form 1: Personal info, address, license basics\n• Form 3: Employment history (names, dates, roles)\n\n**What you'll need to add:**\n• Form 1: License details, years at address\n• Form 2: Driving experience, accident/traffic records (not on resumes)\n• Form 3: Employer contact info, reason for leaving\n\nI'll help guide you through the rest! 🚗`
+                : `✅ I've reviewed your resume and filled in what I could. I'll guide you through the remaining fields!`
+
             addAssistantMessage(successMessage, {
               step: 'resume',
             })
-            
+
             // Auto-prefill with the extracted data
-            console.log('📤 [T ASSISTANT] About to trigger prefill with data:', {
-              hasForm1Data: !!data.form1Data,
-              hasForm2Data: !!data.form2Data,
-              hasForm3Data: !!data.form3Data,
-              form1DataSample: data.form1Data ? {
-                firstName: data.form1Data.firstName,
-                lastName: data.form1Data.lastName,
-                email: data.form1Data.email,
-              } : null,
-            })
+            console.log(
+              '📤 [T ASSISTANT] About to trigger prefill with data:',
+              {
+                hasForm1Data: !!data.form1Data,
+                hasForm2Data: !!data.form2Data,
+                hasForm3Data: !!data.form3Data,
+                form1DataSample: data.form1Data
+                  ? {
+                      firstName: data.form1Data.firstName,
+                      lastName: data.form1Data.lastName,
+                      email: data.form1Data.email,
+                    }
+                  : null,
+              }
+            )
             setTimeout(() => {
               console.log('📤 [T ASSISTANT] Calling onAction with prefill data')
               console.log('   Action: resume:prefill:confirm')
@@ -633,7 +738,9 @@ function TAssistantContent({
                 hasForm1Data: !!data.form1Data,
                 hasForm2Data: !!data.form2Data,
                 hasForm3Data: !!data.form3Data,
-                form1DataKeys: data.form1Data ? Object.keys(data.form1Data) : [],
+                form1DataKeys: data.form1Data
+                  ? Object.keys(data.form1Data)
+                  : [],
                 dataType: typeof data,
                 dataKeys: Object.keys(data),
               })
@@ -645,36 +752,56 @@ function TAssistantContent({
           .catch((error) => {
             setIsAnalyzing(false)
             console.error('❌ Analysis error:', error)
-            
+
             // Special handling for T Backend cache lock scenario
             if (error.errorType === 'T_BACKEND_CACHE_LOCK') {
-              console.log('🔒 [T ASSISTANT] Detected T Backend cache lock - providing user guidance')
+              console.log(
+                '🔒 [T ASSISTANT] Detected T Backend cache lock - providing user guidance'
+              )
               addAssistantMessage(
                 `⚠️ **Small hiccup!**\n\nI've seen this resume before but can't find my notes.\n\n**Quick fix (try first):**\n1. Refresh this page (F5)\n2. Upload again\n\n**If that doesn't work:**\n1. Open your resume\n2. Make a tiny edit (add a space, fix a typo)\n3. Save as new file\n4. Upload the new version\n\nOr just fill the forms manually - I'll still help!`,
                 {
                   step: 'resume',
                   actions: [
-                    { id: 'resume-reupload', label: 'I made changes', value: 'resume:reupload' },
-                    { id: 'resume-continue', label: 'Fill manually', value: 'forms' },
+                    {
+                      id: 'resume-reupload',
+                      label: 'I made changes',
+                      value: 'resume:reupload',
+                    },
+                    {
+                      id: 'resume-continue',
+                      label: 'Fill manually',
+                      value: 'forms',
+                    },
                   ],
                 }
               )
             } else {
               // Generic error handling - keep it simple and actionable
-              const friendlyError = error.message.includes('504') || error.message.includes('timeout')
-                ? 'The analysis is taking too long (server timeout).'
-                : error.message.includes('Failed to fetch')
-                ? 'Couldn\'t connect to the analysis service.'
-                : error.message
-              
+              const friendlyError =
+                error.message.includes('504') ||
+                error.message.includes('timeout')
+                  ? 'The analysis is taking too long (server timeout).'
+                  : error.message.includes('Failed to fetch')
+                    ? "Couldn't connect to the analysis service."
+                    : error.message
+
               addAssistantMessage(
                 `⚠️ Couldn't analyze your resume: ${friendlyError}\n\n**No problem!** You can:\n• Fill out the forms manually (I'll help!)\n• Try uploading again\n• Upload a different resume`,
                 {
                   step: 'resume',
                   actions: [
-                    { id: 'resume-continue', label: 'Fill manually', value: 'forms' },
+                    {
+                      id: 'resume-continue',
+                      label: 'Fill manually',
+                      value: 'forms',
+                    },
                     { id: 'resume-retry', label: 'Try again', value: 'resume' },
-                    { id: 'resume-help', label: 'Get help', value: 'resume:help' },
+                    {
+                      id: 'resume-help',
+                      label: 'Get help',
+                      value: 'resume:help',
+                    },
                   ],
                 }
               )
@@ -713,27 +840,37 @@ function TAssistantContent({
       )
     } else if (resumeUploadEvent.type === 'blockchain_complete') {
       addAssistantMessage(
-        '✅ Perfect! Your resume is verified and ready.\n\nI\'ll analyze it now to help fill out your application forms automatically. This saves you tons of time!',
-        { 
+        "✅ Perfect! Your resume is verified and ready.\n\nI'll analyze it now to help fill out your application forms automatically. This saves you tons of time!",
+        {
           step: 'resume',
           actions: [
             { id: 'resume-wait', label: 'Sounds good!', value: 'resume:wait' },
-          ]
+          ],
         }
       )
     } else if (resumeUploadEvent.type === 'upload_error') {
       // Show error with helpful guidance
       const errorMsg = resumeUploadEvent.error || 'Something went wrong'
-      const isDuplicate = errorMsg.toLowerCase().includes('already') || errorMsg.toLowerCase().includes('duplicate')
-      
+      const isDuplicate =
+        errorMsg.toLowerCase().includes('already') ||
+        errorMsg.toLowerCase().includes('duplicate')
+
       if (isDuplicate) {
         addAssistantMessage(
-          '📋 I see you\'ve already uploaded this resume before.\n\nWant to use your existing resume, or upload a different one?',
+          "📋 I see you've already uploaded this resume before.\n\nWant to use your existing resume, or upload a different one?",
           {
             step: 'resume',
             actions: [
-              { id: 'resume-use-existing', label: 'Use existing', value: 'forms' },
-              { id: 'resume-help', label: 'Upload different', value: 'resume:help' },
+              {
+                id: 'resume-use-existing',
+                label: 'Use existing',
+                value: 'forms',
+              },
+              {
+                id: 'resume-help',
+                label: 'Upload different',
+                value: 'resume:help',
+              },
             ],
           }
         )
@@ -749,12 +886,15 @@ function TAssistantContent({
           }
         )
       }
-    } else if (resumeUploadEvent.type === 'profile_conflict' && resumeUploadEvent.data) {
+    } else if (
+      resumeUploadEvent.type === 'profile_conflict' &&
+      resumeUploadEvent.data
+    ) {
       // Profile conflict detected - explain to user and guide them
       const { conflicts, existing, incoming } = resumeUploadEvent.data
-      
+
       const conflictList = conflicts.map((c: string) => `• ${c}`).join('\n')
-      
+
       addAssistantMessage(
         `⚠️ **Profile Conflict Detected**\n\nI noticed this resume appears to be for a different person than your existing profile:\n\n${conflictList}\n\n**Your existing profile:**\n• Name: ${existing.name || 'Not set'}\n• CDL: ${existing.cdlNumber || 'Not set'}\n\n**This new resume:**\n• Name: ${incoming.name || 'Not set'}\n• CDL: ${incoming.cdlNumber || 'Not set'}\n\n**What should we do?**\n\nA modal will appear asking you to choose:\n• **Keep Existing** - Keep your current profile, discard this resume's data\n• **Replace** - Replace your profile with this new resume's data\n\n💡 **Tip:** If this is your resume but with updated info, choose "Replace". If you accidentally uploaded someone else's resume, choose "Keep Existing".`,
         {
@@ -774,61 +914,85 @@ function TAssistantContent({
   useEffect(() => {
     if (!mounted || !profileCompleteness) return
     if (!userAddress || userRole !== 'driver') return
-    
+
     // Only show guidance once per score level to avoid spam
-    if (profileCompletenessHandledRef.current === profileCompleteness.score) return
+    if (profileCompletenessHandledRef.current === profileCompleteness.score)
+      return
     profileCompletenessHandledRef.current = profileCompleteness.score
 
     // Provide contextual guidance based on profile status
-    if (profileCompleteness.status === 'incomplete' && profileCompleteness.score < 40) {
+    if (
+      profileCompleteness.status === 'incomplete' &&
+      profileCompleteness.score < 40
+    ) {
       addAssistantMessage(
         `👋 Hey! I noticed your driver profile is only ${profileCompleteness.percentage} complete.\n\n` +
-        `To apply for jobs on Veree, you'll need to add some key information:\n\n` +
-        `🔑 **Essential:**\n` +
-        profileCompleteness.missingFields.slice(0, 3).map(f => `• ${f.label} (+${f.points} points)`).join('\n') +
-        `\n\n` +
-        `Complete your DOT application to unlock job applications!`,
+          `To apply for jobs on Veree, you'll need to add some key information:\n\n` +
+          `🔑 **Essential:**\n` +
+          profileCompleteness.missingFields
+            .slice(0, 3)
+            .map((f) => `• ${f.label} (+${f.points} points)`)
+            .join('\n') +
+          `\n\n` +
+          `Complete your DOT application to unlock job applications!`,
         {
           step: 'forms',
           actions: [
             { id: 'go-forms', label: 'Complete DOT App', value: 'forms' },
-          ]
+          ],
         }
       )
-    } else if (profileCompleteness.status === 'basic' && profileCompleteness.score >= 40 && profileCompleteness.score < 70) {
+    } else if (
+      profileCompleteness.status === 'basic' &&
+      profileCompleteness.score >= 40 &&
+      profileCompleteness.score < 70
+    ) {
       addAssistantMessage(
         `🎯 Nice! Your profile is ${profileCompleteness.percentage} complete - you can now apply to jobs!\n\n` +
-        `Want to stand out more? Here are quick wins:\n` +
-        profileCompleteness.missingFields.slice(0, 3).map(f => `• Add ${f.label} (+${f.points} points)`).join('\n') +
-        `\n\n` +
-        `More complete profiles get more employer views! 📈`,
+          `Want to stand out more? Here are quick wins:\n` +
+          profileCompleteness.missingFields
+            .slice(0, 3)
+            .map((f) => `• Add ${f.label} (+${f.points} points)`)
+            .join('\n') +
+          `\n\n` +
+          `More complete profiles get more employer views! 📈`,
         {
-          step: 'profile'
+          step: 'profile',
         }
       )
-    } else if (profileCompleteness.status === 'good' && profileCompleteness.score >= 70 && profileCompleteness.score < 90) {
+    } else if (
+      profileCompleteness.status === 'good' &&
+      profileCompleteness.score >= 70 &&
+      profileCompleteness.score < 90
+    ) {
       addAssistantMessage(
         `✨ Great job! Your profile is ${profileCompleteness.percentage} complete.\n\n` +
-        `You're almost there! Just a few more details to reach 100%:\n` +
-        profileCompleteness.missingFields.slice(0, 2).map(f => `• ${f.label}`).join('\n') +
-        `\n\n` +
-        `Employers love seeing complete profiles - it shows you're serious! 💼`,
+          `You're almost there! Just a few more details to reach 100%:\n` +
+          profileCompleteness.missingFields
+            .slice(0, 2)
+            .map((f) => `• ${f.label}`)
+            .join('\n') +
+          `\n\n` +
+          `Employers love seeing complete profiles - it shows you're serious! 💼`,
         {
-          step: 'profile'
+          step: 'profile',
         }
       )
-    } else if (profileCompleteness.status === 'excellent' && profileCompleteness.score >= 90) {
+    } else if (
+      profileCompleteness.status === 'excellent' &&
+      profileCompleteness.score >= 90
+    ) {
       // Only congratulate on first time hitting excellent
       if (profileCompletenessHandledRef.current < 90) {
         addAssistantMessage(
           `🎉 Awesome! Your profile is ${profileCompleteness.percentage} complete!\n\n` +
-          `You're all set to apply for trucking jobs. Your complete profile will make a great impression on employers.\n\n` +
-          `Ready to find your next opportunity? Browse jobs and apply with one click! 🚚`,
+            `You're all set to apply for trucking jobs. Your complete profile will make a great impression on employers.\n\n` +
+            `Ready to find your next opportunity? Browse jobs and apply with one click! 🚚`,
           {
             step: 'profile',
             actions: [
               { id: 'browse-jobs', label: 'Browse Jobs', value: 'jobs' },
-            ]
+            ],
           }
         )
       }
@@ -888,7 +1052,7 @@ function TAssistantContent({
         const helpHeaders: Record<string, string> = {
           'Content-Type': 'application/json',
         }
-        
+
         // Add X-Wallet-Address header if user is logged in
         if (userAddress) {
           helpHeaders['X-Wallet-Address'] = userAddress
@@ -968,13 +1132,14 @@ function TAssistantContent({
     setMessages((prev) => [...prev, userMessage])
     const messageText = input.trim()
     setInput('')
-    
+
     // Update Ava Brain context
     avaBrainContextRef.current.lastActivity = Date.now()
     avaBrainContextRef.current.hasResume = hasResume ?? false
-    avaBrainContextRef.current.profileCompleteness = profileCompleteness?.score ?? 0
+    avaBrainContextRef.current.profileCompleteness =
+      profileCompleteness?.score ?? 0
     avaBrainContextRef.current.currentPage = currentStep
-    
+
     // Create an event for the user message
     const event: AvaEvent = {
       category: 'help_request',
@@ -982,10 +1147,14 @@ function TAssistantContent({
       context: { message: messageText },
       timestamp: Date.now(),
     }
-    
+
     // Check with Ava Brain - does this need AI or can we use a template?
-    const routeResult = routeEvent(event, avaBrainContextRef.current, messageText)
-    
+    const routeResult = routeEvent(
+      event,
+      avaBrainContextRef.current,
+      messageText
+    )
+
     // If the brain says we can use a template (no AI needed)
     if ('message' in routeResult && !routeResult.useAI && routeResult.message) {
       // Instant response from template - no loading needed!
@@ -996,7 +1165,7 @@ function TAssistantContent({
       console.log('⚡ [AVA BRAIN] Template response (instant, no AI cost)')
       return
     }
-    
+
     // AI is needed - show loading and call the API
     setIsLoading(true)
     console.log('🤖 [AVA BRAIN] Escalating to AI for complex question')
@@ -1004,30 +1173,37 @@ function TAssistantContent({
     try {
       // Build context-aware prompt with application data
       const applicationSnapshot = buildApplicationSnapshot()
-      
+
       // If the brain provided a pre-built prompt, use it; otherwise build our own
-      const contextPrompt = 'prompt' in routeResult 
-        ? routeResult.prompt 
-        : [
-          `You are AvA, a friendly AI assistant guiding users through the driver employment application process.`,
-          `Current step: ${currentStep}`,
-          userAddress ? `User is logged in with wallet: ${userAddress}` : `User is not logged in yet`,
-          hasResume ? `User has uploaded their resume` : `User has not uploaded their resume yet`,
-          hasForms ? `User has started filling out forms` : `User has not started forms yet`,
-          ``,
-          `=== USER'S APPLICATION DATA ===`,
-          applicationSnapshot,
-          ``,
-          `Be helpful, friendly, and guide them to the next step. You can reference their application data to provide personalized guidance.`,
-          `Keep responses concise (2-3 paragraphs max).`,
-          `User message: ${messageText}`,
-        ].join('\n')
+      const contextPrompt =
+        'prompt' in routeResult
+          ? routeResult.prompt
+          : [
+              `You are AvA, a friendly AI assistant guiding users through the driver employment application process.`,
+              `Current step: ${currentStep}`,
+              userAddress
+                ? `User is logged in with wallet: ${userAddress}`
+                : `User is not logged in yet`,
+              hasResume
+                ? `User has uploaded their resume`
+                : `User has not uploaded their resume yet`,
+              hasForms
+                ? `User has started filling out forms`
+                : `User has not started forms yet`,
+              ``,
+              `=== USER'S APPLICATION DATA ===`,
+              applicationSnapshot,
+              ``,
+              `Be helpful, friendly, and guide them to the next step. You can reference their application data to provide personalized guidance.`,
+              `Keep responses concise (2-3 paragraphs max).`,
+              `User message: ${messageText}`,
+            ].join('\n')
 
       // Build headers with wallet address if available
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       }
-      
+
       // Add X-Wallet-Address header if user is logged in
       if (userAddress) {
         headers['X-Wallet-Address'] = userAddress
@@ -1046,10 +1222,11 @@ function TAssistantContent({
         const errorData = await response.json().catch(() => ({}))
         let errorMessage = errorData?.error || 'Failed to get AI response'
         const detailMessage = errorData?.detail
-        
+
         // Handle specific error codes with user-friendly messages
         if (response.status === 502 || response.status === 503) {
-          errorMessage = 'AI service is temporarily unavailable. Please try again in a moment.'
+          errorMessage =
+            'AI service is temporarily unavailable. Please try again in a moment.'
         }
         const combinedMessage = detailMessage
           ? `${errorMessage}: ${detailMessage}`
@@ -1060,7 +1237,7 @@ function TAssistantContent({
       }
 
       const data = await response.json()
-      
+
       addAssistantMessage(data.reply || 'No response received')
 
       // Don't automatically trigger actions based on T's response
@@ -1100,40 +1277,61 @@ function TAssistantContent({
   }
 
   const buildPreviewMessage = useCallback((preview: any) => {
-    const lines: string[] = ['**Here\'s what I\'ll fill in:**\n']
-    
+    const lines: string[] = ["**Here's what I'll fill in:**\n"]
+
     if (preview.form1Data) {
       lines.push('**Form 1 - Personal Information:**')
       if (preview.form1Data.firstName || preview.form1Data.lastName) {
-        lines.push(`• Name: ${preview.form1Data.firstName || ''} ${preview.form1Data.lastName || ''}`.trim())
+        lines.push(
+          `• Name: ${preview.form1Data.firstName || ''} ${preview.form1Data.lastName || ''}`.trim()
+        )
       }
-      if (preview.form1Data.email) lines.push(`• Email: ${preview.form1Data.email}`)
-      if (preview.form1Data.phone) lines.push(`• Phone: ${preview.form1Data.phone}`)
-      if (preview.form1Data.dateOfBirth) lines.push(`• Date of Birth: ${preview.form1Data.dateOfBirth}`)
+      if (preview.form1Data.email)
+        lines.push(`• Email: ${preview.form1Data.email}`)
+      if (preview.form1Data.phone)
+        lines.push(`• Phone: ${preview.form1Data.phone}`)
+      if (preview.form1Data.dateOfBirth)
+        lines.push(`• Date of Birth: ${preview.form1Data.dateOfBirth}`)
       if (preview.form1Data.currentMailing?.street) {
-        lines.push(`• Address: ${preview.form1Data.currentMailing.street}, ${preview.form1Data.currentMailing.city || ''}, ${preview.form1Data.currentMailing.state || ''}`)
+        lines.push(
+          `• Address: ${preview.form1Data.currentMailing.street}, ${preview.form1Data.currentMailing.city || ''}, ${preview.form1Data.currentMailing.state || ''}`
+        )
       }
       if (preview.form1Data.currentLicenses?.[0]) {
         const license = preview.form1Data.currentLicenses[0]
-        lines.push(`• License: ${license.licenseNumber || 'N/A'} (${license.state || 'State'}) - ${license.typeClass || 'Class'}`)
-        if (license.endorsements) lines.push(`• Endorsements: ${license.endorsements}`)
+        lines.push(
+          `• License: ${license.licenseNumber || 'N/A'} (${license.state || 'State'}) - ${license.typeClass || 'Class'}`
+        )
+        if (license.endorsements)
+          lines.push(`• Endorsements: ${license.endorsements}`)
       }
-      if (preview.form1Data.medicalQualification?.medicalCertificateExpiration) {
-        lines.push(`• Medical Cert Expiration: ${preview.form1Data.medicalQualification.medicalCertificateExpiration}`)
+      if (
+        preview.form1Data.medicalQualification?.medicalCertificateExpiration
+      ) {
+        lines.push(
+          `• Medical Cert Expiration: ${preview.form1Data.medicalQualification.medicalCertificateExpiration}`
+        )
       }
       lines.push('')
     }
 
     if (preview.form2Data) {
-      if (preview.form2Data.workHistory && preview.form2Data.workHistory.length > 0) {
+      if (
+        preview.form2Data.workHistory &&
+        preview.form2Data.workHistory.length > 0
+      ) {
         lines.push(`**Form 2 - Employment History:**`)
-        lines.push(`• ${preview.form2Data.workHistory.length} employment record(s) found`)
+        lines.push(
+          `• ${preview.form2Data.workHistory.length} employment record(s) found`
+        )
         lines.push('')
       }
     }
 
     const stats = preview.stats || { extracted: 0, total: 0 }
-    lines.push(`**Summary:** ${stats.extracted} out of ${stats.total} fields extracted`)
+    lines.push(
+      `**Summary:** ${stats.extracted} out of ${stats.total} fields extracted`
+    )
     lines.push('\nReady to prefill your forms with this information?')
 
     return lines.join('\n')
@@ -1161,22 +1359,37 @@ function TAssistantContent({
             addAssistantMessage(preview, {
               step: 'resume',
               actions: [
-                { id: 'resume-prefill-confirm', label: 'Yes, use this data', value: 'resume:prefill:confirm' },
-                { id: 'resume-continue', label: 'No, I\'ll fill manually', value: 'forms' },
+                {
+                  id: 'resume-prefill-confirm',
+                  label: 'Yes, use this data',
+                  value: 'resume:prefill:confirm',
+                },
+                {
+                  id: 'resume-continue',
+                  label: "No, I'll fill manually",
+                  value: 'forms',
+                },
               ],
             })
           } else {
-            addAssistantMessage('Sorry, I don\'t have the preview data. Please try uploading your resume again.')
+            addAssistantMessage(
+              "Sorry, I don't have the preview data. Please try uploading your resume again."
+            )
           }
           break
         case 'resume:prefill:confirm':
           // Confirm and trigger prefill
-          addAssistantMessage('Perfect! I\'ll prefill your forms now. This will take just a moment...')
-          
+          addAssistantMessage(
+            "Perfect! I'll prefill your forms now. This will take just a moment..."
+          )
+
           // Pass the extracted data directly to the parent via the callback
           // This avoids calling the API again (which fails for duplicates)
           if (analysisPreview) {
-            console.log('📤 [T ASSISTANT] Passing prefill data directly:', analysisPreview)
+            console.log(
+              '📤 [T ASSISTANT] Passing prefill data directly:',
+              analysisPreview
+            )
             onAction?.(action.value, analysisPreview)
           } else {
             // No data available, let parent handle it
@@ -1185,7 +1398,9 @@ function TAssistantContent({
           break
         case 'resume:reupload':
           // User needs to upload a modified resume due to cache lock
-          addAssistantMessage('Great! Go ahead and upload your modified resume. Remember, even a tiny change (like adding a space or updating a date) will make it a new file.')
+          addAssistantMessage(
+            'Great! Go ahead and upload your modified resume. Remember, even a tiny change (like adding a space or updating a date) will make it a new file.'
+          )
           onAction?.('resume') // Navigate to resume section
           break
         default:
@@ -1232,8 +1447,8 @@ function TAssistantContent({
     return (
       <>
         {/* Backdrop - mobile only */}
-        <div 
-          className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998]"
+        <div
+          className='md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998]'
           onClick={(e) => {
             e.stopPropagation()
             if (onToggleCollapse) {
@@ -1250,208 +1465,225 @@ function TAssistantContent({
             inset-4 sm:inset-6
             md:top-24 md:bottom-6 md:left-auto md:right-6 md:w-[50vw] lg:w-[45vw] xl:w-[40vw] md:max-w-[700px]
             rounded-2xl overflow-hidden border ${
-            theme === 'dark'
-              ? 'bg-gray-800 border-brand-mint/20'
-              : 'bg-gray-50 border-brand-sage/20'
-          }`}
+              theme === 'dark'
+                ? 'bg-gray-800 border-brand-mint/20'
+                : 'bg-gray-50 border-brand-sage/20'
+            }`}
           style={{
-            boxShadow: theme === 'dark'
-              ? '0 8px 32px rgba(0, 0, 0, 0.3)'
-              : '0 8px 32px rgba(0, 0, 0, 0.1)',
+            boxShadow:
+              theme === 'dark'
+                ? '0 8px 32px rgba(0, 0, 0, 0.3)'
+                : '0 8px 32px rgba(0, 0, 0, 0.1)',
             pointerEvents: 'auto',
-            zIndex: 9999
+            zIndex: 9999,
           }}
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
         >
-        {/* Header - Clean and compact */}
-        <div
-          className={`flex items-center justify-between px-5 py-3 ${
-            theme === 'dark' 
-              ? 'border-b border-brand-mint/15' 
-              : 'border-b border-brand-sage/15'
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            {/* AvA Logo - Outline style */}
-            <div
-              className={`w-9 h-9 rounded-lg flex items-center justify-center font-semibold text-xs border-2 ${
-                theme === 'dark'
-                  ? 'border-brand-mint/50 text-brand-mint bg-transparent'
-                  : 'border-brand-sage/50 text-brand-sage bg-transparent'
-              }`}
-            >
-              AvA
-            </div>
-            <div>
-              <h3 className={`font-semibold text-sm ${
-                theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage-dark'
-              }`}>
-                AvA Assistant
-              </h3>
-              <p className={`text-xs ${
-                theme === 'dark' ? 'text-brand-mint/70' : 'text-brand-sage/70'
-              }`}>
-                Your DOT application guide
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              e.preventDefault()
-              if (onToggleCollapse) {
-                onToggleCollapse()
-              }
-            }}
-            className={`p-2 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer ${
-              theme === 'dark' 
-                ? 'hover:bg-brand-mint/20 text-brand-cream/70 hover:text-brand-cream' 
-                : 'hover:bg-brand-sage/10 text-brand-sage/70 hover:text-brand-sage'
-            }`}
-            aria-label="Close AvA Assistant"
-            type="button"
-            style={{ pointerEvents: 'auto', zIndex: 10000 }}
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Messages - Better typography and spacing */}
-        <div
-          ref={messagesContainerRef}
-          className={`flex-1 overflow-y-auto px-6 py-5 space-y-5 ${
-            theme === 'dark' ? 'scrollbar-dark' : 'scrollbar-light'
-          }`}
-        >
-        {messages.map((message) => (
+          {/* Header - Clean and compact */}
           <div
-            key={message.id}
-            className={`flex ${
-              message.role === 'user' ? 'justify-end' : 'justify-start'
+            className={`flex items-center justify-between px-5 py-3 ${
+              theme === 'dark'
+                ? 'border-b border-brand-mint/15'
+                : 'border-b border-brand-sage/15'
             }`}
           >
-            <div
-              className={`max-w-[85%] rounded-2xl px-5 py-3 ${
-                message.role === 'user'
-                  ? theme === 'dark'
-                    ? 'bg-brand-mint text-gray-900'
-                    : 'bg-brand-sage text-white'
-                  : theme === 'dark'
-                    ? 'bg-gray-700 text-brand-cream'
-                    : 'bg-white text-gray-800 shadow-sm'
-              }`}
-            >
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-              <p
-                className={`text-[10px] mt-2 ${
-                  message.role === 'user'
-                    ? theme === 'dark'
-                      ? 'text-gray-700/80'
-                      : 'text-white/60'
-                    : theme === 'dark'
-                      ? 'text-gray-500'
-                      : 'text-gray-400'
+            <div className='flex items-center gap-3'>
+              {/* AvA Logo - Outline style */}
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center font-semibold text-xs border-2 ${
+                  theme === 'dark'
+                    ? 'border-brand-mint/50 text-brand-mint bg-transparent'
+                    : 'border-brand-sage/50 text-brand-sage bg-transparent'
                 }`}
               >
-                {message.timestamp.toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </p>
-              {message.role === 'assistant' &&
-                message.actions &&
-                message.actions.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-gray-200/20">
-                    {message.actions.map((action) => (
-                      <button
-                        key={action.id}
-                        type="button"
-                        onClick={() => handleMessageAction(action)}
-                        className={`px-4 py-1.5 text-xs font-medium rounded-full border transition-all cursor-pointer ${
-                          theme === 'dark'
-                            ? 'border-brand-mint/40 text-brand-mint hover:bg-brand-mint/15 hover:border-brand-mint/60'
-                            : 'border-brand-sage/30 text-brand-sage hover:bg-brand-sage/10 hover:border-brand-sage/50'
-                        }`}
-                      >
-                        {action.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-            </div>
-          </div>
-        ))}
-        {(isLoading || isProcessingHelp) && (
-          <div className="flex justify-start">
-            <div
-              className={`rounded-2xl px-5 py-3 ${
-                theme === 'dark'
-                  ? 'bg-gray-700 text-brand-cream'
-                  : 'bg-white shadow-sm'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Loader2 className={`w-4 h-4 animate-spin ${
-                  theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
-                }`} />
-                <span className={`text-sm ${
-                  theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-500'
-                }`}>
-                  AvA is thinking...
-                </span>
+                AvA
+              </div>
+              <div>
+                <h3
+                  className={`font-semibold text-sm ${
+                    theme === 'dark'
+                      ? 'text-brand-cream'
+                      : 'text-brand-sage-dark'
+                  }`}
+                >
+                  AvA Assistant
+                </h3>
+                <p
+                  className={`text-xs ${
+                    theme === 'dark'
+                      ? 'text-brand-mint/70'
+                      : 'text-brand-sage/70'
+                  }`}
+                >
+                  Your DOT application guide
+                </p>
               </div>
             </div>
-          </div>
-        )}
-        </div>
-
-        {/* Input - Clean and simple */}
-        <div
-          className={`px-5 py-4 ${
-            theme === 'dark' 
-              ? 'border-t border-brand-mint/15' 
-              : 'border-t border-brand-sage/15'
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => {
-                setInput(e.target.value)
-                resetActivityTimer() // Track user activity
-              }}
-              onKeyPress={handleKeyPress}
-              placeholder="Ask AvA anything..."
-              disabled={isLoading}
-              className={`flex-1 px-5 py-3 rounded-xl border focus:outline-none transition-all ${
-                theme === 'dark'
-                  ? 'bg-gray-700 border-brand-mint/20 text-brand-cream focus:border-brand-mint/40 placeholder-brand-cream/50'
-                  : 'bg-white border-brand-sage/20 text-gray-900 focus:border-brand-sage/40 placeholder-gray-400'
-              }`}
-            />
             <button
-              onClick={handleSend}
-              disabled={!input.trim() || isLoading}
-              className={`p-3 rounded-xl transition-all cursor-pointer ${
-                !input.trim() || isLoading
-                  ? 'opacity-40 cursor-not-allowed'
-                  : theme === 'dark'
-                    ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg shadow-brand-mint/20 hover:shadow-brand-mint/30'
-                    : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg shadow-brand-sage/20 hover:shadow-brand-sage/30'
+              onClick={(e) => {
+                e.stopPropagation()
+                e.preventDefault()
+                if (onToggleCollapse) {
+                  onToggleCollapse()
+                }
+              }}
+              className={`p-2 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer ${
+                theme === 'dark'
+                  ? 'hover:bg-brand-mint/20 text-brand-cream/70 hover:text-brand-cream'
+                  : 'hover:bg-brand-sage/10 text-brand-sage/70 hover:text-brand-sage'
               }`}
-              aria-label="Send message"
+              aria-label='Close AvA Assistant'
+              type='button'
+              style={{ pointerEvents: 'auto', zIndex: 10000 }}
             >
-              {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Send className="w-5 h-5" />
-              )}
+              <X className='w-5 h-5' />
             </button>
           </div>
-        </div>
+
+          {/* Messages - Better typography and spacing */}
+          <div
+            ref={messagesContainerRef}
+            className={`flex-1 overflow-y-auto px-6 py-5 space-y-5 ${
+              theme === 'dark' ? 'scrollbar-dark' : 'scrollbar-light'
+            }`}
+          >
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${
+                  message.role === 'user' ? 'justify-end' : 'justify-start'
+                }`}
+              >
+                <div
+                  className={`max-w-[85%] rounded-2xl px-5 py-3 ${
+                    message.role === 'user'
+                      ? theme === 'dark'
+                        ? 'bg-brand-mint text-gray-900'
+                        : 'bg-brand-sage text-white'
+                      : theme === 'dark'
+                        ? 'bg-gray-700 text-brand-cream'
+                        : 'bg-white text-gray-800 shadow-sm'
+                  }`}
+                >
+                  <p className='text-sm leading-relaxed whitespace-pre-wrap'>
+                    {message.content}
+                  </p>
+                  <p
+                    className={`text-[10px] mt-2 ${
+                      message.role === 'user'
+                        ? theme === 'dark'
+                          ? 'text-gray-700/80'
+                          : 'text-white/60'
+                        : theme === 'dark'
+                          ? 'text-gray-500'
+                          : 'text-gray-400'
+                    }`}
+                  >
+                    {message.timestamp.toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                  {message.role === 'assistant' &&
+                    message.actions &&
+                    message.actions.length > 0 && (
+                      <div className='flex flex-wrap gap-2 mt-4 pt-3 border-t border-gray-200/20'>
+                        {message.actions.map((action) => (
+                          <button
+                            key={action.id}
+                            type='button'
+                            onClick={() => handleMessageAction(action)}
+                            className={`px-4 py-1.5 text-xs font-medium rounded-full border transition-all cursor-pointer ${
+                              theme === 'dark'
+                                ? 'border-brand-mint/40 text-brand-mint hover:bg-brand-mint/15 hover:border-brand-mint/60'
+                                : 'border-brand-sage/30 text-brand-sage hover:bg-brand-sage/10 hover:border-brand-sage/50'
+                            }`}
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                </div>
+              </div>
+            ))}
+            {(isLoading || isProcessingHelp) && (
+              <div className='flex justify-start'>
+                <div
+                  className={`rounded-2xl px-5 py-3 ${
+                    theme === 'dark'
+                      ? 'bg-gray-700 text-brand-cream'
+                      : 'bg-white shadow-sm'
+                  }`}
+                >
+                  <div className='flex items-center gap-2'>
+                    <Loader2
+                      className={`w-4 h-4 animate-spin ${
+                        theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                      }`}
+                    />
+                    <span
+                      className={`text-sm ${
+                        theme === 'dark'
+                          ? 'text-brand-cream/70'
+                          : 'text-gray-500'
+                      }`}
+                    >
+                      AvA is thinking...
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Input - Clean and simple */}
+          <div
+            className={`px-5 py-4 ${
+              theme === 'dark'
+                ? 'border-t border-brand-mint/15'
+                : 'border-t border-brand-sage/15'
+            }`}
+          >
+            <div className='flex items-center gap-3'>
+              <input
+                ref={inputRef}
+                type='text'
+                value={input}
+                onChange={(e) => {
+                  setInput(e.target.value)
+                  resetActivityTimer() // Track user activity
+                }}
+                onKeyPress={handleKeyPress}
+                placeholder='Ask AvA anything...'
+                disabled={isLoading}
+                className={`flex-1 px-5 py-3 rounded-xl border focus:outline-none transition-all ${
+                  theme === 'dark'
+                    ? 'bg-gray-700 border-brand-mint/20 text-brand-cream focus:border-brand-mint/40 placeholder-brand-cream/50'
+                    : 'bg-white border-brand-sage/20 text-gray-900 focus:border-brand-sage/40 placeholder-gray-400'
+                }`}
+              />
+              <button
+                onClick={handleSend}
+                disabled={!input.trim() || isLoading}
+                className={`p-3 rounded-xl transition-all cursor-pointer ${
+                  !input.trim() || isLoading
+                    ? 'opacity-40 cursor-not-allowed'
+                    : theme === 'dark'
+                      ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg shadow-brand-mint/20 hover:shadow-brand-mint/30'
+                      : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg shadow-brand-sage/20 hover:shadow-brand-sage/30'
+                }`}
+                aria-label='Send message'
+              >
+                {isLoading ? (
+                  <Loader2 className='w-5 h-5 animate-spin' />
+                ) : (
+                  <Send className='w-5 h-5' />
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </>
     )
@@ -1473,7 +1705,7 @@ function TAssistantContent({
           theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
         }`}
       >
-        <div className="flex items-center space-x-3">
+        <div className='flex items-center space-x-3'>
           <div
             className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg border-2 ${
               theme === 'dark'
@@ -1481,12 +1713,13 @@ function TAssistantContent({
                 : 'bg-gradient-to-br from-brand-sage to-brand-sage-dark text-white border-brand-sage/50'
             }`}
             style={{
-              boxShadow: theme === 'dark'
-                ? '0 0 20px rgba(20, 184, 166, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.1)'
-                : '0 0 20px rgba(107, 142, 35, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.1)'
+              boxShadow:
+                theme === 'dark'
+                  ? '0 0 20px rgba(20, 184, 166, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.1)'
+                  : '0 0 20px rgba(107, 142, 35, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.1)',
             }}
           >
-            <span className="text-lg font-bold">AvA</span>
+            <span className='text-lg font-bold'>AvA</span>
           </div>
           <div>
             <h3
@@ -1505,7 +1738,7 @@ function TAssistantContent({
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className='flex items-center space-x-2'>
           {currentStep === 'welcome' && (
             <span
               className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -1576,7 +1809,7 @@ function TAssistantContent({
       {/* Messages */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
+        className='flex-1 overflow-y-auto p-4 space-y-4'
       >
         {messages.map((message) => (
           <div
@@ -1596,7 +1829,7 @@ function TAssistantContent({
                     : 'bg-gray-100 text-gray-900'
               }`}
             >
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              <p className='text-sm whitespace-pre-wrap'>{message.content}</p>
               <p
                 className={`text-xs mt-1 ${
                   message.role === 'user'
@@ -1616,11 +1849,11 @@ function TAssistantContent({
               {message.role === 'assistant' &&
                 message.actions &&
                 message.actions.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-3">
+                  <div className='flex flex-wrap gap-2 mt-3'>
                     {message.actions.map((action) => (
                       <button
                         key={action.id}
-                        type="button"
+                        type='button'
                         onClick={() => handleMessageAction(action)}
                         className={`px-3 py-1 text-xs font-medium rounded-full border transition-all cursor-pointer ${
                           theme === 'dark'
@@ -1637,7 +1870,7 @@ function TAssistantContent({
           </div>
         ))}
         {(isLoading || isProcessingHelp) && (
-          <div className="flex justify-start">
+          <div className='flex justify-start'>
             <div
               className={`rounded-lg px-4 py-2 ${
                 theme === 'dark'
@@ -1645,7 +1878,7 @@ function TAssistantContent({
                   : 'bg-gray-100 text-gray-900'
               }`}
             >
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className='w-4 h-4 animate-spin' />
             </div>
           </div>
         )}
@@ -1657,17 +1890,17 @@ function TAssistantContent({
           theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
         }`}
       >
-        <div className="flex items-center space-x-2">
+        <div className='flex items-center space-x-2'>
           <input
             ref={inputRef}
-            type="text"
+            type='text'
             value={input}
             onChange={(e) => {
               setInput(e.target.value)
               resetActivityTimer() // Track user activity
             }}
             onKeyPress={handleKeyPress}
-            placeholder="Ask me anything about the application process..."
+            placeholder='Ask me anything about the application process...'
             disabled={isLoading}
             className={`flex-1 px-4 py-2 rounded-lg border-2 focus:outline-none focus:ring-2 focus:border-transparent ${
               theme === 'dark'
@@ -1685,19 +1918,19 @@ function TAssistantContent({
                   ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
                   : 'bg-brand-sage text-white hover:bg-brand-sage/90'
             }`}
-            aria-label="Send message"
+            aria-label='Send message'
           >
             {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className='w-5 h-5 animate-spin' />
             ) : (
-              <Send className="w-5 h-5" />
+              <Send className='w-5 h-5' />
             )}
           </button>
         </div>
       </div>
     </div>
-    )
-  }
+  )
+}
 
 // Main component that handles SSR
 export default function TAssistant(props: TAssistantProps) {
@@ -1713,4 +1946,3 @@ export default function TAssistant(props: TAssistantProps) {
 
   return <TAssistantContent {...props} />
 }
-
