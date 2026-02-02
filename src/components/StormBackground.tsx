@@ -9,21 +9,12 @@ import { useTheme } from '@/contexts/ThemeContext'
  * Storm-Themed Animated Background with tsParticles
  *
  * Creates a stormy atmosphere with:
- * - Drifting cloud SVG shapes (actual cloud silhouettes)
+ * - Static dark cloud image (dark_cloud.png) — screen blend in dark, inverted + multiply in light
  * - Occasional lightning bolt flashes (CSS overlay)
  * - Rain-like particles falling
  *
  * Fits the StormChain brand — aggressive, dynamic, powerful
  */
-
-// Storm cloud SVGs - loaded from public folder
-const CLOUD_SVGS = [
-  { src: '/storm_cloud.svg', width: 128, height: 89 },   // 1280:894 aspect
-  { src: '/storm_cloud_2.svg', width: 115, height: 100 }, // 1280:1109 aspect
-]
-
-// Wide thin cloud for top of screen only
-const TOP_CLOUD_SVG = { src: '/storm_cloud_3.svg', width: 200, height: 100 } // 1280:640 = 2:1 aspect
 
 export default function StormBackground() {
   const { theme } = useTheme()
@@ -64,6 +55,18 @@ export default function StormBackground() {
 
   return (
     <>
+      {/* Static dark cloud — dark: screen (black bg gone). Light: invert + multiply so cloud is dark and visible */}
+      <div
+        className='fixed inset-0 pointer-events-none bg-cover bg-center'
+        style={{
+          zIndex: -3,
+          backgroundImage: 'url(/dark_cloud.png)',
+          opacity: isDark ? 0.25 : 0.22,
+          mixBlendMode: isDark ? 'screen' : 'multiply',
+          filter: isDark ? undefined : 'invert(1)',
+        }}
+      />
+
       {/* Lightning flash overlay - subtle glow from sky */}
       <div
         className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-100 ${
@@ -75,126 +78,6 @@ export default function StormBackground() {
             : 'radial-gradient(ellipse at 50% 0%, #1e293b 0%, transparent 60%)',
         }}
       />
-
-      {/* Cloud layer - actual cloud SVG shapes drifting */}
-      <Particles
-        id='storm-clouds'
-        init={particlesInit}
-        options={{
-          fullScreen: {
-            enable: true,
-            zIndex: -2,
-          },
-          background: {
-            color: { value: '' },
-          },
-          fpsLimit: 30,
-          particles: {
-            number: {
-              value: 8,
-              density: {
-                enable: true,
-                value_area: 1000,
-              },
-            },
-            shape: {
-              type: 'image',
-              image: CLOUD_SVGS, // Randomly picks from both cloud shapes
-            },
-            opacity: {
-              value: isDark ? 0.4 : 0.25, // Lower opacity since SVG is black
-              random: true,
-              anim: {
-                enable: true,
-                speed: 0.1,
-                opacity_min: isDark ? 0.2 : 0.1,
-                sync: false,
-              },
-            },
-            size: {
-              value: 200,
-              random: true,
-              anim: {
-                enable: false,
-              },
-            },
-            move: {
-              enable: true,
-              speed: 0.4,
-              direction: 'left',
-              random: true,
-              straight: false,
-              out_mode: 'out',
-              bounce: false,
-            },
-          },
-          interactivity: {
-            events: {
-              onhover: { enable: false },
-              onclick: { enable: false },
-              resize: true,
-            },
-          },
-          retina_detect: true,
-        }}
-      />
-
-      {/* Top cloud banner - large wide cloud drifting under header */}
-      <div className='fixed top-12 left-0 right-0 h-[25vh] pointer-events-none overflow-hidden' style={{ zIndex: -2 }}>
-        <Particles
-          id='storm-clouds-top'
-          init={particlesInit}
-          options={{
-            fullScreen: {
-              enable: false, // Contained in parent div
-            },
-            background: {
-              color: { value: '' },
-            },
-            fpsLimit: 30,
-            particles: {
-              number: {
-                value: 2, // Just 1-2 big clouds scrolling
-              },
-              shape: {
-                type: 'image',
-                image: TOP_CLOUD_SVG,
-              },
-              opacity: {
-                value: isDark ? 0.6 : 0.35,
-                random: false,
-                anim: {
-                  enable: false,
-                },
-              },
-              size: {
-                value: 800, // Very large - spans most of the width
-                random: false,
-                anim: {
-                  enable: false,
-                },
-              },
-              move: {
-                enable: true,
-                speed: 0.5, // Slow steady drift
-                direction: 'left',
-                random: false,
-                straight: true,
-                out_mode: 'out',
-                bounce: false,
-              },
-            },
-            interactivity: {
-              events: {
-                onhover: { enable: false },
-                onclick: { enable: false },
-                resize: true,
-              },
-            },
-            retina_detect: true,
-          }}
-        />
-      </div>
 
       {/* Rain layer - very subtle, gentle rain */}
       <Particles
