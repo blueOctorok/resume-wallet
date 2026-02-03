@@ -153,29 +153,57 @@ export async function GET(
       type: string
       createdAt: string
       ipfsHash: string | null
+      structuredData?: unknown // Developer resume structured data for preview
     } | null = null
     if (settings.showResume) {
-      const { data: resumeData } = await supabase
+      // First try to get a developer-built resume (preferred for preview)
+      const { data: devResumeData } = await supabase
         .from('resumes')
         .select(
-          'id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, created_at, resume_type'
+          'id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, created_at, resume_type, structured_data'
         )
         .eq('user_id', profile.user_id)
-        .eq('verification_status', 'VERIFIED')
+        .eq('resume_type', 'developer_built')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
 
-      if (resumeData) {
+      if (devResumeData) {
         resume = {
-          id: resumeData.id,
-          title: resumeData.title ?? resumeData.filename,
-          filename: resumeData.filename,
-          verified: resumeData.verification_status === 'VERIFIED',
-          blockchainVerified: !!resumeData.blockchain_tx_hash,
-          type: (resumeData.resume_type as string) ?? 'file',
-          createdAt: resumeData.created_at,
-          ipfsHash: resumeData.ipfs_hash ?? null,
+          id: devResumeData.id,
+          title: devResumeData.title ?? devResumeData.filename,
+          filename: devResumeData.filename,
+          verified: devResumeData.verification_status === 'VERIFIED',
+          blockchainVerified: !!devResumeData.blockchain_tx_hash,
+          type: 'developer_built',
+          createdAt: devResumeData.created_at,
+          ipfsHash: devResumeData.ipfs_hash ?? null,
+          structuredData: devResumeData.structured_data,
+        }
+      } else {
+        // Fall back to any verified resume
+        const { data: resumeData } = await supabase
+          .from('resumes')
+          .select(
+            'id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, created_at, resume_type'
+          )
+          .eq('user_id', profile.user_id)
+          .eq('verification_status', 'VERIFIED')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (resumeData) {
+          resume = {
+            id: resumeData.id,
+            title: resumeData.title ?? resumeData.filename,
+            filename: resumeData.filename,
+            verified: resumeData.verification_status === 'VERIFIED',
+            blockchainVerified: !!resumeData.blockchain_tx_hash,
+            type: (resumeData.resume_type as string) ?? 'file',
+            createdAt: resumeData.created_at,
+            ipfsHash: resumeData.ipfs_hash ?? null,
+          }
         }
       }
     }

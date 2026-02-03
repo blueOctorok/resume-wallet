@@ -3,6 +3,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import ShareProfileCard from './ShareProfileCard'
+import DeveloperResumeBuilder from './DeveloperResumeBuilder'
+import DeveloperResumePreviewModal from './DeveloperResumePreviewModal'
+import type { DeveloperResumeData } from './DeveloperResumeBuilder'
 import {
   Code2,
   FileText,
@@ -22,6 +25,10 @@ import {
   X,
   Check,
   Link as LinkIcon,
+  Shield,
+  Download,
+  Eye,
+  CheckCircle,
 } from 'lucide-react'
 
 // ============================================================
@@ -105,6 +112,39 @@ export default function DeveloperHub({
     totalJobApplications: 0,
   })
 
+  // Resume state
+  interface DeveloperResume {
+    id: string
+    title: string
+    structured_data: DeveloperResumeData
+    verification_status: string
+    blockchain_tx_hash?: string
+    ipfs_hash?: string
+    created_at: string
+  }
+  const [resumes, setResumes] = useState<DeveloperResume[]>([])
+  const [showResumeBuilder, setShowResumeBuilder] = useState(false)
+  const [editingResumeId, setEditingResumeId] = useState<string | null>(null)
+  const [previewResume, setPreviewResume] = useState<DeveloperResume | null>(
+    null
+  )
+
+  // Fetch developer resumes
+  const fetchResumes = useCallback(async () => {
+    if (!userAddress) return
+    try {
+      const res = await fetch('/api/developer/resume', {
+        headers: { 'x-wallet-address': userAddress },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setResumes(data.resumes || [])
+      }
+    } catch (error) {
+      console.error('Error fetching resumes:', error)
+    }
+  }, [userAddress])
+
   // Fetch hub data from API
   const fetchHubData = useCallback(async () => {
     if (!userAddress) {
@@ -141,7 +181,8 @@ export default function DeveloperHub({
 
   useEffect(() => {
     fetchHubData()
-  }, [fetchHubData])
+    fetchResumes()
+  }, [fetchHubData, fetchResumes])
 
   // ============================================================
   // PROFILE COMPLETENESS
@@ -497,8 +538,14 @@ export default function DeveloperHub({
         <StatCard
           icon={FileText}
           label='Resumes'
-          value={0}
-          subValue='coming soon'
+          value={resumes.length}
+          subValue={
+            resumes.some((r) => r.verification_status === 'VERIFIED')
+              ? 'verified'
+              : resumes.length > 0
+                ? 'pending'
+                : undefined
+          }
           color='bg-purple-500'
           onClick={() => onNavigate('resume')}
         />
@@ -749,25 +796,110 @@ export default function DeveloperHub({
                 Tech Resume
               </h2>
             </div>
-            <span
-              className={`text-xs px-2 py-1 rounded-full ${
-                theme === 'dark'
-                  ? 'bg-purple-500/20 text-purple-400'
-                  : 'bg-purple-100 text-purple-600'
-              }`}
-            >
-              Coming Soon
-            </span>
+            {resumes.length > 0 && (
+              <button
+                onClick={() => {
+                  setEditingResumeId(null)
+                  setShowResumeBuilder(true)
+                }}
+                className='flex items-center gap-1 text-sm text-brand-mint hover:underline'
+              >
+                <Plus className='w-4 h-4' />
+                New Resume
+              </button>
+            )}
           </div>
 
-          <EmptySection
-            icon={FileText}
-            title='Tech Resume Builder'
-            description='Build a tech-focused resume highlighting your skills, projects, and experience. Coming soon!'
-            actionLabel='Coming Soon'
-            onAction={() => {}}
-            color='bg-purple-500'
-          />
+          {resumes.length === 0 ? (
+            <EmptySection
+              icon={FileText}
+              title='Tech Resume Builder'
+              description='Build a tech-focused resume highlighting your skills, projects, and experience. Verify it on blockchain!'
+              actionLabel='Create Resume'
+              onAction={() => {
+                setEditingResumeId(null)
+                setShowResumeBuilder(true)
+              }}
+              color='bg-purple-500'
+            />
+          ) : (
+            <div className='space-y-3'>
+              {resumes.map((resume) => (
+                <div
+                  key={resume.id}
+                  className={`p-4 rounded-xl border ${
+                    theme === 'dark'
+                      ? 'bg-gray-700/50 border-gray-600 hover:border-gray-500'
+                      : 'bg-gray-50 border-gray-200 hover:border-gray-300'
+                  } transition-colors`}
+                >
+                  <div className='flex items-center justify-between'>
+                    <div className='flex-1'>
+                      <div className='flex items-center gap-2'>
+                        <h3
+                          className={`font-medium ${
+                            theme === 'dark' ? 'text-white' : 'text-gray-900'
+                          }`}
+                        >
+                          {resume.title}
+                        </h3>
+                        {resume.verification_status === 'VERIFIED' && (
+                          <span className='flex items-center gap-1 text-xs text-green-400'>
+                            <CheckCircle className='w-3 h-3' />
+                            Verified
+                          </span>
+                        )}
+                      </div>
+                      <p
+                        className={`text-xs mt-1 ${
+                          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                        }`}
+                      >
+                        Created{' '}
+                        {new Date(resume.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className='flex items-center gap-2'>
+                      <button
+                        onClick={() => setPreviewResume(resume)}
+                        className={`p-2 rounded-lg ${
+                          theme === 'dark'
+                            ? 'hover:bg-gray-600 text-gray-400'
+                            : 'hover:bg-gray-200 text-gray-600'
+                        }`}
+                        title='Preview'
+                      >
+                        <Eye className='w-4 h-4' />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingResumeId(resume.id)
+                          setShowResumeBuilder(true)
+                        }}
+                        className={`p-2 rounded-lg ${
+                          theme === 'dark'
+                            ? 'hover:bg-gray-600 text-gray-400'
+                            : 'hover:bg-gray-200 text-gray-600'
+                        }`}
+                        title='Edit'
+                      >
+                        <Edit className='w-4 h-4' />
+                      </button>
+                      {resume.verification_status !== 'VERIFIED' && (
+                        <button
+                          onClick={() => setPreviewResume(resume)}
+                          className='p-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+                          title='Verify on Blockchain'
+                        >
+                          <Shield className='w-4 h-4' />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* GitHub Section */}
@@ -1127,6 +1259,46 @@ export default function DeveloperHub({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Resume Builder Full Screen */}
+      {showResumeBuilder && (
+        <div className='fixed inset-0 z-50 flex flex-col overflow-hidden bg-gray-900'>
+          <DeveloperResumeBuilder
+            userAddress={userAddress}
+            existingResumeId={editingResumeId || undefined}
+            onBack={() => {
+              setShowResumeBuilder(false)
+              setEditingResumeId(null)
+              fetchResumes()
+            }}
+            onSave={() => {
+              fetchResumes()
+            }}
+          />
+        </div>
+      )}
+
+      {/* Resume Preview Modal */}
+      {previewResume && userAddress && (
+        <DeveloperResumePreviewModal
+          resume={previewResume}
+          userAddress={userAddress}
+          onClose={() => setPreviewResume(null)}
+          onEdit={() => {
+            setEditingResumeId(previewResume.id)
+            setPreviewResume(null)
+            setShowResumeBuilder(true)
+          }}
+          onVerify={() => {
+            fetchResumes()
+            setPreviewResume(null)
+          }}
+          onDelete={() => {
+            fetchResumes()
+            setPreviewResume(null)
+          }}
+        />
       )}
     </div>
   )

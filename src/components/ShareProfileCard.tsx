@@ -181,34 +181,43 @@ export default function ShareProfileCard({
     ? `${window.location.origin}${profileBasePath}/${shareToken}`
     : ''
 
+  // Developer hub: match hub sections (gray). Driver: sage styling.
+  const isHubStyle = userRole === 'developer'
+  const cardBg = isHubStyle
+    ? theme === 'dark'
+      ? 'bg-gray-800/50 border-gray-700'
+      : 'bg-white/70 border-gray-200'
+    : theme === 'dark'
+      ? 'bg-brand-sage-dark/50 border border-brand-mint/30'
+      : 'bg-white border border-brand-sage/20 shadow-xl'
+  const accentClass = isHubStyle
+    ? 'text-brand-mint'
+    : theme === 'dark'
+      ? 'text-brand-mint'
+      : 'text-brand-sage'
+  const accentBg = isHubStyle
+    ? 'bg-brand-mint/20'
+    : theme === 'dark'
+      ? 'bg-brand-mint/20'
+      : 'bg-brand-sage/10'
+  const primaryBtn = isHubStyle
+    ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
+    : theme === 'dark'
+      ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
+      : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+
   if (loading) {
     return (
-      <div
-        className={`rounded-2xl p-6 ${
-          theme === 'dark'
-            ? 'bg-brand-sage-dark/50 border border-brand-mint/30'
-            : 'bg-white border border-brand-sage/20 shadow-xl'
-        }`}
-      >
+      <div className={`rounded-2xl p-6 ${cardBg}`}>
         <div className='flex items-center justify-center py-8'>
-          <Loader2
-            className={`w-8 h-8 animate-spin ${
-              theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
-            }`}
-          />
+          <Loader2 className={`w-8 h-8 animate-spin ${accentClass}`} />
         </div>
       </div>
     )
   }
 
   return (
-    <div
-      className={`rounded-2xl overflow-hidden ${
-        theme === 'dark'
-          ? 'bg-brand-sage-dark/50 border border-brand-mint/30'
-          : 'bg-white border border-brand-sage/20 shadow-xl'
-      }`}
-    >
+    <div className={`rounded-2xl overflow-hidden ${cardBg}`}>
       {/* Header */}
       <div
         className={`p-4 border-b ${
@@ -217,9 +226,7 @@ export default function ShareProfileCard({
       >
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-2'>
-            <QrCode
-              className={`w-5 h-5 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`}
-            />
+            <QrCode className={`w-5 h-5 ${accentClass}`} />
             <h3
               className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
             >
@@ -293,11 +300,7 @@ export default function ShareProfileCard({
             />
           </div>
           {savingSettings && (
-            <p
-              className={`text-xs mt-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`}
-            >
-              Saving...
-            </p>
+            <p className={`text-xs mt-2 ${accentClass}`}>Saving...</p>
           )}
         </div>
       )}
@@ -308,13 +311,9 @@ export default function ShareProfileCard({
           // Generate Token CTA
           <div className='text-center py-4'>
             <div
-              className={`w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center ${
-                theme === 'dark' ? 'bg-brand-mint/20' : 'bg-brand-sage/10'
-              }`}
+              className={`w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center ${accentBg}`}
             >
-              <QrCode
-                className={`w-8 h-8 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`}
-              />
+              <QrCode className={`w-8 h-8 ${accentClass}`} />
             </div>
             <h4
               className={`font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
@@ -330,11 +329,7 @@ export default function ShareProfileCard({
             <button
               onClick={() => generateToken(false)}
               disabled={generating}
-              className={`px-6 py-3 rounded-xl font-semibold ${
-                theme === 'dark'
-                  ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                  : 'bg-brand-sage text-white hover:bg-brand-sage/90'
-              } disabled:opacity-50`}
+              className={`px-6 py-3 rounded-xl font-semibold ${primaryBtn} disabled:opacity-50`}
             >
               {generating ? (
                 <Loader2 className='w-5 h-5 animate-spin mx-auto' />
@@ -499,7 +494,7 @@ function SettingToggle({
           enabled
             ? theme === 'dark'
               ? 'bg-brand-mint'
-              : 'bg-brand-sage'
+              : 'bg-brand-mint'
             : theme === 'dark'
               ? 'bg-gray-600'
               : 'bg-gray-300'

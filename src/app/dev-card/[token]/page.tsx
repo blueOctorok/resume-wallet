@@ -18,6 +18,9 @@ import {
   Play,
   Star,
   Sparkles,
+  User,
+  Folder,
+  GraduationCap,
 } from 'lucide-react'
 import GitHubContributionGraph from '@/components/GitHubContributionGraph'
 
@@ -53,6 +56,66 @@ interface Project {
   isFeatured: boolean
 }
 
+interface ResumeStructuredData {
+  personalInfo: {
+    firstName: string
+    lastName: string
+    email: string
+    phone: string
+    location: string
+    headline: string
+    summary: string
+    githubUrl: string
+    linkedinUrl: string
+    portfolioUrl: string
+    personalWebsite: string
+  }
+  skills: Array<{
+    id: string
+    name: string
+    category: string
+    proficiency: string
+  }>
+  experience: Array<{
+    id: string
+    company: string
+    title: string
+    location: string
+    startDate: string
+    endDate: string
+    isCurrent: boolean
+    description: string
+    achievements: string[]
+    technologies: string[]
+  }>
+  projects: Array<{
+    id: string
+    name: string
+    description: string
+    role: string
+    technologies: string[]
+    liveUrl: string
+    repoUrl: string
+    highlights: string[]
+  }>
+  education: Array<{
+    id: string
+    institution: string
+    degree: string
+    field: string
+    startDate: string
+    endDate: string
+    gpa: string
+  }>
+  certifications: Array<{
+    id: string
+    name: string
+    issuer: string
+    date: string
+    url: string
+  }>
+}
+
 interface Resume {
   id: string
   title: string
@@ -62,6 +125,7 @@ interface Resume {
   type: string
   createdAt: string
   ipfsHash: string | null
+  structuredData?: ResumeStructuredData
 }
 
 interface GitHubData {
@@ -185,9 +249,6 @@ export default function PublicDeveloperCard() {
     profile.displayName ||
     [profile.firstName, profile.lastName].filter(Boolean).join(' ') ||
     'Developer'
-
-  const featuredProjects = projects.filter((p) => p.isFeatured)
-  const otherProjects = projects.filter((p) => !p.isFeatured)
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'>
@@ -625,43 +686,274 @@ export default function PublicDeveloperCard() {
           </div>
         )}
 
-        {/* Featured Projects with Live Preview */}
-        {featuredProjects.length > 0 && (
-          <div className='mb-8'>
-            <h2 className='flex items-center gap-2 text-xl font-bold text-white mb-4'>
-              <Star className='w-5 h-5 text-yellow-500' />
-              Featured Projects
-            </h2>
-            <div className='space-y-6'>
-              {featuredProjects.map((proj) => (
-                <ProjectCard
-                  key={proj.id}
-                  project={proj}
-                  featured
-                  getYouTubeId={getYouTubeId}
-                  getLoomId={getLoomId}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Resume — same flow as preview, one document with border */}
+        {resume?.structuredData && (
+          <div className='mb-8 rounded-2xl border-2 border-gray-600/80 bg-gray-800/30 overflow-hidden shadow-xl'>
+            <div className='p-6 sm:p-8'>
+              {/* Resume header badge */}
+              <div className='flex items-center justify-between mb-6 pb-4 border-b border-gray-700/50'>
+                <h2 className='flex items-center gap-2 text-xl font-bold text-white'>
+                  <FileText className='w-5 h-5 text-brand-mint' />
+                  Resume
+                </h2>
+                {resume.verified && (
+                  <span className='flex items-center gap-1 text-xs text-green-400'>
+                    <CheckCircle className='w-3 h-3' />
+                    Blockchain Verified
+                  </span>
+                )}
+              </div>
 
-        {/* Other Projects */}
-        {otherProjects.length > 0 && (
-          <div className='mb-8'>
-            <h2 className='flex items-center gap-2 text-xl font-bold text-white mb-4'>
-              <Briefcase className='w-5 h-5 text-brand-mint' />
-              {featuredProjects.length > 0 ? 'More Projects' : 'Projects'}
-            </h2>
-            <div className='grid sm:grid-cols-2 gap-4'>
-              {otherProjects.map((proj) => (
-                <ProjectCard
-                  key={proj.id}
-                  project={proj}
-                  getYouTubeId={getYouTubeId}
-                  getLoomId={getLoomId}
-                />
-              ))}
+              {/* Personal Info */}
+              <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
+                <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
+                  <User className='w-5 h-5 text-brand-mint' /> Personal
+                  Information
+                </h3>
+                <div className='space-y-2'>
+                  <p className='text-xl font-bold text-white'>
+                    {resume.structuredData.personalInfo.firstName}{' '}
+                    {resume.structuredData.personalInfo.lastName}
+                  </p>
+                  {resume.structuredData.personalInfo.headline && (
+                    <p className='text-brand-mint'>
+                      {resume.structuredData.personalInfo.headline}
+                    </p>
+                  )}
+                  <div className='text-sm text-gray-400'>
+                    {resume.structuredData.personalInfo.email && (
+                      <p>{resume.structuredData.personalInfo.email}</p>
+                    )}
+                    {resume.structuredData.personalInfo.phone && (
+                      <p>{resume.structuredData.personalInfo.phone}</p>
+                    )}
+                    {resume.structuredData.personalInfo.location && (
+                      <p>{resume.structuredData.personalInfo.location}</p>
+                    )}
+                  </div>
+                  {resume.structuredData.personalInfo.summary && (
+                    <p className='mt-3 text-gray-300'>
+                      {resume.structuredData.personalInfo.summary}
+                    </p>
+                  )}
+                  <div className='flex flex-wrap gap-3 mt-3'>
+                    {resume.structuredData.personalInfo.githubUrl && (
+                      <a
+                        href={resume.structuredData.personalInfo.githubUrl}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='text-sm text-brand-mint hover:underline flex items-center gap-1'
+                      >
+                        <Github className='w-4 h-4' /> GitHub
+                      </a>
+                    )}
+                    {resume.structuredData.personalInfo.linkedinUrl && (
+                      <a
+                        href={resume.structuredData.personalInfo.linkedinUrl}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='text-sm text-brand-mint hover:underline flex items-center gap-1'
+                      >
+                        <ExternalLink className='w-4 h-4' /> LinkedIn
+                      </a>
+                    )}
+                    {resume.structuredData.personalInfo.portfolioUrl && (
+                      <a
+                        href={resume.structuredData.personalInfo.portfolioUrl}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='text-sm text-brand-mint hover:underline flex items-center gap-1'
+                      >
+                        <Folder className='w-4 h-4' /> Portfolio
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Technical Skills */}
+              {resume.structuredData.skills.length > 0 && (
+                <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
+                  <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
+                    <Code className='w-5 h-5 text-brand-mint' /> Technical
+                    Skills
+                  </h3>
+                  <div className='flex flex-wrap gap-2'>
+                    {resume.structuredData.skills.map((skill) => (
+                      <span
+                        key={skill.id}
+                        className='px-3 py-1 rounded-lg text-sm bg-gray-700/50 text-gray-300'
+                      >
+                        {skill.name}
+                        <span className='ml-1 text-xs opacity-60'>
+                          ({skill.proficiency})
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Work Experience */}
+              {resume.structuredData.experience.length > 0 && (
+                <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
+                  <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
+                    <Briefcase className='w-5 h-5 text-brand-mint' /> Work
+                    Experience
+                  </h3>
+                  <div className='space-y-4'>
+                    {resume.structuredData.experience.map((exp) => (
+                      <div
+                        key={exp.id}
+                        className='border-l-2 border-brand-mint/30 pl-4'
+                      >
+                        <p className='font-semibold text-white'>{exp.title}</p>
+                        <p className='text-gray-400'>
+                          {exp.company} {exp.location && `• ${exp.location}`}
+                        </p>
+                        <p className='text-sm text-gray-500'>
+                          {exp.startDate} -{' '}
+                          {exp.isCurrent ? 'Present' : exp.endDate}
+                        </p>
+                        {exp.description && (
+                          <p className='mt-2 text-sm text-gray-300'>
+                            {exp.description}
+                          </p>
+                        )}
+                        {exp.achievements.filter(Boolean).length > 0 && (
+                          <ul className='mt-2 text-sm text-gray-300 list-disc list-inside'>
+                            {exp.achievements.filter(Boolean).map((a, i) => (
+                              <li key={i}>{a}</li>
+                            ))}
+                          </ul>
+                        )}
+                        {exp.technologies.length > 0 && (
+                          <p className='mt-2 text-xs text-gray-500'>
+                            Tech: {exp.technologies.join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Projects (from resume) */}
+              {resume.structuredData.projects.length > 0 && (
+                <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
+                  <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
+                    <Folder className='w-5 h-5 text-brand-mint' /> Projects
+                  </h3>
+                  <div className='space-y-4'>
+                    {resume.structuredData.projects.map((project) => (
+                      <div
+                        key={project.id}
+                        className='border-l-2 border-brand-mint/30 pl-4'
+                      >
+                        <p className='font-semibold text-white'>
+                          {project.name}
+                          {project.role && (
+                            <span className='font-normal text-sm ml-2'>
+                              ({project.role})
+                            </span>
+                          )}
+                        </p>
+                        {project.description && (
+                          <p className='mt-1 text-sm text-gray-300'>
+                            {project.description}
+                          </p>
+                        )}
+                        <div className='flex gap-3 mt-2'>
+                          {project.liveUrl && (
+                            <a
+                              href={project.liveUrl}
+                              target='_blank'
+                              rel='noopener noreferrer'
+                              className='text-xs text-brand-mint hover:underline flex items-center gap-1'
+                            >
+                              <Globe className='w-3 h-3' /> Live
+                            </a>
+                          )}
+                          {project.repoUrl && (
+                            <a
+                              href={project.repoUrl}
+                              target='_blank'
+                              rel='noopener noreferrer'
+                              className='text-xs text-brand-mint hover:underline flex items-center gap-1'
+                            >
+                              <Github className='w-3 h-3' /> Repo
+                            </a>
+                          )}
+                        </div>
+                        {project.technologies.length > 0 && (
+                          <p className='mt-2 text-xs text-gray-500'>
+                            Tech: {project.technologies.join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Education */}
+              {resume.structuredData.education.length > 0 && (
+                <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
+                  <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
+                    <GraduationCap className='w-5 h-5 text-brand-mint' />{' '}
+                    Education
+                  </h3>
+                  <div className='space-y-3'>
+                    {resume.structuredData.education.map((edu) => (
+                      <div key={edu.id}>
+                        <p className='font-semibold text-white'>
+                          {edu.degree} {edu.field && `in ${edu.field}`}
+                        </p>
+                        <p className='text-gray-400'>{edu.institution}</p>
+                        <p className='text-sm text-gray-500'>
+                          {edu.startDate} - {edu.endDate}{' '}
+                          {edu.gpa && `• GPA: ${edu.gpa}`}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Certifications */}
+              {resume.structuredData.certifications.length > 0 && (
+                <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
+                  <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
+                    <CheckCircle className='w-5 h-5 text-brand-mint' />{' '}
+                    Certifications
+                  </h3>
+                  <div className='space-y-2'>
+                    {resume.structuredData.certifications.map((cert) => (
+                      <div
+                        key={cert.id}
+                        className='flex items-center justify-between'
+                      >
+                        <div>
+                          <p className='font-medium text-white'>{cert.name}</p>
+                          <p className='text-sm text-gray-400'>
+                            {cert.issuer} {cert.date && `• ${cert.date}`}
+                          </p>
+                        </div>
+                        {cert.url && (
+                          <a
+                            href={cert.url}
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='text-sm text-brand-mint hover:underline'
+                          >
+                            Verify
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

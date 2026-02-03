@@ -2,6 +2,69 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 📝 **ADD: Developer Resume Builder** (January 2026)
+
+**Full-featured resume builder for developers with the same capabilities as the driver resume builder.**
+
+### New Components
+
+**`DeveloperResumeBuilder.tsx`** — Multi-step form for creating developer resumes:
+
+- Step 1: Personal Info (name, contact, headline, summary, links)
+- Step 2: Technical Skills (click-to-add common skills, proficiency levels)
+- Step 3: Work Experience (company, title, dates, achievements, technologies)
+- Step 4: Projects (name, description, tech stack, live/repo URLs, highlights)
+- Step 5: Education (institution, degree, field, dates, GPA)
+- Step 6: Review & Export (preview all sections)
+- Auto-saves to database
+- Prefills from developer profile
+
+**`DeveloperResumePreviewModal.tsx`** — Preview modal with actions:
+
+- Download PDF
+- Edit resume
+- Verify on Blockchain
+- Delete resume
+
+**`developer-resume-pdf.ts`** — PDF generator:
+
+- Generates styled PDFs from structured resume data
+- Teal color scheme matching brand
+- Sections: Summary, Technical Skills, Experience, Projects, Education, Certifications
+
+### API Routes
+
+- **`POST /api/developer/resume`** — Create new developer resume
+- **`PUT /api/developer/resume`** — Update existing resume
+- **`GET /api/developer/resume`** — List all developer resumes for user
+
+Resumes use same `resumes` table with `resume_type = 'developer_built'`.
+
+### Developer Hub Integration
+
+- Resume section now shows actual resumes (not "Coming Soon")
+- Create Resume button opens full-screen builder
+- Resume list with preview, edit, verify actions
+- Stat card shows resume count
+
+### Career Card Integration
+
+- Work Experience section shows from resume structured data
+- Education section shows degrees and institutions
+- Certifications section with verify links
+- "Blockchain Verified" badge when resume is verified
+
+### Features Match Driver Resume
+
+- ✅ Multi-step form builder
+- ✅ Preview modal
+- ✅ PDF download
+- ✅ Blockchain verification (via existing `/api/resumes/[id]/verify`)
+- ✅ Edit and delete
+- ✅ Show in Career Card
+
+---
+
 ## 🔗 **ADD: GitHub OAuth for Private Repos** (January 2026)
 
 **Added GitHub OAuth integration so developers can show private repo data on their Career Card.**

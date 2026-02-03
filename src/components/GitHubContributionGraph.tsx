@@ -106,11 +106,8 @@ export default function GitHubContributionGraph({
       startDate.setDate(startDate.getDate() - 1)
     }
 
-    // Find the last Saturday on or after Dec 31 of selected year (or today for current year)
-    const endDate =
-      selectedYear === currentYear
-        ? new Date() // Today for current year
-        : new Date(selectedYear, 11, 31)
+    // Always use full year (Dec 31) so grid shows all 12 months; future days are empty cells
+    const endDate = new Date(selectedYear, 11, 31)
     while (endDate.getDay() !== 6) {
       endDate.setDate(endDate.getDate() + 1)
     }
@@ -151,28 +148,47 @@ export default function GitHubContributionGraph({
     return weeksArray
   }, [contributions, selectedYear, currentYear])
 
-  // Calculate month labels with their starting positions
+  // Calculate month labels with start and end week index so we can center each label
+  // Only show labels for months in the selected year (avoids "Dec" from previous year at start)
   const monthLabels = useMemo(() => {
     if (weeks.length === 0) return []
 
-    const labels: Array<{ month: string; weekIndex: number }> = []
+    const labels: Array<{
+      month: string
+      weekIndex: number
+      endWeekIndex: number
+    }> = []
     let lastMonth = -1
+    let startWeekIndex = 0
 
     weeks.forEach((week, weekIndex) => {
-      // Find the first valid day in this week
-      const firstDay = week.find((d) => d !== null)
-      if (firstDay) {
-        const date = new Date(firstDay.date)
+      const firstDayInYear = week.find((d) => {
+        if (d === null) return false
+        const date = new Date(d.date)
+        return date.getFullYear() === selectedYear
+      })
+      if (firstDayInYear) {
+        const date = new Date(firstDayInYear.date)
         const month = date.getMonth()
         if (month !== lastMonth) {
-          labels.push({ month: MONTHS[month], weekIndex })
+          if (lastMonth >= 0) {
+            labels[labels.length - 1].endWeekIndex = weekIndex
+          }
+          labels.push({
+            month: MONTHS[month],
+            weekIndex,
+            endWeekIndex: weeks.length,
+          })
           lastMonth = month
         }
       }
     })
+    if (labels.length > 0) {
+      labels[labels.length - 1].endWeekIndex = weeks.length
+    }
 
     return labels
-  }, [weeks])
+  }, [weeks, selectedYear])
 
   if (error) {
     return (
@@ -249,20 +265,26 @@ export default function GitHubContributionGraph({
       {/* Contribution grid */}
       <div className='overflow-x-auto pb-2'>
         <div className='min-w-[720px]'>
-          {/* Month labels */}
-          <div className='flex mb-1 ml-8'>
-            {monthLabels.map(({ month, weekIndex }, i) => (
-              <div
-                key={`${month}-${i}`}
-                className='text-[10px] text-gray-500'
-                style={{
-                  position: 'absolute',
-                  left: `${weekIndex * 12 + 32}px`, // 12px per week + 32px offset for day labels
-                }}
-              >
-                {month}
-              </div>
-            ))}
+          {/* Month labels — centered over each month's columns */}
+          <div className='flex mb-1 ml-0 relative'>
+            {monthLabels.map(({ month, weekIndex, endWeekIndex }, i) => {
+              const labelOffset = 28 // Align with grid (day labels col + half square)
+              const startPx = weekIndex * 12 + labelOffset
+              const endPx = endWeekIndex * 12 + labelOffset
+              const centerPx = (startPx + endPx) / 2
+              return (
+                <div
+                  key={`${month}-${i}`}
+                  className='text-[10px] text-gray-500 absolute'
+                  style={{
+                    left: `${centerPx}px`,
+                    transform: 'translateX(-50%)',
+                  }}
+                >
+                  {month}
+                </div>
+              )
+            })}
           </div>
 
           {/* Grid with day labels */}
