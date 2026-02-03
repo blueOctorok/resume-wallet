@@ -39,6 +39,7 @@ export async function GET(
         bio,
         years_experience,
         github_username,
+        github_access_token,
         portfolio_url,
         linkedin_url,
         personal_website,
@@ -179,11 +180,124 @@ export async function GET(
       }
     }
 
+    // Fetch GitHub data if GitHub is enabled and connected
+    let githubData: {
+      connected: boolean
+      publicRepos: number
+      privateRepos: number
+      totalRepos: number
+      followers: number
+      following: number
+      publicGists: number
+      avatarUrl: string
+      bio: string | null
+      repos: Array<{
+        name: string
+        description: string | null
+        stars: number
+        forks: number
+        language: string | null
+        url: string
+        isPrivate: boolean
+      }>
+      languages: Array<{ language: string; count: number; percentage: number }>
+    } | null = null
+
+    if (settings.showGitHub && profile.github_username) {
+      const hasToken = !!profile.github_access_token
+      const headers: Record<string, string> = {
+        Accept: 'application/vnd.github.v3+json',
+        'User-Agent': 'StormChain-CareerCard',
+      }
+
+      // Use OAuth token if available for private data
+      if (hasToken && profile.github_access_token) {
+        headers.Authorization = `Bearer ${profile.github_access_token}`
+      }
+
+      try {
+        // Fetch user profile
+        const userRes = await fetch(
+          `https://api.github.com/user${hasToken ? '' : 's/' + profile.github_username}`,
+          { headers }
+        )
+        const userData = await userRes.json()
+
+        if (userData && !userData.message) {
+          // Fetch repos (with token, includes private)
+          const reposRes = await fetch(
+            `https://api.github.com/${hasToken ? 'user/repos?per_page=100&sort=updated' : `users/${profile.github_username}/repos?per_page=100&sort=updated`}`,
+            { headers }
+          )
+          const reposData = await reposRes.json()
+
+          const repos = Array.isArray(reposData)
+            ? reposData
+                .map((r: Record<string, unknown>) => ({
+                  name: r.name as string,
+                  description: r.description as string | null,
+                  stars: (r.stargazers_count as number) ?? 0,
+                  forks: (r.forks_count as number) ?? 0,
+                  language: r.language as string | null,
+                  url: r.html_url as string,
+                  isPrivate: (r.private as boolean) ?? false,
+                  updatedAt: r.updated_at as string,
+                }))
+                .sort(
+                  (a, b) =>
+                    b.stars - a.stars ||
+                    new Date(b.updatedAt).getTime() -
+                      new Date(a.updatedAt).getTime()
+                )
+            : []
+
+          // Calculate language stats
+          const langCount: Record<string, number> = {}
+          repos.forEach((r) => {
+            if (r.language) {
+              langCount[r.language] = (langCount[r.language] || 0) + 1
+            }
+          })
+          const totalLangs = Object.values(langCount).reduce((a, b) => a + b, 0)
+          const languages = Object.entries(langCount)
+            .map(([language, count]) => ({
+              language,
+              count,
+              percentage: Math.round((count / totalLangs) * 100),
+            }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 6)
+
+          githubData = {
+            connected: hasToken,
+            publicRepos: userData.public_repos ?? 0,
+            privateRepos: hasToken
+              ? (userData.total_private_repos ??
+                userData.owned_private_repos ??
+                0)
+              : 0,
+            totalRepos: repos.length,
+            followers: userData.followers ?? 0,
+            following: userData.following ?? 0,
+            publicGists: userData.public_gists ?? 0,
+            avatarUrl: userData.avatar_url ?? '',
+            bio: userData.bio ?? null,
+            repos: repos.slice(0, 6), // Top 6 repos
+            languages,
+          }
+        }
+      } catch (err) {
+        console.error('[DEVELOPER PUBLIC] GitHub fetch error:', err)
+        // Continue without GitHub data
+      }
+    }
+
     return NextResponse.json({
       success: true,
       profile: publicProfile,
       projects,
       resume,
+      githubData,
       settings: {
         allowConnect: settings.allowConnect ?? true,
       },

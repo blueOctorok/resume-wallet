@@ -2,6 +2,102 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🔗 **ADD: GitHub OAuth for Private Repos** (January 2026)
+
+**Added GitHub OAuth integration so developers can show private repo data on their Career Card.**
+
+### GitHub OAuth Flow
+
+- **`/api/github/oauth`** — Initiates OAuth, redirects to GitHub with `repo`, `read:user`, `user:email` scopes
+- **`/api/github/callback`** — Exchanges code for token, fetches username, stores token in `developer_profiles`
+- **Migration 013** — Adds `github_access_token` column to `developer_profiles`
+
+### Developer Hub Updates
+
+- **Connect GitHub button** — In GitHub section, click to start OAuth flow
+- **Connected state** — Shows green "Connected" badge with username when linked
+- **Privacy note** — "We only read repo data — we never modify anything"
+
+### Career Card API (`/api/developer/public/[token]`)
+
+- Now fetches `github_access_token` from profile
+- If token exists, calls GitHub API with `Authorization: Bearer` header
+- Returns `githubData` with:
+  - `connected: true` — Indicates private data is included
+  - `privateRepos` count
+  - `totalRepos` (public + private)
+  - `repos` array including private repos with `isPrivate: true` flag
+
+### Career Card Display
+
+- **Green badge** when connected: "Includes private repos — full GitHub activity shown"
+- **"Private" tag** on private repos in the list
+- **Activity score** now based on total repos (public + private)
+- **Stats show** "Repos (X private)" when connected
+
+### Contribution Graph (GitHub-style green dots)
+
+Added a proper GitHub-style contribution graph using the **GraphQL API** (reliable, unlike HTML scraping).
+
+**`/api/github/contributions`**:
+
+- Uses GitHub GraphQL API with OAuth token
+- Returns accurate contribution data including private contributions
+- Supports year selection via `?year=YYYY` parameter
+
+**`GitHubContributionGraph.tsx`**:
+
+- Year selector dropdown (last 5 years)
+- GitHub-style grid with green squares (5 intensity levels)
+- Shows total contributions count
+- "+Private" badge when token includes private contributions
+- Hover tooltips: "X contributions on YYYY-MM-DD"
+- "Less → More" legend
+
+### Setup Required
+
+1. Create a GitHub OAuth App at https://github.com/settings/developers
+2. Set callback URL to `{YOUR_URL}/api/github/callback`
+3. Add to environment variables:
+   - `GITHUB_CLIENT_ID`
+   - `GITHUB_CLIENT_SECRET`
+4. Run migration 013 to add token column
+
+---
+
+## 🎨 **ENHANCE: GitHub Contribution Graph with Year Selector** (January 2026)
+
+**Added a proper GitHub-style contribution graph to the Career Card with year selection, matching GitHub's actual display.**
+
+### GitHubContributionGraph.tsx (NEW)
+
+A standalone component that renders the contribution calendar:
+
+- **Year Selector Dropdown:** Pick from the last 5 years to view contributions for any year
+- **Real GitHub Data:** Fetches actual contribution data via new API route
+- **GitHub-style Rendering:** Green squares rendered with correct intensity levels (0-4)
+- **Responsive:** Horizontally scrollable on mobile, proper month/day labels
+- **Tooltip on Hover:** Shows "X contributions on YYYY-MM-DD"
+- **Legend:** "Less → More" scale like GitHub
+
+### /api/github/contributions (NEW)
+
+Server-side API that fetches contribution data from GitHub:
+
+- Parses GitHub's public contributions page (no auth required)
+- Supports `?username=X&year=YYYY` parameters
+- Returns `{ contributions: [{date, count, level}], total }`
+- Caches results for 1 hour to avoid rate limits
+
+### Career Card Updates
+
+- Replaced static `ghchart` image with the new `GitHubContributionGraph` component
+- Added GitHub avatar and bio from API
+- Improved stats display: Repos, Followers, Following, Gists
+- External stats cards (languages, streak) gracefully hide if services are down
+
+---
+
 ## 🔧 **FIX: Developer Career Card Preview 404** (January 2026)
 
 **Developer Career Card preview was calling `/api/driver/public/[token]` and opening `/d/[token]`, which only serves driver profiles — causing 404 when developers clicked Preview.**

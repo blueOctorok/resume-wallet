@@ -19,6 +19,7 @@ import {
   Star,
   Sparkles,
 } from 'lucide-react'
+import GitHubContributionGraph from '@/components/GitHubContributionGraph'
 
 interface PublicProfile {
   id: string
@@ -63,11 +64,34 @@ interface Resume {
   ipfsHash: string | null
 }
 
+interface GitHubData {
+  connected: boolean
+  publicRepos: number
+  privateRepos: number
+  totalRepos: number
+  followers: number
+  following: number
+  publicGists: number
+  avatarUrl: string
+  bio: string | null
+  repos: Array<{
+    name: string
+    description: string | null
+    stars: number
+    forks: number
+    language: string | null
+    url: string
+    isPrivate: boolean
+  }>
+  languages: Array<{ language: string; count: number; percentage: number }>
+}
+
 interface ProfileData {
   success: boolean
   profile: PublicProfile
   projects: Project[]
   resume: Resume | null
+  githubData: GitHubData | null
   settings: { allowConnect: boolean }
   viewCount: number
 }
@@ -348,6 +372,229 @@ export default function PublicDeveloperCard() {
                   loading='lazy'
                 />
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* GitHub Assessment Section */}
+        {profile.githubUsername && data.githubData && (
+          <div className='mb-8'>
+            <div className='flex items-center justify-between mb-4'>
+              <h2 className='flex items-center gap-2 text-xl font-bold text-white'>
+                <Github className='w-5 h-5 text-brand-mint' />
+                GitHub Assessment
+              </h2>
+              <a
+                href={`https://github.com/${profile.githubUsername}`}
+                target='_blank'
+                rel='noopener noreferrer'
+                className='flex items-center gap-1 text-sm text-brand-mint hover:underline'
+              >
+                @{profile.githubUsername} <ExternalLink className='w-3 h-3' />
+              </a>
+            </div>
+            {data.githubData.connected ? (
+              <p className='text-xs text-green-400 mb-3 flex items-center gap-1'>
+                <CheckCircle className='w-3 h-3' />
+                Includes private repos — full GitHub activity shown
+              </p>
+            ) : (
+              <p className='text-xs text-gray-500 mb-3'>
+                Public repos only — private work not shown
+              </p>
+            )}
+
+            <div className='bg-gray-800/50 backdrop-blur-xl rounded-2xl border border-gray-700/50 overflow-hidden'>
+              {/* Profile Header */}
+              <div className='p-5 border-b border-gray-700/50'>
+                <div className='flex items-center gap-4'>
+                  {data.githubData.avatarUrl && (
+                    <img
+                      src={data.githubData.avatarUrl}
+                      alt='GitHub Avatar'
+                      className='w-14 h-14 rounded-xl border-2 border-gray-700'
+                    />
+                  )}
+                  <div className='flex-1'>
+                    <p className='text-lg font-semibold text-white'>
+                      @{profile.githubUsername}
+                    </p>
+                    {data.githubData.bio && (
+                      <p className='text-sm text-gray-400'>
+                        {data.githubData.bio}
+                      </p>
+                    )}
+                  </div>
+                  {/* GitHub Strength Score - now based on total repos (public + private) */}
+                  <div className='text-center'>
+                    <div
+                      className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold ${
+                        data.githubData.totalRepos >= 30
+                          ? 'bg-green-500/20 text-green-400 border-2 border-green-500/50'
+                          : data.githubData.totalRepos >= 15
+                            ? 'bg-brand-mint/20 text-brand-mint border-2 border-brand-mint/50'
+                            : data.githubData.totalRepos >= 5
+                              ? 'bg-yellow-500/20 text-yellow-400 border-2 border-yellow-500/50'
+                              : 'bg-gray-600/20 text-gray-400 border-2 border-gray-600/50'
+                      }`}
+                    >
+                      {data.githubData.totalRepos >= 30
+                        ? 'A'
+                        : data.githubData.totalRepos >= 15
+                          ? 'B'
+                          : data.githubData.totalRepos >= 5
+                            ? 'C'
+                            : 'D'}
+                    </div>
+                    <p className='text-xs text-gray-500 mt-1'>Activity</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats Grid */}
+              <div className='grid grid-cols-4 gap-px bg-gray-700/30'>
+                <div className='bg-gray-800/80 p-4 text-center'>
+                  <p className='text-2xl font-bold text-white'>
+                    {data.githubData.totalRepos}
+                  </p>
+                  <p className='text-xs text-gray-500'>
+                    {data.githubData.connected &&
+                    data.githubData.privateRepos > 0
+                      ? `Repos (${data.githubData.privateRepos} private)`
+                      : 'Repositories'}
+                  </p>
+                </div>
+                <div className='bg-gray-800/80 p-4 text-center'>
+                  <p className='text-2xl font-bold text-white'>
+                    {data.githubData.repos.reduce((sum, r) => sum + r.stars, 0)}
+                  </p>
+                  <p className='text-xs text-gray-500'>Total Stars</p>
+                </div>
+                <div className='bg-gray-800/80 p-4 text-center'>
+                  <p className='text-2xl font-bold text-white'>
+                    {data.githubData.followers}
+                  </p>
+                  <p className='text-xs text-gray-500'>Followers</p>
+                </div>
+                <div className='bg-gray-800/80 p-4 text-center'>
+                  <p className='text-2xl font-bold text-white'>
+                    {data.githubData.languages.length}
+                  </p>
+                  <p className='text-xs text-gray-500'>Languages</p>
+                </div>
+              </div>
+
+              {/* Contribution Graph */}
+              <div className='p-5 border-b border-gray-700/50'>
+                <p className='text-sm font-medium text-gray-300 mb-3'>
+                  Contribution Activity
+                </p>
+                <GitHubContributionGraph shareToken={token} />
+              </div>
+
+              {/* Language Breakdown */}
+              {data.githubData.languages.length > 0 && (
+                <div className='p-5 border-b border-gray-700/50'>
+                  <p className='text-sm font-medium text-gray-300 mb-3'>
+                    Top Languages
+                  </p>
+                  <div className='space-y-2'>
+                    {data.githubData.languages.map((lang) => (
+                      <div
+                        key={lang.language}
+                        className='flex items-center gap-3'
+                      >
+                        <div className='w-20 text-sm text-gray-400 truncate'>
+                          {lang.language}
+                        </div>
+                        <div className='flex-1 h-2 bg-gray-700/50 rounded-full overflow-hidden'>
+                          <div
+                            className='h-full bg-gradient-to-r from-brand-mint to-teal-400 rounded-full'
+                            style={{ width: `${lang.percentage}%` }}
+                          />
+                        </div>
+                        <div className='w-12 text-right text-xs text-gray-500'>
+                          {lang.percentage}%
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Popular Repos */}
+              {data.githubData.repos.length > 0 && (
+                <div className='p-5'>
+                  <p className='text-sm font-medium text-gray-300 mb-3'>
+                    {data.githubData.connected
+                      ? 'Top Repositories'
+                      : 'Public Repositories'}
+                  </p>
+                  <div className='grid gap-3'>
+                    {data.githubData.repos.slice(0, 4).map((repo) => (
+                      <a
+                        key={repo.name}
+                        href={repo.url}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='block p-3 bg-gray-700/30 hover:bg-gray-700/50 rounded-xl transition-colors group'
+                      >
+                        <div className='flex items-start justify-between gap-2'>
+                          <div className='flex-1 min-w-0'>
+                            <div className='flex items-center gap-2'>
+                              <p className='font-medium text-white group-hover:text-brand-mint transition-colors truncate'>
+                                {repo.name}
+                              </p>
+                              {repo.isPrivate && (
+                                <span className='text-[10px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded'>
+                                  Private
+                                </span>
+                              )}
+                            </div>
+                            {repo.description && (
+                              <p className='text-xs text-gray-500 mt-0.5 line-clamp-1'>
+                                {repo.description}
+                              </p>
+                            )}
+                          </div>
+                          <ExternalLink className='w-3 h-3 text-gray-600 group-hover:text-brand-mint flex-shrink-0 mt-1' />
+                        </div>
+                        <div className='flex items-center gap-3 mt-2'>
+                          {repo.language && (
+                            <span className='flex items-center gap-1 text-xs text-gray-400'>
+                              <span className='w-2 h-2 rounded-full bg-brand-mint' />
+                              {repo.language}
+                            </span>
+                          )}
+                          {repo.stars > 0 && (
+                            <span className='flex items-center gap-1 text-xs text-gray-400'>
+                              <Star className='w-3 h-3' />
+                              {repo.stars}
+                            </span>
+                          )}
+                          {repo.forks > 0 && (
+                            <span className='flex items-center gap-1 text-xs text-gray-400'>
+                              <Github className='w-3 h-3' />
+                              {repo.forks}
+                            </span>
+                          )}
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+
+                  {/* View all on GitHub */}
+                  <a
+                    href={`https://github.com/${profile.githubUsername}?tab=repositories`}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='flex items-center justify-center gap-2 w-full mt-4 px-4 py-3 bg-gray-700/30 hover:bg-gray-700/50 rounded-xl text-gray-300 text-sm font-medium transition-all'
+                  >
+                    View all {data.githubData.totalRepos} repositories on GitHub
+                    <ExternalLink className='w-3 h-3' />
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         )}

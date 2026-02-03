@@ -134,7 +134,8 @@ export async function GET(request: NextRequest) {
     // Calculate statistics
     const totalProjects = projects.length
     const featuredProjects = projects.filter((p) => p.isFeatured).length
-    const githubConnected = !!profile?.github_username
+    // GitHub is "connected" only if we have an OAuth token (not just a username)
+    const githubConnected = !!profile?.github_access_token
     const totalJobApplications = jobApplications.length
     const pendingApplications = jobApplications.filter(
       (a) => a.status === 'pending'
@@ -168,6 +169,7 @@ export async function GET(request: NextRequest) {
             bio: profile.bio,
             yearsExperience: profile.years_experience,
             githubUsername: profile.github_username,
+            githubConnected: !!profile.github_access_token, // True if OAuth connected
             githubConnectedAt: profile.github_connected_at,
             githubData: profile.github_data,
             portfolioUrl: profile.portfolio_url,

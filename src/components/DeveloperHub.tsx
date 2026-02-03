@@ -66,6 +66,7 @@ interface DeveloperProfile {
   twitterUrl: string | null
   personalWebsite: string | null
   githubUsername: string | null
+  githubConnected: boolean // True if OAuth token is stored
 }
 
 interface HubData {
@@ -788,25 +789,83 @@ export default function DeveloperHub({
                 GitHub
               </h2>
             </div>
-            <span
-              className={`text-xs px-2 py-1 rounded-full ${
-                theme === 'dark'
-                  ? 'bg-gray-600 text-gray-400'
-                  : 'bg-gray-200 text-gray-600'
-              }`}
-            >
-              Coming Soon
-            </span>
+            {profile?.githubConnected && (
+              <span className='flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400'>
+                <Check className='w-3 h-3' />
+                Connected
+              </span>
+            )}
           </div>
 
-          <EmptySection
-            icon={Github}
-            title='Connect GitHub'
-            description='Link your GitHub to automatically showcase your repos, commits, and contribution activity. Coming soon!'
-            actionLabel='Coming Soon'
-            onAction={() => {}}
-            color='bg-gray-700'
-          />
+          {profile?.githubConnected ? (
+            <div className='space-y-3'>
+              <div
+                className={`flex items-center gap-3 p-3 rounded-lg ${
+                  theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100'
+                }`}
+              >
+                <Github
+                  className={`w-8 h-8 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                />
+                <div>
+                  <p
+                    className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                  >
+                    @{profile.githubUsername}
+                  </p>
+                  <p
+                    className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}
+                  >
+                    Private repos included on Career Card
+                  </p>
+                </div>
+              </div>
+              <p
+                className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+              >
+                Your GitHub is connected! Your Career Card now shows private
+                repo stats and full contribution data.
+              </p>
+            </div>
+          ) : (
+            <div className='text-center py-6'>
+              <div
+                className={`w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center bg-gray-700`}
+              >
+                <Github className='w-8 h-8 text-white' />
+              </div>
+              <h3
+                className={`font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+              >
+                Connect GitHub
+              </h3>
+              <p
+                className={`text-sm mb-4 max-w-xs mx-auto ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                }`}
+              >
+                Link your GitHub to show private repos, real contribution stats,
+                and give employers the full picture.
+              </p>
+              <button
+                onClick={() => {
+                  if (userAddress) {
+                    window.location.href = `/api/github/oauth?wallet=${encodeURIComponent(userAddress)}`
+                  }
+                }}
+                disabled={!userAddress}
+                className='inline-flex items-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-xl transition-all disabled:opacity-50'
+              >
+                <Github className='w-5 h-5' />
+                Connect GitHub
+              </button>
+              <p
+                className={`text-xs mt-3 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}
+              >
+                We only read repo data — we never modify anything
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Job Applications Section */}
