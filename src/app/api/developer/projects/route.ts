@@ -46,9 +46,33 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Map snake_case to camelCase for frontend
+    const mapped = (projects || []).map((p) => ({
+      id: p.id,
+      title: p.title,
+      description: p.description,
+      longDescription: p.long_description,
+      techStack: p.tech_stack ?? [],
+      liveUrl: p.live_url,
+      repoUrl: p.repo_url,
+      demoVideoUrl: p.demo_video_url,
+      thumbnailUrl: p.thumbnail_url,
+      screenshots: p.screenshots ?? [],
+      role: p.role,
+      teamSize: p.team_size,
+      startDate: p.start_date,
+      endDate: p.end_date,
+      isOngoing: p.is_ongoing,
+      isFeatured: p.is_featured,
+      isPublic: p.is_public,
+      displayOrder: p.display_order,
+      createdAt: p.created_at,
+      updatedAt: p.updated_at,
+    }))
+
     return NextResponse.json({
       success: true,
-      projects: projects || [],
+      projects: mapped,
     })
   } catch (error) {
     console.error('[PROJECTS GET] Error:', error)

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import ProjectDetailModal from './ProjectDetailModal'
 import {
   Plus,
   Folder,
@@ -18,6 +19,7 @@ import {
   Play,
   Image as ImageIcon,
   Check,
+  Eye,
 } from 'lucide-react'
 
 // ============================================================
@@ -135,6 +137,9 @@ export default function PortfolioPage({
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Detail modal state
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
 
   // Form state
   const [showForm, setShowForm] = useState(false)
@@ -931,9 +936,9 @@ export default function PortfolioPage({
                 )}
 
                 {/* Tech Stack */}
-                {project.techStack.length > 0 && (
+                {(project.techStack?.length ?? 0) > 0 && (
                   <div className='flex flex-wrap gap-1 mb-3'>
-                    {project.techStack.slice(0, 5).map((tech) => (
+                    {(project.techStack ?? []).slice(0, 5).map((tech) => (
                       <span
                         key={tech}
                         className={`px-2 py-0.5 rounded text-xs ${
@@ -945,27 +950,39 @@ export default function PortfolioPage({
                         {tech}
                       </span>
                     ))}
-                    {project.techStack.length > 5 && (
+                    {(project.techStack?.length ?? 0) > 5 && (
                       <span
                         className={`px-2 py-0.5 rounded text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}
                       >
-                        +{project.techStack.length - 5}
+                        +{(project.techStack?.length ?? 0) - 5}
                       </span>
                     )}
                   </div>
                 )}
 
-                {/* Links */}
+                {/* Links & View Details */}
                 <div className='flex items-center gap-2 mb-3'>
+                  <button
+                    onClick={() => setSelectedProject(project)}
+                    className={`inline-flex items-center gap-1 text-sm font-medium ${
+                      theme === 'dark'
+                        ? 'text-indigo-400 hover:text-indigo-300'
+                        : 'text-indigo-600 hover:text-indigo-700'
+                    }`}
+                  >
+                    <Eye className='w-4 h-4' />
+                    View Details
+                  </button>
                   {project.liveUrl && (
                     <a
                       href={project.liveUrl}
                       target='_blank'
                       rel='noopener noreferrer'
+                      onClick={(e) => e.stopPropagation()}
                       className={`inline-flex items-center gap-1 text-sm ${
                         theme === 'dark'
-                          ? 'text-indigo-400 hover:text-indigo-300'
-                          : 'text-indigo-600 hover:text-indigo-700'
+                          ? 'text-gray-400 hover:text-gray-300'
+                          : 'text-gray-600 hover:text-gray-700'
                       }`}
                     >
                       <Globe className='w-4 h-4' />
@@ -977,6 +994,7 @@ export default function PortfolioPage({
                       href={project.repoUrl}
                       target='_blank'
                       rel='noopener noreferrer'
+                      onClick={(e) => e.stopPropagation()}
                       className={`inline-flex items-center gap-1 text-sm ${
                         theme === 'dark'
                           ? 'text-gray-400 hover:text-gray-300'
@@ -1054,6 +1072,14 @@ export default function PortfolioPage({
             </div>
           ))}
         </div>
+      )}
+
+      {/* Project Detail Modal */}
+      {selectedProject && (
+        <ProjectDetailModal
+          project={selectedProject}
+          onClose={() => setSelectedProject(null)}
+        />
       )}
     </div>
   )

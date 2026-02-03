@@ -2,6 +2,63 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🔧 **FIX: Developer Career Card Preview 404** (January 2026)
+
+**Developer Career Card preview was calling `/api/driver/public/[token]` and opening `/d/[token]`, which only serves driver profiles — causing 404 when developers clicked Preview.**
+
+### Changes
+
+- **`/api/developer/public/[token]` (GET):** New public API that loads a developer profile by share token from `developer_profiles`, respects share_settings (showPortfolio, showGitHub, showResume, showContact, allowConnect), returns profile, projects, resume, view count.
+- **`/dev-card/[token]` page:** New public page that fetches from the developer public API and renders the Career Card (name, headline, bio, skills, links, projects, resume, contact, “Hire with Veree” CTA).
+- **ShareProfileCard.tsx:** When `userRole === 'developer'`, share link, QR code, and Preview now use `/dev-card/[token]` instead of `/d/[token]`.
+
+### Result
+
+- Developers: Generate Career Card → Preview opens `/dev-card/SKobbBYg9iYY` and loads via `/api/developer/public/SKobbBYg9iYY` (no more 404).
+- Drivers: Unchanged; still use `/d/[token]` and `/api/driver/public/[token]`.
+
+---
+
+## 🎨 **ENHANCE: Rich Portfolio Showcase** (January 2026)
+
+**Upgraded portfolio display to properly showcase developer work — detail modal, live previews, GitHub stats, profile links.**
+
+### ProjectDetailModal.tsx (NEW)
+
+Full-screen modal when clicking "View Details" on a project:
+
+- **Live Preview:** iframe embed of the live site (toggle between screenshot and live)
+- **Video Embed:** YouTube and Loom videos auto-embed in the modal
+- **GitHub Stats:** Auto-fetches stars, forks, watchers, language from GitHub API
+- **Full Description:** Shows long description, all tech stack tags
+- **Project Timeline:** Start/end dates, ongoing status, role, team size
+- **Action Buttons:** View Live Site, View Code, Watch Demo
+
+### DeveloperHub.tsx
+
+- **My Links Section:** Shows portfolio URL, GitHub, LinkedIn as prominent buttons
+- **Edit Links Modal:** Click "Edit" to update portfolio URL, GitHub username, LinkedIn, personal website
+- **Add Links CTA:** If no links set, shows a call-to-action to add them
+- **Profile State:** Now stores and displays developer profile data (headline, links, etc.)
+
+### PortfolioPage.tsx
+
+- **View Details Button:** Each project card now has "View Details" → opens ProjectDetailModal
+- **Richer Cards:** Show thumbnail, tech stack tags, links to live/code
+
+### API Endpoints
+
+- **`/api/developer/profile` (GET/PUT):** Fetch and update developer profile (links, bio, etc.)
+- **GitHub API:** ProjectDetailModal calls GitHub public API to fetch repo stats
+
+### What you can do now
+
+1. Add portfolio URL, GitHub username, LinkedIn in Developer Hub → "Edit Links"
+2. Click a project → see full detail modal with live preview, video, GitHub stats
+3. External portfolio link shows prominently for employers to click
+
+---
+
 ## 📂 **ADD: Developer Portfolio System** (January 2026)
 
 **Full portfolio system for Software Engineers — database, API, and UI.**

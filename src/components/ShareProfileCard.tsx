@@ -19,27 +19,44 @@ import {
 
 interface ShareSettings {
   showResume: boolean
-  showDotApp: boolean
-  showMvr: boolean
+  showDotApp?: boolean
+  showMvr?: boolean
+  showPortfolio?: boolean
+  showGitHub?: boolean
   showContact: boolean
   allowConnect: boolean
 }
 
 interface ShareProfileCardProps {
-  walletAddress: string
+  /** Wallet address for API auth (preferred) */
+  walletAddress?: string
+  /** Alias for walletAddress — used by DeveloperHub */
+  userAddress?: string
   driverName?: string
+  /** When 'developer', uses /api/developer/share for Career Card */
+  userRole?: 'driver' | 'developer'
 }
 
 export default function ShareProfileCard({
   walletAddress,
+  userAddress,
   driverName,
+  userRole = 'driver',
 }: ShareProfileCardProps) {
   const { theme } = useTheme()
+  const address = walletAddress ?? userAddress
+  const shareApiUrl =
+    userRole === 'developer' ? '/api/developer/share' : '/api/driver/share'
+  // Driver Career Card: /d/[token]; Developer Career Card: /dev-card/[token]
+  const profileBasePath = userRole === 'developer' ? '/dev-card' : '/d'
+
   const [shareToken, setShareToken] = useState<string | null>(null)
   const [settings, setSettings] = useState<ShareSettings>({
     showResume: true,
     showDotApp: true,
     showMvr: true,
+    showPortfolio: true,
+    showGitHub: true,
     showContact: false,
     allowConnect: true,
   })
@@ -53,14 +70,16 @@ export default function ShareProfileCard({
 
   // Fetch current share token and settings
   useEffect(() => {
-    fetchShareInfo()
-  }, [walletAddress])
+    if (address) fetchShareInfo()
+    else setLoading(false)
+  }, [address, userRole])
 
   const fetchShareInfo = async () => {
+    if (!address) return
     try {
       setLoading(true)
-      const response = await fetch('/api/driver/share', {
-        headers: { 'x-wallet-address': walletAddress },
+      const response = await fetch(shareApiUrl, {
+        headers: { 'x-wallet-address': address },
       })
 
       if (response.ok) {
@@ -81,13 +100,14 @@ export default function ShareProfileCard({
   }
 
   const generateToken = async (regenerate = false) => {
+    if (!address) return
     try {
       setGenerating(true)
-      const response = await fetch('/api/driver/share', {
+      const response = await fetch(shareApiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+          'x-wallet-address': address,
         },
         body: JSON.stringify({ regenerate }),
       })
@@ -107,13 +127,14 @@ export default function ShareProfileCard({
   }
 
   const updateSettings = async (newSettings: ShareSettings) => {
+    if (!address) return
     try {
       setSavingSettings(true)
-      const response = await fetch('/api/driver/share', {
+      const response = await fetch(shareApiUrl, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+          'x-wallet-address': address,
         },
         body: JSON.stringify({ shareSettings: newSettings }),
       })
@@ -130,7 +151,7 @@ export default function ShareProfileCard({
 
   const copyLink = () => {
     if (!shareToken) return
-    const url = `${window.location.origin}/d/${shareToken}`
+    const url = `${window.location.origin}${profileBasePath}/${shareToken}`
     navigator.clipboard.writeText(url)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -150,14 +171,14 @@ export default function ShareProfileCard({
   const getQRUrl = () => {
     if (!shareToken) return ''
     const profileUrl = encodeURIComponent(
-      `${window.location.origin}/d/${shareToken}`
+      `${window.location.origin}${profileBasePath}/${shareToken}`
     )
     // Using QR Server API (free, no key needed)
     return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${profileUrl}&bgcolor=1a1a2e&color=5eead4&margin=10`
   }
 
   const profileUrl = shareToken
-    ? `${window.location.origin}/d/${shareToken}`
+    ? `${window.location.origin}${profileBasePath}/${shareToken}`
     : ''
 
   if (loading) {
