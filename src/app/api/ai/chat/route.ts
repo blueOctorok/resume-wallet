@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     if (!message || typeof message !== 'string') {
       return NextResponse.json(
         { error: 'Missing or invalid message field' },
-        { status: 400 },
+        { status: 400 }
       )
     }
 
@@ -78,11 +78,33 @@ export async function POST(request: NextRequest) {
     // X-Partner: pace_drivers may handle authentication differently
 
     // Make initial request with X-Partner header to trigger payment flow
-    const tBackendResponse = await fetch(tBackendUrl, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(tBackendPayload),
-    })
+    // Add timeout to prevent Vercel function timeout (504)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 25000) // 25s timeout
+
+    let tBackendResponse: Response
+    try {
+      tBackendResponse = await fetch(tBackendUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(tBackendPayload),
+        signal: controller.signal,
+      })
+    } catch (fetchError: unknown) {
+      clearTimeout(timeout)
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        console.error('❌ [AI CHAT] T Backend request timed out (25s)')
+        return NextResponse.json(
+          {
+            error:
+              'AI service is taking too long to respond. Please try again.',
+          },
+          { status: 504 }
+        )
+      }
+      throw fetchError
+    }
+    clearTimeout(timeout)
 
     // Automatic payments ENABLED - Credits working as of Dec 9, 2025
     // Team fixed credit activation system and pricing
@@ -101,11 +123,11 @@ export async function POST(request: NextRequest) {
 
     if (isPaymentRequired && AUTO_PAYMENT_ENABLED) {
       console.log(
-        `💳 [AI CHAT] Payment required (${tBackendResponse.status}), processing payment...`,
+        `💳 [AI CHAT] Payment required (${tBackendResponse.status}), processing payment...`
       )
       console.log(
         `📋 [AI CHAT] Response body:`,
-        JSON.stringify(responseData, null, 2),
+        JSON.stringify(responseData, null, 2)
       )
 
       try {
@@ -113,11 +135,11 @@ export async function POST(request: NextRequest) {
 
         if (!paymentRequirements) {
           console.error(
-            '❌ [AI CHAT] Could not parse payment requirements from 402 response',
+            '❌ [AI CHAT] Could not parse payment requirements from 402 response'
           )
           return NextResponse.json(
             { error: 'Payment required but payment details are invalid' },
-            { status: 402 },
+            { status: 402 }
           )
         }
 
@@ -150,15 +172,39 @@ export async function POST(request: NextRequest) {
 
         // Retry with payment proof - backend may need time to verify on-chain
         // Payment status can be: pending -> submitted -> verified
-        let retryResponse = await fetch(tBackendUrl, {
-          method: 'POST',
-          headers: retryHeaders,
-          body: JSON.stringify(tBackendPayload),
-        })
+        // Use shorter timeout for retries to stay within Vercel limits
+        const retryController = new AbortController()
+        const retryTimeout = setTimeout(() => retryController.abort(), 15000)
 
-        // Handle payment verification states - backend needs time to verify on-chain
-        // Increased retries since T Backend verification can be slow
-        const maxRetries = 8
+        let retryResponse: Response
+        try {
+          retryResponse = await fetch(tBackendUrl, {
+            method: 'POST',
+            headers: retryHeaders,
+            body: JSON.stringify(tBackendPayload),
+            signal: retryController.signal,
+          })
+        } catch (retryFetchError: unknown) {
+          clearTimeout(retryTimeout)
+          if (
+            retryFetchError instanceof Error &&
+            retryFetchError.name === 'AbortError'
+          ) {
+            return NextResponse.json(
+              {
+                error: 'AI service timed out after payment. Try again shortly.',
+                paymentTxHash: paymentResult.txHash,
+              },
+              { status: 504 }
+            )
+          }
+          throw retryFetchError
+        }
+        clearTimeout(retryTimeout)
+
+        // Handle payment verification states - reduced retries for Vercel timeout
+        // 4 retries * 2s = 8s max additional wait
+        const maxRetries = 4
         let retryCount = 0
 
         while (retryResponse.status === 402 && retryCount < maxRetries) {
@@ -166,30 +212,38 @@ export async function POST(request: NextRequest) {
           const status = retryData?.detail?.status
           console.log(
             `📋 [AI CHAT] Retry response (${retryCount}):`,
-            JSON.stringify(retryData, null, 2),
+            JSON.stringify(retryData, null, 2)
           )
 
           if (status === 'pending' || status === 'submitted') {
             retryCount++
-            const waitTime = 3000 // Fixed 3s wait between retries (24s total max)
+            const waitTime = 2000 // 2s wait between retries (8s total max)
             console.log(
-              `⏳ [AI CHAT] Payment status: ${status}, waiting ${waitTime}ms before retry ${retryCount}/${maxRetries}...`,
+              `⏳ [AI CHAT] Payment status: ${status}, waiting ${waitTime}ms before retry ${retryCount}/${maxRetries}...`
             )
 
             await new Promise((resolve) => setTimeout(resolve, waitTime))
 
             console.log(
-              `🔄 [AI CHAT] Retrying after payment verification delay...`,
+              `🔄 [AI CHAT] Retrying after payment verification delay...`
             )
-            retryResponse = await fetch(tBackendUrl, {
-              method: 'POST',
-              headers: retryHeaders,
-              body: JSON.stringify(tBackendPayload),
-            })
+
+            const loopController = new AbortController()
+            const loopTimeout = setTimeout(() => loopController.abort(), 10000)
+            try {
+              retryResponse = await fetch(tBackendUrl, {
+                method: 'POST',
+                headers: retryHeaders,
+                body: JSON.stringify(tBackendPayload),
+                signal: loopController.signal,
+              })
+            } finally {
+              clearTimeout(loopTimeout)
+            }
           } else {
             // Status changed (likely verified or error)
             console.log(
-              `✅ [AI CHAT] Payment status changed to: ${status || 'unknown'}`,
+              `✅ [AI CHAT] Payment status changed to: ${status || 'unknown'}`
             )
             break
           }
@@ -215,7 +269,7 @@ export async function POST(request: NextRequest) {
                 paymentTxHash: paymentResult.txHash,
                 invoiceId: paymentRequirements.invoiceId,
               },
-              { status: 202 }, // 202 Accepted - payment sent, processing
+              { status: 202 } // 202 Accepted - payment sent, processing
             )
           }
 
@@ -224,7 +278,7 @@ export async function POST(request: NextRequest) {
               error: 'Payment completed but request failed',
               detail: retryError,
             },
-            { status: retryResponse.status },
+            { status: retryResponse.status }
           )
         }
 
@@ -246,7 +300,7 @@ export async function POST(request: NextRequest) {
             error: 'Payment processing failed',
             detail: paymentError.message || 'Could not complete payment',
           },
-          { status: 500 },
+          { status: 500 }
         )
       }
     }
@@ -307,13 +361,13 @@ export async function POST(request: NextRequest) {
               'Please contact support. Automatic payment has been temporarily disabled due to cost issues.',
             requiresPayment: true,
           },
-          { status: 402 },
+          { status: 402 }
         )
       }
 
       return NextResponse.json(
         { error: userMessage, detail: errorDetail },
-        { status: tBackendResponse.status },
+        { status: tBackendResponse.status }
       )
     }
 
@@ -337,7 +391,7 @@ export async function POST(request: NextRequest) {
         error: 'An unexpected error occurred while processing your message',
         detail: error.message,
       },
-      { status: 500 },
+      { status: 500 }
     )
   }
 }

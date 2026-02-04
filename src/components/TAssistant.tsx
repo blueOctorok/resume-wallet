@@ -1237,6 +1237,19 @@ function TAssistantContent({
         const detailMessage = errorData?.detail
 
         // Handle specific error codes with user-friendly messages
+        if (response.status === 504) {
+          // Gateway timeout - T Backend is slow or overloaded
+          setIsLoading(false)
+          addAssistantMessage(
+            `The AI service is taking longer than expected to respond. This usually means high traffic. In the meantime, I can help with common questions:\n\n` +
+              `• **"connect github"** - Link your GitHub profile\n` +
+              `• **"build portfolio"** - Add projects to showcase\n` +
+              `• **"career score"** - Calculate your AI career score\n` +
+              `• **"share profile"** - Get your shareable Career Card link\n\n` +
+              `Try one of these, or ask your question again in a moment!`
+          )
+          return
+        }
         if (response.status === 502 || response.status === 503) {
           errorMessage =
             'AI service is temporarily unavailable. Please try again in a moment.'
