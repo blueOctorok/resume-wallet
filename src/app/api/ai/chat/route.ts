@@ -82,8 +82,9 @@ export async function POST(request: NextRequest) {
 
     // Make initial request with X-Partner header to trigger payment flow
     // Add timeout to prevent Vercel function timeout (504)
+    // With maxDuration=60 on Pro, we can allow up to 50s for T Backend
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 25000) // 25s timeout
+    const timeout = setTimeout(() => controller.abort(), 50000) // 50s timeout
 
     let tBackendResponse: Response
     try {
