@@ -2,6 +2,78 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🎨 **UPDATE: Landing Page & Branding** (February 2026)
+
+### Landing Page Rewrite (`HomePage.tsx`)
+
+The pre-login landing page now reflects StormChain's expanded scope:
+
+**Hero Section:**
+
+- New tagline: "Your Career, One Verified Card"
+- Messaging for drivers AND developers
+- Trust indicators: Career Card, Blockchain Verified, StormChain Rewards
+
+**"Built for Professionals" Section:**
+
+- Side-by-side cards for Drivers and Software Engineers
+- Drivers: DOT apps, MVR integration, AI auto-fill, Career Card
+- Developers: GitHub integration, portfolio, verified history, Career Card
+
+**How It Works (Updated):**
+
+1. Build Your Profile (resume upload or GitHub connect)
+2. Get Your Career Card (shareable, QR code, on-chain verification)
+3. Apply & Earn (one-click apply, earn StormChain tokens)
+
+**Career Card Highlight:**
+
+- Visual mockup of the Career Card
+- Features: QR code, blockchain badge, privacy controls
+
+**Why StormChain (Updated Benefits):**
+
+- Permanent Records, AI-Powered, One-Click Apply, Earn Rewards
+
+### Favicon Update
+
+- Replaced old "V" (Veree) icon with **lightning bolt** (StormChain)
+- Background: brand-sage gradient (`#4a5249` → `#697469`)
+- Bolt: brand-cream to brand-mint gradient with mint stroke
+
+---
+
+## 🛠️ **ADD: Developer Admin Management** (February 2026)
+
+**Full admin management for developers, matching the existing driver admin capabilities.**
+
+### New Admin Tabs
+
+- **Dev Profiles** — List and manage all `developer_profiles` with search, pagination, and delete
+- **Projects** — List and manage all `developer_projects` with tech stack display, links, and delete
+
+### New API Routes
+
+- `GET /api/admin/dev-profiles` — List developer profiles with search/pagination
+- `GET /api/admin/dev-profiles/[id]` — Get developer profile details
+- `DELETE /api/admin/dev-profiles/[id]` — Delete developer profile (cascades to projects)
+- `GET /api/admin/dev-projects` — List developer projects with search/pagination
+- `GET /api/admin/dev-projects/[id]` — Get developer project details
+- `DELETE /api/admin/dev-projects/[id]` — Delete developer project
+
+### Updated Features
+
+- **Users list** now shows:
+  - "Dev" badge if user has a developer profile
+  - Project count badge
+- **User detail modal** now displays:
+  - Developer profile section (name, GitHub link, headline, skills)
+  - Developer projects list with tech stacks, links, and delete buttons
+- **User delete** now also deletes developer profiles and projects
+- Renamed "Profiles" tab to "Driver Profiles" for clarity
+
+---
+
 ## 🔧 **FIX: Role selection modal under nav** (February 2026)
 
 - **Issue:** On the “select a role” screen, the nav bar overlapped the “Let’s get you set up” content.

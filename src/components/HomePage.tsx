@@ -1,22 +1,37 @@
 'use client'
 
 import { useTheme } from '@/contexts/ThemeContext'
-import { Shield, FileCheck, Sparkles, ArrowRight, Zap } from 'lucide-react'
+import {
+  Shield,
+  FileCheck,
+  Sparkles,
+  ArrowRight,
+  Zap,
+  Briefcase,
+  CreditCard,
+  Code,
+  Truck,
+  Users,
+  Star,
+} from 'lucide-react'
 
 interface HomePageProps {
   isAuthenticated: boolean
   onGetStarted: () => void
 }
 
-export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProps) {
+export default function HomePage({
+  isAuthenticated,
+  onGetStarted,
+}: HomePageProps) {
   const { theme } = useTheme()
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className='max-w-6xl mx-auto px-4 sm:px-6 lg:px-8'>
       {/* Hero Section */}
-      <div className="text-center py-12 sm:py-16 md:py-20">
-        <div className="mb-8">
-          <div className="inline-block">
+      <div className='text-center py-12 sm:py-16 md:py-20'>
+        <div className='mb-8'>
+          <div className='inline-block'>
             <div
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6 ${
                 theme === 'dark'
@@ -24,8 +39,8 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
                   : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30'
               }`}
             >
-              <Sparkles className="w-4 h-4" />
-              <span>Blockchain-Verified Driver Applications</span>
+              <Sparkles className='w-4 h-4' />
+              <span>Blockchain-Verified Career Platform</span>
             </div>
           </div>
         </div>
@@ -37,7 +52,7 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
               : 'bg-gradient-to-r from-brand-sage via-brand-sage-dark to-brand-mint bg-clip-text text-transparent'
           }`}
         >
-          Your Resume,
+          Your Career,
           <br />
           <span
             className={
@@ -46,7 +61,7 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
                 : ''
             }
           >
-            Verified Forever
+            One Verified Card
           </span>
         </h1>
 
@@ -55,12 +70,15 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
             theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
           }`}
         >
-          Submit your DOT driver application with blockchain verification.
-          <br className="hidden sm:block" />
-          <span className="font-semibold">Secure, permanent, and tamper-proof.</span>
+          Build your Career Card. Apply to jobs instantly. Get verified
+          on-chain.
+          <br className='hidden sm:block' />
+          <span className='font-semibold'>
+            For drivers, developers, and beyond.
+          </span>
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+        <div className='flex flex-col sm:flex-row gap-4 justify-center items-center mb-12'>
           <button
             onClick={onGetStarted}
             className={`group px-8 py-4 text-lg font-semibold rounded-xl transition-all duration-300 shadow-2xl hover:shadow-3xl hover:scale-105 flex items-center gap-2 ${
@@ -69,12 +87,12 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
                 : 'bg-brand-sage text-white hover:bg-brand-sage-dark'
             }`}
           >
-            <span>{isAuthenticated ? 'Upload Resume' : 'Get Started'}</span>
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            <span>{isAuthenticated ? 'Go to Dashboard' : 'Get Started'}</span>
+            <ArrowRight className='w-5 h-5 group-hover:translate-x-1 transition-transform' />
           </button>
 
           <a
-            href="#how-it-works"
+            href='#how-it-works'
             className={`px-8 py-4 text-lg font-semibold rounded-xl border-2 transition-all duration-300 hover:scale-105 ${
               theme === 'dark'
                 ? 'border-brand-mint text-brand-mint hover:bg-brand-mint/10'
@@ -86,8 +104,20 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
         </div>
 
         {/* Trust Indicators */}
-        <div className="flex flex-wrap justify-center gap-8 text-sm">
-          <div className="flex items-center gap-2">
+        <div className='flex flex-wrap justify-center gap-6 sm:gap-8 text-sm'>
+          <div className='flex items-center gap-2'>
+            <CreditCard
+              className={`w-5 h-5 ${
+                theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+              }`}
+            />
+            <span
+              className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}
+            >
+              Career Card
+            </span>
+          </div>
+          <div className='flex items-center gap-2'>
             <Shield
               className={`w-5 h-5 ${
                 theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
@@ -99,19 +129,7 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
               Blockchain Verified
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <FileCheck
-              className={`w-5 h-5 ${
-                theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
-              }`}
-            />
-            <span
-              className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}
-            >
-              DOT Compliant
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
+          <div className='flex items-center gap-2'>
             <Zap
               className={`w-5 h-5 ${
                 theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
@@ -120,14 +138,127 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
             <span
               className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}
             >
-              AI-Powered Prefill
+              StormChain Rewards
             </span>
           </div>
         </div>
       </div>
 
+      {/* Who It's For Section */}
+      <div className='py-12 sm:py-16'>
+        <h2
+          className={`text-3xl sm:text-4xl font-bold text-center mb-4 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}
+        >
+          Built for Professionals
+        </h2>
+        <p
+          className={`text-center mb-12 max-w-2xl mx-auto ${
+            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+          }`}
+        >
+          Whether you drive trucks or write code, StormChain helps you stand
+          out.
+        </p>
+
+        <div className='grid md:grid-cols-2 gap-8 max-w-4xl mx-auto'>
+          {/* Drivers */}
+          <div
+            className={`p-6 sm:p-8 rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-xl ${
+              theme === 'dark'
+                ? 'bg-brand-sage-light/10 border-brand-mint/30 hover:border-brand-mint/50'
+                : 'bg-white border-brand-sage/30 hover:border-brand-sage/50'
+            }`}
+          >
+            <div
+              className={`w-14 h-14 rounded-xl flex items-center justify-center mb-4 ${
+                theme === 'dark'
+                  ? 'bg-blue-500/20 text-blue-400'
+                  : 'bg-blue-100 text-blue-600'
+              }`}
+            >
+              <Truck className='w-7 h-7' />
+            </div>
+            <h3
+              className={`text-xl font-bold mb-3 ${
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
+              }`}
+            >
+              Drivers
+            </h3>
+            <ul
+              className={`space-y-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}
+            >
+              <li className='flex items-center gap-2'>
+                <FileCheck className='w-4 h-4 text-green-500' />
+                DOT-compliant applications
+              </li>
+              <li className='flex items-center gap-2'>
+                <FileCheck className='w-4 h-4 text-green-500' />
+                MVR integration
+              </li>
+              <li className='flex items-center gap-2'>
+                <FileCheck className='w-4 h-4 text-green-500' />
+                AI-powered form auto-fill
+              </li>
+              <li className='flex items-center gap-2'>
+                <FileCheck className='w-4 h-4 text-green-500' />
+                Shareable Career Card
+              </li>
+            </ul>
+          </div>
+
+          {/* Developers */}
+          <div
+            className={`p-6 sm:p-8 rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-xl ${
+              theme === 'dark'
+                ? 'bg-brand-sage-light/10 border-brand-mint/30 hover:border-brand-mint/50'
+                : 'bg-white border-brand-sage/30 hover:border-brand-sage/50'
+            }`}
+          >
+            <div
+              className={`w-14 h-14 rounded-xl flex items-center justify-center mb-4 ${
+                theme === 'dark'
+                  ? 'bg-purple-500/20 text-purple-400'
+                  : 'bg-purple-100 text-purple-600'
+              }`}
+            >
+              <Code className='w-7 h-7' />
+            </div>
+            <h3
+              className={`text-xl font-bold mb-3 ${
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
+              }`}
+            >
+              Software Engineers
+            </h3>
+            <ul
+              className={`space-y-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}
+            >
+              <li className='flex items-center gap-2'>
+                <FileCheck className='w-4 h-4 text-green-500' />
+                GitHub integration
+              </li>
+              <li className='flex items-center gap-2'>
+                <FileCheck className='w-4 h-4 text-green-500' />
+                Portfolio showcase
+              </li>
+              <li className='flex items-center gap-2'>
+                <FileCheck className='w-4 h-4 text-green-500' />
+                Verified work history
+              </li>
+              <li className='flex items-center gap-2'>
+                <FileCheck className='w-4 h-4 text-green-500' />
+                Shareable Career Card
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       {/* Features Grid */}
-      <div id="how-it-works" className="py-12 sm:py-16">
+      <div id='how-it-works' className='py-12 sm:py-16'>
         <h2
           className={`text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-12 ${
             theme === 'dark' ? 'text-white' : 'text-gray-900'
@@ -136,7 +267,7 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
           How It Works
         </h2>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className='grid md:grid-cols-3 gap-8'>
           {/* Step 1 */}
           <div
             className={`p-6 sm:p-8 rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-xl ${
@@ -152,22 +283,22 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
                   : 'bg-brand-sage text-white'
               }`}
             >
-              <span className="text-2xl font-bold">1</span>
+              <span className='text-2xl font-bold'>1</span>
             </div>
             <h3
               className={`text-xl font-bold mb-3 ${
                 theme === 'dark' ? 'text-white' : 'text-gray-900'
               }`}
             >
-              Upload Your Resume
+              Build Your Profile
             </h3>
             <p
               className={`${
                 theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
               }`}
             >
-              Securely upload your resume to IPFS (decentralized storage) with
-              blockchain verification for permanent, tamper-proof records.
+              Upload your resume or connect GitHub. Our AI extracts your
+              experience and builds your profile automatically.
             </p>
           </div>
 
@@ -186,22 +317,22 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
                   : 'bg-brand-sage text-white'
               }`}
             >
-              <span className="text-2xl font-bold">2</span>
+              <span className='text-2xl font-bold'>2</span>
             </div>
             <h3
               className={`text-xl font-bold mb-3 ${
                 theme === 'dark' ? 'text-white' : 'text-gray-900'
               }`}
             >
-              AI Auto-Fill Forms
+              Get Your Career Card
             </h3>
             <p
               className={`${
                 theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
               }`}
             >
-              Our AI assistant "T" analyzes your resume and automatically fills
-              out your DOT driver application forms. Edit as needed.
+              Your credentials become a shareable Career Card with a QR code.
+              Employers can instantly verify your qualifications.
             </p>
           </div>
 
@@ -220,29 +351,29 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
                   : 'bg-brand-sage text-white'
               }`}
             >
-              <span className="text-2xl font-bold">3</span>
+              <span className='text-2xl font-bold'>3</span>
             </div>
             <h3
               className={`text-xl font-bold mb-3 ${
                 theme === 'dark' ? 'text-white' : 'text-gray-900'
               }`}
             >
-              Submit & Verify
+              Apply & Earn
             </h3>
             <p
               className={`${
                 theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
               }`}
             >
-              Submit your completed application with blockchain verification.
-              Your credentials are permanently stored and instantly verifiable.
+              Apply to jobs with one click. Earn StormChain tokens for
+              completing your profile and getting verified.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Benefits Section */}
-      <div className="py-12 sm:py-16">
+      {/* Career Card Highlight */}
+      <div className='py-12 sm:py-16'>
         <div
           className={`rounded-3xl p-8 sm:p-12 ${
             theme === 'dark'
@@ -250,151 +381,274 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
               : 'bg-gradient-to-br from-brand-sage/10 to-brand-mint/10 border-2 border-brand-sage/30'
           }`}
         >
-          <h2
-            className={`text-3xl sm:text-4xl font-bold text-center mb-8 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}
-          >
-            Why Choose StormChain?
-          </h2>
-
-          <div className="grid sm:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            <div className="flex gap-4">
+          <div className='grid md:grid-cols-2 gap-8 items-center'>
+            <div>
               <div
-                className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
+                className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium mb-4 ${
                   theme === 'dark'
-                    ? 'bg-brand-mint text-gray-900'
-                    : 'bg-brand-sage text-white'
+                    ? 'bg-brand-mint/20 text-brand-mint'
+                    : 'bg-brand-sage/20 text-brand-sage'
                 }`}
               >
-                ✓
+                <Star className='w-4 h-4' />
+                Featured
               </div>
-              <div>
-                <h4
-                  className={`font-semibold mb-1 ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}
-                >
-                  Permanent Records
-                </h4>
-                <p
-                  className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                  }`}
-                >
-                  Blockchain verification ensures your credentials can never be
-                  lost or altered.
-                </p>
-              </div>
+              <h2
+                className={`text-3xl sm:text-4xl font-bold mb-4 ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`}
+              >
+                Your Career Card
+              </h2>
+              <p
+                className={`text-lg mb-6 ${
+                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                }`}
+              >
+                A single, shareable link that showcases your verified
+                credentials, work history, and skills. Share it anywhere, verify
+                it on-chain.
+              </p>
+              <ul
+                className={`space-y-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}
+              >
+                <li className='flex items-center gap-3'>
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
+                      theme === 'dark'
+                        ? 'bg-brand-mint text-gray-900'
+                        : 'bg-brand-sage text-white'
+                    }`}
+                  >
+                    ✓
+                  </div>
+                  Scannable QR code for instant access
+                </li>
+                <li className='flex items-center gap-3'>
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
+                      theme === 'dark'
+                        ? 'bg-brand-mint text-gray-900'
+                        : 'bg-brand-sage text-white'
+                    }`}
+                  >
+                    ✓
+                  </div>
+                  Blockchain verification badge
+                </li>
+                <li className='flex items-center gap-3'>
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
+                      theme === 'dark'
+                        ? 'bg-brand-mint text-gray-900'
+                        : 'bg-brand-sage text-white'
+                    }`}
+                  >
+                    ✓
+                  </div>
+                  Privacy controls for what you share
+                </li>
+              </ul>
             </div>
-
-            <div className="flex gap-4">
+            <div className='flex justify-center'>
               <div
-                className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
+                className={`relative w-64 h-40 sm:w-80 sm:h-48 rounded-2xl shadow-2xl ${
                   theme === 'dark'
-                    ? 'bg-brand-mint text-gray-900'
-                    : 'bg-brand-sage text-white'
+                    ? 'bg-gradient-to-br from-gray-800 to-gray-900 border border-brand-mint/30'
+                    : 'bg-gradient-to-br from-white to-gray-100 border border-brand-sage/30'
                 }`}
               >
-                ✓
-              </div>
-              <div>
-                <h4
-                  className={`font-semibold mb-1 ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}
+                {/* Card mockup */}
+                <div className='absolute top-4 left-4'>
+                  <div
+                    className={`text-xs font-medium ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`}
+                  >
+                    CAREER CARD
+                  </div>
+                  <div
+                    className={`text-lg font-bold mt-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                  >
+                    Your Name
+                  </div>
+                  <div
+                    className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}
+                  >
+                    Your Title
+                  </div>
+                </div>
+                <div className='absolute bottom-4 right-4 flex items-center gap-2'>
+                  <Shield
+                    className={`w-5 h-5 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`}
+                  />
+                  <span
+                    className={`text-xs ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`}
+                  >
+                    Verified
+                  </span>
+                </div>
+                <div
+                  className={`absolute bottom-4 left-4 w-12 h-12 rounded-lg ${
+                    theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'
+                  } flex items-center justify-center`}
                 >
-                  Save Time
-                </h4>
-                <p
-                  className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                  }`}
-                >
-                  AI-powered auto-fill extracts information from your resume,
-                  eliminating manual data entry.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <div
-                className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
-                  theme === 'dark'
-                    ? 'bg-brand-mint text-gray-900'
-                    : 'bg-brand-sage text-white'
-                }`}
-              >
-                ✓
-              </div>
-              <div>
-                <h4
-                  className={`font-semibold mb-1 ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}
-                >
-                  Secure & Private
-                </h4>
-                <p
-                  className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                  }`}
-                >
-                  Your smart wallet ensures only you control access to your
-                  data. No passwords to remember.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <div
-                className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
-                  theme === 'dark'
-                    ? 'bg-brand-mint text-gray-900'
-                    : 'bg-brand-sage text-white'
-                }`}
-              >
-                ✓
-              </div>
-              <div>
-                <h4
-                  className={`font-semibold mb-1 ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}
-                >
-                  Instant Verification
-                </h4>
-                <p
-                  className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                  }`}
-                >
-                  Employers can instantly verify your credentials on the
-                  blockchain. No more waiting.
-                </p>
+                  <span className='text-2xl'>📱</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Benefits Section */}
+      <div className='py-12 sm:py-16'>
+        <h2
+          className={`text-3xl sm:text-4xl font-bold text-center mb-12 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}
+        >
+          Why StormChain?
+        </h2>
+
+        <div className='grid sm:grid-cols-2 lg:grid-cols-4 gap-6'>
+          <div
+            className={`p-6 rounded-xl text-center ${
+              theme === 'dark' ? 'bg-brand-sage-light/10' : 'bg-white shadow-lg'
+            }`}
+          >
+            <div
+              className={`w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center ${
+                theme === 'dark'
+                  ? 'bg-brand-mint/20 text-brand-mint'
+                  : 'bg-brand-sage/20 text-brand-sage'
+              }`}
+            >
+              <Shield className='w-6 h-6' />
+            </div>
+            <h4
+              className={`font-semibold mb-2 ${
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
+              }`}
+            >
+              Permanent Records
+            </h4>
+            <p
+              className={`text-sm ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              }`}
+            >
+              Blockchain ensures your credentials can never be lost or altered.
+            </p>
+          </div>
+
+          <div
+            className={`p-6 rounded-xl text-center ${
+              theme === 'dark' ? 'bg-brand-sage-light/10' : 'bg-white shadow-lg'
+            }`}
+          >
+            <div
+              className={`w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center ${
+                theme === 'dark'
+                  ? 'bg-brand-mint/20 text-brand-mint'
+                  : 'bg-brand-sage/20 text-brand-sage'
+              }`}
+            >
+              <Zap className='w-6 h-6' />
+            </div>
+            <h4
+              className={`font-semibold mb-2 ${
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
+              }`}
+            >
+              AI-Powered
+            </h4>
+            <p
+              className={`text-sm ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              }`}
+            >
+              Auto-fill forms and build profiles from your resume or GitHub.
+            </p>
+          </div>
+
+          <div
+            className={`p-6 rounded-xl text-center ${
+              theme === 'dark' ? 'bg-brand-sage-light/10' : 'bg-white shadow-lg'
+            }`}
+          >
+            <div
+              className={`w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center ${
+                theme === 'dark'
+                  ? 'bg-brand-mint/20 text-brand-mint'
+                  : 'bg-brand-sage/20 text-brand-sage'
+              }`}
+            >
+              <Briefcase className='w-6 h-6' />
+            </div>
+            <h4
+              className={`font-semibold mb-2 ${
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
+              }`}
+            >
+              One-Click Apply
+            </h4>
+            <p
+              className={`text-sm ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              }`}
+            >
+              Apply to jobs instantly with your verified Career Card.
+            </p>
+          </div>
+
+          <div
+            className={`p-6 rounded-xl text-center ${
+              theme === 'dark' ? 'bg-brand-sage-light/10' : 'bg-white shadow-lg'
+            }`}
+          >
+            <div
+              className={`w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center ${
+                theme === 'dark'
+                  ? 'bg-brand-mint/20 text-brand-mint'
+                  : 'bg-brand-sage/20 text-brand-sage'
+              }`}
+            >
+              <Star className='w-6 h-6' />
+            </div>
+            <h4
+              className={`font-semibold mb-2 ${
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
+              }`}
+            >
+              Earn Rewards
+            </h4>
+            <p
+              className={`text-sm ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              }`}
+            >
+              Earn StormChain tokens for building your verified profile.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* CTA Section */}
-      <div className="text-center py-12 sm:py-16">
+      <div className='text-center py-12 sm:py-16'>
         <h2
           className={`text-3xl sm:text-4xl font-bold mb-6 ${
             theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}
         >
-          Ready to Get Started?
+          Ready to Build Your Career Card?
         </h2>
         <p
-          className={`text-lg mb-8 ${
+          className={`text-lg mb-8 max-w-2xl mx-auto ${
             theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
           }`}
         >
           {isAuthenticated
-            ? 'Upload your resume and start your DOT driver application today.'
-            : 'Sign in with your wallet and complete your application in minutes.'}
+            ? 'Head to your dashboard to complete your profile and start applying.'
+            : 'Join thousands of professionals who trust StormChain for verified credentials.'}
         </p>
         <button
           onClick={onGetStarted}
@@ -404,11 +658,12 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
               : 'bg-brand-sage text-white hover:bg-brand-sage-dark'
           }`}
         >
-          <span>{isAuthenticated ? 'Start Application' : 'Get Started Free'}</span>
-          <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+          <span>
+            {isAuthenticated ? 'Go to Dashboard' : 'Get Started Free'}
+          </span>
+          <ArrowRight className='w-6 h-6 group-hover:translate-x-1 transition-transform' />
         </button>
       </div>
     </div>
   )
 }
-

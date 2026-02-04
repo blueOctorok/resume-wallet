@@ -5,7 +5,7 @@ import { requireAdmin, isAdminWallet } from '@/lib/admin-auth'
 /**
  * GET /api/admin/users
  * List all users with optional search
- * 
+ *
  * Query params:
  *   search - Filter by wallet address or email (partial match)
  *   limit - Max results (default 50)
@@ -26,30 +26,47 @@ export async function GET(request: NextRequest) {
     // Build query
     let query = supabase
       .from('users')
-      .select('id, wallet_address, email, name, role, is_active, created_at', { count: 'exact' })
+      .select('id, wallet_address, email, name, role, is_active, created_at', {
+        count: 'exact',
+      })
 
     // Apply search filter
     if (search) {
-      query = query.or(`wallet_address.ilike.%${search}%,email.ilike.%${search}%,name.ilike.%${search}%`)
+      query = query.or(
+        `wallet_address.ilike.%${search}%,email.ilike.%${search}%,name.ilike.%${search}%`
+      )
     }
 
     // Apply pagination and ordering
-    const { data: users, error, count } = await query
+    const {
+      data: users,
+      error,
+      count,
+    } = await query
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
     if (error) {
       console.error('[ADMIN USERS] Query error:', error)
-      return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
+      return NextResponse.json(
+        { error: 'Failed to fetch users' },
+        { status: 500 }
+      )
     }
 
     // Get counts and profile data for each user
-    const userIds = users?.map(u => u.id) || []
-    
-    // Get profile data (including names for display)
-    const { data: profiles } = await supabase
+    const userIds = users?.map((u) => u.id) || []
+
+    // Get driver profile data (including names for display)
+    const { data: driverProfiles } = await supabase
       .from('driver_profiles')
       .select('user_id, first_name, last_name, email')
+      .in('user_id', userIds)
+
+    // Get developer profile data
+    const { data: devProfiles } = await supabase
+      .from('developer_profiles')
+      .select('user_id, full_name, email, github_username')
       .in('user_id', userIds)
 
     // Get resume counts
@@ -64,37 +81,83 @@ export async function GET(request: NextRequest) {
       .select('user_id')
       .in('user_id', userIds)
 
+    // Get developer project counts
+    const { data: devProjects } = await supabase
+      .from('developer_projects')
+      .select('user_id')
+      .in('user_id', userIds)
+
     // Build lookup maps
-    const profileMap = new Map<string, { first_name: string | null; last_name: string | null; email: string | null }>()
-    profiles?.forEach(p => profileMap.set(p.user_id, p))
+    const driverProfileMap = new Map<
+      string,
+      {
+        first_name: string | null
+        last_name: string | null
+        email: string | null
+      }
+    >()
+    driverProfiles?.forEach((p) => driverProfileMap.set(p.user_id, p))
+
+    const devProfileMap = new Map<
+      string,
+      {
+        full_name: string | null
+        email: string | null
+        github_username: string | null
+      }
+    >()
+    devProfiles?.forEach((p) => devProfileMap.set(p.user_id, p))
 
     const resumeCountMap = new Map<string, number>()
-    resumes?.forEach(r => {
+    resumes?.forEach((r) => {
       resumeCountMap.set(r.user_id, (resumeCountMap.get(r.user_id) || 0) + 1)
     })
 
     const dotAppCountMap = new Map<string, number>()
-    dotApps?.forEach(a => {
+    dotApps?.forEach((a) => {
       dotAppCountMap.set(a.user_id, (dotAppCountMap.get(a.user_id) || 0) + 1)
     })
 
+    const devProjectCountMap = new Map<string, number>()
+    devProjects?.forEach((p) => {
+      devProjectCountMap.set(
+        p.user_id,
+        (devProjectCountMap.get(p.user_id) || 0) + 1
+      )
+    })
+
     // Enrich users with counts, profile data, and admin status
-    const enrichedUsers = users?.map(user => {
-      const profile = profileMap.get(user.id)
-      // Build display name from profile or fall back to users.name
-      const displayName = profile?.first_name && profile?.last_name
-        ? `${profile.first_name} ${profile.last_name}`
-        : profile?.first_name || user.name || null
+    const enrichedUsers = users?.map((user) => {
+      const driverProfile = driverProfileMap.get(user.id)
+      const devProfile = devProfileMap.get(user.id)
+
+      // Build display name: prefer driver profile, then dev profile, then users.name
+      let displayName: string | null = null
+      if (driverProfile?.first_name && driverProfile?.last_name) {
+        displayName = `${driverProfile.first_name} ${driverProfile.last_name}`
+      } else if (driverProfile?.first_name) {
+        displayName = driverProfile.first_name
+      } else if (devProfile?.full_name) {
+        displayName = devProfile.full_name
+      } else if (devProfile?.github_username) {
+        displayName = `@${devProfile.github_username}`
+      } else {
+        displayName = user.name || null
+      }
+
       // Use profile email if available, fall back to users.email
-      const displayEmail = profile?.email || user.email || null
-      
+      const displayEmail =
+        driverProfile?.email || devProfile?.email || user.email || null
+
       return {
         ...user,
         displayName,
         displayEmail,
-        hasProfile: profileMap.has(user.id),
+        hasProfile: driverProfileMap.has(user.id),
+        hasDevProfile: devProfileMap.has(user.id),
         resumeCount: resumeCountMap.get(user.id) || 0,
         dotAppCount: dotAppCountMap.get(user.id) || 0,
+        devProjectCount: devProjectCountMap.get(user.id) || 0,
         isAdmin: isAdminWallet(user.wallet_address),
       }
     })
@@ -106,9 +169,11 @@ export async function GET(request: NextRequest) {
       limit,
       offset,
     })
-
   } catch (error) {
     console.error('[ADMIN USERS] Unexpected error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }

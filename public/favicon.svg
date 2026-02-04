@@ -1,23 +1,15 @@
 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background Circle with Gradient -->
   <defs>
     <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#6B9080;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#A4C3B2;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:#4a5249" />
+      <stop offset="100%" style="stop-color:#697469" />
     </linearGradient>
-    <linearGradient id="vGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#EAF4F4;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#CCE3DE;stop-opacity:1" />
+    <linearGradient id="boltGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fef5ed" />
+      <stop offset="100%" style="stop-color:#c9d9c3" />
     </linearGradient>
   </defs>
-  
-  <!-- Background Circle -->
-  <circle cx="32" cy="32" r="32" fill="url(#bgGradient)"/>
-  
-  <!-- Modern V Symbol -->
-  <path d="M 18 16 L 32 48 L 46 16 L 40 16 L 32 38 L 24 16 Z" fill="url(#vGradient)" stroke="#EAF4F4" stroke-width="1" stroke-linejoin="round"/>
-  
-  <!-- Subtle inner highlight for depth -->
-  <path d="M 24 16 L 32 38 L 28 16 Z" fill="#EAF4F4" opacity="0.2"/>
+  <circle cx="32" cy="32" r="32" fill="url(#bgGradient)" />
+  <!-- Lightning bolt: StormChain accent -->
+  <path d="M36 10 L24 34 L32 34 L28 54 L44 28 L36 28 Z" fill="url(#boltGradient)" stroke="#c9d9c3" stroke-width="1.5" stroke-linejoin="round" />
 </svg>
-
