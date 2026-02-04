@@ -399,8 +399,8 @@ export default function UserStatusModal({
                               : 'text-gray-500'
                           }`}
                         >
-                          View-only for now. Sending from Veree will use this in
-                          production.
+                          View-only for now. Sending from StormChain will use
+                          this in production.
                         </div>
                       </div>
                       <span

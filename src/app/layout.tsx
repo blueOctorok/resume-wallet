@@ -13,11 +13,70 @@ const montserrat = Montserrat({
 })
 
 export const metadata: Metadata = {
-  title: 'StormChain | We Make Hard-to-Get Jobs Easy',
+  metadataBase: new URL('https://stormchain.ai'),
+  title: {
+    default: 'StormChain | Blockchain-Verified Career Platform',
+    template: '%s | StormChain',
+  },
   description:
-    'Blockchain-verified applications for drivers and developers. Showcase your work, prove your credentials. Secure, permanent, and tamper-proof.',
+    'Build your Career Card, apply to jobs instantly, and get verified on-chain. The blockchain-verified career platform for drivers and software engineers.',
+  keywords: [
+    'StormChain',
+    'Career Card',
+    'blockchain verification',
+    'driver applications',
+    'DOT application',
+    'developer portfolio',
+    'resume verification',
+    'verified credentials',
+    'job applications',
+    'CDL driver jobs',
+    'software engineer portfolio',
+  ],
+  authors: [{ name: 'StormChain' }],
+  creator: 'StormChain',
+  publisher: 'StormChain',
   icons: {
     icon: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://stormchain.ai',
+    siteName: 'StormChain',
+    title: 'StormChain | Blockchain-Verified Career Platform',
+    description:
+      'Build your Career Card, apply to jobs instantly, and get verified on-chain. For drivers and software engineers.',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'StormChain - Your Career, One Verified Card',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'StormChain | Blockchain-Verified Career Platform',
+    description:
+      'Build your Career Card, apply to jobs instantly, and get verified on-chain.',
+    images: ['/og-image.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    google: 'EPF8l8g1XNFcpDvbSd4j_8lG6-ppNW4vCMlGHnhkzCQ',
   },
 }
 

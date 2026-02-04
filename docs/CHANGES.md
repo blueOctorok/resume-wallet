@@ -41,6 +41,34 @@ The pre-login landing page now reflects StormChain's expanded scope:
 - Background: brand-sage gradient (`#4a5249` → `#697469`)
 - Bolt: brand-cream to brand-mint gradient with mint stroke
 
+### SEO & Metadata Overhaul
+
+**New files:**
+
+- `public/robots.txt` — Allows crawling, points to sitemap, blocks `/api/`
+- `src/app/sitemap.ts` — Dynamic sitemap served at `/sitemap.xml`
+- `public/og-image.svg` — Open Graph image for social sharing
+
+**Updated `layout.tsx` metadata:**
+
+- `metadataBase` for absolute URLs
+- Template-based titles (`%s | StormChain`)
+- Keywords array for SEO
+- Full Open Graph tags (type, locale, images)
+- Twitter card configuration
+- Robots directives for Googlebot
+
+**Veree → StormChain text replacements:**
+
+- TAssistant prompts
+- UserStatusModal wallet info
+- JobListings "Apply with StormChain" button
+- MyApplications description
+- SendUSDC help text
+- Public application page (`/application/[token]`)
+- Public driver card page (`/d/[token]`) - header logo, footer
+- VereeView section titles
+
 ---
 
 ## 🛠️ **ADD: Developer Admin Management** (February 2026)

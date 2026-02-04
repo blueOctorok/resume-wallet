@@ -927,7 +927,7 @@ function TAssistantContent({
     ) {
       addAssistantMessage(
         `👋 Hey! I noticed your driver profile is only ${profileCompleteness.percentage} complete.\n\n` +
-          `To apply for jobs on Veree, you'll need to add some key information:\n\n` +
+          `To apply for jobs on StormChain, you'll need to add some key information:\n\n` +
           `🔑 **Essential:**\n` +
           profileCompleteness.missingFields
             .slice(0, 3)

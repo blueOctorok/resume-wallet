@@ -415,25 +415,25 @@ export default function StormChainView({ onBack }: StormChainViewProps) {
               : 'bg-brand-sage/10 border border-brand-sage/30'
           }`}
         >
-        <p
-          className={`font-medium mb-2 ${isDark ? 'text-brand-cream' : 'text-brand-sage'}`}
-        >
-          Revenue-Backed Model
-        </p>
-        <p
-          className={`text-sm ${isDark ? 'text-brand-cream/70' : 'text-brand-sage/70'}`}
-        >
-          Unlike speculative tokens, STORM liquidity is funded by actual
-          platform revenue. Every token earned represents real economic
-          activity on the platform.
-        </p>
+          <p
+            className={`font-medium mb-2 ${isDark ? 'text-brand-cream' : 'text-brand-sage'}`}
+          >
+            Revenue-Backed Model
+          </p>
+          <p
+            className={`text-sm ${isDark ? 'text-brand-cream/70' : 'text-brand-sage/70'}`}
+          >
+            Unlike speculative tokens, STORM liquidity is funded by actual
+            platform revenue. Every token earned represents real economic
+            activity on the platform.
+          </p>
         </div>
       </Section>
 
       {/* Drivers Only */}
       <Section
         isDark={isDark}
-        title='Who Earns Veree?'
+        title='Who Earns STORM?'
         icon={<Users className='w-5 h-5' />}
       >
         <p>
@@ -513,15 +513,16 @@ export default function StormChainView({ onBack }: StormChainViewProps) {
             className={`text-sm space-y-1 ${isDark ? 'text-brand-cream/80' : 'text-brand-sage/80'}`}
           >
             <li>
-              • Pay only in USDC—no token accounting; applicants earn the rewards
+              • Pay only in USDC—no token accounting; applicants earn the
+              rewards
             </li>
             <li>
               • Optional: buy and hold STORM on the DEX to get lower USDC fees
               on plans and bulk verification
             </li>
             <li>
-              • Do well on StormChain and you could get rewards from the platform
-              bucket (e.g. discounts)
+              • Do well on StormChain and you could get rewards from the
+              platform bucket (e.g. discounts)
             </li>
             <li>
               • Holding keeps tokens scarce and simplifies taxes and company
@@ -631,7 +632,7 @@ export default function StormChainView({ onBack }: StormChainViewProps) {
         </p>
       </Section>
 
-      {/* What Can You Do With Veree */}
+      {/* What Can You Do With STORM */}
       <Section
         isDark={isDark}
         title='Token Utility'

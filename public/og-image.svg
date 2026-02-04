@@ -1,0 +1,42 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e2530" />
+      <stop offset="100%" style="stop-color:#0f1419" />
+    </linearGradient>
+    <linearGradient id="boltGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fef5ed" />
+      <stop offset="100%" style="stop-color:#c9d9c3" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGrad)" />
+  
+  <!-- Decorative circles -->
+  <circle cx="100" cy="100" r="200" fill="#697469" opacity="0.1" />
+  <circle cx="1100" cy="530" r="250" fill="#c9d9c3" opacity="0.1" />
+  
+  <!-- Lightning bolt icon -->
+  <g transform="translate(100, 200)">
+    <path d="M60 0 L20 120 L50 120 L40 200 L100 70 L70 70 Z" fill="url(#boltGrad)" />
+  </g>
+  
+  <!-- Text -->
+  <text x="250" y="280" font-family="system-ui, sans-serif" font-size="72" font-weight="bold" fill="#fef5ed">
+    StormChain
+  </text>
+  <text x="250" y="360" font-family="system-ui, sans-serif" font-size="36" fill="#c9d9c3">
+    Your Career, One Verified Card
+  </text>
+  
+  <!-- Tagline -->
+  <text x="250" y="450" font-family="system-ui, sans-serif" font-size="24" fill="#9ca3af">
+    Blockchain-verified credentials for drivers and developers
+  </text>
+  
+  <!-- URL -->
+  <text x="250" y="550" font-family="system-ui, sans-serif" font-size="28" fill="#697469">
+    stormchain.ai
+  </text>
+</svg>

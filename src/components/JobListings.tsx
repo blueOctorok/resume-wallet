@@ -18,7 +18,7 @@ import dynamic from 'next/dynamic'
 
 // Dynamically import the modal to reduce initial bundle size
 const ApplyWithVereeModal = dynamic(() => import('./ApplyWithVereeModal'), {
-  ssr: false
+  ssr: false,
 })
 
 interface Job {
@@ -43,7 +43,11 @@ interface JobListingsProps {
   userAddress: string | null
 }
 
-export default function JobListings({ onClose, onBack, userAddress }: JobListingsProps) {
+export default function JobListings({
+  onClose,
+  onBack,
+  userAddress,
+}: JobListingsProps) {
   const { theme } = useTheme()
   const [jobs, setJobs] = useState<Job[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -143,9 +147,9 @@ export default function JobListings({ onClose, onBack, userAddress }: JobListing
         <div className='mb-8'>
           <button
             onClick={onBack}
-            className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-4 cursor-pointer"
+            className='inline-flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-4 cursor-pointer'
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className='w-5 h-5' />
             Back
           </button>
           <h1
@@ -316,7 +320,7 @@ export default function JobListings({ onClose, onBack, userAddress }: JobListing
 
         {/* Loading state */}
         {isLoading && (
-          <LoadingScreen message="Searching for jobs..." fullScreen={false} />
+          <LoadingScreen message='Searching for jobs...' fullScreen={false} />
         )}
 
         {/* Jobs list */}
@@ -424,7 +428,7 @@ export default function JobListings({ onClose, onBack, userAddress }: JobListing
                         }`}
                       >
                         <FileText className='w-4 h-4' />
-                        Apply with Veree
+                        Apply with StormChain
                       </button>
                     )}
                     <a
