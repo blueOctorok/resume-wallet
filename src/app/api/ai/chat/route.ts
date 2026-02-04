@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     } catch (fetchError: unknown) {
       clearTimeout(timeout)
       if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-        console.error('❌ [AI CHAT] T Backend request timed out (25s)')
+        console.error('❌ [AI CHAT] T Backend request timed out (50s)')
         return NextResponse.json(
           {
             error:
