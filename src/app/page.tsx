@@ -2481,22 +2481,6 @@ const HomeContent = () => {
           />
         )}
 
-        {/* Admin Quick Reset Button (Development Only) */}
-        {user && process.env.NODE_ENV === 'development' && (
-          <div className='fixed top-4 right-4 z-50'>
-            <button
-              onClick={() => {
-                console.log('🧹 [DEV] Quick reset triggered for:', user.address)
-                resetApplicationProgress()
-              }}
-              className='px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg shadow-lg text-sm font-semibold'
-              title='Development: Clear form data'
-            >
-              🧹 Clear Forms (Dev)
-            </button>
-          </div>
-        )}
-
         {/* Navigation with Hub button */}
         <Navigation
           isAuthenticated={!!user}
@@ -2522,6 +2506,18 @@ const HomeContent = () => {
           userRole={userRole}
           onSwitchRole={handleSwitchRole}
         />
+
+        {/* Role Selection Modal - rendered here so z-[80] sits above nav (z-50); was overlapping when inside main content (z-0) */}
+        {user &&
+          !isRoleLoading &&
+          !isSettingRole &&
+          (showRoleSelection || userRole === null) && (
+            <RoleSelectionModal
+              onSelectRole={handleRoleSelection}
+              isLoading={isSettingRole}
+              userEmail={user?.email}
+            />
+          )}
 
         {/* T Assistant - Sidebar (only when logged in) */}
         {user && (
@@ -2569,19 +2565,6 @@ const HomeContent = () => {
               }
             />
           )}
-
-          {/* Role Selection Modal - Show when user needs to select a role */}
-          {/* Show modal if: user is logged in, not loading, not setting role, and either showRoleSelection is true OR userRole is null/undefined */}
-          {user &&
-            !isRoleLoading &&
-            !isSettingRole &&
-            (showRoleSelection || userRole === null) && (
-              <RoleSelectionModal
-                onSelectRole={handleRoleSelection}
-                isLoading={isSettingRole}
-                userEmail={user?.email}
-              />
-            )}
 
           {/* Employer Hub - Show if user is an employer and on home page */}
           {user &&

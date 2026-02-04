@@ -2,6 +2,12 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🔧 **FIX: Role selection modal under nav** (February 2026)
+
+- **Issue:** On the “select a role” screen, the nav bar overlapped the “Let’s get you set up” content.
+- **Cause:** `RoleSelectionModal` was rendered inside the main content div, which has `relative z-0`. That created a stacking context, so the modal’s `z-[80]` only applied inside that context; the nav (`z-50`) at the root level still painted on top.
+- **Change:** Moved `RoleSelectionModal` out of the main content and rendered it as a sibling of `Navigation` (same level as `UserStatusModal`). The modal’s `z-[80]` now competes at the root level and correctly appears above the nav.
+
 ## 📝 **ADD: Developer Resume Builder** (January 2026)
 
 **Full-featured resume builder for developers with the same capabilities as the driver resume builder.**

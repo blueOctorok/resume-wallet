@@ -14,7 +14,8 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   title: 'StormChain | We Make Hard-to-Get Jobs Easy',
-  description: 'Blockchain-verified applications for drivers and developers. Showcase your work, prove your credentials. Secure, permanent, and tamper-proof.',
+  description:
+    'Blockchain-verified applications for drivers and developers. Showcase your work, prove your credentials. Secure, permanent, and tamper-proof.',
   icons: {
     icon: '/favicon.svg',
   },
@@ -67,7 +68,7 @@ export default function RootLayout({
         <ThemeProvider>
           <AlchemyProvider>
             {children}
-            <MobileConsole />
+            {process.env.NODE_ENV === 'development' && <MobileConsole />}
             <ScrollToTop />
           </AlchemyProvider>
         </ThemeProvider>
