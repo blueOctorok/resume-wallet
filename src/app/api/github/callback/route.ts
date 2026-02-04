@@ -2,6 +2,123 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 /**
+ * Invalidate career score so it gets recalculated with GitHub data.
+ */
+async function invalidateCareerScore(userId: string) {
+  try {
+    const supabase = await getAdminSupabaseClient()
+    await supabase
+      .from('developer_profiles')
+      .update({ career_score: null })
+      .eq('user_id', userId)
+  } catch (error) {
+    console.warn('[GITHUB CALLBACK] Failed to invalidate career score:', error)
+  }
+}
+
+/**
+ * Fetch GitHub data and store it in the database.
+ * This is the proper sync pattern - fetch once, store, then read from DB.
+ */
+async function syncGitHubData(
+  userId: string,
+  accessToken: string,
+  githubUsername: string
+) {
+  try {
+    const headers: Record<string, string> = {
+      Accept: 'application/vnd.github.v3+json',
+      'User-Agent': 'StormChain-GitHubSync',
+      Authorization: `Bearer ${accessToken}`,
+    }
+
+    // Fetch user profile
+    const userRes = await fetch('https://api.github.com/user', { headers })
+    const userData = await userRes.json()
+
+    if (!userData || userData.message) {
+      console.error('[GITHUB SYNC] Failed to fetch user:', userData?.message)
+      return
+    }
+
+    // Fetch repos (includes private with OAuth token)
+    const reposRes = await fetch(
+      'https://api.github.com/user/repos?per_page=100&sort=updated',
+      { headers }
+    )
+    const reposData = await reposRes.json()
+    const repos = Array.isArray(reposData) ? reposData : []
+
+    // Calculate totals
+    const totalStars = repos.reduce(
+      (sum: number, r: Record<string, unknown>) =>
+        sum + ((r.stargazers_count as number) || 0),
+      0
+    )
+    const totalForks = repos.reduce(
+      (sum: number, r: Record<string, unknown>) =>
+        sum + ((r.forks_count as number) || 0),
+      0
+    )
+    const privateRepos = repos.filter(
+      (r: Record<string, unknown>) => r.private
+    ).length
+
+    // Calculate language stats
+    const langCount: Record<string, number> = {}
+    repos.forEach((r: Record<string, unknown>) => {
+      const lang = r.language as string | null
+      if (lang) {
+        langCount[lang] = (langCount[lang] || 0) + 1
+      }
+    })
+    const totalLangs = Object.values(langCount).reduce((a, b) => a + b, 0)
+    const topLanguages = Object.entries(langCount)
+      .map(([language, count]) => ({
+        language,
+        count,
+        percentage: totalLangs > 0 ? Math.round((count / totalLangs) * 100) : 0,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+
+    // Build github_data object to store
+    const githubData = {
+      totalRepos: repos.length,
+      publicRepos: repos.length - privateRepos,
+      privateRepos,
+      totalStars,
+      totalForks,
+      followers: userData.followers || 0,
+      following: userData.following || 0,
+      avatarUrl: userData.avatar_url || null,
+      bio: userData.bio || null,
+      topLanguages,
+      syncedAt: new Date().toISOString(),
+    }
+
+    // Store in database
+    const supabase = await getAdminSupabaseClient()
+    const { error } = await supabase
+      .from('developer_profiles')
+      .update({ github_data: githubData })
+      .eq('user_id', userId)
+
+    if (error) {
+      console.error('[GITHUB SYNC] Failed to store data:', error)
+    } else {
+      console.log('[GITHUB SYNC] Successfully synced GitHub data:', {
+        repos: repos.length,
+        stars: totalStars,
+        languages: topLanguages.length,
+      })
+    }
+  } catch (error) {
+    console.error('[GITHUB SYNC] Error syncing data:', error)
+  }
+}
+
+/**
  * GET /api/github/callback
  *
  * Handles GitHub OAuth callback. Exchanges authorization code for access token,
@@ -170,6 +287,13 @@ export async function GET(request: NextRequest) {
     console.log(
       `[GITHUB CALLBACK] Successfully connected GitHub @${githubUsername} for wallet ${wallet}`
     )
+
+    // Sync GitHub data to database (fire and forget - don't block redirect)
+    // This stores repos, stars, languages, etc. in github_data column
+    syncGitHubData(user.id, accessToken, githubUsername)
+
+    // Invalidate career score - will be recalculated with fresh data
+    await invalidateCareerScore(user.id)
 
     // Redirect back to app with success
     return NextResponse.redirect(

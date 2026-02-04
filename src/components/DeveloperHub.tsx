@@ -49,6 +49,22 @@ interface DeveloperStats {
   totalJobApplications: number
 }
 
+interface CareerScore {
+  score: number
+  grade: 'A' | 'B' | 'C' | 'D' | 'F'
+  breakdown: {
+    github: { score: number; weight: number; factors: Record<string, number> }
+    portfolio: {
+      score: number
+      weight: number
+      factors: Record<string, number>
+    }
+    profile: { score: number; weight: number; factors: Record<string, number> }
+  }
+  suggestions: string[]
+  analyzedAt: string
+}
+
 interface Project {
   id: string
   title: string
@@ -78,6 +94,7 @@ interface DeveloperProfile {
 interface HubData {
   success: boolean
   isNewUser: boolean
+  userId?: string // The users table ID - needed for career score API
   profile: DeveloperProfile | null
   projects: Project[]
   stats: DeveloperStats
@@ -120,6 +137,12 @@ export default function DeveloperHub({
     null
   )
 
+  // Career Score state
+  const [careerScore, setCareerScore] = useState<CareerScore | null>(null)
+  const [scoreLoading, setScoreLoading] = useState(false)
+  const [showScoreDetails, setShowScoreDetails] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+
   // Fetch developer resumes
   const fetchResumes = useCallback(async () => {
     if (!userAddress) return
@@ -135,6 +158,43 @@ export default function DeveloperHub({
       console.error('Error fetching resumes:', error)
     }
   }, [userAddress])
+
+  // Calculate career score using AI
+  const calculateCareerScore = useCallback(
+    async (forceRefresh = false) => {
+      if (!userAddress || !userId) return
+
+      setScoreLoading(true)
+      try {
+        const res = await fetch('/api/ai/career-score', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-wallet-address': userAddress,
+          },
+          body: JSON.stringify({ userId, forceRefresh }),
+        })
+
+        if (res.ok) {
+          const data = await res.json()
+          if (data.success) {
+            setCareerScore({
+              score: data.score,
+              grade: data.grade,
+              breakdown: data.breakdown,
+              suggestions: data.suggestions,
+              analyzedAt: data.analyzedAt,
+            })
+          }
+        }
+      } catch (error) {
+        console.error('[DEVELOPER HUB] Error calculating career score:', error)
+      } finally {
+        setScoreLoading(false)
+      }
+    },
+    [userAddress, userId]
+  )
 
   // Fetch hub data from API
   const fetchHubData = useCallback(async () => {
@@ -163,6 +223,11 @@ export default function DeveloperHub({
           totalJobApplications: 0,
         }
       )
+
+      // Store userId for career score calculation (from users table, not profile table)
+      if (data.userId) {
+        setUserId(data.userId)
+      }
     } catch (error) {
       console.error('[DEVELOPER HUB] Error fetching data:', error)
     } finally {
@@ -174,6 +239,13 @@ export default function DeveloperHub({
     fetchHubData()
     fetchResumes()
   }, [fetchHubData, fetchResumes])
+
+  // Auto-calculate career score when profile is loaded
+  useEffect(() => {
+    if (userId && profile) {
+      calculateCareerScore()
+    }
+  }, [userId, profile, calculateCareerScore])
 
   // ============================================================
   // PROFILE COMPLETENESS
@@ -541,6 +613,215 @@ export default function DeveloperHub({
             0
           </span>
         </div>
+      </div>
+
+      {/* AI Career Score */}
+      <div
+        className={`p-4 sm:p-6 rounded-xl border ${
+          theme === 'dark'
+            ? 'bg-gray-800/50 border-gray-700'
+            : 'bg-white/70 border-gray-200'
+        }`}
+      >
+        <div className='flex items-center justify-between mb-4'>
+          <div className='flex items-center gap-3'>
+            <div className='p-2 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600'>
+              <TrendingUp className='w-5 h-5 text-white' />
+            </div>
+            <div>
+              <p
+                className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+              >
+                AI Career Score
+              </p>
+              <p
+                className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+              >
+                AI-analyzed based on GitHub, portfolio & profile
+              </p>
+            </div>
+          </div>
+
+          {/* Score Display */}
+          <div className='flex items-center gap-4'>
+            {scoreLoading ? (
+              <Loader2 className='w-6 h-6 animate-spin text-indigo-400' />
+            ) : careerScore ? (
+              <button
+                onClick={() => setShowScoreDetails(!showScoreDetails)}
+                className='flex items-center gap-2 group'
+              >
+                <div
+                  className={`w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold border-2 transition-all group-hover:scale-105 ${
+                    careerScore.grade === 'A'
+                      ? 'bg-green-500/20 text-green-400 border-green-500/50'
+                      : careerScore.grade === 'B'
+                        ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/50'
+                        : careerScore.grade === 'C'
+                          ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50'
+                          : careerScore.grade === 'D'
+                            ? 'bg-orange-500/20 text-orange-400 border-orange-500/50'
+                            : 'bg-gray-500/20 text-gray-400 border-gray-500/50'
+                  }`}
+                >
+                  {careerScore.grade}
+                </div>
+                <div className='text-left'>
+                  <p
+                    className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                  >
+                    {careerScore.score}
+                  </p>
+                  <p className='text-xs text-gray-500'>/ 100</p>
+                </div>
+              </button>
+            ) : profile ? (
+              <button
+                onClick={() => calculateCareerScore()}
+                className='px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium hover:from-indigo-600 hover:to-purple-600 transition-all'
+              >
+                Calculate Score
+              </button>
+            ) : (
+              <p
+                className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}
+              >
+                Complete profile first
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Score Breakdown (expandable) */}
+        {showScoreDetails && careerScore && (
+          <div
+            className={`mt-4 pt-4 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}
+          >
+            {/* Category Scores */}
+            <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4'>
+              <div
+                className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100'}`}
+              >
+                <div className='flex items-center justify-between mb-2'>
+                  <span
+                    className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+                  >
+                    <Github className='w-4 h-4 inline mr-1' />
+                    GitHub
+                  </span>
+                  <span
+                    className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                  >
+                    {careerScore.breakdown.github.score}/100
+                  </span>
+                </div>
+                <div
+                  className={`h-2 rounded-full ${theme === 'dark' ? 'bg-gray-600' : 'bg-gray-300'}`}
+                >
+                  <div
+                    className='h-full rounded-full bg-gray-500'
+                    style={{ width: `${careerScore.breakdown.github.score}%` }}
+                  />
+                </div>
+              </div>
+
+              <div
+                className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100'}`}
+              >
+                <div className='flex items-center justify-between mb-2'>
+                  <span
+                    className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+                  >
+                    <Folder className='w-4 h-4 inline mr-1' />
+                    Portfolio
+                  </span>
+                  <span
+                    className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                  >
+                    {careerScore.breakdown.portfolio.score}/100
+                  </span>
+                </div>
+                <div
+                  className={`h-2 rounded-full ${theme === 'dark' ? 'bg-gray-600' : 'bg-gray-300'}`}
+                >
+                  <div
+                    className='h-full rounded-full bg-indigo-500'
+                    style={{
+                      width: `${careerScore.breakdown.portfolio.score}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div
+                className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100'}`}
+              >
+                <div className='flex items-center justify-between mb-2'>
+                  <span
+                    className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+                  >
+                    <User className='w-4 h-4 inline mr-1' />
+                    Profile
+                  </span>
+                  <span
+                    className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+                  >
+                    {careerScore.breakdown.profile.score}/100
+                  </span>
+                </div>
+                <div
+                  className={`h-2 rounded-full ${theme === 'dark' ? 'bg-gray-600' : 'bg-gray-300'}`}
+                >
+                  <div
+                    className='h-full rounded-full bg-purple-500'
+                    style={{ width: `${careerScore.breakdown.profile.score}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* AI Suggestions */}
+            {careerScore.suggestions.length > 0 && (
+              <div
+                className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-indigo-900/20 border border-indigo-500/30' : 'bg-indigo-50 border border-indigo-200'}`}
+              >
+                <p
+                  className={`text-sm font-medium mb-2 ${theme === 'dark' ? 'text-indigo-300' : 'text-indigo-700'}`}
+                >
+                  <Sparkles className='w-4 h-4 inline mr-1' />
+                  AI Suggestions to Improve
+                </p>
+                <ul className='space-y-1'>
+                  {careerScore.suggestions.map((suggestion, i) => (
+                    <li
+                      key={i}
+                      className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                    >
+                      • {suggestion}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Last analyzed & refresh */}
+            <div className='flex items-center justify-between mt-3'>
+              <p
+                className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}
+              >
+                Last analyzed:{' '}
+                {new Date(careerScore.analyzedAt).toLocaleDateString()}
+              </p>
+              <button
+                onClick={() => calculateCareerScore(true)}
+                disabled={scoreLoading}
+                className={`text-xs px-2 py-1 rounded ${theme === 'dark' ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}
+              >
+                {scoreLoading ? 'Analyzing...' : 'Refresh Score'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Career Card */}

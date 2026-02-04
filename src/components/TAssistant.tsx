@@ -8,6 +8,7 @@ import {
   checkMilestones,
   type AvaEvent,
   type UserContext,
+  type UserRole,
 } from '@/lib/ava-brain'
 import type {
   AssistantHelpRequest,
@@ -291,7 +292,15 @@ function TAssistantContent({
       avaBrainContextRef.current
     )
     if (milestoneEvent) {
-      const response = routeEvent(milestoneEvent, avaBrainContextRef.current)
+      // Pass userRole for role-aware milestone messages
+      const roleForBrain: UserRole =
+        userRole === 'driver' || userRole === 'developer' ? userRole : null
+      const response = routeEvent(
+        milestoneEvent,
+        avaBrainContextRef.current,
+        undefined,
+        roleForBrain
+      )
       if ('message' in response && response.message) {
         console.log('🏆 [AVA BRAIN] State milestone:', milestoneEvent.action)
         addAssistantMessage(response.message, {
@@ -300,7 +309,7 @@ function TAssistantContent({
         })
       }
     }
-  }, [mounted, hasResume, profileCompleteness, addAssistantMessage])
+  }, [mounted, hasResume, profileCompleteness, addAssistantMessage, userRole])
 
   // Reset activity timer on user input
   const resetActivityTimer = useCallback(() => {
@@ -1149,10 +1158,14 @@ function TAssistantContent({
     }
 
     // Check with Ava Brain - does this need AI or can we use a template?
+    // Pass userRole for role-aware routing (driver vs developer templates)
+    const roleForBrain: UserRole =
+      userRole === 'driver' || userRole === 'developer' ? userRole : null
     const routeResult = routeEvent(
       event,
       avaBrainContextRef.current,
-      messageText
+      messageText,
+      roleForBrain
     )
 
     // If the brain says we can use a template (no AI needed)

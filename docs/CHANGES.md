@@ -7061,3 +7061,223 @@ Users → Email + OTP → Alchemy Smart Wallets → Alchemy RPC → Base Sepolia
 - Consecutive requests use credits (no repeated payments)
 - Balance tracking working
 - System ready for production use
+
+## 2026-02-04 - AI Career Score & Role-Aware Assistant
+
+### **AI-Powered Career Scoring System**
+
+Implemented a comprehensive AI-generated Career Score for developers based on GitHub activity, portfolio quality, and profile completeness.
+
+**New Files Created:**
+
+- `src/lib/career-score-prompt.ts` - AI prompt builder with scoring rubric
+- `src/app/api/ai/career-score/route.ts` - Career score API endpoint (POST to calculate, GET by share token)
+- `src/lib/developer-brain-templates.ts` - Developer-specific AI assistant templates
+- `src/lib/developer-knowledge.ts` - Developer knowledge base for AI context
+- `supabase/migrations/014_career_score.sql` - Database migration for career_score JSONB column
+
+**Scoring System:**
+
+```
+Career Score = (GitHub × 35%) + (Portfolio × 40%) + (Profile × 25%)
+
+GitHub Factors:
+- Contribution consistency
+- Repository quality (stars, forks)
+- Language diversity
+- Recent activity
+
+Portfolio Factors:
+- Project count
+- Live URLs deployed
+- Tech stack diversity
+- Demo videos/screenshots
+
+Profile Factors:
+- Completeness percentage
+- Skills listed
+- Experience level
+- External links (LinkedIn, etc.)
+```
+
+**Grade Scale:**
+
+- A = 90-100 (Outstanding)
+- B = 75-89 (Strong)
+- C = 60-74 (Good, room to improve)
+- D = 45-59 (Needs improvement)
+- F = 0-44 (Minimal profile)
+
+**UI Updates:**
+
+- **Career Card (`dev-card/[token]/page.tsx`)**: AI score replaces naive repo-count grade, clickable to show breakdown
+- **Developer Hub (`DeveloperHub.tsx`)**: New AI Career Score card with breakdown, suggestions, and refresh button
+
+**Score Invalidation Triggers:**
+
+- Profile updates (`/api/developer/profile`)
+- Project CRUD operations (`/api/developer/projects`)
+- GitHub OAuth connection (`/api/github/callback`)
+
+### **Role-Aware AI Assistant (Ava/T)**
+
+Made the AI assistant role-aware to provide relevant guidance for drivers vs developers.
+
+**Changes to `src/lib/ava-brain.ts`:**
+
+- Added `UserRole` type ('driver' | 'developer' | null)
+- Updated `routeEvent()` to accept userRole parameter
+- Routes to developer templates when userRole is 'developer'
+- Uses developer-specific AI prompts for escalation
+
+**Developer Templates Include:**
+
+- Navigation guidance (portfolio, GitHub, resume, career score)
+- GitHub connection prompts and success messages
+- Portfolio management messages
+- Career Score explanations and improvement tips
+- Milestone achievements (first project, GitHub connected, score thresholds)
+- Help topics (Career Score explained, Career Card explained, portfolio tips)
+
+**TAssistant Component Updates:**
+
+- Now passes `userRole` to `routeEvent()` calls
+- Developers see developer-focused responses
+- Drivers continue to see driver-focused responses
+
+### **Technical Architecture**
+
+```
+User Action → routeEvent(event, context, message, userRole)
+                    ↓
+         ┌─────────────────────┐
+         │   Role Check        │
+         │   driver vs dev     │
+         └─────────────────────┘
+                    ↓
+    ┌───────────────┴───────────────┐
+    ↓                               ↓
+DRIVER_TEMPLATES              DEVELOPER_TEMPLATES
+(DOT, CDL, FMCSA)            (GitHub, Portfolio, Career Score)
+    ↓                               ↓
+    └───────────────┬───────────────┘
+                    ↓
+         ┌─────────────────────┐
+         │   Template Match?   │
+         │   → Instant Response│
+         │   No Match?         │
+         │   → AI Escalation   │
+         └─────────────────────┘
+```
+
+**Benefits:**
+
+- Developers get relevant guidance (not trucking regulations)
+- Templates are instant and free (no AI cost)
+- AI escalation uses role-appropriate prompts
+- Consistent "Ava" personality across roles
+
+### **Database Changes**
+
+Migration `014_career_score.sql` adds:
+
+```sql
+ALTER TABLE developer_profiles ADD COLUMN career_score JSONB;
+-- Indexes for querying by score and finding stale scores
+```
+
+The `career_score` column stores:
+
+```json
+{
+  "score": 85,
+  "grade": "B",
+  "breakdown": {
+    "github": { "score": 90, "weight": 0.35, "factors": {...} },
+    "portfolio": { "score": 80, "weight": 0.40, "factors": {...} },
+    "profile": { "score": 85, "weight": 0.25, "factors": {...} }
+  },
+  "suggestions": ["Connect GitHub to boost your score", ...],
+  "analyzedAt": "2026-02-04T..."
+}
+```
+
+**Status**: ✅ AI Career Score and Role-Aware Assistant COMPLETE
+
+To apply the database migration:
+
+```bash
+# Run in Supabase SQL editor or via CLI
+-- Apply migration 014_career_score.sql
+```
+
+---
+
+## Portfolio Site Crawling (February 4, 2026)
+
+### **Overview**
+
+Enhanced the career scoring system to **crawl and analyze the developer's portfolio website**. The AI now reads the actual content of your portfolio site, not just the URL.
+
+### **How It Works**
+
+```
+Portfolio URL in profile
+        ↓
+Fetch HTML content (10s timeout)
+        ↓
+Extract: title, description, text content
+        ↓
+Detect: technologies, projects, about/contact sections
+        ↓
+Pass to AI for analysis
+        ↓
+Factor into career score
+```
+
+### **What's Extracted**
+
+| Field                   | Description                                  |
+| ----------------------- | -------------------------------------------- |
+| `title`                 | Page title from `<title>` tag                |
+| `description`           | Meta description                             |
+| `textContent`           | Main page text (up to 5000 chars)            |
+| `projectsMentioned`     | Project names from headings                  |
+| `technologiesMentioned` | Tech keywords detected (React, Python, etc.) |
+| `hasAboutSection`       | Whether an "About" section exists            |
+| `hasContactInfo`        | Whether contact details are present          |
+
+### **Files Changed**
+
+1. **`src/lib/career-score-prompt.ts`**
+   - Added `PortfolioSiteContent` interface
+   - Updated `CareerScoreInput` to include `portfolioSite`
+   - Updated prompt to include crawled content
+   - Added `siteQuality` factor to portfolio scoring
+
+2. **`src/app/api/ai/career-score/route.ts`**
+   - Added `crawlPortfolioSite()` function
+   - Added `TECH_KEYWORDS` constant for technology detection
+   - Updated `buildMetrics()` to crawl portfolio URL
+
+### **New Portfolio Scoring Factor**
+
+The AI now evaluates:
+
+- **Site title and meta description** - SEO awareness
+- **About section** - Personal branding
+- **Contact info** - Professionalism
+- **Technologies mentioned** - Skills alignment
+- **Projects showcased** - Work examples
+
+### **Tech Detection**
+
+The crawler detects 40+ common technologies including:
+
+- Frontend: React, Vue, Angular, Svelte, Next.js
+- Backend: Node, Python, Django, FastAPI, Rails
+- Databases: PostgreSQL, MongoDB, Redis
+- Cloud: AWS, Azure, GCP, Docker, Kubernetes
+- Web3: Solidity, Ethereum, smart contracts
+
+**Status**: ✅ Portfolio Site Crawling COMPLETE

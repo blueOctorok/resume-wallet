@@ -2,6 +2,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 /**
+ * Invalidate career score so it gets recalculated on next request.
+ * Called when profile data changes.
+ */
+async function invalidateCareerScore(userId: string) {
+  try {
+    const supabase = await getAdminSupabaseClient()
+    await supabase
+      .from('developer_profiles')
+      .update({ career_score: null })
+      .eq('user_id', userId)
+  } catch (error) {
+    // Non-critical - score will just use old value until next explicit recalc
+    console.warn('[PROFILE] Failed to invalidate career score:', error)
+  }
+}
+
+/**
  * GET /api/developer/profile
  *
  * Gets the developer profile for the authenticated user.
@@ -160,6 +177,9 @@ export async function PUT(request: NextRequest) {
           { status: 500 }
         )
       }
+
+      // Invalidate career score so it gets recalculated with new data
+      await invalidateCareerScore(user.id)
     } else {
       // Create new profile
       const { error: insertError } = await supabase

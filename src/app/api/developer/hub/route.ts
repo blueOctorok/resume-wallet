@@ -156,6 +156,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       isNewUser: false,
+      userId: user.id, // The users table ID - needed for career score API
       profile: profile
         ? {
             id: profile.id,
