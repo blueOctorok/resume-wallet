@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendUSDCPayment, parsePaymentRequirements } from '@/lib/x402-payment'
 
+// Allow up to 60s so T Backend + payment retries can complete (requires Vercel Pro)
+export const maxDuration = 60
+
 const T_BACKEND_API_KEY = process.env.T_BACKEND_API_KEY
 const T_BACKEND_BASE_URL =
   process.env.T_BACKEND_BASE_URL || 'https://api-v2.fluxpointstudios.com'
