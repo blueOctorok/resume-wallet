@@ -2,6 +2,17 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## ✅ **Refresh + Verified Employment on Career Card** (February 2026)
+
+- **Refresh button:** Employment verification section (Developer and Driver hubs) now has a refresh icon in the header that calls `fetchData()` so users can refresh verification status without reloading the whole page.
+- **Career card verified employment:** Public developer Career Card API returns `verifiedEmployments` (verified/partially verified jobs). The Career Card page shows a “Verified Employment” section when present: grid of cards with green check icon, position, company name, date range, and optional “Partially verified” badge. Styled to match the card (backdrop blur, border, hover).
+
+## ✅ **Verification respond: driver vs developer (no FMCSA for devs)** (February 2026)
+
+- **Respond API GET:** Returns `applicantType` ('driver' | 'developer') and `applicantName`. Applicant name is resolved from developer_profiles for developers and driver_profiles for drivers. For applicant-initiated requests, requesting company is shown as "The applicant (self-requested)" instead of "Unknown Company".
+- **Respond API POST:** For developer, only three answers are required (dates correct, terminated, eligible to return); FMCSA questions (accident, clearinghouse, drug test) are optional and stored as null. For driver, all six answers still required.
+- **Verify page (/verify/[token]):** Uses applicant type to show "Applicant Information" / "Applicant Name" for developers and "Driver Information" / "Driver Name" for drivers. Developers see only 3 verification questions (dates, terminated, eligible to return / would you rehire) plus optional notes; drivers see all 6 FMCSA questions. Copy updated ("this person's employment" vs "this driver's employment").
+
 ## ✅ **Admin: Verifications tab – list and remove verification requests** (February 2026)
 
 - **GET /api/admin/verifications** – List employment verification requests with applicant wallet (truncated), type (driver/developer), previous employer, position, status, created date. Admin-only.

@@ -14,6 +14,7 @@ import {
   X,
   Mail,
   Phone,
+  RefreshCw,
 } from 'lucide-react'
 import VerificationStatusBadge from './VerificationStatusBadge'
 import {
@@ -299,34 +300,49 @@ export default function DeveloperEmploymentVerificationSection({
             : 'bg-white/70 border-gray-200'
         }`}
       >
-        <div className="flex items-center gap-3 mb-4">
-          <div
-            className={`p-2 rounded-lg ${
-              theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-50'
-            }`}
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3">
+            <div
+              className={`p-2 rounded-lg ${
+                theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-50'
+              }`}
+            >
+              <ClipboardCheck
+                className={`w-5 h-5 ${
+                  theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                }`}
+              />
+            </div>
+            <div>
+              <h3
+                className={`font-semibold ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`}
+              >
+                Employment Verification
+              </h3>
+              <p
+                className={`text-sm ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                }`}
+              >
+                Verify your employment to strengthen your career card
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => fetchData()}
+            disabled={loading}
+            className={`p-2 rounded-lg transition-colors ${
+              theme === 'dark'
+                ? 'hover:bg-gray-700 text-gray-400 hover:text-white'
+                : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+            title="Refresh verification status"
           >
-            <ClipboardCheck
-              className={`w-5 h-5 ${
-                theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
-              }`}
-            />
-          </div>
-          <div>
-            <h3
-              className={`font-semibold ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}
-            >
-              Employment Verification
-            </h3>
-            <p
-              className={`text-sm ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              }`}
-            >
-              Verify your employment to strengthen your career card
-            </p>
-          </div>
+            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
 
         <div className="grid grid-cols-3 gap-2 mb-6">

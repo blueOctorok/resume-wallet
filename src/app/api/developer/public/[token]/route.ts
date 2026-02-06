@@ -320,12 +320,30 @@ export async function GET(
       }
     }
 
+    // Verified employment (for career card trust badges)
+    const { data: verifiedRows } = await supabase
+      .from('employment_verification_requests')
+      .select('previous_employer_name, claimed_position, claimed_start_date, claimed_end_date, status')
+      .eq('driver_id', profile.user_id)
+      .eq('applicant_type', 'developer')
+      .in('status', ['VERIFIED', 'PARTIALLY_VERIFIED'])
+      .order('verified_at', { ascending: false })
+
+    const verifiedEmployments = (verifiedRows ?? []).map((r) => ({
+      companyName: r.previous_employer_name,
+      position: r.claimed_position,
+      startDate: r.claimed_start_date ?? null,
+      endDate: r.claimed_end_date ?? null,
+      status: r.status,
+    }))
+
     return NextResponse.json({
       success: true,
       profile: publicProfile,
       projects,
       resume,
       githubData,
+      verifiedEmployments,
       settings: {
         allowConnect: settings.allowConnect ?? true,
       },

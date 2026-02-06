@@ -21,6 +21,7 @@ import {
   User,
   Folder,
   GraduationCap,
+  ShieldCheck,
 } from 'lucide-react'
 import GitHubContributionGraph from '@/components/GitHubContributionGraph'
 
@@ -166,12 +167,21 @@ interface CareerScore {
   analyzedAt: string
 }
 
+interface VerifiedEmployment {
+  companyName: string
+  position: string
+  startDate: string | null
+  endDate: string | null
+  status: string
+}
+
 interface ProfileData {
   success: boolean
   profile: PublicProfile
   projects: Project[]
   resume: Resume | null
   githubData: GitHubData | null
+  verifiedEmployments?: VerifiedEmployment[]
   settings: { allowConnect: boolean }
   viewCount: number
 }
@@ -286,7 +296,7 @@ export default function PublicDeveloperCard() {
     )
   }
 
-  const { profile, projects, resume, settings } = data
+  const { profile, projects, resume, verifiedEmployments, settings } = data
   const displayName =
     profile.displayName ||
     [profile.firstName, profile.lastName].filter(Boolean).join(' ') ||
@@ -419,6 +429,61 @@ export default function PublicDeveloperCard() {
             </div>
           </div>
         </div>
+
+        {/* Verified Employment - Trust badges from past employers */}
+        {verifiedEmployments && verifiedEmployments.length > 0 && (
+          <div className='mb-8'>
+            <div className='mb-4'>
+              <h2 className='flex items-center gap-2 text-xl font-bold text-white'>
+                <ShieldCheck className='w-5 h-5 text-green-400' />
+                Verified Employment
+              </h2>
+              <p className='text-sm text-gray-400 mt-1'>
+                Confirmed by previous employers — trust badges on your Career Card
+              </p>
+            </div>
+            <div className='grid gap-3 sm:grid-cols-2'>
+              {verifiedEmployments.map((job, idx) => (
+                <div
+                  key={idx}
+                  className='flex items-start gap-4 rounded-xl border border-gray-700/50 bg-gray-800/50 backdrop-blur-sm p-4 transition-all hover:border-green-500/30 hover:bg-gray-800/70'
+                >
+                  <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-500/20 border border-green-500/30'>
+                    <CheckCircle className='h-5 w-5 text-green-400' />
+                  </div>
+                  <div className='min-w-0 flex-1'>
+                    <p className='font-semibold text-white'>
+                      {job.position}
+                    </p>
+                    <p className='text-sm text-brand-mint font-medium'>
+                      {job.companyName}
+                    </p>
+                    <p className='mt-1 text-xs text-gray-500'>
+                      {job.startDate
+                        ? new Date(job.startDate).toLocaleDateString('en-US', {
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                        : ''}
+                      {job.startDate && job.endDate ? ' – ' : ''}
+                      {job.endDate
+                        ? new Date(job.endDate).toLocaleDateString('en-US', {
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                        : job.startDate ? 'Present' : ''}
+                    </p>
+                    {job.status === 'PARTIALLY_VERIFIED' && (
+                      <span className='mt-2 inline-block rounded-full bg-amber-500/20 px-2 py-0.5 text-xs text-amber-400 border border-amber-500/30'>
+                        Partially verified
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Portfolio Preview - The Hero Section */}
         {profile.portfolioUrl && (

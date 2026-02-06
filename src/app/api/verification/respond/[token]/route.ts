@@ -69,16 +69,39 @@ export async function GET(
       )
     }
 
-    // Get the driver's name for display
-    const { data: driver } = await supabase
-      .from('driver_profiles')
-      .select('first_name, last_name')
-      .eq('user_id', request_data.driver_id)
-      .single()
+    const applicantType = (request_data.applicant_type as string) || 'driver'
+    const requestingCompanyName =
+      (request_data.companies as { company_name?: string } | null)?.company_name ||
+      (request_data.initiated_by === 'applicant' ? 'The applicant (self-requested)' : 'Unknown Company')
+
+    // Get applicant name: driver_profiles for driver, developer_profiles for developer
+    let applicantName = 'Unknown Applicant'
+    if (applicantType === 'developer') {
+      const { data: dev } = await supabase
+        .from('developer_profiles')
+        .select('first_name, last_name, display_name')
+        .eq('user_id', request_data.driver_id)
+        .single()
+      if (dev) {
+        applicantName =
+          dev.display_name?.trim() ||
+          [dev.first_name, dev.last_name].filter(Boolean).join(' ') ||
+          'Unknown Applicant'
+      }
+    } else {
+      const { data: driver } = await supabase
+        .from('driver_profiles')
+        .select('first_name, last_name')
+        .eq('user_id', request_data.driver_id)
+        .single()
+      if (driver) {
+        applicantName = [driver.first_name, driver.last_name].filter(Boolean).join(' ') || 'Unknown Applicant'
+      }
+    }
 
     const verificationRequest = rowToVerificationRequest(
       request_data as VerificationRequestRow,
-      (request_data.companies as any)?.company_name
+      requestingCompanyName
     )
 
     // Don't expose the token in the response
@@ -87,8 +110,10 @@ export async function GET(
     return NextResponse.json({
       success: true,
       verificationRequest,
-      driverName: driver ? `${driver.first_name} ${driver.last_name}` : 'Unknown Driver',
-      requestingCompanyName: (request_data.companies as any)?.company_name || 'Unknown Company',
+      applicantType,
+      applicantName,
+      driverName: applicantName, // legacy key for backward compatibility
+      requestingCompanyName,
     })
 
   } catch (error) {
@@ -181,6 +206,8 @@ export async function POST(
       )
     }
 
+    const applicantType = (request_data.applicant_type as string) || 'driver'
+
     // Check if token is expired
     if (new Date(request_data.token_expires_at) < new Date()) {
       return NextResponse.json(
@@ -198,6 +225,30 @@ export async function POST(
         },
         { status: 409 }
       )
+    }
+
+    // For verify/deny, validate required answers by applicant type (driver = 6 FMCSA questions, developer = 3)
+    if (action !== 'decline' && answers) {
+      const hasDates = answers.datesCorrect != null
+      const hasTerminated = answers.wasTerminated != null
+      const hasEligible = answers.eligibleToReturn != null
+      if (!hasDates || !hasTerminated || !hasEligible) {
+        return NextResponse.json(
+          { error: 'Please answer all required verification questions (dates, termination, eligible to return).' },
+          { status: 400 }
+        )
+      }
+      if (applicantType === 'driver') {
+        const hasAccident = answers.hadAccident != null
+        const hasClearinghouse = answers.failedClearinghouseTest != null
+        const hasDrugTest = answers.randomDrugTestOrRefused != null
+        if (!hasAccident || !hasClearinghouse || !hasDrugTest) {
+          return NextResponse.json(
+            { error: 'Please answer all verification questions (including accident and drug test questions).' },
+            { status: 400 }
+          )
+        }
+      }
     }
 
     // Determine final status

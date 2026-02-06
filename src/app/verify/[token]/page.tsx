@@ -30,7 +30,8 @@ export default function VerifyEmploymentPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [request, setRequest] = useState<VerificationRequest | null>(null)
-  const [driverName, setDriverName] = useState('')
+  const [applicantType, setApplicantType] = useState<'driver' | 'developer'>('driver')
+  const [applicantName, setApplicantName] = useState('')
   const [requestingCompany, setRequestingCompany] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -62,7 +63,8 @@ export default function VerifyEmploymentPage() {
 
         const data = await response.json()
         setRequest(data.verificationRequest)
-        setDriverName(data.driverName)
+        setApplicantType(data.applicantType === 'developer' ? 'developer' : 'driver')
+        setApplicantName(data.applicantName ?? data.driverName ?? 'Unknown Applicant')
         setRequestingCompany(data.requestingCompanyName)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load verification request')
@@ -82,11 +84,18 @@ export default function VerifyEmploymentPage() {
       return
     }
 
-    // Validate answers for verify/deny
+    // Validate answers for verify/deny (developer = 3 questions; driver = all 6)
     if (action !== 'decline') {
-      if (!answers.datesCorrect || !answers.wasTerminated || !answers.eligibleToReturn || 
-          !answers.hadAccident || !answers.failedClearinghouseTest || !answers.randomDrugTestOrRefused) {
-        alert('Please answer all verification questions')
+      const required = !answers.datesCorrect || !answers.wasTerminated || !answers.eligibleToReturn
+      const driverOnly =
+        applicantType === 'driver' &&
+        (!answers.hadAccident || !answers.failedClearinghouseTest || !answers.randomDrugTestOrRefused)
+      if (required || driverOnly) {
+        alert(
+          applicantType === 'developer'
+            ? 'Please answer all verification questions (dates, termination, eligible to return).'
+            : 'Please answer all verification questions'
+        )
         return
       }
     }
@@ -197,16 +206,18 @@ export default function VerifyEmploymentPage() {
           </p>
         </div>
 
-        {/* Driver & Employment Info */}
+        {/* Applicant & Employment Info */}
         <div className="bg-gray-800 rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <User className="w-5 h-5 text-brand-mint" />
-            Driver Information
+            {applicantType === 'developer' ? 'Applicant Information' : 'Driver Information'}
           </h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <p className="text-sm text-gray-500">Driver Name</p>
-              <p className="text-white font-medium">{driverName}</p>
+              <p className="text-sm text-gray-500">
+                {applicantType === 'developer' ? 'Applicant Name' : 'Driver Name'}
+              </p>
+              <p className="text-white font-medium">{applicantName}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Claimed Position</p>
@@ -271,7 +282,9 @@ export default function VerifyEmploymentPage() {
         <div className="bg-gray-800 rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-semibold text-white mb-4">Verification Questions</h2>
           <p className="text-gray-400 text-sm mb-6">
-            Please answer the following questions about this driver's employment at your company.
+            {applicantType === 'developer'
+              ? 'Please answer the following questions about this person’s employment at your company.'
+              : 'Please answer the following questions about this driver\'s employment at your company.'}
           </p>
 
           <div className="space-y-6">
@@ -337,7 +350,7 @@ export default function VerifyEmploymentPage() {
             {/* Q3: Eligible to Return */}
             <QuestionBlock
               number={3}
-              question="Are they eligible to return?"
+              question="Are they eligible to return / would you rehire?"
               options={[
                 { value: 'yes', label: 'Yes' },
                 { value: 'no', label: 'No' },
@@ -347,55 +360,57 @@ export default function VerifyEmploymentPage() {
               onChange={(v) => setAnswers({ ...answers, eligibleToReturn: v as YesNoDiscuss })}
             />
 
-            {/* Q4: Accident */}
-            <QuestionBlock
-              number={4}
-              question="Were they ever in an accident while employed?"
-              options={[
-                { value: 'yes', label: 'Yes' },
-                { value: 'no', label: 'No' },
-              ]}
-              value={answers.hadAccident}
-              onChange={(v) => setAnswers({ ...answers, hadAccident: v as YesNo })}
-            />
-            {answers.hadAccident === 'yes' && (
-              <div className="ml-6">
-                <label className="block text-sm text-gray-400 mb-1">Accident Details</label>
-                <textarea
-                  value={answers.accidentDetails || ''}
-                  onChange={(e) => setAnswers({ ...answers, accidentDetails: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-brand-mint"
-                  placeholder="Brief description of accident(s)"
-                  rows={2}
+            {/* Driver-only: FMCSA questions (Q4–Q6) */}
+            {applicantType === 'driver' && (
+              <>
+                <QuestionBlock
+                  number={4}
+                  question="Were they ever in an accident while employed?"
+                  options={[
+                    { value: 'yes', label: 'Yes' },
+                    { value: 'no', label: 'No' },
+                  ]}
+                  value={answers.hadAccident}
+                  onChange={(v) => setAnswers({ ...answers, hadAccident: v as YesNo })}
                 />
-              </div>
+                {answers.hadAccident === 'yes' && (
+                  <div className="ml-6">
+                    <label className="block text-sm text-gray-400 mb-1">Accident Details</label>
+                    <textarea
+                      value={answers.accidentDetails || ''}
+                      onChange={(e) => setAnswers({ ...answers, accidentDetails: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-brand-mint"
+                      placeholder="Brief description of accident(s)"
+                      rows={2}
+                    />
+                  </div>
+                )}
+
+                <QuestionBlock
+                  number={5}
+                  question="Did they fail an FMCSA Clearinghouse post-accident test?"
+                  options={[
+                    { value: 'yes', label: 'Yes' },
+                    { value: 'no', label: 'No' },
+                    { value: 'na', label: 'N/A (no post-accident test required)' },
+                  ]}
+                  value={answers.failedClearinghouseTest}
+                  onChange={(v) => setAnswers({ ...answers, failedClearinghouseTest: v as YesNoNA })}
+                />
+
+                <QuestionBlock
+                  number={6}
+                  question="Were they part of a random drug test pull or refused a drug test?"
+                  options={[
+                    { value: 'yes', label: 'Yes' },
+                    { value: 'no', label: 'No' },
+                    { value: 'na', label: 'N/A' },
+                  ]}
+                  value={answers.randomDrugTestOrRefused}
+                  onChange={(v) => setAnswers({ ...answers, randomDrugTestOrRefused: v as YesNoNA })}
+                />
+              </>
             )}
-
-            {/* Q5: Failed Clearinghouse Test */}
-            <QuestionBlock
-              number={5}
-              question="Did they fail an FMCSA Clearinghouse post-accident test?"
-              options={[
-                { value: 'yes', label: 'Yes' },
-                { value: 'no', label: 'No' },
-                { value: 'na', label: 'N/A (no post-accident test required)' },
-              ]}
-              value={answers.failedClearinghouseTest}
-              onChange={(v) => setAnswers({ ...answers, failedClearinghouseTest: v as YesNoNA })}
-            />
-
-            {/* Q6: Drug Test */}
-            <QuestionBlock
-              number={6}
-              question="Were they part of a random drug test pull or refused a drug test?"
-              options={[
-                { value: 'yes', label: 'Yes' },
-                { value: 'no', label: 'No' },
-                { value: 'na', label: 'N/A' },
-              ]}
-              value={answers.randomDrugTestOrRefused}
-              onChange={(v) => setAnswers({ ...answers, randomDrugTestOrRefused: v as YesNoNA })}
-            />
             {answers.randomDrugTestOrRefused === 'yes' && (
               <div className="ml-6">
                 <label className="block text-sm text-gray-400 mb-1">Details</label>
