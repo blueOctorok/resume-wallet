@@ -181,30 +181,19 @@ export default function ShareProfileCard({
     ? `${window.location.origin}${profileBasePath}/${shareToken}`
     : ''
 
-  // Developer hub: match hub sections (gray). Driver: sage styling.
-  const isHubStyle = userRole === 'developer'
-  const cardBg = isHubStyle
-    ? theme === 'dark'
-      ? 'bg-gray-800/50 border-gray-700'
-      : 'bg-white/70 border-gray-200'
-    : theme === 'dark'
-      ? 'bg-brand-sage-dark/50 border border-brand-mint/30'
-      : 'bg-white border border-brand-sage/20 shadow-xl'
-  const accentClass = isHubStyle
-    ? 'text-brand-mint'
-    : theme === 'dark'
-      ? 'text-brand-mint'
-      : 'text-brand-sage'
-  const accentBg = isHubStyle
-    ? 'bg-brand-mint/20'
-    : theme === 'dark'
-      ? 'bg-brand-mint/20'
-      : 'bg-brand-sage/10'
-  const primaryBtn = isHubStyle
-    ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-    : theme === 'dark'
-      ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-      : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+  // Match employment verification card: bg-gray-800/50 (dark) / bg-white/70 (light) for both driver and developer hub
+  const cardBg =
+    theme === 'dark'
+      ? 'bg-gray-800/50 border border-gray-700'
+      : 'bg-white/70 border border-gray-200'
+  const accentClass =
+    theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+  const accentBg =
+    theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-50'
+  const primaryBtn =
+    theme === 'dark'
+      ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
+      : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
 
   if (loading) {
     return (

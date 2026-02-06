@@ -82,11 +82,12 @@ export async function GET(request: NextRequest) {
         .eq('user_id', user.id)
         .maybeSingle(),
 
-      // 2. All resumes
+      // 2. Driver resumes only (exclude developer-created resumes so we don't mix data)
       supabase
         .from('resumes')
         .select('id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, created_at, file_size, resume_type, is_paid')
         .eq('user_id', user.id)
+        .or('resume_type.neq.developer_built,resume_type.is.null')
         .order('created_at', { ascending: false }),
 
       // 3. All DOT applications (include application_data to extract applicant name)

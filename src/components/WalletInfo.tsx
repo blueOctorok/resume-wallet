@@ -93,47 +93,42 @@ export default function WalletInfo({
     }
   }, [refreshInterval, walletAddress])
 
+  // Same surface as employment verification
   const baseBoxClasses = `hidden md:flex flex-col rounded-xl backdrop-blur-xl border transition-all duration-300 shadow-lg overflow-hidden ${
     theme === 'dark'
-      ? 'bg-brand-sage-light/20 border-brand-mint/40'
-      : 'bg-white/80 border-brand-sage/40'
+      ? 'bg-gray-800/50 border-gray-700'
+      : 'bg-white/70 border-gray-200'
   }`
-  const boxShadowStyle =
-    theme === 'dark'
-      ? '0 4px 12px rgba(0, 0, 0, 0.2), 0 0 20px rgba(20, 184, 166, 0.1)'
-      : '0 4px 12px rgba(0, 0, 0, 0.1), 0 0 20px rgba(107, 142, 35, 0.1)'
 
   return (
-    <div className={baseBoxClasses} style={{ boxShadow: boxShadowStyle }}>
+    <div className={baseBoxClasses}>
       {/* Collapsible header: "Wallet" + chevron */}
       <button
         onClick={(e) => {
           e.stopPropagation()
           setExpanded((prev) => !prev)
         }}
-        className={`flex items-center gap-2 px-4 py-2.5 w-full text-left hover:opacity-90 transition-opacity ${
-          theme === 'dark'
-            ? 'hover:bg-brand-sage-light/10'
-            : 'hover:bg-brand-sage/10'
+        className={`flex items-center gap-2 px-4 py-2.5 w-full text-left transition-opacity ${
+          theme === 'dark' ? 'hover:bg-gray-700/50' : 'hover:bg-gray-100'
         }`}
         aria-expanded={expanded}
         aria-label={expanded ? 'Collapse wallet' : 'Expand wallet'}
       >
         <Wallet
-          className={`w-4 h-4 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`}
+          className={`w-4 h-4 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}
         />
         <span
-          className={`text-sm font-semibold ${theme === 'dark' ? 'text-brand-cream' : 'text-gray-800'}`}
+          className={`text-sm font-semibold ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}
         >
           Wallet
         </span>
         {expanded ? (
           <ChevronDown
-            className={`w-4 h-4 ml-auto ${theme === 'dark' ? 'text-brand-cream/60' : 'text-gray-500'}`}
+            className={`w-4 h-4 ml-auto ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}
           />
         ) : (
           <ChevronRight
-            className={`w-4 h-4 ml-auto ${theme === 'dark' ? 'text-brand-cream/60' : 'text-gray-500'}`}
+            className={`w-4 h-4 ml-auto ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}
           />
         )}
       </button>
@@ -142,7 +137,7 @@ export default function WalletInfo({
       {expanded && (
         <div
           className={`flex flex-col gap-3 px-4 pb-4 pt-0 border-t ${
-            theme === 'dark' ? 'border-brand-mint/20' : 'border-brand-sage/20'
+            theme === 'dark' ? 'border-gray-600' : 'border-gray-200'
           }`}
         >
           {/* Click row to open full wallet modal */}
@@ -151,7 +146,9 @@ export default function WalletInfo({
               e.stopPropagation()
               onClick?.()
             }}
-            className='text-left text-xs text-brand-mint hover:underline'
+            className={`text-left text-xs hover:underline ${
+              theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+            }`}
           >
             Open full wallet →
           </button>
@@ -162,25 +159,23 @@ export default function WalletInfo({
               e.stopPropagation()
               handleCopyAddress()
             }}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 hover:scale-[1.02] cursor-pointer ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 cursor-pointer ${
               theme === 'dark'
-                ? 'bg-brand-sage-light/30 hover:bg-brand-sage-light/40 border border-brand-mint/30'
-                : 'bg-brand-sage/10 hover:bg-brand-sage/20 border border-brand-sage/30'
+                ? 'bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600'
+                : 'bg-gray-100 hover:bg-gray-200 border border-gray-200'
             }`}
             title={`Click to copy: ${walletAddress}`}
           >
             <span
-              className={`font-mono text-xs font-semibold ${theme === 'dark' ? 'text-brand-cream' : 'text-gray-800'}`}
+              className={`font-mono text-xs font-semibold ${theme === 'dark' ? 'text-gray-300' : 'text-gray-800'}`}
             >
               {truncateAddress(walletAddress)}
             </span>
             {copied ? (
-              <Check
-                className={`w-3.5 h-3.5 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`}
-              />
+              <Check className='w-3.5 h-3.5 text-green-500' />
             ) : (
               <Copy
-                className={`w-3.5 h-3.5 ${theme === 'dark' ? 'text-brand-cream/60' : 'text-gray-600'}`}
+                className={`w-3.5 h-3.5 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
               />
             )}
           </div>
@@ -198,7 +193,7 @@ export default function WalletInfo({
                 }}
               />
               <span
-                className={`text-xs ${theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'}`}
+                className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
               >
                 Base
               </span>
@@ -225,7 +220,7 @@ export default function WalletInfo({
                 }}
               />
               <span
-                className={`text-xs ${theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'}`}
+                className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
               >
                 Sepolia
               </span>

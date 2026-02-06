@@ -72,10 +72,10 @@ export default function WalletCard({
       <div className='flex items-center gap-2'>
         <button
           onClick={onClick}
-          className={`relative group flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 ${
+          className={`relative group flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 ${
             theme === 'light'
-              ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark'
-              : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50'
+              ? 'text-gray-800 bg-white/70 hover:bg-gray-100 border-gray-200'
+              : 'bg-gray-800/50 text-gray-200 hover:bg-gray-700/50 border-gray-600'
           }`}
         >
           <Wallet className='w-4 h-4' />
@@ -90,14 +90,14 @@ export default function WalletCard({
     )
   }
 
-  // Desktop: Card style
+  // Desktop: Card style — same surface as employment verification
   return (
     <div
       onClick={onClick}
-      className={`relative group cursor-pointer backdrop-blur-sm rounded-xl border transition-all duration-300 shadow-lg hover:shadow-xl p-4 min-w-[280px] ${
+      className={`relative group cursor-pointer backdrop-blur-sm rounded-xl border transition-all duration-300 p-4 min-w-[280px] ${
         theme === 'light'
-          ? 'bg-white/90 border-brand-sage/40 hover:border-brand-sage/60'
-          : 'bg-brand-sage-light/20 border-brand-mint/30 hover:border-brand-mint/50'
+          ? 'bg-white/70 border-gray-200 hover:border-gray-300'
+          : 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
       }`}
     >
       {/* Wallet Header */}
@@ -105,18 +105,18 @@ export default function WalletCard({
         <div className='flex items-center gap-2'>
           <div
             className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-              theme === 'light' ? 'bg-brand-sage/20' : 'bg-brand-mint/20'
+              theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-50'
             }`}
           >
             <Wallet
               className={`w-4 h-4 ${
-                theme === 'light' ? 'text-brand-sage' : 'text-brand-cream'
+                theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
               }`}
             />
           </div>
           <span
             className={`text-sm font-semibold ${
-              theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+              theme === 'light' ? 'text-gray-800' : 'text-gray-200'
             }`}
           >
             Wallet
@@ -127,25 +127,17 @@ export default function WalletCard({
           onClick={toggleAddressVisibility}
           className={`p-1.5 rounded-lg transition-colors ${
             theme === 'light'
-              ? 'bg-brand-sage/20 hover:bg-brand-sage/30'
-              : 'bg-brand-sage/40 hover:bg-brand-sage/60'
+              ? 'hover:bg-gray-200 text-gray-600'
+              : 'hover:bg-gray-600/50 text-gray-400'
           }`}
           aria-label={
             showFullAddress ? 'Hide full address' : 'Show full address'
           }
         >
           {showFullAddress ? (
-            <EyeOff
-              className={`w-3.5 h-3.5 ${
-                theme === 'light' ? 'text-brand-sage' : 'text-brand-cream'
-              }`}
-            />
+            <EyeOff className='w-3.5 h-3.5' />
           ) : (
-            <Eye
-              className={`w-3.5 h-3.5 ${
-                theme === 'light' ? 'text-brand-sage' : 'text-brand-cream'
-              }`}
-            />
+            <Eye className='w-3.5 h-3.5' />
           )}
         </button>
       </div>
@@ -174,7 +166,7 @@ export default function WalletCard({
             ) : (
               <Copy
                 className={`w-3 h-3 ${
-                  theme === 'light' ? 'text-brand-sage' : 'text-brand-cream/70'
+                  theme === 'light' ? 'text-gray-600' : 'text-gray-400'
                 }`}
               />
             )}
@@ -183,12 +175,12 @@ export default function WalletCard({
 
         <div
           className={`rounded-lg p-2.5 ${
-            theme === 'light' ? 'bg-brand-sage/10' : 'bg-brand-sage/30'
+            theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100'
           }`}
         >
           <code
             className={`text-xs font-mono break-all ${
-              theme === 'light' ? 'text-gray-700' : 'text-brand-cream'
+              theme === 'light' ? 'text-gray-700' : 'text-gray-300'
             }`}
           >
             {formatAddress(user.address)}
@@ -199,20 +191,20 @@ export default function WalletCard({
       {/* Network Info */}
       <div
         className={`mt-3 pt-3 border-t ${
-          theme === 'light' ? 'border-brand-sage/20' : 'border-brand-mint/20'
+          theme === 'light' ? 'border-gray-200' : 'border-gray-600'
         }`}
       >
         <div className='flex items-center justify-between text-xs'>
           <span
-            className={`${
-              theme === 'light' ? 'text-gray-600' : 'text-brand-cream/70'
-            }`}
+            className={
+              theme === 'light' ? 'text-gray-600' : 'text-gray-400'
+            }
           >
             Network:
           </span>
           <span
             className={`font-medium ${
-              theme === 'light' ? 'text-brand-sage' : 'text-brand-mint'
+              theme === 'light' ? 'text-gray-800' : 'text-indigo-400'
             }`}
           >
             Base Sepolia
@@ -222,15 +214,15 @@ export default function WalletCard({
         {user.method && (
           <div className='flex items-center justify-between text-xs mt-1'>
             <span
-              className={`${
-                theme === 'light' ? 'text-gray-600' : 'text-brand-cream/70'
-              }`}
+              className={
+                theme === 'light' ? 'text-gray-600' : 'text-gray-400'
+              }
             >
               Method:
             </span>
             <span
               className={`font-medium capitalize ${
-                theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+                theme === 'light' ? 'text-gray-800' : 'text-gray-300'
               }`}
             >
               {user.method.replace('_', ' ')}
@@ -241,15 +233,15 @@ export default function WalletCard({
         {userRole && (
           <div className='flex items-center justify-between text-xs mt-1'>
             <span
-              className={`${
-                theme === 'light' ? 'text-gray-600' : 'text-brand-cream/70'
-              }`}
+              className={
+                theme === 'light' ? 'text-gray-600' : 'text-gray-400'
+              }
             >
               Role:
             </span>
             <span
               className={`font-medium capitalize ${
-                theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
+                theme === 'light' ? 'text-gray-800' : 'text-gray-300'
               }`}
             >
               {userRole === 'driver' ? '🚗 Driver' : '🏢 Employer'}
@@ -268,8 +260,8 @@ export default function WalletCard({
             }}
             className={`w-full inline-flex items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
               theme === 'light'
-                ? 'text-brand-sage border border-brand-sage/40 hover:bg-brand-sage/10'
-                : 'text-brand-cream border border-brand-cream/30 hover:bg-brand-sage-light/30'
+                ? 'text-indigo-600 border border-indigo-200 hover:bg-indigo-50'
+                : 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30'
             }`}
           >
             Switch to {userRole === 'driver' ? 'Employer' : 'Driver'}
@@ -281,7 +273,7 @@ export default function WalletCard({
       {shouldShowBuyUSDC && user?.address && (
         <div
           className={`mt-4 pt-4 border-t ${
-            theme === 'light' ? 'border-brand-sage/20' : 'border-brand-mint/20'
+            theme === 'light' ? 'border-gray-200' : 'border-gray-600'
           }`}
           onClick={(e) => e.stopPropagation()}
         >
@@ -296,8 +288,8 @@ export default function WalletCard({
             onClick={(event) => event.stopPropagation()}
             className={`inline-flex items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
               theme === 'light'
-                ? 'text-brand-sage border border-brand-sage/40 hover:bg-brand-sage/10'
-                : 'text-brand-cream border border-brand-cream/30 hover:bg-brand-sage-light/30'
+                ? 'text-indigo-600 border border-indigo-200 hover:bg-indigo-50'
+                : 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30'
             }`}
           >
             Admin Tools

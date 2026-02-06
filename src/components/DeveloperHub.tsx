@@ -272,6 +272,7 @@ export default function DeveloperHub({
     value,
     subValue,
     color,
+    iconClassName,
     onClick,
   }: {
     icon: React.ElementType
@@ -279,6 +280,7 @@ export default function DeveloperHub({
     value: number | string
     subValue?: string
     color: string
+    iconClassName?: string
     onClick?: () => void
   }) => (
     <button
@@ -294,7 +296,7 @@ export default function DeveloperHub({
     >
       <div className='flex items-center gap-3'>
         <div className={`p-2 rounded-lg ${color}`}>
-          <Icon className='w-5 h-5 text-white' />
+          <Icon className={`w-5 h-5 ${iconClassName ?? 'text-white'}`} />
         </div>
         <div>
           <p
@@ -326,6 +328,7 @@ export default function DeveloperHub({
     actionLabel,
     onAction,
     color,
+    iconClassName,
   }: {
     icon: React.ElementType
     title: string
@@ -333,6 +336,7 @@ export default function DeveloperHub({
     actionLabel: string
     onAction: () => void
     color: string
+    iconClassName?: string
   }) => (
     <div
       className={`text-center py-12 px-6 rounded-xl border-2 border-dashed ${
@@ -342,7 +346,7 @@ export default function DeveloperHub({
       }`}
     >
       <div className={`inline-flex p-4 rounded-full ${color} mb-4`}>
-        <Icon className='w-8 h-8 text-white' />
+        <Icon className={`w-8 h-8 ${iconClassName ?? 'text-white'}`} />
       </div>
       <h3
         className={`text-lg font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
@@ -356,7 +360,11 @@ export default function DeveloperHub({
       </p>
       <button
         onClick={onAction}
-        className='inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium hover:from-indigo-600 hover:to-purple-600 transition-all'
+        className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+          theme === 'dark'
+            ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
+            : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+        }`}
       >
         <Plus className='w-4 h-4' />
         {actionLabel}
@@ -432,7 +440,7 @@ export default function DeveloperHub({
                 theme === 'dark' ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
               }`}
             >
-              <Globe className='w-4 h-4 text-indigo-500' />
+              <Globe className={`w-4 h-4 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
             </a>
           )}
           {project.repoUrl && (
@@ -525,7 +533,7 @@ export default function DeveloperHub({
           className={`h-3 rounded-full overflow-hidden ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`}
         >
           <div
-            className='h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500'
+            className='h-full bg-indigo-500/50 rounded-full transition-all duration-500'
             style={{ width: `${stats.profileCompleteness}%` }}
           />
         </div>
@@ -548,7 +556,8 @@ export default function DeveloperHub({
               ? `${stats.featuredProjects} featured`
               : 'in portfolio'
           }
-          color='bg-indigo-500'
+          color={theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-50'}
+          iconClassName={theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}
           onClick={() => onNavigate('portfolio')}
         />
         <StatCard
@@ -626,8 +635,12 @@ export default function DeveloperHub({
       >
         <div className='flex items-center justify-between mb-4'>
           <div className='flex items-center gap-3'>
-            <div className='p-2 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600'>
-              <TrendingUp className='w-5 h-5 text-white' />
+            <div
+              className={`p-2 rounded-lg ${
+                theme === 'dark' ? 'bg-indigo-500/20 border border-indigo-500/30' : 'bg-indigo-50 border border-indigo-200'
+              }`}
+            >
+              <TrendingUp className={`w-5 h-5 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
             </div>
             <div>
               <p
@@ -679,7 +692,11 @@ export default function DeveloperHub({
             ) : profile ? (
               <button
                 onClick={() => calculateCareerScore()}
-                className='px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium hover:from-indigo-600 hover:to-purple-600 transition-all'
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  theme === 'dark'
+                    ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
+                    : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+                }`}
               >
                 Calculate Score
               </button>
@@ -746,7 +763,7 @@ export default function DeveloperHub({
                   className={`h-2 rounded-full ${theme === 'dark' ? 'bg-gray-600' : 'bg-gray-300'}`}
                 >
                   <div
-                    className='h-full rounded-full bg-indigo-500'
+                    className='h-full rounded-full bg-indigo-500/60'
                     style={{
                       width: `${careerScore.breakdown.portfolio.score}%`,
                     }}
@@ -784,7 +801,7 @@ export default function DeveloperHub({
             {/* AI Suggestions */}
             {careerScore.suggestions.length > 0 && (
               <div
-                className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-indigo-900/20 border border-indigo-500/30' : 'bg-indigo-50 border border-indigo-200'}`}
+                className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-800/50 border border-gray-700' : 'bg-indigo-50 border border-indigo-200'}`}
               >
                 <p
                   className={`text-sm font-medium mb-2 ${theme === 'dark' ? 'text-indigo-300' : 'text-indigo-700'}`}
@@ -869,7 +886,8 @@ export default function DeveloperHub({
               description='Add your projects, side hustles, and case studies. Show employers what you can build.'
               actionLabel='Add Project'
               onAction={() => onNavigate('portfolio')}
-              color='bg-indigo-500'
+              color={theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-50'}
+              iconClassName={theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}
             />
           ) : (
             <div className='space-y-2'>

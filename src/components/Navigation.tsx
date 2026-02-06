@@ -52,21 +52,21 @@ export default function Navigation({
     onNavigate?.(page)
   }
 
-  // Theme-aware classes
+  // Same surface as employment verification: bg-gray-800/50 (dark) / bg-white/70 (light)
   const navClasses =
     theme === 'light'
-      ? 'max-w-2xl mx-auto bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-brand-sage/40 relative'
-      : 'max-w-2xl mx-auto bg-brand-sage-light/20 backdrop-blur-xl rounded-3xl shadow-2xl border border-brand-mint/30 relative'
+      ? 'max-w-2xl mx-auto bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-200 relative'
+      : 'max-w-2xl mx-auto bg-gray-800/50 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-700 relative'
 
   const innerShadowClasses =
     theme === 'light'
-      ? 'absolute inset-0 rounded-3xl shadow-[inset_0_2px_20px_rgba(0,0,0,0.1)] pointer-events-none'
-      : 'absolute inset-0 rounded-3xl shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)] pointer-events-none'
+      ? 'absolute inset-0 rounded-3xl shadow-[inset_0_2px_20px_rgba(0,0,0,0.06)] pointer-events-none'
+      : 'absolute inset-0 rounded-3xl shadow-[inset_0_2px_20px_rgba(0,0,0,0.2)] pointer-events-none'
 
   const glowClasses =
     theme === 'light'
-      ? 'absolute -inset-[1px] rounded-3xl bg-gradient-to-b from-brand-sage/20 to-transparent opacity-50 blur-sm -z-10'
-      : 'absolute -inset-[1px] rounded-3xl bg-gradient-to-b from-brand-mint/20 to-transparent opacity-50 blur-sm -z-10'
+      ? 'absolute -inset-[1px] rounded-3xl bg-gradient-to-b from-gray-400/10 to-transparent opacity-40 blur-sm -z-10'
+      : 'absolute -inset-[1px] rounded-3xl bg-gradient-to-b from-gray-500/20 to-transparent opacity-40 blur-sm -z-10'
 
   return (
     <header
@@ -94,18 +94,18 @@ export default function Navigation({
                         e.stopPropagation()
                         onStatusClick?.()
                       }}
-                      className='relative group flex flex-col items-center space-y-1 sm:space-y-1.5 p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-brand-sage/90 backdrop-blur-sm hover:bg-brand-sage/95 hover:border-brand-mint/70 transition-all duration-300 border-2 border-white/30 cursor-pointer'
+                      className={`relative group flex flex-col items-center space-y-1 sm:space-y-1.5 p-2 sm:p-2.5 rounded-lg sm:rounded-xl backdrop-blur-sm transition-all duration-300 border cursor-pointer ${
+                        theme === 'light'
+                          ? 'bg-gray-100 border-gray-200 hover:bg-gray-200/80 text-gray-800'
+                          : 'bg-gray-700/50 border-gray-600 hover:bg-gray-600/50 text-gray-200'
+                      }`}
                       aria-label='View account status'
-                      style={{
-                        boxShadow:
-                          '0 0 20px rgba(255, 255, 255, 0.25), 0 0 40px rgba(255, 255, 255, 0.15), 0 0 60px rgba(255, 255, 255, 0.05), inset 0 0 15px rgba(255, 255, 255, 0.1), 0 4px 12px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.15)',
-                      }}
                     >
                       {/* Green dot */}
                       <div className='w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50' />
 
                       {/* "Wallet" text */}
-                      <span className='text-[10px] sm:text-xs text-brand-cream/90 font-medium'>
+                      <span className='text-[10px] sm:text-xs font-medium'>
                         Wallet
                       </span>
 
@@ -118,10 +118,10 @@ export default function Navigation({
                 ) : (
                   <button
                     onClick={() => handleNavigation('signin')}
-                    className={`px-4 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer ${
+                    className={`px-4 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 cursor-pointer ${
                       theme === 'light'
-                        ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark'
-                        : 'text-brand-cream bg-brand-mint/20 hover:bg-brand-mint/30 border-brand-mint/40 hover:border-brand-mint/60'
+                        ? 'text-white bg-indigo-600 hover:bg-indigo-700 border-indigo-600'
+                        : 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 border-indigo-500/40'
                     }`}
                   >
                     Sign In
@@ -134,8 +134,8 @@ export default function Navigation({
                 <h1
                   className={`text-3xl sm:text-4xl lg:text-5xl font-extralight tracking-wide ${
                     theme === 'light'
-                      ? 'text-gray-800 drop-shadow-[0_2px_8px_rgba(0,0,0,0.2)]'
-                      : 'text-brand-cream drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]'
+                      ? 'text-gray-800 drop-shadow-[0_2px_8px_rgba(0,0,0,0.1)]'
+                      : 'text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]'
                   }`}
                 >
                   StormChain
@@ -154,29 +154,16 @@ export default function Navigation({
                         onTClick()
                       }
                     }}
-                    className={`hidden md:flex relative group items-center justify-center px-4 py-2.5 rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-2xl border-2 cursor-pointer ${
+                    className={`hidden md:flex relative group items-center justify-center px-4 py-2.5 rounded-2xl transition-all duration-300 border cursor-pointer ${
                       theme === 'light'
-                        ? 'bg-gradient-to-br from-brand-sage to-brand-sage-dark backdrop-blur-sm hover:from-brand-sage-dark hover:to-brand-sage border-brand-sage/60 shadow-lg shadow-brand-sage/30'
-                        : 'bg-gradient-to-br from-brand-mint/30 to-brand-sage-light/20 backdrop-blur-sm hover:from-brand-mint/40 hover:to-brand-sage-light/30 border-brand-mint/50 shadow-lg shadow-brand-mint/20'
+                        ? 'bg-indigo-500/20 text-indigo-700 border-indigo-300 hover:bg-indigo-500/30'
+                        : 'bg-indigo-500/20 text-indigo-400 border-indigo-500/40 hover:bg-indigo-500/30'
                     } ${tHasUnread ? 'animate-pulse' : ''}`}
                     aria-label='Open AvA Assistant'
                     type='button'
-                    style={{
-                      boxShadow:
-                        theme === 'light'
-                          ? '0 0 25px rgba(107, 142, 35, 0.4), 0 8px 24px rgba(0, 0, 0, 0.2)'
-                          : '0 0 25px rgba(20, 184, 166, 0.3), 0 8px 24px rgba(0, 0, 0, 0.3)',
-                      pointerEvents: 'auto',
-                      zIndex: 9999,
-                    }}
+                    style={{ pointerEvents: 'auto', zIndex: 9999 }}
                   >
-                    <span
-                      className={`text-sm font-bold tracking-wide ${
-                        theme === 'light'
-                          ? 'text-white drop-shadow-md'
-                          : 'text-brand-cream drop-shadow-md'
-                      }`}
-                    >
+                    <span className='text-sm font-bold tracking-wide'>
                       AvA
                     </span>
                     {tHasUnread && (
@@ -192,22 +179,26 @@ export default function Navigation({
                 )}
                 <button
                   onClick={toggleMenu}
-                  className='md:hidden p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-brand-sage/60 backdrop-blur-sm hover:bg-brand-sage/80 hover:border-brand-mint/70 transition-all duration-300 shadow-lg hover:shadow-xl cursor-pointer'
+                  className={`md:hidden p-2 sm:p-2.5 rounded-lg sm:rounded-xl backdrop-blur-sm transition-all duration-300 cursor-pointer ${
+                    theme === 'light'
+                      ? 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+                      : 'bg-gray-600/50 hover:bg-gray-500/50 text-gray-200 border border-gray-500'
+                  }`}
                   aria-label='Toggle menu'
                 >
                   <div className='w-4 h-4 sm:w-5 sm:h-5 flex flex-col justify-center items-center gap-1'>
                     <div
-                      className={`w-full h-0.5 bg-white transition-all duration-300 ${
+                      className={`w-full h-0.5 ${theme === 'light' ? 'bg-gray-700' : 'bg-gray-300'} transition-all duration-300 ${
                         isMenuOpen ? 'rotate-45 translate-y-1.5' : ''
                       }`}
                     />
                     <div
-                      className={`w-full h-0.5 bg-white transition-all duration-300 ${
+                      className={`w-full h-0.5 ${theme === 'light' ? 'bg-gray-700' : 'bg-gray-300'} transition-all duration-300 ${
                         isMenuOpen ? 'opacity-0' : ''
                       }`}
                     />
                     <div
-                      className={`w-full h-0.5 bg-white transition-all duration-300 ${
+                      className={`w-full h-0.5 ${theme === 'light' ? 'bg-gray-700' : 'bg-gray-300'} transition-all duration-300 ${
                         isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''
                       }`}
                     />
@@ -220,7 +211,9 @@ export default function Navigation({
             <div
               className={`${
                 isMenuOpen ? 'flex' : 'hidden'
-              } md:flex flex-col md:flex-row items-center gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-brand-mint/30 relative`}
+              } md:flex flex-col md:flex-row items-center gap-2 sm:gap-3 pt-3 sm:pt-4 border-t ${
+                theme === 'light' ? 'border-gray-200' : 'border-gray-600'
+              } relative`}
             >
               {/* MVR Status Badge - Shows status without being a button */}
               {isAuthenticated && userRole === 'driver' && mvrWalletAddress && (
@@ -238,8 +231,8 @@ export default function Navigation({
                   }}
                   className={`md:hidden w-full px-4 py-2 text-xs font-medium rounded-lg border transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer ${
                     theme === 'light'
-                      ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105'
-                      : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105'
+                      ? 'text-indigo-700 bg-indigo-500/20 hover:bg-indigo-500/30 border-indigo-300'
+                      : 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 border-indigo-500/40'
                   }`}
                 >
                   <span className='text-sm'>🤖</span>
@@ -261,11 +254,7 @@ export default function Navigation({
                         handleNavigation('hub')
                         setIsMenuOpen(false)
                       }}
-                      className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2 relative z-10 cursor-pointer ${
-                        theme === 'dark'
-                          ? 'text-brand-cream bg-brand-sage-light/20'
-                          : 'text-white bg-brand-sage shadow-lg'
-                      }`}
+                      className='w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2 relative z-10 cursor-pointer text-white bg-gray-800 hover:bg-gray-700'
                     >
                       <LayoutDashboard className='w-4 h-4' />
                       Driver Hub
@@ -285,8 +274,8 @@ export default function Navigation({
                       }}
                       className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2 relative z-10 cursor-pointer ${
                         theme === 'dark'
-                          ? 'text-brand-cream bg-brand-sage-light/20'
-                          : 'text-white bg-brand-sage shadow-lg'
+                          ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 border border-indigo-500/40'
+                          : 'bg-indigo-600 text-white hover:bg-indigo-700'
                       }`}
                     >
                       <LayoutDashboard className='w-4 h-4' />
@@ -296,7 +285,7 @@ export default function Navigation({
                 </div>
               )}
 
-              {/* Developer Hub Button - Center position with purple/indigo border */}
+              {/* Developer Hub Button - Center position with gold border */}
               {userRole === 'developer' && isAuthenticated && (
                 <div className='relative md:absolute md:left-1/2 md:-translate-x-1/2 w-full md:w-auto'>
                   <div className='rotating-gold-border w-full md:w-auto'>
@@ -305,11 +294,7 @@ export default function Navigation({
                         handleNavigation('hub')
                         setIsMenuOpen(false)
                       }}
-                      className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2 relative z-10 cursor-pointer ${
-                        theme === 'dark'
-                          ? 'text-brand-cream bg-indigo-600/30'
-                          : 'text-white bg-indigo-600 shadow-lg'
-                      }`}
+                      className='w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2 relative z-10 cursor-pointer text-white bg-gray-800 hover:bg-gray-700'
                     >
                       <LayoutDashboard className='w-4 h-4' />
                       Developer Hub
@@ -326,8 +311,8 @@ export default function Navigation({
                     onClick={() => handleNavigation('veree')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-300 cursor-pointer ${
                       theme === 'light'
-                        ? 'text-brand-sage bg-brand-sage/10 hover:bg-brand-sage/20 border border-brand-sage/20'
-                        : 'text-brand-mint bg-brand-mint/10 hover:bg-brand-mint/20 border border-brand-mint/30'
+                        ? 'text-indigo-600 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-200'
+                        : 'text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30'
                     }`}
                     title='View StormChain tokens'
                   >

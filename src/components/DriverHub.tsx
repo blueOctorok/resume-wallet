@@ -27,7 +27,6 @@ import {
   X,
   Trash2,
   Edit,
-  Coins,
   Sparkles,
 } from 'lucide-react'
 
@@ -749,11 +748,11 @@ export default function DriverHub({
     fetchHubData()
   }, [fetchHubData])
 
-  // Card styling based on theme
+  // Card styling: match employment verification (color-mix semi-transparent gray)
   const cardClass = `rounded-2xl border shadow-lg transition-all duration-200 ${
     theme === 'dark'
-      ? 'bg-brand-sage-light/20 border-brand-mint/30 hover:border-brand-mint/50'
-      : 'bg-white/90 border-brand-sage/20 hover:border-brand-sage/40'
+      ? 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
+      : 'bg-white/70 border-gray-200 hover:border-gray-300'
   }`
 
   const sectionHeaderClass = `text-lg font-bold flex items-center gap-3 mb-4 ${
@@ -766,7 +765,7 @@ export default function DriverHub({
         <div className='text-center'>
           <Loader2
             className={`w-12 h-12 animate-spin mx-auto mb-4 ${
-              theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+              theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
             }`}
           />
           <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>
@@ -791,8 +790,8 @@ export default function DriverHub({
             onClick={fetchHubData}
             className={`mt-4 px-4 py-2 rounded-lg font-medium ${
               theme === 'dark'
-                ? 'bg-brand-mint text-gray-900'
-                : 'bg-brand-sage text-white'
+                ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
+                : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
             }`}
           >
             Retry
@@ -856,11 +855,11 @@ export default function DriverHub({
             <div
               className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
                 theme === 'dark'
-                  ? 'bg-gradient-to-br from-brand-mint to-teal-600 shadow-lg shadow-brand-mint/30'
-                  : 'bg-gradient-to-br from-brand-sage to-brand-sage-dark shadow-lg shadow-brand-sage/30'
+                  ? 'bg-indigo-500/20 border border-indigo-500/30'
+                  : 'bg-indigo-50 border border-indigo-200'
               }`}
             >
-              <User className='w-8 h-8 text-white' />
+              <User className={`w-8 h-8 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
             </div>
             <div>
               <h1
@@ -873,7 +872,7 @@ export default function DriverHub({
               {cdlSummary && (
                 <p
                   className={`text-sm mt-1 ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                    theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
                   }`}
                 >
                   {cdlSummary}
@@ -926,7 +925,7 @@ export default function DriverHub({
                     ? 'bg-gradient-to-r from-green-500 to-green-400'
                     : data.stats.profileCompleteness >= 50
                       ? 'bg-gradient-to-r from-yellow-500 to-yellow-400'
-                      : 'bg-gradient-to-r from-brand-mint to-teal-500'
+                      : 'bg-indigo-500/50'
                 }`}
                 style={{ width: `${data.stats.profileCompleteness}%` }}
               />
@@ -1011,14 +1010,16 @@ export default function DriverHub({
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-4'>
             <div
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
+              className={`w-14 h-14 rounded-2xl flex items-center justify-center overflow-hidden ${
                 theme === 'dark'
-                  ? 'bg-gradient-to-br from-brand-mint/30 to-brand-sage-light/20 border border-brand-mint/30'
-                  : 'bg-gradient-to-br from-brand-sage/20 to-brand-sage/10 border border-brand-sage/30'
+                  ? 'bg-gradient-to-br from-indigo-500/20 to-indigo-500/10 border border-indigo-500/30'
+                  : 'bg-gradient-to-br from-indigo-500/10 to-indigo-50 border border-indigo-200'
               }`}
             >
-              <Coins
-                className={`w-7 h-7 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`}
+              <img
+                src='/favicon.svg'
+                alt='StormChain'
+                className='w-8 h-8 object-contain'
               />
             </div>
             <div>
@@ -1029,7 +1030,7 @@ export default function DriverHub({
               </h2>
               <div className='flex items-center gap-2 mt-1'>
                 <span
-                  className={`text-3xl font-bold ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`}
+                  className={`text-3xl font-bold ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}
                 >
                   0
                 </span>
@@ -1047,8 +1048,8 @@ export default function DriverHub({
             <div
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
                 theme === 'dark'
-                  ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/30'
-                  : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/20'
+                  ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30'
+                  : 'bg-indigo-50 text-indigo-600 border border-indigo-200'
               }`}
             >
               <Sparkles className='w-3 h-3' />
@@ -1060,8 +1061,8 @@ export default function DriverHub({
               onClick={() => onNavigate('veree')}
               className={`text-sm font-medium transition-colors cursor-pointer ${
                 theme === 'dark'
-                  ? 'text-brand-mint hover:text-brand-mint/80'
-                  : 'text-brand-sage hover:text-brand-sage/80'
+                  ? 'text-indigo-400 hover:text-indigo-300'
+                  : 'text-indigo-600 hover:text-indigo-500'
               }`}
             >
               Learn about STORM →
@@ -1127,8 +1128,8 @@ export default function DriverHub({
               onClick={() => onNavigate('resume')}
               className={`p-2 rounded-lg transition-colors ${
                 theme === 'dark'
-                  ? 'hover:bg-brand-mint/20 text-brand-mint'
-                  : 'hover:bg-brand-sage/10 text-brand-sage'
+                  ? 'hover:bg-indigo-500/20 text-indigo-400'
+                  : 'hover:bg-indigo-500/10 text-indigo-600'
               }`}
               title='Add Resume'
             >
@@ -1174,8 +1175,8 @@ export default function DriverHub({
                   onClick={() => onNavigate('resume')}
                   className={`w-full py-2 text-sm font-medium rounded-lg transition-colors ${
                     theme === 'dark'
-                      ? 'text-brand-mint hover:bg-brand-mint/10'
-                      : 'text-brand-sage hover:bg-brand-sage/10'
+                      ? 'text-indigo-400 hover:bg-indigo-500/10'
+                      : 'text-indigo-600 hover:bg-indigo-500/10'
                   }`}
                 >
                   View all {data.resumes.length} resumes
@@ -1211,8 +1212,8 @@ export default function DriverHub({
               onClick={onStartDotApp || (() => onNavigate('dotapp'))}
               className={`p-2 rounded-lg transition-colors ${
                 theme === 'dark'
-                  ? 'hover:bg-brand-mint/20 text-brand-mint'
-                  : 'hover:bg-brand-sage/10 text-brand-sage'
+                  ? 'hover:bg-indigo-500/20 text-indigo-400'
+                  : 'hover:bg-indigo-500/10 text-indigo-600'
               }`}
               title='Start DOT Application'
             >
@@ -1279,8 +1280,8 @@ export default function DriverHub({
                   onClick={() => onNavigate('dotapp')}
                   className={`w-full py-2 text-sm font-medium rounded-lg transition-colors ${
                     theme === 'dark'
-                      ? 'text-brand-mint hover:bg-brand-mint/10'
-                      : 'text-brand-sage hover:bg-brand-sage/10'
+                      ? 'text-indigo-400 hover:bg-indigo-500/10'
+                      : 'text-indigo-600 hover:bg-indigo-500/10'
                   }`}
                 >
                   View all {data.dotApplications.length} applications
@@ -1316,8 +1317,8 @@ export default function DriverHub({
               onClick={() => onNavigate('mvr')}
               className={`p-2 rounded-lg transition-colors ${
                 theme === 'dark'
-                  ? 'hover:bg-brand-mint/20 text-brand-mint'
-                  : 'hover:bg-brand-sage/10 text-brand-sage'
+                  ? 'hover:bg-indigo-500/20 text-indigo-400'
+                  : 'hover:bg-indigo-500/10 text-indigo-600'
               }`}
               title='Order MVR'
             >
@@ -1381,8 +1382,8 @@ export default function DriverHub({
               onClick={() => onNavigate('jobs')}
               className={`p-2 rounded-lg transition-colors ${
                 theme === 'dark'
-                  ? 'hover:bg-brand-mint/20 text-brand-mint'
-                  : 'hover:bg-brand-sage/10 text-brand-sage'
+                  ? 'hover:bg-indigo-500/20 text-indigo-400'
+                  : 'hover:bg-indigo-500/10 text-indigo-600'
               }`}
               title='Browse Jobs'
             >
@@ -1419,8 +1420,8 @@ export default function DriverHub({
                   onClick={() => onNavigate('applications')}
                   className={`w-full py-2 text-sm font-medium rounded-lg transition-colors ${
                     theme === 'dark'
-                      ? 'text-brand-mint hover:bg-brand-mint/10'
-                      : 'text-brand-sage hover:bg-brand-sage/10'
+                      ? 'text-indigo-400 hover:bg-indigo-500/10'
+                      : 'text-indigo-600 hover:bg-indigo-500/10'
                   }`}
                 >
                   View all {data.jobApplications.length} applications
@@ -1480,7 +1481,7 @@ export default function DriverHub({
                 <div
                   key={tx.id}
                   className={`flex items-center justify-between p-3 rounded-lg ${
-                    theme === 'dark' ? 'bg-brand-sage/20' : 'bg-gray-50'
+                    theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-50'
                   }`}
                 >
                   <div>
@@ -1504,8 +1505,8 @@ export default function DriverHub({
                       <p
                         className={`font-bold ${
                           theme === 'dark'
-                            ? 'text-brand-mint'
-                            : 'text-brand-sage'
+                            ? 'text-indigo-400'
+                            : 'text-indigo-600'
                         }`}
                       >
                         {tx.currency === 'USD' ? '$' : ''}
@@ -1582,7 +1583,7 @@ export default function DriverHub({
         <div className='fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm'>
           <div
             className={`relative w-full max-w-md rounded-2xl shadow-2xl p-6 ${
-              theme === 'dark' ? 'bg-brand-sage-dark' : 'bg-white'
+              theme === 'dark' ? 'bg-gray-800' : 'bg-white'
             }`}
           >
             <h3
@@ -1700,8 +1701,8 @@ function QuickStatCard({
     <div
       className={`rounded-xl p-4 ${
         theme === 'dark'
-          ? 'bg-brand-sage-light/20 border border-brand-mint/20'
-          : 'bg-white border border-gray-200 shadow-sm'
+          ? 'bg-gray-800/50 border border-gray-700'
+          : 'bg-white/70 border border-gray-200 shadow-sm'
       }`}
     >
       <div className='flex items-center gap-3'>
@@ -1726,7 +1727,7 @@ function QuickStatCard({
       {subValue && (
         <p
           className={`text-xs mt-2 ${
-            theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+            theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
           }`}
         >
           {subValue}
@@ -1754,14 +1755,14 @@ function EmptyState({
   return (
     <div
       className={`text-center py-8 px-4 rounded-xl border-2 border-dashed ${
-        theme === 'dark' ? 'border-brand-mint/30' : 'border-brand-sage/30'
+        theme === 'dark' ? 'border-gray-700' : 'border-gray-300'
       }`}
     >
       <div
         className={`inline-flex p-3 rounded-xl mb-3 ${
           theme === 'dark'
-            ? 'bg-brand-mint/10 text-brand-mint'
-            : 'bg-brand-sage/10 text-brand-sage'
+            ? 'bg-gray-800/50 border border-gray-700 text-indigo-400'
+            : 'bg-indigo-50 text-indigo-600'
         }`}
       >
         {icon}
@@ -1784,8 +1785,8 @@ function EmptyState({
         onClick={onAction}
         className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
           theme === 'dark'
-            ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-            : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+            ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
+            : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
         }`}
       >
         <Plus className='w-4 h-4' />
@@ -1817,7 +1818,7 @@ function ItemRow({
   const statusConfig = getStatusConfig(status)
   const rowClass = `flex items-center justify-between p-3 rounded-xl transition-all ${
     theme === 'dark'
-      ? 'bg-brand-sage/20 hover:bg-brand-sage/30'
+      ? 'bg-gray-700/50 hover:bg-gray-600/50'
       : 'bg-gray-50 hover:bg-gray-100'
   }`
 
@@ -1833,8 +1834,8 @@ function ItemRow({
           <span
             className={`flex-shrink-0 px-2 py-0.5 text-xs rounded-full ${
               theme === 'dark'
-                ? 'bg-brand-mint/20 text-brand-mint'
-                : 'bg-brand-sage/10 text-brand-sage'
+                ? 'bg-indigo-500/20 text-indigo-400'
+                : 'bg-indigo-50 text-indigo-600'
             }`}
           >
             {badge}
@@ -1919,14 +1920,14 @@ function DetailModal({
       <div
         className={`relative w-full max-w-lg max-h-[80vh] overflow-y-auto rounded-2xl shadow-2xl ${
           theme === 'dark'
-            ? 'bg-brand-sage-dark border border-brand-mint/20'
+            ? 'bg-gray-800/50 border border-gray-700'
             : 'bg-white border border-gray-200'
         }`}
       >
         <div
           className={`sticky top-0 flex items-center justify-between p-4 border-b ${
             theme === 'dark'
-              ? 'bg-brand-sage-dark border-brand-mint/20'
+              ? 'bg-gray-800/50 border-gray-700'
               : 'bg-white border-gray-200'
           }`}
         >
@@ -1941,7 +1942,7 @@ function DetailModal({
             onClick={onClose}
             className={`p-2 rounded-lg transition-colors ${
               theme === 'dark'
-                ? 'hover:bg-brand-sage/50 text-gray-400'
+                ? 'hover:bg-gray-700/50 text-gray-400'
                 : 'hover:bg-gray-100'
             }`}
           >
@@ -2045,7 +2046,7 @@ function DotAppDetailContent({
             }`}
           >
             <div
-              className='h-full bg-brand-mint rounded-full'
+              className='h-full bg-indigo-500/60 rounded-full'
               style={{ width: `${(dotApp.currentStep / 3) * 100}%` }}
             />
           </div>
@@ -2055,8 +2056,8 @@ function DotAppDetailContent({
               onClick={() => onNavigate('dotapp')}
               className={`mt-4 w-full py-3 rounded-lg font-semibold transition-all ${
                 theme === 'dark'
-                  ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                  : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+                  ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
+                  : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
               }`}
             >
               Continue Application
@@ -2119,8 +2120,8 @@ function DotAppDetailContent({
           onClick={() => onNavigate('dotapp')}
           className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg font-semibold transition-all ${
             theme === 'dark'
-              ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/30 hover:bg-brand-mint/30'
-              : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30 hover:bg-brand-sage/20'
+              ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30'
+              : 'bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100'
           }`}
         >
           <Edit className='w-4 h-4' />

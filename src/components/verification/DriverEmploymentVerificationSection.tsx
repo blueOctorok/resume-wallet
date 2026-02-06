@@ -182,16 +182,16 @@ export default function DriverEmploymentVerificationSection({
   if (loading) {
     return (
       <div
-        className={`rounded-2xl p-6 ${
+        className={`p-4 sm:p-6 rounded-xl border ${
           theme === 'dark'
-            ? 'bg-brand-sage-dark/50 border border-brand-mint/30'
-            : 'bg-white border border-brand-sage/20 shadow-lg'
+            ? 'bg-gray-800/50 border-gray-700'
+            : 'bg-white/70 border-gray-200'
         }`}
       >
         <div className="flex items-center justify-center py-8">
           <Loader2
             className={`w-6 h-6 animate-spin ${
-              theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+              theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
             }`}
           />
         </div>
@@ -202,7 +202,7 @@ export default function DriverEmploymentVerificationSection({
   if (error) {
     return (
       <div
-        className={`rounded-2xl p-6 ${
+        className={`p-4 sm:p-6 rounded-xl border ${
           theme === 'dark'
             ? 'bg-red-900/20 border border-red-500/30'
             : 'bg-red-50 border border-red-200'
@@ -219,21 +219,21 @@ export default function DriverEmploymentVerificationSection({
   if (employments.length === 0) {
     return (
       <div
-        className={`rounded-2xl p-6 ${
+        className={`p-4 sm:p-6 rounded-xl border ${
           theme === 'dark'
-            ? 'bg-brand-sage-dark/50 border border-brand-mint/30'
-            : 'bg-white border border-brand-sage/20 shadow-lg'
+            ? 'bg-gray-800/50 border-gray-700'
+            : 'bg-white/70 border-gray-200'
         }`}
       >
         <div className="flex items-center gap-3 mb-4">
           <div
             className={`p-2 rounded-lg ${
-              theme === 'dark' ? 'bg-brand-mint/20' : 'bg-brand-sage/10'
+              theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-50'
             }`}
           >
             <ClipboardCheck
               className={`w-5 h-5 ${
-                theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
               }`}
             />
           </div>
@@ -259,8 +259,8 @@ export default function DriverEmploymentVerificationSection({
           disabled={refreshingFromResume}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             theme === 'dark'
-              ? 'bg-brand-mint/20 text-brand-mint hover:bg-brand-mint/30'
-              : 'bg-brand-sage/10 text-brand-sage hover:bg-brand-sage/20'
+              ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
+              : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
           } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           {refreshingFromResume ? (
@@ -288,22 +288,22 @@ export default function DriverEmploymentVerificationSection({
   return (
     <>
       <div
-        className={`rounded-2xl p-6 ${
+        className={`p-4 sm:p-6 rounded-xl border ${
           theme === 'dark'
-            ? 'bg-brand-sage-dark/50 border border-brand-mint/30'
-            : 'bg-white border border-brand-sage/20 shadow-lg'
+            ? 'bg-gray-800/50 border-gray-700'
+            : 'bg-white/70 border-gray-200'
         }`}
       >
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
             <div
               className={`p-2 rounded-lg ${
-                theme === 'dark' ? 'bg-brand-mint/20' : 'bg-brand-sage/10'
+                theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-50'
               }`}
             >
               <ClipboardCheck
                 className={`w-5 h-5 ${
-                  theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
                 }`}
               />
             </div>
@@ -484,8 +484,8 @@ export default function DriverEmploymentVerificationSection({
                         disabled={isInitiating}
                         className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                           theme === 'dark'
-                            ? 'bg-brand-mint/20 text-brand-mint hover:bg-brand-mint/30'
-                            : 'bg-brand-sage/10 text-brand-sage hover:bg-brand-sage/20'
+                            ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
+                            : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         {isInitiating ? (
@@ -590,7 +590,7 @@ export default function DriverEmploymentVerificationSection({
                     theme === 'dark'
                       ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500'
                       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-                  } focus:outline-none focus:ring-2 focus:ring-brand-mint`}
+                  } focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 />
               </div>
               <div>
@@ -611,7 +611,7 @@ export default function DriverEmploymentVerificationSection({
                     theme === 'dark'
                       ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500'
                       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-                  } focus:outline-none focus:ring-2 focus:ring-brand-mint`}
+                  } focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 />
               </div>
             </div>
@@ -635,8 +635,8 @@ export default function DriverEmploymentVerificationSection({
                 disabled={!contactEmail && !contactPhone}
                 className={`flex-1 py-2 px-4 rounded-lg font-medium ${
                   theme === 'dark'
-                    ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                    : 'bg-brand-sage text-white hover:bg-brand-sage-dark'
+                    ? 'bg-indigo-500 text-white hover:bg-indigo-600'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 Send Verification

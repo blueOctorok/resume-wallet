@@ -2,6 +2,21 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## ✅ **Career Card, Nav, Wallet: same surface as employment verification (bg-gray-800/50)** (February 2026)
+
+- **Career Card (ShareProfileCard):** In both Driver and Developer Hub, the Career Card now uses the same surface as employment verification: `bg-gray-800/50 border-gray-700` (dark), `bg-white/70 border-gray-200` (light). Accents use indigo (text-indigo-400/600, bg-indigo-500/20, muted buttons).
+- **Navigation:** Nav bar uses the same surface: `bg-gray-800/50 border-gray-700` (dark), `bg-white/70 border-gray-200` (light). Wallet button, Sign In, AvA, Hub buttons, and STORM token counter use gray/indigo instead of brand-sage/mint.
+- **Wallet:** WalletCard (desktop and mobile) and WalletInfo panel use `bg-gray-800/50` / `bg-white/70` with gray borders; icons and links use indigo accents.
+
+## ✅ **Hub cards: same surface as employment verification (bg-gray-800/50)** (February 2026)
+
+- **Card/surface styling** in Driver Hub and Developer Hub now matches the employment verification section: dark mode uses `bg-gray-800/50` with `border-gray-700` (Tailwind’s color-mix semi-transparent gray). Light mode uses `bg-white/70` and `border-gray-200`. Main hub cards, quick stat cards, modal, EmptyState, list rows, and transaction rows use this surface; indigo is kept only for accents (text, icons, buttons).
+
+## ✅ **Driver Hub: indigo styling + employment verification (driver-only)** (February 2026)
+
+- **Driver Hub** now uses the same indigo accent colors as the Developer Hub (replaced brand-sage/brand-mint with indigo throughout) for a consistent look across both hubs.
+- **Driver employment verification section** uses indigo styling and the same card style as the developer section (rounded-xl, bg-gray-800/50 border-gray-700 in dark; bg-white/70 border-gray-200 in light). Refresh button, empty state, Verify button, and modals use indigo. Driver verification is already fully wired: it uses only driver_profiles and /api/driver/verification/* (initiate-self, status); no developer data or APIs are used.
+
 ## ✅ **Refresh + Verified Employment on Career Card** (February 2026)
 
 - **Refresh button:** Employment verification section (Developer and Driver hubs) now has a refresh icon in the header that calls `fetchData()` so users can refresh verification status without reloading the whole page.
