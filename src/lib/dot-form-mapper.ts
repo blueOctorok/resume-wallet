@@ -281,18 +281,59 @@ export function profileToForm1(profile: UnifiedDriverProfile): Partial<DotForm1D
 // FORM 2 → PROFILE
 // =====================================================
 
+/**
+ * Form 2 from AI prefill includes employmentHistory (work history extracted from resume).
+ * Map it to unified profile so it appears in Driver Hub and can be verified.
+ */
+function form2EmploymentToUnified(employmentHistory: Array<{
+  employer?: string
+  address?: string
+  position?: string
+  startDate?: string
+  endDate?: string
+  reasonForLeaving?: string
+  contactPerson?: string
+  contactPhone?: string
+}>): UnifiedEmployment[] {
+  if (!employmentHistory?.length) return []
+  return employmentHistory
+    .filter((e) => e.employer?.trim())
+    .map((e, idx) => ({
+      id: `prefill-emp-${idx}-${Date.now()}`,
+      companyName: e.employer?.trim() ?? '',
+      position: e.position?.trim() ?? '',
+      location: e.address?.trim() ?? '',
+      startDate: e.startDate ?? '',
+      endDate: e.endDate === 'Present' ? '' : (e.endDate ?? ''),
+      isCurrent: e.endDate === 'Present' || !e.endDate,
+      responsibilities: [],
+      equipment: [],
+      reasonForLeaving: e.reasonForLeaving || undefined,
+      supervisorName: e.contactPerson || undefined,
+      supervisorPhone: e.contactPhone || undefined,
+      supervisorEmail: undefined,
+    }))
+}
+
 export function form2ToProfile(data: DotForm2Data): Partial<UnifiedDriverProfile> {
-  // Form 2 contains driving experience and safety records
-  // These map to drivingExperience and mvrViolations/mvrAccidents
-  
-  // Note: MVR data is typically read-only from purchased reports,
-  // but self-reported accidents/convictions can be stored separately
-  // For now, we'll focus on driving experience
-  
+  // Form 2 contains driving experience and safety records.
+  // When data comes from AI prefill, it also has employmentHistory (work history from resume).
+  const withEmployment = data as DotForm2Data & { employmentHistory?: Array<{
+    employer?: string
+    address?: string
+    position?: string
+    startDate?: string
+    endDate?: string
+    reasonForLeaving?: string
+    contactPerson?: string
+    contactPhone?: string
+  }> }
+  const employmentHistory = withEmployment.employmentHistory?.length
+    ? form2EmploymentToUnified(withEmployment.employmentHistory)
+    : undefined
+
   return {
-    // Driving experience from Form 2 could map to profile.drivingExperience
-    // but the structure is different - keeping this simple for now
-    // Main profile fields are in Form 1 and Form 3
+    ...(employmentHistory?.length ? { employmentHistory } : {}),
   }
 }
 

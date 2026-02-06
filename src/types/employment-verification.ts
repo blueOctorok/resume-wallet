@@ -60,16 +60,25 @@ export interface VerificationAnswers {
   additionalNotes?: string
 }
 
+// ===== INITIATOR TYPE =====
+
+export type InitiatedBy = 'applicant' | 'employer'
+export type ApplicantType = 'driver' | 'developer'
+
 // ===== VERIFICATION REQUEST =====
 
 export interface VerificationRequest {
   id: string
-  driverId: string
-  employmentId: string // ID from driver's employment_history array
+  driverId: string // Also used for developers (legacy name)
+  employmentId: string // ID from employment_history array
   
-  // Requesting company (future employer)
-  requestingCompanyId: string
-  requestingCompanyName?: string // Populated from join
+  // Who initiated and what type of applicant
+  initiatedBy: InitiatedBy
+  applicantType: ApplicantType
+  
+  // Requesting company (future employer) - null for self-initiated
+  requestingCompanyId: string | null
+  requestingCompanyName?: string // Populated from join, or "Self-Initiated"
   
   // Previous employer info
   previousEmployerName: string
@@ -149,7 +158,9 @@ export interface VerificationRequestRow {
   id: string
   driver_id: string
   employment_id: string
-  requesting_company_id: string
+  initiated_by: InitiatedBy
+  applicant_type: ApplicantType
+  requesting_company_id: string | null
   previous_employer_name: string
   previous_employer_email: string | null
   previous_employer_phone: string | null
@@ -217,8 +228,10 @@ export function rowToVerificationRequest(
     id: row.id,
     driverId: row.driver_id,
     employmentId: row.employment_id,
+    initiatedBy: row.initiated_by || 'employer',
+    applicantType: row.applicant_type || 'driver',
     requestingCompanyId: row.requesting_company_id,
-    requestingCompanyName: companyName,
+    requestingCompanyName: companyName || (row.initiated_by === 'applicant' ? 'Self-Initiated' : undefined),
     previousEmployerName: row.previous_employer_name,
     previousEmployerEmail: row.previous_employer_email,
     previousEmployerPhone: row.previous_employer_phone,

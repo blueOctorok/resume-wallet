@@ -2,6 +2,115 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## ✅ **Admin: Verifications tab – list and remove verification requests** (February 2026)
+
+- **GET /api/admin/verifications** – List employment verification requests with applicant wallet (truncated), type (driver/developer), previous employer, position, status, created date. Admin-only.
+- **DELETE /api/admin/verifications/[id]** – Remove a verification request (and its attempts via CASCADE) so the applicant can run the flow again for testing.
+- **Admin dashboard** – New “Verifications” tab with table and delete button (confirm with typing DELETE). Allows clearing test verifications without touching the DB directly.
+
+## ✅ **Verification: Resend email on initiate** (February 2026)
+
+- **Resend integration:** When a driver or developer clicks “Verify” and the previous employer has an email, the app now sends the verification email via Resend. Added `src/lib/send-verification-email.ts` (uses `RESEND_API_KEY`; optional `RESEND_FROM_EMAIL`, default `onboarding@resend.dev`). Both `initiate-self` routes call it after creating the request; if send fails we log and still return success.
+- **Env:** Set `RESEND_API_KEY` in `.env.local`; optionally `RESEND_FROM_EMAIL` (e.g. `verification@stormchain.ai`) once domain is verified in Resend. Doc updated in `VERIFICATION_EMAIL_SETUP.md`.
+
+## ✅ **Verification: 400 logging + email setup doc** (February 2026)
+
+- **400 debugging:** Developer employment verification now logs `[Verification] Initiate failed: status, data` to the console on non-OK response so the exact validation error (missing employmentId, needsContactInfo, invalid start date) is visible.
+- **Email:** Verification emails are not sent by the app; Resend is in the project but not wired. Added `docs/VERIFICATION_EMAIL_SETUP.md` explaining that 400 is not due to localhost (it’s validation) and how to add Resend when ready to send real emails.
+
+## ✅ **Fix: Employment delete showing both again (developer)** (February 2026)
+
+After deleting the second employment, the list briefly showed both again until refresh. Cause: GET developer profile was auto-backfilling employment from resumes when `employment_history` was empty, then persisting that back to the profile—so the next fetch after a delete repopulated from the resume. Fix: GET no longer auto-backfills when the profile list is empty; it returns `[]`. Backfill only runs when explicitly requested via `?syncFromResume=1`. The "Check resume for employers" button now calls `fetchData(true)`, which uses that param so employments are pulled from the resume only when the user clicks. Deletes stay deleted without a full refresh.
+
+## ✅ **Fix: Developer verification 500 + DOT APP only for drivers** (February 2026)
+
+- **Developer verification 500:** Resume-sourced employment often has dates like `"2020"`, `"Jan 2020"`, or empty string; the DB expects PostgreSQL `DATE` (YYYY-MM-DD). Added `toDateOnly()` in `/api/developer/verification/initiate-self` to normalize dates and return 400 with a clear message if start date is missing/invalid. Also defensively handle empty `companyName`/`position` and improved insert error logging.
+- **DOT APP logs for developers:** The unified profile load (DOT form prefill) was running for all users. It now runs only when `userRole === 'driver'` or `currentPage === 'dotapp'`, so developers no longer trigger driver profile fetch or DOT prefill logs.
+
+## ✅ **UX: "Check resume for employers" in Employment Verification** (February 2026)
+
+When employment verification was empty and the user added a resume, the section did not update until a full page refresh. Added a **"Check resume for employers"** button in the empty state of both Driver and Developer employment verification sections. Clicking it refetches profile and verification data so employments pulled from the resume (or DOT prefill for drivers) appear without leaving the page.
+
+- **Driver:** `DriverEmploymentVerificationSection.tsx` — empty state button calls `fetchData()` to refresh from driver profile (DOT/resume).
+- **Developer:** `DeveloperEmploymentVerificationSection.tsx` — empty state button calls `fetchData()`; GET developer profile backfills from resumes when employment is empty, so new resume → click → list updates.
+
+## ✅ **FEATURE: Applicant-Initiated Employment Verification** (February 2026)
+
+**Applicants (drivers and developers) can now proactively request employment verification themselves** to strengthen their Career Card before any employer asks. Previously, only employers could initiate verification.
+
+### Why This Matters
+
+- **Proactive verification**: Applicants can verify their employment history upfront
+- **Stronger career cards**: Verified employment shows as trust badges
+- **Less work for employers**: They see "ready to hire" candidates with pre-verified history
+- **Differentiator**: LinkedIn doesn't have structured employment verification
+
+### What Was Added
+
+**New Migration (`015_applicant_initiated_verification.sql`):**
+- `initiated_by` column: Track who started verification (`applicant` | `employer`)
+- `applicant_type` column: Track if driver or developer verification
+- `requesting_company_id` now nullable (no company for self-initiated)
+- `employment_history` added to `developer_profiles` (mirrors driver_profiles)
+- Updated RLS policies for self-service
+
+**New API Endpoint (`/api/verification/initiate-self`):**
+- Allows applicants to request verification for their own employment
+- Works for both drivers and developers
+- Prompts for contact info if not already in profile
+
+**New Component (`ApplicantVerificationSection.tsx`):**
+- Shared component used in both Driver Hub and Developer Hub
+- Shows all employments with verification status
+- "Verify" button to request verification for unverified entries
+- Contact info modal if previous employer details missing
+
+**Updated Files:**
+- `src/types/employment-verification.ts` - Added `InitiatedBy` and `ApplicantType` types
+- `src/app/api/verification/status/route.ts` - Supports developer and `initiatedBy` filter
+- `src/app/api/developer/profile/route.ts` - Returns and accepts `employmentHistory`
+- `src/components/DriverHub.tsx` - Uses new ApplicantVerificationSection
+- `src/components/DeveloperHub.tsx` - Added ApplicantVerificationSection
+
+### Flow
+
+1. Driver/Developer goes to their Hub
+2. Sees employment history with verification status
+3. Clicks "Verify" on any unverified employment
+4. System emails the previous employer with verification link
+5. Previous employer responds via token-based portal
+6. Verification result shows on Career Card
+
+### Employment from resume / forms
+
+- **Drivers:** When a driver uploads a resume and AI prefill runs, work history is extracted into Form 2. That data is now mapped to the driver profile (`form2ToProfile` in `dot-form-mapper.ts`), so employment appears in the verification section without re-entering. Completing the DOT application (Form 3) also syncs employment to the profile.
+- **Developers:** When a developer saves a resume (create or update) in the Resume Builder, the resume’s work experience is synced to `developer_profiles.employment_history` so those jobs show in the verification section (`syncResumeExperienceToProfile` in `/api/developer/resume`).
+- **Empty state:** The verification section copy now explains that employment comes from resume or DOT application (drivers) or profile/resume (developers), and suggests uploading a resume or completing the form so jobs can be extracted and verified.
+
+### Driver vs developer separation (no mixing)
+
+- **DOT forms 1–3 and driver_profiles are driver-only.** Developer flows never read or write them.
+- **developer_profiles and developer resume data are developer-only.** Driver flows never read or write them.
+- **Role-specific APIs and components:**
+  - Drivers: `GET/POST /api/driver/verification/status`, `POST /api/driver/verification/initiate-self`, and `DriverEmploymentVerificationSection` (driver profile + driver verification only).
+  - Developers: `GET/POST /api/developer/verification/status`, `POST /api/developer/verification/initiate-self`, and `DeveloperEmploymentVerificationSection` (developer profile + developer verification only).
+- **Generic** `/api/verification/status` is employer-only for summary; it returns 400 for role=driver or role=developer and directs callers to the role-specific endpoints. The generic `/api/verification/initiate-self` is deprecated and returns 400 with instructions to use the driver or developer endpoints.
+- **Removed:** Shared `ApplicantVerificationSection` and the mixed applicant-type logic in the verification status route.
+
+### Schema Changes
+
+```sql
+-- New columns on employment_verification_requests
+initiated_by TEXT CHECK (initiated_by IN ('applicant', 'employer'))
+applicant_type TEXT CHECK (applicant_type IN ('driver', 'developer'))
+-- requesting_company_id is now nullable
+
+-- New column on developer_profiles
+employment_history JSONB DEFAULT '[]'::jsonb
+```
+
+---
+
 ## 🎨 **UPDATE: Landing Page & Branding** (February 2026)
 
 ### Landing Page Rewrite (`HomePage.tsx`)

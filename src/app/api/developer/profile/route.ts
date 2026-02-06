@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getEmploymentFromResumes } from '@/lib/developer-employment-from-resumes'
 
 /**
  * Invalidate career score so it gets recalculated on next request.
@@ -59,6 +60,28 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Use profile employment_history if present. When empty, only backfill from resume if
+    // explicitly requested (?syncFromResume=1). Otherwise return [] so that after the user
+    // deletes employments they stay gone (instead of being repopulated from resume on next fetch).
+    let employmentHistory = (profile.employment_history as Array<Record<string, unknown>>) || []
+    const syncFromResume = request.nextUrl.searchParams.get('syncFromResume') === '1'
+    if (employmentHistory.length === 0) {
+      if (syncFromResume) {
+        const fromResume = await getEmploymentFromResumes(supabase, user.id)
+        if (fromResume.length > 0) {
+          employmentHistory = fromResume
+          await supabase
+            .from('developer_profiles')
+            .update({
+              employment_history: fromResume,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('user_id', user.id)
+        }
+      }
+      // If not syncing, employmentHistory stays [] (deleted entries stay deleted)
+    }
+
     return NextResponse.json({
       success: true,
       profile: {
@@ -84,6 +107,7 @@ export async function GET(request: NextRequest) {
         availableForWork: profile.available_for_work,
         education: profile.education || [],
         certifications: profile.certifications || [],
+        employmentHistory,
       },
     })
   } catch (error) {
@@ -155,6 +179,8 @@ export async function PUT(request: NextRequest) {
     if (body.education !== undefined) updates.education = body.education
     if (body.certifications !== undefined)
       updates.certifications = body.certifications
+    if (body.employmentHistory !== undefined)
+      updates.employment_history = body.employmentHistory
 
     // Check if profile exists
     const { data: existingProfile } = await supabase

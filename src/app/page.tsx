@@ -888,7 +888,7 @@ const HomeContent = () => {
   }, [form1Data, form2Data, form3Data, user?.address])
 
   // Load from unified profile if no meaningful localStorage form data exists
-  // This enables DOT form prefill from Resume Builder data
+  // This enables DOT form prefill from Resume Builder data. Only for drivers or when on DOT app.
   useEffect(() => {
     const loadFromProfile = async () => {
       // Only attempt once per session (set early to prevent race conditions)
@@ -897,6 +897,8 @@ const HomeContent = () => {
         return
       }
       if (!user?.address) return
+      // Don't run driver/DOT profile prefill for developers (or before role is known)
+      if (userRole !== 'driver' && currentPage !== 'dotapp') return
 
       // Mark as attempted EARLY to prevent race conditions from concurrent effect runs
       profileLoadAttemptedRef.current = true
@@ -1108,7 +1110,7 @@ const HomeContent = () => {
     }
 
     loadFromProfile()
-  }, [user?.address, form1Data, form2Data, form3Data, profileLoadTrigger])
+  }, [user?.address, userRole, currentPage, form1Data, form2Data, form3Data, profileLoadTrigger])
 
   // Reset profile load attempt when navigating TO DOT app (enables fresh profile check)
   // This handles: User builds resume → saves → navigates to DOT app → should see prefilled data

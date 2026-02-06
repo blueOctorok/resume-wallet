@@ -67,16 +67,19 @@ export async function DELETE(
   try {
     const supabase = await getAdminSupabaseClient()
 
-    // Verify resume exists
+    // Verify resume exists and get user_id for developer employment recompute
     const { data: resume, error: findError } = await supabase
       .from('resumes')
-      .select('id, title, filename')
+      .select('id, user_id, title, filename, resume_type')
       .eq('id', id)
       .single()
 
     if (findError || !resume) {
       return NextResponse.json({ error: 'Resume not found' }, { status: 404 })
     }
+
+    const wasDeveloperBuilt = resume.resume_type === 'developer_built'
+    const resumeUserId = resume.user_id
 
     // Delete the resume
     const { error: deleteError } = await supabase
@@ -87,6 +90,18 @@ export async function DELETE(
     if (deleteError) {
       console.error('[ADMIN RESUME DELETE] Error:', deleteError)
       return NextResponse.json({ error: 'Failed to delete resume' }, { status: 500 })
+    }
+
+    if (wasDeveloperBuilt && resumeUserId) {
+      const { getEmploymentFromResumes } = await import('@/lib/developer-employment-from-resumes')
+      const employmentHistory = await getEmploymentFromResumes(supabase, resumeUserId)
+      await supabase
+        .from('developer_profiles')
+        .update({
+          employment_history: employmentHistory,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', resumeUserId)
     }
 
     console.log(`[ADMIN] Resume deleted: ${id} (${resume.title || resume.filename}) by admin: ${auth.walletAddress}`)

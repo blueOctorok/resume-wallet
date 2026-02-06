@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getEmploymentFromResumes } from '@/lib/developer-employment-from-resumes'
 
 export async function GET(
   req: NextRequest,
@@ -79,7 +80,7 @@ export async function DELETE(
     // Verify ownership before deleting
     const { data: resume, error: resumeError } = await supabase
       .from('resumes')
-      .select('id, user_id, title')
+      .select('id, user_id, title, resume_type')
       .eq('id', id)
       .eq('user_id', user.id)
       .single()
@@ -87,6 +88,8 @@ export async function DELETE(
     if (resumeError || !resume) {
       return NextResponse.json({ error: 'Resume not found or access denied' }, { status: 404 })
     }
+
+    const wasDeveloperBuilt = resume.resume_type === 'developer_built'
 
     // Delete the resume
     const { error: deleteError } = await supabase
@@ -101,6 +104,19 @@ export async function DELETE(
         { error: 'Failed to delete resume' },
         { status: 500 }
       )
+    }
+
+    // If it was a developer resume, recompute employment_history from remaining resumes
+    // so Employment Verification section no longer shows jobs from the deleted resume
+    if (wasDeveloperBuilt) {
+      const employmentHistory = await getEmploymentFromResumes(supabase, user.id)
+      await supabase
+        .from('developer_profiles')
+        .update({
+          employment_history: employmentHistory,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id)
     }
 
     return NextResponse.json({ success: true, message: 'Resume deleted successfully' })

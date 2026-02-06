@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import ShareProfileCard from './ShareProfileCard'
+import DeveloperEmploymentVerificationSection from './verification/DeveloperEmploymentVerificationSection'
 import DeveloperResumeBuilder from './DeveloperResumeBuilder'
 import DeveloperResumePreviewModal from './DeveloperResumePreviewModal'
 import type { DeveloperResumeData } from './DeveloperResumeBuilder'
@@ -826,6 +827,11 @@ export default function DeveloperHub({
 
       {/* Career Card */}
       <ShareProfileCard userAddress={userAddress} userRole='developer' />
+
+      {/* Employment Verification - Developer only (resume / profile data) */}
+      <div className="mb-6">
+        <DeveloperEmploymentVerificationSection userAddress={userAddress} />
+      </div>
 
       {/* Main Sections Grid */}
       <div className='grid lg:grid-cols-2 gap-6'>

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import ShareProfileCard from './ShareProfileCard'
 import DriverVerificationSection from './verification/DriverVerificationSection'
+import DriverEmploymentVerificationSection from './verification/DriverEmploymentVerificationSection'
 import ResumePreviewModal from './ResumePreviewModal'
 import {
   FileText,
@@ -1090,10 +1091,10 @@ export default function DriverHub({
       </div>
 
       {/* ============================================================ */}
-      {/* EMPLOYMENT VERIFICATION STATUS */}
+      {/* EMPLOYMENT VERIFICATION - Driver only (DOT / resume data) */}
       {/* ============================================================ */}
       <div className='mb-6'>
-        <DriverVerificationSection userAddress={userAddress} />
+        <DriverEmploymentVerificationSection userAddress={userAddress} />
       </div>
 
       {/* ============================================================ */}

@@ -1,5 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+/**
+ * Map developer resume "experience" to developer_profiles.employment_history
+ * so the Employment Verification section can show and verify these jobs.
+ */
+async function syncResumeExperienceToProfile(
+  supabase: SupabaseClient,
+  userId: string,
+  structuredData: { experience?: Array<{ id: string; company: string; title: string; location?: string; startDate?: string; endDate?: string; isCurrent?: boolean; description?: string }> }
+) {
+  const experience = structuredData?.experience
+  if (!experience?.length) return
+
+  const employmentHistory = experience.map((exp) => ({
+    id: exp.id,
+    companyName: exp.company || '',
+    position: exp.title || '',
+    location: exp.location || '',
+    startDate: exp.startDate || '',
+    endDate: exp.isCurrent ? '' : (exp.endDate || ''),
+    description: exp.description || undefined,
+  }))
+
+  const { error } = await supabase
+    .from('developer_profiles')
+    .update({ employment_history: employmentHistory, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+
+  if (error) {
+    console.warn('[DEVELOPER RESUME] Failed to sync experience to profile:', error.message)
+  }
+}
 
 /**
  * POST /api/developer/resume
@@ -65,6 +98,10 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // Sync work experience from resume to developer_profiles.employment_history
+    // so Employment Verification section can show and verify these jobs
+    await syncResumeExperienceToProfile(supabase, user.id, structuredData)
 
     return NextResponse.json({
       success: true,
@@ -151,6 +188,9 @@ export async function PUT(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // Sync work experience from resume to developer_profiles.employment_history
+    await syncResumeExperienceToProfile(supabase, user.id, structuredData)
 
     return NextResponse.json({
       success: true,

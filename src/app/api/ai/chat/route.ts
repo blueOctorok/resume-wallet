@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendUSDCPayment, parsePaymentRequirements } from '@/lib/x402-payment'
 
-// Allow up to 60s so T Backend + payment retries can complete (requires Vercel Pro)
-export const maxDuration = 60
+// Allow up to 180s for T Backend "thinking model" + payment retries (requires Vercel Pro)
+export const maxDuration = 180
 
 const T_BACKEND_API_KEY = process.env.T_BACKEND_API_KEY
 const T_BACKEND_BASE_URL =
@@ -82,9 +82,9 @@ export async function POST(request: NextRequest) {
 
     // Make initial request with X-Partner header to trigger payment flow
     // Add timeout to prevent Vercel function timeout (504)
-    // With maxDuration=60 on Pro, we can allow up to 50s for T Backend
+    // T Backend uses a "thinking model" that can take up to 120s
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 50000) // 50s timeout
+    const timeout = setTimeout(() => controller.abort(), 120000) // 120s timeout
 
     let tBackendResponse: Response
     try {
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     } catch (fetchError: unknown) {
       clearTimeout(timeout)
       if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-        console.error('❌ [AI CHAT] T Backend request timed out (50s)')
+        console.error('❌ [AI CHAT] T Backend request timed out (120s)')
         return NextResponse.json(
           {
             error:
