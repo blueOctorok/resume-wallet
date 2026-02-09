@@ -5,6 +5,7 @@ import {
   rowToVerificationRequest,
 } from '@/types/employment-verification'
 import { sendVerificationEmail } from '@/lib/send-verification-email'
+import { getAppBaseUrl } from '@/lib/app-url'
 
 /** Normalize resume date string to PostgreSQL DATE (YYYY-MM-DD). Returns null for empty/unparseable. */
 function toDateOnly(value: string | null | undefined): string | null {
@@ -185,10 +186,7 @@ export async function POST(request: NextRequest) {
     } else if (!token) {
       console.warn('[DEVELOPER VERIFICATION] No verification_token – skipping send')
     } else {
-      const baseUrl =
-        process.env.NEXT_PUBLIC_APP_URL ||
-        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-      const verificationLink = `${baseUrl}/verify/${token}`
+      const verificationLink = `${getAppBaseUrl(request)}/verify/${token}`
       const emailResult = await sendVerificationEmail({
         to: contactEmail,
         verificationLink,

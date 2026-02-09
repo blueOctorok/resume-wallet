@@ -42,7 +42,8 @@ interface DriverEmploymentVerificationSectionProps {
 
 /**
  * Driver-only employment verification section.
- * Uses only driver_profiles (DOT forms 1–3, resume prefill). No developer data.
+ * Data: driver_profiles.employment_history (DOT forms / resume prefill). No developer data.
+ * Verify: /api/driver/verification/initiate-self and /api/driver/verification/status only.
  */
 export default function DriverEmploymentVerificationSection({
   userAddress,

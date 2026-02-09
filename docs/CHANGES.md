@@ -2,6 +2,12 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## ✅ **Driver Hub employment verification: Verify wired like dev, no mixing** (February 2026)
+
+- **Driver verify flow** is fully aligned with the developer side: Driver Hub employment verification uses only driver data and driver APIs. Employment list comes from `GET /api/driver/profile` (driver_profiles.employment_history); status from `GET /api/driver/verification/status?initiatedBy=applicant`; Verify button calls `POST /api/driver/verification/initiate-self`. No developer_profiles or developer verification APIs are used.
+- **Date handling:** Driver initiate-self now uses the same `toDateOnly()` normalization as the developer route so DOT/profile dates (e.g. "Jan 2020" or YYYY-MM-DD) are stored as PostgreSQL DATE. Returns 400 with a clear message if start date is missing or invalid.
+- **Comment** in `DriverEmploymentVerificationSection` documents data source and API usage for future reference.
+
 ## ✅ **Driver resume builder: match developer resume builder look** (February 2026)
 
 - **Layout:** Driver resume creation (`ResumeBuilder.tsx`) now uses the same layout as the developer resume builder: full-height flex column, sticky header bar (Back, prefill badge, Clear form, Fill Test Data, Save), scrollable content with step circles (icon + check when completed), step content in a single card (`rounded-2xl`, `bg-gray-800/50` / `bg-white`), and Previous/Next/Save Resume buttons at the bottom.

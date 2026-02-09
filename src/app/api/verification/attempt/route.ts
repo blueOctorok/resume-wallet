@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getAppBaseUrl } from '@/lib/app-url'
 import { 
   VerificationAttemptRow,
   rowToVerificationAttempt 
@@ -168,9 +169,8 @@ export async function POST(request: NextRequest) {
       method,
     })
 
-    // Build verification link for previous employer
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://your-app.com'
-    const verificationLink = `${baseUrl}/verify/${verificationRequest.verification_token}`
+    // Build verification link for previous employer (uses request host in prod)
+    const verificationLink = `${getAppBaseUrl(request)}/verify/${verificationRequest.verification_token}`
 
     return NextResponse.json({
       success: true,

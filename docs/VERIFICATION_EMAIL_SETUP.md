@@ -6,6 +6,7 @@ In `.env.local` (and production env):
 
 - **`RESEND_API_KEY`** – Your Resend API key (required for sending). Name must be exactly `RESEND_API_KEY`.
 - **`RESEND_FROM_EMAIL`** (optional) – From address, e.g. `verification@mail.stormchain.ai`. Defaults to `onboarding@resend.dev` for testing. Resend recommends verifying a **subdomain** (e.g. `mail.stormchain.ai`) rather than the root domain to avoid DNS conflicts; then use an address on that subdomain here.
+- **`NEXT_PUBLIC_APP_URL`** (optional for verify link) – The public URL of your app (e.g. `https://app.stormchain.ai`). Used as the base for the “Verify employment” link in emails. If unset, the app uses `VERCEL_URL` on Vercel or the request’s host, so links point to your real domain in production, not localhost.
 
 The verification email is sent automatically when an applicant (driver or developer) clicks “Verify” and the previous employer has an email address. If the email fails (e.g. invalid key), the request is still created and we only log a warning.
 

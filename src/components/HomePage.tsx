@@ -35,8 +35,8 @@ export default function HomePage({
             <div
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6 ${
                 theme === 'dark'
-                  ? 'bg-brand-mint/10 text-brand-mint border border-brand-mint/30'
-                  : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30'
+                  ? 'bg-indigo-600/10 text-indigo-500 border border-indigo-600/30'
+                  : 'bg-indigo-600/10 text-indigo-700 border border-indigo-600/30'
               }`}
             >
               <Sparkles className='w-4 h-4' />
@@ -49,7 +49,7 @@ export default function HomePage({
           className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 ${
             theme === 'dark'
               ? 'text-white'
-              : 'bg-gradient-to-r from-brand-sage via-brand-sage-dark to-brand-mint bg-clip-text text-transparent'
+              : 'bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 bg-clip-text text-transparent'
           }`}
         >
           Your Career,
@@ -57,8 +57,8 @@ export default function HomePage({
           <span
             className={
               theme === 'dark'
-                ? 'bg-gradient-to-r from-brand-mint to-brand-cream bg-clip-text text-transparent'
-                : ''
+                ? 'bg-gradient-to-r from-indigo-400 via-indigo-500 to-indigo-700 bg-clip-text text-transparent'
+                : 'bg-gradient-to-r from-indigo-400 via-indigo-600 to-indigo-800 bg-clip-text text-transparent'
             }
           >
             One Verified Card
@@ -83,8 +83,8 @@ export default function HomePage({
             onClick={onGetStarted}
             className={`group px-8 py-4 text-lg font-semibold rounded-xl transition-all duration-300 shadow-2xl hover:shadow-3xl hover:scale-105 flex items-center gap-2 ${
               theme === 'dark'
-                ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                : 'bg-brand-sage text-white hover:bg-brand-sage-dark'
+                ? 'bg-indigo-600 text-white hover:bg-indigo-600/90'
+                : 'bg-indigo-700 text-white hover:bg-indigo-800'
             }`}
           >
             <span>{isAuthenticated ? 'Go to Dashboard' : 'Get Started'}</span>
@@ -95,8 +95,8 @@ export default function HomePage({
             href='#how-it-works'
             className={`px-8 py-4 text-lg font-semibold rounded-xl border-2 transition-all duration-300 hover:scale-105 ${
               theme === 'dark'
-                ? 'border-brand-mint text-brand-mint hover:bg-brand-mint/10'
-                : 'border-brand-sage text-brand-sage hover:bg-brand-sage/10'
+                ? 'border-indigo-600 text-indigo-500 hover:bg-indigo-600/10'
+                : 'border-indigo-700 text-indigo-700 hover:bg-indigo-600/10'
             }`}
           >
             Learn More
@@ -108,7 +108,7 @@ export default function HomePage({
           <div className='flex items-center gap-2'>
             <CreditCard
               className={`w-5 h-5 ${
-                theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                theme === 'dark' ? 'text-indigo-500' : 'text-indigo-700'
               }`}
             />
             <span
@@ -120,7 +120,7 @@ export default function HomePage({
           <div className='flex items-center gap-2'>
             <Shield
               className={`w-5 h-5 ${
-                theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                theme === 'dark' ? 'text-indigo-500' : 'text-indigo-700'
               }`}
             />
             <span
@@ -132,7 +132,7 @@ export default function HomePage({
           <div className='flex items-center gap-2'>
             <Zap
               className={`w-5 h-5 ${
-                theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                theme === 'dark' ? 'text-indigo-500' : 'text-indigo-700'
               }`}
             />
             <span
@@ -167,8 +167,8 @@ export default function HomePage({
           <div
             className={`p-6 sm:p-8 rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-xl ${
               theme === 'dark'
-                ? 'bg-brand-sage-light/10 border-brand-mint/30 hover:border-brand-mint/50'
-                : 'bg-white border-brand-sage/30 hover:border-brand-sage/50'
+                ? 'bg-gray-800/50 border-indigo-600/30 hover:border-indigo-600/50'
+                : 'bg-white border-indigo-600/30 hover:border-indigo-600/50'
             }`}
           >
             <div
@@ -213,8 +213,8 @@ export default function HomePage({
           <div
             className={`p-6 sm:p-8 rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-xl ${
               theme === 'dark'
-                ? 'bg-brand-sage-light/10 border-brand-mint/30 hover:border-brand-mint/50'
-                : 'bg-white border-brand-sage/30 hover:border-brand-sage/50'
+                ? 'bg-gray-800/50 border-indigo-600/30 hover:border-indigo-600/50'
+                : 'bg-white border-indigo-600/30 hover:border-indigo-600/50'
             }`}
           >
             <div
@@ -272,15 +272,15 @@ export default function HomePage({
           <div
             className={`p-6 sm:p-8 rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-xl ${
               theme === 'dark'
-                ? 'bg-brand-sage-light/10 border-brand-mint/30 hover:border-brand-mint/50'
-                : 'bg-white border-brand-sage/30 hover:border-brand-sage/50'
+                ? 'bg-gray-800/50 border-indigo-600/30 hover:border-indigo-600/50'
+                : 'bg-white border-indigo-600/30 hover:border-indigo-600/50'
             }`}
           >
             <div
               className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${
                 theme === 'dark'
-                  ? 'bg-brand-mint text-gray-900'
-                  : 'bg-brand-sage text-white'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-indigo-700 text-white'
               }`}
             >
               <span className='text-2xl font-bold'>1</span>
@@ -306,15 +306,15 @@ export default function HomePage({
           <div
             className={`p-6 sm:p-8 rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-xl ${
               theme === 'dark'
-                ? 'bg-brand-sage-light/10 border-brand-mint/30 hover:border-brand-mint/50'
-                : 'bg-white border-brand-sage/30 hover:border-brand-sage/50'
+                ? 'bg-gray-800/50 border-indigo-600/30 hover:border-indigo-600/50'
+                : 'bg-white border-indigo-600/30 hover:border-indigo-600/50'
             }`}
           >
             <div
               className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${
                 theme === 'dark'
-                  ? 'bg-brand-mint text-gray-900'
-                  : 'bg-brand-sage text-white'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-indigo-700 text-white'
               }`}
             >
               <span className='text-2xl font-bold'>2</span>
@@ -340,15 +340,15 @@ export default function HomePage({
           <div
             className={`p-6 sm:p-8 rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-xl ${
               theme === 'dark'
-                ? 'bg-brand-sage-light/10 border-brand-mint/30 hover:border-brand-mint/50'
-                : 'bg-white border-brand-sage/30 hover:border-brand-sage/50'
+                ? 'bg-gray-800/50 border-indigo-600/30 hover:border-indigo-600/50'
+                : 'bg-white border-indigo-600/30 hover:border-indigo-600/50'
             }`}
           >
             <div
               className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${
                 theme === 'dark'
-                  ? 'bg-brand-mint text-gray-900'
-                  : 'bg-brand-sage text-white'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-indigo-700 text-white'
               }`}
             >
               <span className='text-2xl font-bold'>3</span>
@@ -377,8 +377,8 @@ export default function HomePage({
         <div
           className={`rounded-3xl p-8 sm:p-12 ${
             theme === 'dark'
-              ? 'bg-gradient-to-br from-brand-sage-light/20 to-brand-mint/10 border-2 border-brand-mint/30'
-              : 'bg-gradient-to-br from-brand-sage/10 to-brand-mint/10 border-2 border-brand-sage/30'
+              ? 'bg-gradient-to-br from-gray-800/50 to-indigo-600/10 border-2 border-indigo-600/30'
+              : 'bg-gradient-to-br from-indigo-600/10 to-indigo-500/10 border-2 border-indigo-600/30'
           }`}
         >
           <div className='grid md:grid-cols-2 gap-8 items-center'>
@@ -386,8 +386,8 @@ export default function HomePage({
               <div
                 className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium mb-4 ${
                   theme === 'dark'
-                    ? 'bg-brand-mint/20 text-brand-mint'
-                    : 'bg-brand-sage/20 text-brand-sage'
+                    ? 'bg-indigo-600/20 text-indigo-500'
+                    : 'bg-indigo-600/20 text-indigo-700'
                 }`}
               >
                 <Star className='w-4 h-4' />
@@ -416,8 +416,8 @@ export default function HomePage({
                   <div
                     className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
                       theme === 'dark'
-                        ? 'bg-brand-mint text-gray-900'
-                        : 'bg-brand-sage text-white'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-indigo-700 text-white'
                     }`}
                   >
                     ✓
@@ -428,8 +428,8 @@ export default function HomePage({
                   <div
                     className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
                       theme === 'dark'
-                        ? 'bg-brand-mint text-gray-900'
-                        : 'bg-brand-sage text-white'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-indigo-700 text-white'
                     }`}
                   >
                     ✓
@@ -440,8 +440,8 @@ export default function HomePage({
                   <div
                     className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
                       theme === 'dark'
-                        ? 'bg-brand-mint text-gray-900'
-                        : 'bg-brand-sage text-white'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-indigo-700 text-white'
                     }`}
                   >
                     ✓
@@ -454,14 +454,14 @@ export default function HomePage({
               <div
                 className={`relative w-64 h-40 sm:w-80 sm:h-48 rounded-2xl shadow-2xl ${
                   theme === 'dark'
-                    ? 'bg-gradient-to-br from-gray-800 to-gray-900 border border-brand-mint/30'
-                    : 'bg-gradient-to-br from-white to-gray-100 border border-brand-sage/30'
+                    ? 'bg-gradient-to-br from-gray-800 to-gray-900 border border-indigo-600/30'
+                    : 'bg-gradient-to-br from-white to-gray-100 border border-indigo-600/30'
                 }`}
               >
                 {/* Card mockup */}
                 <div className='absolute top-4 left-4'>
                   <div
-                    className={`text-xs font-medium ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`}
+                    className={`text-xs font-medium ${theme === 'dark' ? 'text-indigo-500' : 'text-indigo-700'}`}
                   >
                     CAREER CARD
                   </div>
@@ -512,14 +512,14 @@ export default function HomePage({
         <div className='grid sm:grid-cols-2 lg:grid-cols-4 gap-6'>
           <div
             className={`p-6 rounded-xl text-center ${
-              theme === 'dark' ? 'bg-brand-sage-light/10' : 'bg-white shadow-lg'
+              theme === 'dark' ? 'bg-gray-800/50' : 'bg-white shadow-lg'
             }`}
           >
             <div
               className={`w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center ${
                 theme === 'dark'
-                  ? 'bg-brand-mint/20 text-brand-mint'
-                  : 'bg-brand-sage/20 text-brand-sage'
+                  ? 'bg-indigo-600/20 text-indigo-500'
+                  : 'bg-indigo-600/20 text-indigo-700'
               }`}
             >
               <Shield className='w-6 h-6' />
@@ -542,14 +542,14 @@ export default function HomePage({
 
           <div
             className={`p-6 rounded-xl text-center ${
-              theme === 'dark' ? 'bg-brand-sage-light/10' : 'bg-white shadow-lg'
+              theme === 'dark' ? 'bg-gray-800/50' : 'bg-white shadow-lg'
             }`}
           >
             <div
               className={`w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center ${
                 theme === 'dark'
-                  ? 'bg-brand-mint/20 text-brand-mint'
-                  : 'bg-brand-sage/20 text-brand-sage'
+                  ? 'bg-indigo-600/20 text-indigo-500'
+                  : 'bg-indigo-600/20 text-indigo-700'
               }`}
             >
               <Zap className='w-6 h-6' />
@@ -572,14 +572,14 @@ export default function HomePage({
 
           <div
             className={`p-6 rounded-xl text-center ${
-              theme === 'dark' ? 'bg-brand-sage-light/10' : 'bg-white shadow-lg'
+              theme === 'dark' ? 'bg-gray-800/50' : 'bg-white shadow-lg'
             }`}
           >
             <div
               className={`w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center ${
                 theme === 'dark'
-                  ? 'bg-brand-mint/20 text-brand-mint'
-                  : 'bg-brand-sage/20 text-brand-sage'
+                  ? 'bg-indigo-600/20 text-indigo-500'
+                  : 'bg-indigo-600/20 text-indigo-700'
               }`}
             >
               <Briefcase className='w-6 h-6' />
@@ -602,14 +602,14 @@ export default function HomePage({
 
           <div
             className={`p-6 rounded-xl text-center ${
-              theme === 'dark' ? 'bg-brand-sage-light/10' : 'bg-white shadow-lg'
+              theme === 'dark' ? 'bg-gray-800/50' : 'bg-white shadow-lg'
             }`}
           >
             <div
               className={`w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center ${
                 theme === 'dark'
-                  ? 'bg-brand-mint/20 text-brand-mint'
-                  : 'bg-brand-sage/20 text-brand-sage'
+                  ? 'bg-indigo-600/20 text-indigo-500'
+                  : 'bg-indigo-600/20 text-indigo-700'
               }`}
             >
               <Star className='w-6 h-6' />
@@ -654,8 +654,8 @@ export default function HomePage({
           onClick={onGetStarted}
           className={`group px-10 py-5 text-xl font-semibold rounded-xl transition-all duration-300 shadow-2xl hover:shadow-3xl hover:scale-105 inline-flex items-center gap-3 ${
             theme === 'dark'
-              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-              : 'bg-brand-sage text-white hover:bg-brand-sage-dark'
+              ? 'bg-indigo-600 text-white hover:bg-indigo-600/90'
+              : 'bg-indigo-700 text-white hover:bg-indigo-800'
           }`}
         >
           <span>

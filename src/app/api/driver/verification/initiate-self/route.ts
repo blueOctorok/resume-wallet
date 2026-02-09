@@ -5,6 +5,20 @@ import {
   rowToVerificationRequest,
 } from '@/types/employment-verification'
 import { sendVerificationEmail } from '@/lib/send-verification-email'
+import { getAppBaseUrl } from '@/lib/app-url'
+
+/** Normalize date string to PostgreSQL DATE (YYYY-MM-DD). Returns null for empty/unparseable. */
+function toDateOnly(value: string | null | undefined): string | null {
+  const s = typeof value === 'string' ? value.trim() : ''
+  if (!s) return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  const ym = s.match(/^(\d{4})-(\d{2})$/)
+  if (ym) return `${ym[1]}-${ym[2]}-01`
+  if (/^\d{4}$/.test(s)) return `${s}-01-01`
+  const d = new Date(s)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toISOString().slice(0, 10)
+}
 
 /**
  * POST /api/driver/verification/initiate-self
@@ -81,6 +95,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // DB expects DATE (YYYY-MM-DD). Normalize from profile/DOT format.
+    const claimedStartDate = toDateOnly(employment.startDate)
+    if (!claimedStartDate) {
+      return NextResponse.json(
+        {
+          error: 'Start date for this employment is missing or invalid. Please add a valid start date in your DOT application or profile.',
+        },
+        { status: 400 }
+      )
+    }
+    const claimedEndDate = toDateOnly(employment.endDate)
+
     const { data: existingRequest } = await supabase
       .from('employment_verification_requests')
       .select('id, status')
@@ -113,8 +139,8 @@ export async function POST(request: NextRequest) {
       previous_employer_phone: contactPhone,
       previous_employer_address: employment.location ?? null,
       claimed_position: employment.position,
-      claimed_start_date: employment.startDate,
-      claimed_end_date: employment.endDate ?? null,
+      claimed_start_date: claimedStartDate,
+      claimed_end_date: claimedEndDate,
       claimed_reason_for_leaving: employment.reasonForLeaving ?? null,
       status: 'VERIFICATION_REQUESTED',
       attempt_count: 0,
@@ -155,10 +181,7 @@ export async function POST(request: NextRequest) {
     // Send email to previous employer if we have an address (non-blocking)
     const token = (newRequest as { verification_token?: string }).verification_token
     if (contactEmail && token) {
-      const baseUrl =
-        process.env.NEXT_PUBLIC_APP_URL ||
-        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-      const verificationLink = `${baseUrl}/verify/${token}`
+      const verificationLink = `${getAppBaseUrl(request)}/verify/${token}`
       const emailResult = await sendVerificationEmail({
         to: contactEmail,
         verificationLink,
