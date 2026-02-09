@@ -1,6 +1,6 @@
 # T Backend General API Documentation
 
-**Base URL**: `https://api-v2.fluxpointstudios.com` (v2 endpoints)  
+**Base URL**: `https://api-v3.fluxpointstudios.com` (v3 endpoints)  
 **Legacy Base URL**: `https://api.fluxpointstudios.com` (some endpoints)  
 **OpenAPI Spec**: `/openapi.json` (fetch for exact request/response schemas)  
 **Authentication**: Add `api-key` header to all requests
@@ -19,7 +19,7 @@ For **exact request/response formats**, fetch the OpenAPI spec:
 
 ```javascript
 const openApiSpec = await fetch(
-  'https://api-v2.fluxpointstudios.com/openapi.json'
+  'https://api-v3.fluxpointstudios.com/openapi.json'
 )
 const schemas = await openApiSpec.json()
 // Use schemas to see exact field names, types, and requirements
@@ -27,8 +27,8 @@ const schemas = await openApiSpec.json()
 
 **Interactive Documentation:**
 
-- **Swagger UI**: `https://api-v2.fluxpointstudios.com/docs`
-- **ReDoc**: `https://api-v2.fluxpointstudios.com/redoc`
+- **Swagger UI**: `https://api-v3.fluxpointstudios.com/docs`
+- **ReDoc**: `https://api-v3.fluxpointstudios.com/redoc`
 
 ---
 
@@ -159,7 +159,7 @@ Main chat endpoint with advanced AI capabilities, memory, and context awareness.
 **Example:**
 
 ```javascript
-const response = await fetch('https://api-v2.fluxpointstudios.com/chat', {
+const response = await fetch('https://api-v3.fluxpointstudios.com/chat', {
   method: 'POST',
   headers: {
     'api-key': 'd046586d84af4ce8872305efce307b4c',
@@ -274,7 +274,7 @@ Add files to a vector store for search.
 ```javascript
 // 1. Upload resume
 const uploadRes = await fetch(
-  'https://api-v2.fluxpointstudios.com/files/upload-url',
+  'https://api-v3.fluxpointstudios.com/files/upload-url',
   {
     method: 'POST',
     headers: { 'api-key': API_KEY, 'Content-Type': 'application/json' },
@@ -285,7 +285,7 @@ const { file_id } = await uploadRes.json()
 
 // 2. Create vector store
 const storeRes = await fetch(
-  'https://api-v2.fluxpointstudios.com/files/vector-stores',
+  'https://api-v3.fluxpointstudios.com/files/vector-stores',
   {
     method: 'POST',
     headers: { 'api-key': API_KEY, 'Content-Type': 'application/json' },
@@ -296,7 +296,7 @@ const { id: storeId } = await storeRes.json()
 
 // 3. Add file to store
 await fetch(
-  `https://api-v2.fluxpointstudios.com/files/vector-stores/${storeId}/files`,
+  `https://api-v3.fluxpointstudios.com/files/vector-stores/${storeId}/files`,
   {
     method: 'POST',
     headers: { 'api-key': API_KEY, 'Content-Type': 'application/json' },
@@ -305,7 +305,7 @@ await fetch(
 )
 
 // 4. Search in chat
-const chatRes = await fetch('https://api-v2.fluxpointstudios.com/chat', {
+const chatRes = await fetch('https://api-v3.fluxpointstudios.com/chat', {
   method: 'POST',
   headers: { 'api-key': API_KEY, 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -390,7 +390,7 @@ Stream real-time events from a background task.
 ```javascript
 // Create background task
 const bgTask = await fetch(
-  'https://api-v2.fluxpointstudios.com/background/create',
+  'https://api-v3.fluxpointstudios.com/background/create',
   {
     method: 'POST',
     headers: { 'api-key': API_KEY, 'Content-Type': 'application/json' },
@@ -406,7 +406,7 @@ const { id } = await bgTask.json()
 // Poll for results
 const pollInterval = setInterval(async () => {
   const status = await fetch(
-    `https://api-v2.fluxpointstudios.com/background/${id}`,
+    `https://api-v3.fluxpointstudios.com/background/${id}`,
     {
       headers: { 'api-key': API_KEY },
     }
@@ -507,7 +507,7 @@ T Backend has access to the following capabilities:
 ### Basic Chat
 
 ```javascript
-const response = await fetch('https://api-v2.fluxpointstudios.com/chat', {
+const response = await fetch('https://api-v3.fluxpointstudios.com/chat', {
   method: 'POST',
   headers: {
     'api-key': 'd046586d84af4ce8872305efce307b4c',
@@ -527,7 +527,7 @@ console.log(data.reply)
 ```javascript
 // 1. Create vector store
 const store = await fetch(
-  'https://api-v2.fluxpointstudios.com/files/vector-stores',
+  'https://api-v3.fluxpointstudios.com/files/vector-stores',
   {
     method: 'POST',
     headers: { 'api-key': API_KEY, 'Content-Type': 'application/json' },
@@ -541,7 +541,7 @@ const { id } = await store.json()
 
 // 2. Upload file
 const fileRes = await fetch(
-  'https://api-v2.fluxpointstudios.com/files/upload-url',
+  'https://api-v3.fluxpointstudios.com/files/upload-url',
   {
     method: 'POST',
     headers: { 'api-key': API_KEY, 'Content-Type': 'application/json' },
@@ -552,7 +552,7 @@ const { file_id } = await fileRes.json()
 
 // 3. Add to vector store
 await fetch(
-  `https://api-v2.fluxpointstudios.com/files/vector-stores/${id}/files`,
+  `https://api-v3.fluxpointstudios.com/files/vector-stores/${id}/files`,
   {
     method: 'POST',
     headers: { 'api-key': API_KEY, 'Content-Type': 'application/json' },
@@ -561,7 +561,7 @@ await fetch(
 )
 
 // 4. Search in chat
-const searchRes = await fetch('https://api-v2.fluxpointstudios.com/chat', {
+const searchRes = await fetch('https://api-v3.fluxpointstudios.com/chat', {
   method: 'POST',
   headers: { 'api-key': API_KEY, 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -643,7 +643,7 @@ The following schemas are defined in the OpenAPI spec (`/openapi.json`). Use the
 **To get exact schemas:**
 
 ```javascript
-const response = await fetch('https://api-v2.fluxpointstudios.com/openapi.json')
+const response = await fetch('https://api-v3.fluxpointstudios.com/openapi.json')
 const spec = await response.json()
 // Access schemas via spec.components.schemas
 ```
@@ -651,7 +651,7 @@ const spec = await response.json()
 ## 📝 Notes
 
 - **All endpoints require the `api-key` header**
-- **Base URL**: Most endpoints use `https://api-v2.fluxpointstudios.com`
+- **Base URL**: Most endpoints use `https://api-v3.fluxpointstudios.com`
 - **Legacy Base URL**: Some endpoints may use `https://api.fluxpointstudios.com` (check docs)
 - **Content-Type**: `application/json` for POST requests
 - **Session IDs**: Help maintain conversation context in chat

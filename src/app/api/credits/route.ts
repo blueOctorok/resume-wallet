@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-const T_BACKEND_BASE_URL = process.env.T_BACKEND_BASE_URL || 'https://api-v2.fluxpointstudios.com'
+const T_BACKEND_BASE_URL = process.env.T_BACKEND_BASE_URL || 'https://api-v3.fluxpointstudios.com'
 const FETCH_TIMEOUT_MS = 10000 // 10 second timeout
 
 /**

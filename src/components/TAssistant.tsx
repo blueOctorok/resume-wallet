@@ -1251,8 +1251,11 @@ function TAssistantContent({
           return
         }
         if (response.status === 502 || response.status === 503) {
-          errorMessage =
+          setIsLoading(false)
+          addAssistantMessage(
             'AI service is temporarily unavailable. Please try again in a moment.'
+          )
+          return
         }
         const combinedMessage = detailMessage
           ? `${errorMessage}: ${detailMessage}`

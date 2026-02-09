@@ -180,7 +180,7 @@ Open browser DevTools Console to see detailed logs:
 🤖 [PREFILL] Step 2: Extracting data with AI...
 🤖 [AI PREFILL] Starting resume extraction...
    Input: CID=QmXXXXXXXXXXXXXXXXX
-   Calling: https://api-v2.fluxpointstudios.com/applications/driver/prefill
+   Calling: https://api-v3.fluxpointstudios.com/applications/driver/prefill
 
 ✅ [AI PREFILL] T Backend response received
    Vector Store ID: local:resumes
@@ -296,7 +296,7 @@ curl -X POST http://localhost:3000/api/ai/prefill-resume \
 ```bash
 # Add to .env.local
 T_BACKEND_API_KEY="d046586d84af4ce8872305efce307b4c"
-T_BACKEND_BASE_URL="https://api-v2.fluxpointstudios.com"
+T_BACKEND_BASE_URL="https://api-v3.fluxpointstudios.com"
 ```
 
 ### Fields Are Null/Empty

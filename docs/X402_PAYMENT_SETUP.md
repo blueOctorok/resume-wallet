@@ -49,7 +49,7 @@ Check that these environment variables are set:
 ```bash
 # Required
 T_BACKEND_API_KEY="your-api-key"
-T_BACKEND_BASE_URL="https://api-v2.fluxpointstudios.com"
+T_BACKEND_BASE_URL="https://api-v3.fluxpointstudios.com"
 
 # Payment wallet (one of these)
 X402_PAYMENT_PRIVATE_KEY="0x..." # Preferred: dedicated wallet

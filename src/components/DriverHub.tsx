@@ -1126,14 +1126,14 @@ export default function DriverHub({
             </h2>
             <button
               onClick={() => onNavigate('resume')}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
                 theme === 'dark'
-                  ? 'hover:bg-indigo-500/20 text-indigo-400'
-                  : 'hover:bg-indigo-500/10 text-indigo-600'
+                  ? 'text-indigo-400 hover:text-indigo-300'
+                  : 'text-indigo-600 hover:text-indigo-700'
               }`}
-              title='Add Resume'
             >
-              <Plus className='w-5 h-5' />
+              <Plus className='w-4 h-4' />
+              {data.resumes.length > 0 ? 'New Resume' : 'Add Resume'}
             </button>
           </div>
 
@@ -1173,13 +1173,13 @@ export default function DriverHub({
               {data.resumes.length > 3 && (
                 <button
                   onClick={() => onNavigate('resume')}
-                  className={`w-full py-2 text-sm font-medium rounded-lg transition-colors ${
+                  className={`w-full py-2 text-sm font-medium transition-colors ${
                     theme === 'dark'
-                      ? 'text-indigo-400 hover:bg-indigo-500/10'
-                      : 'text-indigo-600 hover:bg-indigo-500/10'
+                      ? 'text-indigo-400 hover:text-indigo-300'
+                      : 'text-indigo-600 hover:text-indigo-700'
                   }`}
                 >
-                  View all {data.resumes.length} resumes
+                  View all {data.resumes.length} resumes →
                 </button>
               )}
             </div>
@@ -1210,14 +1210,14 @@ export default function DriverHub({
             </h2>
             <button
               onClick={onStartDotApp || (() => onNavigate('dotapp'))}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
                 theme === 'dark'
-                  ? 'hover:bg-indigo-500/20 text-indigo-400'
-                  : 'hover:bg-indigo-500/10 text-indigo-600'
+                  ? 'text-indigo-400 hover:text-indigo-300'
+                  : 'text-indigo-600 hover:text-indigo-700'
               }`}
-              title='Start DOT Application'
             >
-              <Plus className='w-5 h-5' />
+              <Plus className='w-4 h-4' />
+              {data.dotApplications.length > 0 ? 'New Application' : 'Start Application'}
             </button>
           </div>
 
@@ -1278,13 +1278,13 @@ export default function DriverHub({
               {data.dotApplications.length > 3 && (
                 <button
                   onClick={() => onNavigate('dotapp')}
-                  className={`w-full py-2 text-sm font-medium rounded-lg transition-colors ${
+                  className={`w-full py-2 text-sm font-medium transition-colors ${
                     theme === 'dark'
-                      ? 'text-indigo-400 hover:bg-indigo-500/10'
-                      : 'text-indigo-600 hover:bg-indigo-500/10'
+                      ? 'text-indigo-400 hover:text-indigo-300'
+                      : 'text-indigo-600 hover:text-indigo-700'
                   }`}
                 >
-                  View all {data.dotApplications.length} applications
+                  View all {data.dotApplications.length} applications →
                 </button>
               )}
             </div>
@@ -1315,14 +1315,14 @@ export default function DriverHub({
             </h2>
             <button
               onClick={() => onNavigate('mvr')}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
                 theme === 'dark'
-                  ? 'hover:bg-indigo-500/20 text-indigo-400'
-                  : 'hover:bg-indigo-500/10 text-indigo-600'
+                  ? 'text-indigo-400 hover:text-indigo-300'
+                  : 'text-indigo-600 hover:text-indigo-700'
               }`}
-              title='Order MVR'
             >
-              <Plus className='w-5 h-5' />
+              <Plus className='w-4 h-4' />
+              Order MVR
             </button>
           </div>
 
@@ -1380,14 +1380,14 @@ export default function DriverHub({
             </h2>
             <button
               onClick={() => onNavigate('jobs')}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
                 theme === 'dark'
-                  ? 'hover:bg-indigo-500/20 text-indigo-400'
-                  : 'hover:bg-indigo-500/10 text-indigo-600'
+                  ? 'text-indigo-400 hover:text-indigo-300'
+                  : 'text-indigo-600 hover:text-indigo-700'
               }`}
-              title='Browse Jobs'
             >
-              <Plus className='w-5 h-5' />
+              <Plus className='w-4 h-4' />
+              Browse Jobs
             </button>
           </div>
 
@@ -1418,13 +1418,13 @@ export default function DriverHub({
               {data.jobApplications.length > 3 && (
                 <button
                   onClick={() => onNavigate('applications')}
-                  className={`w-full py-2 text-sm font-medium rounded-lg transition-colors ${
+                  className={`w-full py-2 text-sm font-medium transition-colors ${
                     theme === 'dark'
-                      ? 'text-indigo-400 hover:bg-indigo-500/10'
-                      : 'text-indigo-600 hover:bg-indigo-500/10'
+                      ? 'text-indigo-400 hover:text-indigo-300'
+                      : 'text-indigo-600 hover:text-indigo-700'
                   }`}
                 >
-                  View all {data.jobApplications.length} applications
+                  View all {data.jobApplications.length} applications →
                 </button>
               )}
             </div>

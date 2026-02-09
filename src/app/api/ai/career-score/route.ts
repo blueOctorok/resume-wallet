@@ -13,7 +13,7 @@ import {
 } from '@/lib/career-score-prompt'
 
 const T_BACKEND_BASE_URL =
-  process.env.T_BACKEND_BASE_URL || 'https://api-v2.fluxpointstudios.com'
+  process.env.T_BACKEND_BASE_URL || 'https://api-v3.fluxpointstudios.com'
 
 // Common tech keywords to detect in portfolio site content
 const TECH_KEYWORDS = [
@@ -655,6 +655,9 @@ async function buildMetrics(
   }
 }
 
+/** Timeout for T Backend AI call (ms). Connection timeouts often mean the service is down or unreachable. */
+const T_BACKEND_AI_TIMEOUT_MS = 25_000
+
 /**
  * Get AI-generated score from T Backend
  */
@@ -662,20 +665,40 @@ async function getAIScore(
   metrics: CareerScoreInput
 ): Promise<CareerScoreResult> {
   const prompt = buildCareerScorePrompt(metrics)
+  const url = `${T_BACKEND_BASE_URL}/chat`
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), T_BACKEND_AI_TIMEOUT_MS)
 
-  // Use the T Backend chat API for AI analysis
-  const response = await fetch(`${T_BACKEND_BASE_URL}/chat`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Partner': 'pace_drivers',
-    },
-    body: JSON.stringify({
-      message: prompt,
-      system:
-        'You are a career assessment AI. Respond ONLY with valid JSON. No explanations, no markdown.',
-    }),
-  })
+  let response: Response
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Partner': 'pace_drivers',
+      },
+      body: JSON.stringify({
+        message: prompt,
+        system:
+          'You are a career assessment AI. Respond ONLY with valid JSON. No explanations, no markdown.',
+      }),
+      signal: controller.signal,
+    })
+    clearTimeout(timeoutId)
+  } catch (e) {
+    clearTimeout(timeoutId)
+    const isTimeout =
+      e instanceof Error && (e.name === 'AbortError' || e.message?.includes('timeout'))
+    const isConnect =
+      e instanceof Error && (e.cause as Error)?.message?.includes('Connect Timeout')
+    if (isTimeout || isConnect) {
+      console.error(
+        '[CAREER SCORE] T Backend unreachable (timeout or connection failed).',
+        'Check T_BACKEND_BASE_URL and that the service is up. Using formula fallback.'
+      )
+    }
+    throw e
+  }
 
   if (!response.ok) {
     throw new Error(`T Backend error: ${response.status}`)

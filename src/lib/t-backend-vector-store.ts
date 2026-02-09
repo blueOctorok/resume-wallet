@@ -5,7 +5,7 @@
  * All operations are key-scoped to your API key and won't affect other clients.
  */
 
-const T_BACKEND_BASE_URL = process.env.T_BACKEND_BASE_URL || 'https://api-v2.fluxpointstudios.com'
+const T_BACKEND_BASE_URL = process.env.T_BACKEND_BASE_URL || 'https://api-v3.fluxpointstudios.com'
 
 // Lazy check for API key - only throw when actually needed
 function getApiKey(): string {

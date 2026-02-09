@@ -268,6 +268,25 @@ If T doesn't seem to use your knowledge:
 3. Ensure your API key is being used correctly
 4. Try asking more specific questions
 
+## Troubleshooting
+
+### "AI failed, using fallback" / Connect Timeout
+
+If you see in logs:
+
+- `[CAREER SCORE] AI failed, using fallback: TypeError: fetch failed` with `ConnectTimeoutError` or `UND_ERR_CONNECT_TIMEOUT`
+
+then the app cannot reach **T Backend** (the external AI service). Career Score and AvA chat both call `T_BACKEND_BASE_URL` (default `https://api-v3.fluxpointstudios.com`).
+
+**What’s happening:** The request to T Backend is timing out (e.g. after 10–25s). The app still returns a result: Career Score uses a **formula-based fallback** (no AI), and chat may return an error to the user.
+
+**What to check:**
+
+1. **T Backend status** – Confirm the service at `T_BACKEND_BASE_URL` is up and accepting connections.
+2. **Network/firewall** – If the app runs on Vercel, in Docker, or behind a firewall, ensure outbound HTTPS to that host is allowed (no block on 443).
+3. **Env** – If you use a different AI backend, set `T_BACKEND_BASE_URL` in `.env.local` (e.g. `T_BACKEND_BASE_URL=https://your-ai-api.example.com`). No trailing slash.
+4. **AvA chat** – Uses the same backend; if Career Score times out, chat will usually fail too until T Backend is reachable.
+
 ## Next Steps
 
 1. ✅ Run setup via `/admin` page

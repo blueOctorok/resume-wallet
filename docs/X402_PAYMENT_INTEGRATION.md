@@ -131,7 +131,7 @@ To test the payment flow:
 
 ```bash
 # Test request that should trigger 402
-curl -X POST https://api-v2.fluxpointstudios.com/chat \
+curl -X POST https://api-v3.fluxpointstudios.com/chat \
   -H "api-key: YOUR_API_KEY" \
   -H "X-Partner: pace_drivers" \
   -H "Content-Type: application/json" \

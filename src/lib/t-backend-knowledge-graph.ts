@@ -5,7 +5,7 @@
  * All operations are key-scoped to your API key.
  */
 
-const T_BACKEND_BASE_URL = process.env.T_BACKEND_BASE_URL || 'https://api-v2.fluxpointstudios.com'
+const T_BACKEND_BASE_URL = process.env.T_BACKEND_BASE_URL || 'https://api-v3.fluxpointstudios.com'
 
 // Cache the last successful fact count so the UI can display something even if the API takes time to index
 let lastSeededFactCount: number | null = null

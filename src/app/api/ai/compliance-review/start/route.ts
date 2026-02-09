@@ -12,7 +12,7 @@ type StartRequestBody = {
 export async function POST(request: NextRequest) {
   try {
     const apiKey = process.env.T_BACKEND_API_KEY
-    const baseUrl = process.env.T_BACKEND_BASE_URL || 'https://api-v2.fluxpointstudios.com'
+    const baseUrl = process.env.T_BACKEND_BASE_URL || 'https://api-v3.fluxpointstudios.com'
     if (!apiKey) {
       return NextResponse.json({ error: 'Missing T_BACKEND_API_KEY' }, { status: 500 })
     }

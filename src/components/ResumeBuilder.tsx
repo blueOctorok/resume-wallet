@@ -598,201 +598,209 @@ export default function ResumeBuilder({
     }
   }
 
+  // Match developer resume builder layout and styling
   return (
-    <>
-      {onBack && (
-        <button
-          onClick={handleBack}
-          className={`inline-flex items-center gap-2 px-3 py-2 sm:px-4 text-sm sm:text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-4 cursor-pointer ${
-            theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'
-          }`}
-        >
-          <ArrowLeft className='w-4 h-4 sm:w-5 sm:h-5' />
-          Back
-        </button>
-      )}
-
+    <div
+      className={`h-full flex flex-col overflow-hidden ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}
+    >
+      {/* Header - fixed at top */}
       <div
-        className={`max-w-4xl mx-auto rounded-2xl border p-6 sm:p-8 shadow-2xl relative overflow-x-hidden ${
+        className={`flex-shrink-0 z-10 border-b ${
           theme === 'dark'
-            ? 'bg-brand-sage-light/20 border-brand-mint/30 backdrop-blur-xl'
-            : 'bg-white/80 border-brand-sage/20 backdrop-blur-xl'
-        } border-t-4 ${
-          theme === 'dark' ? 'border-brand-mint' : 'border-brand-sage'
-        }`}
+            ? 'bg-gray-900/95 border-gray-800'
+            : 'bg-white/95 border-gray-200'
+        } backdrop-blur-sm`}
       >
-          {/* Header */}
-          <div className='mb-4 sm:mb-6'>
-            <div className='flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2'>
-              <div>
-                <h3
-                  className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold flex items-center gap-2 ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}
-                >
-                  <FileEdit className='w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7' />
-                  Build Your Resume
-                </h3>
-                <p
-                  className={`text-xs sm:text-sm md:text-base mt-2 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                  }`}
-                >
-                  Create a professional driver resume step by step. You can save your progress and export
-                  to PDF when done.
-                </p>
-              </div>
-              <div className='flex items-center gap-2 flex-wrap'>
-                {/* Clear form — when prefilled or manually filled, lets user start over */}
-                {hasFormData && (
-                  <button
-                    type='button'
-                    onClick={clearResume}
-                    className={`inline-flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm rounded-lg font-medium transition-all whitespace-nowrap ${
-                      theme === 'dark'
-                        ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/30'
-                        : 'text-gray-500 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200'
-                    }`}
-                    title='Clear all form data and start over'
-                  >
-                    <RotateCcw className='w-4 h-4' />
-                    <span>Clear form</span>
-                  </button>
-                )}
-                <button
-                  type='button'
-                  onClick={fillTestData}
-                  className={`inline-flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm rounded-lg font-medium transition-all whitespace-nowrap ${
-                    theme === 'dark'
-                      ? 'bg-brand-sage/30 text-brand-cream border border-brand-sage/40 hover:bg-brand-sage/40'
-                      : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
-                  }`}
-                  title='Fill test data'
-                >
-                  <Sparkles className='w-4 h-4' />
-                  <span>Fill Test Data</span>
-                </button>
-              </div>
-            </div>
-            {/* Show prefill indicator when data loaded from profile */}
-            {profileLoaded && profileSource && (
-              <div
-                className={`mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs sm:text-sm ${
-                  theme === 'dark'
-                    ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/30'
-                    : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/20'
-                }`}
-              >
-                <Sparkles className='w-3.5 h-3.5' />
-                <span>
-                  Prefilled from {profileSource === 'dot_application' ? 'DOT Application' : 
-                    profileSource === 'uploaded_resume' ? 'uploaded resume' : 
-                    profileSource === 'mvr' ? 'MVR data' : 'your profile'}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Progress Steps */}
-          <div className='mb-4 sm:mb-6 -mx-3 sm:mx-0'>
-            <div className='overflow-x-auto pb-2 px-3 sm:px-0 resume-steps-scrollbar'>
-              <div className='flex gap-2 min-w-max sm:min-w-0 sm:flex-wrap'>
-                {STEPS.map((step, index) => (
-                  <button
-                    key={step.id}
-                    onClick={() => goToStep(index)}
-                    className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 ${
-                      index === currentStep
-                        ? theme === 'dark'
-                          ? 'bg-brand-mint text-gray-900'
-                          : 'bg-brand-sage text-white'
-                        : theme === 'dark'
-                          ? 'bg-brand-sage/30 text-brand-cream/70 hover:bg-brand-sage/40'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    <step.Icon className='w-4 h-4 sm:w-5 sm:h-5' />
-                    <span className='hidden sm:inline'>{step.name}</span>
-                    <span className='sm:hidden font-semibold'>{index + 1}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Save Status */}
-          {(saveError || saveSuccess) && (
-            <div
-              className={`mb-4 p-3 rounded-lg text-sm ${
-                saveError
-                  ? theme === 'dark'
-                    ? 'bg-red-900/20 text-red-400 border border-red-500/40'
-                    : 'bg-red-50 text-red-700 border border-red-200'
-                  : theme === 'dark'
-                    ? 'bg-green-900/20 text-green-400 border border-green-500/40'
-                    : 'bg-green-50 text-green-700 border border-green-200'
-              }`}
-            >
-              {saveError || (saveSuccess && '✅ Resume saved & synced to profile')}
-            </div>
-          )}
-
-          {/* Step Content */}
-          <div className='mb-4 sm:mb-6 overflow-x-hidden'>{renderStep()}</div>
-
-          {/* Navigation Buttons */}
-          <div className='flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-4 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700'>
+        <div className='max-w-4xl mx-auto px-4 py-4'>
+          <div className='flex items-center justify-between flex-wrap gap-2'>
             <button
-              onClick={handlePrevious}
-              disabled={currentStep === 0}
-              className={`inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+              onClick={handleBack}
+              className={`flex items-center gap-2 ${
                 theme === 'dark'
-                  ? 'bg-brand-sage/30 text-brand-cream hover:bg-brand-sage/40'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'text-gray-400 hover:text-white'
+                  : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <ArrowLeft className='w-4 h-4' />
-              Previous
+              <ArrowLeft className='w-5 h-5' />
+              {onBack ? 'Back to Hub' : 'Back'}
             </button>
 
-            <div className='flex items-stretch sm:items-center gap-2 flex-1 sm:flex-initial justify-end'>
-              {/* Next button for all steps except the last */}
-              {currentStep < STEPS.length - 1 && (
-                <button
-                  onClick={handleNext}
-                  className={`inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg font-medium transition-all flex-1 sm:flex-initial ${
+            <div className='flex items-center gap-2 flex-wrap'>
+              {profileLoaded && profileSource && (
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs ${
                     theme === 'dark'
-                      ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                      : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+                      ? 'bg-brand-mint/10 text-brand-mint border border-brand-mint/30'
+                      : 'bg-brand-mint/10 text-gray-700 border border-brand-mint/30'
                   }`}
                 >
-                  <span>Next</span>
-                  <ArrowRight className='w-4 h-4' />
+                  <Sparkles className='w-3 h-3' />
+                  Prefilled from {profileSource === 'dot_application' ? 'DOT Application' : profileSource === 'uploaded_resume' ? 'uploaded resume' : profileSource === 'mvr' ? 'MVR data' : 'profile'}
+                </span>
+              )}
+              {(saveError || saveSuccess) && (
+                <span
+                  className={`text-sm ${
+                    saveError ? 'text-red-400' : 'text-green-400'
+                  }`}
+                >
+                  {saveError || 'Saved & synced'}
+                </span>
+              )}
+              {hasFormData && (
+                <button
+                  type='button'
+                  onClick={clearResume}
+                  className={`inline-flex items-center gap-2 px-3 py-2 text-sm rounded-xl font-medium transition-all ${
+                    theme === 'dark'
+                      ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/10'
+                      : 'text-gray-500 hover:text-red-600 hover:bg-red-50'
+                  }`}
+                  title='Clear all form data'
+                >
+                  <RotateCcw className='w-4 h-4' />
+                  Clear form
                 </button>
               )}
-
-              {/* Save button - shown on all steps, more prominent on last step */}
+              <button
+                type='button'
+                onClick={fillTestData}
+                className={`inline-flex items-center gap-2 px-3 py-2 text-sm rounded-xl font-medium transition-all ${
+                  theme === 'dark'
+                    ? 'bg-gray-700/50 text-gray-300 border border-gray-600 hover:bg-gray-700'
+                    : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
+                }`}
+                title='Fill test data'
+              >
+                <Sparkles className='w-4 h-4' />
+                Fill Test Data
+              </button>
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className={`inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg font-medium transition-all disabled:opacity-50 flex-1 sm:flex-initial ${
-                  currentStep === STEPS.length - 1
-                    ? theme === 'dark'
-                      ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                      : 'bg-brand-sage text-white hover:bg-brand-sage/90'
-                    : theme === 'dark'
-                      ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/40 hover:bg-brand-mint/30'
-                      : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30 hover:bg-brand-sage/20'
-                }`}
+                className='flex items-center gap-2 px-4 py-2 bg-brand-mint text-gray-900 rounded-xl font-medium hover:bg-brand-mint/90 disabled:opacity-50'
               >
-                <Save className='w-4 h-4' />
-                <span className='hidden xs:inline'>{isSaving ? 'Saving...' : currentStep === STEPS.length - 1 ? 'Save Resume' : 'Save Progress'}</span>
-                <span className='xs:hidden'>{isSaving ? 'Saving...' : 'Save'}</span>
+                {isSaving ? (
+                  <Loader2 className='w-4 h-4 animate-spin' />
+                ) : (
+                  <Save className='w-4 h-4' />
+                )}
+                Save
               </button>
             </div>
           </div>
         </div>
-    </>
+      </div>
+
+      {/* Scrollable form area */}
+      <div className='flex-1 min-h-0 overflow-y-auto'>
+        <div className='max-w-4xl mx-auto px-4 py-6'>
+          {/* Step indicator - circles like developer builder */}
+          <div className='flex items-center justify-between mb-8 overflow-x-auto pb-2'>
+            {STEPS.map((step, idx) => {
+              const Icon = step.Icon
+              const isActive = idx === currentStep
+              const isCompleted = idx < currentStep
+              return (
+                <button
+                  key={step.id}
+                  onClick={() => goToStep(idx)}
+                  className={`flex flex-col items-center min-w-[72px] ${
+                    isActive
+                      ? 'text-brand-mint'
+                      : isCompleted
+                        ? theme === 'dark'
+                          ? 'text-gray-400'
+                          : 'text-gray-600'
+                        : theme === 'dark'
+                          ? 'text-gray-600'
+                          : 'text-gray-400'
+                  }`}
+                >
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
+                      isActive
+                        ? 'bg-brand-mint/20 border-2 border-brand-mint'
+                        : isCompleted
+                          ? 'bg-brand-mint/10 border border-brand-mint/50'
+                          : theme === 'dark'
+                            ? 'bg-gray-800 border border-gray-700'
+                            : 'bg-gray-100 border border-gray-300'
+                    }`}
+                  >
+                    {isCompleted ? (
+                      <Check className='w-5 h-5' />
+                    ) : (
+                      <Icon className='w-5 h-5' />
+                    )}
+                  </div>
+                  <span className='text-xs text-center whitespace-nowrap'>
+                    {step.name}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Step content card */}
+          <div
+            className={`rounded-2xl border p-6 ${
+              theme === 'dark'
+                ? 'bg-gray-800/50 border-gray-700'
+                : 'bg-white border-gray-200'
+            }`}
+          >
+            <h2
+              className={`text-2xl font-bold mb-6 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+            >
+              {STEPS[currentStep].name}
+            </h2>
+            {renderStep()}
+          </div>
+
+          {/* Navigation */}
+          <div className='flex justify-between mt-6'>
+            <button
+              onClick={handlePrevious}
+              disabled={currentStep === 0}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-colors ${
+                currentStep === 0
+                  ? 'opacity-50 cursor-not-allowed'
+                  : theme === 'dark'
+                    ? 'bg-gray-800 text-white hover:bg-gray-700'
+                    : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+              }`}
+            >
+              <ArrowLeft className='w-5 h-5' />
+              Previous
+            </button>
+
+            {currentStep < STEPS.length - 1 ? (
+              <button
+                onClick={handleNext}
+                className='flex items-center gap-2 px-6 py-3 bg-brand-mint text-gray-900 rounded-xl font-medium hover:bg-brand-mint/90'
+              >
+                Next
+                <ArrowRight className='w-5 h-5' />
+              </button>
+            ) : (
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className='flex items-center gap-2 px-6 py-3 bg-brand-mint text-gray-900 rounded-xl font-medium hover:bg-brand-mint/90 disabled:opacity-50'
+              >
+                {isSaving ? (
+                  <Loader2 className='w-5 h-5 animate-spin' />
+                ) : (
+                  <Save className='w-5 h-5' />
+                )}
+                Save Resume
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -964,13 +972,11 @@ function CDLInfoStep({ data, onChange, theme }: CDLInfoStepProps) {
           {ENDORSEMENT_OPTIONS.map((endorsement) => (
             <label
               key={endorsement}
-              className={`flex items-center gap-2 p-2 sm:p-3 rounded-lg cursor-pointer border transition-all text-xs sm:text-sm ${
+              className={`flex items-center gap-2 p-2 sm:p-3 rounded-xl cursor-pointer border transition-all text-xs sm:text-sm ${
                 data.endorsements.includes(endorsement)
-                  ? theme === 'dark'
-                    ? 'bg-brand-mint/20 border-brand-mint/40'
-                    : 'bg-brand-sage/10 border-brand-sage/40'
+                  ? 'bg-brand-mint/20 border-brand-mint/50'
                   : theme === 'dark'
-                    ? 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                    ? 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
                     : 'bg-gray-50 border-gray-200 hover:border-gray-300'
               }`}
             >
@@ -1002,8 +1008,8 @@ function CDLInfoStep({ data, onChange, theme }: CDLInfoStepProps) {
               key={restriction}
               className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm ${
                 theme === 'dark'
-                  ? 'bg-brand-sage/30 text-brand-cream border border-brand-sage/40'
-                  : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30'
+                  ? 'bg-gray-700/50 text-gray-200 border border-gray-600'
+                  : 'bg-gray-100 text-gray-700 border border-gray-200'
               }`}
             >
               {restriction}
@@ -1026,10 +1032,10 @@ function CDLInfoStep({ data, onChange, theme }: CDLInfoStepProps) {
               e.currentTarget.value = ''
             }
           }}
-          className={`w-full px-3 sm:px-4 py-2 rounded-lg border text-sm sm:text-base ${
+          className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-brand-mint/20 ${
             theme === 'dark'
-              ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+              ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-brand-mint'
+              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
           }`}
         />
       </div>
@@ -1103,11 +1109,7 @@ function EmploymentStep({ employments, onChange, theme }: EmploymentStepProps) {
         </h4>
         <button
           onClick={addEmployment}
-          className={`inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg font-medium transition-all ${
-            theme === 'dark'
-              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-              : 'bg-brand-sage text-white hover:bg-brand-sage/90'
-          }`}
+          className='inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-xl font-medium bg-brand-mint text-gray-900 hover:bg-brand-mint/90 transition-all'
         >
           <Plus className='w-4 h-4' />
           <span>Add Employment</span>
@@ -1220,8 +1222,8 @@ function EmploymentStep({ employments, onChange, theme }: EmploymentStepProps) {
                       key={resp}
                       className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm ${
                         theme === 'dark'
-                          ? 'bg-brand-sage/30 text-brand-cream border border-brand-sage/40'
-                          : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30'
+                          ? 'bg-gray-700/50 text-gray-200 border border-gray-600'
+                          : 'bg-gray-100 text-gray-700 border border-gray-200'
                       }`}
                     >
                       {resp}
@@ -1244,10 +1246,10 @@ function EmploymentStep({ employments, onChange, theme }: EmploymentStepProps) {
                       e.currentTarget.value = ''
                     }
                   }}
-                  className={`w-full px-3 sm:px-4 py-2 rounded-lg border text-sm sm:text-base ${
+                  className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-brand-mint/20 ${
                     theme === 'dark'
-                      ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                      ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-brand-mint'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
                   }`}
                 />
               </div>
@@ -1322,11 +1324,7 @@ function EducationStep({
         </h4>
         <button
           onClick={addEducation}
-          className={`inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg font-medium transition-all ${
-            theme === 'dark'
-              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-              : 'bg-brand-sage text-white hover:bg-brand-sage/90'
-          }`}
+          className='inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-xl font-medium bg-brand-mint text-gray-900 hover:bg-brand-mint/90 transition-all'
         >
           <Plus className='w-4 h-4' />
           <span>Add Education</span>
@@ -1418,8 +1416,8 @@ function EducationStep({
                       key={cert}
                       className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm ${
                         theme === 'dark'
-                          ? 'bg-brand-sage/30 text-brand-cream border border-brand-sage/40'
-                          : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30'
+                          ? 'bg-gray-700/50 text-gray-200 border border-gray-600'
+                          : 'bg-gray-100 text-gray-700 border border-gray-200'
                       }`}
                     >
                       {cert}
@@ -1442,10 +1440,10 @@ function EducationStep({
                       e.currentTarget.value = ''
                     }
                   }}
-                  className={`w-full px-3 sm:px-4 py-2 rounded-lg border text-sm sm:text-base ${
+                  className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-brand-mint/20 ${
                     theme === 'dark'
-                      ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                      ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-brand-mint'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
                   }`}
                 />
               </div>
@@ -1537,10 +1535,10 @@ function SkillsStep({
                 }
               }}
               placeholder='e.g., Double/Triple Trailers, ELD Systems'
-              className={`w-full px-3 sm:px-4 py-2 rounded-lg border transition-all text-sm sm:text-base ${
+              className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-brand-mint/20 ${
                 theme === 'dark'
-                  ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-brand-mint focus:ring-1 focus:ring-brand-mint'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-brand-sage focus:ring-1 focus:ring-brand-sage'
+                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-brand-mint'
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
               }`}
             />
           </div>
@@ -1557,11 +1555,7 @@ function SkillsStep({
         <button
           onClick={addSkill}
           disabled={!newSkillName.trim()}
-          className={`mt-3 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-            theme === 'dark'
-              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-              : 'bg-brand-sage text-white hover:bg-brand-sage/90'
-          }`}
+          className='mt-3 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-xl font-medium bg-brand-mint text-gray-900 hover:bg-brand-mint/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed'
         >
           <Plus className='w-4 h-4' />
           Add Skill
@@ -1607,8 +1601,8 @@ function SkillsStep({
                       key={skill.id}
                       className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm ${
                         theme === 'dark'
-                          ? 'bg-brand-sage/30 text-brand-cream border border-brand-sage/40'
-                          : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30'
+                          ? 'bg-gray-700/50 text-gray-200 border border-gray-600'
+                          : 'bg-gray-100 text-gray-700 border border-gray-200'
                       }`}
                     >
                       {skill.name}
@@ -1674,11 +1668,7 @@ function ReferencesStep({
         </h4>
         <button
           onClick={addReference}
-          className={`inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg font-medium transition-all ${
-            theme === 'dark'
-              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-              : 'bg-brand-sage text-white hover:bg-brand-sage/90'
-          }`}
+          className='inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-xl font-medium bg-brand-mint text-gray-900 hover:bg-brand-mint/90 transition-all'
         >
           <Plus className='w-4 h-4' />
           <span>Add Reference</span>
@@ -2151,7 +2141,7 @@ function InputField({
   return (
     <div className={className}>
       <label
-        className={`block text-sm font-medium mb-1 ${
+        className={`block text-sm font-medium mb-2 ${
           theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
         }`}
       >
@@ -2165,10 +2155,10 @@ function InputField({
         disabled={disabled}
         placeholder={placeholder}
         required={required}
-        className={`w-full px-3 sm:px-4 py-2 rounded-lg border transition-all text-sm sm:text-base ${
+        className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-brand-mint/20 ${
           theme === 'dark'
-            ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-brand-mint focus:ring-1 focus:ring-brand-mint'
-            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-brand-sage focus:ring-1 focus:ring-brand-sage'
+            ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-brand-mint'
+            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
         } disabled:opacity-50 disabled:cursor-not-allowed`}
       />
     </div>
@@ -2195,7 +2185,7 @@ function TextareaField({
   return (
     <div>
       <label
-        className={`block text-sm font-medium mb-1 ${
+        className={`block text-sm font-medium mb-2 ${
           theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
         }`}
       >
@@ -2208,10 +2198,10 @@ function TextareaField({
         required={required}
         rows={rows}
         placeholder={placeholder}
-        className={`w-full px-3 sm:px-4 py-2 rounded-lg border transition-all resize-none text-sm sm:text-base ${
+        className={`w-full px-4 py-3 rounded-xl border transition-colors resize-none focus:outline-none focus:ring-2 focus:ring-brand-mint/20 ${
           theme === 'dark'
-            ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-brand-mint focus:ring-1 focus:ring-brand-mint'
-            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-brand-sage focus:ring-1 focus:ring-brand-sage'
+            ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-brand-mint'
+            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
         }`}
       />
     </div>
@@ -2236,7 +2226,7 @@ function SelectField({
   return (
     <div>
       <label
-        className={`block text-sm font-medium mb-1 ${
+        className={`block text-sm font-medium mb-2 ${
           theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
         }`}
       >
@@ -2247,10 +2237,10 @@ function SelectField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}
-        className={`w-full px-3 sm:px-4 py-2 rounded-lg border transition-all text-sm sm:text-base ${
+        className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-brand-mint/20 ${
           theme === 'dark'
-            ? 'bg-white border-gray-300 text-gray-900 focus:border-brand-mint focus:ring-1 focus:ring-brand-mint'
-            : 'bg-white border-gray-300 text-gray-900 focus:border-brand-sage focus:ring-1 focus:ring-brand-sage'
+            ? 'bg-gray-800 border-gray-700 text-white focus:border-brand-mint'
+            : 'bg-white border-gray-300 text-gray-900 focus:border-brand-mint'
         }`}
       >
         {options.map((option) => (

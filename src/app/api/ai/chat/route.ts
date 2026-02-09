@@ -6,7 +6,7 @@ export const maxDuration = 180
 
 const T_BACKEND_API_KEY = process.env.T_BACKEND_API_KEY
 const T_BACKEND_BASE_URL =
-  process.env.T_BACKEND_BASE_URL || 'https://api-v2.fluxpointstudios.com'
+  process.env.T_BACKEND_BASE_URL || 'https://api-v3.fluxpointstudios.com'
 
 /**
  * POST /api/ai/chat
@@ -104,6 +104,28 @@ export async function POST(request: NextRequest) {
               'AI service is taking too long to respond. Please try again.',
           },
           { status: 504 }
+        )
+      }
+      // Network errors: connection timeout, refused, DNS, etc.
+      const cause = fetchError instanceof Error ? fetchError.cause : null
+      const isConnectTimeout =
+        cause instanceof Error &&
+        ('code' in cause && cause.code === 'UND_ERR_CONNECT_TIMEOUT' ||
+          cause.message?.includes('Connect Timeout'))
+      const isNetworkError =
+        fetchError instanceof Error &&
+        (fetchError.message === 'fetch failed' || isConnectTimeout)
+      if (isNetworkError) {
+        console.error(
+          '❌ [AI CHAT] T Backend unreachable (connection failed or timeout).',
+          'Check T_BACKEND_BASE_URL and network. Service may be down.'
+        )
+        return NextResponse.json(
+          {
+            error:
+              'AI service is temporarily unreachable. Please try again in a moment.',
+          },
+          { status: 503 }
         )
       }
       throw fetchError
@@ -349,7 +371,7 @@ export async function POST(request: NextRequest) {
       } else if (tBackendResponse.status === 502) {
         userMessage =
           'AI service is temporarily unavailable. Please try again in a moment.'
-      } else if (tBackendResponse.status === 503) {
+      } else if (tBackendResponse.status === 503 || tBackendResponse.status === 504) {
         userMessage =
           'AI service is temporarily unavailable. Please try again in a moment.'
       } else if (tBackendResponse.status === 500) {
@@ -369,8 +391,14 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      // Don't send raw HTML (e.g. nginx error pages) to the client
+      const safeDetail =
+        typeof errorDetail === 'string' && errorDetail.trimStart().startsWith('<')
+          ? undefined
+          : errorDetail
+
       return NextResponse.json(
-        { error: userMessage, detail: errorDetail },
+        { error: userMessage, ...(safeDetail != null && { detail: safeDetail }) },
         { status: tBackendResponse.status }
       )
     }

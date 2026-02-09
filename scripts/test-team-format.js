@@ -8,7 +8,7 @@
 
 require('dotenv').config({ path: '.env.local' })
 
-const API_BASE_URL = process.env.T_BACKEND_BASE_URL || 'https://api-v2.fluxpointstudios.com'
+const API_BASE_URL = process.env.T_BACKEND_BASE_URL || 'https://api-v3.fluxpointstudios.com'
 
 async function testTeamFormat() {
   console.log('🧪 Testing with Team\'s Exact Format')

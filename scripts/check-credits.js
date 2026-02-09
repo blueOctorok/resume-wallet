@@ -27,7 +27,7 @@ async function checkCredits() {
   console.log(`Partner: pace_drivers`)
   console.log('')
 
-  const url = `https://api-v2.fluxpointstudios.com/payments/credits?partner=pace_drivers&wallet=${account.address}`
+  const url = `https://api-v3.fluxpointstudios.com/payments/credits?partner=pace_drivers&wallet=${account.address}`
   
   try {
     console.log('🔍 Fetching credits from T Backend...')

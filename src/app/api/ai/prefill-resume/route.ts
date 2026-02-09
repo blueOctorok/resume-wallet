@@ -7,7 +7,7 @@ import {
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 const T_BACKEND_API_KEY = process.env.T_BACKEND_API_KEY
-const T_BACKEND_BASE_URL = process.env.T_BACKEND_BASE_URL || 'https://api-v2.fluxpointstudios.com'
+const T_BACKEND_BASE_URL = process.env.T_BACKEND_BASE_URL || 'https://api-v3.fluxpointstudios.com'
 
 /**
  * POST /api/ai/prefill-resume

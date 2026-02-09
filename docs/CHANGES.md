@@ -2,6 +2,12 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## ✅ **Driver resume builder: match developer resume builder look** (February 2026)
+
+- **Layout:** Driver resume creation (`ResumeBuilder.tsx`) now uses the same layout as the developer resume builder: full-height flex column, sticky header bar (Back, prefill badge, Clear form, Fill Test Data, Save), scrollable content with step circles (icon + check when completed), step content in a single card (`rounded-2xl`, `bg-gray-800/50` / `bg-white`), and Previous/Next/Save Resume buttons at the bottom.
+- **Inputs:** All driver form fields use the same styling as the developer builder: `rounded-xl`, `px-4 py-3`, dark `bg-gray-800 border-gray-700`, `focus:ring-2 focus:ring-brand-mint/20`. Tags (restrictions, responsibilities, certifications, skills) use gray pill style instead of brand-sage.
+- **Primary actions:** Add Employment, Add Education, Add Skill, Add Reference and main nav use `bg-brand-mint text-gray-900`; secondary/Previous uses gray. Driver-relevant steps and fields (Personal Info, CDL & License, Employment, Education, Skills & Equipment, References, Review) are unchanged in structure, only styled to match the developer flow.
+
 ## ✅ **Career Card, Nav, Wallet: same surface as employment verification (bg-gray-800/50)** (February 2026)
 
 - **Career Card (ShareProfileCard):** In both Driver and Developer Hub, the Career Card now uses the same surface as employment verification: `bg-gray-800/50 border-gray-700` (dark), `bg-white/70 border-gray-200` (light). Accents use indigo (text-indigo-400/600, bg-indigo-500/20, muted buttons).
@@ -2945,7 +2951,7 @@ All components now use the unified profile:
 
 ### **Problem:**
 
-When T Backend (`api-v2.fluxpointstudios.com`) experiences outages (502/503/504 errors), raw nginx HTML errors were being passed through to the frontend, causing confusing error displays.
+When T Backend (`api-v3.fluxpointstudios.com`) experiences outages (502/503/504 errors), raw nginx HTML errors were being passed through to the frontend, causing confusing error displays.
 
 ### **Solution:**
 
@@ -6327,7 +6333,7 @@ Three critical issues were resolved to achieve this:
     - Integrates with resume upload flow
     - Integrates with form completion flow
     - Integrates with submission flow
-  - Env Vars: `T_BACKEND_API_KEY` (required), `T_BACKEND_BASE_URL` (optional; defaults to `https://api-v2.fluxpointstudios.com`)
+  - Env Vars: `T_BACKEND_API_KEY` (required), `T_BACKEND_BASE_URL` (optional; defaults to `https://api-v3.fluxpointstudios.com`)
 
 **FEATURE (November 6, 2025):**
 
@@ -6348,7 +6354,7 @@ Three critical issues were resolved to achieve this:
     - Session persistence (per user wallet address)
     - Welcome message on first open
     - Theme-aware styling (dark/light mode)
-  - Env Vars: `T_BACKEND_API_KEY` (required), `T_BACKEND_BASE_URL` (optional; defaults to `https://api-v2.fluxpointstudios.com`)
+  - Env Vars: `T_BACKEND_API_KEY` (required), `T_BACKEND_BASE_URL` (optional; defaults to `https://api-v3.fluxpointstudios.com`)
   - Next: Add context awareness (reference user's application data), document search (vector stores)
 
 **FEATURE (November 10, 2025):**
@@ -6380,7 +6386,7 @@ Three critical issues were resolved to achieve this:
     - `src/app/api/ai/compliance-review/status/route.ts` (poll status)
     - `src/components/driver-application/ComplianceReview.tsx` (start/poll UI)
     - `src/components/driver-application/DriverDashboard.tsx` (wired component)
-  - Env Vars: `T_BACKEND_API_KEY` (required), `T_BACKEND_BASE_URL` (optional; defaults to `https://api-v2.fluxpointstudios.com`)
+  - Env Vars: `T_BACKEND_API_KEY` (required), `T_BACKEND_BASE_URL` (optional; defaults to `https://api-v3.fluxpointstudios.com`)
   - Next: Persist review output to Supabase, attach to application record, and show history
 
 ## 🤖 **AI RESUME PREFILL INTEGRATED!** ✨
