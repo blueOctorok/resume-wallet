@@ -6,6 +6,7 @@ import ShareProfileCard from './ShareProfileCard'
 import DriverVerificationSection from './verification/DriverVerificationSection'
 import DriverEmploymentVerificationSection from './verification/DriverEmploymentVerificationSection'
 import ResumePreviewModal from './ResumePreviewModal'
+import UploadResumeModal from './UploadResumeModal'
 import {
   FileText,
   ClipboardList,
@@ -13,6 +14,7 @@ import {
   Briefcase,
   CreditCard,
   Plus,
+  Upload,
   CheckCircle,
   Clock,
   AlertCircle,
@@ -201,6 +203,7 @@ export default function DriverHub({
     type: 'success' | 'error'
     text: string
   } | null>(null)
+  const [showUploadResumeModal, setShowUploadResumeModal] = useState(false)
 
   // Handle resume deletion
   const handleDeleteResume = async (resume: HubResume) => {
@@ -1124,17 +1127,30 @@ export default function DriverHub({
                 </span>
               )}
             </h2>
-            <button
-              onClick={() => onNavigate('resume')}
-              className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
-                theme === 'dark'
-                  ? 'text-indigo-400 hover:text-indigo-300'
-                  : 'text-indigo-600 hover:text-indigo-700'
-              }`}
-            >
-              <Plus className='w-4 h-4' />
-              {data.resumes.length > 0 ? 'New Resume' : 'Add Resume'}
-            </button>
+            <div className='flex items-center gap-2'>
+              <button
+                onClick={() => setShowUploadResumeModal(true)}
+                className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
+                  theme === 'dark'
+                    ? 'text-indigo-400 hover:text-indigo-300'
+                    : 'text-indigo-600 hover:text-indigo-700'
+                }`}
+              >
+                <Upload className='w-4 h-4' />
+                Upload Resume
+              </button>
+              <button
+                onClick={() => onNavigate('resume')}
+                className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
+                  theme === 'dark'
+                    ? 'text-indigo-400 hover:text-indigo-300'
+                    : 'text-indigo-600 hover:text-indigo-700'
+                }`}
+              >
+                <Plus className='w-4 h-4' />
+                {data.resumes.length > 0 ? 'New Resume' : 'Add Resume'}
+              </button>
+            </div>
           </div>
 
           {data.resumes.length === 0 ? (
@@ -1655,6 +1671,13 @@ export default function DriverHub({
           />
         </DetailModal>
       )}
+
+      <UploadResumeModal
+        isOpen={showUploadResumeModal}
+        onClose={() => setShowUploadResumeModal(false)}
+        user={userAddress ? { address: userAddress } : null}
+        onUploadComplete={() => fetchHubData()}
+      />
     </div>
   )
 }

@@ -2738,49 +2738,63 @@ const HomeContent = () => {
 
                 {currentPage === 'resume' && (
                   <div className='max-w-4xl mx-auto space-y-6'>
-                    {/* Resume Tab Selector */}
-                    <ResumeTabSelector
-                      activeTab={resumeTab}
-                      onTabChange={setResumeTab}
-                      theme={theme}
-                    />
-
-                    {/* Tab Content */}
-                    {resumeTab === 'upload' && (
-                      <ResumeUploadWithVerification
-                        user={user}
-                        onBack={() => setCurrentPage(null)}
-                        onUploadComplete={(payload) => {
-                          setHasResume(true)
-                          // Store the IPFS hash for later prefill use
-                          if (payload?.finalResult?.ipfsHash) {
-                            setLatestResumeIpfsHash(
-                              payload.finalResult.ipfsHash
-                            )
-                          }
-                          // Note: analysis_ready event is now triggered by ResumeUploadWithVerification itself
-                          // after blockchain verification completes, so we don't need to trigger it here
-                        }}
-                      />
+                    {/* Drivers use Upload via hub modal; this page is Create only. Others get Upload + Create tabs. */}
+                    {userRole === 'driver' ? (
+                      <>
+                        <ResumeBuilder
+                          user={user}
+                          existingResumeId={editingResumeId}
+                          onBack={() => {
+                            setCurrentPage(null)
+                            setEditingResumeId(undefined)
+                          }}
+                          onSave={(resumeId) => {
+                            console.log('Resume saved:', resumeId)
+                            setHasResume(true)
+                            setEditingResumeId(undefined)
+                          }}
+                        />
+                        {user && <WalletTransactions />}
+                      </>
+                    ) : (
+                      <>
+                        <ResumeTabSelector
+                          activeTab={resumeTab}
+                          onTabChange={setResumeTab}
+                          theme={theme}
+                        />
+                        {resumeTab === 'upload' && (
+                          <ResumeUploadWithVerification
+                            user={user}
+                            onBack={() => setCurrentPage(null)}
+                            onUploadComplete={(payload) => {
+                              setHasResume(true)
+                              if (payload?.finalResult?.ipfsHash) {
+                                setLatestResumeIpfsHash(
+                                  payload.finalResult.ipfsHash
+                                )
+                              }
+                            }}
+                          />
+                        )}
+                        {resumeTab === 'create' && (
+                          <ResumeBuilder
+                            user={user}
+                            existingResumeId={editingResumeId}
+                            onBack={() => {
+                              setCurrentPage(null)
+                              setEditingResumeId(undefined)
+                            }}
+                            onSave={(resumeId) => {
+                              console.log('Resume saved:', resumeId)
+                              setHasResume(true)
+                              setEditingResumeId(undefined)
+                            }}
+                          />
+                        )}
+                        {user && <WalletTransactions />}
+                      </>
                     )}
-
-                    {resumeTab === 'create' && (
-                      <ResumeBuilder
-                        user={user}
-                        existingResumeId={editingResumeId}
-                        onBack={() => {
-                          setCurrentPage(null)
-                          setEditingResumeId(undefined)
-                        }}
-                        onSave={(resumeId) => {
-                          console.log('Resume saved:', resumeId)
-                          setHasResume(true)
-                          setEditingResumeId(undefined)
-                        }}
-                      />
-                    )}
-
-                    {user && <WalletTransactions />}
                   </div>
                 )}
 

@@ -6,6 +6,7 @@ import ShareProfileCard from './ShareProfileCard'
 import DeveloperEmploymentVerificationSection from './verification/DeveloperEmploymentVerificationSection'
 import DeveloperResumeBuilder from './DeveloperResumeBuilder'
 import DeveloperResumePreviewModal from './DeveloperResumePreviewModal'
+import UploadResumeModal from './UploadResumeModal'
 import type { DeveloperResumeData } from './DeveloperResumeBuilder'
 import {
   Code2,
@@ -13,6 +14,7 @@ import {
   Github,
   Briefcase,
   Plus,
+  Upload,
   Folder,
   ExternalLink,
   Loader2,
@@ -137,6 +139,7 @@ export default function DeveloperHub({
   const [previewResume, setPreviewResume] = useState<DeveloperResume | null>(
     null
   )
+  const [showUploadResumeModal, setShowUploadResumeModal] = useState(false)
 
   // Career Score state
   const [careerScore, setCareerScore] = useState<CareerScore | null>(null)
@@ -929,18 +932,35 @@ export default function DeveloperHub({
                 Tech Resume
               </h2>
             </div>
-            {resumes.length > 0 && (
+            <div className='flex items-center gap-2'>
               <button
-                onClick={() => {
-                  setEditingResumeId(null)
-                  setShowResumeBuilder(true)
-                }}
-                className='flex items-center gap-1 text-sm text-brand-mint hover:underline'
+                onClick={() => setShowUploadResumeModal(true)}
+                className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+                  theme === 'dark'
+                    ? 'text-indigo-400 hover:text-indigo-300'
+                    : 'text-indigo-600 hover:text-indigo-700'
+                }`}
               >
-                <Plus className='w-4 h-4' />
-                New Resume
+                <Upload className='w-4 h-4' />
+                Upload Resume
               </button>
-            )}
+              {resumes.length > 0 && (
+                <button
+                  onClick={() => {
+                    setEditingResumeId(null)
+                    setShowResumeBuilder(true)
+                  }}
+                  className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+                    theme === 'dark'
+                      ? 'text-indigo-400 hover:text-indigo-300'
+                      : 'text-indigo-600 hover:text-indigo-700'
+                  }`}
+                >
+                  <Plus className='w-4 h-4' />
+                  New Resume
+                </button>
+              )}
+            </div>
           </div>
 
           {resumes.length === 0 ? (
@@ -1252,6 +1272,13 @@ export default function DeveloperHub({
           }}
         />
       )}
+
+      <UploadResumeModal
+        isOpen={showUploadResumeModal}
+        onClose={() => setShowUploadResumeModal(false)}
+        user={userAddress ? { address: userAddress } : null}
+        onUploadComplete={() => fetchResumes()}
+      />
     </div>
   )
 }
