@@ -106,7 +106,7 @@ Note: All fields default to null if not explicitly found. No guessing.
 ### Supported resume formats
 
 - Supported:
-  - text/plain
+  - text/plain.
   - PDF (text extraction via pypdf)
   - DOCX (Word) via python-docx
 - Scanned PDFs (images) supported when OCR is enabled
