@@ -723,29 +723,50 @@ export default function DriverHub({
     }
   }, [userAddress])
 
-  const handleDiscardInProgressDotApp = useCallback(async () => {
-    if (!onDeleteInProgressDotApp) return
-    if (
-      !window.confirm(
-        'Discard this in-progress application? Your unsaved form data will be removed.',
+  const handleDiscardInProgressDotApp = useCallback(
+    async (app: HubDotApplication) => {
+      if (!onDeleteInProgressDotApp) return
+      if (
+        !window.confirm(
+          'Discard this in-progress application? Your unsaved form data will be removed.',
+        )
       )
-    )
-      return
+        return
 
-    setDeletingInProgressDotApp(true)
-    setSelectedDotApp(null)
-    try {
-      await onDeleteInProgressDotApp()
-      await fetchHubData()
-    } catch (err) {
-      console.error('Discard in-progress error:', err)
-      alert(
-        err instanceof Error ? err.message : 'Failed to discard application',
-      )
-    } finally {
-      setDeletingInProgressDotApp(false)
-    }
-  }, [onDeleteInProgressDotApp, fetchHubData])
+      setDeletingInProgressDotApp(true)
+      setSelectedDotApp(null)
+      try {
+        await onDeleteInProgressDotApp()
+        // Update only DOT applications in state so the rest of the hub doesn't refetch
+        const appId = app.id
+        setHubData((prev) => {
+          if (!prev) return null
+          const newApps = prev.dotApplications.filter((a) => a.id !== appId)
+          return {
+            ...prev,
+            dotApplications: newApps,
+            stats: {
+              ...prev.stats,
+              totalDotApps: newApps.length,
+              inProgressDotApps: newApps.filter((a) => a.isInProgress).length,
+              completedDotApps: newApps.filter((a) => a.isComplete).length,
+              verifiedDotApps: newApps.filter(
+                (a) => a.verificationStatus === 'VERIFIED',
+              ).length,
+            },
+          }
+        })
+      } catch (err) {
+        console.error('Discard in-progress error:', err)
+        alert(
+          err instanceof Error ? err.message : 'Failed to discard application',
+        )
+      } finally {
+        setDeletingInProgressDotApp(false)
+      }
+    },
+    [onDeleteInProgressDotApp],
+  )
 
   useEffect(() => {
     fetchHubData()
@@ -1130,10 +1151,10 @@ export default function DriverHub({
             <div className='flex items-center gap-2'>
               <button
                 onClick={() => setShowUploadResumeModal(true)}
-                className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                   theme === 'dark'
-                    ? 'text-indigo-400 hover:text-indigo-300'
-                    : 'text-indigo-600 hover:text-indigo-700'
+                    ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
+                    : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                 }`}
               >
                 <Upload className='w-4 h-4' />
@@ -1141,10 +1162,10 @@ export default function DriverHub({
               </button>
               <button
                 onClick={() => onNavigate('resume')}
-                className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                   theme === 'dark'
-                    ? 'text-indigo-400 hover:text-indigo-300'
-                    : 'text-indigo-600 hover:text-indigo-700'
+                    ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
+                    : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                 }`}
               >
                 <Plus className='w-4 h-4' />
@@ -1189,10 +1210,10 @@ export default function DriverHub({
               {data.resumes.length > 3 && (
                 <button
                   onClick={() => onNavigate('resume')}
-                  className={`w-full py-2 text-sm font-medium transition-colors ${
+                  className={`w-full rounded-lg border py-2 text-sm font-medium transition-colors ${
                     theme === 'dark'
-                      ? 'text-indigo-400 hover:text-indigo-300'
-                      : 'text-indigo-600 hover:text-indigo-700'
+                      ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
+                      : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                   }`}
                 >
                   View all {data.resumes.length} resumes →
@@ -1226,10 +1247,10 @@ export default function DriverHub({
             </h2>
             <button
               onClick={onStartDotApp || (() => onNavigate('dotapp'))}
-              className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                 theme === 'dark'
-                  ? 'text-indigo-400 hover:text-indigo-300'
-                  : 'text-indigo-600 hover:text-indigo-700'
+                  ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
+                  : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
               }`}
             >
               <Plus className='w-4 h-4' />
@@ -1283,7 +1304,7 @@ export default function DriverHub({
                     onClick={handleClick}
                     onDelete={
                       app.isInProgress && onDeleteInProgressDotApp
-                        ? handleDiscardInProgressDotApp
+                        ? () => handleDiscardInProgressDotApp(app)
                         : undefined
                     }
                     deleteDisabled={deletingInProgressDotApp}
@@ -1294,10 +1315,10 @@ export default function DriverHub({
               {data.dotApplications.length > 3 && (
                 <button
                   onClick={() => onNavigate('dotapp')}
-                  className={`w-full py-2 text-sm font-medium transition-colors ${
+                  className={`w-full rounded-lg border py-2 text-sm font-medium transition-colors ${
                     theme === 'dark'
-                      ? 'text-indigo-400 hover:text-indigo-300'
-                      : 'text-indigo-600 hover:text-indigo-700'
+                      ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
+                      : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                   }`}
                 >
                   View all {data.dotApplications.length} applications →
@@ -1331,10 +1352,10 @@ export default function DriverHub({
             </h2>
             <button
               onClick={() => onNavigate('mvr')}
-              className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                 theme === 'dark'
-                  ? 'text-indigo-400 hover:text-indigo-300'
-                  : 'text-indigo-600 hover:text-indigo-700'
+                  ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
+                  : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
               }`}
             >
               <Plus className='w-4 h-4' />
@@ -1396,10 +1417,10 @@ export default function DriverHub({
             </h2>
             <button
               onClick={() => onNavigate('jobs')}
-              className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                 theme === 'dark'
-                  ? 'text-indigo-400 hover:text-indigo-300'
-                  : 'text-indigo-600 hover:text-indigo-700'
+                  ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
+                  : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
               }`}
             >
               <Plus className='w-4 h-4' />
@@ -1434,10 +1455,10 @@ export default function DriverHub({
               {data.jobApplications.length > 3 && (
                 <button
                   onClick={() => onNavigate('applications')}
-                  className={`w-full py-2 text-sm font-medium transition-colors ${
+                  className={`w-full rounded-lg border py-2 text-sm font-medium transition-colors ${
                     theme === 'dark'
-                      ? 'text-indigo-400 hover:text-indigo-300'
-                      : 'text-indigo-600 hover:text-indigo-700'
+                      ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
+                      : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                   }`}
                 >
                   View all {data.jobApplications.length} applications →
@@ -1465,13 +1486,13 @@ export default function DriverHub({
               <CreditCard className='w-5 h-5 text-gray-500' />
             </div>
             Transaction History
-            {data.transactions.length > 0 && (
+            {(data.transactions ?? []).length > 0 && (
               <span
                 className={`text-sm font-normal ${
                   theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
                 }`}
               >
-                ({data.transactions.length} transactions)
+                ({(data.transactions ?? []).length} transactions)
               </span>
             )}
           </h2>
@@ -1484,7 +1505,7 @@ export default function DriverHub({
 
         {showPaymentHistory && (
           <div className='mt-4 space-y-3'>
-            {data.transactions.length === 0 ? (
+            {(data.transactions ?? []).length === 0 ? (
               <p
                 className={`text-sm text-center py-4 ${
                   theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
@@ -1493,7 +1514,7 @@ export default function DriverHub({
                 No transactions yet
               </p>
             ) : (
-              data.transactions.map((tx) => (
+              (data.transactions ?? []).map((tx) => (
                 <div
                   key={tx.id}
                   className={`flex items-center justify-between p-3 rounded-lg ${
@@ -1806,10 +1827,10 @@ function EmptyState({
       </p>
       <button
         onClick={onAction}
-        className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+        className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all ${
           theme === 'dark'
-            ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
-            : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+            ? 'border-gray-600 bg-indigo-500/20 text-indigo-400 hover:border-indigo-500/50 hover:bg-indigo-500/30'
+            : 'border-gray-300 bg-indigo-50 text-indigo-600 hover:border-indigo-400 hover:bg-indigo-100'
         }`}
       >
         <Plus className='w-4 h-4' />

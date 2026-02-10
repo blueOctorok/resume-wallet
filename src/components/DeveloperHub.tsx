@@ -363,10 +363,10 @@ export default function DeveloperHub({
       </p>
       <button
         onClick={onAction}
-        className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+        className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 font-medium transition-all ${
           theme === 'dark'
-            ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30'
-            : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+            ? 'border-gray-600 bg-indigo-500/20 text-indigo-400 hover:border-indigo-500/50 hover:bg-indigo-500/30'
+            : 'border-gray-300 bg-indigo-50 text-indigo-600 hover:border-indigo-400 hover:bg-indigo-100'
         }`}
       >
         <Plus className='w-4 h-4' />
@@ -876,7 +876,11 @@ export default function DeveloperHub({
             </div>
             <button
               onClick={() => onNavigate('portfolio')}
-              className={`text-sm font-medium ${theme === 'dark' ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-700'}`}
+              className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                theme === 'dark'
+                  ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
+                  : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
+              }`}
             >
               {stats.totalProjects > 0 ? 'View All →' : 'Add Projects →'}
             </button>
@@ -900,10 +904,10 @@ export default function DeveloperHub({
               {projects.length > 3 && (
                 <button
                   onClick={() => onNavigate('portfolio')}
-                  className={`w-full text-center py-2 text-sm font-medium rounded-lg ${
+                  className={`w-full rounded-lg border py-2 text-center text-sm font-medium transition-colors ${
                     theme === 'dark'
-                      ? 'text-indigo-400 hover:bg-gray-700/50'
-                      : 'text-indigo-600 hover:bg-gray-100'
+                      ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
+                      : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                   }`}
                 >
                   View all {projects.length} projects →
@@ -935,10 +939,10 @@ export default function DeveloperHub({
             <div className='flex items-center gap-2'>
               <button
                 onClick={() => setShowUploadResumeModal(true)}
-                className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                   theme === 'dark'
-                    ? 'text-indigo-400 hover:text-indigo-300'
-                    : 'text-indigo-600 hover:text-indigo-700'
+                    ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
+                    : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                 }`}
               >
                 <Upload className='w-4 h-4' />
@@ -950,10 +954,10 @@ export default function DeveloperHub({
                     setEditingResumeId(null)
                     setShowResumeBuilder(true)
                   }}
-                  className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                     theme === 'dark'
-                      ? 'text-indigo-400 hover:text-indigo-300'
-                      : 'text-indigo-600 hover:text-indigo-700'
+                      ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
+                      : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
                   }`}
                 >
                   <Plus className='w-4 h-4' />

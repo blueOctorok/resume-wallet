@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getAdminSupabaseClient } from '@/utils/supabase/admin';
 
+function isNetworkError(msg: string | undefined): boolean {
+  const m = (msg ?? '').toLowerCase();
+  return msg === 'fetch failed' || m.includes('econnrefused') || m.includes('enotfound') || m.includes('etimedout') || m.includes('network');
+}
+
 export async function POST(request: Request) {
   try {
     const { walletAddress } = await request.json();
@@ -25,11 +30,11 @@ export async function POST(request: Request) {
       .single();
 
     if (profileError) {
+      if (isNetworkError(profileError.message)) {
+        console.warn('[PROFILE API] Network error:', profileError.message);
+        return NextResponse.json({ error: 'Could not reach database' }, { status: 503 });
+      }
       console.error('[PROFILE API] Error fetching user profile:', profileError);
-      console.error('[PROFILE API] Error code:', profileError.code);
-      console.error('[PROFILE API] Error message:', profileError.message);
-      console.error('[PROFILE API] Error details:', profileError.details);
-      console.error('[PROFILE API] Error hint:', profileError.hint);
       
       // Check if it's a "column does not exist" error (migration not run)
       if (profileError.message?.includes('column') && profileError.message?.includes('role')) {
@@ -108,7 +113,12 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error in profile API:', error);
+    const message = error instanceof Error ? error.message : '';
+    if (isNetworkError(message)) {
+      console.warn('[PROFILE API] Network error:', message);
+      return NextResponse.json({ error: 'Could not reach database' }, { status: 503 });
+    }
+    console.error('[PROFILE API] Error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

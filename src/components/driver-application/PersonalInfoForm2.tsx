@@ -382,7 +382,7 @@ export default function PersonalInfoForm2({
     <div className='space-y-8'>
       <div className='text-center'>
         <h2
-          className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
+          className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
         >
           DRIVING EXPERIENCE
         </h2>
@@ -392,7 +392,7 @@ export default function PersonalInfoForm2({
         <div key={index} className='space-y-4'>
           <div className='flex justify-between items-center'>
             <h3
-              className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
+              className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
             >
               EXPERIENCE {index + 1}
             </h3>
@@ -411,7 +411,7 @@ export default function PersonalInfoForm2({
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
             <div>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 TYPE OF EQUIPMENT
               </label>
@@ -426,8 +426,8 @@ export default function PersonalInfoForm2({
                 }
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
-                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                    ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                    : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                 }`}
               >
                 <option value=''>Select equipment type...</option>
@@ -447,7 +447,7 @@ export default function PersonalInfoForm2({
             </div>
             <div>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 YEARS OF EXPERIENCE
               </label>
@@ -464,8 +464,8 @@ export default function PersonalInfoForm2({
                 placeholder='e.g., 2.5, 5, 10+'
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint'
-                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                    ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                    : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                 }`}
               />
             </div>
@@ -480,8 +480,8 @@ export default function PersonalInfoForm2({
           onClick={addDrivingExperience}
           className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
             theme === 'dark'
-              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
-              : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
+              ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
+              : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
           }`}
         >
           + Add Driving Experience
@@ -494,12 +494,12 @@ export default function PersonalInfoForm2({
     <div className='space-y-8'>
       <div className='text-center'>
         <h2
-          className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
+          className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
         >
           ACCIDENT RECORD FOR THE PAST 3 YEARS
         </h2>
         <p
-          className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'}`}
+          className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
         >
           Attach additional sheet if more space is needed. Check this box if
           none
@@ -515,11 +515,11 @@ export default function PersonalInfoForm2({
           onChange={(e) =>
             handleInputChange('hasNoAccidents', e.target.checked)
           }
-          className={`w-4 h-4 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`}
+          className={`w-4 h-4 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}
         />
         <label
           htmlFor='hasNoAccidents'
-          className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+          className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
         >
           Check this box if you have had no accidents in the past 3 years
         </label>
@@ -531,7 +531,7 @@ export default function PersonalInfoForm2({
             <div key={index} className='space-y-4'>
               <div className='flex justify-between items-center'>
                 <h3
-                  className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
+                  className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
                 >
                   ACCIDENT {index + 1}
                 </h3>
@@ -552,7 +552,7 @@ export default function PersonalInfoForm2({
               <div className='grid grid-cols-1 md:grid-cols-5 gap-4'>
                 <div>
                   <label
-                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     DATE
                   </label>
@@ -568,14 +568,14 @@ export default function PersonalInfoForm2({
                     }
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       theme === 'dark'
-                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
-                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     }`}
                   />
                 </div>
                 <div>
                   <label
-                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     NATURE OF ACCIDENT
                   </label>
@@ -592,14 +592,14 @@ export default function PersonalInfoForm2({
                     placeholder='Head-on, rear-end, upset, etc.'
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       theme === 'dark'
-                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
-                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     }`}
                   />
                 </div>
                 <div>
                   <label
-                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     # FATALITIES
                   </label>
@@ -615,14 +615,14 @@ export default function PersonalInfoForm2({
                     }
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       theme === 'dark'
-                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
-                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     }`}
                   />
                 </div>
                 <div>
                   <label
-                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     # INJURIES
                   </label>
@@ -638,14 +638,14 @@ export default function PersonalInfoForm2({
                     }
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       theme === 'dark'
-                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
-                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     }`}
                   />
                 </div>
                 <div>
                   <label
-                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     CHEMICAL SPILLS (Y/N)
                   </label>
@@ -661,8 +661,8 @@ export default function PersonalInfoForm2({
                     }
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       theme === 'dark'
-                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
-                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     }`}
                   />
                 </div>
@@ -671,7 +671,7 @@ export default function PersonalInfoForm2({
               {/* At Fault Radio Buttons */}
               <div className='space-y-3'>
                 <label
-                  className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                  className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                 >
                   Were you at fault for this accident?
                 </label>
@@ -689,10 +689,10 @@ export default function PersonalInfoForm2({
                           index
                         )
                       }
-                      className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
+                      className={`mr-2 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} accent-indigo-500`}
                     />
                     <span
-                      className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                      className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                     >
                       YES
                     </span>
@@ -710,10 +710,10 @@ export default function PersonalInfoForm2({
                           index
                         )
                       }
-                      className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
+                      className={`mr-2 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} accent-indigo-500`}
                     />
                     <span
-                      className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                      className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                     >
                       NO
                     </span>
@@ -730,8 +730,8 @@ export default function PersonalInfoForm2({
               onClick={addAccident}
               className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
                 theme === 'dark'
-                  ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
-                  : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
+                  ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
+                  : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
               }`}
             >
               + Add Accident
@@ -746,17 +746,17 @@ export default function PersonalInfoForm2({
     <div className='space-y-8'>
       <div className='text-center'>
         <h2
-          className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
+          className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
         >
           TRAFFIC CONVICTIONS AND FORFEITURES FOR THE PAST 3 YEARS
         </h2>
         <p
-          className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'}`}
+          className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
         >
           (OTHER THAN PARKING VIOLATIONS)
         </p>
         <p
-          className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'}`}
+          className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
         >
           Attach additional sheet if more space is needed. Check this box if
           none
@@ -772,11 +772,11 @@ export default function PersonalInfoForm2({
           onChange={(e) =>
             handleInputChange('hasNoConvictions', e.target.checked)
           }
-          className={`w-4 h-4 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`}
+          className={`w-4 h-4 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}
         />
         <label
           htmlFor='hasNoConvictions'
-          className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+          className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
         >
           Check this box if you have had no convictions in the past 3 years
         </label>
@@ -788,7 +788,7 @@ export default function PersonalInfoForm2({
             <div key={index} className='space-y-4'>
               <div className='flex justify-between items-center'>
                 <h3
-                  className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
+                  className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
                 >
                   CONVICTION {index + 1}
                 </h3>
@@ -809,7 +809,7 @@ export default function PersonalInfoForm2({
               <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
                 <div>
                   <label
-                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     DATE CONVICTED
                   </label>
@@ -826,14 +826,14 @@ export default function PersonalInfoForm2({
                     placeholder='MM/YYYY'
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       theme === 'dark'
-                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
-                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     }`}
                   />
                 </div>
                 <div>
                   <label
-                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     VIOLATION
                   </label>
@@ -849,14 +849,14 @@ export default function PersonalInfoForm2({
                     }
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       theme === 'dark'
-                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
-                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     }`}
                   />
                 </div>
                 <div>
                   <label
-                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     STATE OF VIOLATION
                   </label>
@@ -872,14 +872,14 @@ export default function PersonalInfoForm2({
                     }
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       theme === 'dark'
-                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
-                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     }`}
                   />
                 </div>
                 <div>
                   <label
-                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     PENALTY
                   </label>
@@ -896,8 +896,8 @@ export default function PersonalInfoForm2({
                     placeholder='Forfeited bond, collateral and/or points'
                     className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                       theme === 'dark'
-                        ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
-                        : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
                     }`}
                   />
                 </div>
@@ -912,8 +912,8 @@ export default function PersonalInfoForm2({
               onClick={addConviction}
               className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
                 theme === 'dark'
-                  ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
-                  : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
+                  ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
+                  : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
               }`}
             >
               + Add Conviction
@@ -926,7 +926,7 @@ export default function PersonalInfoForm2({
       <div className='space-y-6'>
         <div className='space-y-3'>
           <label
-            className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+            className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
           >
             Have you ever been denied a license, permit, or privilege to operate
             a motor vehicle?
@@ -941,10 +941,10 @@ export default function PersonalInfoForm2({
                 onChange={(e) =>
                   handleInputChange('deniedLicense', e.target.value)
                 }
-                className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
+                className={`mr-2 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} accent-indigo-500`}
               />
               <span
-                className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 YES
               </span>
@@ -958,10 +958,10 @@ export default function PersonalInfoForm2({
                 onChange={(e) =>
                   handleInputChange('deniedLicense', e.target.value)
                 }
-                className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
+                className={`mr-2 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} accent-indigo-500`}
               />
               <span
-                className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 NO
               </span>
@@ -970,7 +970,7 @@ export default function PersonalInfoForm2({
           {formData.deniedLicense === 'yes' && (
             <div className='mt-3'>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 If yes, explain:
               </label>
@@ -992,7 +992,7 @@ export default function PersonalInfoForm2({
 
         <div className='space-y-3'>
           <label
-            className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+            className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
           >
             Has any license, permit, or privilege ever been suspended or
             revoked?
@@ -1007,10 +1007,10 @@ export default function PersonalInfoForm2({
                 onChange={(e) =>
                   handleInputChange('suspendedLicense', e.target.value)
                 }
-                className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
+                className={`mr-2 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} accent-indigo-500`}
               />
               <span
-                className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 YES
               </span>
@@ -1024,10 +1024,10 @@ export default function PersonalInfoForm2({
                 onChange={(e) =>
                   handleInputChange('suspendedLicense', e.target.value)
                 }
-                className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
+                className={`mr-2 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} accent-indigo-500`}
               />
               <span
-                className={`${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 NO
               </span>
@@ -1036,7 +1036,7 @@ export default function PersonalInfoForm2({
           {formData.suspendedLicense === 'yes' && (
             <div className='mt-3'>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-brand-sage'}`}
+                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 If yes, explain:
               </label>
@@ -1059,14 +1059,13 @@ export default function PersonalInfoForm2({
     </div>
   )
 
+  const cardClass =
+    theme === 'dark'
+      ? 'rounded-2xl border border-gray-700 bg-gray-800/50 shadow-lg'
+      : 'rounded-2xl border border-gray-200 bg-white/70 shadow-lg'
+
   return (
-    <div
-      className={`max-w-4xl mx-auto rounded-lg shadow-xl border-t-4 relative z-10 ${
-        theme === 'dark'
-          ? 'bg-brand-sage-light/20 backdrop-blur-xl border-brand-mint'
-          : 'bg-white/80 backdrop-blur-xl border-t-brand-sage border-gray-200'
-      }`}
-    >
+    <div className={`max-w-4xl mx-auto relative z-10 ${cardClass}`}>
       {/* Header */}
       <div
         className={`text-center py-8 px-6 border-b ${
@@ -1074,32 +1073,32 @@ export default function PersonalInfoForm2({
         }`}
       >
         <h1
-          className={`text-3xl font-bold mb-2 ${
-            theme === 'dark' ? 'text-white' : 'text-brand-sage'
+          className={`text-2xl font-bold mb-2 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}
         >
-          DRIVER EMPLOYMENT APPLICATION
+          Driver Employment Application
         </h1>
         <p
-          className={`text-lg ${
-            theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'
+          className={`text-base ${
+            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
           }`}
         >
           [COMPANY NAME, ADDRESS, PHONE NUMBER, AND EMAIL]
         </p>
         <p
-          className={`text-sm ${
-            theme === 'dark' ? 'text-gray-400' : 'text-brand-sage/60'
+          className={`text-sm mt-1 ${
+            theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
           }`}
         >
           An Equal Opportunity Employer
         </p>
         <p
           className={`text-sm font-semibold mt-2 ${
-            theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+            theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
           }`}
         >
-          COMPLETE IN FULL OR IT WILL NOT BE CONSIDERED.
+          Complete in full or it will not be considered.
         </p>
 
         {/* Save and Test Data Buttons */}
@@ -1129,14 +1128,14 @@ export default function PersonalInfoForm2({
         <div className='flex items-center justify-between mb-4'>
           <div
             className={`text-sm font-medium ${
-              theme === 'dark' ? 'text-white' : 'text-brand-sage'
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
             }`}
           >
             Step {currentStep} of {STEPS.length}
           </div>
           <div
             className={`text-sm ${
-              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
             }`}
           >
             {Math.round((currentStep / STEPS.length) * 100)}% Complete
@@ -1150,8 +1149,8 @@ export default function PersonalInfoForm2({
           <div
             className={`h-2 rounded-full transition-all duration-300 ${
               theme === 'dark'
-                ? 'bg-gradient-to-r from-brand-mint to-brand-cream'
-                : 'bg-gradient-to-r from-brand-sage to-brand-mint'
+                ? 'bg-indigo-500'
+                : 'bg-indigo-600'
             }`}
             style={{ width: `${(currentStep / STEPS.length) * 100}%` }}
           ></div>
@@ -1188,8 +1187,8 @@ export default function PersonalInfoForm2({
               className={`w-3 h-3 rounded-full ${
                 step.id <= currentStep
                   ? theme === 'dark'
-                    ? 'bg-brand-mint'
-                    : 'bg-brand-sage'
+                    ? 'bg-indigo-500'
+                    : 'bg-indigo-600'
                   : theme === 'dark'
                     ? 'bg-gray-600'
                     : 'bg-gray-300'
@@ -1202,8 +1201,8 @@ export default function PersonalInfoForm2({
           onClick={nextStep}
           className={`px-4 py-2 rounded-md font-semibold transition-all duration-200 ${
             theme === 'dark'
-              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
-              : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
+              ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg'
+              : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
           }`}
         >
           {currentStep === STEPS.length ? 'Continue to Form 3' : 'Next'}
