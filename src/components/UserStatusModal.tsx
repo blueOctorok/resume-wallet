@@ -2,12 +2,25 @@
 
 import { useState, useEffect } from 'react'
 import USDCBalance from './USDCBalance'
+import STORMBalance from './STORMBalance'
 import SendUSDC from './wallet/SendUSDC'
+import SendSTORM from './wallet/SendSTORM'
 import ReceiveUSDC from './wallet/ReceiveUSDC'
 import TransactionHistory from './TransactionHistory'
 import BuyUSDCButton from './BuyUSDCButton'
 import { useTheme } from '@/contexts/ThemeContext'
-import { Wallet, Send, QrCode, History } from 'lucide-react'
+import {
+  Wallet,
+  Send,
+  QrCode,
+  History,
+  X,
+  Copy,
+  Check,
+  ExternalLink,
+  User,
+  Zap,
+} from 'lucide-react'
 
 interface UserStatusModalProps {
   isOpen: boolean
@@ -23,6 +36,7 @@ interface UserStatusModalProps {
 }
 
 type WalletTab = 'overview' | 'send' | 'receive' | 'history'
+type SendToken = 'usdc' | 'storm'
 
 export default function UserStatusModal({
   isOpen,
@@ -34,6 +48,8 @@ export default function UserStatusModal({
 }: UserStatusModalProps) {
   const { theme } = useTheme()
   const [activeTab, setActiveTab] = useState<WalletTab>('overview')
+  const [sendToken, setSendToken] = useState<SendToken>('usdc')
+  const [copied, setCopied] = useState(false)
 
   const handleLogout = () => {
     onLogout()
@@ -46,18 +62,26 @@ export default function UserStatusModal({
   }
 
   const handleBackdropClick = (e: React.MouseEvent) => {
-    // Only close if clicking the backdrop itself, not the modal
     if (e.target === e.currentTarget) {
       onClose()
+    }
+  }
+
+  const copyAddress = async () => {
+    if (!user.address) return
+    try {
+      await navigator.clipboard.writeText(user.address)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
     }
   }
 
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
-      // Save current scroll position
       const scrollY = window.scrollY
-      // Lock body scroll
       const originalStyle = window.getComputedStyle(document.body).overflow
       document.body.style.overflow = 'hidden'
       document.body.style.position = 'fixed'
@@ -65,7 +89,6 @@ export default function UserStatusModal({
       document.body.style.width = '100%'
 
       return () => {
-        // Restore body scroll
         document.body.style.overflow = originalStyle
         document.body.style.position = ''
         document.body.style.top = ''
@@ -77,372 +100,406 @@ export default function UserStatusModal({
 
   if (!isOpen) return null
 
+  // Consistent card styling (matches hub)
+  const cardClass = `rounded-2xl border transition-all duration-200 ${
+    theme === 'dark'
+      ? 'bg-gray-800/50 border-gray-700'
+      : 'bg-white/70 border-gray-200'
+  }`
+
+  const tabClass = (isActive: boolean) =>
+    `flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex-1 justify-center rounded-t-lg ${
+      isActive
+        ? theme === 'dark'
+          ? 'text-indigo-400 bg-gray-800/50 border-b-2 border-indigo-400'
+          : 'text-indigo-600 bg-white/70 border-b-2 border-indigo-600'
+        : theme === 'dark'
+          ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/30'
+          : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+    }`
+
+  const buttonPrimary = `w-full px-4 py-3 font-semibold rounded-xl transition-all duration-200 ${
+    theme === 'dark'
+      ? 'bg-indigo-500 hover:bg-indigo-400 text-white'
+      : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+  }`
+
+  const buttonSecondary = `w-full px-4 py-3 font-semibold rounded-xl border transition-all duration-200 ${
+    theme === 'dark'
+      ? 'bg-gray-800/50 border-gray-600 text-gray-200 hover:border-indigo-500/50 hover:text-indigo-400'
+      : 'bg-white border-gray-300 text-gray-700 hover:border-indigo-400 hover:text-indigo-600'
+  }`
+
   return (
     <>
       {/* Backdrop */}
       <div
-        className='fixed inset-0 bg-black/50 backdrop-blur-sm z-[100]'
+        className={`fixed inset-0 z-[100] ${
+          theme === 'dark' ? 'bg-black/60' : 'bg-black/40'
+        } backdrop-blur-sm`}
         onClick={handleBackdropClick}
       />
 
       {/* Modal */}
       <div
-        className='fixed inset-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-[101] w-full sm:w-[90vw] sm:max-w-[340px] md:max-w-md lg:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col pointer-events-auto'
+        className='fixed inset-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-[101] w-full sm:w-[95vw] sm:max-w-lg h-full sm:h-auto sm:max-h-[90vh] flex flex-col'
         onClick={(e) => e.stopPropagation()}
       >
-        <div className='relative bg-brand-sage-light/20 backdrop-blur-xl rounded-0 sm:rounded-2xl md:rounded-3xl shadow-2xl flex flex-col h-full sm:h-auto overflow-hidden'>
-          {/* Close Button */}
-          <button
-            onClick={onClose}
-            className='absolute top-3 right-3 sm:top-4 sm:right-4 p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-brand-sage/60 backdrop-blur-sm hover:bg-brand-sage/80 hover:border-brand-mint/70 transition-all duration-300 shadow-lg hover:shadow-xl border border-transparent'
-            aria-label='Close modal'
-          >
-            <svg
-              className='w-3 h-3 sm:w-4 sm:h-4 text-brand-cream'
-              fill='none'
-              stroke='currentColor'
-              viewBox='0 0 24 24'
-            >
-              <path
-                strokeLinecap='round'
-                strokeLinejoin='round'
-                strokeWidth={2}
-                d='M6 18L18 6M6 6l12 12'
-              />
-            </svg>
-          </button>
-
-          {/* Inner shadow for depth */}
-          <div className='absolute inset-0 sm:rounded-3xl shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)] pointer-events-none' />
-
+        <div
+          className={`relative flex flex-col h-full sm:h-auto sm:rounded-2xl overflow-hidden ${
+            theme === 'dark'
+              ? 'bg-gray-900 border border-gray-700'
+              : 'bg-gray-50 border border-gray-200'
+          }`}
+        >
           {/* Header */}
-          <div className='p-4 sm:p-6 border-b border-brand-mint/20'>
-            <h2 className='text-lg sm:text-xl md:text-2xl font-semibold text-brand-cream text-center'>
-              Wallet
-            </h2>
+          <div
+            className={`flex items-center justify-between p-4 sm:p-5 border-b ${
+              theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+            }`}
+          >
+            <div className='flex items-center gap-3'>
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  theme === 'dark'
+                    ? 'bg-indigo-500/20 border border-indigo-500/30'
+                    : 'bg-indigo-50 border border-indigo-200'
+                }`}
+              >
+                <Wallet
+                  className={`w-5 h-5 ${
+                    theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                  }`}
+                />
+              </div>
+              <div>
+                <h2
+                  className={`text-lg font-semibold ${
+                    theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
+                  }`}
+                >
+                  Wallet
+                </h2>
+                <p
+                  className={`text-xs ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  }`}
+                >
+                  Base Network
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className={`p-2 rounded-lg transition-colors ${
+                theme === 'dark'
+                  ? 'hover:bg-gray-800 text-gray-400 hover:text-gray-200'
+                  : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <X className='w-5 h-5' />
+            </button>
           </div>
 
           {/* Tabs */}
           {user.address && (
-            <div className='flex border-b border-brand-mint/20 scrollbar-hide-mobile overflow-x-auto'>
+            <div
+              className={`flex border-b ${
+                theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+              }`}
+            >
               <button
                 onClick={() => setActiveTab('overview')}
-                className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-1 justify-center ${
-                  activeTab === 'overview'
-                    ? 'text-brand-mint border-b-2 border-brand-mint bg-brand-sage-light/10'
-                    : 'text-brand-cream/70 hover:text-brand-cream hover:bg-brand-sage-light/5'
-                }`}
+                className={tabClass(activeTab === 'overview')}
               >
-                <Wallet className='w-3.5 h-3.5 sm:w-4 sm:h-4' />
-                <span>Overview</span>
+                <Wallet className='w-4 h-4' />
+                <span className='hidden sm:inline'>Overview</span>
               </button>
               <button
                 onClick={() => setActiveTab('send')}
-                className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-1 justify-center ${
-                  activeTab === 'send'
-                    ? 'text-brand-mint border-b-2 border-brand-mint bg-brand-sage-light/10'
-                    : 'text-brand-cream/70 hover:text-brand-cream hover:bg-brand-sage-light/5'
-                }`}
+                className={tabClass(activeTab === 'send')}
               >
-                <Send className='w-3.5 h-3.5 sm:w-4 sm:h-4' />
-                <span>Send</span>
+                <Send className='w-4 h-4' />
+                <span className='hidden sm:inline'>Send</span>
               </button>
               <button
                 onClick={() => setActiveTab('receive')}
-                className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-1 justify-center ${
-                  activeTab === 'receive'
-                    ? 'text-brand-mint border-b-2 border-brand-mint bg-brand-sage-light/10'
-                    : 'text-brand-cream/70 hover:text-brand-cream hover:bg-brand-sage-light/5'
-                }`}
+                className={tabClass(activeTab === 'receive')}
               >
-                <QrCode className='w-3.5 h-3.5 sm:w-4 sm:h-4' />
-                <span>Receive</span>
+                <QrCode className='w-4 h-4' />
+                <span className='hidden sm:inline'>Receive</span>
               </button>
               <button
                 onClick={() => setActiveTab('history')}
-                className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-1 justify-center ${
-                  activeTab === 'history'
-                    ? 'text-brand-mint border-b-2 border-brand-mint bg-brand-sage-light/10'
-                    : 'text-brand-cream/70 hover:text-brand-cream hover:bg-brand-sage-light/5'
-                }`}
+                className={tabClass(activeTab === 'history')}
               >
-                <History className='w-3.5 h-3.5 sm:w-4 sm:h-4' />
-                <span>History</span>
+                <History className='w-4 h-4' />
+                <span className='hidden sm:inline'>History</span>
               </button>
             </div>
           )}
 
-          {/* Tab Content - Scrollable area */}
-          <div className='flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-hide-mobile min-h-0'>
+          {/* Content */}
+          <div className='flex-1 overflow-y-auto p-4 sm:p-5 space-y-4'>
             {activeTab === 'overview' && (
-              <div className='space-y-4 sm:space-y-6'>
-                {/* User Info Card */}
-                <div className='bg-brand-sage/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 border border-brand-mint/20 shadow-lg'>
-                  <div className='space-y-2 sm:space-y-3 md:space-y-4 text-xs sm:text-sm'>
-                    {user.email && (
-                      <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0'>
-                        <span className='font-medium text-brand-cream/70 text-xs sm:text-sm'>
-                          Email:
-                        </span>
-                        <span className='text-brand-cream text-xs sm:text-sm break-all sm:break-normal'>
+              <>
+                {/* Account Card */}
+                <div className={`${cardClass} p-4`}>
+                  <div className='flex items-center gap-3 mb-4'>
+                    <div
+                      className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        theme === 'dark'
+                          ? 'bg-indigo-500/20'
+                          : 'bg-indigo-50'
+                      }`}
+                    >
+                      <User
+                        className={`w-6 h-6 ${
+                          theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                        }`}
+                      />
+                    </div>
+                    <div className='flex-1 min-w-0'>
+                      {user.email && (
+                        <p
+                          className={`text-sm truncate ${
+                            theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                          }`}
+                        >
                           {user.email}
-                        </span>
-                      </div>
-                    )}
-                    {user.address && (
-                      <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0'>
-                        <span className='font-medium text-brand-cream/70 text-xs sm:text-sm'>
-                          Wallet:
-                        </span>
-                        <span className='text-brand-cream font-mono text-xs'>
-                          {user.address.slice(0, 8)}...{user.address.slice(-6)}
-                        </span>
-                      </div>
-                    )}
-                    {user.chain && (
-                      <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0'>
-                        <span className='font-medium text-brand-cream/70 text-xs sm:text-sm'>
-                          Network:
-                        </span>
-                        <span className='text-brand-cream text-xs sm:text-sm'>
-                          {user.chain}
-                        </span>
-                      </div>
-                    )}
-                    {userRole && (
-                      <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0'>
-                        <span className='font-medium text-brand-cream/70 text-xs sm:text-sm'>
-                          Role:
-                        </span>
-                        <span className='text-brand-cream text-xs sm:text-sm'>
+                        </p>
+                      )}
+                      {userRole && (
+                        <p
+                          className={`text-xs ${
+                            theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                          }`}
+                        >
                           {userRole === 'driver'
                             ? '🚗 Driver'
                             : userRole === 'developer'
-                              ? '💻 Software Engineer'
+                              ? '💻 Developer'
                               : '🏢 Employer'}
-                        </span>
-                      </div>
-                    )}
+                        </p>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Wallet Address */}
+                  {user.address && (
+                    <div
+                      className={`flex items-center gap-2 p-3 rounded-xl ${
+                        theme === 'dark' ? 'bg-gray-900/50' : 'bg-gray-100'
+                      }`}
+                    >
+                      <code
+                        className={`flex-1 text-xs font-mono truncate ${
+                          theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                        }`}
+                      >
+                        {user.address}
+                      </code>
+                      <button
+                        onClick={copyAddress}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          theme === 'dark'
+                            ? 'hover:bg-gray-700 text-gray-400'
+                            : 'hover:bg-gray-200 text-gray-500'
+                        }`}
+                      >
+                        {copied ? (
+                          <Check className='w-4 h-4 text-green-500' />
+                        ) : (
+                          <Copy className='w-4 h-4' />
+                        )}
+                      </button>
+                      <a
+                        href={`https://sepolia.basescan.org/address/${user.address}`}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          theme === 'dark'
+                            ? 'hover:bg-gray-700 text-gray-400'
+                            : 'hover:bg-gray-200 text-gray-500'
+                        }`}
+                      >
+                        <ExternalLink className='w-4 h-4' />
+                      </a>
+                    </div>
+                  )}
                 </div>
 
-                {/* USDC Balance Display */}
+                {/* Token Balances */}
                 {user.address && (
-                  <div>
+                  <div className='space-y-3'>
+                    <h3
+                      className={`text-sm font-medium ${
+                        theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                      }`}
+                    >
+                      Token Balances
+                    </h3>
+
+                    {/* USDC Balance */}
                     <USDCBalance
                       walletAddress={user.address}
-                      refreshInterval={60000} // Auto-refresh every 60 seconds
+                      refreshInterval={60000}
                     />
-                  </div>
-                )}
 
-                {/* Buy USDC Button */}
-                {user.address && (
-                  <div className='bg-brand-sage/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-brand-mint/20 shadow-lg'>
-                    <BuyUSDCButton
+                    {/* STORM Balance */}
+                    <STORMBalance
                       walletAddress={user.address}
-                      onSuccess={() => {
-                        // Optionally refresh balance after purchase
-                        window.location.reload()
-                      }}
+                      refreshInterval={60000}
                     />
                   </div>
                 )}
 
-                {/* Switch Role Button */}
-                {userRole && onSwitchRole && (
-                  <button
-                    onClick={handleSwitchRole}
-                    className='w-full px-4 sm:px-6 py-3 sm:py-4 text-brand-cream font-semibold bg-brand-sage/60 backdrop-blur-sm border border-brand-mint/30 rounded-lg sm:rounded-xl hover:bg-brand-sage/80 hover:border-brand-mint/50 transition-all duration-300 shadow-lg hover:shadow-xl text-sm sm:text-base'
-                  >
-                    Change Role
-                  </button>
+                {/* Buy USDC */}
+                {user.address && (
+                  <div className={`${cardClass} p-4`}>
+                    <BuyUSDCButton walletAddress={user.address} />
+                  </div>
                 )}
 
-                {/* Clear Role Button (for testing) */}
-                {userRole && user?.address && (
-                  <button
-                    onClick={async () => {
-                      if (
-                        confirm(
-                          'Clear your role? This will show the role selection modal again. (For testing)'
-                        )
-                      ) {
-                        try {
-                          const response = await fetch('/api/user/set-role', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              role: null,
-                              walletAddress: user.address,
-                            }),
-                          })
-                          if (response.ok) {
-                            // Reload page to trigger role fetch and show modal
-                            window.location.reload()
-                          } else {
-                            const errorData = await response
-                              .json()
-                              .catch(() => ({}))
-                            alert(
-                              `Failed to clear role: ${errorData.error || 'Unknown error'}`
-                            )
-                          }
-                        } catch (error) {
-                          console.error('Error clearing role:', error)
-                          alert('Error clearing role')
-                        }
-                      }
-                    }}
-                    className='w-full px-4 sm:px-6 py-3 sm:py-4 text-yellow-200 font-semibold bg-yellow-600/20 backdrop-blur-sm border border-yellow-500/30 rounded-lg sm:rounded-xl hover:bg-yellow-600/30 hover:border-yellow-500/50 transition-all duration-300 shadow-lg hover:shadow-xl text-sm sm:text-base'
-                  >
-                    🧪 Clear Role (Test)
+                {/* Action Buttons */}
+                <div className='space-y-3 pt-2'>
+                  {userRole && onSwitchRole && (
+                    <button onClick={handleSwitchRole} className={buttonSecondary}>
+                      Change Role
+                    </button>
+                  )}
+                  <button onClick={handleLogout} className={buttonPrimary}>
+                    Sign Out
                   </button>
-                )}
-
-                {/* Sign Out Button */}
-                <button
-                  onClick={handleLogout}
-                  className='w-full px-4 sm:px-6 py-3 sm:py-4 text-brand-sage font-semibold bg-brand-mint rounded-lg sm:rounded-xl hover:bg-brand-mint/80 transition-all duration-300 shadow-lg hover:shadow-xl text-sm sm:text-base'
-                >
-                  Sign Out
-                </button>
-              </div>
+                </div>
+              </>
             )}
 
             {activeTab === 'send' && user.address && (
               <div className='space-y-4'>
-                {/* Simple token list / selector */}
-                <div
-                  className={`p-3 rounded-lg border text-xs sm:text-sm ${
-                    theme === 'dark'
-                      ? 'bg-brand-sage-light/10 border-brand-mint/30'
-                      : 'bg-gray-50 border-gray-200'
-                  }`}
-                >
+                {/* Token Selector */}
+                <div className={`${cardClass} p-4`}>
                   <p
-                    className={`mb-2 font-medium ${
-                      theme === 'dark' ? 'text-brand-cream' : 'text-gray-800'
+                    className={`text-sm font-medium mb-3 ${
+                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
                     }`}
                   >
-                    Choose asset to send
+                    Select token to send
                   </p>
-
-                  <div className='space-y-2'>
-                    {/* Base Sepolia USDC – currently supported */}
-                    <div
-                      className={`flex items-center justify-between p-2 rounded-lg border text-xs sm:text-sm ${
-                        theme === 'dark'
-                          ? 'bg-blue-900/30 border-blue-500/40'
-                          : 'bg-blue-50 border-blue-200'
+                  <div className='grid grid-cols-2 gap-3'>
+                    {/* USDC Option */}
+                    <button
+                      onClick={() => setSendToken('usdc')}
+                      className={`p-3 rounded-xl border-2 transition-all ${
+                        sendToken === 'usdc'
+                          ? theme === 'dark'
+                            ? 'border-blue-500 bg-blue-500/10'
+                            : 'border-blue-500 bg-blue-50'
+                          : theme === 'dark'
+                            ? 'border-gray-700 hover:border-gray-600'
+                            : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      <div>
+                      <div className='flex items-center gap-2'>
                         <div
-                          className={`font-semibold ${
-                            theme === 'dark'
-                              ? 'text-brand-cream'
-                              : 'text-gray-900'
+                          className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'
                           }`}
                         >
-                          USDC
-                          <span className='ml-1 text-[11px] opacity-80'>
-                            • Base Sepolia (test)
-                          </span>
+                          <span className='text-lg'>💵</span>
                         </div>
-                        <div
-                          className={`text-[11px] ${
-                            theme === 'dark'
-                              ? 'text-brand-cream/70'
-                              : 'text-gray-600'
-                          }`}
-                        >
-                          Current send flow uses this asset for testing.
+                        <div className='text-left'>
+                          <p
+                            className={`text-sm font-semibold ${
+                              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                            }`}
+                          >
+                            USDC
+                          </p>
+                          <p
+                            className={`text-xs ${
+                              theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+                            }`}
+                          >
+                            Sepolia
+                          </p>
                         </div>
                       </div>
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-[11px] font-semibold ${
-                          theme === 'dark'
-                            ? 'bg-blue-500/30 text-blue-100 border border-blue-400/50'
-                            : 'bg-blue-100 text-blue-700 border border-blue-300'
-                        }`}
-                      >
-                        Active
-                      </span>
-                    </div>
+                    </button>
 
-                    {/* Base Mainnet USDC – view-only for now */}
-                    <div
-                      className={`flex items-center justify-between p-2 rounded-lg border text-xs sm:text-sm opacity-70 ${
-                        theme === 'dark'
-                          ? 'bg-gray-900/40 border-gray-700'
-                          : 'bg-white border-gray-200'
+                    {/* STORM Option */}
+                    <button
+                      onClick={() => setSendToken('storm')}
+                      className={`p-3 rounded-xl border-2 transition-all ${
+                        sendToken === 'storm'
+                          ? theme === 'dark'
+                            ? 'border-yellow-500 bg-yellow-500/10'
+                            : 'border-yellow-500 bg-yellow-50'
+                          : theme === 'dark'
+                            ? 'border-gray-700 hover:border-gray-600'
+                            : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      <div>
+                      <div className='flex items-center gap-2'>
                         <div
-                          className={`font-semibold ${
-                            theme === 'dark'
-                              ? 'text-brand-cream/80'
-                              : 'text-gray-800'
+                          className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            theme === 'dark' ? 'bg-yellow-500/20' : 'bg-yellow-100'
                           }`}
                         >
-                          USDC
-                          <span className='ml-1 text-[11px] opacity-80'>
-                            • Base Mainnet
-                          </span>
+                          <span className='text-lg'>⛈️</span>
                         </div>
-                        <div
-                          className={`text-[11px] ${
-                            theme === 'dark'
-                              ? 'text-brand-cream/60'
-                              : 'text-gray-500'
-                          }`}
-                        >
-                          View-only for now. Sending from StormChain will use
-                          this in production.
+                        <div className='text-left'>
+                          <p
+                            className={`text-sm font-semibold ${
+                              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                            }`}
+                          >
+                            STORM
+                          </p>
+                          <p
+                            className={`text-xs ${
+                              theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
+                            }`}
+                          >
+                            Sepolia
+                          </p>
                         </div>
                       </div>
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-[11px] font-semibold ${
-                          theme === 'dark'
-                            ? 'bg-gray-800 text-gray-400 border border-gray-700'
-                            : 'bg-gray-100 text-gray-500 border border-gray-200'
-                        }`}
-                      >
-                        Coming soon
-                      </span>
-                    </div>
+                    </button>
                   </div>
                 </div>
 
-                {/* Current send flow: Base Sepolia USDC */}
-                <SendUSDC
-                  walletAddress={user.address}
-                  onSuccess={() => {
-                    // Refresh balance after successful send
-                    setTimeout(() => window.location.reload(), 2000)
-                  }}
-                />
+                {/* Send Form */}
+                {sendToken === 'usdc' ? (
+                  <SendUSDC
+                    walletAddress={user.address}
+                    onSuccess={() => {
+                      setTimeout(() => window.location.reload(), 2000)
+                    }}
+                  />
+                ) : (
+                  <SendSTORM
+                    walletAddress={user.address}
+                    onSuccess={() => {
+                      setTimeout(() => window.location.reload(), 2000)
+                    }}
+                  />
+                )}
               </div>
             )}
 
             {activeTab === 'receive' && user.address && (
-              <div>
-                <ReceiveUSDC walletAddress={user.address} />
-              </div>
+              <ReceiveUSDC walletAddress={user.address} />
             )}
 
             {activeTab === 'history' && user.address && (
-              <div>
-                <TransactionHistory
-                  walletAddress={user.address}
-                  maxTransactions={50}
-                  showFilters={true}
-                  autoRefresh={true}
-                  refreshInterval={30000}
-                />
-              </div>
+              <TransactionHistory
+                walletAddress={user.address}
+                maxTransactions={50}
+                showFilters={true}
+                autoRefresh={true}
+                refreshInterval={30000}
+              />
             )}
           </div>
         </div>

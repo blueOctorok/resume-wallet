@@ -2,6 +2,151 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 /**
+ * Normalizes resume structured_data from different formats (old uploaded vs new builder)
+ * into a consistent format that the career card can display.
+ * Same logic as DriverHub.tsx uses for preview.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeResumeStructuredData(raw: any): any {
+  if (!raw) return undefined
+
+  // Detect format: new builder uses 'companyName', old format uses 'company'
+  const isResumeBuilderFormat =
+    Array.isArray(raw.employments) &&
+    raw.employments.length > 0 &&
+    'companyName' in (raw.employments[0] || {})
+
+  // Detect skills format: new builder uses objects with 'name', old uses grouped { category, items }
+  const hasResumeBuilderSkillsFormat =
+    Array.isArray(raw.skills) &&
+    raw.skills.length > 0 &&
+    typeof raw.skills[0] === 'object' &&
+    'name' in (raw.skills[0] || {})
+
+  if (isResumeBuilderFormat) {
+    // New builder format — already normalized, just pass through with clean structure
+    return {
+      personalInfo: {
+        firstName: raw.personalInfo?.firstName,
+        lastName: raw.personalInfo?.lastName,
+        email: raw.personalInfo?.email,
+        phone: raw.personalInfo?.phone,
+        address: raw.personalInfo?.address,
+        city: raw.personalInfo?.city,
+        state: raw.personalInfo?.state,
+        zipCode: raw.personalInfo?.zipCode,
+        professionalSummary: raw.personalInfo?.professionalSummary,
+      },
+      cdlInfo: {
+        cdlClass: raw.cdlInfo?.cdlClass,
+        cdlState: raw.cdlInfo?.cdlState,
+        expirationDate: raw.cdlInfo?.expirationDate,
+        endorsements: raw.cdlInfo?.endorsements || [],
+        restrictions: raw.cdlInfo?.restrictions || [],
+      },
+      employments: (raw.employments || []).map((emp: Record<string, unknown>) => ({
+        companyName: emp.companyName,
+        position: emp.position,
+        location: emp.location,
+        startDate: emp.startDate,
+        endDate: emp.endDate,
+        isCurrent: emp.isCurrent,
+        responsibilities: emp.responsibilities || [],
+      })),
+      educations: (raw.educations || []).map((edu: Record<string, unknown>) => ({
+        school: edu.school,
+        degree: edu.degree,
+        field: edu.field,
+        year: edu.year,
+        certifications: edu.certifications || [],
+      })),
+      skills: hasResumeBuilderSkillsFormat
+        ? (raw.skills || []).map((skill: Record<string, unknown>) => ({
+            name: skill.name,
+            category: skill.category || 'other',
+          }))
+        : [],
+      references: (raw.references || []).map((ref: Record<string, unknown>) => ({
+        name: ref.name,
+        title: ref.title,
+        company: ref.company,
+        phone: ref.phone,
+        email: ref.email,
+        relationship: ref.relationship,
+      })),
+    }
+  } else {
+    // Old uploaded/analyzed format — map to normalized structure
+    return {
+      personalInfo: {
+        firstName: raw.personalInfo?.firstName,
+        lastName: raw.personalInfo?.lastName,
+        email: raw.personalInfo?.email,
+        phone: raw.personalInfo?.phone,
+        address: raw.personalInfo?.address,
+        city: raw.personalInfo?.city,
+        state: raw.personalInfo?.state,
+        zipCode: raw.personalInfo?.zipCode,
+        professionalSummary: raw.personalInfo?.summary || raw.personalInfo?.professionalSummary,
+      },
+      cdlInfo: {
+        cdlClass: raw.cdlInfo?.cdlClass,
+        cdlState: raw.cdlInfo?.cdlState,
+        expirationDate: raw.cdlInfo?.cdlExpiration || raw.cdlInfo?.expirationDate,
+        endorsements: raw.cdlInfo?.endorsements || [],
+        restrictions: raw.cdlInfo?.restrictions || [],
+      },
+      // Old format: employments[].company → companyName, .current → .isCurrent, .description → responsibilities
+      employments: (raw.employments || []).map((emp: Record<string, unknown>) => ({
+        companyName: emp.company || emp.companyName,
+        position: emp.position,
+        location: emp.location,
+        startDate: emp.startDate,
+        endDate: emp.endDate,
+        isCurrent: emp.current ?? emp.isCurrent,
+        responsibilities: emp.description
+          ? [emp.description]
+          : (emp.responsibilities as string[]) || [],
+      })),
+      educations: (raw.educations || []).map((edu: Record<string, unknown>) => ({
+        school: edu.school,
+        degree: edu.degree,
+        field: edu.field,
+        year: edu.graduationDate || edu.year,
+        certifications: (edu.certifications as string[]) || [],
+      })),
+      // Old format: skills is array of { category, items: string[] } — flatten to { name, category }
+      skills: Array.isArray(raw.skills)
+        ? raw.skills.flatMap((skillGroup: unknown) => {
+            if (typeof skillGroup === 'string') {
+              return [{ name: skillGroup, category: 'other' }]
+            }
+            const group = skillGroup as Record<string, unknown>
+            if (Array.isArray(group.items)) {
+              return (group.items as string[]).map((item) => ({
+                name: item,
+                category: (group.category as string) || 'other',
+              }))
+            }
+            if (group.name) {
+              return [{ name: group.name, category: (group.category as string) || 'other' }]
+            }
+            return []
+          })
+        : [],
+      references: (raw.references || []).map((ref: Record<string, unknown>) => ({
+        name: ref.name,
+        title: ref.title || ref.relationship,
+        company: ref.company,
+        phone: ref.phone,
+        email: ref.email,
+        relationship: ref.relationship,
+      })),
+    }
+  }
+}
+
+/**
  * GET /api/driver/public/[token]
  * 
  * Fetches a driver's public profile by their share token.
@@ -87,12 +232,11 @@ export async function GET(
     }
 
     // Increment view count (fire and forget)
-    supabase
+    void supabase
       .from('driver_profiles')
       .update({ share_views_count: (profile.share_views_count || 0) + 1 })
       .eq('id', profile.id)
-      .then(() => {})
-      .catch(() => {})
+      .then(() => {}, () => {})
 
     // Build the public profile based on settings
     const publicProfile: Record<string, any> = {
@@ -122,19 +266,22 @@ export async function GET(
       }
     }
 
-    // Fetch resume if enabled
+    // Fetch resume if enabled — show latest DRIVER resume (exclude developer_built)
     let resume = null
     if (settings.showResume) {
       const { data: resumeData } = await supabase
         .from('resumes')
-        .select('id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, created_at, resume_type')
+        .select('id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, created_at, resume_type, structured_data')
         .eq('user_id', profile.user_id)
-        .eq('verification_status', 'VERIFIED')
+        .or('resume_type.neq.developer_built,resume_type.is.null') // Exclude developer resumes
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
 
       if (resumeData) {
+        // Normalize structured_data to a consistent format (handles old uploaded vs new builder format)
+        const normalizedData = normalizeResumeStructuredData(resumeData.structured_data)
+        
         resume = {
           id: resumeData.id,
           title: resumeData.title,
@@ -143,8 +290,8 @@ export async function GET(
           blockchainVerified: !!resumeData.blockchain_tx_hash,
           type: resumeData.resume_type,
           createdAt: resumeData.created_at,
-          // Include IPFS hash for viewing
           ipfsHash: resumeData.ipfs_hash,
+          structuredData: normalizedData,
         }
       }
     }
@@ -195,7 +342,7 @@ export async function GET(
       }
     }
 
-    // Employment history summary (if resume sharing enabled)
+    // Employment history from profile (unverified — for resume/display only, not "Verified Employment")
     let employmentSummary = null
     if (settings.showResume && profile.employment_history) {
       const history = profile.employment_history as Array<{
@@ -205,7 +352,6 @@ export async function GET(
         endDate?: string
         isCurrent?: boolean
       }>
-      
       if (Array.isArray(history) && history.length > 0) {
         employmentSummary = history.slice(0, 3).map(emp => ({
           company: emp.companyName,
@@ -216,18 +362,40 @@ export async function GET(
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      profile: publicProfile,
-      resume,
-      dotApp,
-      mvr,
-      employmentSummary,
-      settings: {
-        allowConnect: settings.allowConnect,
+    // Verified employment only from verification flow (employer responded via email)
+    const { data: verifiedRows } = await supabase
+      .from('employment_verification_requests')
+      .select('previous_employer_name, claimed_position, claimed_start_date, claimed_end_date, status')
+      .eq('driver_id', profile.user_id)
+      .eq('applicant_type', 'driver')
+      .in('status', ['VERIFIED', 'PARTIALLY_VERIFIED'])
+      .order('verified_at', { ascending: false })
+
+    const verifiedEmployments = (verifiedRows ?? []).map((r) => ({
+      companyName: r.previous_employer_name,
+      position: r.claimed_position,
+      startDate: r.claimed_start_date ?? null,
+      endDate: r.claimed_end_date ?? null,
+      status: r.status,
+    }))
+
+    // Prevent caching so career card always shows current state (e.g. after resume delete)
+    return NextResponse.json(
+      {
+        success: true,
+        profile: publicProfile,
+        resume,
+        dotApp,
+        mvr,
+        employmentSummary,
+        verifiedEmployments,
+        settings: {
+          allowConnect: settings.allowConnect,
+        },
+        viewCount: (profile.share_views_count || 0) + 1,
       },
-      viewCount: (profile.share_views_count || 0) + 1,
-    })
+      { headers: { 'Cache-Control': 'no-store' } }
+    )
 
   } catch (error) {
     console.error('[PUBLIC PROFILE] Error:', error)

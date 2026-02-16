@@ -18,8 +18,10 @@ import {
   Building2,
   Mail,
   Phone,
-  Calendar,
   Send,
+  Sparkles,
+  ShieldCheck,
+  GraduationCap,
 } from 'lucide-react'
 
 // Types for the public profile data
@@ -42,6 +44,53 @@ interface PublicProfile {
   }
 }
 
+/** Driver resume structured_data (builder or extracted) */
+interface DriverResumeStructuredData {
+  personalInfo?: {
+    firstName?: string
+    lastName?: string
+    email?: string
+    phone?: string
+    address?: string
+    city?: string
+    state?: string
+    zipCode?: string
+    professionalSummary?: string
+  }
+  cdlInfo?: {
+    cdlClass?: string
+    cdlState?: string
+    expirationDate?: string
+    endorsements?: string[]
+    restrictions?: string[]
+  }
+  employments?: Array<{
+    companyName?: string
+    position?: string
+    location?: string
+    startDate?: string
+    endDate?: string
+    isCurrent?: boolean
+    responsibilities?: string[]
+  }>
+  educations?: Array<{
+    school?: string
+    degree?: string
+    field?: string
+    year?: string
+    certifications?: string[]
+  }>
+  skills?: string[] | Array<{ name?: string; category?: string }>
+  references?: Array<{
+    name?: string
+    title?: string
+    company?: string
+    phone?: string
+    email?: string
+    relationship?: string
+  }>
+}
+
 interface Resume {
   id: string
   title: string
@@ -51,6 +100,21 @@ interface Resume {
   type: string
   createdAt: string
   ipfsHash: string
+  structuredData?: DriverResumeStructuredData
+}
+
+/** Driver career score from /api/ai/driver-career-score */
+interface DriverCareerScore {
+  score: number
+  grade: 'A' | 'B' | 'C' | 'D' | 'F'
+  breakdown: {
+    mvr: { score: number; weight: number; factors: Record<string, number> }
+    experience: { score: number; weight: number; factors: Record<string, number> }
+    credentials: { score: number; weight: number; factors: Record<string, number> }
+    profile: { score: number; weight: number; factors: Record<string, number> }
+  }
+  suggestions: string[]
+  analyzedAt: string
 }
 
 interface DotApp {
@@ -77,6 +141,15 @@ interface EmploymentEntry {
   endDate: string
 }
 
+/** Only jobs verified via the email verification flow (employer responded). */
+interface VerifiedEmploymentEntry {
+  companyName: string
+  position: string
+  startDate: string | null
+  endDate: string | null
+  status: string
+}
+
 interface ProfileData {
   success: boolean
   profile: PublicProfile
@@ -84,6 +157,7 @@ interface ProfileData {
   dotApp: DotApp | null
   mvr: Mvr | null
   employmentSummary: EmploymentEntry[] | null
+  verifiedEmployments?: VerifiedEmploymentEntry[] | null
   settings: {
     allowConnect: boolean
   }
@@ -97,6 +171,9 @@ export default function PublicDriverProfile() {
   const [data, setData] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [careerScore, setCareerScore] = useState<DriverCareerScore | null>(null)
+  const [scoreLoading, setScoreLoading] = useState(false)
+  const [showScoreBreakdown, setShowScoreBreakdown] = useState(false)
 
   // Connect form state
   const [showConnectForm, setShowConnectForm] = useState(false)
@@ -112,17 +189,19 @@ export default function PublicDriverProfile() {
   const [connectSuccess, setConnectSuccess] = useState(false)
 
   useEffect(() => {
-    if (token) {
-      fetchProfile()
-    }
+    if (token) fetchProfile()
   }, [token])
+
+  useEffect(() => {
+    if (data && token) fetchCareerScore()
+  }, [data, token])
 
   const fetchProfile = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      const response = await fetch(`/api/driver/public/${token}`)
+      const response = await fetch(`/api/driver/public/${token}`, { cache: 'no-store' })
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -140,6 +219,21 @@ export default function PublicDriverProfile() {
       setError('Failed to load profile')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchCareerScore = async () => {
+    try {
+      setScoreLoading(true)
+      const response = await fetch(`/api/ai/driver-career-score?token=${token}`)
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success) setCareerScore(result)
+      }
+    } catch (err) {
+      console.error('Error fetching driver career score:', err)
+    } finally {
+      setScoreLoading(false)
     }
   }
 
@@ -177,13 +271,12 @@ export default function PublicDriverProfile() {
     }
   }
 
-  // Loading state
   if (loading) {
     return (
       <div className='min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center'>
         <div className='text-center'>
           <Loader2 className='w-12 h-12 animate-spin text-brand-mint mx-auto mb-4' />
-          <p className='text-gray-400'>Loading profile...</p>
+          <p className='text-gray-400'>Loading Career Card...</p>
         </div>
       </div>
     )
@@ -213,204 +306,158 @@ export default function PublicDriverProfile() {
     )
   }
 
-  const { profile, resume, dotApp, mvr, employmentSummary, settings } = data
+  const { profile, resume, dotApp, mvr, employmentSummary, verifiedEmployments, settings } = data
+  const displayName = [profile.firstName, profile.lastName].filter(Boolean).join(' ') || 'Driver'
+  const endorsements = profile.cdl.endorsements ?? []
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'>
-      {/* Header */}
-      <header className='border-b border-gray-700/50 bg-gray-900/80 backdrop-blur-xl sticky top-0 z-10'>
-        <div className='max-w-3xl mx-auto px-4 py-4 flex items-center justify-between'>
+      <div className='fixed inset-0 overflow-hidden pointer-events-none'>
+        <div className='absolute top-0 right-0 w-96 h-96 bg-brand-mint/5 rounded-full blur-3xl' />
+        <div className='absolute bottom-0 left-0 w-96 h-96 bg-teal-500/5 rounded-full blur-3xl' />
+      </div>
+
+      <header className='border-b border-gray-700/50 bg-gray-900/80 backdrop-blur-xl sticky top-0 z-20'>
+        <div className='max-w-4xl mx-auto px-4 py-4 flex items-center justify-between'>
           <a href='/' className='flex items-center gap-2'>
-            <div className='w-8 h-8 rounded-lg bg-brand-mint flex items-center justify-center'>
-              <span className='text-gray-900 font-bold text-sm'>⚡</span>
+            <div className='w-8 h-8 rounded-lg bg-gradient-to-br from-brand-mint to-teal-500 flex items-center justify-center shadow-lg shadow-brand-mint/20'>
+              <span className='text-gray-900 font-bold text-sm'>S</span>
             </div>
             <span className='text-white font-semibold'>StormChain</span>
           </a>
-          <span className='text-xs text-gray-500'>Verified Driver Profile</span>
+          <div className='flex items-center gap-2'>
+            <Sparkles className='w-4 h-4 text-brand-mint' />
+            <span className='text-xs text-gray-400'>Career Card</span>
+          </div>
         </div>
       </header>
 
-      <main className='max-w-3xl mx-auto px-4 py-8'>
-        {/* Profile Card */}
-        <div className='bg-gray-800/50 backdrop-blur-xl rounded-2xl border border-gray-700/50 overflow-hidden mb-6'>
-          {/* Top Section */}
-          <div className='p-6 border-b border-gray-700/50'>
-            <div className='flex items-start gap-4'>
-              {/* Avatar */}
-              <div className='w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-mint to-teal-600 flex items-center justify-center flex-shrink-0'>
-                <span className='text-3xl font-bold text-gray-900'>
-                  {profile.firstName?.[0]}
-                  {profile.lastName?.[0]}
-                </span>
+      <main className='max-w-4xl mx-auto px-4 py-8 relative z-10'>
+        {/* Hero Profile Card */}
+        <div className='bg-gradient-to-br from-gray-800/80 to-gray-800/40 backdrop-blur-xl rounded-3xl border border-gray-700/50 overflow-hidden mb-8 shadow-2xl'>
+          <div className='h-1 bg-gradient-to-r from-brand-mint via-teal-400 to-emerald-500' />
+          <div className='p-8'>
+            <div className='flex flex-col sm:flex-row items-start gap-6'>
+              <div className='relative'>
+                <div className='absolute inset-0 bg-brand-mint/30 rounded-2xl blur-xl' />
+                <div className='relative w-24 h-24 rounded-2xl bg-gradient-to-br from-brand-mint via-teal-400 to-emerald-500 flex items-center justify-center shadow-xl'>
+                  <span className='text-4xl font-bold text-gray-900'>
+                    {profile.firstName?.[0] ?? 'D'}
+                    {profile.lastName?.[0] ?? ''}
+                  </span>
+                </div>
               </div>
-
               <div className='flex-1 min-w-0'>
-                <h1 className='text-2xl font-bold text-white'>
-                  {profile.firstName} {profile.lastName}
-                </h1>
-
-                {profile.location && (
-                  <p className='flex items-center gap-1 text-gray-400 mt-1'>
-                    <MapPin className='w-4 h-4' />
-                    {profile.location}
-                  </p>
-                )}
-
-                {profile.experienceYears && (
-                  <p className='text-gray-400 mt-1'>
-                    {profile.experienceYears}+ years experience
-                  </p>
+                <div className='flex items-start justify-between gap-4'>
+                  <div>
+                    <h1 className='text-3xl font-bold text-white'>{displayName}</h1>
+                    {profile.summary && (
+                      <p className='text-lg text-brand-mint font-medium mt-1 line-clamp-2'>
+                        {profile.summary.split('\n')[0]?.slice(0, 80) || 'Professional Driver'}
+                      </p>
+                    )}
+                    {!profile.summary && (
+                      <p className='text-lg text-brand-mint font-medium mt-1'>Professional Driver</p>
+                    )}
+                  </div>
+                  <div className='flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-full text-sm border border-green-500/30'>
+                    <CheckCircle className='w-4 h-4' />
+                    Verified
+                  </div>
+                </div>
+                <div className='flex flex-wrap items-center gap-4 mt-3 text-gray-400'>
+                  {profile.location && (
+                    <span className='flex items-center gap-1.5'>
+                      <MapPin className='w-4 h-4' />
+                      {profile.location}
+                    </span>
+                  )}
+                  {profile.experienceYears != null && (
+                    <span className='flex items-center gap-1.5'>
+                      <Briefcase className='w-4 h-4' />
+                      {profile.experienceYears}+ years
+                    </span>
+                  )}
+                </div>
+                {profile.summary && (
+                  <p className='mt-4 text-gray-300 leading-relaxed'>{profile.summary}</p>
                 )}
               </div>
-
-              {/* Verified Badge */}
-              <div className='flex items-center gap-1 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-full text-sm'>
-                <CheckCircle className='w-4 h-4' />
-                Verified
-              </div>
             </div>
-
-            {/* Summary */}
-            {profile.summary && (
-              <p className='mt-4 text-gray-300 text-sm leading-relaxed'>
-                {profile.summary}
-              </p>
-            )}
-          </div>
-
-          {/* CDL Info */}
-          <div className='p-6 border-b border-gray-700/50'>
-            <h2 className='flex items-center gap-2 text-lg font-semibold text-white mb-4'>
-              <Award className='w-5 h-5 text-brand-mint' />
-              CDL Information
-            </h2>
-            <div className='grid grid-cols-2 sm:grid-cols-4 gap-4'>
-              <InfoBox
-                label='Class'
-                value={profile.cdl.class || 'N/A'}
-                highlight
-              />
-              <InfoBox label='State' value={profile.cdl.state || 'N/A'} />
-              <InfoBox
-                label='Expiration'
-                value={
-                  profile.cdl.expiration
-                    ? new Date(profile.cdl.expiration).toLocaleDateString(
-                        'en-US',
-                        { month: 'short', year: 'numeric' }
-                      )
-                    : 'N/A'
-                }
-              />
-              <InfoBox
-                label='Endorsements'
-                value={
-                  profile.cdl.endorsements?.length
-                    ? profile.cdl.endorsements.join(', ')
-                    : 'None'
-                }
-              />
-            </div>
-          </div>
-
-          {/* Credentials */}
-          <div className='p-6'>
-            <h2 className='flex items-center gap-2 text-lg font-semibold text-white mb-4'>
-              <Shield className='w-5 h-5 text-brand-mint' />
-              Verified Credentials
-            </h2>
-            <div className='space-y-3'>
-              {/* Resume */}
-              {resume && (
-                <CredentialCard
-                  icon={<FileText className='w-5 h-5' />}
-                  title='Resume'
-                  subtitle={resume.title || resume.filename}
-                  verified={resume.blockchainVerified}
-                  action={
-                    resume.ipfsHash && !resume.ipfsHash.startsWith('built_') ? (
-                      <a
-                        href={`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`}
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        className='flex items-center gap-1 text-sm text-brand-mint hover:underline'
-                      >
-                        View <ExternalLink className='w-3 h-3' />
-                      </a>
-                    ) : null
-                  }
-                />
+            {/* Quick Links */}
+            <div className='flex flex-wrap gap-3 mt-6 pt-6 border-t border-gray-700/50'>
+              {resume?.ipfsHash && !resume.ipfsHash.startsWith('built_') && (
+                <a
+                  href={`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  className='flex items-center gap-2 px-4 py-2 bg-green-500/20 hover:bg-green-500/30 rounded-xl text-green-400 transition-all hover:scale-105 border border-green-500/30'
+                >
+                  <FileText className='w-4 h-4' />
+                  View Resume
+                  {resume.blockchainVerified && <CheckCircle className='w-3 h-3' />}
+                </a>
               )}
-
-              {/* DOT Application */}
-              {dotApp && (
-                <CredentialCard
-                  icon={<ClipboardCheck className='w-5 h-5' />}
-                  title='DOT Application'
-                  subtitle={
-                    dotApp.isComplete
-                      ? 'Complete'
-                      : `${dotApp.completionPercentage}% Complete`
-                  }
-                  verified={dotApp.blockchainVerified}
-                  status={dotApp.isComplete ? 'complete' : 'in_progress'}
-                />
+              {profile.contact?.email && (
+                <a
+                  href={`mailto:${profile.contact.email}`}
+                  className='flex items-center gap-2 px-4 py-2 bg-gray-700/50 hover:bg-gray-700 rounded-xl text-gray-300 transition-all hover:scale-105'
+                >
+                  <Mail className='w-4 h-4' />
+                  Email
+                </a>
               )}
-
-              {/* MVR */}
-              {mvr && (
-                <CredentialCard
-                  icon={<Car className='w-5 h-5' />}
-                  title='Motor Vehicle Record'
-                  subtitle={`License: ${mvr.licenseStatus}`}
-                  verified={true}
-                  status={
-                    mvr.status === 'clean'
-                      ? 'complete'
-                      : mvr.status === 'valid_with_violations'
-                        ? 'warning'
-                        : 'error'
-                  }
-                  extra={
-                    <div className='text-xs text-gray-500 mt-1'>
-                      {mvr.violationCount === 0
-                        ? 'Clean record'
-                        : `${mvr.violationCount} violation${mvr.violationCount > 1 ? 's' : ''}`}
-                      {mvr.totalPoints !== null &&
-                        mvr.totalPoints > 0 &&
-                        ` • ${mvr.totalPoints} points`}
-                    </div>
-                  }
-                />
-              )}
-
-              {/* No credentials message */}
-              {!resume && !dotApp && !mvr && (
-                <p className='text-gray-500 text-center py-4'>
-                  No verified credentials available
-                </p>
+              {profile.contact?.phone && (
+                <a
+                  href={`tel:${profile.contact.phone}`}
+                  className='flex items-center gap-2 px-4 py-2 bg-gray-700/50 hover:bg-gray-700 rounded-xl text-gray-300 transition-all hover:scale-105'
+                >
+                  <Phone className='w-4 h-4' />
+                  Phone
+                </a>
               )}
             </div>
           </div>
         </div>
 
-        {/* Employment History */}
-        {employmentSummary && employmentSummary.length > 0 && (
-          <div className='bg-gray-800/50 backdrop-blur-xl rounded-2xl border border-gray-700/50 p-6 mb-6'>
-            <h2 className='flex items-center gap-2 text-lg font-semibold text-white mb-4'>
-              <Briefcase className='w-5 h-5 text-brand-mint' />
-              Recent Experience
-            </h2>
-            <div className='space-y-3'>
-              {employmentSummary.map((emp, idx) => (
-                <div key={idx} className='flex items-start gap-3'>
-                  <div className='w-2 h-2 rounded-full bg-brand-mint mt-2' />
-                  <div>
-                    <p className='text-white font-medium'>{emp.position}</p>
-                    <p className='text-gray-400 text-sm'>{emp.company}</p>
-                    <p className='text-gray-500 text-xs'>
-                      {emp.startDate} - {emp.endDate}
+        {/* Verified Employment — only when employer verified via email */}
+        {verifiedEmployments && verifiedEmployments.length > 0 && (
+          <div className='mb-8'>
+            <div className='mb-4'>
+              <h2 className='flex items-center gap-2 text-xl font-bold text-white'>
+                <ShieldCheck className='w-5 h-5 text-green-400' />
+                Verified Employment
+              </h2>
+              <p className='text-sm text-gray-400 mt-1'>
+                Confirmed by previous employers — trust badges on your Career Card
+              </p>
+            </div>
+            <div className='grid gap-3 sm:grid-cols-2'>
+              {verifiedEmployments.map((job, idx) => (
+                <div
+                  key={idx}
+                  className='flex items-start gap-4 rounded-xl border border-gray-700/50 bg-gray-800/50 backdrop-blur-sm p-4 transition-all hover:border-green-500/30 hover:bg-gray-800/70'
+                >
+                  <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-500/20 border border-green-500/30'>
+                    <CheckCircle className='h-5 w-5 text-green-400' />
+                  </div>
+                  <div className='min-w-0 flex-1'>
+                    <p className='font-semibold text-white'>{job.position}</p>
+                    <p className='text-sm text-brand-mint font-medium'>{job.companyName}</p>
+                    <p className='mt-1 text-xs text-gray-500'>
+                      {job.startDate
+                        ? new Date(job.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+                        : ''}
+                      {job.startDate && job.endDate ? ' – ' : ''}
+                      {job.endDate
+                        ? new Date(job.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+                        : job.startDate ? 'Present' : ''}
                     </p>
+                    {job.status === 'PARTIALLY_VERIFIED' && (
+                      <span className='mt-2 inline-block rounded-full bg-amber-500/20 px-2 py-0.5 text-xs text-amber-400 border border-amber-500/30'>
+                        Partially verified
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -418,46 +465,405 @@ export default function PublicDriverProfile() {
           </div>
         )}
 
-        {/* Contact Info (if shared) */}
-        {profile.contact &&
-          (profile.contact.email || profile.contact.phone) && (
-            <div className='bg-gray-800/50 backdrop-blur-xl rounded-2xl border border-gray-700/50 p-6 mb-6'>
-              <h2 className='flex items-center gap-2 text-lg font-semibold text-white mb-4'>
-                Contact Information
-              </h2>
-              <div className='flex flex-wrap gap-3'>
-                {profile.contact.email && (
-                  <a
-                    href={`mailto:${profile.contact.email}`}
-                    className='flex items-center gap-2 px-4 py-2 bg-gray-700/50 rounded-lg text-gray-300 hover:bg-gray-700 transition-colors'
+        {/* MVR & Driver Score Section (like GitHub Assessment for devs) */}
+        <div className='mb-8'>
+          <div className='mb-4'>
+            <h2 className='flex items-center gap-2 text-xl font-bold text-white'>
+              <Car className='w-5 h-5 text-brand-mint' />
+              MVR & Driving Record
+            </h2>
+            <p className='text-sm text-gray-400 mt-1'>
+              Motor Vehicle Record and AI-rated candidate score based on record
+            </p>
+          </div>
+          <div className='bg-gray-800/50 backdrop-blur-xl rounded-2xl border border-gray-700/50 overflow-hidden'>
+            <div className='p-5 border-b border-gray-700/50'>
+              <div className='flex items-center gap-4 flex-wrap'>
+                <div className='flex-1 min-w-0'>
+                  <p className='text-lg font-semibold text-white'>Driving record</p>
+                  {mvr ? (
+                    <p className='text-sm text-gray-400'>
+                      License {mvr.licenseStatus}
+                      {mvr.violationCount === 0 ? ' • Clean record' : ` • ${mvr.violationCount} violation(s)`}
+                      {mvr.totalPoints != null && mvr.totalPoints > 0 && ` • ${mvr.totalPoints} pts`}
+                    </p>
+                  ) : (
+                    <p className='text-sm text-gray-500'>No MVR on file</p>
+                  )}
+                </div>
+                <div className='text-center relative'>
+                  <button
+                    onClick={() => setShowScoreBreakdown(!showScoreBreakdown)}
+                    className='focus:outline-none'
+                    title='Click to see score breakdown'
                   >
-                    <Mail className='w-4 h-4' />
-                    {profile.contact.email}
-                  </a>
-                )}
-                {profile.contact.phone && (
-                  <a
-                    href={`tel:${profile.contact.phone}`}
-                    className='flex items-center gap-2 px-4 py-2 bg-gray-700/50 rounded-lg text-gray-300 hover:bg-gray-700 transition-colors'
-                  >
-                    <Phone className='w-4 h-4' />
-                    {profile.contact.phone}
-                  </a>
-                )}
+                    <div
+                      className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold cursor-pointer transition-all hover:scale-105 ${
+                        scoreLoading
+                          ? 'bg-gray-600/20 text-gray-400 border-2 border-gray-600/50 animate-pulse'
+                          : careerScore?.grade === 'A'
+                            ? 'bg-green-500/20 text-green-400 border-2 border-green-500/50'
+                            : careerScore?.grade === 'B'
+                              ? 'bg-brand-mint/20 text-brand-mint border-2 border-brand-mint/50'
+                              : careerScore?.grade === 'C'
+                                ? 'bg-yellow-500/20 text-yellow-400 border-2 border-yellow-500/50'
+                                : careerScore?.grade === 'D'
+                                  ? 'bg-orange-500/20 text-orange-400 border-2 border-orange-500/50'
+                                  : 'bg-gray-600/20 text-gray-400 border-2 border-gray-600/50'
+                      }`}
+                    >
+                      {scoreLoading ? '...' : careerScore?.grade || '—'}
+                    </div>
+                  </button>
+                  <p className='text-xs text-gray-500 mt-1'>
+                    {careerScore ? `Score: ${careerScore.score}` : 'Driver Score'}
+                  </p>
+                  {showScoreBreakdown && careerScore && (
+                    <div className='absolute right-0 top-20 z-30 w-64 p-4 bg-gray-800 rounded-xl border border-gray-700 shadow-xl text-left'>
+                      <button
+                        onClick={() => setShowScoreBreakdown(false)}
+                        className='absolute top-2 right-2 text-gray-500 hover:text-white'
+                      >
+                        ×
+                      </button>
+                      <p className='text-sm font-semibold text-white mb-3'>Score Breakdown</p>
+                      <div className='space-y-2 text-xs'>
+                        <div className='flex justify-between'>
+                          <span className='text-gray-400'>MVR Record</span>
+                          <span className='text-white font-medium'>{careerScore.breakdown.mvr.score}/100</span>
+                        </div>
+                        <div className='flex justify-between'>
+                          <span className='text-gray-400'>Experience</span>
+                          <span className='text-white font-medium'>{careerScore.breakdown.experience.score}/100</span>
+                        </div>
+                        <div className='flex justify-between'>
+                          <span className='text-gray-400'>Credentials</span>
+                          <span className='text-white font-medium'>{careerScore.breakdown.credentials.score}/100</span>
+                        </div>
+                        <div className='flex justify-between'>
+                          <span className='text-gray-400'>Profile</span>
+                          <span className='text-white font-medium'>{careerScore.breakdown.profile.score}/100</span>
+                        </div>
+                        <div className='border-t border-gray-700 pt-2 mt-2 flex justify-between font-semibold'>
+                          <span className='text-brand-mint'>Overall</span>
+                          <span className='text-brand-mint'>{careerScore.score}/100</span>
+                        </div>
+                      </div>
+                      <p className='text-[10px] text-gray-500 mt-3'>
+                        Analyzed • {new Date(careerScore.analyzedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          )}
+            {/* Stats grid */}
+            <div className='grid grid-cols-2 sm:grid-cols-4 gap-px bg-gray-700/30'>
+              <div className='bg-gray-800/80 p-4 text-center'>
+                <p className='text-2xl font-bold text-white'>{profile.cdl.class || '—'}</p>
+                <p className='text-xs text-gray-500'>CDL Class</p>
+              </div>
+              <div className='bg-gray-800/80 p-4 text-center'>
+                <p className='text-2xl font-bold text-white'>{mvr?.totalPoints ?? '—'}</p>
+                <p className='text-xs text-gray-500'>Points</p>
+              </div>
+              <div className='bg-gray-800/80 p-4 text-center'>
+                <p className='text-2xl font-bold text-white'>{mvr?.violationCount ?? '—'}</p>
+                <p className='text-xs text-gray-500'>Violations</p>
+              </div>
+              <div className='bg-gray-800/80 p-4 text-center'>
+                <p className='text-2xl font-bold text-white'>{endorsements.length}</p>
+                <p className='text-xs text-gray-500'>Endorsements</p>
+              </div>
+            </div>
+            {/* Endorsements bar (like languages for devs) */}
+            {endorsements.length > 0 && (
+              <div className='p-5 border-t border-gray-700/50'>
+                <p className='text-sm font-medium text-gray-300 mb-3'>Endorsements</p>
+                <div className='space-y-2'>
+                  {endorsements.map((endorsement) => (
+                    <div key={endorsement} className='flex items-center gap-3'>
+                      <div className='w-24 text-sm text-gray-400 truncate'>{endorsement}</div>
+                      <div className='flex-1 h-2 bg-gray-700/50 rounded-full overflow-hidden'>
+                        <div
+                          className='h-full bg-gradient-to-r from-brand-mint to-teal-400 rounded-full'
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Experience years bar */}
+            {profile.experienceYears != null && profile.experienceYears > 0 && (
+              <div className='p-5 border-t border-gray-700/50'>
+                <p className='text-sm font-medium text-gray-300 mb-3'>Experience</p>
+                <div className='flex items-center gap-3'>
+                  <div className='w-28 text-sm text-gray-400'>Years driving</div>
+                  <div className='flex-1 h-3 bg-gray-700/50 rounded-full overflow-hidden'>
+                    <div
+                      className='h-full bg-gradient-to-r from-brand-mint to-teal-400 rounded-full'
+                      style={{ width: `${Math.min(100, (profile.experienceYears ?? 0) * 10)}%` }}
+                    />
+                  </div>
+                  <div className='w-12 text-right text-xs text-gray-500'>{profile.experienceYears}+ yrs</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
-        {/* Connect Button */}
+        {/* CDL & Credentials summary card */}
+        <div className='bg-gray-800/50 backdrop-blur-xl rounded-2xl border border-gray-700/50 p-6 mb-8'>
+          <h2 className='flex items-center gap-2 text-lg font-semibold text-white mb-4'>
+            <Shield className='w-5 h-5 text-brand-mint' />
+            Credentials
+          </h2>
+          <div className='grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4'>
+            <InfoBox label='Class' value={profile.cdl.class || 'N/A'} highlight />
+            <InfoBox label='State' value={profile.cdl.state || 'N/A'} />
+            <InfoBox
+              label='Expiration'
+              value={
+                profile.cdl.expiration
+                  ? new Date(profile.cdl.expiration).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+                  : 'N/A'
+              }
+            />
+            <InfoBox
+              label='Endorsements'
+              value={endorsements.length ? endorsements.join(', ') : 'None'}
+            />
+          </div>
+          <div className='flex flex-wrap gap-3'>
+            {resume && (
+              <span className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 text-sm border border-green-500/30'>
+                <FileText className='w-4 h-4' /> Resume {resume.blockchainVerified && <CheckCircle className='w-3 h-3' />}
+              </span>
+            )}
+            {dotApp && (
+              <span className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-400 text-sm border border-purple-500/30'>
+                <ClipboardCheck className='w-4 h-4' /> DOT {dotApp.isComplete ? 'Complete' : `${dotApp.completionPercentage}%`}
+              </span>
+            )}
+            {mvr && (
+              <span className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/20 text-orange-400 text-sm border border-orange-500/30'>
+                <Car className='w-4 h-4' /> MVR on file
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Resume — driver-specific sections (CDL, employments, skills, education) */}
+        {resume && (
+          <div className='mb-8 rounded-2xl border-2 border-gray-600/80 bg-gray-800/30 overflow-hidden shadow-xl'>
+            <div className='p-6 sm:p-8'>
+              <div className='flex items-center justify-between mb-6 pb-4 border-b border-gray-700/50'>
+                <h2 className='flex items-center gap-2 text-xl font-bold text-white'>
+                  <FileText className='w-5 h-5 text-brand-mint' />
+                  Resume
+                </h2>
+                <div className='flex items-center gap-3'>
+                  {resume.blockchainVerified && (
+                    <span className='flex items-center gap-1 text-xs text-green-400'>
+                      <CheckCircle className='w-3 h-3' />
+                      Blockchain Verified
+                    </span>
+                  )}
+                  {resume.ipfsHash && !resume.ipfsHash.startsWith('built_') && (
+                    <a
+                      href={`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      className='flex items-center gap-1 text-sm text-brand-mint hover:underline'
+                    >
+                      View PDF <ExternalLink className='w-3 h-3' />
+                    </a>
+                  )}
+                </div>
+              </div>
+              {resume.structuredData ? (
+                <>
+                  {resume.structuredData.personalInfo && (
+                    <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
+                      <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
+                        <User className='w-5 h-5 text-brand-mint' /> Personal Information
+                      </h3>
+                      <p className='text-xl font-bold text-white'>
+                        {resume.structuredData.personalInfo.firstName} {resume.structuredData.personalInfo.lastName}
+                      </p>
+                      <div className='text-sm text-gray-400 mt-1'>
+                        {resume.structuredData.personalInfo.email && <p>{resume.structuredData.personalInfo.email}</p>}
+                        {resume.structuredData.personalInfo.phone && <p>{resume.structuredData.personalInfo.phone}</p>}
+                        {resume.structuredData.personalInfo.address && (
+                          <p>{resume.structuredData.personalInfo.address}</p>
+                        )}
+                        {(resume.structuredData.personalInfo.city || resume.structuredData.personalInfo.state || resume.structuredData.personalInfo.zipCode) && (
+                          <p>
+                            {[resume.structuredData.personalInfo.city, resume.structuredData.personalInfo.state, resume.structuredData.personalInfo.zipCode].filter(Boolean).join(', ')}
+                          </p>
+                        )}
+                      </div>
+                      {resume.structuredData.personalInfo.professionalSummary && (
+                        <p className='mt-3 text-gray-300'>{resume.structuredData.personalInfo.professionalSummary}</p>
+                      )}
+                    </div>
+                  )}
+                  {resume.structuredData.cdlInfo && (resume.structuredData.cdlInfo.cdlClass || resume.structuredData.cdlInfo.endorsements?.length || resume.structuredData.cdlInfo.restrictions?.length) ? (
+                    <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
+                      <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
+                        <Award className='w-5 h-5 text-brand-mint' /> CDL
+                      </h3>
+                      <p className='text-white'>
+                        {resume.structuredData.cdlInfo.cdlClass} {resume.structuredData.cdlInfo.cdlState && `• ${resume.structuredData.cdlInfo.cdlState}`}
+                        {resume.structuredData.cdlInfo.expirationDate && ` • Exp: ${new Date(resume.structuredData.cdlInfo.expirationDate).toLocaleDateString('en-US')}`}
+                      </p>
+                      {resume.structuredData.cdlInfo.endorsements?.length ? (
+                        <p className='text-sm text-gray-400 mt-1'>Endorsements: {resume.structuredData.cdlInfo.endorsements.join(', ')}</p>
+                      ) : null}
+                      {resume.structuredData.cdlInfo.restrictions?.length ? (
+                        <p className='text-sm text-gray-400 mt-1'>Restrictions: {resume.structuredData.cdlInfo.restrictions.join(', ')}</p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {resume.structuredData.employments && resume.structuredData.employments.length > 0 && (
+                    <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
+                      <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
+                        <Briefcase className='w-5 h-5 text-brand-mint' /> Work Experience
+                      </h3>
+                      <div className='space-y-4'>
+                        {resume.structuredData.employments.map((exp, i) => (
+                          <div key={i} className='border-l-2 border-brand-mint/30 pl-4'>
+                            <p className='font-semibold text-white'>{exp.position}</p>
+                            <p className='text-gray-400'>{exp.companyName} {exp.location && `• ${exp.location}`}</p>
+                            <p className='text-sm text-gray-500'>
+                              {exp.startDate} – {exp.isCurrent ? 'Present' : exp.endDate}
+                            </p>
+                            {exp.responsibilities?.filter(Boolean).length ? (
+                              <ul className='mt-2 text-sm text-gray-300 list-disc list-inside'>
+                                {exp.responsibilities.filter(Boolean).map((r, j) => (
+                                  <li key={j}>{r}</li>
+                                ))}
+                              </ul>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {resume.structuredData.skills && (Array.isArray(resume.structuredData.skills) ? resume.structuredData.skills.length : 0) > 0 && (
+                    <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
+                      <h3 className='text-lg font-semibold mb-3 text-white'>Skills</h3>
+                      <div className='flex flex-wrap gap-2'>
+                        {(Array.isArray(resume.structuredData.skills) ? resume.structuredData.skills : []).map((s, i) => (
+                          <span
+                            key={i}
+                            className='px-3 py-1 rounded-lg text-sm bg-gray-700/50 text-gray-300'
+                          >
+                            {typeof s === 'string' ? s : (s as { name?: string }).name ?? 'Skill'}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {resume.structuredData.educations && resume.structuredData.educations.length > 0 && (
+                    <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
+                      <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
+                        <GraduationCap className='w-5 h-5 text-brand-mint' /> Education
+                      </h3>
+                      <div className='space-y-2'>
+                        {resume.structuredData.educations.map((edu, i) => (
+                          <div key={i}>
+                            <p className='font-semibold text-white'>{edu.degree} {edu.field && `in ${edu.field}`}</p>
+                            <p className='text-gray-400 text-sm'>{edu.school}</p>
+                            {edu.year && <p className='text-xs text-gray-500'>{edu.year}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {resume.structuredData.references && resume.structuredData.references.length > 0 && (
+                    <div className='p-4 rounded-xl bg-gray-800/50'>
+                      <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
+                        <User className='w-5 h-5 text-brand-mint' /> References
+                      </h3>
+                      <div className='space-y-3'>
+                        {resume.structuredData.references.map((ref, i) => (
+                          <div key={i} className='border-l-2 border-brand-mint/30 pl-4'>
+                            <p className='font-semibold text-white'>{ref.name}{ref.title && `, ${ref.title}`}</p>
+                            {ref.company && <p className='text-gray-400 text-sm'>{ref.company}</p>}
+                            {(ref.phone || ref.email) && (
+                              <p className='text-xs text-gray-500'>
+                                {[ref.phone, ref.email].filter(Boolean).join(' • ')}
+                              </p>
+                            )}
+                            {ref.relationship && (
+                              <p className='text-xs text-gray-500'>{ref.relationship}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className='text-sm text-gray-400'>
+                  {resume.ipfsHash && !resume.ipfsHash.startsWith('built_') ? (
+                    <a
+                      href={`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      className='text-brand-mint hover:underline flex items-center gap-1'
+                    >
+                      View resume document <ExternalLink className='w-3 h-3' />
+                    </a>
+                  ) : (
+                    'Resume on file — view from your hub to download.'
+                  )}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Contact */}
+        {profile.contact && (profile.contact.email || profile.contact.phone) && (
+          <div className='bg-gray-800/50 backdrop-blur-xl rounded-2xl border border-gray-700/50 p-6 mb-8'>
+            <h2 className='text-lg font-semibold text-white mb-4'>Get in Touch</h2>
+            <div className='flex flex-wrap gap-3'>
+              {profile.contact.email && (
+                <a
+                  href={`mailto:${profile.contact.email}`}
+                  className='flex items-center gap-2 px-5 py-3 bg-brand-mint/20 hover:bg-brand-mint/30 rounded-xl text-brand-mint transition-all hover:scale-105 border border-brand-mint/30'
+                >
+                  <Mail className='w-5 h-5' />
+                  {profile.contact.email}
+                </a>
+              )}
+              {profile.contact.phone && (
+                <a
+                  href={`tel:${profile.contact.phone}`}
+                  className='flex items-center gap-2 px-5 py-3 bg-gray-700/50 hover:bg-gray-700 rounded-xl text-gray-300 transition-all hover:scale-105'
+                >
+                  <Phone className='w-5 h-5' />
+                  {profile.contact.phone}
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Connect */}
         {settings.allowConnect && !connectSuccess && (
-          <div className='text-center'>
+          <div className='text-center py-8'>
             {!showConnectForm ? (
               <button
                 onClick={() => setShowConnectForm(true)}
-                className='inline-flex items-center gap-2 px-8 py-4 bg-brand-mint text-gray-900 font-semibold text-lg rounded-xl hover:bg-brand-mint/90 transition-colors shadow-lg shadow-brand-mint/20'
+                className='inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-brand-mint to-teal-400 text-gray-900 font-bold text-lg rounded-2xl hover:shadow-xl hover:shadow-brand-mint/30 transition-all hover:scale-105'
               >
                 <Building2 className='w-5 h-5' />
-                I'm Hiring - Connect
+                I'm Hiring — Connect
               </button>
             ) : (
               <div className='bg-gray-800/50 backdrop-blur-xl rounded-2xl border border-gray-700/50 p-6 text-left'>
@@ -580,14 +986,13 @@ export default function PublicDriverProfile() {
           </div>
         )}
 
-        {/* Footer */}
         <footer className='mt-12 text-center'>
           <p className='text-gray-500 text-sm'>
             Powered by{' '}
             <a href='/' className='text-brand-mint hover:underline'>
               StormChain
             </a>{' '}
-            • Verified Driver Credentials
+            • Career Card
           </p>
         </footer>
       </main>
@@ -614,63 +1019,6 @@ function InfoBox({
       >
         {value}
       </p>
-    </div>
-  )
-}
-
-function CredentialCard({
-  icon,
-  title,
-  subtitle,
-  verified,
-  status,
-  action,
-  extra,
-}: {
-  icon: React.ReactNode
-  title: string
-  subtitle: string
-  verified: boolean
-  status?: 'complete' | 'in_progress' | 'warning' | 'error'
-  action?: React.ReactNode
-  extra?: React.ReactNode
-}) {
-  const statusColors = {
-    complete: 'text-green-500',
-    in_progress: 'text-yellow-500',
-    warning: 'text-orange-500',
-    error: 'text-red-500',
-  }
-
-  return (
-    <div className='flex items-center gap-4 p-4 bg-gray-700/30 rounded-xl'>
-      <div
-        className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-          verified
-            ? 'bg-green-500/20 text-green-500'
-            : 'bg-gray-600 text-gray-400'
-        }`}
-      >
-        {icon}
-      </div>
-      <div className='flex-1 min-w-0'>
-        <p className='font-medium text-white'>{title}</p>
-        <p
-          className={`text-sm ${status ? statusColors[status] : 'text-gray-400'}`}
-        >
-          {subtitle}
-        </p>
-        {extra}
-      </div>
-      <div className='flex items-center gap-3'>
-        {verified && (
-          <span className='flex items-center gap-1 text-xs text-green-500'>
-            <CheckCircle className='w-3 h-3' />
-            Verified
-          </span>
-        )}
-        {action}
-      </div>
     </div>
   )
 }

@@ -13,6 +13,12 @@ export const BASE_MAINNET_USDC_ADDRESS =
 export const BASE_SEPOLIA_USDC_ADDRESS =
   '0x036cbd53842c5426634e7929541ec2318f3dcf7e'
 
+// STORM Token contract addresses
+export const STORM_TOKEN_ADDRESS_SEPOLIA =
+  process.env.STORM_TOKEN_ADDRESS || '0xB42fdc3bd07b4D90FF4ba55f52cEEb57E690f2C5'
+export const STORM_TOKEN_ADDRESS_MAINNET =
+  process.env.STORM_TOKEN_ADDRESS_MAINNET || ''
+
 // Determine which network to use (default to Mainnet for production)
 const USE_MAINNET = process.env.NEXT_PUBLIC_USE_BASE_MAINNET !== 'false' // Default to true/mainnet
 const NETWORK = USE_MAINNET ? Network.BASE_MAINNET : Network.BASE_SEPOLIA
@@ -410,4 +416,157 @@ export const tokenAPIConfig = {
   usdcAddress: USDC_ADDRESS,
   isMainnet: USE_MAINNET,
   sdk: alchemySDK,
+}
+
+// ============================================
+// STORM Token Balance Functions
+// ============================================
+
+/**
+ * Get STORM token balance for a wallet address on Base Sepolia
+ */
+export async function getSTORMBalanceSepolia(walletAddress: string): Promise<{
+  balance: string
+  balanceFormatted: string
+  decimals: number
+  symbol: string
+  success: boolean
+  error?: string
+}> {
+  try {
+    if (!STORM_TOKEN_ADDRESS_SEPOLIA) {
+      return {
+        balance: '0',
+        balanceFormatted: '0.00',
+        decimals: 18,
+        symbol: 'STORM',
+        success: false,
+        error: 'STORM token address not configured',
+      }
+    }
+
+    const balances = await alchemySDKSepolia.core.getTokenBalances(walletAddress, [
+      STORM_TOKEN_ADDRESS_SEPOLIA,
+    ])
+
+    // STORM has 18 decimals (standard ERC20)
+    const metadata = { decimals: 18, symbol: 'STORM' }
+    
+    return parseTokenBalanceResponse(balances, metadata, 'STORM')
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.warn('⚠️ Base Sepolia STORM balance check failed:', errorMessage)
+    
+    return {
+      balance: '0',
+      balanceFormatted: '0.00',
+      decimals: 18,
+      symbol: 'STORM',
+      success: false,
+      error: errorMessage,
+    }
+  }
+}
+
+/**
+ * Get STORM token balance for a wallet address on Base Mainnet
+ */
+export async function getSTORMBalanceMainnet(walletAddress: string): Promise<{
+  balance: string
+  balanceFormatted: string
+  decimals: number
+  symbol: string
+  success: boolean
+  error?: string
+}> {
+  try {
+    if (!STORM_TOKEN_ADDRESS_MAINNET) {
+      return {
+        balance: '0',
+        balanceFormatted: '0.00',
+        decimals: 18,
+        symbol: 'STORM',
+        success: false,
+        error: 'STORM mainnet token address not configured',
+      }
+    }
+
+    const balances = await alchemySDKMainnet.core.getTokenBalances(walletAddress, [
+      STORM_TOKEN_ADDRESS_MAINNET,
+    ])
+
+    const metadata = { decimals: 18, symbol: 'STORM' }
+    
+    return parseTokenBalanceResponse(balances, metadata, 'STORM')
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.warn('⚠️ Base Mainnet STORM balance check failed:', errorMessage)
+    
+    return {
+      balance: '0',
+      balanceFormatted: '0.00',
+      decimals: 18,
+      symbol: 'STORM',
+      success: false,
+      error: errorMessage,
+    }
+  }
+}
+
+/**
+ * Helper function to parse token balance response (works for any ERC20)
+ */
+function parseTokenBalanceResponse(
+  balances: any, 
+  metadata: { decimals: number; symbol: string },
+  tokenSymbol: string
+): {
+  balance: string
+  balanceFormatted: string
+  decimals: number
+  symbol: string
+  success: boolean
+  error?: string
+} {
+  if (balances.tokenBalances.length === 0) {
+    return {
+      balance: '0',
+      balanceFormatted: '0.00',
+      decimals: metadata.decimals,
+      symbol: tokenSymbol,
+      success: true, // No balance is still a valid response
+    }
+  }
+
+  const tokenBalance = balances.tokenBalances[0]
+
+  if (tokenBalance.error) {
+    return {
+      balance: '0',
+      balanceFormatted: '0.00',
+      decimals: metadata.decimals,
+      symbol: tokenSymbol,
+      success: false,
+      error: tokenBalance.error,
+    }
+  }
+
+  // Convert hex balance to decimal
+  const balanceHex = tokenBalance.tokenBalance || '0x0'
+  const balanceBigInt = BigInt(balanceHex)
+  const decimals = metadata.decimals
+
+  // Format balance - for 18 decimals show more precision, for 6 (USDC) show 2
+  const balanceNum = Number(balanceBigInt) / Math.pow(10, decimals)
+  const balanceFormatted = decimals === 6 
+    ? balanceNum.toFixed(2)
+    : balanceNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })
+
+  return {
+    balance: balanceBigInt.toString(),
+    balanceFormatted,
+    decimals,
+    symbol: metadata.symbol,
+    success: true,
+  }
 }

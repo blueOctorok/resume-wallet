@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { triggerStormReward } from '@/lib/storm-rewards'
 
 /**
  * API Route: Record MVR Payment
@@ -139,6 +140,10 @@ export async function POST(request: NextRequest) {
       type: 'MVR_ORDER',
       status: 'COMPLETED'
     })
+
+    // Distribute STORM rewards for this payment (non-blocking)
+    // We don't await this - payment success shouldn't depend on reward distribution
+    triggerStormReward(walletAddress, payment.amount_usdc, payment.id, 'MVR_ORDER')
 
     return NextResponse.json({
       success: true,

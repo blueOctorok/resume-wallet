@@ -34,19 +34,8 @@ module.exports = {
       gasPrice: 1000000000, // 1 gwei
     },
   },
+  // Etherscan V2 API - single key works for all chains (Base, Ethereum, etc.)
   etherscan: {
-    apiKey: {
-      baseSepolia: process.env.BASESCAN_API_KEY || '',
-    },
-    customChains: [
-      {
-        network: 'baseSepolia',
-        chainId: 84532,
-        urls: {
-          apiURL: 'https://api-sepolia.basescan.org/api',
-          browserURL: 'https://sepolia.basescan.org',
-        },
-      },
-    ],
+    apiKey: process.env.BASESCAN_API_KEY || '',
   },
 }

@@ -2,6 +2,170 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 💼 **Wallet Modal UI Overhaul + STORM Token Support** (February 2026)
+
+**Completely redesigned the wallet modal to match the new hub styling and added full STORM token support.**
+
+### UI Updates
+
+**UserStatusModal** (`src/components/UserStatusModal.tsx`):
+- New modern design matching the DriverHub styling (gray-800/50, border-gray-700, indigo accents)
+- Added STORM token balance display alongside USDC
+- Token selector on Send tab lets users choose between USDC or STORM
+- Clean header with wallet icon and Base Network label
+- Improved tabs with icon-only mobile view
+- External link to view address on BaseScan
+
+**Balance Components** (`STORMBalance.tsx`, `USDCBalance.tsx`):
+- Consistent card styling matching hub (rounded-2xl, gray-800/50 background)
+- Clean icon + label layout with refresh button
+- Network-specific balance rows (Mainnet green, Sepolia blue/yellow)
+- Compact mode for nav/header display (STORM)
+
+**Send Components** (`SendUSDC.tsx`, `SendSTORM.tsx`):
+- Modernized input styling with focus rings
+- Network context badge showing token + network
+- Error/success states with icons (AlertCircle, CheckCircle)
+- Consistent button styling with indigo (USDC) / yellow (STORM) accents
+- BaseScan links for transaction verification
+
+### Token Support in Wallet
+
+Users can now:
+1. **View balances** for both USDC and STORM tokens in the Overview tab
+2. **Send USDC** on Base Sepolia (testnet)
+3. **Send STORM** on Base Sepolia (testnet)
+4. **Receive** any token by sharing their wallet address/QR code
+5. **View transaction history** for all token transfers
+
+### Design System
+
+The wallet now uses the same design language as the DriverHub:
+- Dark mode: `bg-gray-800/50`, `border-gray-700`, `text-gray-200`
+- Light mode: `bg-white/70`, `border-gray-200`, `text-gray-800`
+- Accent colors: Indigo for primary actions, token-specific colors for branding
+- Consistent rounded corners (`rounded-xl`, `rounded-2xl`)
+- Smooth transitions on hover/focus states
+
+---
+
+## ⛈️ **STORM Token Smart Contracts + Backend Integration** (February 2026)
+
+**Created the StormChain (STORM) token smart contracts and backend reward distribution system.**
+
+The STORM token is the platform's reward token (per whitepaper): users earn it from USDC purchases, hold it for utility, and eventually trade it when DEX liquidity is enabled.
+
+### Smart Contracts (deployed to Base Sepolia)
+
+| Contract | Address | Purpose |
+|----------|---------|---------|
+| `StormToken` | `0xB42fdc3bd07b4D90FF4ba55f52cEEb57E690f2C5` | ERC20 token (18 decimals, 15M fixed supply, Pausable) |
+| `RewardDistributor` | `0xFBFEcCCA19dcE1C016251dc38F30695f073916a5` | Holds 9M reward pool; `distribute(to, amount)` |
+| `FounderVesting A` | `0x26417BcB32C5a791a893F69983eBF4C4b5D22e66` | 1yr cliff + 2yr linear vest |
+| `FounderVesting B` | `0x1e9DE510628EeA295B9FeB76C0F38cF7B6820Be5` | 1yr cliff + 2yr linear vest |
+
+All contracts verified on Basescan with source code visible.
+
+### Allocation (per whitepaper)
+
+| Allocation | Amount | Recipient |
+|------------|--------|-----------|
+| User Rewards | 9M | RewardDistributor contract |
+| Platform Treasury | 3M | Treasury wallet |
+| DEX Liquidity | 1M | DEX wallet (held until trading enabled) |
+| Founder A | 1M | FounderVesting contract |
+| Founder B | 1M | FounderVesting contract |
+
+### Backend Integration
+
+**Reward calculation** (`src/lib/storm-rewards.ts`):
+- Implements smooth decay formula: `tokens = (USDC × 3.33) × (remaining / 9M)^0.7`
+- At 0% distributed: $3 USDC → 10 STORM
+- At 50% distributed: $3 USDC → ~6.16 STORM
+- Supports fractional tokens (18 decimals) — late users get sub-token amounts
+- 15 unit tests verify calculations match whitepaper
+
+**Contract interaction** (`src/lib/storm-contract.ts`):
+- `distributeReward(address, amountWei)` — sends STORM to user
+- `getTotalDistributed()` — reads pool state for decay calculation
+- `getStormBalance(address)` — check user's STORM balance
+
+**API endpoint** (`/api/storm/distribute`):
+- POST: Distribute STORM reward to user after USDC payment
+- GET: Check current pool state (distributed, remaining, current rate)
+
+**Payment hook** (`/api/mvr/payment`):
+- After recording USDC payment, triggers STORM distribution (non-blocking)
+- Logs reward amount and tx hash
+
+### Key Features
+
+- **18 decimals** — supports fractional distribution (like BTC satoshis)
+- **Fixed supply** — no mint after deploy; 15M created once
+- **OpenZeppelin only** — ERC20, AccessControl, ReentrancyGuard, SafeERC20
+- **Decay formula off-chain** — backend computes and calls `distribute()`
+- **Non-blocking rewards** — payment succeeds even if reward distribution fails
+
+### Deploy Commands
+
+```bash
+npm run deploy:storm:local     # Local test
+npm run deploy:storm:sepolia   # Base Sepolia testnet
+npm run deploy:storm:base      # Base mainnet (production)
+```
+
+### Files
+
+**Contracts:**
+- `contracts/StormToken.sol`
+- `contracts/RewardDistributor.sol`
+- `contracts/FounderVesting.sol`
+- `scripts/deploy-storm-token.js`
+
+**Backend:**
+- `src/lib/storm-rewards.ts` — decay formula + `triggerStormReward()` helper
+- `src/lib/storm-rewards.test.ts` — 15 unit tests
+- `src/lib/storm-contract.ts` — contract interaction via viem
+- `src/app/api/storm/distribute/route.ts` — distribution API
+- `docs/STORM_TOKEN_CONTRACT_DESIGN.md`
+
+**Wallet Integration:**
+- `src/lib/alchemy-token-api.ts` — added `getSTORMBalanceSepolia()` and `getSTORMBalanceMainnet()`
+- `src/components/STORMBalance.tsx` — STORM balance display component (compact + full modes)
+- `src/components/wallet/SendSTORM.tsx` — send STORM tokens (like SendUSDC)
+- `src/components/WalletInfo.tsx` — now shows STORM balance alongside USDC
+
+---
+
+## ✅ **Driver Career Card: correct resume + no stale after delete** (February 2026)
+
+- **Fixed resume type filter:** The driver public API now correctly filters to **driver resumes only** using `.or('resume_type.neq.developer_built,resume_type.is.null')`. Previously it was fetching any resume including developer resumes, causing the wrong data to appear on the driver career card.
+- **Delete reflects immediately:** Public driver API returns `Cache-Control: no-store` and the career card fetches with `cache: 'no-store'`. After deleting a resume in the hub, refreshing the career card shows no resume.
+- **Data normalization:** The API normalizes `structured_data` from different driver resume formats (old uploaded vs new builder) into a consistent format for display.
+- **Career card UI:** Added References section, address/zipCode in Personal Information, CDL expiration and restrictions.
+
+## ✅ **Admin: MVR section with remove** (February 2026)
+
+- **GET /api/admin/mvr** — Lists MVR orders with driver name, wallet, license state, order status, result (license status, points, violations), ordered date. Paginated (limit/offset). Admin-only.
+- **DELETE /api/admin/mvr/[id]** — Removes an MVR order. Cascades to mvr_results; driver_profiles refs set to null. Admin-only.
+- **Admin dashboard** — New "MVR" tab (Car icon) between Resumes and Verifications. Table shows driver, wallet, state, order status, result summary, ordered date, and delete button. Same delete confirmation flow (type DELETE) as other admin sections.
+
+## ✅ **TDD for career scores: driver + developer** (February 2026)
+
+- **Vitest** added for app tests: `vitest.config.ts` with Node env and `@/*` alias; `npm run test:app` script.
+- **Driver career score** extracted to `src/lib/driver-career-score.ts`: pure `computeDriverCareerScore(input)` and `gradeFromScore(score)`. Route handler builds input from DB and delegates. **21 tests** cover MVR (clean/violations/invalid), experience, credentials, profile, grade thresholds, suggestions, and result shape.
+- **Developer career score** tests in `src/lib/career-score-prompt.test.ts`: **18 tests** for `parseCareerScoreResponse` (valid/invalid JSON, field validation, score clamping) and `calculateFallbackScore` (weights with/without GitHub, grade bands, suggestions, result shape). Logic remains in `career-score-prompt.ts`.
+- 39 tests total; `npm run test:app` passes.
+
+## ✅ **Driver Career Card: match developer card look and features** (February 2026)
+
+- **Public driver Career Card** (`/d/[token]`) was redesigned to mirror the developer Career Card: same gradient background, sticky header with StormChain + “Career Card” badge, hero profile card with gradient accent bar and avatar glow, quick links (View Resume, Email, Phone), and consistent section styling.
+- **Verified Employment** section shows employment history in the same trust-badge card style as the dev card (green check, position, company, dates).
+- **MVR & Driving Record** section (replacing portfolio/GitHub for drivers): card with MVR status, stats grid (CDL class, points, violations, endorsements count), **Driver Score** (A–F grade from new API) with click-to-expand breakdown (MVR, experience, credentials, profile), endorsements bar chart (like dev “Top Languages”), and experience years bar.
+- **Driver Career Score API** (`GET /api/ai/driver-career-score?token=...`): computes a 0–100 score and grade from MVR record, experience years, credentials (resume verified, DOT complete, endorsements), and profile completeness. No AI call in v1; same result shape as dev career score for consistent UI.
+- **Resume**: Driver public API now returns `structuredData` for the latest verified resume when available. Career Card shows a full **Resume** section (personal info, CDL, work experience, skills, education) when structured data exists; otherwise View Resume link only.
+- **Credentials** summary card lists CDL details and badge pills (Resume, DOT, MVR). Contact and Connect CTA match dev card styling. Unused `CredentialCard` helper was removed.
+
 ## ✅ **Driver Hub employment verification: Verify wired like dev, no mixing** (February 2026)
 
 - **Driver verify flow** is fully aligned with the developer side: Driver Hub employment verification uses only driver data and driver APIs. Employment list comes from `GET /api/driver/profile` (driver_profiles.employment_history); status from `GET /api/driver/verification/status?initiatedBy=applicant`; Verify button calls `POST /api/driver/verification/initiate-self`. No developer_profiles or developer verification APIs are used.

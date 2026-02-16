@@ -8,16 +8,19 @@ import {
 } from '@account-kit/react'
 import { encodeFunctionData, parseAbi, isAddress, parseUnits } from 'viem'
 import { useTheme } from '@/contexts/ThemeContext'
-import { getUSDCBalanceSepolia } from '@/lib/alchemy-token-api'
+import {
+  getSTORMBalanceSepolia,
+  STORM_TOKEN_ADDRESS_SEPOLIA,
+} from '@/lib/alchemy-token-api'
 import { policyId } from '@/lib/alchemy-account-config'
 import { ExternalLink, AlertCircle, CheckCircle } from 'lucide-react'
 
-interface SendUSDCProps {
+interface SendSTORMProps {
   walletAddress: string
   onSuccess?: () => void
 }
 
-export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
+export default function SendSTORM({ walletAddress, onSuccess }: SendSTORMProps) {
   const { isConnected } = useSignerStatus()
   const { client } = useSmartAccountClient({ type: 'LightAccount' })
   const { sendCallsAsync, isPending } = useSendCalls({ client })
@@ -30,8 +33,8 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
   const [success, setSuccess] = useState(false)
   const [txHash, setTxHash] = useState<string | null>(null)
 
-  const USDC_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
-  const USDC_DECIMALS = 6
+  // STORM token has 18 decimals (standard ERC20)
+  const STORM_DECIMALS = 18
 
   // Card styling (matches hub)
   const cardClass = `rounded-2xl border transition-all duration-200 ${
@@ -42,9 +45,9 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
 
   const inputClass = `w-full px-4 py-3 rounded-xl border text-sm transition-colors ${
     theme === 'dark'
-      ? 'bg-gray-900/50 border-gray-600 text-gray-200 placeholder-gray-500 focus:border-indigo-500'
-      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-indigo-500'
-  } focus:outline-none focus:ring-2 focus:ring-indigo-500/20`
+      ? 'bg-gray-900/50 border-gray-600 text-gray-200 placeholder-gray-500 focus:border-yellow-500'
+      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-yellow-500'
+  } focus:outline-none focus:ring-2 focus:ring-yellow-500/20`
 
   const validateForm = (): boolean => {
     if (!recipient.trim()) {
@@ -62,6 +65,11 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
       return false
     }
 
+    if (!STORM_TOKEN_ADDRESS_SEPOLIA) {
+      setError('STORM token not configured')
+      return false
+    }
+
     setError(null)
     return true
   }
@@ -74,24 +82,29 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
     setSuccess(false)
 
     try {
-      const balanceResult = await getUSDCBalanceSepolia(walletAddress)
+      // Check STORM balance first
+      const balanceResult = await getSTORMBalanceSepolia(walletAddress)
       if (!balanceResult.success) {
-        setError('Failed to check balance. Please try again.')
+        setError('Failed to check STORM balance. Please try again.')
         return
       }
 
-      const currentBalance = parseFloat(balanceResult.balanceFormatted)
+      const currentBalance = parseFloat(
+        balanceResult.balanceFormatted.replace(/,/g, '')
+      )
       const sendAmount = parseFloat(amount)
 
       if (sendAmount > currentBalance) {
         setError(
-          `Insufficient balance. You have $${currentBalance.toFixed(2)} USDC`
+          `Insufficient balance. You have ${currentBalance.toLocaleString()} STORM`
         )
         return
       }
 
-      const amountRaw = parseUnits(amount, USDC_DECIMALS)
+      // Calculate amount in raw STORM (18 decimals)
+      const amountRaw = parseUnits(amount, STORM_DECIMALS)
 
+      // Encode ERC-20 transfer function call
       const transferAbi = parseAbi([
         'function transfer(address to, uint256 amount) returns (bool)',
       ])
@@ -102,7 +115,7 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
         args: [recipient as `0x${string}`, amountRaw],
       })
 
-      console.log('💸 [SEND USDC] Sending transaction with gas sponsorship...')
+      console.log('⛈️ [SEND STORM] Sending transaction with gas sponsorship...')
 
       let result
       try {
@@ -114,7 +127,7 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
           },
           calls: [
             {
-              to: USDC_ADDRESS as `0x${string}`,
+              to: STORM_TOKEN_ADDRESS_SEPOLIA as `0x${string}`,
               data: callData,
             },
           ],
@@ -127,34 +140,19 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
           errorMessage.includes('invalid_argument')
 
         if (isSponsorshipError) {
-          console.warn(
-            '⚠️ [SEND USDC] Gas sponsorship failed - policy limit reached'
-          )
+          console.warn('⚠️ [SEND STORM] Gas sponsorship failed - trying without')
 
           try {
-            console.log(
-              '🔄 [SEND USDC] Retrying without sponsorship (user will pay gas)...'
-            )
             result = await sendCallsAsync({
               calls: [
                 {
-                  to: USDC_ADDRESS as `0x${string}`,
+                  to: STORM_TOKEN_ADDRESS_SEPOLIA as `0x${string}`,
                   data: callData,
                 },
               ],
             })
-
-            console.log(
-              '✅ [SEND USDC] Fallback transaction sent successfully (user paid gas)'
-            )
           } catch (fallbackError: any) {
-            console.error(
-              '❌ [SEND USDC] Fallback transaction failed:',
-              fallbackError
-            )
-            const fallbackMessage =
-              fallbackError?.message || fallbackError?.toString() || ''
-
+            const fallbackMessage = fallbackError?.message || ''
             if (
               fallbackMessage.includes('insufficient') ||
               fallbackMessage.includes('balance')
@@ -164,7 +162,6 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
                   'Please add some ETH to your wallet or try again later.'
               )
             }
-
             throw fallbackError
           }
         } else {
@@ -172,16 +169,14 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
         }
       }
 
-      console.log('✅ [SEND USDC] Transaction sent, call IDs:', result.ids)
+      console.log('✅ [SEND STORM] Transaction sent, call IDs:', result.ids)
 
       const callId = result.ids[0]
 
       try {
-        console.log('⏳ [SEND USDC] Waiting for transaction confirmation...')
-
+        console.log('⏳ [SEND STORM] Waiting for transaction confirmation...')
         const statusResult = await client.waitForCallsStatus({ id: callId })
-
-        console.log('✅ [SEND USDC] Transaction status:', statusResult)
+        console.log('✅ [SEND STORM] Transaction status:', statusResult)
 
         const txHash =
           statusResult?.status === 'CONFIRMED'
@@ -191,14 +186,10 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
               callId
             : callId
 
-        console.log('✅ [SEND USDC] Transaction hash:', txHash)
         setTxHash(txHash)
         setSuccess(true)
       } catch (waitErr) {
-        console.warn(
-          '⚠️ [SEND USDC] Could not wait for confirmation, but transaction was sent:',
-          waitErr
-        )
+        console.warn('⚠️ [SEND STORM] Could not wait for confirmation:', waitErr)
         setTxHash(callId)
         setSuccess(true)
       }
@@ -210,8 +201,8 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
         onSuccess?.()
       }, 3000)
     } catch (err) {
-      console.error('❌ Send USDC error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to send USDC')
+      console.error('❌ Send STORM error:', err)
+      setError(err instanceof Error ? err.message : 'Failed to send STORM')
     } finally {
       setIsLoading(false)
     }
@@ -225,7 +216,7 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
             theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
           }`}
         >
-          Please connect your wallet to send USDC
+          Please connect your wallet to send STORM
         </p>
       </div>
     )
@@ -236,33 +227,33 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
       {/* Network context badge */}
       <div
         className={`flex items-center justify-between p-3 rounded-xl ${
-          theme === 'dark' ? 'bg-blue-500/10' : 'bg-blue-50'
+          theme === 'dark' ? 'bg-yellow-500/10' : 'bg-yellow-50'
         }`}
       >
         <div className='flex items-center gap-2'>
-          <span className='text-lg'>💵</span>
+          <span className='text-lg'>⛈️</span>
           <div>
             <p
               className={`text-sm font-medium ${
                 theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
               }`}
             >
-              USDC on Base Sepolia
+              STORM on Base Sepolia
             </p>
             <p
               className={`text-xs ${
                 theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
               }`}
             >
-              Testnet funds only
+              StormChain test tokens
             </p>
           </div>
         </div>
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${
             theme === 'dark'
-              ? 'bg-blue-500/20 text-blue-300'
-              : 'bg-blue-100 text-blue-600'
+              ? 'bg-yellow-500/20 text-yellow-300'
+              : 'bg-yellow-100 text-yellow-600'
           }`}
         >
           Test
@@ -297,11 +288,11 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
             theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
           }`}
         >
-          Amount (USDC)
+          Amount (STORM)
         </label>
         <input
           type='number'
-          step='0.01'
+          step='0.0001'
           min='0'
           value={amount}
           onChange={(e) => {
@@ -357,7 +348,7 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
                 theme === 'dark' ? 'text-green-300' : 'text-green-700'
               }`}
             >
-              Transaction sent successfully!
+              STORM sent successfully!
             </p>
           </div>
           {txHash && (
@@ -388,11 +379,11 @@ export default function SendUSDC({ walletAddress, onSuccess }: SendUSDCProps) {
               ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
               : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             : theme === 'dark'
-              ? 'bg-indigo-500 hover:bg-indigo-400 text-white'
-              : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+              ? 'bg-yellow-500 hover:bg-yellow-400 text-gray-900'
+              : 'bg-yellow-500 hover:bg-yellow-600 text-white'
         }`}
       >
-        {isLoading || isPending ? 'Sending...' : '💵 Send USDC'}
+        {isLoading || isPending ? 'Sending...' : '⛈️ Send STORM'}
       </button>
 
       <p

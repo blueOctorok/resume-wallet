@@ -18,7 +18,8 @@ import {
   FileCheck,
   FileEdit,
   Sparkles,
-  RotateCcw
+  RotateCcw,
+  Loader2
 } from 'lucide-react'
 import { profileToResumeBuilder, resumeBuilderToProfile } from '@/lib/profile-mapper'
 import type { UnifiedDriverProfile } from '@/types/driver-profile'

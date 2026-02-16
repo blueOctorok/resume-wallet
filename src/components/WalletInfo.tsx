@@ -5,6 +5,7 @@ import { Copy, Check, ChevronDown, ChevronRight, Wallet } from 'lucide-react'
 import {
   getUSDCBalanceMainnet,
   getUSDCBalanceSepolia,
+  getSTORMBalanceSepolia,
 } from '@/lib/alchemy-token-api'
 import { useTheme } from '@/contexts/ThemeContext'
 
@@ -26,6 +27,7 @@ export default function WalletInfo({
   const [expanded, setExpanded] = useState(defaultExpanded)
   const [balanceMainnet, setBalanceMainnet] = useState<string>('0.00')
   const [balanceSepolia, setBalanceSepolia] = useState<string>('0.00')
+  const [stormBalance, setStormBalance] = useState<string>('0.00')
   const [loading, setLoading] = useState<boolean>(true)
   const [copied, setCopied] = useState<boolean>(false)
 
@@ -54,10 +56,11 @@ export default function WalletInfo({
     }
 
     try {
-      // Fetch both Mainnet and Sepolia balances in parallel
-      const [mainnetResult, sepoliaResult] = await Promise.all([
+      // Fetch USDC and STORM balances in parallel
+      const [mainnetResult, sepoliaResult, stormResult] = await Promise.all([
         getUSDCBalanceMainnet(walletAddress),
         getUSDCBalanceSepolia(walletAddress),
+        getSTORMBalanceSepolia(walletAddress),
       ])
 
       if (mainnetResult.success) {
@@ -71,10 +74,17 @@ export default function WalletInfo({
       } else {
         setBalanceSepolia('0.00')
       }
+
+      if (stormResult.success) {
+        setStormBalance(stormResult.balanceFormatted)
+      } else {
+        setStormBalance('0.00')
+      }
     } catch (err) {
-      console.error('Error fetching USDC balances:', err)
+      console.error('Error fetching balances:', err)
       setBalanceMainnet('0.00')
       setBalanceSepolia('0.00')
+      setStormBalance('0.00')
     } finally {
       setLoading(false)
     }
@@ -181,58 +191,81 @@ export default function WalletInfo({
           </div>
 
           {/* USDC Balances */}
-          <div className='flex items-center gap-4'>
-            <div className='flex items-center gap-1.5'>
-              <div
-                className={`w-1.5 h-1.5 rounded-full ${theme === 'dark' ? 'bg-green-400' : 'bg-green-600'}`}
-                style={{
-                  boxShadow:
-                    theme === 'dark'
-                      ? '0 0 8px rgba(74, 222, 128, 0.6)'
-                      : '0 0 8px rgba(22, 163, 74, 0.6)',
-                }}
-              />
-              <span
-                className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
-              >
-                Base
-              </span>
-              {loading ? (
+          <div className='flex flex-col gap-2'>
+            <div className='flex items-center gap-4'>
+              <div className='flex items-center gap-1.5'>
                 <div
-                  className={`animate-spin rounded-full h-3 w-3 border-b-2 ${theme === 'dark' ? 'border-green-400' : 'border-green-600'}`}
+                  className={`w-1.5 h-1.5 rounded-full ${theme === 'dark' ? 'bg-green-400' : 'bg-green-600'}`}
+                  style={{
+                    boxShadow:
+                      theme === 'dark'
+                        ? '0 0 8px rgba(74, 222, 128, 0.6)'
+                        : '0 0 8px rgba(22, 163, 74, 0.6)',
+                  }}
                 />
-              ) : (
                 <span
-                  className={`text-xs font-bold ${theme === 'dark' ? 'text-green-400' : 'text-green-700'}`}
+                  className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
                 >
-                  ${balanceMainnet}
+                  Base
                 </span>
-              )}
+                {loading ? (
+                  <div
+                    className={`animate-spin rounded-full h-3 w-3 border-b-2 ${theme === 'dark' ? 'border-green-400' : 'border-green-600'}`}
+                  />
+                ) : (
+                  <span
+                    className={`text-xs font-bold ${theme === 'dark' ? 'text-green-400' : 'text-green-700'}`}
+                  >
+                    ${balanceMainnet}
+                  </span>
+                )}
+              </div>
+              <div className='flex items-center gap-1.5'>
+                <div
+                  className={`w-1.5 h-1.5 rounded-full ${theme === 'dark' ? 'bg-blue-400' : 'bg-blue-600'}`}
+                  style={{
+                    boxShadow:
+                      theme === 'dark'
+                        ? '0 0 8px rgba(96, 165, 250, 0.6)'
+                        : '0 0 8px rgba(37, 99, 235, 0.6)',
+                  }}
+                />
+                <span
+                  className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+                >
+                  Sepolia
+                </span>
+                {loading ? (
+                  <div
+                    className={`animate-spin rounded-full h-3 w-3 border-b-2 ${theme === 'dark' ? 'border-blue-400' : 'border-blue-600'}`}
+                  />
+                ) : (
+                  <span
+                    className={`text-xs font-bold ${theme === 'dark' ? 'text-blue-400' : 'text-blue-700'}`}
+                  >
+                    ${balanceSepolia}
+                  </span>
+                )}
+              </div>
             </div>
+            
+            {/* STORM Balance */}
             <div className='flex items-center gap-1.5'>
-              <div
-                className={`w-1.5 h-1.5 rounded-full ${theme === 'dark' ? 'bg-blue-400' : 'bg-blue-600'}`}
-                style={{
-                  boxShadow:
-                    theme === 'dark'
-                      ? '0 0 8px rgba(96, 165, 250, 0.6)'
-                      : '0 0 8px rgba(37, 99, 235, 0.6)',
-                }}
-              />
+              <span className='text-yellow-400 text-xs'>⛈️</span>
               <span
                 className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
               >
-                Sepolia
+                STORM
               </span>
               {loading ? (
                 <div
-                  className={`animate-spin rounded-full h-3 w-3 border-b-2 ${theme === 'dark' ? 'border-blue-400' : 'border-blue-600'}`}
+                  className={`animate-spin rounded-full h-3 w-3 border-b-2 ${theme === 'dark' ? 'border-yellow-400' : 'border-yellow-600'}`}
                 />
               ) : (
                 <span
-                  className={`text-xs font-bold ${theme === 'dark' ? 'text-blue-400' : 'text-blue-700'}`}
+                  className={`text-xs font-bold ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'}`}
                 >
-                  ${balanceSepolia}
+                  {stormBalance}
                 </span>
               )}
             </div>

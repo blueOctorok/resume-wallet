@@ -2,33 +2,29 @@
 
 import { useState, useEffect } from 'react'
 import {
-  getUSDCBalanceMainnet,
-  getUSDCBalanceSepolia,
-  hasSufficientUSDC,
+  getSTORMBalanceSepolia,
+  getSTORMBalanceMainnet,
+  STORM_TOKEN_ADDRESS_SEPOLIA,
 } from '@/lib/alchemy-token-api'
 import { useTheme } from '@/contexts/ThemeContext'
 import { RefreshCw, ExternalLink } from 'lucide-react'
 
-interface USDCBalanceProps {
+interface STORMBalanceProps {
   walletAddress: string
-  requiredAmount?: string
-  showSufficiencyCheck?: boolean
   refreshInterval?: number
+  compact?: boolean
 }
 
-export default function USDCBalance({
+export default function STORMBalance({
   walletAddress,
-  requiredAmount,
-  showSufficiencyCheck = false,
   refreshInterval = 60000,
-}: USDCBalanceProps) {
+  compact = false,
+}: STORMBalanceProps) {
   const { theme } = useTheme()
-  const [balanceMainnet, setBalanceMainnet] = useState<string>('0.00')
   const [balanceSepolia, setBalanceSepolia] = useState<string>('0.00')
+  const [balanceMainnet, setBalanceMainnet] = useState<string>('0.00')
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
-  const [hasSufficient, setHasSufficient] = useState<boolean>(true)
-  const [shortfall, setShortfall] = useState<string | undefined>()
 
   const fetchBalance = async () => {
     if (!walletAddress) {
@@ -40,16 +36,10 @@ export default function USDCBalance({
     try {
       setError(null)
 
-      const [mainnetResult, sepoliaResult] = await Promise.all([
-        getUSDCBalanceMainnet(walletAddress),
-        getUSDCBalanceSepolia(walletAddress),
+      const [sepoliaResult, mainnetResult] = await Promise.all([
+        getSTORMBalanceSepolia(walletAddress),
+        getSTORMBalanceMainnet(walletAddress),
       ])
-
-      if (mainnetResult.success) {
-        setBalanceMainnet(mainnetResult.balanceFormatted)
-      } else {
-        setBalanceMainnet('0.00')
-      }
 
       if (sepoliaResult.success) {
         setBalanceSepolia(sepoliaResult.balanceFormatted)
@@ -57,21 +47,15 @@ export default function USDCBalance({
         setBalanceSepolia('0.00')
       }
 
-      if (showSufficiencyCheck && requiredAmount) {
-        const sufficiencyResult = await hasSufficientUSDC(
-          walletAddress,
-          requiredAmount
-        )
-
-        if (sufficiencyResult.success) {
-          setHasSufficient(sufficiencyResult.hasSufficient)
-          setShortfall(sufficiencyResult.shortfall)
-        }
+      if (mainnetResult.success) {
+        setBalanceMainnet(mainnetResult.balanceFormatted)
+      } else {
+        setBalanceMainnet('0.00')
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
       setError(errorMessage)
-      console.error('Error fetching USDC balance:', errorMessage)
+      console.error('Error fetching STORM balance:', errorMessage)
     } finally {
       setLoading(false)
     }
@@ -79,7 +63,7 @@ export default function USDCBalance({
 
   useEffect(() => {
     fetchBalance()
-  }, [walletAddress, requiredAmount, showSufficiencyCheck])
+  }, [walletAddress])
 
   useEffect(() => {
     if (refreshInterval > 0) {
@@ -91,6 +75,41 @@ export default function USDCBalance({
   const handleRefresh = () => {
     setLoading(true)
     fetchBalance()
+  }
+
+  // Compact mode for nav/header display
+  if (compact) {
+    if (loading) {
+      return (
+        <div className='flex items-center gap-1'>
+          <span className='text-yellow-400'>⛈️</span>
+          <div
+            className={`animate-pulse h-4 w-12 rounded ${
+              theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
+            }`}
+          />
+        </div>
+      )
+    }
+
+    const displayBalance =
+      balanceSepolia !== '0.00' ? balanceSepolia : balanceMainnet
+
+    return (
+      <div
+        className='flex items-center gap-1'
+        title={`STORM Token Balance: ${displayBalance}`}
+      >
+        <span className='text-yellow-400'>⛈️</span>
+        <span
+          className={`text-sm font-medium ${
+            theme === 'dark' ? 'text-yellow-300' : 'text-yellow-600'
+          }`}
+        >
+          {displayBalance}
+        </span>
+      </div>
+    )
   }
 
   // Card styling (matches hub)
@@ -106,10 +125,10 @@ export default function USDCBalance({
         <div className='flex items-center gap-3'>
           <div
             className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-50'
+              theme === 'dark' ? 'bg-yellow-500/20' : 'bg-yellow-50'
             }`}
           >
-            <span className='text-lg'>💵</span>
+            <span className='text-lg'>⛈️</span>
           </div>
           <div className='flex-1'>
             <div
@@ -167,18 +186,27 @@ export default function USDCBalance({
         <div className='flex items-center gap-3'>
           <div
             className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-50'
+              theme === 'dark' ? 'bg-yellow-500/20' : 'bg-yellow-50'
             }`}
           >
-            <span className='text-lg'>💵</span>
+            <span className='text-lg'>⛈️</span>
           </div>
-          <span
-            className={`font-semibold ${
-              theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-            }`}
-          >
-            USDC
-          </span>
+          <div>
+            <span
+              className={`font-semibold ${
+                theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+              }`}
+            >
+              STORM
+            </span>
+            <p
+              className={`text-xs ${
+                theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+              }`}
+            >
+              StormChain Token
+            </p>
+          </div>
         </div>
         <button
           onClick={handleRefresh}
@@ -195,45 +223,16 @@ export default function USDCBalance({
 
       {/* Balance rows */}
       <div className='space-y-2'>
-        {/* Base Mainnet */}
+        {/* Base Sepolia (currently active for testnet) */}
         <div
           className={`flex items-center justify-between p-2.5 rounded-xl ${
-            theme === 'dark' ? 'bg-green-500/10' : 'bg-green-50'
+            theme === 'dark' ? 'bg-yellow-500/10' : 'bg-yellow-50'
           }`}
         >
           <div className='flex items-center gap-2'>
             <div
               className={`w-2 h-2 rounded-full ${
-                theme === 'dark' ? 'bg-green-400' : 'bg-green-500'
-              }`}
-            />
-            <span
-              className={`text-sm ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-              }`}
-            >
-              Mainnet
-            </span>
-          </div>
-          <span
-            className={`text-sm font-bold ${
-              theme === 'dark' ? 'text-green-400' : 'text-green-600'
-            }`}
-          >
-            ${balanceMainnet}
-          </span>
-        </div>
-
-        {/* Base Sepolia */}
-        <div
-          className={`flex items-center justify-between p-2.5 rounded-xl ${
-            theme === 'dark' ? 'bg-blue-500/10' : 'bg-blue-50'
-          }`}
-        >
-          <div className='flex items-center gap-2'>
-            <div
-              className={`w-2 h-2 rounded-full ${
-                theme === 'dark' ? 'bg-blue-400' : 'bg-blue-500'
+                theme === 'dark' ? 'bg-yellow-400' : 'bg-yellow-500'
               }`}
             />
             <span
@@ -246,45 +245,62 @@ export default function USDCBalance({
           </div>
           <span
             className={`text-sm font-bold ${
-              theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+              theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'
             }`}
           >
-            ${balanceSepolia}
+            {balanceSepolia} STORM
+          </span>
+        </div>
+
+        {/* Base Mainnet (coming soon) */}
+        <div
+          className={`flex items-center justify-between p-2.5 rounded-xl ${
+            theme === 'dark' ? 'bg-gray-700/30' : 'bg-gray-100'
+          }`}
+        >
+          <div className='flex items-center gap-2'>
+            <div
+              className={`w-2 h-2 rounded-full ${
+                theme === 'dark' ? 'bg-gray-500' : 'bg-gray-400'
+              }`}
+            />
+            <span
+              className={`text-sm ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              }`}
+            >
+              Mainnet
+            </span>
+          </div>
+          <span
+            className={`text-sm ${
+              theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+            }`}
+          >
+            {balanceMainnet !== '0.00' ? `${balanceMainnet} STORM` : 'Soon'}
           </span>
         </div>
       </div>
 
-      {/* Sufficiency Check */}
-      {showSufficiencyCheck && requiredAmount && (
-        <div
-          className={`mt-3 p-2.5 rounded-xl ${
-            hasSufficient
-              ? theme === 'dark'
-                ? 'bg-green-500/10'
-                : 'bg-green-50'
-              : theme === 'dark'
-                ? 'bg-yellow-500/10'
-                : 'bg-yellow-50'
-          }`}
-        >
-          <div className='flex items-center gap-2'>
-            <span>{hasSufficient ? '✅' : '⚠️'}</span>
-            <span
-              className={`text-xs ${
-                hasSufficient
-                  ? theme === 'dark'
-                    ? 'text-green-300'
-                    : 'text-green-700'
-                  : theme === 'dark'
-                    ? 'text-yellow-300'
-                    : 'text-yellow-700'
-              }`}
-            >
-              {hasSufficient
-                ? `Sufficient (need $${requiredAmount})`
-                : `Need $${requiredAmount}${shortfall ? `, short $${shortfall}` : ''}`}
+      {/* Token contract link */}
+      {STORM_TOKEN_ADDRESS_SEPOLIA && (
+        <div className='mt-3 pt-3 border-t border-gray-700/50'>
+          <a
+            href={`https://sepolia.basescan.org/address/${STORM_TOKEN_ADDRESS_SEPOLIA}`}
+            target='_blank'
+            rel='noopener noreferrer'
+            className={`inline-flex items-center gap-1 text-xs ${
+              theme === 'dark'
+                ? 'text-gray-500 hover:text-gray-300'
+                : 'text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            <span className='font-mono'>
+              {STORM_TOKEN_ADDRESS_SEPOLIA?.slice(0, 6)}...
+              {STORM_TOKEN_ADDRESS_SEPOLIA?.slice(-4)}
             </span>
-          </div>
+            <ExternalLink className='w-3 h-3' />
+          </a>
         </div>
       )}
     </div>
