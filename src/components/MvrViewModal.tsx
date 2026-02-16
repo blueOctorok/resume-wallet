@@ -53,8 +53,17 @@ interface License {
   restrictions?: string
 }
 
+/** Driver name from DMV record (parsed from Accio subject block) */
+interface MvrSubject {
+  firstName?: string
+  middleName?: string
+  lastName?: string
+  nameSuffix?: string
+}
+
 interface MvrResult {
   id: string
+  subject?: MvrSubject | null
   licenseNumber: string | null
   licenseState: string | null
   licenseClass: string | null
@@ -93,6 +102,46 @@ interface Payment {
   amount: string
   status: string
   createdAt: string
+}
+
+/**
+ * Extract clean driver name from potentially XML-contaminated subject fields.
+ * 
+ * Accio XML sometimes has malformed data where the firstName field contains
+ * nested XML tags AND the lastName embedded inside, like:
+ *   "Samuel <country/> ... <name_last>Blaha"
+ * 
+ * This function extracts just the actual name parts.
+ */
+function formatDriverName(subject: MvrSubject | undefined | null): string {
+  if (!subject) return ''
+  
+  // Get the raw firstName string (might contain XML garbage)
+  const rawFirstName = subject.firstName || ''
+  
+  // Extract firstName: text BEFORE the first '<' character
+  const firstTagIdx = rawFirstName.indexOf('<')
+  const cleanFirst = firstTagIdx > 0 
+    ? rawFirstName.slice(0, firstTagIdx).trim() 
+    : rawFirstName.replace(/<[^>]*>/g, '').trim() // fallback: strip all tags
+  
+  // Extract lastName: look for <name_last>VALUE pattern in the raw string
+  let cleanLast = ''
+  const nameLastMatch = rawFirstName.match(/<name_last>([^<\n]+)/i)
+  if (nameLastMatch?.[1]) {
+    cleanLast = nameLastMatch[1].trim()
+  }
+  
+  // If no embedded lastName found, try subject.lastName (also clean it)
+  if (!cleanLast && subject.lastName) {
+    const lastTagIdx = subject.lastName.indexOf('<')
+    cleanLast = lastTagIdx > 0 
+      ? subject.lastName.slice(0, lastTagIdx).trim()
+      : subject.lastName.replace(/<[^>]*>/g, '').trim()
+  }
+  
+  // Return "FirstName LastName"
+  return [cleanFirst, cleanLast].filter(Boolean).join(' ')
 }
 
 /**
@@ -221,7 +270,7 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Motor Vehicle Report - ${mvrResult.licenseNumber || 'MVR'}</title>
+        <title>Motor Vehicle Report${formatDriverName(mvrResult.subject) ? ` - ${formatDriverName(mvrResult.subject)}` : mvrResult.licenseNumber ? ` - ${mvrResult.licenseNumber}` : ''}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { 
@@ -378,7 +427,7 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
         <div class="header">
           <div class="header-left">
             <h1>Motor Vehicle Report</h1>
-            <p>Official DMV Record</p>
+            <p>Official DMV Record${formatDriverName(mvrResult.subject) ? ` • ${formatDriverName(mvrResult.subject)}` : ''}</p>
           </div>
           <div class="header-right">
             <div class="order-num">Order #${mvrOrder.orderNumber}</div>
@@ -387,6 +436,12 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
         </div>
 
         <div class="license-card">
+          ${formatDriverName(mvrResult.subject) ? `
+          <div style="margin-bottom: 20px;">
+            <label style="font-size: 11px; color: #6b7280; text-transform: uppercase;">Name on record</label>
+            <div style="font-size: 22px; font-weight: 700; color: #1f2937; margin-top: 4px;">${formatDriverName(mvrResult.subject)}</div>
+          </div>
+          ` : ''}
           <div class="license-grid">
             <div class="license-item">
               <label>License Number</label>
@@ -582,9 +637,16 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
                 <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   Motor Vehicle Report
                 </h2>
-                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Official DMV Record
-                </p>
+                {/* Show driver name prominently if available */}
+                {mvrResult && formatDriverName(mvrResult.subject) ? (
+                  <p className={`text-sm font-medium ${isDark ? 'text-brand-mint' : 'text-brand-sage'}`}>
+                    {formatDriverName(mvrResult.subject)}
+                  </p>
+                ) : (
+                  <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Official DMV Record
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -765,6 +827,17 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
                     </div>
                     
                     <div className="p-5">
+                      {/* Driver name from DMV record (when available) */}
+                      {formatDriverName(mvrResult.subject) && (
+                        <div className="mb-5">
+                          <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                            Name on record
+                          </p>
+                          <p className={`mt-1 text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            {formatDriverName(mvrResult.subject)}
+                          </p>
+                        </div>
+                      )}
                       {/* Main License Details */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
                         <div>

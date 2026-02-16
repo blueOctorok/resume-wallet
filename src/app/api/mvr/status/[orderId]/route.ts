@@ -109,6 +109,8 @@ export async function GET(
       },
       result: result ? {
         id: result.id,
+        // Subject (driver name from DMV record - from parsed_data)
+        subject: result.parsed_data?.subject ?? null,
         // License info
         licenseNumber: result.license_number,
         licenseState: result.license_state,

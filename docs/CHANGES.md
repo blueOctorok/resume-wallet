@@ -2,6 +2,24 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 👤 **MVR Driver Name on Report** (February 2026)
+
+**Display the driver’s name from the DMV record on the MVR view and on the printable PDF.**
+
+The Accio MVR XML includes a `subject` block with `name_first`, `name_middle`, `name_last`, and `name_suffix`. This was already parsed and stored in `mvr_results.parsed_data.subject` but was not exposed to the UI.
+
+### Changes
+
+- **API** `GET /api/mvr/status/[orderId]`: Response now includes `result.subject` (firstName, middleName, lastName, nameSuffix) from `parsed_data`.
+- **MvrViewModal**: Added “Name on record” in the License Information section when subject data exists; same name is used in the download/print PDF (header subtitle and top of license card).
+
+### Files Modified
+
+- `src/app/api/mvr/status/[orderId]/route.ts` – Expose `subject` in the result payload.
+- `src/components/MvrViewModal.tsx` – `MvrSubject` interface, `formatDriverName()` helper, name in modal and in PDF HTML.
+
+---
+
 ## 🖨️ **MVR Download/Print Feature** (February 2026)
 
 **Added a download/print button to the MVR View Modal for generating a professional PDF version of the report.**
