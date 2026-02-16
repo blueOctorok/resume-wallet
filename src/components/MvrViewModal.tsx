@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { 
   X, FileText, Calendar, MapPin, CreditCard, AlertCircle, 
   Shield, AlertTriangle, Car, Clock, CheckCircle, XCircle,
-  Stethoscope, ChevronDown, ExternalLink, Award, Activity
+  Stethoscope, ChevronDown, ExternalLink, Award, Activity,
+  Download, Printer
 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 
@@ -148,6 +149,351 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
   const [payments, setPayments] = useState<Payment[]>([])
   const [showPayments, setShowPayments] = useState(false)
 
+  // Generate printable PDF version
+  const handleDownloadPDF = () => {
+    if (!mvrResult || !mvrOrder) return
+
+    // Create a new window with print-friendly content
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      alert('Please allow popups to download the PDF')
+      return
+    }
+
+    const statusBadge = getStatusBadge(mvrResult.licenseStatus)
+    const statusColor = statusBadge.text.includes('emerald') ? '#10b981' : 
+                        statusBadge.text.includes('red') ? '#ef4444' : 
+                        statusBadge.text.includes('amber') ? '#f59e0b' : '#6b7280'
+
+    // Build violations HTML
+    const violationsHtml = mvrResult.violations && mvrResult.violations.length > 0 
+      ? mvrResult.violations.map(v => `
+          <div class="violation-item">
+            <div class="violation-header">
+              <strong>${v.description || v.type || 'Violation'}</strong>
+              ${v.acdCode ? `<span class="acd-code">ACD: ${v.acdCode}</span>` : ''}
+            </div>
+            <div class="violation-details">
+              ${v.date ? `<span>Issue: ${formatDate(v.date)}</span>` : ''}
+              ${v.convictionDate ? `<span>Conviction: ${formatDate(v.convictionDate)}</span>` : ''}
+            </div>
+          </div>
+        `).join('')
+      : '<p class="none">No violations on record</p>'
+
+    // Build accidents HTML
+    const accidentsHtml = mvrResult.accidents && mvrResult.accidents.length > 0
+      ? mvrResult.accidents.map(a => `
+          <div class="accident-item">
+            <strong>${a.description || 'Accident'}</strong>
+            <span>${formatDate(a.date)}</span>
+            ${a.severity ? `<span class="severity">${a.severity}</span>` : ''}
+          </div>
+        `).join('')
+      : '<p class="none">No accidents on record</p>'
+
+    // Build suspensions HTML
+    const suspensionsHtml = mvrResult.suspensions && mvrResult.suspensions.length > 0
+      ? mvrResult.suspensions.map(s => `
+          <div class="suspension-item">
+            <strong>${s.reason || 'Suspension'}</strong>
+            <span>From: ${formatDate(s.date)}${s.endDate ? ` to ${formatDate(s.endDate)}` : ''}</span>
+          </div>
+        `).join('')
+      : '<p class="none">No suspensions on record</p>'
+
+    // Build license classes HTML
+    const licensesHtml = mvrResult.licenses && mvrResult.licenses.length > 0
+      ? mvrResult.licenses.map(l => `
+          <div class="license-class">
+            <div class="class-badge">${l.class || '?'}</div>
+            <div class="class-info">
+              <strong>Class ${l.class} - ${l.type || 'Standard'}</strong>
+              ${l.classDescription ? `<span>${l.classDescription}</span>` : ''}
+              ${l.restrictions ? `<span class="restrictions">Restrictions: ${l.restrictions}</span>` : ''}
+            </div>
+            <span class="class-status" style="color: ${statusColor}">${l.status || 'Unknown'}</span>
+          </div>
+        `).join('')
+      : ''
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Motor Vehicle Report - ${mvrResult.licenseNumber || 'MVR'}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #1f2937;
+            line-height: 1.5;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 3px solid #059669;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+          }
+          .header-left h1 { font-size: 24px; color: #059669; margin-bottom: 4px; }
+          .header-left p { color: #6b7280; font-size: 14px; }
+          .header-right { text-align: right; }
+          .header-right .order-num { font-family: monospace; font-size: 12px; color: #6b7280; }
+          .header-right .date { font-size: 14px; color: #374151; }
+          
+          .license-card {
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+            border: 1px solid #bbf7d0;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+          }
+          .license-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+          }
+          .license-item label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+          .license-item .value { font-size: 18px; font-weight: 700; color: #1f2937; margin-top: 4px; }
+          .license-item .value.mono { font-family: monospace; }
+          .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 4px;
+          }
+          .status-valid { background: #d1fae5; color: #059669; }
+          .status-invalid { background: #fee2e2; color: #dc2626; }
+          .status-pending { background: #fef3c7; color: #d97706; }
+          .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+          
+          .license-classes { margin-top: 20px; padding-top: 20px; border-top: 1px solid #d1fae5; }
+          .license-classes h4 { font-size: 11px; color: #6b7280; text-transform: uppercase; margin-bottom: 12px; }
+          .license-class {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 8px;
+          }
+          .class-badge {
+            width: 48px;
+            height: 48px;
+            background: #e5e7eb;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 800;
+            color: #374151;
+          }
+          .class-info { flex: 1; }
+          .class-info strong { display: block; color: #1f2937; }
+          .class-info span { font-size: 13px; color: #6b7280; }
+          .class-info .restrictions { display: block; font-size: 12px; color: #9ca3af; }
+          .class-status { font-size: 12px; font-weight: 600; }
+
+          .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+          }
+          .stat-card {
+            text-align: center;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+          }
+          .stat-value { font-size: 32px; font-weight: 800; }
+          .stat-value.good { color: #10b981; }
+          .stat-value.warning { color: #f59e0b; }
+          .stat-value.bad { color: #ef4444; }
+          .stat-label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+
+          .section {
+            margin-bottom: 24px;
+          }
+          .section-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e5e7eb;
+          }
+          .section-header h3 { font-size: 16px; color: #1f2937; }
+          .section-count {
+            background: #fef3c7;
+            color: #d97706;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+          }
+
+          .violation-item, .accident-item, .suspension-item {
+            padding: 12px 16px;
+            background: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 8px;
+          }
+          .violation-header { display: flex; justify-content: space-between; align-items: center; }
+          .violation-details { margin-top: 4px; font-size: 13px; color: #6b7280; }
+          .violation-details span { margin-right: 16px; }
+          .acd-code { font-family: monospace; font-size: 11px; color: #9ca3af; }
+
+          .none { color: #9ca3af; font-style: italic; }
+
+          .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+            font-size: 11px;
+            color: #9ca3af;
+          }
+          .footer .brand { color: #059669; font-weight: 600; }
+
+          @media print {
+            body { padding: 20px; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="header-left">
+            <h1>Motor Vehicle Report</h1>
+            <p>Official DMV Record</p>
+          </div>
+          <div class="header-right">
+            <div class="order-num">Order #${mvrOrder.orderNumber}</div>
+            <div class="date">${formatDate(mvrOrder.orderedAt)}</div>
+          </div>
+        </div>
+
+        <div class="license-card">
+          <div class="license-grid">
+            <div class="license-item">
+              <label>License Number</label>
+              <div class="value mono">${mvrResult.licenseNumber || 'N/A'}</div>
+            </div>
+            <div class="license-item">
+              <label>State</label>
+              <div class="value">${mvrResult.licenseState || 'N/A'}</div>
+            </div>
+            <div class="license-item">
+              <label>Status</label>
+              <div class="status-badge ${mvrResult.licenseStatus?.toLowerCase().includes('valid') ? 'status-valid' : mvrResult.licenseStatus?.toLowerCase().includes('expired') ? 'status-invalid' : 'status-pending'}">
+                <span class="status-dot" style="background: currentColor"></span>
+                ${mvrResult.licenseStatus || 'Unknown'}
+              </div>
+            </div>
+            <div class="license-item">
+              <label>Expiration</label>
+              <div class="value">${formatDate(mvrResult.licenseExpirationDate)}</div>
+            </div>
+          </div>
+          ${licensesHtml ? `<div class="license-classes"><h4>License Classes</h4>${licensesHtml}</div>` : ''}
+        </div>
+
+        ${mvrResult.medicalCertStatus ? `
+        <div class="section">
+          <div class="section-header">
+            <h3>Medical Certificate</h3>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+            <div class="license-item">
+              <label>Status</label>
+              <div class="status-badge ${mvrResult.medicalCertStatus?.toLowerCase().includes('valid') || mvrResult.medicalCertStatus?.toLowerCase().includes('certified') ? 'status-valid' : 'status-pending'}">
+                ${mvrResult.medicalCertStatus}
+              </div>
+            </div>
+            <div class="license-item">
+              <label>Expiration</label>
+              <div class="value">${formatDate(mvrResult.medicalCertExpiration)}</div>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value ${(mvrResult.totalPoints || 0) === 0 ? 'good' : 'bad'}">${mvrResult.totalPoints || 0}</div>
+            <div class="stat-label">Points</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value ${(mvrResult.violationCount || 0) === 0 ? 'good' : 'warning'}">${mvrResult.violationCount || 0}</div>
+            <div class="stat-label">Violations</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value ${(mvrResult.accidentCount || 0) === 0 ? 'good' : 'bad'}">${mvrResult.accidentCount || 0}</div>
+            <div class="stat-label">Accidents</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value ${(mvrResult.suspensionCount || 0) === 0 ? 'good' : 'bad'}">${mvrResult.suspensionCount || 0}</div>
+            <div class="stat-label">Suspensions</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">
+            <h3>Violations</h3>
+            ${mvrResult.violations?.length ? `<span class="section-count">${mvrResult.violations.length}</span>` : ''}
+          </div>
+          ${violationsHtml}
+        </div>
+
+        <div class="section">
+          <div class="section-header">
+            <h3>Accidents</h3>
+            ${mvrResult.accidents?.length ? `<span class="section-count">${mvrResult.accidents.length}</span>` : ''}
+          </div>
+          ${accidentsHtml}
+        </div>
+
+        <div class="section">
+          <div class="section-header">
+            <h3>Suspensions</h3>
+            ${mvrResult.suspensions?.length ? `<span class="section-count">${mvrResult.suspensions.length}</span>` : ''}
+          </div>
+          ${suspensionsHtml}
+        </div>
+
+        <div class="footer">
+          <p>Report generated ${new Date().toLocaleString()}</p>
+          <p>Data received ${new Date(mvrResult.receivedAt).toLocaleString()}</p>
+          <p class="brand" style="margin-top: 8px;">StormChain - Blockchain-Verified Career Platform</p>
+        </div>
+
+        <script>
+          // Auto-trigger print dialog
+          window.onload = function() {
+            window.print();
+          }
+        </script>
+      </body>
+      </html>
+    `
+
+    printWindow.document.write(html)
+    printWindow.document.close()
+  }
+
   useEffect(() => {
     if (!isOpen || !walletAddress) {
       return
@@ -241,16 +587,33 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
                 </p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className={`p-2 rounded-xl transition-all ${
-                isDark 
-                  ? 'hover:bg-gray-700/50 text-gray-400 hover:text-white' 
-                  : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <X className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Download/Print Button - only show when results are available */}
+              {mvrResult && mvrOrder && (
+                <button
+                  onClick={handleDownloadPDF}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all font-medium text-sm ${
+                    isDark 
+                      ? 'bg-brand-sage/20 hover:bg-brand-sage/30 text-brand-mint' 
+                      : 'bg-brand-sage/10 hover:bg-brand-sage/20 text-brand-sage'
+                  }`}
+                  title="Download or Print Report"
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Download</span>
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className={`p-2 rounded-xl transition-all ${
+                  isDark 
+                    ? 'hover:bg-gray-700/50 text-gray-400 hover:text-white' 
+                    : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
 

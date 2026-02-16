@@ -2,6 +2,28 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🖨️ **MVR Download/Print Feature** (February 2026)
+
+**Added a download/print button to the MVR View Modal for generating a professional PDF version of the report.**
+
+### Changes
+
+- Added `Download` button in the MVR modal header (only visible when results are loaded)
+- Button opens a new print-friendly window with professional styling:
+  - Clean, professional layout optimized for printing/PDF
+  - Green accent colors matching the brand
+  - Grid layout for license information
+  - Color-coded stats (green=good, amber=warning, red=bad)
+  - Properly formatted violations, accidents, and suspensions
+  - StormChain branding in footer
+- Auto-triggers the browser's print dialog for easy PDF save or printing
+
+### Files Modified
+
+- `src/components/MvrViewModal.tsx` - Added `handleDownloadPDF` function and Download button
+
+---
+
 ## 🐛 **Critical Bug Fix: MVR Payment Wallet Address Mismatch** (February 2026)
 
 **Fixed a critical bug where MVR payments were recorded under the wrong wallet address, causing 403 errors on order submission.**
