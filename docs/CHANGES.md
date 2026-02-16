@@ -2,6 +2,61 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🐛 **Critical Bug Fix: MVR Payment Wallet Address Mismatch** (February 2026)
+
+**Fixed a critical bug where MVR payments were recorded under the wrong wallet address, causing 403 errors on order submission.**
+
+### The Bug
+
+`MvrPaymentButton.tsx` was using `useUser().address` which returns the **signer/EOA address**, NOT the **smart wallet address**. This caused:
+1. Payment recorded under EOA address (e.g., `0x1Ac0...`)
+2. Order request sent with smart wallet address (e.g., `0x9499...`)
+3. Server rejected with "Payment does not belong to this wallet address"
+
+### The Fix
+
+Changed from:
+```typescript
+const user = useUser()
+const walletAddress = userAddress || user?.address  // Wrong: EOA address
+```
+
+To:
+```typescript
+const account = useAccount({ type: 'LightAccount' })
+const walletAddress = userAddress || account?.address  // Correct: Smart wallet address
+```
+
+### Key Learning
+
+With Alchemy Account Kit (smart wallets):
+- `useUser()` → Returns signer info (email, EOA/signing address)
+- `useAccount({ type: 'LightAccount' })` → Returns the actual smart wallet address that holds tokens
+
+These are **different addresses**! Always use `useAccount()` for on-chain operations.
+
+### Additional Improvements
+
+- Added logging to `/api/mvr/order` to help debug future wallet mismatches
+- Made payment verification more robust (handles duplicate user edge cases)
+
+---
+
+## 🎨 **MVR Order Form UI Overhaul** (February 2026)
+
+**Redesigned the MVR Order Form to match the new hub styling.**
+
+### Changes
+
+- Consistent card styling (`bg-gray-800/50`, `border-gray-700`)
+- Section headers with icons (User, CreditCard, MapPin)
+- Modern input fields with focus rings
+- Clean success/error states with icons
+- Indigo accent colors for buttons and icons
+- Improved form layout with labeled inputs
+
+---
+
 ## 💼 **Wallet Modal UI Overhaul + STORM Token Support** (February 2026)
 
 **Completely redesigned the wallet modal to match the new hub styling and added full STORM token support.**

@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { useSignerStatus, useSmartAccountClient, useSendCalls, useUser } from '@account-kit/react'
+import { useSignerStatus, useSmartAccountClient, useSendCalls, useAccount } from '@account-kit/react'
 import { encodeFunctionData, parseAbi } from 'viem'
 import { useTheme } from '@/contexts/ThemeContext'
 
@@ -36,10 +36,13 @@ export default function MvrPaymentButton({
   const { client } = useSmartAccountClient({ type: 'LightAccount' })
   const { sendCallsAsync, isPending } = useSendCalls({ client })
   const { theme } = useTheme()
-  const user = useUser()
   
-  // Use explicit userAddress prop if provided, otherwise fall back to user?.address
-  const walletAddress = userAddress || user?.address
+  // IMPORTANT: Use useAccount to get the SMART WALLET address, not useUser
+  // useUser() returns the signer (EOA) address, which is different from the smart wallet
+  const account = useAccount({ type: 'LightAccount' })
+  
+  // Use explicit userAddress prop if provided, otherwise use the smart account address
+  const walletAddress = userAddress || account?.address
 
   const [config, setConfig] = useState<MvrConfig | null>(null)
   const [isLoading, setIsLoading] = useState(false)

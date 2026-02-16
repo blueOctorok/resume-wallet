@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, CheckCircle, AlertCircle, FileText, User, CreditCard, MapPin } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import MvrPaymentButton from './MvrPaymentButton'
 
@@ -24,16 +24,16 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
   const [city, setCity] = useState('')
   const [state, setState] = useState('')
   const [zip, setZip] = useState('')
-  
+
   // License Information
   const [dlNumber, setDlNumber] = useState('')
   const [dlState, setDlState] = useState('')
-  
+
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [orderResult, setOrderResult] = useState<any>(null)
-  
+
   // Payment state
   const [paymentTxHash, setPaymentTxHash] = useState<string | null>(null)
   const [isPaymentComplete, setIsPaymentComplete] = useState(false)
@@ -45,7 +45,6 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
       if (pendingPayment) {
         setPaymentTxHash(pendingPayment)
         setIsPaymentComplete(true)
-        // Clear it from localStorage
         localStorage.removeItem('pendingMvrPayment')
       }
     }
@@ -54,7 +53,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
   const handlePaymentSuccess = (txHash: string) => {
     setPaymentTxHash(txHash)
     setIsPaymentComplete(true)
-    setError(null) // Clear any previous errors
+    setError(null)
   }
 
   const handlePaymentError = (errorMsg: string) => {
@@ -64,8 +63,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    // Require payment before submission
+
     if (!isPaymentComplete || !paymentTxHash) {
       setError('Please complete payment before submitting order')
       return
@@ -82,7 +80,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           walletAddress: userAddress,
-          paymentTxHash, // Include payment transaction hash
+          paymentTxHash,
           firstName: firstName.trim(),
           middleName: middleName.trim(),
           lastName: lastName.trim(),
@@ -114,310 +112,422 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
     }
   }
 
-  const inputClass = `w-full px-4 py-3 rounded-xl border transition-all ${
-    theme === 'light'
-      ? 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-brand-sage focus:ring-2 focus:ring-brand-sage/20'
-      : 'bg-brand-sage-light/10 border-brand-cream/30 text-brand-cream placeholder:text-brand-cream/50 focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20'
+  // Consistent styling (matches hub)
+  const cardClass = `rounded-2xl border transition-all duration-200 ${
+    theme === 'dark'
+      ? 'bg-gray-800/50 border-gray-700'
+      : 'bg-white/70 border-gray-200'
+  }`
+
+  const inputClass = `w-full px-4 py-3 rounded-xl border text-sm transition-colors ${
+    theme === 'dark'
+      ? 'bg-gray-900/50 border-gray-600 text-gray-200 placeholder-gray-500 focus:border-indigo-500'
+      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-indigo-500'
+  } focus:outline-none focus:ring-2 focus:ring-indigo-500/20`
+
+  const labelClass = `block text-xs font-medium mb-1.5 ${
+    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+  }`
+
+  const sectionHeaderClass = `flex items-center gap-2 text-sm font-semibold mb-4 ${
+    theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
   }`
 
   return (
-    <div className="w-full p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className='w-full p-4 sm:p-6 lg:p-8'>
+      <div className='max-w-2xl mx-auto space-y-6'>
         {/* Header */}
-        <div>
+        <div className={`${cardClass} p-5`}>
           <button
             onClick={onBack}
-            className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-4 cursor-pointer"
+            className={`inline-flex items-center gap-2 text-sm mb-4 transition-colors ${
+              theme === 'dark'
+                ? 'text-gray-400 hover:text-gray-200'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className='w-4 h-4' />
             Back
           </button>
-          <div className={`p-6 rounded-2xl ${
-            theme === 'light'
-              ? 'bg-white/80 backdrop-blur-xl border border-brand-sage/40'
-              : 'bg-brand-sage-light/20 backdrop-blur-xl border border-brand-mint/30'
-          }`}>
+          <div className='flex items-center gap-3'>
+            <div
+              className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                theme === 'dark'
+                  ? 'bg-indigo-500/20 border border-indigo-500/30'
+                  : 'bg-indigo-50 border border-indigo-200'
+              }`}
+            >
+              <FileText
+                className={`w-6 h-6 ${
+                  theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                }`}
+              />
+            </div>
             <div>
-              <h1 className={`text-3xl font-light tracking-wide mb-2 ${
-                theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
-              }`}>
+              <h1
+                className={`text-xl font-semibold ${
+                  theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
+                }`}
+              >
                 Order MVR
               </h1>
-              <p className={`text-sm ${
-                theme === 'light' ? 'text-gray-600' : 'text-brand-cream/70'
-              }`}>
-                Motor Vehicle Record through Accio
+              <p
+                className={`text-sm ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                }`}
+              >
+                Motor Vehicle Record via Accio
               </p>
             </div>
           </div>
         </div>
 
-      {/* Success Message */}
-      {success && orderResult && (
-        <div className={`p-8 rounded-2xl text-center ${
-          theme === 'light'
-            ? 'bg-white/80 backdrop-blur-xl border border-green-300'
-            : 'bg-brand-sage-light/20 backdrop-blur-xl border border-green-500/30'
-        }`}>
-          <div className="mb-6">
-            <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full ${
-              theme === 'light' ? 'bg-green-100' : 'bg-green-900/30'
-            }`}>
-              <svg className={`w-10 h-10 ${
-                theme === 'light' ? 'text-green-600' : 'text-green-400'
-              }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+        {/* Success Message */}
+        {success && orderResult && (
+          <div className={`${cardClass} p-8 text-center`}>
+            <div
+              className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
+                theme === 'dark' ? 'bg-green-500/20' : 'bg-green-50'
+              }`}
+            >
+              <CheckCircle
+                className={`w-8 h-8 ${
+                  theme === 'dark' ? 'text-green-400' : 'text-green-500'
+                }`}
+              />
             </div>
-          </div>
-          <h3 className={`text-2xl font-semibold mb-3 ${
-            theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
-          }`}>
-            MVR Order Placed Successfully!
-          </h3>
-          <p className={`text-sm mb-8 ${
-            theme === 'light' ? 'text-gray-600' : 'text-brand-cream/70'
-          }`}>
-            Order Number: <span className="font-mono font-semibold">{orderResult.orderNumber}</span>
-          </p>
-          <button
-            onClick={onBack}
-            className={`px-8 py-3 rounded-xl font-semibold transition-all ${
-              theme === 'light'
-                ? 'bg-brand-sage text-white hover:bg-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105'
-                : 'bg-brand-sage-light/20 text-brand-cream hover:bg-brand-sage-light/30 border border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105'
-            }`}
-          >
-            Done
-          </button>
-        </div>
-      )}
-
-      {/* Form */}
-      {!success && (
-        <form onSubmit={handleSubmit} className={`p-8 rounded-2xl space-y-6 ${
-          theme === 'light'
-            ? 'bg-white/80 backdrop-blur-xl border border-brand-sage/40'
-            : 'bg-brand-sage-light/20 backdrop-blur-xl border border-brand-mint/30'
-        }`}>
-          {/* Personal Information */}
-          <div className="space-y-4">
-            <h3 className={`text-sm font-semibold uppercase tracking-wide ${
-              theme === 'light' ? 'text-gray-700' : 'text-brand-cream/80'
-            }`}>
-              Personal Information
+            <h3
+              className={`text-xl font-semibold mb-2 ${
+                theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
+              }`}
+            >
+              MVR Order Placed!
             </h3>
-            {/* Name fields - 3 columns for first, middle, last */}
-            <p className={`text-xs ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>
-              Enter your name exactly as it appears on your driver&apos;s license
+            <p
+              className={`text-sm mb-6 ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              }`}
+            >
+              Order Number:{' '}
+              <span className='font-mono font-semibold'>
+                {orderResult.orderNumber}
+              </span>
             </p>
-            <div className="grid grid-cols-3 gap-4">
-              <input
-                type="text"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                required
-                placeholder="First Name"
-                className={inputClass}
-              />
-              <input
-                type="text"
-                value={middleName}
-                onChange={(e) => setMiddleName(e.target.value)}
-                placeholder="Middle Name"
-                className={inputClass}
-              />
-              <input
-                type="text"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                required
-                placeholder="Last Name"
-                className={inputClass}
-              />
-            </div>
-            {/* Other personal info - 2 columns */}
-            <div className="grid grid-cols-2 gap-4">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="Email"
-                className={inputClass}
-              />
-              <input
-                type="date"
-                value={dob}
-                onChange={(e) => setDob(e.target.value)}
-                required
-                className={inputClass}
-              />
-              <input
-                type="text"
-                value={ssn}
-                onChange={(e) => setSsn(e.target.value.slice(0, 4))}
-                required
-                placeholder="SSN (Last 4)"
-                maxLength={4}
-                className={inputClass}
-              />
-            </div>
+            <button
+              onClick={onBack}
+              className={`px-6 py-3 rounded-xl font-semibold transition-all ${
+                theme === 'dark'
+                  ? 'bg-indigo-500 hover:bg-indigo-400 text-white'
+                  : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+              }`}
+            >
+              Done
+            </button>
           </div>
+        )}
 
-          {/* Driver License */}
-          <div className="space-y-4">
-            <h3 className={`text-sm font-semibold uppercase tracking-wide ${
-              theme === 'light' ? 'text-gray-700' : 'text-brand-cream/80'
-            }`}>
-              Driver License
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <input
-                type="text"
-                value={dlNumber}
-                onChange={(e) => setDlNumber(e.target.value)}
-                required
-                placeholder="DL Number"
-                className={inputClass}
-              />
-              <input
-                type="text"
-                value={dlState}
-                onChange={(e) => setDlState(e.target.value.toUpperCase())}
-                required
-                placeholder="DL State (TX)"
-                maxLength={2}
-                className={inputClass}
-              />
-            </div>
-          </div>
-
-          {/* Address */}
-          <div className="space-y-4">
-            <h3 className={`text-sm font-semibold uppercase tracking-wide ${
-              theme === 'light' ? 'text-gray-700' : 'text-brand-cream/80'
-            }`}>
-              Address
-            </h3>
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              required
-              placeholder="Street Address"
-              className={inputClass}
-            />
-            <div className="grid grid-cols-3 gap-4">
-              <input
-                type="text"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                required
-                placeholder="City"
-                className={inputClass}
-              />
-              <input
-                type="text"
-                value={state}
-                onChange={(e) => setState(e.target.value.toUpperCase())}
-                required
-                placeholder="State"
-                maxLength={2}
-                className={inputClass}
-              />
-              <input
-                type="text"
-                value={zip}
-                onChange={(e) => setZip(e.target.value)}
-                required
-                placeholder="Zip"
-                maxLength={10}
-                className={inputClass}
-              />
-            </div>
-          </div>
-
-          {/* Payment Section */}
-          <div className="space-y-4">
-            <h3 className={`text-sm font-semibold uppercase tracking-wide ${
-              theme === 'light' ? 'text-gray-700' : 'text-brand-cream/80'
-            }`}>
-              Payment
-            </h3>
-            
-            {!isPaymentComplete ? (
-              <div className="space-y-2">
-                <p className={`text-sm ${
-                  theme === 'light' ? 'text-gray-600' : 'text-brand-cream/70'
-                }`}>
-                  Complete payment to proceed with your MVR order.
-                </p>
-                <MvrPaymentButton 
-                  userAddress={userAddress}
-                  onPaymentSuccess={handlePaymentSuccess}
-                  onPaymentError={handlePaymentError}
-                  disabled={isLoading}
+        {/* Form */}
+        {!success && (
+          <form onSubmit={handleSubmit} className='space-y-4'>
+            {/* Personal Information */}
+            <div className={`${cardClass} p-5`}>
+              <div className={sectionHeaderClass}>
+                <User
+                  className={`w-4 h-4 ${
+                    theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                  }`}
                 />
+                Personal Information
               </div>
-            ) : (
-              <div className={`p-4 rounded-xl ${
-                theme === 'light'
-                  ? 'bg-green-50 border border-green-200'
-                  : 'bg-green-900/20 border border-green-500/30'
-              }`}>
-                <div className="flex items-center gap-2">
-                  <svg className={`w-5 h-5 ${
-                    theme === 'light' ? 'text-green-600' : 'text-green-400'
-                  }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <p className={`text-sm font-medium ${
-                    theme === 'light' ? 'text-green-700' : 'text-green-400'
-                  }`}>
-                    Payment confirmed
-                  </p>
+              <p
+                className={`text-xs mb-4 ${
+                  theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                }`}
+              >
+                Enter your name exactly as it appears on your driver&apos;s
+                license
+              </p>
+
+              {/* Name fields */}
+              <div className='grid grid-cols-3 gap-3 mb-3'>
+                <div>
+                  <label className={labelClass}>First Name *</label>
+                  <input
+                    type='text'
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                    placeholder='John'
+                    className={inputClass}
+                  />
                 </div>
-                <p className={`text-xs mt-1 font-mono ${
-                  theme === 'light' ? 'text-green-600' : 'text-green-400/80'
-                }`}>
-                  {paymentTxHash?.slice(0, 20)}...
+                <div>
+                  <label className={labelClass}>Middle</label>
+                  <input
+                    type='text'
+                    value={middleName}
+                    onChange={(e) => setMiddleName(e.target.value)}
+                    placeholder='M'
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Last Name *</label>
+                  <input
+                    type='text'
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                    placeholder='Doe'
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+
+              {/* Other personal info */}
+              <div className='grid grid-cols-2 gap-3'>
+                <div>
+                  <label className={labelClass}>Email *</label>
+                  <input
+                    type='email'
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    placeholder='john@example.com'
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Date of Birth *</label>
+                  <input
+                    type='date'
+                    value={dob}
+                    onChange={(e) => setDob(e.target.value)}
+                    required
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>SSN (Last 4) *</label>
+                  <input
+                    type='text'
+                    value={ssn}
+                    onChange={(e) => setSsn(e.target.value.slice(0, 4))}
+                    required
+                    placeholder='1234'
+                    maxLength={4}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Driver License */}
+            <div className={`${cardClass} p-5`}>
+              <div className={sectionHeaderClass}>
+                <CreditCard
+                  className={`w-4 h-4 ${
+                    theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                  }`}
+                />
+                Driver License
+              </div>
+              <div className='grid grid-cols-2 gap-3'>
+                <div>
+                  <label className={labelClass}>License Number *</label>
+                  <input
+                    type='text'
+                    value={dlNumber}
+                    onChange={(e) => setDlNumber(e.target.value)}
+                    required
+                    placeholder='12345678'
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>State *</label>
+                  <input
+                    type='text'
+                    value={dlState}
+                    onChange={(e) => setDlState(e.target.value.toUpperCase())}
+                    required
+                    placeholder='TX'
+                    maxLength={2}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Address */}
+            <div className={`${cardClass} p-5`}>
+              <div className={sectionHeaderClass}>
+                <MapPin
+                  className={`w-4 h-4 ${
+                    theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                  }`}
+                />
+                Address
+              </div>
+              <div className='space-y-3'>
+                <div>
+                  <label className={labelClass}>Street Address *</label>
+                  <input
+                    type='text'
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    required
+                    placeholder='123 Main St'
+                    className={inputClass}
+                  />
+                </div>
+                <div className='grid grid-cols-3 gap-3'>
+                  <div>
+                    <label className={labelClass}>City *</label>
+                    <input
+                      type='text'
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      required
+                      placeholder='Houston'
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>State *</label>
+                    <input
+                      type='text'
+                      value={state}
+                      onChange={(e) => setState(e.target.value.toUpperCase())}
+                      required
+                      placeholder='TX'
+                      maxLength={2}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>ZIP *</label>
+                    <input
+                      type='text'
+                      value={zip}
+                      onChange={(e) => setZip(e.target.value)}
+                      required
+                      placeholder='77001'
+                      maxLength={10}
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Section */}
+            <div className={`${cardClass} p-5`}>
+              <div className={sectionHeaderClass}>
+                <CreditCard
+                  className={`w-4 h-4 ${
+                    theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                  }`}
+                />
+                Payment
+              </div>
+
+              {!isPaymentComplete ? (
+                <div className='space-y-3'>
+                  <p
+                    className={`text-sm ${
+                      theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                    }`}
+                  >
+                    Complete payment to proceed with your MVR order.
+                  </p>
+                  <MvrPaymentButton
+                    userAddress={userAddress}
+                    onPaymentSuccess={handlePaymentSuccess}
+                    onPaymentError={handlePaymentError}
+                    disabled={isLoading}
+                  />
+                </div>
+              ) : (
+                <div
+                  className={`flex items-center gap-3 p-3 rounded-xl ${
+                    theme === 'dark'
+                      ? 'bg-green-500/10 border border-green-500/20'
+                      : 'bg-green-50 border border-green-200'
+                  }`}
+                >
+                  <CheckCircle
+                    className={`w-5 h-5 ${
+                      theme === 'dark' ? 'text-green-400' : 'text-green-500'
+                    }`}
+                  />
+                  <div>
+                    <p
+                      className={`text-sm font-medium ${
+                        theme === 'dark' ? 'text-green-300' : 'text-green-700'
+                      }`}
+                    >
+                      Payment confirmed
+                    </p>
+                    <p
+                      className={`text-xs font-mono ${
+                        theme === 'dark' ? 'text-green-400/70' : 'text-green-600'
+                      }`}
+                    >
+                      {paymentTxHash?.slice(0, 20)}...
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div
+                className={`flex items-start gap-2 p-4 rounded-xl ${
+                  theme === 'dark'
+                    ? 'bg-red-500/10 border border-red-500/20'
+                    : 'bg-red-50 border border-red-200'
+                }`}
+              >
+                <AlertCircle
+                  className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
+                    theme === 'dark' ? 'text-red-400' : 'text-red-500'
+                  }`}
+                />
+                <p
+                  className={`text-sm ${
+                    theme === 'dark' ? 'text-red-300' : 'text-red-700'
+                  }`}
+                >
+                  {error}
                 </p>
               </div>
             )}
-          </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className={`p-4 rounded-xl ${
-              theme === 'light'
-                ? 'bg-red-50 border border-red-200 text-red-700'
-                : 'bg-red-900/20 border border-red-500/30 text-red-400'
-            }`}>
-              <p className="text-sm">{error}</p>
-            </div>
-          )}
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={isLoading || !isPaymentComplete}
-            className={`w-full px-6 py-4 rounded-xl font-semibold text-base transition-all ${
-              isLoading || !isPaymentComplete
-                ? theme === 'light'
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-brand-sage-light/10 text-brand-cream/40 cursor-not-allowed'
-                : theme === 'light'
-                  ? 'bg-brand-sage text-white hover:bg-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105'
-                  : 'bg-brand-sage-light/20 text-brand-cream hover:bg-brand-sage-light/30 border border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105'
-            }`}
-          >
-            {isLoading ? 'Ordering MVR...' : !isPaymentComplete ? 'Complete Payment First' : 'Submit MVR Order'}
-          </button>
-        </form>
-      )}
+            {/* Submit Button */}
+            <button
+              type='submit'
+              disabled={isLoading || !isPaymentComplete}
+              className={`w-full px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
+                isLoading || !isPaymentComplete
+                  ? theme === 'dark'
+                    ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : theme === 'dark'
+                    ? 'bg-indigo-500 hover:bg-indigo-400 text-white'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+              }`}
+            >
+              {isLoading
+                ? 'Ordering MVR...'
+                : !isPaymentComplete
+                  ? 'Complete Payment First'
+                  : 'Submit MVR Order'}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   )
 }
-
