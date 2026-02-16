@@ -36,6 +36,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log('[MVR PAYMENT] Received request with walletAddress:', walletAddress)
+
     // Use service role client to bypass RLS for payments
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -62,6 +64,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
 
     if (existingUser) {
+      console.log('[MVR PAYMENT] Found existing user:', existingUser.id, 'for wallet:', walletAddress)
       user = existingUser
     } else {
       // User doesn't exist, create them
