@@ -93,12 +93,22 @@ export async function POST(request: NextRequest) {
     // Check if payment with this tx_hash already exists (prevent duplicates)
     const { data: existingPayment } = await supabase
       .from('payments')
-      .select('id, tx_hash, amount_usdc')
+      .select('id, tx_hash, amount_usdc, user_id')
       .eq('tx_hash', truncatedTxHash)
       .eq('type', 'MVR_ORDER')
       .maybeSingle()
 
     if (existingPayment) {
+      // Verify the existing payment belongs to the same user
+      if (existingPayment.user_id !== user.id) {
+        console.warn('[MVR PAYMENT] ⚠️ Duplicate tx_hash with different user:', {
+          existingUserId: existingPayment.user_id,
+          requestUserId: user.id,
+          txHash: truncatedTxHash,
+        })
+        // Still return it - the order route will verify ownership
+      }
+      
       console.log('[MVR PAYMENT] ✅ Payment already exists, returning existing:', existingPayment.id)
       return NextResponse.json({
         success: true,

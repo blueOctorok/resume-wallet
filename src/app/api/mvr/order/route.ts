@@ -120,12 +120,20 @@ export async function POST(request: NextRequest) {
     }
 
     if (!payment) {
-      console.error('[MVR ORDER] Payment not found for txHash:', paymentTxHash)
+      console.error('[MVR ORDER] Payment not found for txHash:', paymentTxHash, 'truncated:', truncatedHash)
       return NextResponse.json(
         { error: 'Payment not found. Please complete payment before ordering.' },
         { status: 400 }
       )
     }
+
+    console.log('[MVR ORDER] Found payment:', {
+      paymentId: payment.id,
+      paymentUserId: payment.user_id,
+      txHash: payment.tx_hash,
+      status: payment.status,
+      requestWallet: walletAddress,
+    })
 
     if (payment.status !== 'COMPLETED') {
       console.error('[MVR ORDER] Payment not completed. Status:', payment.status)
@@ -136,32 +144,57 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify payment belongs to this user
-    // Get the user from the payment to ensure we're using the same user ID
-    let { data: paymentUser, error: paymentUserError } = await supabaseService
+    // Look up the user by wallet address (same way payment route does) to ensure consistency
+    const { data: walletUser, error: walletUserError } = await supabaseService
       .from('users')
       .select('id, wallet_address')
-      .eq('id', payment.user_id)
-      .single()
+      .ilike('wallet_address', walletAddress)
+      .maybeSingle()
 
-    if (paymentUserError || !paymentUser) {
-      console.error('[MVR ORDER] Error fetching user for payment:', paymentUserError)
+    if (walletUserError) {
+      console.error('[MVR ORDER] Error looking up user by wallet:', walletUserError)
       return NextResponse.json(
-        { error: 'Payment user not found.' },
+        { error: 'Failed to verify user.' },
+        { status: 500 }
+      )
+    }
+
+    // If no user found with this wallet address, that's a problem
+    if (!walletUser) {
+      console.error('[MVR ORDER] No user found for wallet address:', walletAddress)
+      return NextResponse.json(
+        { error: 'No user account found for this wallet.' },
         { status: 404 }
       )
     }
 
-    // Verify the payment's user wallet address matches the provided wallet address (case-insensitive)
-    if (paymentUser.wallet_address?.toLowerCase() !== walletAddress.toLowerCase()) {
-      console.error('[MVR ORDER] Payment wallet mismatch:', {
-        paymentWallet: paymentUser.wallet_address,
-        providedWallet: walletAddress,
-        paymentUserId: payment.user_id
+    // Verify the payment belongs to this user (by user_id, not wallet address comparison)
+    // This is more reliable since payment stores user_id at creation time
+    if (walletUser.id !== payment.user_id) {
+      console.error('[MVR ORDER] Payment user mismatch:', {
+        paymentUserId: payment.user_id,
+        walletUserId: walletUser.id,
+        walletAddress: walletAddress
       })
-      return NextResponse.json(
-        { error: 'Payment does not belong to this wallet address.' },
-        { status: 403 }
-      )
+      
+      // Check if this might be a duplicate user issue (same wallet, different user records)
+      const { data: paymentUserRecord } = await supabaseService
+        .from('users')
+        .select('id, wallet_address')
+        .eq('id', payment.user_id)
+        .maybeSingle()
+      
+      // If the payment's user has the same wallet (case-insensitive), allow it
+      // This handles the case where duplicate users exist for the same wallet
+      if (paymentUserRecord?.wallet_address?.toLowerCase() === walletAddress.toLowerCase()) {
+        console.log('[MVR ORDER] Payment user wallet matches, proceeding despite user ID mismatch')
+        // Continue with paymentUserRecord instead
+      } else {
+        return NextResponse.json(
+          { error: 'Payment does not belong to this wallet address.' },
+          { status: 403 }
+        )
+      }
     }
 
     // Validate Accio credentials
