@@ -2583,10 +2583,10 @@ function AdminDashboardContent() {
           </div>
         </div>
       )}
-        </div>
-      </main>
+      </div>
+    </main>
 
-      {/* Delete Confirmation Modal */}
+    {/* Delete Confirmation Modal */}
       {deleteTarget && (
         <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50'>
           <div
