@@ -129,10 +129,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for duplicate application
+    // Note: Column renamed from driver_user_id to applicant_user_id in migration 016
     const { data: existingApp } = await supabase
       .from('applications')
       .select('id')
-      .eq('driver_user_id', user.id)
+      .eq('applicant_user_id', user.id)
       .eq('job_posting_id', jobPostingId)
       .single()
 
@@ -148,8 +149,9 @@ export async function POST(request: NextRequest) {
 
     // Prepare application data snapshot
     const applicationData = {
-      driver_name: user.name,
-      driver_email: user.email,
+      applicant_name: user.name,
+      applicant_email: user.email,
+      // Driver-specific fields (will be null for non-drivers)
       cdl_class: profile.cdl_class,
       cdl_endorsements: profile.cdl_endorsements,
       cdl_state: profile.cdl_state,
@@ -160,10 +162,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Create application record
+    // Note: Column renamed from driver_user_id to applicant_user_id in migration 016
     const { data: application, error: appError } = await supabase
       .from('applications')
       .insert({
-        driver_user_id: user.id,
+        applicant_user_id: user.id,
         job_posting_id: jobPostingId,
         driver_application_id: profile.driver_application_id,
         resume_id: profile.resume_id,

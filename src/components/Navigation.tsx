@@ -15,7 +15,7 @@ type NavPage =
   | 'applications'
   | 'home'
   | 'hub'
-  | 'veree'
+  | 'stormchain'
 
 interface NavigationProps {
   isAuthenticated?: boolean
@@ -308,7 +308,7 @@ export default function Navigation({
                 {/* Show Token counter for drivers and developers - employers don't earn tokens */}
                 {(userRole === 'driver' || userRole === 'developer') && (
                   <button
-                    onClick={() => handleNavigation('veree')}
+                    onClick={() => handleNavigation('stormchain')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-300 cursor-pointer ${
                       theme === 'light'
                         ? 'text-indigo-600 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-200'

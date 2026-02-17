@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get all applications for this user with job details
+    // Note: Column renamed from driver_user_id to applicant_user_id in migration 016
     const { data: applications, error: appsError } = await supabase
       .from('applications')
       .select(`
@@ -41,13 +42,14 @@ export async function POST(request: NextRequest) {
           pay_range_max,
           redirect_url,
           external_source,
+          target_role,
           company_id,
           companies (
             company_name
           )
         )
       `)
-      .eq('driver_user_id', user.id)
+      .eq('applicant_user_id', user.id)
       .order('applied_at', { ascending: false })
 
     if (appsError) {

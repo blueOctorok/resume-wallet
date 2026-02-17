@@ -193,6 +193,6 @@ export function generateOrderNumber(): string {
  * Generate unique GUID for webhook tracking
  */
 export function generateWebhookGuid(): string {
-  return `veree-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`
+  return `stormchain-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`
 }
 

@@ -33,7 +33,7 @@ function isPersonalEmail(email?: string): boolean {
 }
 
 interface RoleSelectionModalProps {
-  onSelectRole: (role: 'driver' | 'developer' | 'employer') => void
+  onSelectRole: (role: 'driver' | 'developer' | 'employer', companyName?: string, dotNumber?: string) => void
   isLoading?: boolean
   userEmail?: string // Used to gate Employer option
 }
@@ -47,9 +47,15 @@ export default function RoleSelectionModal({
   const [selectedRole, setSelectedRole] = useState<
     'driver' | 'developer' | 'employer' | null
   >(null)
+  // Company info for employer signup (prevents orphan "My Company" records)
+  const [companyName, setCompanyName] = useState('')
+  const [dotNumber, setDotNumber] = useState('')
 
   // Check if user can select Employer (requires company email)
   const isEmployerDisabled = isPersonalEmail(userEmail)
+  
+  // Employer needs company name to proceed
+  const canProceed = selectedRole && (selectedRole !== 'employer' || companyName.trim().length >= 2)
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -71,8 +77,12 @@ export default function RoleSelectionModal({
   }, [])
 
   const handleConfirm = () => {
-    if (selectedRole) {
-      onSelectRole(selectedRole)
+    if (selectedRole && canProceed) {
+      if (selectedRole === 'employer') {
+        onSelectRole(selectedRole, companyName.trim(), dotNumber.trim() || undefined)
+      } else {
+        onSelectRole(selectedRole)
+      }
     }
   }
 
@@ -476,17 +486,82 @@ export default function RoleSelectionModal({
             </button>
           </div>
 
+          {/* Employer Company Info - appears when employer is selected */}
+          {selectedRole === 'employer' && !isEmployerDisabled && (
+            <div className={`mx-4 sm:mx-8 mb-4 p-4 sm:p-6 rounded-xl border-2 transition-all duration-300 ${
+              theme === 'dark'
+                ? 'bg-brand-mint/10 border-brand-mint/40'
+                : 'bg-brand-mint/5 border-brand-mint/30'
+            }`}>
+              <h3 className={`text-base sm:text-lg font-semibold mb-3 ${
+                theme === 'dark' ? 'text-brand-cream' : 'text-gray-900'
+              }`}>
+                Tell us about your company
+              </h3>
+              
+              <div className='space-y-3'>
+                {/* Company Name - Required */}
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                  }`}>
+                    Company Name <span className='text-red-500'>*</span>
+                  </label>
+                  <input
+                    type='text'
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder='e.g. PACE Drivers LLC'
+                    className={`w-full px-4 py-2.5 rounded-lg border transition-colors ${
+                      theme === 'dark'
+                        ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500 focus:border-brand-mint'
+                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
+                    } focus:outline-none focus:ring-2 focus:ring-brand-mint/30`}
+                    disabled={isLoading}
+                  />
+                </div>
+
+                {/* DOT Number - Optional */}
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                  }`}>
+                    DOT Number <span className='text-gray-400 font-normal'>(optional)</span>
+                  </label>
+                  <input
+                    type='text'
+                    value={dotNumber}
+                    onChange={(e) => setDotNumber(e.target.value)}
+                    placeholder='e.g. 1234567'
+                    className={`w-full px-4 py-2.5 rounded-lg border transition-colors ${
+                      theme === 'dark'
+                        ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500 focus:border-brand-mint'
+                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
+                    } focus:outline-none focus:ring-2 focus:ring-brand-mint/30`}
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+
+              <p className={`mt-3 text-xs ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              }`}>
+                You can add more details later in your company profile.
+              </p>
+            </div>
+          )}
+
           {/* Footer */}
           <div
-            className={`p-4 sm:p-8 pt-0 flex justify-center border-t ${theme === 'dark' ? 'border-brand-mint/30' : 'border-brand-sage/30'}`}
+            className={`p-4 sm:p-8 pt-4 flex justify-center border-t ${theme === 'dark' ? 'border-brand-mint/30' : 'border-brand-sage/30'}`}
           >
             <button
               onClick={handleConfirm}
-              disabled={!selectedRole || isLoading}
+              disabled={!canProceed || isLoading}
               className={`
                 w-full sm:w-auto px-6 sm:px-8 py-3 rounded-lg font-semibold text-base sm:text-lg transition-all duration-300
                 ${
-                  selectedRole && !isLoading
+                  canProceed && !isLoading
                     ? selectedRole === 'driver'
                       ? 'bg-gradient-to-r from-brand-sage to-brand-sage-dark hover:from-brand-sage-dark hover:to-brand-sage text-white shadow-lg shadow-brand-sage/50 active:scale-[0.98] sm:hover:scale-105'
                       : selectedRole === 'developer'
@@ -522,7 +597,9 @@ export default function RoleSelectionModal({
                   Setting up...
                 </span>
               ) : selectedRole ? (
-                `Continue as ${selectedRole === 'driver' ? 'Driver' : selectedRole === 'developer' ? 'Software Engineer' : 'Employer'}`
+                selectedRole === 'employer' && !companyName.trim() 
+                  ? 'Enter company name to continue'
+                  : `Continue as ${selectedRole === 'driver' ? 'Driver' : selectedRole === 'developer' ? 'Software Engineer' : 'Employer'}`
               ) : (
                 'Select a role to continue'
               )}

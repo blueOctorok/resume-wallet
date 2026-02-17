@@ -742,7 +742,7 @@ export default function StormChainView({ onBack }: StormChainViewProps) {
         <p
           className={`text-sm ${isDark ? 'text-brand-cream/50' : 'text-brand-sage/60'}`}
         >
-          Questions? Contact us at support@stormchain.io
+          Questions? Contact us at support@stormchain.ai
         </p>
       </div>
     </div>

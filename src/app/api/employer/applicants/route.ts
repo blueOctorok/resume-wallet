@@ -5,6 +5,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
  * GET /api/employer/applicants
  *
  * Fetches all applicants who have applied to this employer's job postings.
+ * Supports team-based access via company_members table.
  * Includes filtering, sorting, and status management.
  */
 export async function GET(request: NextRequest) {
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user and company
+    // Get user
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id')
@@ -38,18 +39,34 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const { data: company, error: companyError } = await supabase
-      .from('companies')
-      .select('id')
-      .eq('employer_user_id', user.id)
-      .single()
+    // Check company_members for team-based access
+    const { data: membership } = await supabase
+      .from('company_members')
+      .select('company_id, role')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .maybeSingle()
 
-    if (companyError || !company) {
+    let companyId = membership?.company_id
+
+    // Fall back to legacy employer_user_id check
+    if (!companyId) {
+      const { data: legacyCompany } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('employer_user_id', user.id)
+        .single()
+      
+      companyId = legacyCompany?.id
+    }
+
+    if (!companyId) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
     // Build query
-    // applications has driver_user_id → users; driver_profiles has user_id → users
+    // applications has applicant_user_id → users (renamed from driver_user_id in migration 016)
+    // driver_profiles has user_id → users
     // So we get driver_profiles via users (no direct FK from applications to driver_profiles)
     let query = supabase
       .from('applications')
@@ -63,17 +80,19 @@ export async function GET(request: NextRequest) {
         cover_letter,
         reviewer_notes,
         share_token,
-        driver_user_id,
+        applicant_user_id,
         job_posting_id,
         job_postings!inner (
           id,
           title,
-          company_id
+          company_id,
+          target_role
         ),
-        users!applications_driver_user_id_fkey (
+        users!applications_applicant_user_id_fkey (
           id,
           wallet_address,
           email,
+          role,
           driver_profiles (
             first_name,
             last_name,
@@ -98,7 +117,7 @@ export async function GET(request: NextRequest) {
         )
       `,
       )
-      .eq('job_postings.company_id', company.id)
+      .eq('job_postings.company_id', companyId)
 
     // Filter by job if specified
     if (jobId) {
@@ -125,19 +144,27 @@ export async function GET(request: NextRequest) {
     }
 
     // Process applicants (driver_profiles is nested under users)
+    // Generic naming with backward compatibility
     const applicants = (applications || []).map((app) => {
-      const driverUser = app.users as {
+      const applicantUser = app.users as {
         id: string
         wallet_address?: string
         email?: string
+        role?: string
         driver_profiles?: unknown
       } | null
-      const driverProfiles = driverUser?.driver_profiles
+      const driverProfiles = applicantUser?.driver_profiles
       const driverProfile = Array.isArray(driverProfiles)
         ? driverProfiles[0]
         : driverProfiles
       const resume = Array.isArray(app.resumes) ? app.resumes[0] : app.resumes
       const jobPosting = app.job_postings as any
+
+      const name = driverProfile
+        ? `${driverProfile.first_name || ''} ${driverProfile.last_name || ''}`.trim() || 'Unknown'
+        : 'Unknown'
+      const email = driverProfile?.email || applicantUser?.email || null
+      const phone = driverProfile?.phone || null
 
       return {
         applicationId: app.id,
@@ -148,19 +175,17 @@ export async function GET(request: NextRequest) {
         coverLetter: app.cover_letter,
         reviewerNotes: app.reviewer_notes,
         shareToken: app.share_token,
-        // Driver info
-        driverUserId: app.driver_user_id,
-        driverName: driverProfile
-          ? `${driverProfile.first_name || ''} ${driverProfile.last_name || ''}`.trim() ||
-            'Unknown'
-          : 'Unknown',
-        driverEmail: driverProfile?.email || driverUser?.email || null,
-        driverPhone: driverProfile?.phone || null,
-        driverLocation:
+        // Applicant info (generic)
+        applicantUserId: app.applicant_user_id,
+        applicantRole: applicantUser?.role || 'driver',
+        applicantName: name,
+        applicantEmail: email,
+        applicantPhone: phone,
+        applicantLocation:
           driverProfile?.city && driverProfile?.state
             ? `${driverProfile.city}, ${driverProfile.state}`
             : driverProfile?.state || null,
-        // CDL info
+        // CDL info (driver-specific)
         cdlClass: driverProfile?.cdl_class || null,
         cdlState: driverProfile?.cdl_state || null,
         cdlExpiration: driverProfile?.cdl_expiration || null,
@@ -169,12 +194,22 @@ export async function GET(request: NextRequest) {
         // Job info
         jobPostingId: app.job_posting_id,
         jobTitle: jobPosting?.title || 'Unknown Position',
+        jobTargetRole: jobPosting?.target_role || 'driver',
         // Resume info
         hasResume: !!resume,
         resumeId: resume?.id || null,
         resumeTitle: resume?.title || resume?.filename || null,
         resumeVerified: resume?.verification_status === 'VERIFIED',
         resumeIpfsHash: resume?.ipfs_hash || null,
+        // Legacy aliases for backward compatibility
+        driverUserId: app.applicant_user_id,
+        driverName: name,
+        driverEmail: email,
+        driverPhone: phone,
+        driverLocation:
+          driverProfile?.city && driverProfile?.state
+            ? `${driverProfile.city}, ${driverProfile.state}`
+            : driverProfile?.state || null,
       }
     })
 
@@ -192,8 +227,8 @@ export async function GET(request: NextRequest) {
     // Get job postings for filter dropdown
     const { data: jobs } = await supabase
       .from('job_postings')
-      .select('id, title, is_active')
-      .eq('company_id', company.id)
+      .select('id, title, is_active, target_role')
+      .eq('company_id', companyId)
       .order('created_at', { ascending: false })
 
     // Stats
@@ -232,6 +267,7 @@ export async function GET(request: NextRequest) {
  * PATCH /api/employer/applicants
  *
  * Updates an application's status or adds reviewer notes.
+ * Supports team-based access - requires recruiter role or above.
  */
 export async function PATCH(request: NextRequest) {
   try {
@@ -255,7 +291,7 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user and company
+    // Get user
     const { data: user } = await supabase
       .from('users')
       .select('id')
@@ -266,14 +302,40 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const { data: company } = await supabase
-      .from('companies')
-      .select('id')
-      .eq('employer_user_id', user.id)
-      .single()
+    // Check company_members for team-based access with appropriate role
+    const { data: membership } = await supabase
+      .from('company_members')
+      .select('company_id, role')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .maybeSingle()
 
-    if (!company) {
+    let companyId = membership?.company_id
+    const userRole = membership?.role
+
+    // Fall back to legacy employer_user_id check
+    if (!companyId) {
+      const { data: legacyCompany } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('employer_user_id', user.id)
+        .single()
+      
+      companyId = legacyCompany?.id
+    }
+
+    if (!companyId) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
+    }
+
+    // Check if user has permission to update applications
+    // Requires owner, admin, hr_manager, hiring_manager, or recruiter role
+    const canUpdateRoles = ['owner', 'admin', 'hr_manager', 'hiring_manager', 'recruiter']
+    if (userRole && !canUpdateRoles.includes(userRole)) {
+      return NextResponse.json(
+        { error: 'You do not have permission to update applications' },
+        { status: 403 },
+      )
     }
 
     // Verify application belongs to this company
@@ -296,7 +358,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const jobPosting = application.job_postings as any
-    if (jobPosting.company_id !== company.id) {
+    if (jobPosting.company_id !== companyId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 

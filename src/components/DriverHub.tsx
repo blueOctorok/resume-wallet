@@ -144,7 +144,7 @@ interface HubData {
 interface DriverHubProps {
   userAddress: string | null
   onNavigate: (
-    page: 'resume' | 'dotapp' | 'mvr' | 'jobs' | 'applications' | 'veree',
+    page: 'resume' | 'dotapp' | 'mvr' | 'jobs' | 'applications' | 'stormchain',
   ) => void
   onStartDotApp?: () => void
   onViewMvr?: (orderId: string) => void
@@ -1082,7 +1082,7 @@ export default function DriverHub({
 
             {/* Learn More Button */}
             <button
-              onClick={() => onNavigate('veree')}
+              onClick={() => onNavigate('stormchain')}
               className={`text-sm font-medium transition-colors cursor-pointer ${
                 theme === 'dark'
                   ? 'text-indigo-400 hover:text-indigo-300'
@@ -2013,7 +2013,7 @@ function DotAppDetailContent({
   dotApp: HubDotApplication
   theme: string
   onNavigate: (
-    page: 'resume' | 'dotapp' | 'mvr' | 'jobs' | 'applications' | 'veree',
+    page: 'resume' | 'dotapp' | 'mvr' | 'jobs' | 'applications' | 'stormchain',
   ) => void
   onStartEmploymentVerification?: () => void
   onVerify?: () => void

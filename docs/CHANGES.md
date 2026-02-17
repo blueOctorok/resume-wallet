@@ -2,6 +2,146 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🔧 **Employer Onboarding & Admin Refactor** (February 2026)
+
+**Improvements to employer onboarding flow and admin dashboard for better UX and data quality.**
+
+### Changes
+
+#### 1. Inline Company Name on Employer Signup
+- **File:** `src/components/RoleSelectionModal.tsx`
+- **What:** When a user selects "Employer" role, they now see an inline form asking for their company name (required) and DOT number (optional)
+- **Why:** Prevents orphan "My Company" placeholder records that were being auto-created
+- **Flow:** User selects Employer → Enters company name → Continue button enables → Company created with real name
+
+#### 2. Admin Sidebar Refactor
+- **File:** `src/app/admin/AdminDashboard.tsx`
+- **What:** Replaced horizontal tab navigation with a vertical sidebar organized by sections:
+  - **Employers:** Companies
+  - **Drivers:** Profiles, DOT Apps, Resumes, MVR Orders, Verifications
+  - **Developers:** Profiles, Projects
+  - **System:** All Users, Tools
+- **Why:** Better organization for frequent admin use, scales as features grow
+
+#### 3. Admin Email Notifications
+- **File:** `src/lib/send-admin-notification.ts` (new)
+- **What:** Sends email to admins when a new company is registered
+- **Config:** Set `ADMIN_NOTIFICATION_EMAILS` env var (comma-separated list)
+- **Uses:** Existing Resend setup with `verify.stormchain.ai` domain
+
+#### 4. Test Data Cleanup
+- **File:** `supabase/migrations/018_cleanup_test_data.sql`
+- **What:** One-time migration to delete orphan "My Company" records with no jobs/team
+- **Safe:** Idempotent, can run multiple times
+
+### Environment Variables
+
+Add these to `.env.local` for admin notifications:
+```
+ADMIN_NOTIFICATION_EMAILS=admin1@example.com,admin2@example.com
+```
+
+### Related Files Modified
+- `src/app/page.tsx` - Updated `handleRoleSelection` to pass company info
+- `src/app/api/user/set-role/route.ts` - Accepts `companyName` and `dotNumber`, creates company with real name
+
+---
+
+## 🏢 **Generic Employer Architecture: Multi-User & Role-Agnostic** (February 2026)
+
+**Major architecture overhaul to support multi-user employer accounts, role-agnostic job postings, and employer candidate annotations.**
+
+### Problem Statement
+
+The platform was too driver-focused:
+- `job_postings` had driver-specific columns (cdl_class, endorsements_required)
+- `applications.driver_user_id` was named for drivers only
+- Companies were tied to a single `employer_user_id` (no team access)
+- No way for employers to add data to candidate profiles (MVRs they ordered, notes, ratings)
+
+### Solution
+
+**Migration 016** adds:
+
+1. **`company_members` table** - Multi-user access per company with 7 role levels
+2. **Generic job postings** - `target_role` column + `role_requirements` JSONB for any role type
+3. **Renamed `driver_user_id` → `applicant_user_id`** in applications table
+4. **`employer_candidate_data` table** - Notes, ratings, documents, interview data per candidate
+5. **Updated RLS policies** - Team-based access instead of single owner
+
+### Employer Roles
+
+| Role | Access Level |
+|------|--------------|
+| `owner` | Full control, can delete company |
+| `admin` | Manage team, company settings, all jobs |
+| `hr_manager` | View all applicants, make hire decisions, compliance |
+| `hiring_manager` | Manage jobs in their scope, make hire decisions |
+| `recruiter` | Post jobs, screen candidates, schedule interviews |
+| `interviewer` | View assigned candidates, add interview notes only |
+| `viewer` | Read-only access to dashboards and reports |
+
+### Employer Candidate Data Types
+
+Employers can now add to candidate profiles:
+- `note` - Internal notes (visible_to_candidate toggle)
+- `rating` - 1-5 star ratings by category
+- `tag` - Custom tags (hot candidate, backup, etc.)
+- `document` - MVR, PSP, background checks they ordered
+- `interview` - Interview notes and scheduling
+- `assessment` - Skills assessment results
+- `offer` - Offer details
+- `rejection_reason` - Why candidate was rejected
+
+### Generic Job Requirements
+
+Job postings now support any role via `role_requirements` JSONB (existing `requirements` TEXT column is for descriptions):
+
+```json
+// Driver job
+{ "target_role": "driver", "role_requirements": { "cdl_class": ["A"], "endorsements": ["Hazmat"] } }
+
+// Developer job
+{ "target_role": "developer", "role_requirements": { "skills": ["React", "Node.js"], "experience_level": "senior" } }
+
+// Warehouse job
+{ "target_role": "warehouse", "role_requirements": { "forklift_certified": true, "shift": "nights" } }
+```
+
+### API Updates Complete
+
+**Updated existing APIs:**
+- `src/app/api/employer/hub/route.ts` - Team-based access, `applicant_user_id`, returns `userRole`
+- `src/app/api/employer/applicants/route.ts` - Team-based access, `applicant_user_id`, role-based permissions
+- `src/app/api/applications/submit/route.ts` - Uses `applicant_user_id`
+- `src/app/api/applications/list/route.ts` - Uses `applicant_user_id`
+
+**New API endpoints:**
+
+| Endpoint | Methods | Description |
+|----------|---------|-------------|
+| `/api/employer/team` | GET, POST | List team members, invite new members |
+| `/api/employer/team/[memberId]` | PATCH, DELETE | Update/remove team members |
+| `/api/employer/team/accept-invite` | GET, POST | View and accept team invitations |
+| `/api/employer/candidate-data` | GET, POST | List and add candidate annotations |
+| `/api/employer/candidate-data/[id]` | GET, PATCH, DELETE | View, update, delete specific annotations |
+
+### Migration File
+
+`supabase/migrations/016_generic_employer_architecture.sql`
+
+### Breaking Changes
+
+⚠️ **Column renamed:**
+- `applications.driver_user_id` → `applications.applicant_user_id`
+- FK: `applications_driver_user_id_fkey` → `applications_applicant_user_id_fkey`
+
+**Backward compatibility maintained:**
+- API responses include legacy aliases (`driverUserId`, `driverName`, etc.)
+- Existing single-owner companies work via fallback to `employer_user_id`
+
+---
+
 ## 🎨 **Loading Screens & Spinners: Indigo Theme Update** (February 2026)
 
 **Updated all loading screens and spinners to match the new indigo design system.**
@@ -7739,3 +7879,137 @@ The crawler detects 40+ common technologies including:
 - Web3: Solidity, Ethereum, smart contracts
 
 **Status**: ✅ Portfolio Site Crawling COMPLETE
+
+---
+
+## Company Approval System & Central Admin (February 17, 2026)
+
+### **Overview**
+
+Implemented admin-controlled company approval workflow and added a Companies section to the Central Admin dashboard. This ensures legitimate companies are properly verified before gaining full employer access.
+
+### **Key Changes**
+
+1. **Company Status System** - Companies now have `pending`, `active`, or `suspended` status
+2. **Pre-Created Companies** - Admins can pre-create companies for known clients
+3. **Designated Owner Email** - Companies can have a designated owner who will be auto-linked on login
+4. **Smart Role Assignment** - When users select "employer" role, the system checks for pre-created companies and pending invitations before creating a new one
+
+### **New Migration: `017_company_approval_system.sql`**
+
+Added to `companies` table:
+
+| Column                   | Type         | Purpose                                    |
+| ------------------------ | ------------ | ------------------------------------------ |
+| `status`                 | VARCHAR(20)  | pending/active/suspended                   |
+| `designated_owner_email` | TEXT         | Email of who should become owner           |
+| `approved_by`            | UUID         | Admin who approved                         |
+| `approved_at`            | TIMESTAMP    | When approved                              |
+| `suspended_by`           | UUID         | Admin who suspended                        |
+| `suspended_at`           | TIMESTAMP    | When suspended                             |
+| `suspension_reason`      | TEXT         | Why suspended                              |
+| `admin_notes`            | TEXT         | Internal notes                             |
+| `onboarding_completed`   | BOOLEAN      | Has company finished setup                 |
+
+New table: `company_status_history` - Audit trail of all status changes.
+
+### **New Admin APIs**
+
+#### `GET /api/admin/companies`
+
+Lists all companies with filtering by status.
+
+```typescript
+// Query params:
+// - status: 'pending' | 'active' | 'suspended' | 'all'
+// - search: Search by name or DOT number
+
+// Response:
+{
+  companies: [...],
+  stats: { total: 10, pending: 2, active: 7, suspended: 1 }
+}
+```
+
+#### `POST /api/admin/companies`
+
+Pre-creates a company (admin onboarding).
+
+```typescript
+// Body:
+{
+  companyName: "PACE Drivers",
+  dotNumber: "1234567",
+  designatedOwnerEmail: "harry@pacedrivers.com",
+  status: "active"  // Pre-approved
+}
+```
+
+#### `PATCH /api/admin/companies/[id]`
+
+Actions: `approve`, `suspend`, `reactivate`, or update fields.
+
+```typescript
+// Approve pending company:
+{ action: 'approve' }
+
+// Suspend company:
+{ action: 'suspend', reason: 'Violation of TOS' }
+
+// Update notes:
+{ adminNotes: 'Enterprise client, priority support' }
+```
+
+### **Updated: `set-role` API Logic**
+
+When a user selects the `employer` role, the system now:
+
+1. **Checks for pre-created company** - If `designated_owner_email` matches the user's email, auto-link as owner
+2. **Checks for pending invitations** - If there's a team invite for the user's email, auto-accept it
+3. **Checks existing ownership/membership** - Don't create duplicate companies
+4. **Creates pending company** - Only if nothing found, create with `status: 'pending'`
+
+This prevents the old behavior of creating "My Company" for every employer signup.
+
+### **Admin Dashboard Updates**
+
+Added **Companies** tab as the first item in the admin dashboard:
+
+- Status filter pills (All / Pending / Active / Suspended)
+- Company cards with owner info, team count, location
+- One-click Approve/Suspend/Reactivate actions
+- Admin notes editor
+- Pre-Create Company button for manual onboarding
+
+### **Workflow: Admin-Controlled Employer Onboarding**
+
+**Option A: Pre-create for known client**
+```
+1. Admin goes to /admin → Companies tab
+2. Clicks "Pre-Create Company"
+3. Enters: Company name, DOT number, designated owner email
+4. Company created as "active" (pre-approved)
+5. When owner logs in with that email, auto-linked as owner
+```
+
+**Option B: Self-service with approval**
+```
+1. User signs up, selects "Employer" role
+2. Company created with status "pending"
+3. User sees "pending approval" message
+4. Admin sees company in "Pending" tab
+5. Admin reviews and clicks "Approve"
+6. Company becomes active, user can use full features
+```
+
+### **Files Changed**
+
+| File                                            | Change                             |
+| ----------------------------------------------- | ---------------------------------- |
+| `supabase/migrations/017_company_approval_system.sql` | New migration                 |
+| `src/app/api/admin/companies/route.ts`          | NEW - List and create companies    |
+| `src/app/api/admin/companies/[id]/route.ts`     | NEW - Get, update, delete company  |
+| `src/app/api/user/set-role/route.ts`            | Smart company assignment logic     |
+| `src/app/admin/AdminDashboard.tsx`              | Added Companies section            |
+
+**Status**: ✅ Company Approval System COMPLETE

@@ -105,43 +105,73 @@ interface Payment {
 }
 
 /**
- * Extract clean driver name from potentially XML-contaminated subject fields.
+ * Extract clean driver name from potentially corrupted subject data.
  * 
- * Accio XML sometimes has malformed data where the firstName field contains
- * nested XML tags AND the lastName embedded inside, like:
- *   "Samuel <country/> ... <name_last>Blaha"
+ * Accio XML parsing sometimes produces malformed data where firstName contains
+ * the entire subject block's text content concatenated, like:
+ *   "Samuel Christian U 321 Vista Circle North Olmsted N N N ... Blaha"
  * 
- * This function extracts just the actual name parts.
+ * Strategy:
+ * 1. If lastName exists and is clean, use it
+ * 2. Otherwise, assume last word of firstName blob is the last name
+ * 3. For first name, take only name-like words from the start (before addresses/flags)
  */
 function formatDriverName(subject: MvrSubject | undefined | null): string {
   if (!subject) return ''
   
-  // Get the raw firstName string (might contain XML garbage)
-  const rawFirstName = subject.firstName || ''
+  // Get raw values (might be XML-contaminated or have all fields mashed together)
+  let rawFirst = (subject.firstName || '').replace(/<[^>]*>/g, ' ').trim()
+  let rawLast = (subject.lastName || '').replace(/<[^>]*>/g, ' ').trim()
   
-  // Extract firstName: text BEFORE the first '<' character
-  const firstTagIdx = rawFirstName.indexOf('<')
-  const cleanFirst = firstTagIdx > 0 
-    ? rawFirstName.slice(0, firstTagIdx).trim() 
-    : rawFirstName.replace(/<[^>]*>/g, '').trim() // fallback: strip all tags
+  // If data looks clean (short, no numbers, no single-letter garbage), use as-is
+  const looksClean = (s: string) => s.length < 30 && !/\d/.test(s) && !/\b[A-Z]\b/.test(s)
   
-  // Extract lastName: look for <name_last>VALUE pattern in the raw string
-  let cleanLast = ''
-  const nameLastMatch = rawFirstName.match(/<name_last>([^<\n]+)/i)
-  if (nameLastMatch?.[1]) {
-    cleanLast = nameLastMatch[1].trim()
+  if (looksClean(rawFirst) && looksClean(rawLast)) {
+    return [rawFirst, rawLast].filter(Boolean).join(' ')
   }
   
-  // If no embedded lastName found, try subject.lastName (also clean it)
-  if (!cleanLast && subject.lastName) {
-    const lastTagIdx = subject.lastName.indexOf('<')
-    cleanLast = lastTagIdx > 0 
-      ? subject.lastName.slice(0, lastTagIdx).trim()
-      : subject.lastName.replace(/<[^>]*>/g, '').trim()
+  // Data is corrupted - need to extract intelligently
+  // Split the firstName blob into words
+  const words = rawFirst.split(/\s+/).filter(Boolean)
+  
+  if (words.length === 0) return rawLast || ''
+  
+  // Helper: does this word look like a name? (capitalized, 2+ chars, no numbers)
+  const isNameLike = (w: string) => 
+    w.length >= 2 && 
+    /^[A-Z][a-z]+$/.test(w) && 
+    !['North', 'South', 'East', 'West', 'Current', 'Employment', 'Contract', 'Hire'].includes(w)
+  
+  // Extract first name: take leading name-like words (usually 1-2)
+  const firstNames: string[] = []
+  for (const word of words) {
+    if (isNameLike(word) && firstNames.length < 2) {
+      firstNames.push(word)
+    } else if (firstNames.length > 0) {
+      break // Stop once we hit non-name content
+    }
   }
   
-  // Return "FirstName LastName"
-  return [cleanFirst, cleanLast].filter(Boolean).join(' ')
+  // Extract last name: use rawLast if clean, otherwise last name-like word from blob
+  let lastName = ''
+  if (rawLast && isNameLike(rawLast)) {
+    lastName = rawLast
+  } else {
+    // Find last name-like word in the blob
+    for (let i = words.length - 1; i >= 0; i--) {
+      if (isNameLike(words[i])) {
+        lastName = words[i]
+        break
+      }
+    }
+  }
+  
+  // Don't include lastName if it's already in firstNames
+  if (firstNames.includes(lastName)) {
+    lastName = ''
+  }
+  
+  return [...firstNames, lastName].filter(Boolean).join(' ')
 }
 
 /**

@@ -11,7 +11,7 @@ import WalletCard from '@/components/WalletCard'
 import TLoadingModal from '@/components/TLoadingModal'
 import LoadingScreen from '@/components/LoadingScreen'
 import ResumeTabSelector from '@/components/ResumeTabSelector'
-import StormChainView from '@/components/VereeView'
+import StormChainView from '@/components/StormChainView'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   useSendUserOperation,
@@ -505,7 +505,7 @@ const HomeContent = () => {
   }, [])
 
   const handleRoleSelection = useCallback(
-    async (role: 'driver' | 'developer' | 'employer') => {
+    async (role: 'driver' | 'developer' | 'employer', companyName?: string, dotNumber?: string) => {
       if (!user?.address) {
         console.error('No user address available')
         return
@@ -521,6 +521,8 @@ const HomeContent = () => {
           body: JSON.stringify({
             role,
             walletAddress: user.address,
+            // Pass company info for employers (prevents orphan "My Company" records)
+            ...(role === 'employer' && companyName && { companyName, dotNumber }),
           }),
         })
 
@@ -1754,7 +1756,7 @@ const HomeContent = () => {
         | 'mvr'
         | 'home'
         | 'hub'
-        | 'veree'
+        | 'stormchain'
     ) => {
       console.log(`Navigating to: ${page}`)
 
@@ -2665,7 +2667,7 @@ const HomeContent = () => {
                           page === 'jobs' ||
                           page === 'applications' ||
                           page === 'mvr' ||
-                          page === 'veree'
+                          page === 'stormchain'
                         ) {
                           setCurrentPage(page)
                         }
@@ -2825,7 +2827,7 @@ const HomeContent = () => {
                   </div>
                 )}
 
-                {currentPage === 'veree' && (
+                {currentPage === 'stormchain' && (
                   <StormChainView onBack={() => handleNavigation('hub')} />
                 )}
 

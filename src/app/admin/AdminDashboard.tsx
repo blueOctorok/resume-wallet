@@ -25,6 +25,11 @@ import {
   Github,
   ExternalLink,
   Car,
+  Building2,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  UserPlus,
 } from 'lucide-react'
 import AdminResetWallet from '@/components/admin/AdminResetWallet'
 import dynamic from 'next/dynamic'
@@ -37,6 +42,7 @@ const TBackendSetup = dynamic(
 )
 
 type TabId =
+  | 'companies'
   | 'users'
   | 'dotApps'
   | 'profiles'
@@ -100,6 +106,35 @@ interface DevProject {
   walletAddress: string
   ownerName: string
   techCount: number
+}
+
+// Company for admin view
+interface AdminCompany {
+  id: string
+  name: string
+  dotNumber: string | null
+  mcNumber: string | null
+  status: 'pending' | 'active' | 'suspended'
+  email: string | null
+  phone: string | null
+  city: string | null
+  state: string | null
+  companySize: string | null
+  verified: boolean
+  designatedOwnerEmail: string | null
+  onboardingCompleted: boolean
+  adminNotes: string | null
+  owner: {
+    id: string
+    name: string | null
+    email: string | null
+  } | null
+  ownerEmail: string | null
+  teamMemberCount: number
+  approvedAt: string | null
+  suspendedAt: string | null
+  suspensionReason: string | null
+  createdAt: string
 }
 
 // User detail data when viewing a specific user
@@ -195,6 +230,9 @@ function AdminDashboardContent() {
   const [error, setError] = useState<string | null>(null)
 
   // Data states
+  const [companies, setCompanies] = useState<AdminCompany[]>([])
+  const [companyStats, setCompanyStats] = useState({ total: 0, pending: 0, active: 0, suspended: 0 })
+  const [companyStatusFilter, setCompanyStatusFilter] = useState<'all' | 'pending' | 'active' | 'suspended'>('all')
   const [users, setUsers] = useState<User[]>([])
   const [dotApps, setDotApps] = useState<DotApp[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
@@ -323,6 +361,19 @@ function AdminDashboardContent() {
       let data: any
 
       switch (activeTab) {
+        case 'companies':
+          response = await fetch(
+            `/api/admin/companies?status=${companyStatusFilter}&search=${encodeURIComponent(searchQuery)}`,
+            { headers }
+          )
+          data = await response.json()
+          if (data.success) {
+            setCompanies(data.companies)
+            setCompanyStats(data.stats)
+            setTotalCount(data.stats.total)
+          }
+          break
+
         case 'users':
           response = await fetch(
             `/api/admin/users?search=${encodeURIComponent(searchQuery)}&limit=${pageSize}&offset=${offset}`,
@@ -425,7 +476,7 @@ function AdminDashboardContent() {
     } finally {
       setLoading(false)
     }
-  }, [walletAddress, isAdmin, activeTab, currentPage, searchQuery])
+  }, [walletAddress, isAdmin, activeTab, currentPage, searchQuery, companyStatusFilter])
 
   useEffect(() => {
     if (activeTab !== 'tools') {
@@ -488,41 +539,43 @@ function AdminDashboardContent() {
     }
   }
 
-  // Tab configuration
-  const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
-    { id: 'users', label: 'Users', icon: <Users className='w-4 h-4' /> },
+  // Tab configuration - organized by section
+  // Sidebar sections with their tabs - organized for intuitive navigation
+  const sidebarSections = [
     {
-      id: 'dotApps',
-      label: 'DOT Apps',
-      icon: <ClipboardList className='w-4 h-4' />,
+      id: 'employers',
+      label: 'Employers',
+      tabs: [
+        { id: 'companies' as TabId, label: 'Companies', icon: <Building2 className='w-4 h-4' /> },
+      ],
     },
     {
-      id: 'profiles',
-      label: 'Driver Profiles',
-      icon: <UserCircle className='w-4 h-4' />,
-    },
-    { id: 'resumes', label: 'Resumes', icon: <FileText className='w-4 h-4' /> },
-    {
-      id: 'devProfiles',
-      label: 'Dev Profiles',
-      icon: <Code className='w-4 h-4' />,
-    },
-    {
-      id: 'devProjects',
-      label: 'Projects',
-      icon: <FolderGit2 className='w-4 h-4' />,
+      id: 'drivers',
+      label: 'Drivers',
+      tabs: [
+        { id: 'profiles' as TabId, label: 'Profiles', icon: <UserCircle className='w-4 h-4' /> },
+        { id: 'dotApps' as TabId, label: 'DOT Apps', icon: <ClipboardList className='w-4 h-4' /> },
+        { id: 'resumes' as TabId, label: 'Resumes', icon: <FileText className='w-4 h-4' /> },
+        { id: 'mvr' as TabId, label: 'MVR Orders', icon: <Car className='w-4 h-4' /> },
+        { id: 'verifications' as TabId, label: 'Verifications', icon: <ClipboardCheck className='w-4 h-4' /> },
+      ],
     },
     {
-      id: 'mvr',
-      label: 'MVR',
-      icon: <Car className='w-4 h-4' />,
+      id: 'developers',
+      label: 'Developers',
+      tabs: [
+        { id: 'devProfiles' as TabId, label: 'Profiles', icon: <Code className='w-4 h-4' /> },
+        { id: 'devProjects' as TabId, label: 'Projects', icon: <FolderGit2 className='w-4 h-4' /> },
+      ],
     },
     {
-      id: 'verifications',
-      label: 'Verifications',
-      icon: <ClipboardCheck className='w-4 h-4' />,
+      id: 'system',
+      label: 'System',
+      tabs: [
+        { id: 'users' as TabId, label: 'All Users', icon: <Users className='w-4 h-4' /> },
+        { id: 'tools' as TabId, label: 'Tools', icon: <Settings className='w-4 h-4' /> },
+      ],
     },
-    { id: 'tools', label: 'Tools', icon: <Settings className='w-4 h-4' /> },
   ]
 
   // Styling
@@ -585,54 +638,72 @@ function AdminDashboardContent() {
   const totalPages = Math.ceil(totalCount / pageSize)
 
   return (
-    <div className='min-h-screen p-4 md:p-8'>
-      <div className='max-w-7xl mx-auto space-y-6'>
-        {/* Header */}
-        <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-4'>
-          <div>
-            <h1
-              className={`text-2xl md:text-3xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
-            >
-              Admin Panel
+    <div className='min-h-screen flex'>
+      {/* Sidebar */}
+      <aside className={`w-64 flex-shrink-0 border-r ${
+        theme === 'dark' 
+          ? 'bg-gray-900 border-gray-700' 
+          : 'bg-gray-50 border-gray-200'
+      }`}>
+        <div className='sticky top-0 h-screen overflow-y-auto'>
+          {/* Sidebar Header */}
+          <div className={`p-4 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+            <h1 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              Central Admin
             </h1>
-            <p
-              className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
-            >
-              Manage users, applications, and system settings
+            <p className={`text-xs mt-1 font-mono ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+              {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
             </p>
           </div>
-          <div
-            className={`text-xs font-mono ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}
-          >
-            {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
-          </div>
-        </div>
 
-        {/* Tabs */}
-        <div className={`${cardClass} p-1 flex flex-wrap gap-1`}>
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => {
-                setActiveTab(tab.id)
-                setCurrentPage(1)
-                setSearchQuery('')
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                activeTab === tab.id
-                  ? theme === 'dark'
-                    ? 'bg-brand-mint text-gray-900'
-                    : 'bg-brand-sage text-white'
-                  : theme === 'dark'
-                    ? 'text-gray-400 hover:text-white hover:bg-gray-700'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              }`}
-            >
-              {tab.icon}
-              <span className='hidden sm:inline'>{tab.label}</span>
-            </button>
-          ))}
+          {/* Navigation Sections */}
+          <nav className='p-3 space-y-4'>
+            {sidebarSections.map((section) => (
+              <div key={section.id}>
+                <h2 className={`px-3 py-2 text-xs font-semibold uppercase tracking-wider ${
+                  theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                }`}>
+                  {section.label}
+                </h2>
+                <div className='space-y-1'>
+                  {section.tabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        setActiveTab(tab.id)
+                        setCurrentPage(1)
+                        setSearchQuery('')
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                        activeTab === tab.id
+                          ? theme === 'dark'
+                            ? 'bg-brand-mint text-gray-900'
+                            : 'bg-brand-sage text-white'
+                          : theme === 'dark'
+                            ? 'text-gray-400 hover:text-white hover:bg-gray-800'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      }`}
+                    >
+                      {tab.icon}
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </nav>
         </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className='flex-1 min-w-0 p-6'>
+        <div className='max-w-6xl mx-auto space-y-6'>
+          {/* Page Header */}
+          <div>
+            <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              {sidebarSections.flatMap(s => s.tabs).find(t => t.id === activeTab)?.label || 'Admin'}
+            </h2>
+          </div>
 
         {/* Search & Refresh (not for tools tab) */}
         {activeTab !== 'tools' && (
@@ -701,6 +772,248 @@ function AdminDashboardContent() {
             </div>
           ) : (
             <>
+              {/* Companies Section */}
+              {activeTab === 'companies' && (
+                <div className='p-6'>
+                  {/* Status Filter Pills */}
+                  <div className='flex flex-wrap gap-2 mb-6'>
+                    {(['all', 'pending', 'active', 'suspended'] as const).map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => setCompanyStatusFilter(status)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                          companyStatusFilter === status
+                            ? status === 'pending'
+                              ? 'bg-yellow-500 text-white'
+                              : status === 'active'
+                                ? 'bg-green-500 text-white'
+                                : status === 'suspended'
+                                  ? 'bg-red-500 text-white'
+                                  : 'bg-indigo-500 text-white'
+                            : theme === 'dark'
+                              ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {status === 'pending' && <Clock className='w-4 h-4' />}
+                        {status === 'active' && <CheckCircle2 className='w-4 h-4' />}
+                        {status === 'suspended' && <XCircle className='w-4 h-4' />}
+                        {status === 'all' && <Building2 className='w-4 h-4' />}
+                        <span className='capitalize'>{status}</span>
+                        <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
+                          companyStatusFilter === status
+                            ? 'bg-white/20'
+                            : theme === 'dark' ? 'bg-gray-600' : 'bg-gray-200'
+                        }`}>
+                          {status === 'all'
+                            ? companyStats.total
+                            : companyStats[status as keyof typeof companyStats]}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Companies Grid */}
+                  {companies.length === 0 ? (
+                    <div className='text-center py-12'>
+                      <Building2 className='w-12 h-12 mx-auto mb-4 opacity-30' />
+                      <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>
+                        No companies found
+                      </p>
+                    </div>
+                  ) : (
+                    <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
+                      {companies.map((company) => (
+                        <div
+                          key={company.id}
+                          className={`rounded-xl border p-5 ${
+                            theme === 'dark'
+                              ? 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
+                              : 'bg-white border-gray-200 hover:border-gray-300'
+                          } transition-colors`}
+                        >
+                          {/* Header */}
+                          <div className='flex items-start justify-between mb-3'>
+                            <div className='flex-1 min-w-0'>
+                              <h3 className={`font-semibold truncate ${
+                                theme === 'dark' ? 'text-white' : 'text-gray-900'
+                              }`}>
+                                {company.name}
+                              </h3>
+                              {company.dotNumber && (
+                                <p className='text-xs text-gray-500'>DOT: {company.dotNumber}</p>
+                              )}
+                            </div>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              company.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                : company.status === 'active'
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                  : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                            }`}>
+                              {company.status}
+                            </span>
+                          </div>
+
+                          {/* Owner Info */}
+                          <div className={`text-sm mb-3 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                            <div className='flex items-center gap-2'>
+                              <UserCircle className='w-4 h-4' />
+                              <span className='truncate'>
+                                {company.owner?.name || company.ownerEmail || 'No owner assigned'}
+                              </span>
+                            </div>
+                            {company.teamMemberCount > 0 && (
+                              <div className='flex items-center gap-2 mt-1'>
+                                <Users className='w-4 h-4' />
+                                <span>{company.teamMemberCount} team member{company.teamMemberCount > 1 ? 's' : ''}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Location */}
+                          {(company.city || company.state) && (
+                            <p className={`text-xs mb-3 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                              {[company.city, company.state].filter(Boolean).join(', ')}
+                            </p>
+                          )}
+
+                          {/* Actions */}
+                          <div className='flex gap-2 pt-3 border-t border-gray-200 dark:border-gray-700'>
+                            {company.status === 'pending' && (
+                              <button
+                                onClick={async () => {
+                                  await fetch(`/api/admin/companies/${company.id}`, {
+                                    method: 'PATCH',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'x-wallet-address': walletAddress || '',
+                                    },
+                                    body: JSON.stringify({ action: 'approve' }),
+                                  })
+                                  fetchData()
+                                }}
+                                className='flex-1 px-3 py-1.5 rounded-lg text-sm font-medium bg-green-500 text-white hover:bg-green-600'
+                              >
+                                Approve
+                              </button>
+                            )}
+                            {company.status === 'active' && (
+                              <button
+                                onClick={async () => {
+                                  const reason = prompt('Suspension reason (optional):')
+                                  await fetch(`/api/admin/companies/${company.id}`, {
+                                    method: 'PATCH',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'x-wallet-address': walletAddress || '',
+                                    },
+                                    body: JSON.stringify({ action: 'suspend', reason }),
+                                  })
+                                  fetchData()
+                                }}
+                                className='flex-1 px-3 py-1.5 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600'
+                              >
+                                Suspend
+                              </button>
+                            )}
+                            {company.status === 'suspended' && (
+                              <button
+                                onClick={async () => {
+                                  await fetch(`/api/admin/companies/${company.id}`, {
+                                    method: 'PATCH',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'x-wallet-address': walletAddress || '',
+                                    },
+                                    body: JSON.stringify({ action: 'reactivate' }),
+                                  })
+                                  fetchData()
+                                }}
+                                className='flex-1 px-3 py-1.5 rounded-lg text-sm font-medium bg-green-500 text-white hover:bg-green-600'
+                              >
+                                Reactivate
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                // Simple inline notes editor
+                                const notes = prompt('Admin notes:', company.adminNotes || '')
+                                if (notes !== null) {
+                                  fetch(`/api/admin/companies/${company.id}`, {
+                                    method: 'PATCH',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'x-wallet-address': walletAddress || '',
+                                    },
+                                    body: JSON.stringify({ adminNotes: notes }),
+                                  }).then(() => fetchData())
+                                }
+                              }}
+                              className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                                theme === 'dark'
+                                  ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              }`}
+                            >
+                              Notes
+                            </button>
+                          </div>
+
+                          {/* Admin Notes Preview */}
+                          {company.adminNotes && (
+                            <p className='mt-3 text-xs text-gray-500 italic line-clamp-2'>
+                              {company.adminNotes}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add Company Button */}
+                  <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700'>
+                    <button
+                      onClick={async () => {
+                        const companyName = prompt('Company name:')
+                        if (!companyName) return
+                        const dotNumber = prompt('DOT number (optional):')
+                        const ownerEmail = prompt('Designated owner email:')
+                        if (!ownerEmail) return
+
+                        const res = await fetch('/api/admin/companies', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'x-wallet-address': walletAddress || '',
+                          },
+                          body: JSON.stringify({
+                            companyName,
+                            dotNumber: dotNumber || undefined,
+                            designatedOwnerEmail: ownerEmail,
+                            status: 'active',
+                          }),
+                        })
+                        const data = await res.json()
+                        if (data.success) {
+                          alert(`Company "${companyName}" created! Owner can now log in.`)
+                          fetchData()
+                        } else {
+                          alert(data.error || 'Failed to create company')
+                        }
+                      }}
+                      className='flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-indigo-500 text-white hover:bg-indigo-600'
+                    >
+                      <UserPlus className='w-4 h-4' />
+                      Pre-Create Company
+                    </button>
+                    <p className={`mt-2 text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                      Pre-create a company for a client. When the designated owner logs in with their email, they will automatically be linked as the owner.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Users Table */}
               {activeTab === 'users' && (
                 <div className='overflow-x-auto'>
@@ -2270,6 +2583,8 @@ function AdminDashboardContent() {
           </div>
         </div>
       )}
+        </div>
+      </main>
 
       {/* Delete Confirmation Modal */}
       {deleteTarget && (

@@ -4,11 +4,11 @@
 
 ### Architecture Overview
 
-Veree is now architected as a **two-sided marketplace** connecting drivers with employers. The platform has distinct experiences for each user type:
+StormChain is architected as a **two-sided marketplace** connecting drivers with employers. The platform has distinct experiences for each user type:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    VEREE PLATFORM                       │
+│                  STORMCHAIN PLATFORM                    │
 ├──────────────────────┬──────────────────────────────────┤
 │   DRIVER SIDE        │      EMPLOYER SIDE               │
 ├──────────────────────┼──────────────────────────────────┤
@@ -68,56 +68,157 @@ Veree is now architected as a **two-sided marketplace** connecting drivers with 
 
 ### Roadmap: Employer Features
 
-#### 🔜 **Phase 2: Company Profiles (Q1 2026)**
+#### ✅ **Phase 2: Company Profiles (COMPLETE)**
 
-**Company Setup:**
+**Company Setup** (✅ Implemented):
 
 - Multi-step company profile wizard
-  - Basic info: Company name, DOT/MC numbers
-  - Contact details: Phone, email, website
-  - Location: Address, operating regions
-  - Fleet details: Company size, truck types
-  - Industry type: Long-haul, local, regional, specialized
-- Logo upload and branding
-- Admin verification system (prevent fraudulent employers)
+- Basic info: Company name, DOT/MC numbers
+- Contact details: Phone, email, website
+- Location: Address, operating regions
+- Fleet details: Company size
+- Industry type array
 
-**Technical Implementation:**
+**What's New in Migration 016:**
 
-- Update `companies` table with additional fields
-- Create company profile edit interface
-- Implement verification workflow for admins
-- Add company logo storage (IPFS or cloud)
+- ✅ **Multi-user access** via `company_members` table
+- ✅ **7 role levels** (owner → viewer)
+- ✅ **Invitation system** with secure tokens
 
 ---
 
-#### 🔜 **Phase 3: Job Posting System (Q1-Q2 2026)**
+#### ✅ **Phase 3: Job Posting System (COMPLETE)**
 
-**Job Creation:**
+**Job Creation** (✅ Implemented):
 
-- Job posting wizard with AI assistance
-  - Job title and description
-  - Requirements: CDL class, endorsements, experience
-  - Location and route type (local, regional, OTR)
-  - Pay structure (per mile, hourly, salary)
-  - Benefits and home time
-  - Equipment type (day cab, sleeper, reefer, etc.)
-- Job preview before publishing
-- Edit and archive existing postings
-- Expiration date management
+- Full job posting CRUD
+- Role-agnostic via `target_role` column (driver, developer, warehouse, etc.)
+- Generic `requirements` JSONB field for role-specific requirements
+- Location, pay range, benefits, home time
+- Active/inactive status
 
-**Job Discovery (Driver Side):**
+**What's New in Migration 016:**
 
-- Job search/browse interface for drivers
-- Filter by location, CDL class, route type, pay
-- One-click application with DQ file
-- Application status tracking
+- ✅ **`target_role` column** - Jobs can target any role, not just drivers
+- ✅ **`role_requirements` JSONB** - Flexible requirements per role type (existing `requirements` TEXT is for descriptions)
+- ✅ **`department` column** - For hiring manager scope
 
-**Technical Implementation:**
+---
 
-- Job posting CRUD APIs
-- Search and filter logic
-- Application submission flow
-- Notification system for new applications
+#### ✅ **Phase 4: Generic Employer Architecture (COMPLETE - February 2026)**
+
+**Multi-user company access and role-agnostic job postings now implemented!**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    COMPANY TEAM ACCESS                       │
+├─────────────────────────────────────────────────────────────┤
+│  OWNER     │ Full control, billing, delete company          │
+│  ADMIN     │ Manage team, settings, all jobs                │
+│  HR_MANAGER│ All hiring access, compliance                  │
+│  HIRING_MGR│ Manage jobs in scope                           │
+│  RECRUITER │ Post jobs, screen candidates                   │
+│  INTERVIEWER│ View assigned candidates, add notes           │
+│  VIEWER    │ Read-only dashboards                           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**What's New:**
+
+- **`company_members` table** - Multiple users per company with role-based permissions
+- **Generic job postings** - `target_role` (driver/developer/warehouse/etc) + `role_requirements` JSONB
+- **`employer_candidate_data` table** - Employers can add notes, ratings, documents, interview data
+- **Visibility toggle** - Each annotation can be made visible/hidden from candidate
+- **Employer-ordered MVRs** - Track who ordered an MVR (candidate vs employer)
+- **Updated RLS** - Team-based access instead of single owner
+
+**Migration:** `016_generic_employer_architecture.sql`
+
+---
+
+#### ✅ **Phase 5: Company Approval System (COMPLETE - February 2026)**
+
+**Admin-controlled employer onboarding and verification now implemented!**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  COMPANY STATUS WORKFLOW                     │
+├─────────────────────────────────────────────────────────────┤
+│  PENDING   → Company created, awaiting admin approval       │
+│  ACTIVE    → Approved, full employer features enabled       │
+│  SUSPENDED → Disabled by admin (violation, fraud, etc.)     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**What's New:**
+
+- **Company status system** - `pending`, `active`, `suspended` states
+- **Pre-created companies** - Admins can set up companies before owners log in
+- **Designated owner email** - Auto-link owners when they sign up
+- **Smart role assignment** - Checks for pre-created companies and invites before creating new
+- **Central Admin** - Companies tab in admin dashboard with approval workflow
+- **Audit trail** - `company_status_history` table tracks all status changes
+
+**Admin Workflows:**
+
+1. **Pre-create for known client** - Admin creates company with designated owner email, owner auto-linked on login
+2. **Self-service with approval** - Employer signs up, company created as "pending", admin reviews and approves
+
+**Migration:** `017_company_approval_system.sql`
+
+---
+
+#### ✅ **Phase 6: Employer Onboarding UX & Admin Refactor (COMPLETE - February 2026)**
+
+**Improved employer signup flow and admin dashboard for better data quality and usability.**
+
+**Inline Company Registration:**
+
+When a user selects "Employer" role, they now see an inline form:
+- Company Name (required) - Must be at least 2 characters
+- DOT Number (optional) - Can be added later
+- Continue button disabled until company name entered
+
+This prevents orphan "My Company" placeholder records that were previously auto-created.
+
+**Central Admin Sidebar:**
+
+Replaced horizontal tabs with a clean, organized sidebar layout:
+
+```
+┌────────────────────────────────────────────────────────┐
+│  CENTRAL ADMIN                                          │
+├──────────────┬─────────────────────────────────────────┤
+│  EMPLOYERS   │  Main Content Area                       │
+│  • Companies │                                          │
+│              │  [Search] [Refresh]                      │
+│  DRIVERS     │                                          │
+│  • Profiles  │  ┌────────────────────────────────────┐ │
+│  • DOT Apps  │  │ Data Cards / Tables                │ │
+│  • Resumes   │  │                                    │ │
+│  • MVR Orders│  │                                    │ │
+│  • Verif.    │  └────────────────────────────────────┘ │
+│              │                                          │
+│  DEVELOPERS  │                                          │
+│  • Profiles  │                                          │
+│  • Projects  │                                          │
+│              │                                          │
+│  SYSTEM      │                                          │
+│  • All Users │                                          │
+│  • Tools     │                                          │
+└──────────────┴─────────────────────────────────────────┘
+```
+
+**Admin Email Notifications:**
+
+- New company registrations trigger email to admins
+- Uses existing Resend setup (`verify.stormchain.ai`)
+- Configure via `ADMIN_NOTIFICATION_EMAILS` env var
+
+**Test Data Cleanup:**
+
+- `018_cleanup_test_data.sql` removes orphan "My Company" records
+- Safe, idempotent migration
 
 ---
 
@@ -230,29 +331,42 @@ Results stored and shared with future employer
 
 ```sql
 -- Core Tables (Implemented)
-users              -- role: 'driver' | 'employer'
+users              -- role: 'driver' | 'employer' | 'developer'
 companies          -- Employer profiles
-job_postings       -- Job listings
-applications       -- Driver applications to jobs
+company_members    -- Multi-user access (owner/admin/hr/recruiter/etc)
+job_postings       -- Role-agnostic job listings (target_role + role_requirements JSONB)
+applications       -- Candidate applications (applicant_user_id, generic)
+employer_candidate_data  -- Employer annotations (notes, ratings, documents, interviews)
 
--- Existing Driver Tables
-resumes
+-- Driver-Specific Tables
+driver_profiles
 driver_applications
+resumes
+mvr_orders
+mvr_results
+
+-- Developer-Specific Tables
+developer_profiles
+developer_projects
+
+-- Shared Tables
+employment_verification_requests
+verification_attempts
 t_prefill_cache
 
 -- Future Enhancements
-messages           -- Employer-driver communication
+messages           -- Employer-candidate communication
 saved_searches     -- Employer saved talent searches
 notifications      -- Application status updates
-reviews            -- Employer reviews by drivers
 ```
 
 ### Security & Access Control
 
 **Row-Level Security (RLS) Policies:**
 
-- Drivers can only see their own applications and data
-- Employers can only see their own company, jobs, and applicants
+- Candidates can only see their own applications and data
+- Employer team members can see their company's jobs and applicants (role-based)
+- Candidates can see employer data marked `visible_to_candidate = true`
 - Public can view active job postings (when logged in)
 - Admins can verify companies and moderate content
 

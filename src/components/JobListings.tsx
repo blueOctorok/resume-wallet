@@ -17,7 +17,7 @@ import LoadingScreen from './LoadingScreen'
 import dynamic from 'next/dynamic'
 
 // Dynamically import the modal to reduce initial bundle size
-const ApplyWithVereeModal = dynamic(() => import('./ApplyWithVereeModal'), {
+const ApplyWithStormChainModal = dynamic(() => import('./ApplyWithStormChainModal'), {
   ssr: false,
 })
 
@@ -511,7 +511,7 @@ export default function JobListings({
       </div>
 
       {/* Apply Modal */}
-      <ApplyWithVereeModal
+      <ApplyWithStormChainModal
         isOpen={applyModalOpen}
         onClose={() => {
           setApplyModalOpen(false)

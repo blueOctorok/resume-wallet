@@ -7,11 +7,14 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
  * Aggregates all employer data for the Employer Hub dashboard.
  * Single API call to fetch everything needed for the hub view.
  * 
+ * Now supports team-based access via company_members table.
+ * 
  * Headers:
  *   x-wallet-address: User's wallet address
  * 
  * Returns:
  *   - company: Employer's company profile
+ *   - userRole: User's role within the company (owner, admin, recruiter, etc.)
  *   - jobPostings: All job postings with application counts
  *   - applicants: Recent applicants across all jobs
  *   - mvrOrders: MVR orders placed for applicants
@@ -66,12 +69,33 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Get employer's company
-    const { data: company, error: companyError } = await supabase
-      .from('companies')
-      .select('*')
-      .eq('employer_user_id', user.id)
+    // Check company_members first for team-based access
+    const { data: membership } = await supabase
+      .from('company_members')
+      .select(`
+        role,
+        company_id,
+        is_active,
+        companies (*)
+      `)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
       .maybeSingle()
+
+    // Fall back to legacy employer_user_id check if no membership found
+    let company = membership?.companies as any
+    let userRole = membership?.role || null
+
+    if (!company) {
+      const { data: legacyCompany } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('employer_user_id', user.id)
+        .maybeSingle()
+      
+      company = legacyCompany
+      userRole = legacyCompany ? 'owner' : null // Legacy single-owner is always owner
+    }
 
     // If no company, return empty state (employer needs to create company first)
     if (!company) {
@@ -80,6 +104,7 @@ export async function GET(request: NextRequest) {
         isNewUser: false,
         needsCompanySetup: true,
         company: null,
+        userRole: null,
         jobPostings: [],
         applicants: [],
         mvrOrders: [],
@@ -121,18 +146,19 @@ export async function GET(request: NextRequest) {
         .order('created_at', { ascending: false }),
 
       // 2. All applications to this company's jobs
+      // Note: applicant_user_id was renamed from driver_user_id in migration 016
       supabase
         .from('applications')
         .select(`
           id, status, applied_at, view_count, last_viewed_at, cover_letter,
           reviewer_notes, share_token,
-          driver_user_id,
+          applicant_user_id,
           job_posting_id,
           job_postings!inner (
-            id, title, company_id
+            id, title, company_id, target_role
           ),
-          users!applications_driver_user_id_fkey (
-            id, wallet_address, email
+          users!applications_applicant_user_id_fkey (
+            id, wallet_address, email, role
           ),
           driver_profiles (
             first_name, last_name, phone, email,
@@ -187,13 +213,14 @@ export async function GET(request: NextRequest) {
     })
 
     // Process applicants (flatten from applications)
+    // Generic naming: "applicant" instead of "driver" for role-agnostic support
     const applicants = applications.map(app => {
       const driverProfile = Array.isArray(app.driver_profiles) 
         ? app.driver_profiles[0] 
         : app.driver_profiles
       const resume = Array.isArray(app.resumes) ? app.resumes[0] : app.resumes
       const jobPosting = app.job_postings as any
-      const driverUser = app.users as any
+      const applicantUser = app.users as any
 
       return {
         applicationId: app.id,
@@ -204,14 +231,15 @@ export async function GET(request: NextRequest) {
         coverLetter: app.cover_letter,
         reviewerNotes: app.reviewer_notes,
         shareToken: app.share_token,
-        // Driver info
-        driverUserId: app.driver_user_id,
-        driverName: driverProfile 
+        // Applicant info (generic)
+        applicantUserId: app.applicant_user_id,
+        applicantRole: applicantUser?.role || 'driver', // driver, developer, etc.
+        applicantName: driverProfile 
           ? `${driverProfile.first_name || ''} ${driverProfile.last_name || ''}`.trim() || 'Unknown'
           : 'Unknown',
-        driverEmail: driverProfile?.email || driverUser?.email || null,
-        driverPhone: driverProfile?.phone || null,
-        // CDL info
+        applicantEmail: driverProfile?.email || applicantUser?.email || null,
+        applicantPhone: driverProfile?.phone || null,
+        // CDL info (driver-specific, null for other roles)
         cdlClass: driverProfile?.cdl_class || null,
         cdlState: driverProfile?.cdl_state || null,
         cdlExpiration: driverProfile?.cdl_expiration || null,
@@ -219,10 +247,18 @@ export async function GET(request: NextRequest) {
         // Job info
         jobPostingId: app.job_posting_id,
         jobTitle: jobPosting?.title || 'Unknown Position',
+        jobTargetRole: jobPosting?.target_role || 'driver',
         // Resume info
         hasResume: !!resume,
         resumeId: resume?.id || null,
         resumeVerified: resume?.verification_status === 'VERIFIED',
+        // Legacy aliases for backward compatibility
+        driverUserId: app.applicant_user_id,
+        driverName: driverProfile 
+          ? `${driverProfile.first_name || ''} ${driverProfile.last_name || ''}`.trim() || 'Unknown'
+          : 'Unknown',
+        driverEmail: driverProfile?.email || applicantUser?.email || null,
+        driverPhone: driverProfile?.phone || null,
       }
     })
 
@@ -232,8 +268,8 @@ export async function GET(request: NextRequest) {
         ? order.mvr_results[0] 
         : order.mvr_results
       
-      // Find applicant name for this MVR
-      const applicant = applicants.find(a => a.driverUserId === order.driver_user_id)
+      // Find applicant name for this MVR (using applicantUserId or legacy driverUserId)
+      const applicant = applicants.find(a => a.applicantUserId === order.driver_user_id)
       
       return {
         id: order.id,
@@ -301,6 +337,8 @@ export async function GET(request: NextRequest) {
         city: company.address_city,
         state: company.address_state,
       },
+      // User's role within the company (owner, admin, hr_manager, hiring_manager, recruiter, interviewer, viewer)
+      userRole,
       jobPostings,
       applicants,
       mvrOrders,
