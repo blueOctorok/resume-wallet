@@ -143,7 +143,7 @@ export default function VerifyEmploymentPage() {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-brand-mint" />
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-indigo-400" />
           <p className="text-gray-400">Loading verification request...</p>
         </div>
       </div>

@@ -2,6 +2,58 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🎨 **Loading Screens & Spinners: Indigo Theme Update** (February 2026)
+
+**Updated all loading screens and spinners to match the new indigo design system.**
+
+The app previously used sage/mint colors (`brand-sage`, `brand-mint`) for loading states. These have been updated to use the new indigo accent colors (`indigo-400`, `indigo-500`, `indigo-600`) for consistency with the hub styling.
+
+### Changes
+
+- **LoadingScreen.tsx**: Main loading component now uses `bg-gray-800/50` (dark) / `bg-white/80` (light) with indigo borders and spinner colors
+- **TLoadingModal.tsx**: AvA thinking modal uses indigo accents
+- **MvrViewModal.tsx**: MVR data loading spinner updated
+- **ApplicantsPage.tsx**: Employer applicants loading spinner
+- **FindDriversPage.tsx**: Driver search loading spinner
+- **MvrManagementModal.tsx**: MVR management loading state
+- **EmailOTPAuth.tsx**: Auth balance loading spinner
+- **page.tsx**: Submission loading screen and session checking spinner
+- **d/[token]/page.tsx**: Career Card loading
+- **dev-card/[token]/page.tsx**: Developer Career Card loading states
+- **verify/[token]/page.tsx**: Verification request loading
+- **AdminDashboard.tsx**: All admin panel loading spinners
+- **DeveloperResumeBuilder.tsx**: Developer resume loading
+- **DriverApplication.tsx**: Driver application loading
+- **PrefillBanner.tsx**: Resume/MVR prefill spinners
+- **DriverDashboard.tsx**: Driver dashboard loading
+
+### Design System
+
+Loading states now use:
+- **Dark mode**: `bg-gray-800/50`, `border-indigo-500`, `text-indigo-400`
+- **Light mode**: `bg-white/80`, `border-indigo-600`, `text-indigo-600`
+
+### Files Modified
+
+- `src/components/LoadingScreen.tsx`
+- `src/components/TLoadingModal.tsx`
+- `src/components/MvrViewModal.tsx`
+- `src/components/employer/ApplicantsPage.tsx`
+- `src/components/employer/FindDriversPage.tsx`
+- `src/components/MvrManagementModal.tsx`
+- `src/components/EmailOTPAuth.tsx`
+- `src/app/page.tsx`
+- `src/app/d/[token]/page.tsx`
+- `src/app/dev-card/[token]/page.tsx`
+- `src/app/verify/[token]/page.tsx`
+- `src/app/admin/AdminDashboard.tsx`
+- `src/components/DeveloperResumeBuilder.tsx`
+- `src/components/DriverApplication.tsx`
+- `src/components/driver-application/PrefillBanner.tsx`
+- `src/components/driver-application/DriverDashboard.tsx`
+
+---
+
 ## 👤 **MVR Driver Name on Report** (February 2026)
 
 **Display the driver’s name from the DMV record on the MVR view and on the printable PDF.**

@@ -571,7 +571,7 @@ function AdminDashboardContent() {
     return (
       <div className='min-h-screen flex items-center justify-center'>
         <div className='text-center'>
-          <Loader2 className='w-8 h-8 animate-spin text-brand-mint mx-auto mb-4' />
+          <Loader2 className='w-8 h-8 animate-spin text-indigo-400 mx-auto mb-4' />
           <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
             {walletAddress
               ? 'Checking admin access...'
@@ -697,7 +697,7 @@ function AdminDashboardContent() {
             </div>
           ) : loading ? (
             <div className='flex items-center justify-center py-12'>
-              <Loader2 className='w-8 h-8 animate-spin text-brand-mint' />
+              <Loader2 className='w-8 h-8 animate-spin text-indigo-400' />
             </div>
           ) : (
             <>
@@ -1688,7 +1688,7 @@ function AdminDashboardContent() {
           >
             {loadingUserDetail ? (
               <div className='flex items-center justify-center py-12'>
-                <Loader2 className='w-8 h-8 animate-spin text-brand-mint' />
+                <Loader2 className='w-8 h-8 animate-spin text-indigo-400' />
               </div>
             ) : (
               selectedUser && (
@@ -2132,7 +2132,7 @@ function AdminDashboardContent() {
           >
             {loadingMvrDetail ? (
               <div className='flex items-center justify-center py-12'>
-                <Loader2 className='w-8 h-8 animate-spin text-brand-mint' />
+                <Loader2 className='w-8 h-8 animate-spin text-indigo-400' />
               </div>
             ) : selectedMvrDetail && (
               <>
@@ -2365,7 +2365,7 @@ export default function AdminDashboard() {
   if (!mounted) {
     return (
       <div className='min-h-screen flex items-center justify-center'>
-        <Loader2 className='w-8 h-8 animate-spin text-brand-mint' />
+        <Loader2 className='w-8 h-8 animate-spin text-indigo-400' />
       </div>
     )
   }

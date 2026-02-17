@@ -160,7 +160,7 @@ export default function PrefillBanner({
                   <CheckCircle2 className="w-5 h-5 text-green-500" />
                 )}
                 {isResumePrefilling && (
-                  <Loader2 className="w-5 h-5 animate-spin text-brand-mint" />
+                  <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
                 )}
               </div>
               <p
@@ -228,7 +228,7 @@ export default function PrefillBanner({
                   <CheckCircle2 className="w-5 h-5 text-green-500" />
                 )}
                 {isMvrPrefilling && (
-                  <Loader2 className="w-5 h-5 animate-spin text-brand-mint" />
+                  <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
                 )}
               </div>
               <p

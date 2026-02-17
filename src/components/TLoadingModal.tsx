@@ -18,19 +18,19 @@ export default function TLoadingModal({ isVisible, message = 'AvA is thinking...
       {/* Subtle backdrop */}
       <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
 
-      {/* Clean modal */}
+      {/* Clean modal - matches new hub styling */}
       <div
         className={`relative rounded-2xl px-8 py-6 mx-4 shadow-xl pointer-events-auto ${
           theme === 'dark'
-            ? 'bg-gray-800/95 border border-brand-mint/30'
-            : 'bg-white/95 border border-brand-sage/20'
+            ? 'bg-gray-800/95 border border-indigo-500/30'
+            : 'bg-white/95 border border-indigo-500/20'
         }`}
       >
         <div className="flex items-center gap-4">
           {/* Simple spinning loader */}
           <div
             className={`${
-              theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+              theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
             }`}
           >
             <Loader2 className="w-6 h-6 animate-spin" />

@@ -364,7 +364,7 @@ export default function MultiMethodAuth({
                 <span className='font-bold text-blue-900 dark:text-brand-cream'>
                   {balanceLoading ? (
                     <span className='flex items-center space-x-1'>
-                      <div className='animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 dark:border-brand-sage'></div>
+                      <div className='animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 dark:border-indigo-400'></div>
                       <span>Loading...</span>
                     </span>
                   ) : (

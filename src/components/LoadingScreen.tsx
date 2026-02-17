@@ -21,15 +21,15 @@ export default function LoadingScreen({
     <div className={containerClasses}>
       {/* Backdrop blur for full screen */}
       {fullScreen && (
-        <div className="absolute inset-0 bg-gradient-to-br from-brand-cream via-white to-brand-mint/20 dark:from-slate-900 dark:via-slate-800 dark:to-brand-sage-dark" />
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-100 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-gray-900" />
       )}
 
-      {/* Loading card */}
+      {/* Loading card - matches new hub styling */}
       <div
         className={`relative rounded-2xl p-8 shadow-2xl border-t-4 ${
           theme === 'dark'
-            ? 'bg-brand-sage-light/20 backdrop-blur-xl border-brand-mint'
-            : 'bg-white/80 backdrop-blur-xl border-brand-sage'
+            ? 'bg-gray-800/50 backdrop-blur-xl border-indigo-500'
+            : 'bg-white/80 backdrop-blur-xl border-indigo-600'
         }`}
       >
         <div className="flex flex-col items-center gap-6">
@@ -39,8 +39,8 @@ export default function LoadingScreen({
             <div
               className={`w-20 h-20 rounded-full border-4 border-transparent animate-spin ${
                 theme === 'dark'
-                  ? 'border-t-brand-mint border-r-brand-mint/50'
-                  : 'border-t-brand-sage border-r-brand-sage/50'
+                  ? 'border-t-indigo-400 border-r-indigo-400/50'
+                  : 'border-t-indigo-600 border-r-indigo-600/50'
               }`}
               style={{ animationDuration: '1s' }}
             />
@@ -49,8 +49,8 @@ export default function LoadingScreen({
             <div
               className={`absolute inset-0 m-auto w-12 h-12 rounded-full animate-pulse ${
                 theme === 'dark'
-                  ? 'bg-brand-mint/30'
-                  : 'bg-brand-sage/30'
+                  ? 'bg-indigo-500/30'
+                  : 'bg-indigo-500/20'
               }`}
               style={{ animationDuration: '1.5s' }}
             />
@@ -58,7 +58,7 @@ export default function LoadingScreen({
             {/* Center "S" for StormChain */}
             <div
               className={`absolute inset-0 flex items-center justify-center text-2xl font-bold ${
-                theme === 'dark' ? 'text-white' : 'text-brand-sage'
+                theme === 'dark' ? 'text-white' : 'text-indigo-600'
               }`}
             >
               S
@@ -69,7 +69,7 @@ export default function LoadingScreen({
           <div className="text-center">
             <p
               className={`text-lg font-semibold mb-1 ${
-                theme === 'dark' ? 'text-white' : 'text-brand-sage'
+                theme === 'dark' ? 'text-white' : 'text-gray-800'
               }`}
             >
               {message}
@@ -79,19 +79,19 @@ export default function LoadingScreen({
             <div className="flex justify-center gap-1">
               <span
                 className={`w-2 h-2 rounded-full animate-bounce ${
-                  theme === 'dark' ? 'bg-brand-mint' : 'bg-brand-sage'
+                  theme === 'dark' ? 'bg-indigo-400' : 'bg-indigo-600'
                 }`}
                 style={{ animationDelay: '0ms', animationDuration: '1s' }}
               />
               <span
                 className={`w-2 h-2 rounded-full animate-bounce ${
-                  theme === 'dark' ? 'bg-brand-mint' : 'bg-brand-sage'
+                  theme === 'dark' ? 'bg-indigo-400' : 'bg-indigo-600'
                 }`}
                 style={{ animationDelay: '150ms', animationDuration: '1s' }}
               />
               <span
                 className={`w-2 h-2 rounded-full animate-bounce ${
-                  theme === 'dark' ? 'bg-brand-mint' : 'bg-brand-sage'
+                  theme === 'dark' ? 'bg-indigo-400' : 'bg-indigo-600'
                 }`}
                 style={{ animationDelay: '300ms', animationDuration: '1s' }}
               />

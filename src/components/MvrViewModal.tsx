@@ -684,8 +684,8 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16">
               <div className="relative">
-                <div className="w-16 h-16 border-4 border-brand-sage/20 rounded-full" />
-                <div className="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-t-brand-mint rounded-full animate-spin" />
+                <div className="w-16 h-16 border-4 border-indigo-500/20 rounded-full" />
+                <div className="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-t-indigo-500 rounded-full animate-spin" />
               </div>
               <p className={`mt-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 Loading MVR data...

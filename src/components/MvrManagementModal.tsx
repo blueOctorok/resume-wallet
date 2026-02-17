@@ -225,7 +225,7 @@ export default function MvrManagementModal({
           <div className="p-6 space-y-6">
             {loading ? (
               <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4 border-brand-sage"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4 border-indigo-500"></div>
                 <p className={theme === 'light' ? 'text-gray-600' : 'text-gray-400'}>Loading MVR data...</p>
               </div>
             ) : error ? (

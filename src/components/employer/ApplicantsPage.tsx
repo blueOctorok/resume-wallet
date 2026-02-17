@@ -165,7 +165,7 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className={`w-12 h-12 animate-spin ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`} />
+        <Loader2 className={`w-12 h-12 animate-spin ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
       </div>
     )
   }

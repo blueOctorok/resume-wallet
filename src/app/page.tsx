@@ -2223,16 +2223,16 @@ const HomeContent = () => {
     <div
       className={`max-w-4xl mx-auto p-6 ${
         theme === 'dark'
-          ? 'bg-brand-sage-light/20 backdrop-blur-xl'
+          ? 'bg-gray-800/50 backdrop-blur-xl'
           : 'bg-white/80 backdrop-blur-xl'
       } rounded-2xl shadow-2xl relative z-10 border-t-4 ${
-        theme === 'dark' ? 'border-brand-mint' : 'border-brand-sage'
+        theme === 'dark' ? 'border-indigo-500' : 'border-indigo-600'
       }`}
     >
       <div className='text-center py-12'>
         <div className='mb-6'>
           <div className='flex justify-center mb-4'>
-            <div className='animate-spin rounded-full h-16 w-16 border-b-2 border-brand-mint'></div>
+            <div className='animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-500'></div>
           </div>
         </div>
 
@@ -2707,20 +2707,20 @@ const HomeContent = () => {
                 {currentPage === 'signin' && !user && (
                   <div className='max-w-md mx-auto overflow-hidden'>
                     {isCheckingSession ? (
-                      <div className='relative backdrop-blur-xl rounded-3xl shadow-2xl border p-8 bg-brand-sage-light/20 border-brand-mint/30'>
+                      <div className='relative backdrop-blur-xl rounded-3xl shadow-2xl border p-8 bg-gray-800/50 border-indigo-500/30'>
                         <div className='relative text-center'>
                           <div
                             className={`animate-spin rounded-full h-10 w-10 border-b-2 mx-auto mb-4 ${
                               theme === 'light'
-                                ? 'border-brand-sage'
-                                : 'border-brand-mint'
+                                ? 'border-indigo-600'
+                                : 'border-indigo-400'
                             }`}
                           ></div>
                           <p
                             className={`${
                               theme === 'light'
                                 ? 'text-gray-600'
-                                : 'text-brand-cream/80'
+                                : 'text-gray-300'
                             }`}
                           >
                             Checking for existing session...
