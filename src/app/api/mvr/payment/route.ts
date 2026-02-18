@@ -113,6 +113,26 @@ export async function POST(request: NextRequest) {
       }
       
       console.log('[MVR PAYMENT] ✅ Payment already exists, returning existing:', existingPayment.id)
+      
+      // Check if STORM was ever distributed for this payment
+      // If not, distribute now (handles case where original distribution failed)
+      const { data: existingDistribution } = await supabase
+        .from('storm_distributions')
+        .select('id')
+        .eq('payment_id', existingPayment.id)
+        .maybeSingle()
+      
+      if (!existingDistribution) {
+        console.log('[MVR PAYMENT] ⛈️ STORM not yet distributed for existing payment, distributing now...')
+        try {
+          await triggerStormReward(walletAddress, existingPayment.amount_usdc, existingPayment.id, 'MVR_ORDER')
+        } catch (stormError) {
+          console.error('[MVR PAYMENT] STORM reward failed for existing payment (non-fatal):', stormError)
+        }
+      } else {
+        console.log('[MVR PAYMENT] ⛈️ STORM already distributed for this payment, skipping')
+      }
+      
       return NextResponse.json({
         success: true,
         payment: {
