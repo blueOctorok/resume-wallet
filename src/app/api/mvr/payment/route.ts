@@ -154,9 +154,15 @@ export async function POST(request: NextRequest) {
       status: 'COMPLETED'
     })
 
-    // Distribute STORM rewards for this payment (non-blocking)
-    // We don't await this - payment success shouldn't depend on reward distribution
-    triggerStormReward(walletAddress, payment.amount_usdc, payment.id, 'MVR_ORDER')
+    // Distribute STORM rewards for this payment
+    // Must await in serverless - unawaited promises get terminated when response is sent
+    // Wrapped in try/catch so STORM failure doesn't affect payment success
+    try {
+      await triggerStormReward(walletAddress, payment.amount_usdc, payment.id, 'MVR_ORDER')
+    } catch (stormError) {
+      // Log but don't fail the payment
+      console.error('[MVR PAYMENT] STORM reward failed (non-fatal):', stormError)
+    }
 
     return NextResponse.json({
       success: true,
