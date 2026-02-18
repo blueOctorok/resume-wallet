@@ -105,73 +105,20 @@ interface Payment {
 }
 
 /**
- * Extract clean driver name from potentially corrupted subject data.
- * 
- * Accio XML parsing sometimes produces malformed data where firstName contains
- * the entire subject block's text content concatenated, like:
- *   "Samuel Christian U 321 Vista Circle North Olmsted N N N ... Blaha"
- * 
- * Strategy:
- * 1. If lastName exists and is clean, use it
- * 2. Otherwise, assume last word of firstName blob is the last name
- * 3. For first name, take only name-like words from the start (before addresses/flags)
+ * Format driver name from subject data.
+ * The API now extracts clean name data directly from raw XML,
+ * so this is straightforward concatenation.
  */
 function formatDriverName(subject: MvrSubject | undefined | null): string {
   if (!subject) return ''
   
-  // Get raw values (might be XML-contaminated or have all fields mashed together)
-  let rawFirst = (subject.firstName || '').replace(/<[^>]*>/g, ' ').trim()
-  let rawLast = (subject.lastName || '').replace(/<[^>]*>/g, ' ').trim()
+  const parts = [
+    subject.firstName?.trim(),
+    subject.middleName?.trim(),
+    subject.lastName?.trim()
+  ].filter(Boolean)
   
-  // If data looks clean (short, no numbers, no single-letter garbage), use as-is
-  const looksClean = (s: string) => s.length < 30 && !/\d/.test(s) && !/\b[A-Z]\b/.test(s)
-  
-  if (looksClean(rawFirst) && looksClean(rawLast)) {
-    return [rawFirst, rawLast].filter(Boolean).join(' ')
-  }
-  
-  // Data is corrupted - need to extract intelligently
-  // Split the firstName blob into words
-  const words = rawFirst.split(/\s+/).filter(Boolean)
-  
-  if (words.length === 0) return rawLast || ''
-  
-  // Helper: does this word look like a name? (capitalized, 2+ chars, no numbers)
-  const isNameLike = (w: string) => 
-    w.length >= 2 && 
-    /^[A-Z][a-z]+$/.test(w) && 
-    !['North', 'South', 'East', 'West', 'Current', 'Employment', 'Contract', 'Hire'].includes(w)
-  
-  // Extract first name: take leading name-like words (usually 1-2)
-  const firstNames: string[] = []
-  for (const word of words) {
-    if (isNameLike(word) && firstNames.length < 2) {
-      firstNames.push(word)
-    } else if (firstNames.length > 0) {
-      break // Stop once we hit non-name content
-    }
-  }
-  
-  // Extract last name: use rawLast if clean, otherwise last name-like word from blob
-  let lastName = ''
-  if (rawLast && isNameLike(rawLast)) {
-    lastName = rawLast
-  } else {
-    // Find last name-like word in the blob
-    for (let i = words.length - 1; i >= 0; i--) {
-      if (isNameLike(words[i])) {
-        lastName = words[i]
-        break
-      }
-    }
-  }
-  
-  // Don't include lastName if it's already in firstNames
-  if (firstNames.includes(lastName)) {
-    lastName = ''
-  }
-  
-  return [...firstNames, lastName].filter(Boolean).join(' ')
+  return parts.join(' ')
 }
 
 /**
@@ -326,8 +273,8 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
           .header-right .date { font-size: 14px; color: #374151; }
           
           .license-card {
-            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
-            border: 1px solid #bbf7d0;
+            background: #f8fafc;
+            border: 2px solid #0d9488;
             border-radius: 12px;
             padding: 24px;
             margin-bottom: 24px;
@@ -337,7 +284,7 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
             grid-template-columns: repeat(4, 1fr);
             gap: 20px;
           }
-          .license-item label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+          .license-item label { font-size: 11px; color: #4b5563; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
           .license-item .value { font-size: 18px; font-weight: 700; color: #1f2937; margin-top: 4px; }
           .license-item .value.mono { font-family: monospace; }
           .status-badge {
@@ -350,19 +297,20 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
             font-weight: 600;
             margin-top: 4px;
           }
-          .status-valid { background: #d1fae5; color: #059669; }
-          .status-invalid { background: #fee2e2; color: #dc2626; }
-          .status-pending { background: #fef3c7; color: #d97706; }
+          .status-valid { background: #d1fae5; color: #047857; border: 1px solid #059669; }
+          .status-invalid { background: #fee2e2; color: #b91c1c; border: 1px solid #dc2626; }
+          .status-pending { background: #fef3c7; color: #b45309; border: 1px solid #d97706; }
           .status-dot { width: 8px; height: 8px; border-radius: 50%; }
           
-          .license-classes { margin-top: 20px; padding-top: 20px; border-top: 1px solid #d1fae5; }
-          .license-classes h4 { font-size: 11px; color: #6b7280; text-transform: uppercase; margin-bottom: 12px; }
+          .license-classes { margin-top: 20px; padding-top: 20px; border-top: 2px solid #d1d5db; }
+          .license-classes h4 { font-size: 11px; color: #4b5563; text-transform: uppercase; margin-bottom: 12px; font-weight: 600; }
           .license-class {
             display: flex;
             align-items: center;
             gap: 16px;
             padding: 12px;
-            background: white;
+            background: #f9fafb;
+            border: 1px solid #d1d5db;
             border-radius: 8px;
             margin-bottom: 8px;
           }
@@ -393,15 +341,14 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
           .stat-card {
             text-align: center;
             padding: 20px;
-            border: 1px solid #e5e7eb;
+            border: 2px solid #d1d5db;
             border-radius: 12px;
+            background: #f9fafb;
           }
           .stat-value { font-size: 32px; font-weight: 800; }
-          .stat-value.good { color: #10b981; }
-          .stat-value.warning { color: #f59e0b; }
-          .stat-value.bad { color: #ef4444; }
-          .stat-label { font-size: 12px; color: #6b7280; margin-top: 4px; }
-
+          .stat-value.good { color: #047857; }
+          .stat-value.warning { color: #b45309; }
+          .stat-value.bad { color: #b91c1c; }
           .section {
             margin-bottom: 24px;
           }
@@ -411,31 +358,34 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
             gap: 8px;
             margin-bottom: 12px;
             padding-bottom: 8px;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 2px solid #d1d5db;
           }
-          .section-header h3 { font-size: 16px; color: #1f2937; }
+          .section-header h3 { font-size: 16px; color: #1f2937; font-weight: 600; }
           .section-count {
             background: #fef3c7;
-            color: #d97706;
+            color: #92400e;
             font-size: 11px;
             font-weight: 600;
             padding: 2px 8px;
             border-radius: 10px;
+            border: 1px solid #d97706;
           }
 
           .violation-item, .accident-item, .suspension-item {
             padding: 12px 16px;
-            background: #fffbeb;
-            border-left: 4px solid #f59e0b;
+            background: #fefce8;
+            border-left: 4px solid #ca8a04;
+            border: 1px solid #eab308;
+            border-left-width: 4px;
             border-radius: 0 8px 8px 0;
             margin-bottom: 8px;
           }
           .violation-header { display: flex; justify-content: space-between; align-items: center; }
-          .violation-details { margin-top: 4px; font-size: 13px; color: #6b7280; }
+          .violation-details { margin-top: 4px; font-size: 13px; color: #4b5563; }
           .violation-details span { margin-right: 16px; }
-          .acd-code { font-family: monospace; font-size: 11px; color: #9ca3af; }
+          .acd-code { font-family: monospace; font-size: 11px; color: #6b7280; }
 
-          .none { color: #9ca3af; font-style: italic; }
+          .none { color: #6b7280; font-style: italic; }
 
           .footer {
             margin-top: 40px;

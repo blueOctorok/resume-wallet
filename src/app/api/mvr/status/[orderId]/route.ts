@@ -2,6 +2,35 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 /**
+ * Extract a single XML tag value from raw XML string
+ */
+function extractXmlValue(xml: string, tagName: string): string | undefined {
+  const regex = new RegExp(`<${tagName}[^>]*>([^<]*)</${tagName}>`, 'i')
+  const match = xml.match(regex)
+  return match?.[1]?.trim() || undefined
+}
+
+/**
+ * Extract clean subject (name) from raw MVR XML
+ * This bypasses any corrupted parsed_data by going straight to the source
+ */
+function extractSubjectFromRawXml(rawXml: string | null): { firstName?: string; middleName?: string; lastName?: string } | null {
+  if (!rawXml) return null
+  
+  // Find the <subject> block
+  const subjectMatch = rawXml.match(/<subject[^>]*>([\s\S]*?)<\/subject>/i)
+  if (!subjectMatch) return null
+  
+  const subjectXml = subjectMatch[1]
+  
+  return {
+    firstName: extractXmlValue(subjectXml, 'name_first'),
+    middleName: extractXmlValue(subjectXml, 'name_middle'),
+    lastName: extractXmlValue(subjectXml, 'name_last'),
+  }
+}
+
+/**
  * API Route: Get MVR Order Status
  * 
  * GET /api/mvr/status/[orderId]
@@ -44,11 +73,12 @@ export async function GET(
       )
     }
 
-    // Get MVR order with result - include all detailed data
+    // Get MVR order with result - include all detailed data AND raw XML for clean name extraction
     const { data: mvrOrder, error: orderError } = await supabase
       .from('mvr_orders')
       .select(`
         *,
+        result_xml,
         mvr_results (
           id,
           license_number,
@@ -89,6 +119,9 @@ export async function GET(
       ? mvrOrder.mvr_results[0] 
       : mvrOrder.mvr_results
 
+    // Extract clean subject directly from raw XML (bypasses corrupted parsed_data)
+    const cleanSubject = extractSubjectFromRawXml(mvrOrder.result_xml)
+
     return NextResponse.json({
       success: true,
       order: {
@@ -109,8 +142,8 @@ export async function GET(
       },
       result: result ? {
         id: result.id,
-        // Subject (driver name from DMV record - from parsed_data)
-        subject: result.parsed_data?.subject ?? null,
+        // Subject extracted directly from raw XML (clean, not from corrupted parsed_data)
+        subject: cleanSubject,
         // License info
         licenseNumber: result.license_number,
         licenseState: result.license_state,

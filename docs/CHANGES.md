@@ -2,6 +2,75 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🔧 **MVR Name Extraction Fix** (February 2026)
+
+**Fixed corrupted driver name display on MVR reports by extracting directly from raw XML.**
+
+### Problem
+
+The MVR parser was storing corrupted `parsed_data.subject` where the `firstName` field contained ALL text content from the entire subject block concatenated together, resulting in gibberish like:
+```
+Samuel Christian U 321 Vista Circle North Olmsted N N N 000005066...
+```
+
+### Root Cause
+
+The Accio XML is **correctly formatted** - the bug was in how we were parsing and storing the data. The corrupted data was already in the database.
+
+### Solution
+
+Instead of relying on potentially corrupted `parsed_data.subject`, the API now extracts the name **directly from the raw XML** (`result_xml`) which is stored verbatim:
+
+```typescript
+function extractSubjectFromRawXml(rawXml: string | null) {
+  // Uses regex that stops at first '<' to get clean values:
+  // /<name_first[^>]*>([^<]*)<\/name_first>/
+  // This extracts "Samuel" not "Samuel Christian U 321..."
+}
+```
+
+### Files Modified
+
+- `src/app/api/mvr/status/[orderId]/route.ts` - Added `extractSubjectFromRawXml()`, queries `result_xml`, returns clean subject
+- `src/components/MvrViewModal.tsx` - Simplified `formatDriverName()` since API now returns clean data
+
+---
+
+## 🔒 **Security Fix: SECURITY INVOKER Views** (February 2026)
+
+**Fixed Supabase security linter warnings for views with SECURITY DEFINER property.**
+
+### Problem
+
+Two views were flagged as security vulnerabilities:
+- `complete_applications` - joins applications with user profiles and jobs
+- `complete_mvr_data` - joins MVR orders with results and driver info
+
+**Why it matters:** SECURITY DEFINER views execute with the permissions of the view **owner** (usually a superuser), which bypasses Row Level Security (RLS) policies. This means users could potentially access data they shouldn't have permission to see.
+
+### Solution
+
+**Migration 019** sets `security_invoker = true` on both views:
+
+```sql
+ALTER VIEW complete_applications SET (security_invoker = true);
+ALTER VIEW complete_mvr_data SET (security_invoker = true);
+```
+
+With SECURITY INVOKER, the views now respect the RLS policies of the **querying user**, not the view owner.
+
+### How to Apply
+
+Run the migration in Supabase SQL Editor:
+```bash
+# Or copy contents of supabase/migrations/019_fix_security_definer_views.sql
+```
+
+### Files Changed
+- `supabase/migrations/019_fix_security_definer_views.sql` (new)
+
+---
+
 ## 🔧 **Employer Onboarding & Admin Refactor** (February 2026)
 
 **Improvements to employer onboarding flow and admin dashboard for better UX and data quality.**
