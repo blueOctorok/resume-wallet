@@ -2,6 +2,72 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🔍 **Phase 1: Talent Search & Career Cards** (February 2026)
+
+**Foundation for employer talent discovery and career card system.**
+
+### Overview
+
+This phase introduces the infrastructure for employers to search for candidates and view their career cards - an aggregated view of all their profile data, resume, credentials, and verifications.
+
+### Database Changes (Migration 020)
+
+**New Tables:**
+- `candidate_requests` - Employer requests to candidates (document uploads, verifications)
+
+**Table Modifications:**
+- `mvr_orders` - Added `ordered_by_company_id`, `ordered_by_user_id`, `is_shared` to track employer-ordered MVRs
+- `applications` - Added `initiated_by` (applicant/employer), `recruited_by_user_id`, `career_card_snapshot`
+
+**New Views:**
+- `career_cards` - Aggregated view of candidate data for talent search
+
+**New Functions:**
+- `search_talent()` - Efficient candidate search with filters (role, CDL class, state, experience, etc.)
+
+### EmployerHub Refactor
+
+- Updated styling to match DriverHub (semi-transparent backgrounds, modern transitions)
+- Made UI generic to support both drivers and developers
+- Added prominent "Find Talent" button in Quick Actions
+- Applicant cards now show role badge (Driver/Dev)
+- Developer-specific section in applicant detail (skills, GitHub, portfolio)
+- Updated empty states to encourage talent search
+
+### Key Concepts
+
+**Career Card:** Aggregated view of an applicant's hub data:
+- Profile info (driver_profiles or dev_profiles)
+- Resume
+- DOT Application (drivers)
+- MVR Results (drivers)
+- Verified work history
+- Projects (developers)
+
+**Employer Actions on Career Card:**
+- Order MVR for candidate (results go to candidate's profile)
+- Request document upload
+- Initiate employment verification
+- Create application from career card
+
+**Application Initiation:**
+- `applicant` - Traditional flow: candidate applies to job
+- `employer` - Recruitment flow: employer creates application from career card
+
+### Files Modified
+
+- `src/components/EmployerHub.tsx` - Restyled, made generic, added talent search CTA
+- `supabase/migrations/020_talent_search_career_cards.sql` - New migration
+
+### Next Steps (Phase 2)
+
+- CareerCardView component - Full career card display for employers
+- TalentSearch component - Search interface with filters
+- Employer action APIs - Order MVR, request documents
+- Notification system - Alert candidates to employer actions
+
+---
+
 ## 🔧 **MVR Name Extraction Fix** (February 2026)
 
 **Fixed corrupted driver name display on MVR reports by extracting directly from raw XML.**

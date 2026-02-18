@@ -222,6 +222,49 @@ Replaced horizontal tabs with a clean, organized sidebar layout:
 
 ---
 
+#### 🔄 **Phase 7: Talent Search & Career Cards (IN PROGRESS - February 2026)**
+
+**Enabling employers to discover and recruit candidates through career cards.**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      CAREER CARD                                 │
+│  (Aggregated view of everything in applicant's Hub)              │
+├─────────────────────────────────────────────────────────────────┤
+│  DRIVER                          │  DEVELOPER                    │
+│  ├─ Profile                      │  ├─ Profile                   │
+│  ├─ Resume                       │  ├─ Resume/Portfolio          │
+│  ├─ DOT Application              │  ├─ Skills                    │
+│  ├─ MVR Results                  │  ├─ Projects                  │
+│  ├─ Verified Work History        │  ├─ GitHub/Contributions      │
+│  └─ Certifications               │  └─ Verified Experience       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Phase 1 (Complete):**
+- ✅ Migration 020: `candidate_requests`, `career_cards` view, `search_talent()` function
+- ✅ EmployerHub refactored with new styling and generic support
+- ✅ Applicant cards show role badges (Driver/Dev)
+- ✅ "Find Talent" prominently featured in Quick Actions
+
+**Phase 2 (Next):**
+- CareerCardView component for employer candidate view
+- TalentSearch component with filters
+- Employer action APIs (order MVR, request docs)
+- Notification system for candidate alerts
+
+**Key Concepts:**
+
+1. **Shared MVRs** - When employer orders MVR, it goes to candidate's profile and is visible to all employers (huge value for candidates)
+2. **Two Application Paths:**
+   - Applicant applies to job → `initiated_by: 'applicant'`
+   - Employer recruits from career card → `initiated_by: 'employer'`
+3. **Candidate Requests** - Employers can request docs, verifications from candidates
+
+**Migration:** `020_talent_search_career_cards.sql`
+
+---
+
 #### ✅ **Employment Verification System (COMPLETE - January 2026)**
 
 **Three-Party Verification Flow:**

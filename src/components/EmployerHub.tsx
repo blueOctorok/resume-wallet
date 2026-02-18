@@ -30,6 +30,7 @@ import {
   Shield,
   Search,
   ClipboardCheck,
+  Code,
 } from 'lucide-react'
 
 // ============================================================
@@ -54,6 +55,7 @@ interface HubJobPosting {
   id: string
   title: string
   description: string | null
+  targetRole: string | null  // 'driver', 'developer', etc.
   locationCity: string | null
   locationState: string | null
   salaryMin: number | null
@@ -79,14 +81,21 @@ interface HubApplicant {
   coverLetter: string | null
   reviewerNotes: string | null
   shareToken: string | null
-  driverUserId: string
-  driverName: string
-  driverEmail: string | null
-  driverPhone: string | null
+  applicantUserId: string  // Renamed from driverUserId for generic use
+  applicantName: string    // Renamed from driverName
+  applicantEmail: string | null
+  applicantPhone: string | null
+  applicantRole: string | null  // 'driver' or 'developer'
+  // Driver-specific (null for developers)
   cdlClass: string | null
   cdlState: string | null
   cdlExpiration: string | null
   experienceYears: number | null
+  // Developer-specific (null for drivers)
+  skills: string[] | null
+  githubUrl: string | null
+  portfolioUrl: string | null
+  // Common
   jobPostingId: string
   jobTitle: string
   hasResume: boolean
@@ -353,10 +362,10 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
       {/* Company Header */}
-      <div className={`rounded-2xl p-6 mb-8 ${
+      <div className={`rounded-2xl p-6 mb-8 border shadow-lg transition-all duration-200 ${
         theme === 'dark'
-          ? 'bg-brand-sage-dark/50 border border-brand-mint/30'
-          : 'bg-white border border-brand-sage/20 shadow-xl'
+          ? 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
+          : 'bg-white/70 border-gray-200 hover:border-gray-300'
       }`}>
         <div className="flex items-center gap-4">
           <div className={`w-16 h-16 rounded-xl flex items-center justify-center ${
@@ -427,10 +436,10 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       </div>
 
       {/* Pipeline Overview */}
-      <div className={`rounded-2xl p-6 mb-8 ${
+      <div className={`rounded-2xl p-6 mb-8 border shadow-lg transition-all duration-200 ${
         theme === 'dark'
-          ? 'bg-brand-sage-dark/50 border border-brand-mint/30'
-          : 'bg-white border border-brand-sage/20 shadow-xl'
+          ? 'bg-gray-800/50 border-gray-700'
+          : 'bg-white/70 border-gray-200'
       }`}>
         <h2 className={`text-lg font-semibold mb-4 ${
           theme === 'dark' ? 'text-white' : 'text-gray-900'
@@ -485,9 +494,9 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             <EmptyState
               icon={<Users className="w-12 h-12" />}
               title="No applicants yet"
-              description="Post a job to start receiving applications from qualified drivers"
-              actionLabel="Post a Job"
-              onAction={() => onNavigate('post-job')}
+              description="Post a job or search for talent to start building your candidate pipeline"
+              actionLabel="Find Talent"
+              onAction={() => onNavigate('talent-search')}
               theme={theme}
             />
           ) : (
@@ -536,7 +545,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             <EmptyState
               icon={<Briefcase className="w-12 h-12" />}
               title="No job postings"
-              description="Create your first job posting to attract qualified drivers"
+              description="Create your first job posting to attract qualified candidates"
               actionLabel="Post a Job"
               onAction={() => onNavigate('post-job')}
               theme={theme}
@@ -599,38 +608,54 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           icon={<TrendingUp className="w-5 h-5" />}
           theme={theme}
         >
-          <div className="grid grid-cols-2 gap-3">
-            <ActionButton
-              icon={<Plus className="w-5 h-5" />}
-              label="Post New Job"
-              onClick={() => onNavigate('post-job')}
-              theme={theme}
-              primary
-            />
-            <ActionButton
-              icon={<Users className="w-5 h-5" />}
-              label="View All Applicants"
-              onClick={() => onNavigate('applicants')}
-              theme={theme}
-            />
-            <ActionButton
-              icon={<Search className="w-5 h-5" />}
-              label="Find Drivers"
-              onClick={() => onNavigate('find-drivers')}
-              theme={theme}
-            />
-            <ActionButton
-              icon={<Building2 className="w-5 h-5" />}
-              label="Company Profile"
-              onClick={() => onNavigate('company-profile')}
-              theme={theme}
-            />
-            <ActionButton
-              icon={<FileText className="w-5 h-5" />}
-              label="View Reports"
-              onClick={() => onNavigate('reports')}
-              theme={theme}
-            />
+          <div className="space-y-3">
+            {/* Primary action - Find Talent */}
+            <button
+              onClick={() => onNavigate('talent-search')}
+              className={`w-full flex items-center gap-4 p-4 rounded-xl font-medium transition-all duration-200 ${
+                theme === 'dark'
+                  ? 'bg-gradient-to-r from-teal-600 to-teal-500 text-white hover:from-teal-500 hover:to-teal-400 shadow-lg shadow-teal-500/20'
+                  : 'bg-gradient-to-r from-teal-600 to-teal-500 text-white hover:from-teal-500 hover:to-teal-400 shadow-lg shadow-teal-500/30'
+              }`}
+            >
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Search className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <span className="block font-semibold">Find Talent</span>
+                <span className="text-sm opacity-90">Search drivers & developers</span>
+              </div>
+              <ChevronRight className="w-5 h-5 ml-auto" />
+            </button>
+            
+            {/* Secondary actions grid */}
+            <div className="grid grid-cols-2 gap-3">
+              <ActionButton
+                icon={<Plus className="w-5 h-5" />}
+                label="Post New Job"
+                onClick={() => onNavigate('post-job')}
+                theme={theme}
+                primary
+              />
+              <ActionButton
+                icon={<Users className="w-5 h-5" />}
+                label="View Applicants"
+                onClick={() => onNavigate('applicants')}
+                theme={theme}
+              />
+              <ActionButton
+                icon={<Building2 className="w-5 h-5" />}
+                label="Company Profile"
+                onClick={() => onNavigate('company-profile')}
+                theme={theme}
+              />
+              <ActionButton
+                icon={<FileText className="w-5 h-5" />}
+                label="View Reports"
+                onClick={() => onNavigate('reports')}
+                theme={theme}
+              />
+            </div>
           </div>
         </Section>
       </div>
@@ -801,15 +826,19 @@ function StatCard({
   highlight?: boolean
 }) {
   return (
-    <div className={`rounded-xl p-4 ${
+    <div className={`rounded-xl p-4 border transition-all duration-200 ${
       theme === 'dark'
-        ? 'bg-brand-sage-dark/50 border border-brand-mint/20'
-        : 'bg-white border border-gray-200 shadow-sm'
+        ? 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
+        : 'bg-white/70 border-gray-200 hover:border-gray-300 shadow-sm'
     }`}>
       <div className="flex items-center gap-2 mb-2">
-        <span className={theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}>
-          {icon}
-        </span>
+        <div className={`p-1.5 rounded-lg ${
+          theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
+        }`}>
+          <span className={theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}>
+            {icon}
+          </span>
+        </div>
         <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
           {label}
         </span>
@@ -873,21 +902,25 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <div className={`rounded-2xl p-6 ${
+    <div className={`rounded-2xl p-6 border shadow-lg transition-all duration-200 ${
       theme === 'dark'
-        ? 'bg-brand-sage-dark/50 border border-brand-mint/30'
-        : 'bg-white border border-brand-sage/20 shadow-xl'
+        ? 'bg-gray-800/50 border-gray-700'
+        : 'bg-white/70 border-gray-200'
     }`}>
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <span className={theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}>
-            {icon}
-          </span>
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-lg ${
+            theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
+          }`}>
+            <span className={theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}>
+              {icon}
+            </span>
+          </div>
           <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
             {title}
           </h3>
           {count !== undefined && (
-            <span className={`text-sm px-2 py-0.5 rounded-full ${
+            <span className={`text-sm px-2.5 py-0.5 rounded-full font-medium ${
               theme === 'dark' ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
             }`}>
               {count}
@@ -954,28 +987,47 @@ function ApplicantRow({
   onClick: () => void
   theme: string
 }) {
+  // Support both old field names (driverName) and new (applicantName) during transition
+  const name = (applicant as any).applicantName || (applicant as any).driverName || 'Unknown'
+  const role = (applicant as any).applicantRole || 'driver'
+  
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-colors ${
+      className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all duration-200 ${
         theme === 'dark'
           ? 'hover:bg-gray-700/50'
           : 'hover:bg-gray-50'
       }`}
     >
       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-        theme === 'dark' ? 'bg-brand-mint/20' : 'bg-brand-sage/10'
+        role === 'developer'
+          ? theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'
+          : theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
       }`}>
         <span className={`text-sm font-bold ${
-          theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+          role === 'developer'
+            ? theme === 'dark' ? 'text-purple-400' : 'text-purple-600'
+            : theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
         }`}>
-          {applicant.driverName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+          {name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
         </span>
       </div>
       <div className="flex-1 min-w-0">
-        <p className={`font-medium truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-          {applicant.driverName}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className={`font-medium truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            {name}
+          </p>
+          {role && (
+            <span className={`text-xs px-1.5 py-0.5 rounded ${
+              role === 'developer'
+                ? 'bg-purple-500/10 text-purple-500'
+                : 'bg-teal-500/10 text-teal-500'
+            }`}>
+              {role === 'developer' ? 'Dev' : 'Driver'}
+            </span>
+          )}
+        </div>
         <p className={`text-sm truncate ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
           {applicant.jobTitle}
         </p>
@@ -1192,41 +1244,47 @@ function ApplicantDetailContent({
     theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
   }`
   const valueClass = `text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`
+  
+  // Support both old and new field names during transition
+  const email = (applicant as any).applicantEmail || (applicant as any).driverEmail
+  const phone = (applicant as any).applicantPhone || (applicant as any).driverPhone
+  const role = (applicant as any).applicantRole || 'driver'
+  const isDriver = role === 'driver'
 
   return (
     <div className="space-y-4">
       {/* Contact Info */}
       <div className="flex flex-wrap gap-3">
-        {applicant.driverEmail && (
+        {email && (
           <a
-            href={`mailto:${applicant.driverEmail}`}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+            href={`mailto:${email}`}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
               theme === 'dark'
                 ? 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             <Mail className="w-4 h-4" />
-            {applicant.driverEmail}
+            {email}
           </a>
         )}
-        {applicant.driverPhone && (
+        {phone && (
           <a
-            href={`tel:${applicant.driverPhone}`}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+            href={`tel:${phone}`}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
               theme === 'dark'
                 ? 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             <Phone className="w-4 h-4" />
-            {applicant.driverPhone}
+            {phone}
           </a>
         )}
       </div>
 
-      {/* CDL Info */}
-      {(applicant.cdlClass || applicant.cdlState) && (
+      {/* Driver-specific: CDL Info */}
+      {isDriver && (applicant.cdlClass || applicant.cdlState) && (
         <div className={`p-4 rounded-xl ${
           theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
         }`}>
@@ -1254,6 +1312,48 @@ function ApplicantDetailContent({
                 <p className={labelClass}>Experience</p>
                 <p className={valueClass}>{applicant.experienceYears} years</p>
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Developer-specific: Skills & Links */}
+      {!isDriver && (applicant.skills || applicant.githubUrl || applicant.portfolioUrl) && (
+        <div className={`p-4 rounded-xl ${
+          theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
+        }`}>
+          <h4 className={`font-medium mb-3 flex items-center gap-2 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            <Code className="w-4 h-4" />
+            Developer Info
+          </h4>
+          {applicant.skills && applicant.skills.length > 0 && (
+            <div className="mb-3">
+              <p className={labelClass}>Skills</p>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {applicant.skills.map((skill, i) => (
+                  <span key={i} className={`px-2 py-0.5 rounded text-xs ${
+                    theme === 'dark' ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-100 text-purple-700'
+                  }`}>
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="flex gap-3">
+            {applicant.githubUrl && (
+              <a href={applicant.githubUrl} target="_blank" rel="noopener noreferrer" 
+                className={`text-sm ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'} hover:underline`}>
+                GitHub ↗
+              </a>
+            )}
+            {applicant.portfolioUrl && (
+              <a href={applicant.portfolioUrl} target="_blank" rel="noopener noreferrer"
+                className={`text-sm ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'} hover:underline`}>
+                Portfolio ↗
+              </a>
             )}
           </div>
         </div>
@@ -1308,26 +1408,28 @@ function ApplicantDetailContent({
       <div className="pt-4 space-y-3">
         <button
           onClick={onVerifyEmployment}
-          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm ${
+          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors ${
             theme === 'dark'
-              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-              : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+              ? 'bg-teal-500 text-white hover:bg-teal-400'
+              : 'bg-teal-600 text-white hover:bg-teal-500'
           }`}
         >
           <ClipboardCheck className="w-4 h-4" />
           Verify Employment History
         </button>
-        <button
-          onClick={onOrderMvr}
-          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm ${
-            theme === 'dark'
-              ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/40 hover:bg-brand-mint/30'
-              : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30 hover:bg-brand-sage/20'
-          }`}
-        >
-          <Car className="w-4 h-4" />
-          Order MVR Report
-        </button>
+        {isDriver && (
+          <button
+            onClick={onOrderMvr}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors ${
+              theme === 'dark'
+                ? 'bg-teal-500/20 text-teal-400 border border-teal-500/40 hover:bg-teal-500/30'
+                : 'bg-teal-50 text-teal-600 border border-teal-200 hover:bg-teal-100'
+            }`}
+          >
+            <Car className="w-4 h-4" />
+            Order MVR Report
+          </button>
+        )}
       </div>
     </div>
   )

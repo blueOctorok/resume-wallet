@@ -38,6 +38,21 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
   const [paymentTxHash, setPaymentTxHash] = useState<string | null>(null)
   const [isPaymentComplete, setIsPaymentComplete] = useState(false)
 
+  // Check if required form fields are filled
+  const isFormValid = Boolean(
+    firstName.trim() &&
+    lastName.trim() &&
+    email.trim() &&
+    ssn.trim() &&
+    dob.trim() &&
+    address.trim() &&
+    city.trim() &&
+    state.trim() &&
+    zip.trim() &&
+    dlNumber.trim() &&
+    dlState.trim()
+  )
+
   // Check for pending payment on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -439,13 +454,15 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
                       theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
                     }`}
                   >
-                    Complete payment to proceed with your MVR order.
+                    {isFormValid 
+                      ? 'Complete payment to proceed with your MVR order.'
+                      : 'Fill out all required fields above before paying.'}
                   </p>
                   <MvrPaymentButton
                     userAddress={userAddress}
                     onPaymentSuccess={handlePaymentSuccess}
                     onPaymentError={handlePaymentError}
-                    disabled={isLoading}
+                    disabled={isLoading || !isFormValid}
                   />
                 </div>
               ) : (
