@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { LayoutDashboard, Coins } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { LayoutDashboard, Coins, ChevronDown, RefreshCw, Car, Code, Building2 } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 import { useTheme } from '@/contexts/ThemeContext'
 import MvrStatusBadge from './MvrStatusBadge'
@@ -27,6 +27,8 @@ interface NavigationProps {
   onTClick?: () => void
   /** StormChain token balance for drivers - shown in nav */
   stormTokens?: number
+  /** Callback to switch user role */
+  onSwitchRole?: () => void
 }
 
 export default function Navigation({
@@ -38,9 +40,23 @@ export default function Navigation({
   tHasUnread = false,
   onTClick,
   stormTokens = 0,
+  onSwitchRole,
 }: NavigationProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isHubDropdownOpen, setIsHubDropdownOpen] = useState(false)
+  const hubDropdownRef = useRef<HTMLDivElement>(null)
   const { theme } = useTheme()
+
+  // Close hub dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (hubDropdownRef.current && !hubDropdownRef.current.contains(event.target as Node)) {
+        setIsHubDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
@@ -245,61 +261,69 @@ export default function Navigation({
                 </button>
               )}
 
-              {/* Driver Hub Button - Center position with gold rotating border */}
-              {userRole === 'driver' && isAuthenticated && (
-                <div className='relative md:absolute md:left-1/2 md:-translate-x-1/2 w-full md:w-auto'>
+              {/* Hub Button with Dropdown - Center position with gold rotating border */}
+              {userRole && isAuthenticated && (
+                <div 
+                  ref={hubDropdownRef}
+                  className='relative md:absolute md:left-1/2 md:-translate-x-1/2 w-full md:w-auto'
+                >
                   <div className='rotating-gold-border w-full md:w-auto'>
+                    {/* Single unified button - clicking opens dropdown */}
                     <button
-                      onClick={() => {
-                        handleNavigation('hub')
-                        setIsMenuOpen(false)
-                      }}
-                      className='w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2 relative z-10 cursor-pointer text-white bg-gray-800 hover:bg-gray-700'
+                      onClick={() => setIsHubDropdownOpen(!isHubDropdownOpen)}
+                      className='w-full md:w-auto px-5 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2 relative z-10 cursor-pointer text-white bg-gray-800 hover:bg-gray-700 transition-colors'
                     >
-                      <LayoutDashboard className='w-4 h-4' />
-                      Driver Hub
+                      {userRole === 'driver' && <Car className='w-4 h-4' />}
+                      {userRole === 'employer' && <Building2 className='w-4 h-4' />}
+                      {userRole === 'developer' && <Code className='w-4 h-4' />}
+                      {userRole === 'driver' && 'Driver Hub'}
+                      {userRole === 'employer' && 'Employer Hub'}
+                      {userRole === 'developer' && 'Developer Hub'}
+                      <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${isHubDropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
                   </div>
-                </div>
-              )}
 
-              {/* Employer Hub Button - Center position with gold rotating border */}
-              {userRole === 'employer' && isAuthenticated && (
-                <div className='relative md:absolute md:left-1/2 md:-translate-x-1/2 w-full md:w-auto'>
-                  <div className='rotating-gold-border w-full md:w-auto'>
-                    <button
-                      onClick={() => {
-                        handleNavigation('hub')
-                        setIsMenuOpen(false)
-                      }}
-                      className={`w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2 relative z-10 cursor-pointer ${
-                        theme === 'dark'
-                          ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 border border-indigo-500/40'
-                          : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                      }`}
-                    >
-                      <LayoutDashboard className='w-4 h-4' />
-                      Employer Hub
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Developer Hub Button - Center position with gold border */}
-              {userRole === 'developer' && isAuthenticated && (
-                <div className='relative md:absolute md:left-1/2 md:-translate-x-1/2 w-full md:w-auto'>
-                  <div className='rotating-gold-border w-full md:w-auto'>
-                    <button
-                      onClick={() => {
-                        handleNavigation('hub')
-                        setIsMenuOpen(false)
-                      }}
-                      className='w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2 relative z-10 cursor-pointer text-white bg-gray-800 hover:bg-gray-700'
-                    >
-                      <LayoutDashboard className='w-4 h-4' />
-                      Developer Hub
-                    </button>
-                  </div>
+                  {/* Dropdown menu */}
+                  {isHubDropdownOpen && (
+                    <div className={`absolute top-full left-0 right-0 mt-2 rounded-xl shadow-xl border overflow-hidden z-50 ${
+                      theme === 'dark'
+                        ? 'bg-gray-900 border-gray-700'
+                        : 'bg-white border-gray-200'
+                    }`}>
+                      <button
+                        onClick={() => {
+                          handleNavigation('hub')
+                          setIsMenuOpen(false)
+                          setIsHubDropdownOpen(false)
+                        }}
+                        className={`w-full px-4 py-3 text-sm font-medium flex items-center gap-3 transition-colors ${
+                          theme === 'dark'
+                            ? 'text-white hover:bg-gray-800'
+                            : 'text-gray-900 hover:bg-gray-50'
+                        }`}
+                      >
+                        <LayoutDashboard className='w-4 h-4' />
+                        Go to Hub
+                      </button>
+                      {onSwitchRole && (
+                        <button
+                          onClick={() => {
+                            onSwitchRole()
+                            setIsMenuOpen(false)
+                            setIsHubDropdownOpen(false)
+                          }}
+                          className={`w-full px-4 py-3 text-sm font-medium flex items-center gap-3 border-t transition-colors ${
+                            theme === 'dark'
+                              ? 'text-gray-300 hover:bg-gray-800 border-gray-700'
+                              : 'text-gray-700 hover:bg-gray-50 border-gray-100'
+                          }`}
+                        >
+                          <RefreshCw className='w-4 h-4' />
+                          Switch Role
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -1,0 +1,319 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { nanoid } from 'nanoid'
+import { sendCandidateRequestNotification } from '@/lib/send-admin-notification'
+
+/**
+ * POST /api/employer/talent/[userId]/recruit
+ * 
+ * Creates an employer-initiated application from a career card.
+ * This is when an employer wants to recruit a candidate for a specific job.
+ * 
+ * Body:
+ *   - jobPostingId: UUID of the job posting to create application for (required)
+ *   - message: Optional message to the candidate
+ * 
+ * This will:
+ *   1. Create an application with initiated_by = 'employer'
+ *   2. Capture a snapshot of the candidate's career card
+ *   3. Send email notification to the candidate
+ */
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ userId: string }> }
+) {
+  try {
+    const walletAddress = request.headers.get('x-wallet-address')
+    const { userId: candidateUserId } = await params
+    const body = await request.json()
+
+    const { jobPostingId, message } = body
+
+    if (!walletAddress) {
+      return NextResponse.json(
+        { error: 'Wallet address is required' },
+        { status: 401 }
+      )
+    }
+
+    if (!candidateUserId) {
+      return NextResponse.json(
+        { error: 'Candidate user ID is required' },
+        { status: 400 }
+      )
+    }
+
+    if (!jobPostingId) {
+      return NextResponse.json(
+        { error: 'Job posting ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const supabase = await getAdminSupabaseClient()
+
+    // Verify employer and get company
+    const { data: employer } = await supabase
+      .from('users')
+      .select('id, name, email')
+      .ilike('wallet_address', walletAddress)
+      .single()
+
+    if (!employer) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Get company membership
+    const { data: membership } = await supabase
+      .from('company_members')
+      .select('company_id, role')
+      .eq('user_id', employer.id)
+      .eq('is_active', true)
+      .single()
+
+    let companyId = membership?.company_id || null
+
+    if (!companyId) {
+      const { data: legacyCompany } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('employer_user_id', employer.id)
+        .single()
+
+      companyId = legacyCompany?.id || null
+    }
+
+    if (!companyId) {
+      return NextResponse.json({ error: 'No company access' }, { status: 403 })
+    }
+
+    // Verify job posting belongs to this company
+    const { data: jobPosting } = await supabase
+      .from('job_postings')
+      .select('id, title, company_id, status')
+      .eq('id', jobPostingId)
+      .single()
+
+    if (!jobPosting) {
+      return NextResponse.json({ error: 'Job posting not found' }, { status: 404 })
+    }
+
+    if (jobPosting.company_id !== companyId) {
+      return NextResponse.json(
+        { error: 'Job posting does not belong to your company' },
+        { status: 403 }
+      )
+    }
+
+    if (jobPosting.status !== 'active') {
+      return NextResponse.json(
+        { error: 'Job posting is not active' },
+        { status: 400 }
+      )
+    }
+
+    // Verify candidate exists and is a driver/developer
+    const { data: candidate } = await supabase
+      .from('users')
+      .select('id, role, email, name')
+      .eq('id', candidateUserId)
+      .single()
+
+    if (!candidate) {
+      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
+    }
+
+    if (!['driver', 'developer'].includes(candidate.role || '')) {
+      return NextResponse.json(
+        { error: 'User is not a candidate (driver or developer)' },
+        { status: 400 }
+      )
+    }
+
+    // Check for existing application
+    const { data: existingApp } = await supabase
+      .from('applications')
+      .select('id, status, initiated_by')
+      .eq('job_posting_id', jobPostingId)
+      .eq('applicant_user_id', candidateUserId)
+      .single()
+
+    if (existingApp) {
+      return NextResponse.json(
+        { 
+          error: 'Application already exists',
+          existingApplication: {
+            id: existingApp.id,
+            status: existingApp.status,
+            initiatedBy: existingApp.initiated_by,
+          }
+        },
+        { status: 409 }
+      )
+    }
+
+    // Gather career card snapshot data
+    const careerCardSnapshot: Record<string, unknown> = {
+      capturedAt: new Date().toISOString(),
+      candidateName: candidate.name,
+      candidateEmail: candidate.email,
+      candidateRole: candidate.role,
+    }
+
+    // Get driver profile if applicable
+    if (candidate.role === 'driver') {
+      const { data: driverProfile } = await supabase
+        .from('driver_profiles')
+        .select('*')
+        .eq('user_id', candidateUserId)
+        .single()
+
+      if (driverProfile) {
+        careerCardSnapshot.driverProfile = {
+          cdlClass: driverProfile.cdl_class,
+          cdlState: driverProfile.cdl_state,
+          yearsExperience: driverProfile.years_experience,
+          endorsements: driverProfile.endorsements,
+        }
+      }
+
+      // Get driver application data
+      const { data: driverApp } = await supabase
+        .from('driver_applications')
+        .select('id, verification_status')
+        .eq('user_id', candidateUserId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (driverApp) {
+        careerCardSnapshot.driverApplicationId = driverApp.id
+        careerCardSnapshot.driverApplicationStatus = driverApp.verification_status
+      }
+
+      // Get latest MVR
+      const { data: mvr } = await supabase
+        .from('mvr_orders')
+        .select('id, order_status')
+        .eq('driver_user_id', candidateUserId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (mvr) {
+        careerCardSnapshot.hasMvr = true
+        careerCardSnapshot.mvrStatus = mvr.order_status
+      }
+    }
+
+    // Get developer profile if applicable
+    if (candidate.role === 'developer') {
+      const { data: devProfile } = await supabase
+        .from('developer_profiles')
+        .select('*')
+        .eq('user_id', candidateUserId)
+        .single()
+
+      if (devProfile) {
+        careerCardSnapshot.developerProfile = {
+          skills: devProfile.skills,
+          yearsExperience: devProfile.years_experience,
+          githubUrl: devProfile.github_url,
+          portfolioUrl: devProfile.portfolio_url,
+        }
+      }
+    }
+
+    // Get latest resume
+    const { data: resume } = await supabase
+      .from('resumes')
+      .select('id, title, filename')
+      .eq('user_id', candidateUserId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (resume) {
+      careerCardSnapshot.resumeId = resume.id
+      careerCardSnapshot.resumeTitle = resume.title
+    }
+
+    // Get company name for notification
+    const { data: company } = await supabase
+      .from('companies')
+      .select('name')
+      .eq('id', companyId)
+      .single()
+
+    // Create the application
+    const shareToken = nanoid(16)
+    
+    const { data: application, error: insertError } = await supabase
+      .from('applications')
+      .insert({
+        job_posting_id: jobPostingId,
+        applicant_user_id: candidateUserId,
+        driver_application_id: careerCardSnapshot.driverApplicationId || null,
+        resume_id: resume?.id || null,
+        cover_letter: message || null,
+        status: 'submitted',
+        share_token: shareToken,
+        initiated_by: 'employer',
+        recruited_by_user_id: employer.id,
+        career_card_snapshot: careerCardSnapshot,
+        application_data: {
+          recruiterMessage: message || null,
+          jobTitle: jobPosting.title,
+          companyName: company?.name,
+        },
+      })
+      .select()
+      .single()
+
+    if (insertError) {
+      console.error('[RECRUIT] Insert error:', insertError)
+      return NextResponse.json(
+        { error: 'Failed to create application' },
+        { status: 500 }
+      )
+    }
+
+    console.log(`[RECRUIT] Created application ${application.id} for candidate ${candidateUserId} via employer ${employer.id}`)
+
+    // Send email notification to candidate (non-blocking)
+    if (candidate.email) {
+      sendCandidateRequestNotification({
+        candidateEmail: candidate.email,
+        candidateName: candidate.name || 'Candidate',
+        companyName: company?.name || 'A company',
+        requestType: 'custom',
+        message: `${company?.name || 'A company'} is interested in you for the position of ${jobPosting.title}! They've created an application on your behalf.${message ? ` Their message: "${message}"` : ''}`,
+      }).then(result => {
+        if (result.ok) {
+          console.log(`[RECRUIT] Email sent to ${candidate.email}`)
+        } else {
+          console.warn(`[RECRUIT] Email failed: ${result.error}`)
+        }
+      }).catch(err => {
+        console.error('[RECRUIT] Email error:', err)
+      })
+    }
+
+    return NextResponse.json({
+      success: true,
+      application: {
+        id: application.id,
+        jobPostingId: application.job_posting_id,
+        candidateUserId: application.applicant_user_id,
+        status: application.status,
+        initiatedBy: application.initiated_by,
+        shareToken: application.share_token,
+        createdAt: application.applied_at,
+      },
+    })
+
+  } catch (error) {
+    console.error('[RECRUIT] Unexpected error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

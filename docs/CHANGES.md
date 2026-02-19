@@ -2,6 +2,209 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🔔 **Phase 3: Notifications & Employer-Initiated Recruiting** (February 2026)
+
+**Complete the talent search experience with candidate notifications and employer-initiated applications.**
+
+### Overview
+
+Phase 3 closes the loop on employer-candidate interactions by:
+1. Notifying candidates when employers show interest
+2. Giving candidates a UI to view and respond to requests
+3. Enabling employers to recruit candidates directly from career cards
+
+### New API Routes
+
+**`GET /api/candidate/requests`**
+- Returns all requests sent to the current candidate
+- Includes company info for each request
+- Counts pending requests for badge display
+
+**`GET /api/candidate/requests/[requestId]`**
+- Gets a single request with full details
+- Auto-marks as 'viewed' if currently 'pending'
+
+**`PATCH /api/candidate/requests/[requestId]`**
+- Updates request status (viewed, completed, declined)
+- Validates ownership - candidates can only update their own requests
+- Tracks completion timestamps and reference IDs
+
+**`POST /api/employer/talent/[userId]/recruit`**
+- Creates an employer-initiated application from career card
+- Captures snapshot of candidate's profile at time of recruitment
+- Sends email notification to candidate
+- Sets `initiated_by: 'employer'` on application record
+
+### New Components
+
+**`CandidateRequestsSection.tsx`**
+- Displays employer requests in Driver/Developer Hubs
+- Shows pending count badge
+- Request type icons and labels (MVR, Document, Verification, etc.)
+- Modal for viewing request details and taking action
+- Actions: Complete, Decline, Navigate to relevant section
+
+### Updated Components
+
+**`CareerCardModal.tsx`**
+- Added "Recruit Candidate" button (replaces non-functional "Create Application")
+- Job posting selection modal
+- Optional message to candidate
+- Creates application via `/recruit` API
+
+**`DriverHub.tsx` & `DeveloperHub.tsx`**
+- Added `CandidateRequestsSection` component
+- Shows employer interest directly in the hub
+
+### Email Notifications
+
+**Extended `send-admin-notification.ts`:**
+- Added `sendCandidateRequestNotification()` function
+- Sends styled HTML emails when employers:
+  - Request documents/MVR
+  - Create verification requests
+  - Recruit for a job position
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `src/app/api/candidate/requests/route.ts` | List all requests for candidate |
+| `src/app/api/candidate/requests/[requestId]/route.ts` | Get/update individual request |
+| `src/app/api/employer/talent/[userId]/recruit/route.ts` | Employer-initiated applications |
+| `src/components/CandidateRequestsSection.tsx` | Hub UI for candidate requests |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `src/lib/send-admin-notification.ts` | Added candidate notification function |
+| `src/app/api/employer/talent/[userId]/request/route.ts` | Wired up email notifications |
+| `src/components/employer/CareerCardModal.tsx` | Added recruit modal and functionality |
+| `src/components/DriverHub.tsx` | Added CandidateRequestsSection |
+| `src/components/DeveloperHub.tsx` | Added CandidateRequestsSection |
+
+---
+
+## 🎛️ **Hub Button Dropdown & Role Switching** (February 2026)
+
+**Moved role switching to the Navigation hub button with dropdown menu.**
+
+### Changes
+
+1. **Hub Button Dropdown** (`Navigation.tsx`)
+   - Hub button now has a dropdown toggle (chevron)
+   - Dropdown menu contains:
+     - "Go to Hub" - navigates to the hub
+     - "Switch Role" - opens role selection modal
+   - Dropdown closes when clicking outside
+   - Uses role-specific icons (Car, Building2, Code)
+
+2. **Removed from Wallet** (`UserStatusModal.tsx`)
+   - "Change Role" button removed from wallet modal
+   - Cleaned up unused `onSwitchRole` prop and `handleSwitchRole` function
+
+3. **Props Updated** (`page.tsx`)
+   - Navigation now receives `onSwitchRole={() => setShowRoleSelection(true)}`
+   - UserStatusModal no longer receives `onSwitchRole`
+
+### Why This Matters
+
+Role switching is now more discoverable in the navigation while keeping the wallet focused on wallet-related actions (balances, send/receive, transactions).
+
+---
+
+## 🔍 **Phase 2: Talent Search UI & Employer Actions** (February 2026)
+
+**Complete talent search experience for employers with career card modal and action APIs.**
+
+### Overview
+
+Phase 2 delivers the user-facing components and APIs that enable employers to search for candidates, view detailed career cards, and take actions (request documents, order MVRs).
+
+### New API Routes
+
+**`GET /api/employer/talent/search`**
+- Uses the `search_talent()` SQL function for efficient filtering
+- Supports filters: role, CDL class, state, min experience, has MVR, has driver app
+- Pagination with limit/offset
+- Returns candidates with completeness scores and credential flags
+
+**`GET /api/employer/talent/[userId]`**
+- Gets full career card data for a specific candidate
+- Includes profile, resume, DOT application, MVR, work history, verifications
+- Shows pending requests from the employer's company
+- Flags if candidate has already applied to company's jobs
+
+**`POST /api/employer/talent/[userId]/request`**
+- Creates requests from employer to candidate
+- Request types: `mvr_order`, `document_upload`, `verification`, `profile_completion`, `custom`
+- Prevents duplicate pending requests
+- Auto-expiration after configurable days (default 30)
+
+**`GET /api/employer/talent/[userId]/request`**
+- Gets all requests from employer's company to a specific candidate
+
+### New Components
+
+**`TalentSearchPage.tsx`**
+- Full talent search interface accessible from EmployerHub
+- Filters for role (driver/developer), CDL class, state, experience
+- Toggle filters for has MVR, has DOT app
+- Text search (name, city, email)
+- Candidate cards show profile score, credentials, and badges
+- Pagination with "Load More"
+- Click to open career card modal
+
+**`CareerCardModal.tsx`**
+- Full career card view in modal overlay
+- Sections: Contact, CDL Info (drivers), Links/Skills (developers), Resume, MVR, DOT App, Work History
+- Profile completeness score with visual indicators
+- Employer action buttons:
+  - "Request Resume" (if missing)
+  - "Order MVR" (if missing, drivers only)
+- Shows pending requests to this candidate
+- Link to public profile if available
+- "Create Application" button (for employer-initiated recruiting)
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `src/app/api/employer/talent/search/route.ts` | Talent search API |
+| `src/app/api/employer/talent/[userId]/route.ts` | Career card data API |
+| `src/app/api/employer/talent/[userId]/request/route.ts` | Candidate request API |
+| `src/components/employer/TalentSearchPage.tsx` | Talent search UI |
+| `src/components/employer/CareerCardModal.tsx` | Career card modal |
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `src/app/page.tsx` | Added TalentSearchPage dynamic import and route |
+| `supabase/migrations/020_talent_search_career_cards.sql` | Fixed column references |
+
+### Employer Workflow
+
+1. Click "Find Talent" in EmployerHub
+2. Apply filters (role, CDL class, state, experience, credentials)
+3. Browse candidate cards with completeness scores
+4. Click candidate to open career card modal
+5. View full profile, credentials, work history
+6. Take actions:
+   - Request missing documents
+   - Order MVR for driver candidates
+   - Create application from career card
+
+### Next Steps (Phase 3)
+
+- Notification system for candidates when employer takes action
+- Email notifications for document/MVR requests
+- Candidate-side UI to view and respond to requests
+- Employer-initiated application flow (create application from career card)
+
+---
+
 ## 🔍 **Phase 1: Talent Search & Career Cards** (February 2026)
 
 **Foundation for employer talent discovery and career card system.**

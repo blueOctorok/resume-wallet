@@ -270,6 +270,17 @@ const FindDriversPage = dynamic(
   }
 )
 
+const TalentSearchPage = dynamic(
+  () =>
+    import('@/components/employer/TalentSearchPage').then((mod) => mod.default),
+  {
+    ssr: false,
+    loading: () => (
+      <LoadingScreen message='Loading talent search...' fullScreen={false} />
+    ),
+  }
+)
+
 const RoleSelectionModal = dynamic(
   () => import('@/components/RoleSelectionModal').then((mod) => mod.default),
   {
@@ -582,19 +593,6 @@ const HomeContent = () => {
     [user]
   )
 
-  // Handle role switching from WalletCard
-  const handleSwitchRole = useCallback(() => {
-    if (!userRole) return
-
-    const newRole = userRole === 'driver' ? 'employer' : 'driver'
-    const confirmed = confirm(
-      `Switch to ${newRole === 'driver' ? 'Driver' : 'Employer'} role?\n\nThis will change your account type and navigate you to the ${newRole} dashboard.`
-    )
-
-    if (confirmed) {
-      handleRoleSelection(newRole)
-    }
-  }, [userRole, handleRoleSelection])
 
   const resetApplicationProgress = useCallback(() => {
     console.log(
@@ -2495,6 +2493,7 @@ const HomeContent = () => {
           tHasUnread={avaHasUnread}
           onTClick={() => setIsAvaCollapsed(false)}
           stormTokens={0} // TODO: Replace with actual token balance when implemented
+          onSwitchRole={() => setShowRoleSelection(true)}
         />
 
         {/* User Status Modal */}
@@ -2508,7 +2507,6 @@ const HomeContent = () => {
             chain: user?.chain,
           }}
           userRole={userRole}
-          onSwitchRole={handleSwitchRole}
         />
 
         {/* Role Selection Modal - rendered here so z-[80] sits above nav (z-50); was overlapping when inside main content (z-0) */}
@@ -2584,6 +2582,7 @@ const HomeContent = () => {
                     page === 'jobs' ||
                     page === 'applicants' ||
                     page === 'find-drivers' ||
+                    page === 'talent-search' ||
                     page === 'company-profile' ||
                     page === 'reports'
                   ) {
@@ -2609,6 +2608,16 @@ const HomeContent = () => {
             !isRoleLoading &&
             currentPage === 'find-drivers' && (
               <FindDriversPage
+                walletAddress={user.address}
+                onBack={() => setCurrentPage(null)}
+              />
+            )}
+
+          {user &&
+            userRole === 'employer' &&
+            !isRoleLoading &&
+            currentPage === 'talent-search' && (
+              <TalentSearchPage
                 walletAddress={user.address}
                 onBack={() => setCurrentPage(null)}
               />

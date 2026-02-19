@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import ShareProfileCard from './ShareProfileCard'
 import DeveloperEmploymentVerificationSection from './verification/DeveloperEmploymentVerificationSection'
+import CandidateRequestsSection from './CandidateRequestsSection'
 import DeveloperResumeBuilder from './DeveloperResumeBuilder'
 import DeveloperResumePreviewModal from './DeveloperResumePreviewModal'
 import UploadResumeModal from './UploadResumeModal'
@@ -851,6 +852,14 @@ export default function DeveloperHub({
       {/* Employment Verification - Developer only (resume / profile data) */}
       <div className="mb-6">
         <DeveloperEmploymentVerificationSection userAddress={userAddress} />
+      </div>
+
+      {/* Employer Requests - Requests from interested employers */}
+      <div className="mb-6">
+        <CandidateRequestsSection
+          userAddress={userAddress}
+          onNavigateToResume={() => onNavigate('resume')}
+        />
       </div>
 
       {/* Main Sections Grid */}

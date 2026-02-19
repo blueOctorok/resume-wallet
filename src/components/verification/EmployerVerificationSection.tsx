@@ -175,14 +175,14 @@ export default function EmployerVerificationSection({
 
   if (loading) {
     return (
-      <div className={`rounded-2xl p-6 ${
+      <div className={`rounded-2xl p-6 border shadow-lg transition-all duration-200 ${
         theme === 'dark'
-          ? 'bg-brand-sage-dark/50 border border-brand-mint/30'
-          : 'bg-white border border-brand-sage/20 shadow-lg'
+          ? 'bg-gray-800/50 border-gray-700'
+          : 'bg-white border-gray-200'
       }`}>
         <div className="flex items-center justify-center py-8">
           <Loader2 className={`w-6 h-6 animate-spin ${
-            theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+            theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
           }`} />
         </div>
       </div>
@@ -208,14 +208,14 @@ export default function EmployerVerificationSection({
 
   if (!hasCompany) {
     return (
-      <div className={`rounded-2xl p-6 ${
+      <div className={`rounded-2xl p-6 border shadow-lg transition-all duration-200 ${
         theme === 'dark'
-          ? 'bg-brand-sage-dark/50 border border-brand-mint/30'
-          : 'bg-white border border-brand-sage/20 shadow-lg'
+          ? 'bg-gray-800/50 border-gray-700'
+          : 'bg-white border-gray-200'
       }`}>
         <div className="flex items-center gap-3 mb-4">
           <ClipboardCheck className={`w-5 h-5 ${
-            theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+            theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
           }`} />
           <h3 className={`font-semibold ${
             theme === 'dark' ? 'text-white' : 'text-gray-900'
@@ -234,19 +234,19 @@ export default function EmployerVerificationSection({
 
   return (
     <>
-      <div className={`rounded-2xl p-6 ${
+      <div className={`rounded-2xl p-6 border shadow-lg transition-all duration-200 ${
         theme === 'dark'
-          ? 'bg-brand-sage-dark/50 border border-brand-mint/30'
-          : 'bg-white border border-brand-sage/20 shadow-lg'
+          ? 'bg-gray-800/50 border-gray-700'
+          : 'bg-white border-gray-200'
       }`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-lg ${
-              theme === 'dark' ? 'bg-brand-mint/20' : 'bg-brand-sage/10'
+              theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
             }`}>
               <ClipboardCheck className={`w-5 h-5 ${
-                theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
               }`} />
             </div>
             <div>
@@ -492,7 +492,9 @@ function EmployerVerificationDetailModal({
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin" />
+            <Loader2 className={`w-6 h-6 animate-spin ${
+              theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
+            }`} />
           </div>
         ) : (
           <div className="p-4 space-y-6">
@@ -588,8 +590,8 @@ function EmployerVerificationDetailModal({
                       disabled={sending}
                       className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${
                         theme === 'dark'
-                          ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                          : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+                          ? 'bg-teal-600 text-white hover:bg-teal-500'
+                          : 'bg-teal-600 text-white hover:bg-teal-500'
                       } disabled:opacity-50`}
                     >
                       {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}

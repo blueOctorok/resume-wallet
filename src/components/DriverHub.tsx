@@ -5,6 +5,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import ShareProfileCard from './ShareProfileCard'
 import DriverVerificationSection from './verification/DriverVerificationSection'
 import DriverEmploymentVerificationSection from './verification/DriverEmploymentVerificationSection'
+import CandidateRequestsSection from './CandidateRequestsSection'
 import ResumePreviewModal from './ResumePreviewModal'
 import UploadResumeModal from './UploadResumeModal'
 import {
@@ -1120,6 +1121,17 @@ export default function DriverHub({
       {/* ============================================================ */}
       <div className='mb-6'>
         <DriverEmploymentVerificationSection userAddress={userAddress} />
+      </div>
+
+      {/* ============================================================ */}
+      {/* EMPLOYER REQUESTS - Requests from interested employers */}
+      {/* ============================================================ */}
+      <div className='mb-6'>
+        <CandidateRequestsSection
+          userAddress={userAddress}
+          onNavigateToResume={() => onNavigate('resume')}
+          onNavigateToDotApp={() => onNavigate('dotapp')}
+        />
       </div>
 
       {/* ============================================================ */}

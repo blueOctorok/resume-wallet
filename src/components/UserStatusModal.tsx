@@ -32,7 +32,6 @@ interface UserStatusModalProps {
     chain?: string
   }
   userRole?: 'driver' | 'developer' | 'employer' | null
-  onSwitchRole?: () => void
 }
 
 type WalletTab = 'overview' | 'send' | 'receive' | 'history'
@@ -44,7 +43,6 @@ export default function UserStatusModal({
   onLogout,
   user,
   userRole,
-  onSwitchRole,
 }: UserStatusModalProps) {
   const { theme } = useTheme()
   const [activeTab, setActiveTab] = useState<WalletTab>('overview')
@@ -53,11 +51,6 @@ export default function UserStatusModal({
 
   const handleLogout = () => {
     onLogout()
-    onClose()
-  }
-
-  const handleSwitchRole = () => {
-    onSwitchRole?.()
     onClose()
   }
 
@@ -363,11 +356,6 @@ export default function UserStatusModal({
 
                 {/* Action Buttons */}
                 <div className='space-y-3 pt-2'>
-                  {userRole && onSwitchRole && (
-                    <button onClick={handleSwitchRole} className={buttonSecondary}>
-                      Change Role
-                    </button>
-                  )}
                   <button onClick={handleLogout} className={buttonPrimary}>
                     Sign Out
                   </button>
