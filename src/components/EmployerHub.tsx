@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import EmployerVerificationSection from './verification/EmployerVerificationSection'
+import ApplicantKanban, { type KanbanApplicant } from './employer/ApplicantKanban'
+import CandidateNotesPanel from './employer/CandidateNotesPanel'
 import {
   Briefcase,
   Users,
@@ -31,6 +33,8 @@ import {
   Search,
   ClipboardCheck,
   Code,
+  LayoutGrid,
+  List,
 } from 'lucide-react'
 
 // ============================================================
@@ -172,7 +176,11 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   const [selectedApplicant, setSelectedApplicant] = useState<HubApplicant | null>(null)
   const [selectedJob, setSelectedJob] = useState<HubJobPosting | null>(null)
   const [selectedMvr, setSelectedMvr] = useState<HubMvrOrder | null>(null)
-  
+
+  // Pipeline view state (list vs kanban)
+  const [pipelineView, setPipelineView] = useState<'list' | 'kanban'>('kanban')
+  const [updatingApplicationId, setUpdatingApplicationId] = useState<string | null>(null)
+
   // Employment verification states
   const [showVerifyModal, setShowVerifyModal] = useState(false)
   const [verifyingDriverId, setVerifyingDriverId] = useState<string | null>(null)
@@ -211,6 +219,35 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       fetchHubData()
     }
   }, [walletAddress, fetchHubData])
+
+  // Handle application status change (for Kanban drag-drop)
+  const handleStatusChange = async (applicationId: string, newStatus: string) => {
+    try {
+      setUpdatingApplicationId(applicationId)
+      
+      const response = await fetch(`/api/employer/applications/${applicationId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': walletAddress,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (!response.ok) {
+        const errData = await response.json()
+        throw new Error(errData.error || 'Failed to update status')
+      }
+
+      // Refresh data to get updated pipeline counts
+      await fetchHubData()
+    } catch (err) {
+      console.error('Error updating application status:', err)
+      alert(err instanceof Error ? err.message : 'Failed to update status')
+    } finally {
+      setUpdatingApplicationId(null)
+    }
+  }
 
   // Open employment verification modal
   const openVerifyEmploymentModal = async (driverUserId: string) => {
@@ -435,32 +472,109 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         />
       </div>
 
-      {/* Pipeline Overview */}
+      {/* Pipeline Section */}
       <div className={`rounded-2xl p-6 mb-8 border shadow-lg transition-all duration-200 ${
         theme === 'dark'
           ? 'bg-gray-800/50 border-gray-700'
           : 'bg-white/70 border-gray-200'
       }`}>
-        <h2 className={`text-lg font-semibold mb-4 ${
-          theme === 'dark' ? 'text-white' : 'text-gray-900'
-        }`}>
-          Hiring Pipeline
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          <PipelineStage label="New" count={data.pipeline.new} color="blue" theme={theme} />
-          <ChevronRight className={`w-5 h-5 self-center ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
-          <PipelineStage label="Reviewing" count={data.pipeline.reviewing} color="purple" theme={theme} />
-          <ChevronRight className={`w-5 h-5 self-center ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
-          <PipelineStage label="Interviewing" count={data.pipeline.interviewing} color="orange" theme={theme} />
-          <ChevronRight className={`w-5 h-5 self-center ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
-          <PipelineStage label="Offer Sent" count={data.pipeline.offerSent} color="cyan" theme={theme} />
-          <ChevronRight className={`w-5 h-5 self-center ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
-          <PipelineStage label="Hired" count={data.pipeline.hired} color="green" theme={theme} />
+        {/* Header with View Toggle */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className={`text-lg font-semibold ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            Hiring Pipeline
+          </h2>
+          <div className={`flex items-center gap-1 p-1 rounded-lg ${
+            theme === 'dark' ? 'bg-gray-900/50' : 'bg-gray-100'
+          }`}>
+            <button
+              onClick={() => setPipelineView('list')}
+              className={`p-2 rounded-md transition-colors ${
+                pipelineView === 'list'
+                  ? 'bg-teal-600 text-white'
+                  : theme === 'dark'
+                    ? 'text-gray-400 hover:text-white'
+                    : 'text-gray-500 hover:text-gray-700'
+              }`}
+              title="List view"
+            >
+              <List className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setPipelineView('kanban')}
+              className={`p-2 rounded-md transition-colors ${
+                pipelineView === 'kanban'
+                  ? 'bg-teal-600 text-white'
+                  : theme === 'dark'
+                    ? 'text-gray-400 hover:text-white'
+                    : 'text-gray-500 hover:text-gray-700'
+              }`}
+              title="Kanban view"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          </div>
         </div>
-        {data.pipeline.rejected > 0 && (
-          <p className={`mt-3 text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-            {data.pipeline.rejected} rejected
-          </p>
+
+        {/* List View - Compact Pipeline Summary */}
+        {pipelineView === 'list' && (
+          <>
+            <div className="flex flex-wrap gap-2">
+              <PipelineStage label="New" count={data.pipeline.new} color="blue" theme={theme} />
+              <ChevronRight className={`w-5 h-5 self-center ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
+              <PipelineStage label="Reviewing" count={data.pipeline.reviewing} color="purple" theme={theme} />
+              <ChevronRight className={`w-5 h-5 self-center ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
+              <PipelineStage label="Interviewing" count={data.pipeline.interviewing} color="orange" theme={theme} />
+              <ChevronRight className={`w-5 h-5 self-center ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
+              <PipelineStage label="Offer Sent" count={data.pipeline.offerSent} color="cyan" theme={theme} />
+              <ChevronRight className={`w-5 h-5 self-center ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
+              <PipelineStage label="Hired" count={data.pipeline.hired} color="green" theme={theme} />
+            </div>
+            {data.pipeline.rejected > 0 && (
+              <p className={`mt-3 text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                {data.pipeline.rejected} rejected
+              </p>
+            )}
+          </>
+        )}
+
+        {/* Kanban View - Full Board */}
+        {pipelineView === 'kanban' && (
+          <div className="-mx-2 mt-2">
+            {data.applicants.length === 0 ? (
+              <EmptyState
+                icon={<Users className="w-12 h-12" />}
+                title="No applicants yet"
+                description="Post a job or search for talent to start building your pipeline"
+                actionLabel="Find Talent"
+                onAction={() => onNavigate('talent-search')}
+                theme={theme}
+              />
+            ) : (
+              <ApplicantKanban
+                applicants={data.applicants.map(a => ({
+                  applicationId: a.applicationId,
+                  status: a.status,
+                  appliedAt: a.appliedAt,
+                  applicantUserId: a.applicantUserId,
+                  applicantName: a.applicantName,
+                  applicantRole: a.applicantRole,
+                  jobTitle: a.jobTitle,
+                  jobPostingId: a.jobPostingId,
+                }))}
+                walletAddress={walletAddress}
+                onStatusChange={handleStatusChange}
+                onSelectApplicant={(applicant) => {
+                  const fullApplicant = data.applicants.find(
+                    a => a.applicationId === applicant.applicationId
+                  )
+                  if (fullApplicant) setSelectedApplicant(fullApplicant)
+                }}
+                isUpdating={updatingApplicationId}
+              />
+            )}
+          </div>
         )}
       </div>
 
@@ -663,22 +777,38 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       {/* Detail Modals */}
       {selectedApplicant && (
         <DetailModal
-          title={selectedApplicant.driverName}
+          title={selectedApplicant.applicantName || (selectedApplicant as any).driverName}
           subtitle={`Applied for ${selectedApplicant.jobTitle}`}
           onClose={() => setSelectedApplicant(null)}
           theme={theme}
         >
-          <ApplicantDetailContent
-            applicant={selectedApplicant}
-            theme={theme}
-            onOrderMvr={() => {
-              // TODO: Implement MVR ordering
-              console.log('Order MVR for', selectedApplicant.driverUserId)
-            }}
-            onVerifyEmployment={() => {
-              openVerifyEmploymentModal(selectedApplicant.driverUserId)
-            }}
-          />
+          <div className="grid md:grid-cols-3 gap-4">
+            {/* Main Applicant Details */}
+            <div className="md:col-span-2">
+              <ApplicantDetailContent
+                applicant={selectedApplicant}
+                theme={theme}
+                walletAddress={walletAddress}
+                onOrderMvr={() => {
+                  // TODO: Implement MVR ordering
+                  console.log('Order MVR for', selectedApplicant.applicantUserId)
+                }}
+                onVerifyEmployment={() => {
+                  openVerifyEmploymentModal(selectedApplicant.applicantUserId || (selectedApplicant as any).driverUserId)
+                }}
+                onStatusChange={handleStatusChange}
+              />
+            </div>
+            {/* Notes Panel */}
+            <div className="md:col-span-1">
+              <CandidateNotesPanel
+                candidateUserId={selectedApplicant.applicantUserId || (selectedApplicant as any).driverUserId}
+                applicationId={selectedApplicant.applicationId}
+                walletAddress={walletAddress}
+                candidateName={selectedApplicant.applicantName || (selectedApplicant as any).driverName}
+              />
+            </div>
+          </div>
         </DetailModal>
       )}
 
@@ -1232,14 +1362,20 @@ function DetailModal({
 function ApplicantDetailContent({ 
   applicant, 
   theme,
+  walletAddress,
   onOrderMvr,
   onVerifyEmployment,
+  onStatusChange,
 }: { 
   applicant: HubApplicant
   theme: string
+  walletAddress: string
   onOrderMvr: () => void
   onVerifyEmployment: () => void
+  onStatusChange: (applicationId: string, newStatus: string) => Promise<void>
 }) {
+  const [changingStatus, setChangingStatus] = useState(false)
+  
   const labelClass = `text-xs font-semibold uppercase tracking-wide ${
     theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
   }`
@@ -1251,8 +1387,63 @@ function ApplicantDetailContent({
   const role = (applicant as any).applicantRole || 'driver'
   const isDriver = role === 'driver'
 
+  const statusLabels: Record<string, { label: string; color: string }> = {
+    submitted: { label: 'New', color: 'blue' },
+    under_review: { label: 'Reviewing', color: 'yellow' },
+    interview: { label: 'Interviewing', color: 'purple' },
+    offer: { label: 'Offer Sent', color: 'teal' },
+    hired: { label: 'Hired', color: 'green' },
+    rejected: { label: 'Rejected', color: 'gray' },
+    withdrawn: { label: 'Withdrawn', color: 'gray' },
+  }
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (newStatus === applicant.status) return
+    setChangingStatus(true)
+    try {
+      await onStatusChange(applicant.applicationId, newStatus)
+    } finally {
+      setChangingStatus(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
+      {/* Status Section */}
+      <div className={`p-4 rounded-xl ${
+        theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
+      }`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className={labelClass}>Application Status</p>
+            <p className={`text-sm font-medium ${
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}>
+              {statusLabels[applicant.status]?.label || applicant.status}
+            </p>
+          </div>
+          <select
+            value={applicant.status}
+            onChange={(e) => handleStatusChange(e.target.value)}
+            disabled={changingStatus}
+            className={`px-3 py-2 text-sm rounded-lg border ${
+              changingStatus ? 'opacity-50 cursor-not-allowed' : ''
+            } ${
+              theme === 'dark'
+                ? 'bg-gray-900 border-gray-700 text-white'
+                : 'bg-white border-gray-300 text-gray-900'
+            }`}
+          >
+            <option value="submitted">New</option>
+            <option value="under_review">Reviewing</option>
+            <option value="interview">Interviewing</option>
+            <option value="offer">Offer Sent</option>
+            <option value="hired">Hired</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+      </div>
+
       {/* Contact Info */}
       <div className="flex flex-wrap gap-3">
         {email && (

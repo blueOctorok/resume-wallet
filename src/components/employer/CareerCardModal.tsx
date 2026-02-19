@@ -155,7 +155,7 @@ interface CareerCardModalProps {
 interface JobPosting {
   id: string
   title: string
-  status: string
+  isActive: boolean
 }
 
 export default function CareerCardModal({
@@ -265,7 +265,7 @@ export default function CareerCardModal({
 
       const data = await response.json()
       // Filter to only active jobs
-      const activeJobs = (data.jobs || []).filter((j: JobPosting) => j.status === 'active')
+      const activeJobs = (data.jobs || []).filter((j: JobPosting) => j.isActive)
       setJobPostings(activeJobs)
     } catch (err) {
       console.error('Error fetching jobs:', err)

@@ -320,32 +320,35 @@ Results stored and shared with future employer
 
 ---
 
-#### 🔜 **Phase 4: Applicant Review & Hiring (Q2 2026)**
+#### ✅ **Phase 4: Applicant Review & Hiring (COMPLETE - February 2026)**
+
+**Kanban Pipeline Board:**
+
+- ✅ Drag-drop applicant management between status columns
+- ✅ 6 pipeline stages: New → Reviewing → Interviewing → Offer Sent → Hired → Rejected
+- ✅ Visual status indicators with color-coded columns and badges
+- ✅ View toggle between compact list view and full Kanban board
 
 **Applicant Management:**
 
-- View all applications for each job posting
-- Filter applicants by qualifications, experience
-- Review driver DQ files (blockchain-verified)
-- Application status pipeline:
-  - Submitted → Under Review → Interview → Offer → Hired/Rejected
-- Add internal notes and ratings
-- Communication system (messages/emails)
+- ✅ Status update API with employer ownership validation
+- ✅ Email notifications to candidates on status changes
+- ✅ Status-specific email templates (reviewing, interview, offer, hired, rejected)
 
-**Credential Verification:**
+**Notes & Ratings System:**
 
-- Instant blockchain verification of DQ files
-- View complete DOT applications
-- Access resume, MVR, medical certificates (when available)
-- Flag expired documents or discrepancies
+- ✅ Private employer notes about candidates
+- ✅ 1-5 star rating system
+- ✅ Quick tags (Hot Candidate, Backup, Needs Follow-up) + custom tags
+- ✅ Timeline view of notes in chronological order
 
 **Technical Implementation:**
 
-- Applicant dashboard UI
-- Status management system
-- Blockchain verification integration
-- Document viewer for driver files
-- Messaging/notification system
+- ✅ `ApplicantKanban.tsx` - HTML5 drag-drop Kanban board
+- ✅ `CandidateNotesPanel.tsx` - Notes, ratings, tags UI
+- ✅ `PATCH /api/employer/applications/[id]/status` - Status update API
+- ✅ `POST/GET /api/employer/candidate-data` - Notes/ratings storage
+- ✅ `sendApplicationStatusNotification()` - Email notifications
 
 ---
 

@@ -203,3 +203,127 @@ export async function sendCandidateRequestNotification(
     return { ok: false, error: message }
   }
 }
+
+export interface ApplicationStatusNotificationParams {
+  candidateEmail: string
+  candidateName: string
+  companyName: string
+  jobTitle: string
+  newStatus: 'under_review' | 'interview' | 'offer' | 'hired' | 'rejected'
+}
+
+/**
+ * Status-specific messaging for application updates
+ */
+const STATUS_MESSAGES: Record<string, { subject: string; heading: string; body: string; color: string }> = {
+  under_review: {
+    subject: 'Your application is being reviewed',
+    heading: 'Application Under Review',
+    body: 'Your application is now being reviewed by the hiring team. We\'ll keep you updated on any progress.',
+    color: '#eab308', // yellow
+  },
+  interview: {
+    subject: 'Interview requested!',
+    heading: 'Interview Requested',
+    body: 'Great news! The employer would like to schedule an interview with you. They may reach out soon with more details.',
+    color: '#a855f7', // purple
+  },
+  offer: {
+    subject: 'You have a job offer!',
+    heading: 'Job Offer Extended',
+    body: 'Congratulations! The employer has extended a job offer to you. Log in to view the details and next steps.',
+    color: '#14b8a6', // teal
+  },
+  hired: {
+    subject: 'Congratulations on your new job!',
+    heading: 'You\'re Hired!',
+    body: 'Congratulations! You\'ve been officially hired. The employer will be in touch with onboarding details.',
+    color: '#22c55e', // green
+  },
+  rejected: {
+    subject: 'Application update',
+    heading: 'Application Status Update',
+    body: 'Thank you for your interest in this position. Unfortunately, the employer has decided to move forward with other candidates. Don\'t be discouraged - keep applying!',
+    color: '#6b7280', // gray
+  },
+}
+
+/**
+ * Notifies a candidate when their application status changes.
+ */
+export async function sendApplicationStatusNotification(
+  params: ApplicationStatusNotificationParams
+): Promise<{ ok: boolean; error?: string }> {
+  if (!resend) {
+    console.warn('[STATUS NOTIFICATION] RESEND_API_KEY not set, skipping send')
+    return { ok: false, error: 'Email not configured' }
+  }
+
+  const { candidateEmail, candidateName, companyName, jobTitle, newStatus } = params
+  const statusConfig = STATUS_MESSAGES[newStatus]
+  
+  if (!statusConfig) {
+    console.warn(`[STATUS NOTIFICATION] Unknown status: ${newStatus}`)
+    return { ok: false, error: `Unknown status: ${newStatus}` }
+  }
+
+  const firstName = candidateName.split(' ')[0] || 'there'
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: system-ui, sans-serif; line-height: 1.6; color: #333; max-width: 560px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 24px;">
+    <h1 style="color: #0d9488; margin: 0; font-size: 24px;">StormChain</h1>
+  </div>
+  
+  <h2 style="color: #1f2937; margin-bottom: 16px;">Hi ${firstName},</h2>
+  
+  <p>There's an update on your application for <strong>${jobTitle}</strong> at <strong>${companyName}</strong>.</p>
+  
+  <div style="background: ${statusConfig.color}15; border: 1px solid ${statusConfig.color}40; border-radius: 8px; padding: 16px; margin: 20px 0;">
+    <p style="margin: 0 0 8px; font-weight: 600; color: ${statusConfig.color};">${statusConfig.heading}</p>
+    <p style="margin: 0; color: #374151;">${statusConfig.body}</p>
+  </div>
+  
+  <div style="text-align: center; margin: 24px 0;">
+    <a href="${APP_URL}" 
+       style="display: inline-block; padding: 12px 32px; background: #0d9488; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+      View Application
+    </a>
+  </div>
+  
+  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+  
+  <p style="color: #6b7280; font-size: 13px; margin: 0;">
+    You're receiving this because you applied to a job on StormChain.
+    <br>If you have questions, reply to this email.
+  </p>
+</body>
+</html>
+`.trim()
+
+  try {
+    console.log(`[STATUS NOTIFICATION] Sending ${newStatus} notification to:`, candidateEmail)
+    
+    const { data, error } = await resend.emails.send({
+      from: FROM,
+      to: candidateEmail,
+      subject: `[${companyName}] ${statusConfig.subject}`,
+      html,
+    })
+    
+    if (error) {
+      console.error('[STATUS NOTIFICATION] Resend error:', error)
+      return { ok: false, error: error.message }
+    }
+    
+    console.log('[STATUS NOTIFICATION] Sent successfully. Resend id:', data?.id)
+    return { ok: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[STATUS NOTIFICATION] Send failed:', err)
+    return { ok: false, error: message }
+  }
+}

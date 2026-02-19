@@ -26,8 +26,8 @@ DOT-compliant 3-party verification. 6 FMCSA questions. Token-based previous empl
 
 ---
 
-## 🔜 Phase 8: Applicant Review & Hiring
-Pipeline management (Submitted → Review → Interview → Offer → Hired). Internal notes/ratings. Messaging system. Document viewer.
+## ✅ Phase 8: Applicant Review & Hiring
+Kanban pipeline board with drag-drop (New → Reviewing → Interviewing → Offer → Hired → Rejected). Internal notes, 1-5 star ratings, and tags. Email notifications on status changes. Candidate data API.
 
 ## 🔜 Phase 9: Advanced Features
 Analytics (time-to-hire, pipeline metrics). Saved searches & alerts. ATS integrations. AvA for employers (AI job posting, candidate matching).

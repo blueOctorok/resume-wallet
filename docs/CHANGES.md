@@ -8351,3 +8351,79 @@ Added **Companies** tab as the first item in the admin dashboard:
 | `src/app/admin/AdminDashboard.tsx`              | Added Companies section            |
 
 **Status**: ✅ Company Approval System COMPLETE
+
+---
+
+## Phase 4: Applicant Review & Hiring (Kanban Pipeline)
+
+### Overview
+
+Implemented a Kanban-style applicant pipeline board with drag-drop status management, internal notes/ratings, and email notifications for status changes.
+
+### Features
+
+#### 1. Kanban Pipeline Board
+
+- **Drag-drop applicant management**: Move candidates between status columns
+- **6 pipeline stages**: New → Reviewing → Interviewing → Offer Sent → Hired → Rejected
+- **Visual status indicators**: Color-coded columns and badges
+- **View toggle**: Switch between compact list view and full Kanban board
+
+#### 2. Application Status API
+
+- **Endpoint**: `PATCH /api/employer/applications/[id]/status`
+- **Validates employer ownership** of the job posting
+- **Sends email notifications** to candidates on status changes
+- **Supported statuses**: submitted, under_review, interview, offer, hired, rejected, withdrawn
+
+#### 3. Candidate Notes & Ratings Panel
+
+- **Private employer notes**: Add internal notes about candidates
+- **Star ratings**: 1-5 star rating system
+- **Tags**: Quick tags (Hot Candidate, Backup, Needs Follow-up) or custom tags
+- **Timeline view**: All notes displayed in chronological order
+
+#### 4. Candidate Data API
+
+- **POST /api/employer/candidate-data**: Create notes, ratings, tags
+- **GET /api/employer/candidate-data/[candidateId]**: Fetch all data for a candidate
+- **DELETE /api/employer/candidate-data/[candidateId]?itemId=xxx**: Remove data item
+
+#### 5. Email Notifications
+
+Status-specific emails sent to candidates:
+
+| Status | Subject | Message |
+|--------|---------|---------|
+| under_review | Application is being reviewed | Your application is now being reviewed... |
+| interview | Interview requested! | The employer would like to schedule an interview... |
+| offer | You have a job offer! | Congratulations! The employer has extended a job offer... |
+| hired | Congratulations on your new job! | You've been officially hired... |
+| rejected | Application update | Thank you for your interest... Unfortunately... |
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `src/components/employer/ApplicantKanban.tsx` | Kanban board with drag-drop |
+| `src/components/employer/CandidateNotesPanel.tsx` | Notes, ratings, tags panel |
+| `src/app/api/employer/applications/[id]/status/route.ts` | Status update API |
+| `src/app/api/employer/candidate-data/route.ts` | Create notes/ratings/tags |
+| `src/app/api/employer/candidate-data/[candidateId]/route.ts` | Fetch/delete candidate data |
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `src/lib/send-admin-notification.ts` | Added `sendApplicationStatusNotification()` |
+| `src/components/EmployerHub.tsx` | Integrated Kanban view with toggle, notes panel in detail modal |
+
+### UX Flow
+
+1. Employer opens EmployerHub → sees Kanban board by default
+2. Drags applicant card from "New" to "Reviewing" → API updates status, email sent
+3. Clicks card → detail panel opens with notes sidebar
+4. Adds note or rating → saved to employer_candidate_data
+5. Changes status via dropdown → same flow as drag-drop
+
+**Status**: ✅ Phase 4 COMPLETE

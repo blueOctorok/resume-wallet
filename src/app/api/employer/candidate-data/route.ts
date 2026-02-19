@@ -1,201 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
-// Valid data types for employer candidate data
 const VALID_DATA_TYPES = [
-  'note',           // Internal notes
-  'rating',         // 1-5 star rating
-  'tag',            // Custom tags
-  'document',       // Uploaded documents (MVR, PSP, etc.)
-  'interview',      // Interview notes and scheduling
-  'assessment',     // Skills assessment results
-  'offer',          // Offer details
-  'rejection_reason' // Why candidate was rejected
-]
+  'note',
+  'rating',
+  'tag',
+  'document',
+  'interview',
+  'assessment',
+  'offer',
+  'rejection_reason',
+] as const
 
-// Roles that can add/view candidate data
-const CAN_VIEW_ROLES = ['owner', 'admin', 'hr_manager', 'hiring_manager', 'recruiter', 'interviewer', 'viewer']
-const CAN_ADD_ROLES = ['owner', 'admin', 'hr_manager', 'hiring_manager', 'recruiter', 'interviewer']
-
-/**
- * GET /api/employer/candidate-data
- * 
- * Gets all employer data for a specific candidate.
- * Query params:
- *   - candidateId: Required - the user ID of the candidate
- *   - type: Optional - filter by data type
- *   - applicationId: Optional - filter by specific application
- */
-export async function GET(request: NextRequest) {
-  try {
-    const walletAddress = request.headers.get('x-wallet-address')
-    const { searchParams } = new URL(request.url)
-    const candidateId = searchParams.get('candidateId')
-    const dataType = searchParams.get('type')
-    const applicationId = searchParams.get('applicationId')
-
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 401 }
-      )
-    }
-
-    if (!candidateId) {
-      return NextResponse.json(
-        { error: 'candidateId is required' },
-        { status: 400 }
-      )
-    }
-
-    const supabase = await getAdminSupabaseClient()
-
-    // Get user
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    // Get user's company membership
-    const { data: membership } = await supabase
-      .from('company_members')
-      .select('company_id, role')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .maybeSingle()
-
-    let companyId = membership?.company_id
-    let userRole = membership?.role
-
-    if (!companyId) {
-      const { data: legacyCompany } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('employer_user_id', user.id)
-        .single()
-      
-      companyId = legacyCompany?.id
-      userRole = 'owner'
-    }
-
-    if (!companyId) {
-      return NextResponse.json({ error: 'Company not found' }, { status: 404 })
-    }
-
-    // Check permission
-    if (!CAN_VIEW_ROLES.includes(userRole || '')) {
-      return NextResponse.json(
-        { error: 'You do not have permission to view candidate data' },
-        { status: 403 }
-      )
-    }
-
-    // Build query
-    let query = supabase
-      .from('employer_candidate_data')
-      .select(`
-        id,
-        data_type,
-        content,
-        visible_to_candidate,
-        application_id,
-        created_by,
-        updated_by,
-        created_at,
-        updated_at,
-        users!employer_candidate_data_created_by_fkey (
-          name,
-          email
-        )
-      `)
-      .eq('company_id', companyId)
-      .eq('candidate_user_id', candidateId)
-      .order('created_at', { ascending: false })
-
-    if (dataType) {
-      query = query.eq('data_type', dataType)
-    }
-
-    if (applicationId) {
-      query = query.eq('application_id', applicationId)
-    }
-
-    const { data: candidateData, error: dataError } = await query
-
-    if (dataError) {
-      console.error('[CANDIDATE-DATA] Error fetching data:', dataError)
-      return NextResponse.json(
-        { error: 'Failed to fetch candidate data' },
-        { status: 500 }
-      )
-    }
-
-    // Process data
-    const processedData = (candidateData || []).map(item => {
-      const creator = item.users as any
-      return {
-        id: item.id,
-        dataType: item.data_type,
-        content: item.content,
-        visibleToCandidate: item.visible_to_candidate,
-        applicationId: item.application_id,
-        createdBy: {
-          name: creator?.name || 'Unknown',
-          email: creator?.email,
-        },
-        createdAt: item.created_at,
-        updatedAt: item.updated_at,
-      }
-    })
-
-    // Group by type for convenience
-    const byType = VALID_DATA_TYPES.reduce((acc, type) => {
-      acc[type] = processedData.filter(d => d.dataType === type)
-      return acc
-    }, {} as Record<string, typeof processedData>)
-
-    return NextResponse.json({
-      success: true,
-      data: processedData,
-      byType,
-      stats: {
-        total: processedData.length,
-        notes: byType.note.length,
-        documents: byType.document.length,
-        interviews: byType.interview.length,
-      }
-    })
-
-  } catch (error) {
-    console.error('[CANDIDATE-DATA] Error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}
+type DataType = typeof VALID_DATA_TYPES[number]
 
 /**
  * POST /api/employer/candidate-data
  * 
- * Adds new data to a candidate's profile.
+ * Creates a new note, rating, tag, or other data for a candidate.
+ * 
  * Body:
- *   - candidateId: Required - the user ID of the candidate
- *   - dataType: Required - one of the valid data types
- *   - content: Required - the data content (JSONB)
- *   - visibleToCandidate: Optional - whether candidate can see this (default false)
- *   - applicationId: Optional - link to specific application
+ *   - candidateUserId: UUID of the candidate (required)
+ *   - dataType: One of the valid data types (required)
+ *   - content: JSONB content (required)
+ *   - applicationId: Optional link to specific application
+ *   - visibleToCandidate: Whether candidate can see this (default: false)
  */
 export async function POST(request: NextRequest) {
   try {
     const walletAddress = request.headers.get('x-wallet-address')
     const body = await request.json()
-    const { candidateId, dataType, content, visibleToCandidate = false, applicationId } = body
+
+    const {
+      candidateUserId,
+      dataType,
+      content,
+      applicationId,
+      visibleToCandidate = false,
+    } = body
 
     if (!walletAddress) {
       return NextResponse.json(
@@ -204,139 +46,140 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!candidateId || !dataType || !content) {
+    if (!candidateUserId) {
       return NextResponse.json(
-        { error: 'candidateId, dataType, and content are required' },
+        { error: 'candidateUserId is required' },
         { status: 400 }
       )
     }
 
-    if (!VALID_DATA_TYPES.includes(dataType)) {
+    if (!dataType || !VALID_DATA_TYPES.includes(dataType)) {
       return NextResponse.json(
-        { error: `Invalid dataType. Must be one of: ${VALID_DATA_TYPES.join(', ')}` },
+        { error: `dataType must be one of: ${VALID_DATA_TYPES.join(', ')}` },
+        { status: 400 }
+      )
+    }
+
+    if (!content || typeof content !== 'object') {
+      return NextResponse.json(
+        { error: 'content must be a valid object' },
         { status: 400 }
       )
     }
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user
-    const { data: user } = await supabase
+    // Verify employer
+    const { data: employer } = await supabase
       .from('users')
-      .select('id')
+      .select('id, name')
       .ilike('wallet_address', walletAddress)
       .single()
 
-    if (!user) {
+    if (!employer) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Get user's company membership
+    // Get employer's company
     const { data: membership } = await supabase
       .from('company_members')
-      .select('company_id, role')
-      .eq('user_id', user.id)
+      .select('company_id')
+      .eq('user_id', employer.id)
       .eq('is_active', true)
-      .maybeSingle()
+      .single()
 
-    let companyId = membership?.company_id
-    let userRole = membership?.role
+    let companyId = membership?.company_id || null
 
     if (!companyId) {
       const { data: legacyCompany } = await supabase
         .from('companies')
         .select('id')
-        .eq('employer_user_id', user.id)
+        .eq('employer_user_id', employer.id)
         .single()
-      
-      companyId = legacyCompany?.id
-      userRole = 'owner'
+
+      companyId = legacyCompany?.id || null
     }
 
     if (!companyId) {
-      return NextResponse.json({ error: 'Company not found' }, { status: 404 })
-    }
-
-    // Check permission
-    if (!CAN_ADD_ROLES.includes(userRole || '')) {
-      return NextResponse.json(
-        { error: 'You do not have permission to add candidate data' },
-        { status: 403 }
-      )
+      return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
 
     // Verify candidate exists
     const { data: candidate } = await supabase
       .from('users')
       .select('id')
-      .eq('id', candidateId)
+      .eq('id', candidateUserId)
       .single()
 
     if (!candidate) {
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
     }
 
-    // If applicationId provided, verify it belongs to this company
-    if (applicationId) {
-      const { data: application } = await supabase
-        .from('applications')
-        .select(`
-          id,
-          job_postings!inner (company_id)
-        `)
-        .eq('id', applicationId)
+    // For ratings, update existing or create new (only one rating per company per candidate)
+    if (dataType === 'rating') {
+      const { data: existingRating } = await supabase
+        .from('employer_candidate_data')
+        .select('id')
+        .eq('company_id', companyId)
+        .eq('candidate_user_id', candidateUserId)
+        .eq('data_type', 'rating')
         .single()
 
-      if (!application) {
-        return NextResponse.json({ error: 'Application not found' }, { status: 404 })
-      }
+      if (existingRating) {
+        const { data: updated, error: updateError } = await supabase
+          .from('employer_candidate_data')
+          .update({
+            content,
+            updated_by: employer.id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingRating.id)
+          .select()
+          .single()
 
-      const jobPosting = application.job_postings as any
-      if (jobPosting.company_id !== companyId) {
-        return NextResponse.json({ error: 'Application does not belong to your company' }, { status: 403 })
+        if (updateError) {
+          console.error('[CANDIDATE DATA] Update error:', updateError)
+          return NextResponse.json({ error: 'Failed to update rating' }, { status: 500 })
+        }
+
+        return NextResponse.json({ success: true, item: updated })
       }
     }
 
-    // Create the data entry
-    const { data: newData, error: insertError } = await supabase
+    // Create new entry
+    const { data: newItem, error: insertError } = await supabase
       .from('employer_candidate_data')
       .insert({
         company_id: companyId,
-        candidate_user_id: candidateId,
+        candidate_user_id: candidateUserId,
         data_type: dataType,
         content,
-        visible_to_candidate: visibleToCandidate,
         application_id: applicationId || null,
-        created_by: user.id,
+        visible_to_candidate: visibleToCandidate,
+        created_by: employer.id,
       })
       .select()
       .single()
 
     if (insertError) {
-      console.error('[CANDIDATE-DATA] Error creating data:', insertError)
-      return NextResponse.json(
-        { error: 'Failed to add candidate data' },
-        { status: 500 }
-      )
+      console.error('[CANDIDATE DATA] Insert error:', insertError)
+      return NextResponse.json({ error: 'Failed to create entry' }, { status: 500 })
     }
+
+    console.log(`[CANDIDATE DATA] Created ${dataType} for candidate ${candidateUserId}`)
 
     return NextResponse.json({
       success: true,
-      message: 'Candidate data added successfully',
-      data: {
-        id: newData.id,
-        dataType: newData.data_type,
-        content: newData.content,
-        visibleToCandidate: newData.visible_to_candidate,
-        createdAt: newData.created_at,
-      }
+      item: {
+        id: newItem.id,
+        dataType: newItem.data_type,
+        content: newItem.content,
+        createdAt: newItem.created_at,
+      },
     })
 
   } catch (error) {
-    console.error('[CANDIDATE-DATA] Error adding data:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    console.error('[CANDIDATE DATA] Unexpected error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
