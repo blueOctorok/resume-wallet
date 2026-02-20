@@ -5,6 +5,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import EmployerVerificationSection from './verification/EmployerVerificationSection'
 import ApplicantKanban, { type KanbanApplicant } from './employer/ApplicantKanban'
 import CandidateNotesPanel from './employer/CandidateNotesPanel'
+import AnalyticsDashboard from './employer/AnalyticsDashboard'
 import {
   Briefcase,
   Users,
@@ -36,6 +37,8 @@ import {
   LayoutGrid,
   List,
   Trash2,
+  BarChart3,
+  ChevronDown,
 } from 'lucide-react'
 
 // ============================================================
@@ -181,7 +184,8 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   // Pipeline view state (list vs kanban)
   const [pipelineView, setPipelineView] = useState<'list' | 'kanban'>('kanban')
   const [updatingApplicationId, setUpdatingApplicationId] = useState<string | null>(null)
-  
+  const [showAnalytics, setShowAnalytics] = useState(true)
+
   // Job deletion state
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -504,6 +508,35 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           subValue={`${data.stats.hiresThisMonth} this month`}
           theme={theme}
         />
+      </div>
+
+      {/* Analytics Section */}
+      <div className={`rounded-2xl mb-8 border shadow-lg transition-all duration-200 overflow-hidden ${
+        theme === 'dark'
+          ? 'bg-gray-800/50 border-gray-700'
+          : 'bg-white/70 border-gray-200'
+      }`}>
+        <button
+          onClick={() => setShowAnalytics(!showAnalytics)}
+          className={`w-full flex items-center justify-between p-4 transition-colors ${
+            theme === 'dark' ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <BarChart3 className={`w-5 h-5 ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
+            <span className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              Analytics Dashboard
+            </span>
+          </div>
+          <ChevronDown className={`w-5 h-5 transition-transform ${
+            showAnalytics ? 'rotate-180' : ''
+          } ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} />
+        </button>
+        {showAnalytics && (
+          <div className="p-6 pt-2">
+            <AnalyticsDashboard walletAddress={walletAddress} />
+          </div>
+        )}
       </div>
 
       {/* Pipeline Section */}

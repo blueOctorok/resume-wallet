@@ -2,6 +2,51 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 📊 **Phase 5A: Analytics Dashboard** (February 2026)
+
+### New Features
+
+**Analytics Dashboard in Employer Hub**
+- Collapsible analytics section with comprehensive hiring metrics
+- Real-time data derived from actual database records
+
+**Overview Stats**
+- Total applications count with weekly trend indicator
+- Active/total job postings
+- Average time-to-hire (days)
+- Total hires count
+
+**Pipeline Funnel Visualization**
+- Visual representation of candidates at each stage: New → Reviewing → Interview → Offer → Hired
+- Color-coded stages for quick identification
+- Conversion rates between stages (to review, to interview, to offer, to hired)
+
+**Application Trends**
+- Bar chart showing applications over the last 4 weeks
+- Application source breakdown (Candidate Applied vs Employer Recruited)
+- Progress bars with percentages
+
+**Activity Summary**
+- Pending review count (new + reviewing)
+- In progress count (interviewing + offer)
+- Completed count (hired + rejected)
+
+### New API Endpoints
+
+**`GET /api/employer/analytics`**
+- Returns comprehensive hiring analytics for the employer's company
+- Aggregates data from `job_postings` and `applications` tables
+- Calculates pipeline metrics, conversion rates, and trends
+
+### Files Created
+- `src/app/api/employer/analytics/route.ts` - Analytics API endpoint
+- `src/components/employer/AnalyticsDashboard.tsx` - Analytics UI component
+
+### Files Modified
+- `src/components/EmployerHub.tsx` - Added Analytics Dashboard section with collapse toggle
+
+---
+
 ## 🗑️ **Job Posting Management & Admin Controls** (February 2026)
 
 ### New Features
