@@ -264,7 +264,6 @@ export default function CareerCardModal({
       }
 
       const data = await response.json()
-      // Filter to only active jobs
       const activeJobs = (data.jobs || []).filter((j: JobPosting) => j.isActive)
       setJobPostings(activeJobs)
     } catch (err) {
@@ -830,14 +829,24 @@ export default function CareerCardModal({
   )
 
   const recruitModalContent = showRecruitModal ? (
-    <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4">
+    <div 
+      className="fixed inset-0 z-[10001] flex items-center justify-center p-4"
+      onClick={(e) => {
+        // Only close if clicking the backdrop (not the modal content)
+        if (e.target === e.currentTarget) {
+          setShowRecruitModal(false)
+        }
+      }}
+    >
+      {/* Semi-transparent backdrop */}
+      <div className="absolute inset-0 bg-black/70 pointer-events-none" />
+      {/* Content - stop propagation to prevent backdrop close */}
       <div 
-        className="absolute inset-0 bg-black/70"
-        onClick={() => setShowRecruitModal(false)}
-      />
-      <div className={`relative z-[10002] w-full max-w-md rounded-2xl shadow-2xl ${
-        theme === 'dark' ? 'bg-gray-900' : 'bg-white'
-      }`}>
+        className={`relative z-[10002] w-full max-w-md rounded-2xl shadow-2xl ${
+          theme === 'dark' ? 'bg-gray-900' : 'bg-white'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className={`p-6 border-b ${theme === 'dark' ? 'border-gray-800' : 'border-gray-100'}`}>
           <div className="flex items-center justify-between">
@@ -886,8 +895,11 @@ export default function CareerCardModal({
                   <button
                     type="button"
                     key={job.id}
-                    onClick={() => setSelectedJobId(job.id)}
-                    className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedJobId(job.id)
+                    }}
+                    className={`w-full text-left p-3 rounded-lg border transition-all cursor-pointer ${
                       selectedJobId === job.id
                         ? theme === 'dark'
                           ? 'border-teal-500 bg-teal-500/10'
@@ -897,10 +909,19 @@ export default function CareerCardModal({
                           : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      {selectedJobId === job.id && (
-                        <CheckCircle className="w-4 h-4 text-teal-500 flex-shrink-0" />
-                      )}
+                    <div className="flex items-center gap-3">
+                      {/* Radio selector visual */}
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                        selectedJobId === job.id
+                          ? 'border-teal-500 bg-teal-500'
+                          : theme === 'dark'
+                            ? 'border-gray-500'
+                            : 'border-gray-400'
+                      }`}>
+                        {selectedJobId === job.id && (
+                          <div className="w-2 h-2 rounded-full bg-white" />
+                        )}
+                      </div>
                       <span className={theme === 'dark' ? 'text-white' : 'text-gray-900'}>
                         {job.title}
                       </span>

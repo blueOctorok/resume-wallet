@@ -88,13 +88,14 @@ export async function POST(
     }
 
     // Verify job posting belongs to this company
-    const { data: jobPosting } = await supabase
+    const { data: jobPosting, error: jobError } = await supabase
       .from('job_postings')
-      .select('id, title, company_id, status')
+      .select('id, title, company_id, is_active')
       .eq('id', jobPostingId)
       .single()
 
-    if (!jobPosting) {
+    if (jobError || !jobPosting) {
+      console.error('[RECRUIT] Job posting lookup error:', jobError)
       return NextResponse.json({ error: 'Job posting not found' }, { status: 404 })
     }
 
@@ -105,7 +106,7 @@ export async function POST(
       )
     }
 
-    if (jobPosting.status !== 'active') {
+    if (!jobPosting.is_active) {
       return NextResponse.json(
         { error: 'Job posting is not active' },
         { status: 400 }
