@@ -281,6 +281,17 @@ const TalentSearchPage = dynamic(
   }
 )
 
+const JobPostingForm = dynamic(
+  () =>
+    import('@/components/employer/JobPostingForm').then((mod) => mod.default),
+  {
+    ssr: false,
+    loading: () => (
+      <LoadingScreen message='Loading job form...' fullScreen={false} />
+    ),
+  }
+)
+
 const RoleSelectionModal = dynamic(
   () => import('@/components/RoleSelectionModal').then((mod) => mod.default),
   {
@@ -2620,6 +2631,17 @@ const HomeContent = () => {
               <TalentSearchPage
                 walletAddress={user.address}
                 onBack={() => setCurrentPage(null)}
+              />
+            )}
+
+          {user &&
+            userRole === 'employer' &&
+            !isRoleLoading &&
+            currentPage === 'post-job' && (
+              <JobPostingForm
+                walletAddress={user.address}
+                onBack={() => setCurrentPage(null)}
+                onSuccess={() => setCurrentPage(null)}
               />
             )}
 
