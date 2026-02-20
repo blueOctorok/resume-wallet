@@ -138,9 +138,9 @@ export async function GET(request: NextRequest) {
       supabase
         .from('job_postings')
         .select(`
-          id, title, description, location_city, location_state,
+          id, title, description, target_role, location_city, location_state,
           salary_min, salary_max, job_type, is_active, created_at, updated_at,
-          equipment_type, experience_required, route_type
+          experience_required, route_type, remote_allowed
         `)
         .eq('company_id', company.id)
         .order('created_at', { ascending: false }),
@@ -194,6 +194,7 @@ export async function GET(request: NextRequest) {
         id: job.id,
         title: job.title,
         description: job.description,
+        targetRole: job.target_role,
         locationCity: job.location_city,
         locationState: job.location_state,
         salaryMin: job.salary_min,
@@ -202,9 +203,9 @@ export async function GET(request: NextRequest) {
         isActive: job.is_active,
         createdAt: job.created_at,
         updatedAt: job.updated_at,
-        equipmentType: job.equipment_type,
         experienceRequired: job.experience_required,
         routeType: job.route_type,
+        remoteAllowed: job.remote_allowed,
         // Computed counts
         totalApplications: jobApps.length,
         newApplications: jobApps.filter(a => a.status === 'submitted').length,

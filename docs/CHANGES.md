@@ -2,6 +2,76 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🗑️ **Job Posting Management & Admin Controls** (February 2026)
+
+### New Features
+
+**Employer Hub - Job Deletion**
+- Employers can now delete (deactivate) their job postings from the Hub
+- Click on a job posting to open the detail modal
+- "Delete Job Posting" button with confirmation dialog
+- Soft delete: jobs are deactivated, not permanently removed
+
+**Admin Dashboard - Job Postings Tab**
+- New "Job Postings" tab under Employers section
+- View all job postings across all companies
+- Filter by status: All, Active, Inactive
+- Search by job title or company name
+- Toggle job active status (Activate/Deactivate)
+- Hard delete jobs permanently (with confirmation)
+- View application counts and posting details
+
+### New API Endpoints
+
+**`DELETE /api/employer/jobs/[id]`**
+- Soft-deletes a job posting (sets is_active = false)
+- Only the owning company can delete their jobs
+
+**`PATCH /api/employer/jobs/[id]`**
+- Updates job posting (toggle active status)
+- Only the owning company can modify their jobs
+
+**`GET /api/admin/jobs`**
+- Returns all job postings with company info
+- Admin-only endpoint
+
+**`DELETE /api/admin/jobs/[id]`**
+- Permanently deletes a job posting
+- Admin-only endpoint
+
+**`PATCH /api/admin/jobs/[id]`**
+- Admin can toggle any job's active status
+
+### Files Created
+- `src/app/api/employer/jobs/[id]/route.ts` - Employer job management
+- `src/app/api/admin/jobs/route.ts` - Admin job listing
+- `src/app/api/admin/jobs/[id]/route.ts` - Admin job management
+
+### Files Modified
+- `src/components/EmployerHub.tsx` - Added delete button with confirmation in job detail modal
+- `src/app/admin/AdminDashboard.tsx` - Added Jobs tab with full management UI
+
+---
+
+## 🐛 **Bug Fixes: Recruit Modal & Hub Job Listings** (February 2026)
+
+### Issues Fixed
+
+1. **Recruit Modal Buttons Not Clickable**
+   - **Root cause**: Recruit modal content div was missing z-index, causing buttons to render behind its backdrop
+   - **Fix**: Added `z-[10002]` to recruit modal content container
+   - **Also**: Added `type="button"` to job selection buttons to prevent any form-related interference
+
+2. **Jobs Not Showing in Employer Hub**
+   - **Root cause**: Hub API queried for non-existent `equipment_type` column, causing query failure
+   - **Fix**: Removed `equipment_type` from query, added `remote_allowed` instead
+
+### Files Modified
+- `src/components/employer/CareerCardModal.tsx` - Fixed recruit modal z-index
+- `src/app/api/employer/hub/route.ts` - Fixed job postings query
+
+---
+
 ## 🔔 **Phase 3: Notifications & Employer-Initiated Recruiting** (February 2026)
 
 **Complete the talent search experience with candidate notifications and employer-initiated applications.**

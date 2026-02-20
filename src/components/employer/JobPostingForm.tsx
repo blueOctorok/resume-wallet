@@ -117,9 +117,10 @@ export default function JobPostingForm({
         }),
       })
 
+      const responseData = await response.json()
+      
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to create job')
+        throw new Error(responseData.error || 'Failed to create job')
       }
 
       setSuccess(true)

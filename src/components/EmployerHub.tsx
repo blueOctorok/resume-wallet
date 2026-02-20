@@ -35,6 +35,7 @@ import {
   Code,
   LayoutGrid,
   List,
+  Trash2,
 } from 'lucide-react'
 
 // ============================================================
@@ -68,9 +69,9 @@ interface HubJobPosting {
   isActive: boolean
   createdAt: string
   updatedAt: string
-  equipmentType: string | null
   experienceRequired: number | null
   routeType: string | null
+  remoteAllowed: boolean | null
   totalApplications: number
   newApplications: number
   viewedApplications: number
@@ -180,6 +181,10 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   // Pipeline view state (list vs kanban)
   const [pipelineView, setPipelineView] = useState<'list' | 'kanban'>('kanban')
   const [updatingApplicationId, setUpdatingApplicationId] = useState<string | null>(null)
+  
+  // Job deletion state
+  const [deletingJobId, setDeletingJobId] = useState<string | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   // Employment verification states
   const [showVerifyModal, setShowVerifyModal] = useState(false)
@@ -246,6 +251,35 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       alert(err instanceof Error ? err.message : 'Failed to update status')
     } finally {
       setUpdatingApplicationId(null)
+    }
+  }
+
+  // Handle job deletion (soft delete - deactivates the job)
+  const handleDeleteJob = async (jobId: string) => {
+    try {
+      setDeletingJobId(jobId)
+      
+      const response = await fetch(`/api/employer/jobs/${jobId}`, {
+        method: 'DELETE',
+        headers: {
+          'x-wallet-address': walletAddress,
+        },
+      })
+
+      if (!response.ok) {
+        const errData = await response.json()
+        throw new Error(errData.error || 'Failed to delete job')
+      }
+
+      // Close modals and refresh data
+      setSelectedJob(null)
+      setShowDeleteConfirm(false)
+      await fetchHubData()
+    } catch (err) {
+      console.error('Error deleting job:', err)
+      alert(err instanceof Error ? err.message : 'Failed to delete job')
+    } finally {
+      setDeletingJobId(null)
     }
   }
 
@@ -318,7 +352,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <Loader2 className={`w-12 h-12 animate-spin mx-auto mb-4 ${
-            theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+            theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
           }`} />
           <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
             Loading your employer hub...
@@ -343,8 +377,8 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             onClick={fetchHubData}
             className={`mt-4 px-6 py-2 rounded-lg font-medium ${
               theme === 'dark'
-                ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+                ? 'bg-teal-500 text-white hover:bg-teal-600'
+                : 'bg-teal-600 text-white hover:bg-teal-700'
             }`}
           >
             Try Again
@@ -365,11 +399,11 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       <div className="max-w-4xl mx-auto p-6">
         <div className={`rounded-2xl p-8 text-center ${
           theme === 'dark'
-            ? 'bg-brand-sage-dark/50 border border-brand-mint/30'
-            : 'bg-white border border-brand-sage/20 shadow-xl'
+            ? 'bg-gray-800/50 border border-teal-500/30'
+            : 'bg-white border border-gray-200 shadow-xl'
         }`}>
           <Building2 className={`w-16 h-16 mx-auto mb-6 ${
-            theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+            theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
           }`} />
           <h2 className={`text-2xl font-bold mb-4 ${
             theme === 'dark' ? 'text-white' : 'text-gray-900'
@@ -385,8 +419,8 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             onClick={() => onNavigate('company-setup')}
             className={`px-8 py-3 rounded-xl font-semibold text-lg ${
               theme === 'dark'
-                ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+                ? 'bg-teal-500 text-white hover:bg-teal-600'
+                : 'bg-teal-600 text-white hover:bg-teal-700'
             }`}
           >
             Create Company Profile
@@ -406,10 +440,10 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       }`}>
         <div className="flex items-center gap-4">
           <div className={`w-16 h-16 rounded-xl flex items-center justify-center ${
-            theme === 'dark' ? 'bg-brand-mint/20' : 'bg-brand-sage/10'
+            theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
           }`}>
             <Building2 className={`w-8 h-8 ${
-              theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+              theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
             }`} />
           </div>
           <div className="flex-1">
@@ -596,7 +630,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
               <button
                 onClick={() => onNavigate('applicants')}
                 className={`text-sm font-medium ${
-                  theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
                 }`}
               >
                 View All
@@ -627,7 +661,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
                 <button
                   onClick={() => onNavigate('applicants')}
                   className={`w-full text-center py-2 text-sm font-medium ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                    theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
                   }`}
                 >
                   +{data.applicants.length - 5} more applicants
@@ -647,7 +681,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             <button
               onClick={() => onNavigate('post-job')}
               className={`flex items-center gap-1 text-sm font-medium ${
-                theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
               }`}
             >
               <Plus className="w-4 h-4" />
@@ -671,6 +705,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
                   key={job.id}
                   job={job}
                   onClick={() => setSelectedJob(job)}
+                  onDelete={() => handleDeleteJob(job.id)}
                   theme={theme}
                 />
               ))}
@@ -678,7 +713,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
                 <button
                   onClick={() => onNavigate('jobs')}
                   className={`w-full text-center py-2 text-sm font-medium ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                    theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
                   }`}
                 >
                   +{data.jobPostings.length - 4} more jobs
@@ -816,10 +851,60 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         <DetailModal
           title={selectedJob.title}
           subtitle={selectedJob.isActive ? 'Active' : 'Inactive'}
-          onClose={() => setSelectedJob(null)}
+          onClose={() => {
+            setSelectedJob(null)
+            setShowDeleteConfirm(false)
+          }}
           theme={theme}
         >
           <JobDetailContent job={selectedJob} theme={theme} />
+          
+          {/* Delete Confirmation or Delete Button */}
+          <div className={`mt-6 pt-4 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+            {showDeleteConfirm ? (
+              <div className="space-y-3">
+                <p className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Are you sure you want to permanently delete this job posting? This cannot be undone.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium text-sm ${
+                      theme === 'dark'
+                        ? 'bg-gray-700 text-white hover:bg-gray-600'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleDeleteJob(selectedJob.id)}
+                    disabled={deletingJobId === selectedJob.id}
+                    className="flex-1 px-4 py-2 rounded-lg font-medium text-sm bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {deletingJobId === selectedJob.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                    Confirm Delete
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm ${
+                  theme === 'dark'
+                    ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
+                    : 'bg-red-50 text-red-600 hover:bg-red-100'
+                }`}
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Job Posting
+              </button>
+            )}
+          </div>
         </DetailModal>
       )}
 
@@ -871,7 +956,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             {loadingEmployments ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className={`w-8 h-8 animate-spin ${
-                  theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
                 }`} />
               </div>
             ) : driverEmployments.length === 0 ? (
@@ -890,8 +975,8 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
                     disabled={initiatingVerification}
                     className={`w-full text-left p-4 rounded-xl border transition-colors ${
                       theme === 'dark'
-                        ? 'bg-gray-800/50 border-gray-700 hover:border-brand-mint/50 hover:bg-gray-800'
-                        : 'bg-gray-50 border-gray-200 hover:border-brand-sage/50 hover:bg-gray-100'
+                        ? 'bg-gray-800/50 border-gray-700 hover:border-teal-500/50 hover:bg-gray-800'
+                        : 'bg-gray-50 border-gray-200 hover:border-teal-500/50 hover:bg-gray-100'
                     } ${initiatingVerification ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <div className="flex items-start justify-between">
@@ -923,7 +1008,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
 
             {initiatingVerification && (
               <div className={`mt-4 flex items-center justify-center gap-2 text-sm ${
-                theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
               }`}>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Creating verification request...
@@ -1097,8 +1182,8 @@ function EmptyState({
           onClick={onAction}
           className={`px-4 py-2 rounded-lg text-sm font-medium ${
             theme === 'dark'
-              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-              : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+              ? 'bg-teal-500 text-white hover:bg-teal-600'
+              : 'bg-teal-600 text-white hover:bg-teal-700'
           }`}
         >
           {actionLabel}
@@ -1172,52 +1257,76 @@ function ApplicantRow({
 
 function JobRow({ 
   job, 
-  onClick, 
+  onClick,
+  onDelete,
   theme 
 }: { 
   job: HubJobPosting
   onClick: () => void
+  onDelete: () => void
   theme: string
 }) {
   return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-colors ${
+    <div
+      className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${
         theme === 'dark'
           ? 'hover:bg-gray-700/50'
           : 'hover:bg-gray-50'
       }`}
     >
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-        job.isActive
-          ? theme === 'dark' ? 'bg-green-500/20' : 'bg-green-100'
-          : theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'
-      }`}>
-        <Briefcase className={`w-5 h-5 ${
-          job.isActive ? 'text-green-500' : theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-        }`} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className={`font-medium truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-          {job.title}
-        </p>
-        <p className={`text-sm truncate ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-          {job.locationCity && job.locationState 
-            ? `${job.locationCity}, ${job.locationState}` 
-            : 'Location not set'}
-        </p>
-      </div>
-      <div className="text-right">
-        <p className={`text-sm font-medium ${
-          job.newApplications > 0 ? 'text-orange-500' : theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+      <button
+        onClick={onClick}
+        className="flex items-center gap-3 flex-1 min-w-0 text-left"
+      >
+        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+          job.isActive
+            ? theme === 'dark' ? 'bg-green-500/20' : 'bg-green-100'
+            : theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'
         }`}>
-          {job.newApplications > 0 ? `${job.newApplications} new` : `${job.totalApplications} apps`}
-        </p>
-        <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-          {job.isActive ? 'Active' : 'Inactive'}
-        </p>
+          <Briefcase className={`w-5 h-5 ${
+            job.isActive ? 'text-green-500' : theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+          }`} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={`font-medium truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            {job.title}
+          </p>
+          <p className={`text-sm truncate ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+            {job.locationCity && job.locationState 
+              ? `${job.locationCity}, ${job.locationState}` 
+              : 'Location not set'}
+          </p>
+        </div>
+      </button>
+      <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="text-right">
+          <p className={`text-sm font-medium ${
+            job.newApplications > 0 ? 'text-orange-500' : theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+          }`}>
+            {job.newApplications > 0 ? `${job.newApplications} new` : `${job.totalApplications} apps`}
+          </p>
+          <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+            {job.isActive ? 'Active' : 'Inactive'}
+          </p>
+        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            if (confirm(`Delete "${job.title}"? This cannot be undone.`)) {
+              onDelete()
+            }
+          }}
+          className={`p-2 rounded-lg transition-colors ${
+            theme === 'dark'
+              ? 'hover:bg-red-500/20 text-red-400 hover:text-red-300'
+              : 'hover:bg-red-50 text-red-500 hover:text-red-600'
+          }`}
+          title="Delete job"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
       </div>
-    </button>
+    </div>
   )
 }
 
@@ -1280,8 +1389,8 @@ function ActionButton({
       className={`flex items-center justify-center gap-2 p-4 rounded-xl font-medium transition-colors ${
         primary
           ? theme === 'dark'
-            ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-            : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+            ? 'bg-teal-500 text-white hover:bg-teal-600'
+            : 'bg-teal-600 text-white hover:bg-teal-700'
           : theme === 'dark'
             ? 'bg-gray-700/50 text-white hover:bg-gray-700'
             : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
@@ -1303,13 +1412,13 @@ function StatusBadge({ status, theme }: { status: string; theme: string }) {
   )
 }
 
-function DetailModal({ 
-  title, 
-  subtitle, 
-  onClose, 
-  theme, 
-  children 
-}: { 
+function DetailModal({
+  title,
+  subtitle,
+  onClose,
+  theme,
+  children
+}: {
   title: string
   subtitle?: string
   onClose: () => void
@@ -1318,18 +1427,18 @@ function DetailModal({
 }) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div 
+      <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
       <div className={`relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl ${
         theme === 'dark'
-          ? 'bg-brand-sage-dark border border-brand-mint/30'
+          ? 'bg-gray-900 border border-gray-700'
           : 'bg-white shadow-2xl'
       }`}>
         {/* Header */}
         <div className={`sticky top-0 flex items-center justify-between p-4 border-b ${
-          theme === 'dark' ? 'border-gray-700 bg-brand-sage-dark' : 'border-gray-200 bg-white'
+          theme === 'dark' ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'
         }`}>
           <div>
             <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
@@ -1668,13 +1777,6 @@ function JobDetailContent({ job, theme }: { job: HubJobPosting; theme: string })
             <DollarSign className="w-4 h-4" />
             {formatSalary(job.salaryMin, job.salaryMax)}
           </p>
-        </div>
-      )}
-
-      {job.equipmentType && (
-        <div>
-          <p className={labelClass}>Equipment Type</p>
-          <p className={valueClass}>{job.equipmentType}</p>
         </div>
       )}
 

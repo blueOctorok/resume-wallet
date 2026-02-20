@@ -835,7 +835,7 @@ export default function CareerCardModal({
         className="absolute inset-0 bg-black/70"
         onClick={() => setShowRecruitModal(false)}
       />
-      <div className={`relative w-full max-w-md rounded-2xl shadow-2xl ${
+      <div className={`relative z-[10002] w-full max-w-md rounded-2xl shadow-2xl ${
         theme === 'dark' ? 'bg-gray-900' : 'bg-white'
       }`}>
         {/* Header */}
@@ -884,6 +884,7 @@ export default function CareerCardModal({
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {jobPostings.map(job => (
                   <button
+                    type="button"
                     key={job.id}
                     onClick={() => setSelectedJobId(job.id)}
                     className={`w-full text-left p-3 rounded-lg border transition-colors ${
