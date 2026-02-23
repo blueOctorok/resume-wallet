@@ -5,6 +5,8 @@ import {
   toWei,
   fromWei,
   TOTAL_REWARD_POOL,
+  UserType,
+  USER_MULTIPLIERS,
 } from '@/lib/storm-rewards'
 import {
   isStormConfigured,
@@ -29,7 +31,10 @@ import {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { walletAddress, usdcAmount, paymentId, paymentType } = body
+    const { walletAddress, usdcAmount, paymentId, paymentType, userType: rawUserType } = body
+    
+    // Validate and default userType
+    const userType: UserType = rawUserType === 'employer' ? 'employer' : 'applicant'
 
     // Validate inputs
     if (!walletAddress) {
@@ -80,8 +85,9 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Calculate reward using decay formula
-    const rewardAmount = calculateReward(usdcAmount, totalDistributed)
+    // Calculate reward using decay formula (employers earn at 0.5x rate)
+    const rewardAmount = calculateReward(usdcAmount, totalDistributed, userType)
+    const multiplier = USER_MULTIPLIERS[userType]
 
     if (rewardAmount <= 0) {
       console.log('[STORM] Calculated reward is 0')
@@ -98,6 +104,8 @@ export async function POST(request: NextRequest) {
     console.log('[STORM] Distributing reward:', {
       walletAddress,
       usdcAmount,
+      userType,
+      multiplier,
       rewardAmount,
       rewardWei: rewardWei.toString(),
       totalDistributed,
@@ -142,6 +150,8 @@ export async function POST(request: NextRequest) {
           usdc_spent: usdcAmount,
           payment_id: paymentId,
           payment_type: paymentType,
+          user_type: userType,
+          rate_multiplier: multiplier,
           tx_hash: txHash,
           total_distributed_before: totalDistributed,
         }).then(({ error }) => {
@@ -161,6 +171,8 @@ export async function POST(request: NextRequest) {
       reward: {
         amount: rewardAmount,
         amountWei: rewardWei.toString(),
+        userType,
+        multiplier,
       },
       poolState: {
         totalDistributedBefore: totalDistributed,
@@ -195,9 +207,7 @@ export async function GET() {
     const totalDistributed = fromWei(totalDistributedWei)
     const remaining = TOTAL_REWARD_POOL - totalDistributed
 
-    // Calculate current rate (tokens per $1 USDC)
-    const currentRate = calculateReward(1, totalDistributed)
-
+    // Calculate current rates for both user types
     return NextResponse.json({
       configured: true,
       pool: {
@@ -206,9 +216,17 @@ export async function GET() {
         remaining,
         percentUsed: (totalDistributed / TOTAL_REWARD_POOL) * 100,
       },
-      currentRate: {
-        per1Usdc: currentRate,
-        per3Usdc: calculateReward(3, totalDistributed),
+      currentRates: {
+        applicant: {
+          multiplier: USER_MULTIPLIERS.applicant,
+          per1Usdc: calculateReward(1, totalDistributed, 'applicant'),
+          per3Usdc: calculateReward(3, totalDistributed, 'applicant'),
+        },
+        employer: {
+          multiplier: USER_MULTIPLIERS.employer,
+          per1Usdc: calculateReward(1, totalDistributed, 'employer'),
+          per3Usdc: calculateReward(3, totalDistributed, 'employer'),
+        },
       },
     })
   } catch (error: any) {

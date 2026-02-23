@@ -2,11 +2,13 @@
  * STORM Token Reward Calculation
  *
  * Implements the smooth decay reward formula from the whitepaper:
- * tokens = (USDC_spent × baseRate) × (remaining / totalPool)^0.7
+ * tokens = (USDC_spent × baseRate × userMultiplier) × (remaining / totalPool)^0.7
  *
  * - baseRate: ~3.33 tokens per $1 USDC at 0% distributed ($3 → 10 tokens)
  * - totalPool: 9,000,000 STORM (user rewards allocation)
  * - exponent 0.7: gradual decay (no sudden halvings like Bitcoin)
+ * - userMultiplier: 1.0 for applicants, 0.5 for employers
+ *   (keeps token community-first while rewarding all economic activity)
  */
 
 // Total reward pool (9M STORM)
@@ -18,23 +20,35 @@ export const BASE_RATE = 10 / 3 // ≈ 3.333...
 // Decay exponent (0.7 = gradual decay, per whitepaper)
 export const DECAY_EXPONENT = 0.7
 
+// User type multipliers - applicants earn more to keep token community-first
+export type UserType = 'applicant' | 'employer'
+export const USER_MULTIPLIERS: Record<UserType, number> = {
+  applicant: 1.0,   // Full rate - token belongs to job seekers
+  employer: 0.5,    // Half rate - employers participate but don't dominate
+}
+
 /**
  * Calculate STORM reward for a given USDC spend.
  *
  * @param usdcSpent - Amount of USDC spent (e.g., 2.99 for resume verification)
  * @param totalDistributed - Total STORM already distributed from the 9M pool
+ * @param userType - 'applicant' (1x rate) or 'employer' (0.5x rate)
  * @returns STORM tokens to reward (as a number, e.g., 9.21)
  *
  * @example
- * // At 0% distributed, $3 spend → 10 STORM
- * calculateReward(3, 0) // → 10
+ * // At 0% distributed, $3 spend by applicant → 10 STORM
+ * calculateReward(3, 0, 'applicant') // → 10
  *
- * // At 50% distributed, $3 spend → ~6.16 STORM
- * calculateReward(3, 4_500_000) // → ~6.16
+ * // At 0% distributed, $3 spend by employer → 5 STORM (half rate)
+ * calculateReward(3, 0, 'employer') // → 5
+ *
+ * // At 50% distributed, $3 spend by applicant → ~6.16 STORM
+ * calculateReward(3, 4_500_000, 'applicant') // → ~6.16
  */
 export function calculateReward(
   usdcSpent: number,
-  totalDistributed: number
+  totalDistributed: number,
+  userType: UserType = 'applicant'
 ): number {
   // Validate inputs
   if (usdcSpent <= 0) return 0
@@ -44,9 +58,12 @@ export function calculateReward(
   // Calculate remaining pool
   const remaining = TOTAL_REWARD_POOL - totalDistributed
 
-  // Apply decay formula: tokens = (USDC × baseRate) × (remaining / total)^0.7
+  // Get user type multiplier (applicants 1x, employers 0.5x)
+  const userMultiplier = USER_MULTIPLIERS[userType] ?? 1.0
+
+  // Apply decay formula: tokens = (USDC × baseRate × userMultiplier) × (remaining / total)^0.7
   const decayMultiplier = Math.pow(remaining / TOTAL_REWARD_POOL, DECAY_EXPONENT)
-  const tokens = usdcSpent * BASE_RATE * decayMultiplier
+  const tokens = usdcSpent * BASE_RATE * userMultiplier * decayMultiplier
 
   // Don't exceed remaining pool
   return Math.min(tokens, remaining)
@@ -88,13 +105,15 @@ export function fromWei(wei: bigint | string): number {
  * Get the current reward rate (tokens per $1 USDC).
  *
  * @param totalDistributed - Total STORM already distributed
+ * @param userType - 'applicant' (1x rate) or 'employer' (0.5x rate)
  * @returns Tokens per $1 USDC at current decay level
  */
-export function getCurrentRate(totalDistributed: number): number {
+export function getCurrentRate(totalDistributed: number, userType: UserType = 'applicant'): number {
   if (totalDistributed >= TOTAL_REWARD_POOL) return 0
   const remaining = TOTAL_REWARD_POOL - totalDistributed
+  const userMultiplier = USER_MULTIPLIERS[userType] ?? 1.0
   const decayMultiplier = Math.pow(remaining / TOTAL_REWARD_POOL, DECAY_EXPONENT)
-  return BASE_RATE * decayMultiplier
+  return BASE_RATE * userMultiplier * decayMultiplier
 }
 
 /**
@@ -119,22 +138,25 @@ export function getDecayCurve(): Array<{
  * Trigger STORM reward distribution for a USDC payment.
  * Call this from ANY payment route after recording the payment.
  * 
- * Non-blocking: fires and logs, doesn't throw or block the payment flow.
- * 
  * @param walletAddress - User's wallet address
  * @param usdcAmount - Amount of USDC spent
  * @param paymentId - Payment record ID (for tracking)
  * @param paymentType - Type of payment (e.g., "MVR_ORDER", "SUBSCRIPTION", "RESUME_VERIFICATION")
+ * @param userType - 'applicant' (1x rate) or 'employer' (0.5x rate)
  * 
  * @example
- * // In any payment route, after recording the payment:
- * triggerStormReward(walletAddress, 2.99, payment.id, 'RESUME_VERIFICATION')
+ * // Applicant payment (full rate):
+ * triggerStormReward(walletAddress, 2.99, payment.id, 'MVR_ORDER', 'applicant')
+ * 
+ * // Employer payment (half rate):
+ * triggerStormReward(walletAddress, 50.00, payment.id, 'BACKGROUND_CHECK', 'employer')
  */
 export async function triggerStormReward(
   walletAddress: string,
   usdcAmount: number,
   paymentId: string,
-  paymentType: string
+  paymentType: string,
+  userType: UserType = 'applicant'
 ): Promise<void> {
   try {
     // Get the base URL for internal API calls
@@ -148,15 +170,17 @@ export async function triggerStormReward(
         usdcAmount,
         paymentId,
         paymentType,
+        userType,
       }),
     })
 
     const result = await response.json()
     
     if (result.success) {
-      console.log(`[STORM] ⛈️ Reward distributed for ${paymentType}:`, {
+      console.log(`[STORM] ⛈️ Reward distributed for ${paymentType} (${userType}):`, {
         walletAddress,
         usdcAmount,
+        userType,
         rewardAmount: result.reward?.amount,
         txHash: result.txHash,
       })

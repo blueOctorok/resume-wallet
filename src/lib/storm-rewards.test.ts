@@ -7,22 +7,23 @@ import {
   getDecayCurve,
   TOTAL_REWARD_POOL,
   BASE_RATE,
+  USER_MULTIPLIERS,
 } from './storm-rewards'
 
 describe('storm-rewards', () => {
   describe('calculateReward', () => {
-    it('returns ~10 STORM for $3 at 0% distributed', () => {
-      const reward = calculateReward(3, 0)
+    it('returns ~10 STORM for $3 at 0% distributed (applicant)', () => {
+      const reward = calculateReward(3, 0, 'applicant')
       expect(reward).toBeCloseTo(10, 1) // ~10 tokens
     })
 
-    it('returns ~6.16 STORM for $3 at 50% distributed', () => {
-      const reward = calculateReward(3, 4_500_000)
+    it('returns ~6.16 STORM for $3 at 50% distributed (applicant)', () => {
+      const reward = calculateReward(3, 4_500_000, 'applicant')
       expect(reward).toBeCloseTo(6.16, 1) // ~6.16 tokens (from whitepaper)
     })
 
-    it('returns ~2.15 STORM for $3 at 89% distributed', () => {
-      const reward = calculateReward(3, 8_000_000)
+    it('returns ~2.15 STORM for $3 at 89% distributed (applicant)', () => {
+      const reward = calculateReward(3, 8_000_000, 'applicant')
       expect(reward).toBeCloseTo(2.15, 1) // ~2.15 tokens (from whitepaper)
     })
 
@@ -44,6 +45,24 @@ describe('storm-rewards', () => {
       const reward = calculateReward(2.99, 0)
       expect(reward).toBeGreaterThan(0)
       expect(reward).toBeCloseTo(2.99 * BASE_RATE, 1)
+    })
+
+    it('defaults to applicant rate when userType not specified', () => {
+      const rewardNoType = calculateReward(3, 0)
+      const rewardApplicant = calculateReward(3, 0, 'applicant')
+      expect(rewardNoType).toBe(rewardApplicant)
+    })
+
+    it('gives employers half the rate of applicants', () => {
+      const applicantReward = calculateReward(10, 0, 'applicant')
+      const employerReward = calculateReward(10, 0, 'employer')
+      expect(employerReward).toBeCloseTo(applicantReward * USER_MULTIPLIERS.employer, 2)
+      expect(employerReward).toBeCloseTo(applicantReward * 0.5, 2)
+    })
+
+    it('returns ~5 STORM for $3 employer spend at 0% distributed', () => {
+      const reward = calculateReward(3, 0, 'employer')
+      expect(reward).toBeCloseTo(5, 1) // 10 * 0.5 = 5 tokens
     })
   })
 

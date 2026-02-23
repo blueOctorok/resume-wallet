@@ -6,6 +6,7 @@ import EmployerVerificationSection from './verification/EmployerVerificationSect
 import ApplicantKanban, { type KanbanApplicant } from './employer/ApplicantKanban'
 import CandidateNotesPanel from './employer/CandidateNotesPanel'
 import AnalyticsDashboard from './employer/AnalyticsDashboard'
+import ApplicationInvites from './employer/ApplicationInvites'
 import {
   Briefcase,
   Users,
@@ -840,6 +841,15 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             </div>
           </div>
         </Section>
+
+        {/* Application Invites - Integration Surface */}
+        <ApplicationInvites
+          walletAddress={walletAddress}
+          onExportApplication={(appId) => {
+            // Open PDF export in new tab
+            window.open(`/api/employer/applications/${appId}/export`, '_blank')
+          }}
+        />
       </div>
 
       {/* Detail Modals */}

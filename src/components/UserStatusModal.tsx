@@ -7,6 +7,7 @@ import SendUSDC from './wallet/SendUSDC'
 import SendSTORM from './wallet/SendSTORM'
 import ReceiveUSDC from './wallet/ReceiveUSDC'
 import TransactionHistory from './TransactionHistory'
+import StormEarningsHistory from './StormEarningsHistory'
 import BuyUSDCButton from './BuyUSDCButton'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
@@ -19,7 +20,7 @@ import {
   Check,
   ExternalLink,
   User,
-  Zap,
+  Coins,
 } from 'lucide-react'
 
 interface UserStatusModalProps {
@@ -34,7 +35,7 @@ interface UserStatusModalProps {
   userRole?: 'driver' | 'developer' | 'employer' | null
 }
 
-type WalletTab = 'overview' | 'send' | 'receive' | 'history'
+type WalletTab = 'overview' | 'send' | 'receive' | 'earnings' | 'history'
 type SendToken = 'usdc' | 'storm'
 
 export default function UserStatusModal({
@@ -101,7 +102,7 @@ export default function UserStatusModal({
   }`
 
   const tabClass = (isActive: boolean) =>
-    `flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex-1 justify-center rounded-t-lg ${
+    `flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 justify-center rounded-t-lg ${
       isActive
         ? theme === 'dark'
           ? 'text-indigo-400 bg-gray-800/50 border-b-2 border-indigo-400'
@@ -197,37 +198,45 @@ export default function UserStatusModal({
           {/* Tabs */}
           {user.address && (
             <div
-              className={`flex border-b ${
+              className={`flex overflow-x-auto scrollbar-hide border-b ${
                 theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
               }`}
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
               <button
                 onClick={() => setActiveTab('overview')}
                 className={tabClass(activeTab === 'overview')}
               >
                 <Wallet className='w-4 h-4' />
-                <span className='hidden sm:inline'>Overview</span>
+                <span>Overview</span>
               </button>
               <button
                 onClick={() => setActiveTab('send')}
                 className={tabClass(activeTab === 'send')}
               >
                 <Send className='w-4 h-4' />
-                <span className='hidden sm:inline'>Send</span>
+                <span>Send</span>
               </button>
               <button
                 onClick={() => setActiveTab('receive')}
                 className={tabClass(activeTab === 'receive')}
               >
                 <QrCode className='w-4 h-4' />
-                <span className='hidden sm:inline'>Receive</span>
+                <span>Receive</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('earnings')}
+                className={tabClass(activeTab === 'earnings')}
+              >
+                <Coins className='w-4 h-4' />
+                <span>Earn</span>
               </button>
               <button
                 onClick={() => setActiveTab('history')}
                 className={tabClass(activeTab === 'history')}
               >
                 <History className='w-4 h-4' />
-                <span className='hidden sm:inline'>History</span>
+                <span>History</span>
               </button>
             </div>
           )}
@@ -344,6 +353,14 @@ export default function UserStatusModal({
                       walletAddress={user.address}
                       refreshInterval={60000}
                     />
+
+                    {/* STORM Earnings Summary */}
+                    <div className={`${cardClass} p-4`}>
+                      <StormEarningsHistory
+                        walletAddress={user.address}
+                        compact={true}
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -478,6 +495,10 @@ export default function UserStatusModal({
 
             {activeTab === 'receive' && user.address && (
               <ReceiveUSDC walletAddress={user.address} />
+            )}
+
+            {activeTab === 'earnings' && user.address && (
+              <StormEarningsHistory walletAddress={user.address} />
             )}
 
             {activeTab === 'history' && user.address && (

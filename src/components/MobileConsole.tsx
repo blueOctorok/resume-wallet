@@ -11,11 +11,16 @@ import { useState, useEffect, useRef } from 'react'
 export default function MobileConsole() {
   const [isOpen, setIsOpen] = useState(false)
   const [logs, setLogs] = useState<Array<{ type: string; message: string; timestamp: Date }>>([])
+  const [isMobile, setIsMobile] = useState(false) // Start false to match SSR
   const logContainerRef = useRef<HTMLDivElement>(null)
+
+  // Check for mobile after mount to avoid hydration mismatch
+  useEffect(() => {
+    setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent))
+  }, [])
 
   useEffect(() => {
     // Only enable on mobile devices
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
     if (!isMobile) return
 
     // Intercept console methods
@@ -62,7 +67,7 @@ export default function MobileConsole() {
       console.warn = originalWarn
       console.info = originalInfo
     }
-  }, [])
+  }, [isMobile])
 
   // Auto-scroll to bottom when new logs arrive
   useEffect(() => {
@@ -71,8 +76,7 @@ export default function MobileConsole() {
     }
   }, [logs, isOpen])
 
-  // Only show on mobile
-  const isMobile = typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+  // Only show on mobile (isMobile is set after mount to avoid hydration mismatch)
   if (!isMobile) return null
 
   return (

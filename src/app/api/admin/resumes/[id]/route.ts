@@ -81,7 +81,32 @@ export async function DELETE(
     const wasDeveloperBuilt = resume.resume_type === 'developer_built'
     const resumeUserId = resume.user_id
 
-    // Delete the resume
+    // Check if any applications reference this resume - block deletion if so
+    const { data: linkedApps, error: appCheckError } = await supabase
+      .from('applications')
+      .select('id, job_postings(title, companies(company_name))')
+      .eq('resume_id', id)
+
+    if (appCheckError) {
+      console.error('[ADMIN RESUME DELETE] Error checking applications:', appCheckError)
+    }
+
+    if (linkedApps && linkedApps.length > 0) {
+      // Build a helpful message showing which applications are linked
+      const appDetails = linkedApps.map((app: any) => {
+        const jobTitle = app.job_postings?.title || 'Unknown Job'
+        const companyName = app.job_postings?.companies?.company_name || 'Unknown Company'
+        return `${jobTitle} at ${companyName}`
+      }).join(', ')
+
+      return NextResponse.json({ 
+        error: `Cannot delete: resume is linked to ${linkedApps.length} job application(s)`,
+        details: `Linked applications: ${appDetails}. Delete these applications first, or remove the resume from them.`,
+        linkedApplicationCount: linkedApps.length,
+      }, { status: 409 })
+    }
+
+    // Safe to delete - no linked applications
     const { error: deleteError } = await supabase
       .from('resumes')
       .delete()
@@ -89,6 +114,13 @@ export async function DELETE(
 
     if (deleteError) {
       console.error('[ADMIN RESUME DELETE] Error:', deleteError)
+      // Check if it's a foreign key violation from another table
+      if (deleteError.code === '23503') {
+        return NextResponse.json({ 
+          error: 'Cannot delete: resume is still referenced by other records',
+          details: deleteError.details 
+        }, { status: 409 })
+      }
       return NextResponse.json({ error: 'Failed to delete resume' }, { status: 500 })
     }
 

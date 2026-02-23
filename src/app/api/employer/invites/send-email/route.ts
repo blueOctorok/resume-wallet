@@ -1,0 +1,135 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { sendInviteEmail } from '@/lib/send-invite-email'
+
+/**
+ * POST /api/employer/invites/send-email
+ * Send an application invite via email
+ * 
+ * Body:
+ *   inviteId - The invite to send
+ *   email - Override email (optional, uses invite.candidate_email if not provided)
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const walletAddress = request.headers.get('x-wallet-address')
+    if (!walletAddress) {
+      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    }
+
+    const supabase = await getAdminSupabaseClient()
+
+    // Get user
+    const { data: user } = await supabase
+      .from('users')
+      .select('id')
+      .ilike('wallet_address', walletAddress)
+      .single()
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Get user's company
+    const { data: membership } = await supabase
+      .from('company_members')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+
+    let companyId = membership?.company_id
+
+    if (!companyId) {
+      const { data: legacyCompany } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('employer_user_id', user.id)
+        .single()
+      companyId = legacyCompany?.id
+    }
+
+    if (!companyId) {
+      return NextResponse.json({ error: 'No company found' }, { status: 403 })
+    }
+
+    const body = await request.json()
+    const { inviteId, email: overrideEmail } = body
+
+    if (!inviteId) {
+      return NextResponse.json({ error: 'Invite ID required' }, { status: 400 })
+    }
+
+    // Fetch invite with company and job info
+    const { data: invite, error: inviteError } = await supabase
+      .from('application_invites')
+      .select(`
+        id, token, candidate_email, candidate_name, welcome_message,
+        status, job_posting_id,
+        companies(id, company_name),
+        job_postings(id, title)
+      `)
+      .eq('id', inviteId)
+      .eq('company_id', companyId)
+      .single()
+
+    if (inviteError || !invite) {
+      console.error('[SEND INVITE EMAIL] Invite fetch error:', inviteError)
+      return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
+    }
+
+    // Determine email address
+    const recipientEmail = overrideEmail || invite.candidate_email
+    if (!recipientEmail) {
+      return NextResponse.json({ 
+        error: 'No email address. Provide an email or update the invite with candidate email.' 
+      }, { status: 400 })
+    }
+
+    // Check invite is still sendable
+    if (invite.status === 'completed' || invite.status === 'cancelled') {
+      return NextResponse.json({ 
+        error: `Cannot send email for ${invite.status} invite` 
+      }, { status: 400 })
+    }
+
+    const company = invite.companies as any
+    const job = invite.job_postings as any
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+
+    // Send the email
+    const result = await sendInviteEmail({
+      to: recipientEmail,
+      candidateName: invite.candidate_name || undefined,
+      companyName: company?.company_name || 'Employer',
+      jobTitle: job?.title || undefined,
+      inviteLink: `${baseUrl}/apply/${invite.token}`,
+      welcomeMessage: invite.welcome_message || undefined,
+    })
+
+    if (!result.ok) {
+      return NextResponse.json({ 
+        error: result.error || 'Failed to send email' 
+      }, { status: 500 })
+    }
+
+    // Update invite to track that email was sent
+    await supabase
+      .from('application_invites')
+      .update({ 
+        candidate_email: recipientEmail,
+        email_sent_at: new Date().toISOString(),
+      })
+      .eq('id', inviteId)
+
+    return NextResponse.json({
+      success: true,
+      message: `Invite email sent to ${recipientEmail}`,
+      sentTo: recipientEmail,
+    })
+
+  } catch (error) {
+    console.error('[SEND INVITE EMAIL] Unexpected error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

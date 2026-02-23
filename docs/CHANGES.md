@@ -2,6 +2,294 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 📧 **Application Invite Email Sending** (February 2026)
+
+### New Features
+
+**Send Email Button:**
+- Employers can now send invite emails directly from the Application Invites panel
+- Email includes professional template with company name, job title (if linked), and clear instructions
+- Lists what candidates need (license info, CDL, 10-year employment history, violations)
+- Shows estimated completion time (15-20 minutes)
+- Security messaging about blockchain verification
+- If no email on file, prompts employer to enter one
+
+**Bullhorn Integration Placeholder:**
+- Added disabled "Bullhorn" button showing "coming soon"
+- Requires OAuth setup and per-company API keys — future implementation
+
+### New Files
+- `src/lib/send-invite-email.ts` — Email template and Resend integration
+- `src/app/api/employer/invites/send-email/route.ts` — API endpoint for sending emails
+- `supabase/migrations/022_invite_email_tracking.sql` — Adds `email_sent_at` column
+
+### How It Works
+1. Employer creates invite (with or without email)
+2. Click "Send Email" — if no email, prompts for one
+3. Email sends via Resend with professional formatting
+4. `email_sent_at` timestamp recorded on invite
+
+---
+
+## 📋 **Admin Applications Tab** (February 2026)
+
+### New Feature
+Added Applications management to the admin dashboard. Track all job applications submitted through the platform.
+
+### What's Included
+- **Applications Tab** - Under "Employers" section in admin sidebar
+- **Filter by Status** - All, Submitted, Under Review, Hired, Rejected
+- **Table View** showing:
+  - Applicant name/email
+  - Job title and company
+  - Application status
+  - Resume linked (✓/—)
+  - DOT Application status (✓/.../ —)
+  - Applied date
+  - Delete action
+- **Delete Protection** - Resumes can't be deleted if linked to applications (returns helpful error)
+
+### New Files
+- `src/app/api/admin/applications/route.ts` - List applications
+- `src/app/api/admin/applications/[id]/route.ts` - Get, update status, delete application
+
+### API Endpoints
+- `GET /api/admin/applications` - List all with filters
+- `GET /api/admin/applications/[id]` - Get detail
+- `PATCH /api/admin/applications/[id]` - Update status
+- `DELETE /api/admin/applications/[id]` - Delete application
+
+---
+
+## 🔧 **Admin Page Wallet Fix** (February 2026)
+
+### Issue
+Admin page showed "Waiting for wallet connection..." even when logged in on main page. The Alchemy `useAccount` hook wasn't reliably restoring the session on the `/admin` route.
+
+### Solution
+Added localStorage fallback for admin access:
+- Main page saves wallet address to `stormchain-admin-wallet` in localStorage on login
+- Admin page tries Alchemy hook first, falls back to localStorage
+- Logout clears the localStorage entry
+
+### Files Changed
+- `src/app/page.tsx` - Save wallet to localStorage on auth success, clear on logout
+- `src/app/admin/AdminDashboard.tsx` - Read from localStorage as fallback
+
+---
+
+## 🐛 **Bug Fixes: Invite API & Hydration** (February 2026)
+
+### Application Invite 500 Error
+- **Issue:** `/api/invite/[token]` returned 500 Internal Server Error when fetching invite details
+- **Cause:** Query was selecting `companies(id, name)` but the column is actually `company_name`
+- **Fix:** Updated query to use `companies(id, company_name)` and mapped response correctly
+- **Files:** `src/app/api/invite/[token]/route.ts`, `src/app/api/employer/invites/route.ts`
+
+### React Hydration Mismatch
+- **Issue:** Console error "Hydration failed because server rendered HTML didn't match client"
+- **Cause:** `MobileConsole` component used `typeof window !== 'undefined'` in render path, causing server/client mismatch
+- **Fix:** Moved mobile detection to `useState` + `useEffect` so SSR and initial client render both return `null`, only showing UI after mount
+- **File:** `src/components/MobileConsole.tsx`
+
+---
+
+## 🔗 **ATS Integration Surface: Application Invites & Exports** (February 2026)
+
+### Overview
+
+This release introduces the **integration surface** — features that allow StormChain to work alongside existing ATS systems like Bullhorn. Companies can now send application links, download DOT applications as PDFs, and run MVRs with manual data entry.
+
+**Design Principle:** Standalone product + integration surface. StormChain works fully on its own, but also fits into existing workflows (send link → candidate fills form → download PDF → attach to ATS).
+
+### New Features
+
+**Application Invites:**
+- Employers create shareable links that send candidates directly to the DOT application
+- Link shows company name and optional job context
+- Status tracking: pending → viewed → in_progress → completed
+- Automatic expiration (30 days default)
+- View count tracking
+
+**DOT Application PDF Export:**
+- One-click PDF download of completed DOT applications
+- Professional formatting with all form data
+- Blockchain verification badge when verified
+- Available for admin and employers (with access control)
+
+**Admin MVR Order (Manual Entry):**
+- Back-office MVR ordering without requiring candidate login
+- Enter candidate info from signed authorization forms
+- Optionally link to existing candidate in system
+- Company billing tracking
+- Same Accio integration, different entry point
+
+### Files Created
+
+**Migration:**
+- `supabase/migrations/021_application_invites.sql` - Schema for invite links
+
+**API Routes:**
+- `src/app/api/employer/invites/route.ts` - Create, list, update invites
+- `src/app/api/invite/[token]/route.ts` - Public invite validation
+- `src/app/api/admin/dot-apps/[id]/export/route.ts` - Admin DOT PDF export
+- `src/app/api/employer/applications/[id]/export/route.ts` - Employer DOT PDF export
+- `src/app/api/admin/mvr/order/route.ts` - Admin MVR order with manual entry
+
+**Pages:**
+- `src/app/apply/[token]/page.tsx` - Candidate landing page for invites
+
+**Components:**
+- `src/components/employer/ApplicationInvites.tsx` - Invite management UI
+
+**Libraries:**
+- `src/lib/dot-application-pdf.ts` - DOT application PDF generator
+
+**Documentation:**
+- `docs/INTEGRATION_STRATEGY.md` - Full integration strategy and architecture
+
+### Database Schema
+
+```sql
+application_invites (
+  id UUID PRIMARY KEY,
+  company_id UUID NOT NULL,
+  token VARCHAR(64) UNIQUE NOT NULL,
+  candidate_email VARCHAR(255),
+  candidate_name VARCHAR(255),
+  job_posting_id UUID,
+  status VARCHAR(20), -- pending, viewed, in_progress, completed, expired, cancelled
+  driver_application_id UUID, -- links to completed application
+  expires_at TIMESTAMP,
+  ...
+)
+```
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/employer/invites` | GET | List company's invites |
+| `/api/employer/invites` | POST | Create new invite |
+| `/api/employer/invites` | PATCH | Cancel invite |
+| `/api/invite/[token]` | GET | Validate invite (public) |
+| `/api/invite/[token]` | POST | Mark invite in_progress |
+| `/api/invite/[token]` | PATCH | Mark invite completed |
+| `/api/admin/dot-apps/[id]/export` | GET | Download DOT app PDF (admin) |
+| `/api/employer/applications/[id]/export` | GET | Download DOT app PDF (employer) |
+| `/api/admin/mvr/order` | POST | Place MVR order with manual data |
+| `/api/admin/mvr/order` | GET | List admin-placed MVR orders |
+
+### Usage Flow (Example: Pace Drivers)
+
+1. **Pace Admin** creates application invite in StormChain
+2. Gets shareable link: `stormchain.ai/apply/abc123`
+3. Sends link to candidate via Bullhorn or email
+4. **Candidate** opens link → sees company name → clicks "Start Application"
+5. Redirects to StormChain → logs in/signs up → completes DOT application
+6. **Pace Admin** sees invite status = "completed"
+7. Downloads DOT application PDF → attaches to Bullhorn
+8. Later: sends MVR authorization form (Adobe)
+9. **Pace Admin** enters candidate info in StormChain → orders MVR
+10. MVR result → downloads → attaches to Bullhorn
+
+### Key Design Decisions
+
+- **Company-agnostic:** All features work for any company, not hardcoded to specific partners
+- **Minimal candidate friction:** One link, one clear action, back to their workflow
+- **Employer control:** Admins create/cancel invites, download exports
+- **Status transparency:** Clear tracking so admins know what's pending
+- **Standalone + integrate:** Product works fully alone; integration is additive
+
+---
+
+## 📊 **STORM Earnings History & Export** (February 2026)
+
+### New Features
+
+**Transparent earnings tracking for tax/accounting purposes:**
+- New "Earnings" tab in wallet modal shows complete STORM earning history
+- Each transaction shows: amount earned, USDC spent, payment type, date, and blockchain tx link
+- Summary cards: Total earned, Total spent, Transaction count, Average rate
+- User type indicator (shows "0.5x" badge for employer-rate earnings)
+- CSV export with all transaction details + summary for accounting
+
+**Compact earnings summary on wallet overview:**
+- Quick view of total STORM earned and transaction count
+- One-click export without leaving the overview tab
+
+### Files Created
+- `src/app/api/storm/history/route.ts` - API endpoint to fetch earnings from `storm_distributions` table
+- `src/components/StormEarningsHistory.tsx` - Full and compact earnings display with CSV export
+
+### Files Modified
+- `src/components/UserStatusModal.tsx` - Added "Earnings" tab, integrated compact summary in overview
+
+### Export CSV Format
+```
+Date, STORM Earned, USDC Spent, Payment Type, User Type, Rate Multiplier, Transaction Hash, BaseScan Link
+...transactions...
+
+SUMMARY
+Total STORM Earned, X.XX
+Total USDC Spent, X.XX
+Total Transactions, X
+Average Rate (STORM/USDC), X.XX
+Wallet Address, 0x...
+Export Date, 2026-02-XX
+```
+
+---
+
+## ⛈️ **Differentiated STORM Rewards: Applicant vs Employer Rates** (February 2026)
+
+### Design Decision
+Employers are the primary spenders on the platform but were previously excluded from STORM rewards. This update implements **differentiated rates** to include employers while preserving the community-first identity:
+
+- **Applicants**: 1.0x rate (full rewards - token belongs to job seekers)
+- **Employers**: 0.5x rate (half rewards - they participate but don't dominate)
+
+### Rationale
+- Every STORM token is backed by real USDC economic activity
+- Employers spending $500 is real revenue that should be rewarded
+- Half rate prevents corporate token accumulation from diluting applicant holdings
+- Governance exclusion for employer tokens can be added later if needed
+
+### Technical Changes
+
+**`src/lib/storm-rewards.ts`**
+- Added `UserType` type: `'applicant' | 'employer'`
+- Added `USER_MULTIPLIERS` constant: `{ applicant: 1.0, employer: 0.5 }`
+- Updated `calculateReward()` to accept optional `userType` parameter (defaults to `'applicant'`)
+- Updated `getCurrentRate()` to accept optional `userType` parameter
+- Updated `triggerStormReward()` to accept and pass `userType` to distribution API
+
+**`src/app/api/storm/distribute/route.ts`**
+- POST: Now accepts `userType` in request body, applies appropriate multiplier
+- POST: Logs `userType` and `multiplier` for transparency
+- POST: Stores `user_type` and `rate_multiplier` in `storm_distributions` table
+- GET: Returns separate rate info for both applicant and employer
+
+**`src/lib/storm-rewards.test.ts`**
+- Added tests for employer rate (0.5x)
+- Added test verifying default is applicant rate
+- All 18 tests passing
+
+### Usage
+
+```typescript
+// Applicant payment (full rate):
+triggerStormReward(walletAddress, 2.99, payment.id, 'MVR_ORDER', 'applicant')
+
+// Employer payment (half rate):
+triggerStormReward(walletAddress, 50.00, payment.id, 'BACKGROUND_CHECK', 'employer')
+```
+
+### Future Integration
+When employer payment routes are added, pass `'employer'` as the 5th parameter to `triggerStormReward()`.
+
+---
+
 ## 📊 **Phase 5A: Analytics Dashboard** (February 2026)
 
 ### New Features

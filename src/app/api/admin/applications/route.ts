@@ -1,0 +1,124 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { requireAdmin } from '@/lib/admin-auth'
+
+/**
+ * GET /api/admin/applications
+ * List all job applications with related data
+ * 
+ * Query params:
+ *   status - Filter by status
+ *   search - Search by applicant name/email or job title
+ *   limit - Results per page (default 20)
+ *   offset - Pagination offset
+ */
+export async function GET(request: NextRequest) {
+  const auth = requireAdmin(request)
+  if (!auth.authorized) return auth.error!
+
+  try {
+    const supabase = await getAdminSupabaseClient()
+    const { searchParams } = new URL(request.url)
+    
+    const status = searchParams.get('status')
+    const search = searchParams.get('search')?.toLowerCase()
+    const limit = parseInt(searchParams.get('limit') || '20')
+    const offset = parseInt(searchParams.get('offset') || '0')
+
+    // Build query with joins to get all related data
+    // Note: We fetch user data separately since the FK name may vary
+    // Note: Column renamed from driver_user_id to applicant_user_id in migration 016
+    // Note: applications table uses 'applied_at' not 'created_at'
+    let query = supabase
+      .from('applications')
+      .select(`
+        id, status, cover_letter, applied_at, updated_at,
+        job_posting_id, applicant_user_id, driver_application_id, resume_id,
+        job_postings(id, title, companies(id, company_name)),
+        resumes(id, title, filename),
+        driver_applications(id, is_complete, verification_status)
+      `, { count: 'exact' })
+      .order('applied_at', { ascending: false })
+
+    // Apply filters
+    if (status && status !== 'all') {
+      query = query.eq('status', status)
+    }
+
+    // Apply pagination
+    query = query.range(offset, offset + limit - 1)
+
+    const { data: applications, error, count } = await query
+
+    if (error) {
+      console.error('[ADMIN APPLICATIONS] Query error:', error)
+      return NextResponse.json({ error: 'Failed to fetch applications' }, { status: 500 })
+    }
+
+    // Fetch user data separately (FK relationship name varies)
+    const userIds = [...new Set((applications || []).map((a: any) => a.applicant_user_id).filter(Boolean))]
+    let usersMap: Record<string, any> = {}
+    
+    if (userIds.length > 0) {
+      const { data: users } = await supabase
+        .from('users')
+        .select('id, wallet_address, email, name')
+        .in('id', userIds)
+      
+      if (users) {
+        usersMap = Object.fromEntries(users.map(u => [u.id, u]))
+      }
+    }
+
+    // Transform for cleaner response
+    const transformed = (applications || []).map((app: any) => {
+      const user = usersMap[app.applicant_user_id]
+      return {
+        id: app.id,
+        status: app.status,
+        coverLetter: app.cover_letter,
+        createdAt: app.applied_at, // applications table uses applied_at
+        updatedAt: app.updated_at,
+        // Job info
+        jobId: app.job_posting_id,
+        jobTitle: app.job_postings?.title || 'Unknown Job',
+        companyName: app.job_postings?.companies?.company_name || 'Unknown Company',
+        // Applicant info
+        applicantId: app.applicant_user_id,
+        applicantWallet: user?.wallet_address,
+        applicantEmail: user?.email,
+        applicantName: user?.name,
+        // Linked records
+        resumeId: app.resume_id,
+        resumeTitle: app.resumes?.title || app.resumes?.filename || null,
+        dotApplicationId: app.driver_application_id,
+        dotApplicationComplete: app.driver_applications?.is_complete || false,
+        dotApplicationStatus: app.driver_applications?.verification_status || null,
+      }
+    })
+
+    // Filter by search (post-query since we need to search across joined fields)
+    let filtered = transformed
+    if (search) {
+      filtered = transformed.filter((app: any) => 
+        app.applicantName?.toLowerCase().includes(search) ||
+        app.applicantEmail?.toLowerCase().includes(search) ||
+        app.jobTitle?.toLowerCase().includes(search) ||
+        app.companyName?.toLowerCase().includes(search) ||
+        app.applicantWallet?.toLowerCase().includes(search)
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      applications: filtered,
+      total: search ? filtered.length : (count || 0),
+      limit,
+      offset,
+    })
+
+  } catch (error) {
+    console.error('[ADMIN APPLICATIONS] Unexpected error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

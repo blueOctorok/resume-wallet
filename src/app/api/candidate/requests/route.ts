@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
         completed_at,
         expires_at,
         created_at,
-        company:companies(id, name, logo_url)
+        company:companies(id, company_name, logo_url)
       `)
       .eq('candidate_user_id', user.id)
       .order('created_at', { ascending: false })
@@ -67,17 +67,24 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      requests: (requests || []).map(r => ({
-        id: r.id,
-        requestType: r.request_type,
-        documentType: r.document_type,
-        message: r.message,
-        status: r.status,
-        completedAt: r.completed_at,
-        expiresAt: r.expires_at,
-        createdAt: r.created_at,
-        company: r.company,
-      })),
+      requests: (requests || []).map(r => {
+        const company = r.company as { id: string; company_name: string; logo_url: string | null } | null
+        return {
+          id: r.id,
+          requestType: r.request_type,
+          documentType: r.document_type,
+          message: r.message,
+          status: r.status,
+          completedAt: r.completed_at,
+          expiresAt: r.expires_at,
+          createdAt: r.created_at,
+          company: company ? {
+            id: company.id,
+            name: company.company_name,
+            logoUrl: company.logo_url,
+          } : null,
+        }
+      }),
       pendingCount,
     })
 

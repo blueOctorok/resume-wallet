@@ -1694,9 +1694,13 @@ const HomeContent = () => {
     [handlePrimerAction]
   )
 
-  // Debug: Log user state changes
+  // Debug: Log user state changes and persist wallet for admin access
   useEffect(() => {
     console.log('🎯 [HOME] User state changed:', user)
+    // Save wallet address for admin page access whenever user is logged in
+    if (user?.address && typeof window !== 'undefined') {
+      window.localStorage.setItem('stormchain-admin-wallet', user.address)
+    }
   }, [user])
 
   // Stable callback to prevent infinite loops
@@ -1709,6 +1713,11 @@ const HomeContent = () => {
     console.log('🎯 [HOME] User state updated and currentPage reset to home')
     // Don't auto-navigate here - let the role fetch useEffect handle it
     // This ensures employers go to dashboard and drivers go to resume
+    
+    // Store wallet address for admin page access (admin reads from localStorage as fallback)
+    if (userData?.address && typeof window !== 'undefined') {
+      window.localStorage.setItem('stormchain-admin-wallet', userData.address)
+    }
   }, [])
 
   // Give Alchemy time to check for existing session before showing sign-in
@@ -1743,6 +1752,10 @@ const HomeContent = () => {
 
   // Logout handler
   const handleLogout = useCallback(() => {
+    // Clear admin wallet from localStorage
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem('stormchain-admin-wallet')
+    }
     // Call the Alchemy logout function if available
     // This will handle both Alchemy logout AND call onLogoutSuccess which sets user to null
     if ((window as any).__alchemyLogout) {
@@ -2529,6 +2542,7 @@ const HomeContent = () => {
               onSelectRole={handleRoleSelection}
               isLoading={isSettingRole}
               userEmail={user?.email}
+              walletAddress={user?.address}
             />
           )}
 

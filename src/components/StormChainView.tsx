@@ -81,8 +81,8 @@ export default function StormChainView({ onBack }: StormChainViewProps) {
       {/* Key Stats Row */}
       <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-8'>
         <StatCard isDark={isDark} label='Total Supply' value='15M' />
-        <StatCard isDark={isDark} label='Driver Rewards' value='60%' />
-        <StatCard isDark={isDark} label='Per $3 USDC' value='~10' />
+        <StatCard isDark={isDark} label='User Rewards' value='60%' />
+        <StatCard isDark={isDark} label='Per $3 (Applicant)' value='~10' />
         <StatCard isDark={isDark} label='Decay Model' value='Smooth' />
       </div>
 
@@ -132,8 +132,8 @@ export default function StormChainView({ onBack }: StormChainViewProps) {
           <ul
             className={`text-sm space-y-1 ${isDark ? 'text-brand-cream/80' : 'text-brand-sage/80'}`}
           >
-            <li>• $3 USDC spent → ~10 tokens</li>
-            <li>• $10 USDC spent → ~33 tokens</li>
+            <li>• $3 USDC spent (applicant) → ~10 tokens</li>
+            <li>• $3 USDC spent (employer) → ~5 tokens (0.5x rate)</li>
             <li>• Any product, any price: same rule</li>
           </ul>
         </div>
@@ -266,21 +266,22 @@ export default function StormChainView({ onBack }: StormChainViewProps) {
           <p
             className={`text-sm font-bold ${isDark ? 'text-brand-mint' : 'text-brand-sage'}`}
           >
-            tokens = (USDC_spent × rate) × (remaining / total)^0.7
+            tokens = (USDC × rate × multiplier) × (remaining / total)^0.7
           </p>
           <p
             className={`text-xs mt-2 ${isDark ? 'text-brand-cream/60' : 'text-brand-sage/60'}`}
           >
-            rate ≈ 3.33 tokens per $1 USDC at start (e.g. $3 → 10 tokens)
+            rate ≈ 3.33 per $1 | multiplier: 1.0 (applicant), 0.5 (employer)
           </p>
         </div>
 
         <p
           className={`text-sm mb-4 ${isDark ? 'text-brand-cream/70' : 'text-brand-sage/70'}`}
         >
-          <strong>What this means:</strong> Spend $3 USDC → ~10 tokens at the
-          start. By the time 50% of the pool is distributed, $3 spend → ~6
-          tokens. One rule for any product.
+          <strong>What this means:</strong> Applicant spends $3 USDC → ~10
+          tokens at the start. Employer spends $3 USDC → ~5 tokens. By the time
+          50% of the pool is distributed, those amounts decrease to ~6 and ~3
+          tokens respectively.
         </p>
 
         {/* Decay Curve Table */}
@@ -297,7 +298,7 @@ export default function StormChainView({ onBack }: StormChainViewProps) {
                 </th>
                 <th className='text-right py-2 font-semibold'>% Used</th>
                 <th className='text-right py-2 font-semibold'>
-                  Tokens per $3 USDC
+                  Applicant per $3
                 </th>
               </tr>
             </thead>
@@ -352,6 +353,11 @@ export default function StormChainView({ onBack }: StormChainViewProps) {
             </tbody>
           </table>
         </div>
+        <p
+          className={`text-xs mt-2 italic ${isDark ? 'text-brand-cream/50' : 'text-brand-sage/50'}`}
+        >
+          * Table shows applicant rates. Employers receive half these amounts.
+        </p>
       </Section>
 
       {/* Early Adopter Advantage */}
@@ -430,21 +436,48 @@ export default function StormChainView({ onBack }: StormChainViewProps) {
         </div>
       </Section>
 
-      {/* Drivers Only */}
+      {/* Who Earns */}
       <Section
         isDark={isDark}
         title='Who Earns STORM?'
         icon={<Users className='w-5 h-5' />}
       >
         <p>
-          <strong>Only applicants earn STORM tokens.</strong> When employers pay
-          for services, those tokens go into a platform fund—not to the
-          employer.
+          <strong>Everyone who pays in USDC earns STORM.</strong> Both
+          applicants and employers participate in the token economy, but at
+          different rates to keep the token community-first.
         </p>
-        <p className='mt-3'>
-          This keeps things simple for companies (no token accounting) and
-          directs all rewards to the users who actually use the platform.
-        </p>
+
+        {/* Rate Comparison Table */}
+        <div className='overflow-x-auto mt-4'>
+          <table
+            className={`w-full text-sm ${isDark ? 'text-brand-cream/90' : 'text-brand-sage'}`}
+          >
+            <thead>
+              <tr
+                className={`border-b ${isDark ? 'border-brand-mint/30' : 'border-brand-sage/30'}`}
+              >
+                <th className='text-left py-2 font-semibold'>User Type</th>
+                <th className='text-center py-2 font-semibold'>Rate</th>
+                <th className='text-right py-2 font-semibold'>$3 USDC Example</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                className={`border-b ${isDark ? 'border-brand-mint/10' : 'border-brand-sage/10'} ${isDark ? 'bg-green-900/20' : 'bg-green-50'}`}
+              >
+                <td className='py-2 font-medium'>Applicants</td>
+                <td className='py-2 text-center'>1.0x (full rate)</td>
+                <td className='py-2 text-right font-mono'>~10 tokens</td>
+              </tr>
+              <tr>
+                <td className='py-2 font-medium'>Employers</td>
+                <td className='py-2 text-center'>0.5x (half rate)</td>
+                <td className='py-2 text-right font-mono'>~5 tokens</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
         <div
           className={`mt-4 p-4 rounded-lg ${
@@ -456,18 +489,14 @@ export default function StormChainView({ onBack }: StormChainViewProps) {
           <p
             className={`font-medium mb-2 ${isDark ? 'text-brand-cream' : 'text-brand-sage'}`}
           >
-            Platform Fund Uses:
+            Why differentiated rates?
           </p>
           <ul
             className={`text-sm space-y-1 ${isDark ? 'text-brand-cream/80' : 'text-brand-sage/80'}`}
           >
-            <li>• Surprise bonuses for active users</li>
-            <li>• "User of the Month" rewards</li>
-            <li>
-              • Rewards for employers who do well on StormChain (e.g. discounts)
-            </li>
-            <li>• Treasury for platform growth</li>
-            <li>• Future liquidity provisions</li>
+            <li>• <strong>Applicants get full rate</strong> — The token belongs to job seekers</li>
+            <li>• <strong>Employers get half rate</strong> — They participate but don't dominate</li>
+            <li>• <strong>Every token is backed</strong> — Both rates represent real USDC activity</li>
           </ul>
         </div>
       </Section>
@@ -479,23 +508,17 @@ export default function StormChainView({ onBack }: StormChainViewProps) {
         icon={<Briefcase className='w-5 h-5' />}
       >
         <p>
-          Employers don't earn STORM when they pay for platform services—those
-          tokens go to the platform fund. You always{' '}
-          <strong>pay in USDC</strong>. When token utility is live, employers
-          who <strong>hold STORM</strong> in their wallet get{' '}
+          Employers <strong>earn STORM at 0.5x the applicant rate</strong> when
+          they pay for platform services. You always{' '}
+          <strong>pay in USDC</strong>, and STORM tokens are distributed as a
+          bonus.
+        </p>
+        <p className='mt-3'>
+          When token utility is live, employers who{' '}
+          <strong>hold STORM</strong> in their wallet get{' '}
           <strong>lower USDC transaction costs</strong> on the platform (e.g.
           plans, bulk verification). You never pay in STORM—just hold it to
           qualify for the discount.
-        </p>
-        <p className='mt-3'>
-          Holding (instead of spending tokens at checkout) keeps STORM scarcer
-          and makes company books and taxes simpler: all platform spend stays in
-          USDC.
-        </p>
-        <p className='mt-3'>
-          From the same platform rewards bucket we could also reward employers
-          who do well on StormChain (e.g. quality, engagement) with discounts—so
-          performing well on the platform can earn you lower USDC costs too.
         </p>
         <div
           className={`mt-4 p-4 rounded-lg ${
@@ -513,20 +536,16 @@ export default function StormChainView({ onBack }: StormChainViewProps) {
             className={`text-sm space-y-1 ${isDark ? 'text-brand-cream/80' : 'text-brand-sage/80'}`}
           >
             <li>
-              • Pay only in USDC—no token accounting; applicants earn the
-              rewards
+              • Pay in USDC, earn STORM as a bonus (at half the applicant rate)
             </li>
             <li>
-              • Optional: buy and hold STORM on the DEX to get lower USDC fees
-              on plans and bulk verification
+              • Hold STORM to get lower USDC fees on plans and bulk verification
             </li>
             <li>
-              • Do well on StormChain and you could get rewards from the
-              platform bucket (e.g. discounts)
+              • Half rate keeps the token community-first while still rewarding your spending
             </li>
             <li>
-              • Holding keeps tokens scarce and simplifies taxes and company
-              books
+              • Governance voting may exclude employer-held tokens to preserve applicant voice
             </li>
           </ul>
         </div>

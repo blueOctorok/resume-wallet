@@ -45,6 +45,7 @@ const TBackendSetup = dynamic(
 type TabId =
   | 'companies'
   | 'jobs'
+  | 'applications'
   | 'users'
   | 'dotApps'
   | 'profiles'
@@ -159,6 +160,27 @@ interface AdminJob {
   applicationCount: number
 }
 
+// Job application for admin view
+interface AdminApplication {
+  id: string
+  status: string
+  coverLetter: string | null
+  createdAt: string
+  updatedAt: string
+  jobId: string
+  jobTitle: string
+  companyName: string
+  applicantId: string
+  applicantWallet: string | null
+  applicantEmail: string | null
+  applicantName: string | null
+  resumeId: string | null
+  resumeTitle: string | null
+  dotApplicationId: string | null
+  dotApplicationComplete: boolean
+  dotApplicationStatus: string | null
+}
+
 // User detail data when viewing a specific user
 interface UserDetail {
   user: User
@@ -244,7 +266,30 @@ interface Resume {
 function AdminDashboardContent() {
   const { theme } = useTheme()
   const account = useAccount({ type: 'LightAccount' })
-  const walletAddress = account?.address
+  
+  // Try Alchemy hook first, fall back to localStorage (set by main page on login)
+  // Initialize from localStorage immediately to avoid waiting
+  const [walletAddress, setWalletAddress] = useState<string | undefined>(() => {
+    if (typeof window !== 'undefined') {
+      return window.localStorage.getItem('stormchain-admin-wallet') || undefined
+    }
+    return undefined
+  })
+  
+  // Update if Alchemy provides an address (takes priority)
+  useEffect(() => {
+    if (account?.address) {
+      setWalletAddress(account.address)
+      console.log('[ADMIN] Using wallet from Alchemy:', account.address)
+    }
+  }, [account?.address])
+  
+  // Log current source on mount
+  useEffect(() => {
+    if (walletAddress && !account?.address) {
+      console.log('[ADMIN] Using wallet from localStorage:', walletAddress)
+    }
+  }, [])
 
   const [activeTab, setActiveTab] = useState<TabId>('users')
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
@@ -257,6 +302,8 @@ function AdminDashboardContent() {
   const [companyStatusFilter, setCompanyStatusFilter] = useState<'all' | 'pending' | 'active' | 'suspended'>('all')
   const [jobs, setJobs] = useState<AdminJob[]>([])
   const [jobsFilter, setJobsFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [applications, setApplications] = useState<AdminApplication[]>([])
+  const [applicationsFilter, setApplicationsFilter] = useState<'all' | 'submitted' | 'under_review' | 'hired' | 'rejected'>('all')
   const [users, setUsers] = useState<User[]>([])
   const [dotApps, setDotApps] = useState<DotApp[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
@@ -420,6 +467,18 @@ function AdminDashboardContent() {
           }
           break
 
+        case 'applications':
+          response = await fetch(
+            `/api/admin/applications?status=${applicationsFilter === 'all' ? '' : applicationsFilter}&search=${encodeURIComponent(searchQuery)}&limit=${pageSize}&offset=${offset}`,
+            { headers }
+          )
+          data = await response.json()
+          if (data.success) {
+            setApplications(data.applications)
+            setTotalCount(data.total)
+          }
+          break
+
         case 'users':
           response = await fetch(
             `/api/admin/users?search=${encodeURIComponent(searchQuery)}&limit=${pageSize}&offset=${offset}`,
@@ -522,7 +581,7 @@ function AdminDashboardContent() {
     } finally {
       setLoading(false)
     }
-  }, [walletAddress, isAdmin, activeTab, currentPage, searchQuery, companyStatusFilter])
+  }, [walletAddress, isAdmin, activeTab, currentPage, searchQuery, companyStatusFilter, applicationsFilter])
 
   useEffect(() => {
     if (activeTab !== 'tools') {
@@ -563,6 +622,9 @@ function AdminDashboardContent() {
         case 'mvr':
           endpoint = `/api/admin/mvr/${deleteTarget.id}`
           break
+        case 'application':
+          endpoint = `/api/admin/applications/${deleteTarget.id}`
+          break
       }
 
       const response = await fetch(endpoint, {
@@ -594,6 +656,7 @@ function AdminDashboardContent() {
       tabs: [
         { id: 'companies' as TabId, label: 'Companies', icon: <Building2 className='w-4 h-4' /> },
         { id: 'jobs' as TabId, label: 'Job Postings', icon: <Briefcase className='w-4 h-4' /> },
+        { id: 'applications' as TabId, label: 'Applications', icon: <ClipboardList className='w-4 h-4' /> },
       ],
     },
     {
@@ -1188,6 +1251,137 @@ function AdminDashboardContent() {
                       }`} />
                       <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
                         No job postings found
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Applications Section */}
+              {activeTab === 'applications' && (
+                <div className='p-6'>
+                  {/* Filter Pills */}
+                  <div className='flex flex-wrap gap-2 mb-6'>
+                    {(['all', 'submitted', 'under_review', 'hired', 'rejected'] as const).map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => setApplicationsFilter(status)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          applicationsFilter === status
+                            ? 'bg-indigo-500 text-white'
+                            : theme === 'dark'
+                            ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {status === 'all' ? 'All' : status.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Applications Table */}
+                  <div className='overflow-x-auto'>
+                    <table className='w-full'>
+                      <thead className={theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}>
+                        <tr>
+                          <th className={`${tableHeaderClass} px-4 py-3`}>Applicant</th>
+                          <th className={`${tableHeaderClass} px-4 py-3`}>Job</th>
+                          <th className={`${tableHeaderClass} px-4 py-3`}>Company</th>
+                          <th className={`${tableHeaderClass} px-4 py-3`}>Status</th>
+                          <th className={`${tableHeaderClass} px-4 py-3`}>Resume</th>
+                          <th className={`${tableHeaderClass} px-4 py-3`}>DOT App</th>
+                          <th className={`${tableHeaderClass} px-4 py-3`}>Applied</th>
+                          <th className={`${tableHeaderClass} px-4 py-3`}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className={`divide-y ${theme === 'dark' ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                        {applications.map((app) => (
+                          <tr
+                            key={app.id}
+                            className={`${theme === 'dark' ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'}`}
+                          >
+                            <td className={tableCellClass}>
+                              <div>
+                                <p className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                                  {app.applicantName || 'Unnamed'}
+                                </p>
+                                <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                                  {app.applicantEmail || app.applicantWallet?.slice(0, 10) + '...'}
+                                </p>
+                              </div>
+                            </td>
+                            <td className={tableCellClass}>
+                              <p className='truncate max-w-[150px]' title={app.jobTitle}>
+                                {app.jobTitle}
+                              </p>
+                            </td>
+                            <td className={tableCellClass}>
+                              <p className='truncate max-w-[120px]' title={app.companyName}>
+                                {app.companyName}
+                              </p>
+                            </td>
+                            <td className={tableCellClass}>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                app.status === 'submitted' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                app.status === 'under_review' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                app.status === 'interview' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
+                                app.status === 'offer' ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400' :
+                                app.status === 'hired' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                app.status === 'rejected' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400'
+                              }`}>
+                                {app.status.replace('_', ' ')}
+                              </span>
+                            </td>
+                            <td className={tableCellClass}>
+                              {app.resumeId ? (
+                                <span className='text-green-500' title={app.resumeTitle || 'Linked'}>✓</span>
+                              ) : (
+                                <span className='text-gray-400'>—</span>
+                              )}
+                            </td>
+                            <td className={tableCellClass}>
+                              {app.dotApplicationId ? (
+                                <span className={app.dotApplicationComplete ? 'text-green-500' : 'text-yellow-500'}>
+                                  {app.dotApplicationComplete ? '✓' : '...'}
+                                </span>
+                              ) : (
+                                <span className='text-gray-400'>—</span>
+                              )}
+                            </td>
+                            <td className={tableCellClass}>
+                              <p className='text-xs'>
+                                {new Date(app.createdAt).toLocaleDateString()}
+                              </p>
+                            </td>
+                            <td className={tableCellClass}>
+                              <button
+                                onClick={() =>
+                                  setDeleteTarget({
+                                    type: 'application',
+                                    id: app.id,
+                                    name: `${app.applicantName || 'Unknown'}'s application to "${app.jobTitle}"`,
+                                  })
+                                }
+                                className='p-1.5 rounded-lg text-red-500 hover:bg-red-500/10'
+                                title='Delete application'
+                              >
+                                <Trash2 className='w-4 h-4' />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {applications.length === 0 && (
+                    <div className='text-center py-12'>
+                      <ClipboardList className={`w-12 h-12 mx-auto mb-4 ${
+                        theme === 'dark' ? 'text-gray-600' : 'text-gray-400'
+                      }`} />
+                      <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
+                        No applications found
                       </p>
                     </div>
                   )}

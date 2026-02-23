@@ -26,7 +26,16 @@ const PERSONAL_EMAIL_DOMAINS = [
   'tutanota.com',
 ]
 
-function isPersonalEmail(email?: string): boolean {
+// Whitelisted wallet addresses that bypass personal email restriction (e.g., admins)
+const EMPLOYER_WHITELIST_WALLETS = [
+  '0x9499cD25C6737A8195e74262f3c5eAE6dA607df3', // Main admin account
+].map(w => w.toLowerCase())
+
+function isPersonalEmail(email?: string, walletAddress?: string): boolean {
+  // Check whitelist first - case-insensitive wallet comparison
+  if (walletAddress && EMPLOYER_WHITELIST_WALLETS.includes(walletAddress.toLowerCase())) {
+    return false // Whitelisted, allow employer access
+  }
   if (!email) return true // No email = treat as personal
   const domain = email.split('@')[1]?.toLowerCase()
   return PERSONAL_EMAIL_DOMAINS.includes(domain)
@@ -36,12 +45,14 @@ interface RoleSelectionModalProps {
   onSelectRole: (role: 'driver' | 'developer' | 'employer', companyName?: string, dotNumber?: string) => void
   isLoading?: boolean
   userEmail?: string // Used to gate Employer option
+  walletAddress?: string // Used for whitelist check
 }
 
 export default function RoleSelectionModal({
   onSelectRole,
   isLoading,
   userEmail,
+  walletAddress,
 }: RoleSelectionModalProps) {
   const { theme } = useTheme()
   const [selectedRole, setSelectedRole] = useState<
@@ -51,8 +62,8 @@ export default function RoleSelectionModal({
   const [companyName, setCompanyName] = useState('')
   const [dotNumber, setDotNumber] = useState('')
 
-  // Check if user can select Employer (requires company email)
-  const isEmployerDisabled = isPersonalEmail(userEmail)
+  // Check if user can select Employer (requires company email or whitelisted wallet)
+  const isEmployerDisabled = isPersonalEmail(userEmail, walletAddress)
   
   // Employer needs company name to proceed
   const canProceed = selectedRole && (selectedRole !== 'employer' || companyName.trim().length >= 2)
