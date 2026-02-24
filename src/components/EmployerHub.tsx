@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh'
 import EmployerVerificationSection from './verification/EmployerVerificationSection'
 import ApplicantKanban, { type KanbanApplicant } from './employer/ApplicantKanban'
 import CandidateNotesPanel from './employer/CandidateNotesPanel'
@@ -39,6 +40,7 @@ import {
   Trash2,
   BarChart3,
   ChevronDown,
+  RefreshCw,
 } from 'lucide-react'
 
 // ============================================================
@@ -228,6 +230,12 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       fetchHubData()
     }
   }, [walletAddress, fetchHubData])
+
+  // Auto-refresh when tab becomes visible (solves stale data after changes in other tabs)
+  const { refresh: triggerRefresh, isStale } = useVisibilityRefresh(fetchHubData, {
+    staleTime: 30000, // Consider data stale after 30 seconds
+    enabled: !!walletAddress,
+  })
 
   // Handle application status change (for Kanban drag-drop)
   const handleStatusChange = async (applicationId: string, newStatus: string) => {
@@ -457,6 +465,21 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
               }`}>
                 {data.company?.name || 'Your Company'}
               </h1>
+              {/* Manual refresh button */}
+              <button
+                onClick={triggerRefresh}
+                disabled={loading}
+                title={isStale ? 'Data may be stale - click to refresh' : 'Refresh data'}
+                className={`p-1.5 rounded-lg transition-all ${
+                  loading
+                    ? 'opacity-50 cursor-not-allowed'
+                    : theme === 'dark'
+                      ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                      : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                } ${isStale ? 'text-amber-500' : ''}`}
+              >
+                <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+              </button>
               {data.company?.verified && (
                 <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-500">
                   <CheckCircle className="w-3 h-3" />

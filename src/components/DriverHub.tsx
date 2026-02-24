@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh'
 import ShareProfileCard from './ShareProfileCard'
 import DriverVerificationSection from './verification/DriverVerificationSection'
 import DriverEmploymentVerificationSection from './verification/DriverEmploymentVerificationSection'
@@ -31,6 +32,7 @@ import {
   Trash2,
   Edit,
   Sparkles,
+  RefreshCw,
 } from 'lucide-react'
 
 // ============================================================
@@ -773,6 +775,12 @@ export default function DriverHub({
     fetchHubData()
   }, [fetchHubData])
 
+  // Auto-refresh when tab becomes visible (solves stale data after admin changes in other tabs)
+  const { refresh: triggerRefresh, isStale } = useVisibilityRefresh(fetchHubData, {
+    staleTime: 30000, // Consider data stale after 30 seconds
+    enabled: !!userAddress,
+  })
+
   // Card styling: match employment verification (color-mix semi-transparent gray)
   const cardClass = `rounded-2xl border shadow-lg transition-all duration-200 ${
     theme === 'dark'
@@ -887,13 +895,30 @@ export default function DriverHub({
               <User className={`w-8 h-8 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
             </div>
             <div>
-              <h1
-                className={`text-2xl sm:text-3xl font-bold ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}
-              >
-                {displayName}'s Driver Hub
-              </h1>
+              <div className='flex items-center gap-2'>
+                <h1
+                  className={`text-2xl sm:text-3xl font-bold ${
+                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  }`}
+                >
+                  {displayName}'s Driver Hub
+                </h1>
+                {/* Manual refresh button */}
+                <button
+                  onClick={triggerRefresh}
+                  disabled={loading}
+                  title={isStale ? 'Data may be stale - click to refresh' : 'Refresh data'}
+                  className={`p-1.5 rounded-lg transition-all ${
+                    loading
+                      ? 'opacity-50 cursor-not-allowed'
+                      : theme === 'dark'
+                        ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                        : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                  } ${isStale ? 'text-amber-500' : ''}`}
+                >
+                  <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
               {cdlSummary && (
                 <p
                   className={`text-sm mt-1 ${

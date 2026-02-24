@@ -15,7 +15,6 @@ import {
 } from '@account-kit/react'
 import { AssistantBridgeProvider } from '@/contexts/AssistantBridgeContext'
 import type { ResumeUploadEvent } from '@/types/assistant'
-import { useAvaAssistant } from '@/hooks/useAvaAssistant'
 import {
   useAuthStore,
   useDotApplicationStore,
@@ -29,17 +28,8 @@ import DriverShell from '@/components/app/DriverShell'
 import EmployerShell from '@/components/app/EmployerShell'
 import DeveloperShell from '@/components/app/DeveloperShell'
 import ErrorBoundary from '@/components/app/ErrorBoundary'
-
-// Dynamic imports — global components only
-const TAssistant = dynamic(
-  () => import('@/components/TAssistant').then((mod) => mod.default),
-  { ssr: false, loading: () => <LoadingScreen message='Loading AvA Assistant...' fullScreen={false} /> }
-)
-
-const TLoadingModal = dynamic(
-  () => import('@/components/TLoadingModal').then((mod) => mod.default),
-  { ssr: false }
-)
+import { JourneyModal, AvaFloatingButton } from '@/components/ui'
+import AvaJourneyGuide from '@/components/AvaJourneyGuide'
 
 const WalletInfo = dynamic(
   () => import('@/components/WalletInfo').then((mod) => mod.default),
@@ -93,17 +83,6 @@ const HomeContent = () => {
     driverJourneyState,
     updateJourneyStep,
   } = uiStore
-
-  // AvA Assistant
-  const {
-    isAvaCollapsed, setIsAvaCollapsed, toggleAvaCollapse,
-    avaHasUnread, setAvaHasUnread,
-    avaIsWorking, avaWorkingMessage, setAvaWorking,
-    helpRequest, handleHelpRequest,
-    primerSeen, primerRequest, setPrimerSeen,
-    triggerPrimer, handlePrimerAction, isPrimerTriggered,
-    resetAvaState,
-  } = useAvaAssistant({ userAddress: walletAddress ?? undefined })
 
   const [latestResumeIpfsHash, setLatestResumeIpfsHash] = useState<string | null>(null)
   const [resumeUploadEvent, setResumeUploadEvent] = useState<ResumeUploadEvent | null>(null)
@@ -199,12 +178,6 @@ const HomeContent = () => {
     fetchRole()
   }, [walletAddress])
 
-  // Primer trigger when wallet connected
-  useEffect(() => {
-    if (!primerSeen && driverJourneyState.wallet.status === 'complete' && !isPrimerTriggered()) {
-      triggerPrimer()
-    }
-  }, [driverJourneyState.wallet.status, primerSeen])
 
   // -------------------------------------------------------
   // Session timeout (1.5s for Alchemy to detect existing session)
@@ -286,110 +259,8 @@ const HomeContent = () => {
     setTimeout(() => setResumeUploadEvent(null), 100)
   }, [])
 
-  /**
-   * T Assistant action handler - all actions dispatch to Zustand stores.
-   * No callbacks into child components needed; they react to store changes.
-   */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleTAssistantAction = useCallback((action: string, data?: any) => {
-    const store = useDotApplicationStore.getState()
-    const ui = useUIStore.getState()
-
-    switch (action) {
-      case 'signin':
-        ui.setCurrentPage('signin')
-        break
-      case 'resume':
-      case 'resume:help':
-        ui.setCurrentPage('resume')
-        break
-      case 'forms':
-      case 'resume:prefill':
-        ui.setCurrentPage('dotapp')
-        store.setShowPrefillUpload(false)
-        ui.setShowEmploymentVerification(false)
-        break
-      case 'resume:prefill:confirm':
-        ui.setCurrentPage('dotapp')
-        store.setShowPrefillUpload(false)
-        ui.setShowEmploymentVerification(false)
-        if (data) {
-          if (data.form1Data) store.setForm1Data(data.form1Data)
-          if (data.form2Data) store.setForm2Data(data.form2Data)
-          if (data.form3Data) store.setForm3Data(data.form3Data)
-          store.setHasPrefilled(true)
-          store.setCurrentForm(1)
-          store.incrementFormResetKey()
-          // Fire-and-forget profile sync
-          if (walletAddress) {
-            import('@/lib/dot-form-mapper').then(({ form1ToProfile, form2ToProfile, form3ToProfile }) => {
-              const profileData = {
-                ...(data.form1Data ? form1ToProfile(data.form1Data) : {}),
-                ...(data.form2Data ? form2ToProfile(data.form2Data) : {}),
-                ...(data.form3Data ? form3ToProfile(data.form3Data) : {}),
-              }
-              fetch('/api/driver/profile', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
-                body: JSON.stringify({ profileData, source: 'dot_prefill' }),
-              }).catch(() => {})
-            })
-          }
-          setTimeout(() => {
-            handleResumeUploadEvent({
-              type: 'analysis_ready',
-              step: 'prefill',
-              message: "✅ Forms prefilled! I've extracted and filled in your information. Please review the forms and complete any missing fields.",
-            })
-          }, 500)
-        }
-        break
-      case 'job':
-      case 'jobs':
-        ui.setCurrentPage('jobs')
-        break
-      case 'applications':
-        ui.setCurrentPage('applications')
-        break
-      case 'dotapp':
-        // Reset DOT app and navigate
-        store.resetApplication()
-        if (typeof window !== 'undefined') window.localStorage.removeItem('dot-application')
-        ui.setCurrentPage('dotapp')
-        break
-      case 'hub':
-      case 'home':
-        ui.setCurrentPage(null)
-        break
-      case 'navigation':
-        if (data?.page) ui.setCurrentPage(data.page as PageType)
-        break
-      case 'dashboard':
-        ui.setCurrentPage('dotapp')
-        store.setShowPrefillUpload(false)
-        ui.setShowEmploymentVerification(false)
-        break
-      case 'primer:learn_more':
-      case 'primer:skip':
-        handlePrimerAction(action as 'primer:learn_more' | 'primer:skip')
-        break
-      default:
-        break
-    }
-  }, [walletAddress, handleResumeUploadEvent, handlePrimerAction])
-
   const openModal = useCallback(() => setIsModalOpen(true), [])
   const closeModal = useCallback(() => setIsModalOpen(false), [])
-
-  // Compute current step for TAssistant from store state
-  const getCurrentStep = useCallback(():
-    | 'welcome' | 'wallet' | 'resume' | 'forms' | 'submission' | 'complete' => {
-    if (dotApp.isApplicationCompleted) return 'submission'
-    if (currentPage === 'dotapp' && !dotApp.showPrefillUpload) return 'forms'
-    if (currentPage === 'resume' || dotApp.hasPrefilled || hubStore.hasResume) return 'resume'
-    if (user) return 'wallet'
-    return 'welcome'
-  }, [user, currentPage, dotApp.isApplicationCompleted, dotApp.showPrefillUpload, dotApp.hasPrefilled, hubStore.hasResume])
 
   // -------------------------------------------------------
   // Render
@@ -397,9 +268,9 @@ const HomeContent = () => {
   return (
     <AssistantBridgeProvider
       journey={driverJourneyState}
-      requestHelp={handleHelpRequest}
-      primerSeen={primerSeen}
-      setPrimerSeen={setPrimerSeen}
+      requestHelp={() => {}}
+      primerSeen={true}
+      setPrimerSeen={() => {}}
       notifyResumeUploadEvent={handleResumeUploadEvent}
     >
       <div className='min-h-screen overflow-x-hidden relative'>
@@ -427,8 +298,6 @@ const HomeContent = () => {
             }
           }}
           mvrWalletAddress={user?.address || null}
-          tHasUnread={avaHasUnread}
-          onTClick={() => setIsAvaCollapsed(false)}
           stormTokens={0}
           onSwitchRole={() => setShowRoleSelection(true)}
         />
@@ -456,32 +325,16 @@ const HomeContent = () => {
           />
         )}
 
-        {/* T Assistant — global sidebar (logged-in only) */}
+        {/* AvA Journey Guide — global progress tracker (logged-in only) */}
         {user && (
           <>
-            <TAssistant
-              currentStep={getCurrentStep()}
-              onAction={handleTAssistantAction}
-              userAddress={user?.address}
-              userRole={userRole}
-              hasResume={hubStore.hasResume}
-              hasForms={dotApp.form1Data !== null || dotApp.form2Data !== null || dotApp.form3Data !== null}
-              form1Data={dotApp.form1Data}
-              form2Data={dotApp.form2Data}
-              form3Data={dotApp.form3Data}
-              journeyState={driverJourneyState}
-              helpRequest={helpRequest}
-              primerRequest={primerRequest}
-              resumeUploadEvent={resumeUploadEvent}
-              mode='sidebar'
-              isCollapsed={isAvaCollapsed}
-              onToggleCollapse={toggleAvaCollapse}
-              onUnreadChange={setAvaHasUnread}
-              onLoadingChange={(isLoading, message) => setAvaWorking(isLoading, message)}
-            />
-            <TLoadingModal isVisible={avaIsWorking} message={avaWorkingMessage} />
+            <AvaFloatingButton />
+            <AvaJourneyGuide />
           </>
         )}
+
+        {/* Journey Modal — guided "what's next" prompts after key actions */}
+        <JourneyModal />
 
         {/* Main content area */}
         <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-8 relative z-0'>
@@ -513,7 +366,6 @@ const HomeContent = () => {
               <ErrorBoundary section='Driver Hub'>
                 <DriverShell
                   onAuthSuccess={handleAuthSuccess}
-                  onResetAvaState={resetAvaState}
                   onResumeUploadEvent={handleResumeUploadEvent}
                   onSetLatestResumeIpfsHash={setLatestResumeIpfsHash}
                 />

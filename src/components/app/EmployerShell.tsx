@@ -1,8 +1,9 @@
 'use client'
 
+import { useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import LoadingScreen from '@/components/LoadingScreen'
-import { useUIStore } from '@/stores'
+import { useUIStore, usePreferencesStore } from '@/stores'
 
 const EmployerHub = dynamic(
   () => import('@/components/EmployerHub').then((mod) => mod.default),
@@ -53,9 +54,20 @@ interface EmployerShellProps {
  * Reads currentPage from UIStore; no page state props needed.
  */
 export default function EmployerShell({ walletAddress }: EmployerShellProps) {
-  const { currentPage, setCurrentPage } = useUIStore()
+  const { currentPage, setCurrentPage, triggerJourneyStep } = useUIStore()
+  const { hasCompletedJourneyStep } = usePreferencesStore()
 
   const goBack = () => setCurrentPage(null)
+  
+  // First login journey modal - show welcome message for new employers
+  useEffect(() => {
+    if (walletAddress && !hasCompletedJourneyStep('employer.firstLogin')) {
+      const timer = setTimeout(() => {
+        triggerJourneyStep('employer.firstLogin')
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [walletAddress, hasCompletedJourneyStep, triggerJourneyStep])
 
   // Default: Employer Hub
   if (!currentPage) {
@@ -96,9 +108,18 @@ export default function EmployerShell({ walletAddress }: EmployerShellProps) {
       <JobPostingForm
         walletAddress={walletAddress}
         onBack={goBack}
-        onSuccess={goBack}
+        onSuccess={() => {
+          triggerJourneyStep('employer.jobPosted')
+          goBack()
+        }}
       />
     )
+  }
+
+  // Any unrecognised page value (e.g. 'company-profile') falls back to the hub
+  // rather than rendering a blank screen.
+  if (currentPage) {
+    setCurrentPage(null)
   }
 
   return null

@@ -11,7 +11,7 @@ import type { DriverJourneyState, JourneyStatus } from '@/types/assistant'
  * - Loading indicators
  * - Tab states
  * - Component-specific UI state
- * - Driver journey state (for TAssistant progress tracking)
+ * - Driver journey state (for AvA Journey Guide progress tracking)
  * 
  * This state is NOT persisted - it resets on page refresh.
  */
@@ -35,8 +35,12 @@ interface UIState {
   currentPage: PageType
   showDashboard: boolean
   
-  // Driver journey state (session-only, used by TAssistant)
+  // Driver journey state (session-only, used by AvA Journey Guide)
   driverJourneyState: DriverJourneyState
+  
+  // Journey modal state - guided "what's next" prompts
+  activeJourneyStep: string | null
+  showJourneyModal: boolean
   
   // Modals
   isModalOpen: boolean
@@ -72,6 +76,10 @@ interface UIActions {
   navigateToJobs: () => void
   navigateToMvr: () => void
   
+  // Journey modal actions - guided "what's next" prompts
+  triggerJourneyStep: (stepId: string) => void
+  dismissJourneyModal: () => void
+  
   // Modal actions
   openModal: (type?: string) => void
   closeModal: () => void
@@ -98,6 +106,8 @@ const initialState: UIState = {
   currentPage: null,
   showDashboard: false,
   driverJourneyState: createInitialJourneyState(),
+  activeJourneyStep: null,
+  showJourneyModal: false,
   isModalOpen: false,
   modalType: null,
   resumeTab: 'upload',
@@ -154,6 +164,17 @@ export const useUIStore = create<UIState & UIActions>()(
       currentPage: 'mvr',
       showDashboard: false,
     }),
+    
+    // Journey modal actions - show guided "what's next" prompts
+    triggerJourneyStep: (stepId) => set({
+      activeJourneyStep: stepId,
+      showJourneyModal: true,
+    }),
+    
+    dismissJourneyModal: () => set({
+      activeJourneyStep: null,
+      showJourneyModal: false,
+    }),
 
     // Modal actions
     openModal: (type) => set({ 
@@ -197,6 +218,8 @@ export const useCurrentPage = () => useUIStore((state) => state.currentPage)
 export const useIsModalOpen = () => useUIStore((state) => state.isModalOpen)
 export const useIsMounted = () => useUIStore((state) => state.isMounted)
 export const useDriverJourneyState = () => useUIStore((state) => state.driverJourneyState)
+export const useActiveJourneyStep = () => useUIStore((state) => state.activeJourneyStep)
+export const useShowJourneyModal = () => useUIStore((state) => state.showJourneyModal)
 
 // Re-export for use in components
 export { type DriverJourneyState, type JourneyStatus }

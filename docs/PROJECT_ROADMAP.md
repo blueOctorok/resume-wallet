@@ -14,6 +14,35 @@
 
 ---
 
+## 🤖 **AvA Journey Guide** (February 2026)
+
+**Evolution:** Replaced the old chat-based TAssistant with a visual progress tracker. AvA is now a journey guide, not a chatbot.
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| Progress Calculator | ✅ Done | Consolidated progress calculation for all 3 roles (`journey-progress.ts`) |
+| Journey Store | ✅ Done | Guide state management with localStorage persistence |
+| Floating Button | ✅ Done | Bottom-right summon button with progress badge and pulse animation |
+| Journey Guide Panel | ✅ Done | Sliding panel with progress bar, step checklist, next actions |
+| Keyboard Shortcuts | ✅ Done | Press `?` or `Cmd+/` to open guide |
+| Auto-Welcome | ✅ Done | Auto-opens on first login for new users |
+| Nav Help Button | ✅ Done | "AvA Journey Guide" option in hub dropdown |
+| TAssistant Removal | ✅ Done | Deleted old chat sidebar (1978 lines) |
+
+**Role-Specific Journeys:**
+
+- **Driver:** Wallet → Resume → DOT App → Profile (80%+) → MVR → Apply to Jobs
+- **Employer:** Wallet → Company Profile → Post Job → Review Applicants → Verifications
+- **Developer:** Wallet → Add Projects → Build Resume → Connect GitHub → Career Score → Apply
+
+**Future enhancements:**
+- Database sync for preferences (cross-device consistency)
+- Animated progress celebrations
+- Role-specific AvA character variants
+- Analytics on journey completion rates
+
+---
+
 ## 🚀 **Two-Sided Marketplace: Driver & Employer Platform** (November 20, 2025)
 
 ### Architecture Overview
@@ -55,6 +84,7 @@ StormChain is architected as a **two-sided marketplace** connecting drivers with
   - **Self-service employment verification (NEW!)** - drivers can proactively verify their employment
 - ✅ Resume upload with blockchain verification
 - ✅ **Resume builder** - Create professional driver resumes
+- ✅ **Auto-resume generation (NEW!)** - When DOT app completes and no resume exists, prompt to auto-create one from DOT data
 - ✅ DOT application forms (3-step wizard)
 - ✅ AvA AI assistant for form guidance
 - ✅ Form data persistence and prefill

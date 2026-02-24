@@ -2,6 +2,306 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🤖 **AvA Journey Guide Redesign** (February 2026)
+
+### What Changed
+
+Replaced the boring TAssistant chat sidebar with a dynamic progress-tracking Journey Guide. AvA is no longer a chatbot—it's your visual guide showing exactly where you are in your onboarding journey and what to do next.
+
+### Why This Matters
+
+The old chat-based TAssistant felt "ugly and boring" and users weren't engaging with it. The new design:
+- Shows actual progress (e.g., "3 of 6 steps complete")
+- Provides a visual checklist of completed vs. pending steps
+- Highlights the recommended next action with clear CTAs
+- Can be summoned anytime with a floating button or keyboard shortcut
+- Auto-opens on first login to guide new users
+- Works for all three roles: Driver, Employer, and Developer
+
+### How It Works
+
+1. **Floating Button** (`AvaFloatingButton.tsx`): A circular button in the bottom-right corner with:
+   - Progress percentage badge
+   - Pulsing animation when there's a high-priority action
+   - Keyboard shortcuts: `?` or `Cmd+/`
+
+2. **Journey Guide Panel** (`AvaJourneyGuide.tsx`): A sliding panel from the right showing:
+   - AvA avatar with contextual greeting
+   - Overall progress bar
+   - Step-by-step checklist with status indicators
+   - Suggested next actions with CTAs
+
+3. **Progress Calculator** (`journey-progress.ts`): Consolidates all progress tracking:
+   - Pulls data from auth, hub, and DOT stores
+   - Calculates completion for each role's journey
+   - Generates contextual greetings and next actions
+
+4. **Journey Store** (`journey-store.ts`): Manages guide state:
+   - Open/closed state
+   - First-time welcome tracking
+   - Persisted to localStorage
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `src/components/ui/AvaFloatingButton.tsx` | Floating summon button |
+| `src/components/AvaJourneyGuide.tsx` | Main journey guide panel |
+| `src/lib/journey-progress.ts` | Progress calculation for all roles |
+| `src/stores/journey-store.ts` | Journey guide state management |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `src/app/page.tsx` | Replaced TAssistant with AvaJourneyGuide + AvaFloatingButton |
+| `src/stores/index.ts` | Export new journey store |
+| `src/components/Navigation.tsx` | Added "AvA Journey Guide" help button in hub dropdown |
+| `src/components/ui/index.ts` | Export AvaFloatingButton |
+| `src/components/app/DriverShell.tsx` | Removed onResetAvaState prop |
+| `src/stores/ui-store.ts` | Updated comments |
+
+### Files Removed
+
+| File | Reason |
+|------|--------|
+| `src/components/TAssistant.tsx` | Replaced by AvaJourneyGuide |
+| `src/components/TLoadingModal.tsx` | No longer needed |
+| `src/hooks/useAvaAssistant.ts` | No longer needed |
+
+### Role-Specific Journeys
+
+**Driver Journey:**
+1. Connect Wallet
+2. Create Resume
+3. DOT Application
+4. Complete Profile (80%+)
+5. MVR Record (optional)
+6. Apply to Jobs
+
+**Employer Journey:**
+1. Connect Wallet
+2. Company Profile
+3. Post a Job
+4. Review Applicants
+5. Request Verifications (optional)
+
+**Developer Journey:**
+1. Connect Wallet
+2. Add Projects
+3. Build Resume
+4. Connect GitHub
+5. Career Score
+6. Apply to Jobs
+
+### Technical Notes
+
+- **No chat**: The new guide is purely informational—no back-and-forth messaging
+- **Keyboard shortcuts**: Press `?` or `Cmd+/` to toggle the guide
+- **Click outside to close**: Standard modal behavior
+- **Auto-welcome**: Opens automatically on first login
+- **Progress persists**: Uses Zustand stores with localStorage persistence
+
+---
+
+## 🔄 **Hub Auto-Refresh System** (February 2026)
+
+### What Changed
+
+All three hub components (DriverHub, EmployerHub, DeveloperHub) now automatically refresh their data when the browser tab becomes visible again. This solves the stale data problem when users make changes in other tabs (like the admin panel).
+
+### Why This Matters
+
+Previously, if you deleted a DOT app in the admin panel (different browser tab), the DriverHub would still show that app until you manually refreshed the page. This was confusing and felt broken. Now:
+- Data auto-refreshes when switching back to a tab after 30+ seconds
+- Each hub has a manual refresh button (shows amber when data may be stale)
+- No unnecessary refreshes - only triggers if data is considered "stale"
+
+### How It Works
+
+1. Created a reusable `useVisibilityRefresh` hook that:
+   - Listens for browser's `visibilitychange` event
+   - Tracks when data was last fetched
+   - Only triggers refresh if data is stale (default: 30 seconds)
+
+2. Added the hook to all three hubs with their respective fetch functions
+
+3. Added a refresh button (🔄) next to each hub title that:
+   - Shows normal color when data is fresh
+   - Shows amber when data may be stale
+   - Spins while refreshing
+   - Can be clicked anytime for manual refresh
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `src/hooks/useVisibilityRefresh.ts` | Reusable hook for visibility-based auto-refresh |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `src/components/DriverHub.tsx` | Added useVisibilityRefresh hook and refresh button |
+| `src/components/EmployerHub.tsx` | Added useVisibilityRefresh hook and refresh button |
+| `src/components/DeveloperHub.tsx` | Added useVisibilityRefresh hook and refresh button |
+
+### Technical Notes
+
+- **Stale time**: 30 seconds by default (configurable per hook usage)
+- **No polling**: Uses visibility events, not intervals - more efficient
+- **Prevents race conditions**: Won't trigger refresh if already refreshing
+- **Optional interval refresh**: Hook also exports `useRefreshInterval` for cases needing real-time data
+
+### Usage Example
+
+```tsx
+const { refresh, isStale } = useVisibilityRefresh(fetchData, {
+  staleTime: 30000,  // 30 seconds
+  enabled: !!userId, // only when logged in
+})
+
+// Manual refresh button
+<button onClick={refresh} className={isStale ? 'text-amber-500' : ''}>
+  <RefreshCw className={loading ? 'animate-spin' : ''} />
+</button>
+```
+
+---
+
+## 📄 **Auto-Resume Generation from DOT Application** (February 2026)
+
+### What Changed
+
+When a driver completes their DOT application and has no resume on file, they're now prompted to auto-generate a professional resume from their DOT data.
+
+### Why This Matters
+
+Many drivers don't have resumes and aren't motivated to create them. They fill out the DOT application because it's required, but building a resume feels like extra work. By auto-generating a resume from the DOT data they already entered, we:
+- Remove friction for drivers entering the job market
+- Give them a professional document they can reuse
+- Help the industry by making driver credentials more accessible
+
+### How It Works
+
+1. Driver completes DOT application → data syncs to unified profile
+2. On success screen, we check if user has any existing resumes
+3. If no resumes exist, show a friendly prompt: "Want a Resume Too?"
+4. If driver clicks "Yes, Create My Resume":
+   - Fetch their unified profile (populated by DOT app)
+   - Map profile to resume format using `profileToResumeBuilder()`
+   - Create the resume via `/api/resumes/create`
+   - Show success confirmation
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `src/components/app/DotApplicationFlow.tsx` | Added resume check on completion, `handleCreateResume()` function, new state for resume creation flow |
+| `src/components/driver-application/ApplicationSubmitted.tsx` | Added resume prompt UI with loading/success states, new props for resume creation |
+
+### Technical Notes
+
+- Resume check only runs once after completion (tracked by `resumeCheckDoneRef`)
+- Uses existing `profileToResumeBuilder()` mapper - no new data transformation needed
+- Resume is flagged with `autoGenerated: true` and `source: 'dot_application'` for tracking
+- Silent failure - if resume creation fails, user just doesn't see the prompt (not critical path)
+
+---
+
+## 🎯 **Journey Modal System** (February 2026)
+
+### What Changed
+
+Added a guided journey system that shows "what's next" modals after key user actions across all three roles (Driver, Employer, Developer). Users can toggle this feature on/off.
+
+### Why This Matters
+
+New users often don't know what to do next after completing an action. This feature:
+- Guides users through the platform step by step
+- Reduces cognitive load ("what do I do now?")
+- Increases engagement by showing clear next steps
+- Works like a "would you like fries with that?" moment in software
+
+### How It Works
+
+1. User completes a key action (login, save resume, post job, etc.)
+2. System triggers a journey step via `triggerJourneyStep('role.actionName')`
+3. If user has journey modals enabled (default: on), a modal appears showing:
+   - Completion message with icon
+   - "What's next" suggestion with CTA button
+   - "Got it" dismiss button
+   - "Don't show these again" link
+4. "Show once" steps (like first login) only appear once ever
+
+### Architecture
+
+```
+Journey Config → UI Store (activeStep) → JourneyModal
+                      ↑
+    Shells trigger steps after actions
+                      ↓
+Preferences Store → showJourneyModals toggle
+```
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `src/lib/journey-config.ts` | Step definitions for all roles (title, message, icon, next action) |
+| `src/stores/preferences-store.ts` | User preferences with `showJourneyModals` toggle (persisted) |
+| `src/components/ui/JourneyModal.tsx` | Reusable modal component |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `src/stores/ui-store.ts` | Added `activeJourneyStep`, `showJourneyModal`, `triggerJourneyStep()`, `dismissJourneyModal()` |
+| `src/stores/index.ts` | Export new stores and selectors |
+| `src/components/ui/index.ts` | Export JourneyModal |
+| `src/components/app/DriverShell.tsx` | Trigger first login, resume built steps |
+| `src/components/app/EmployerShell.tsx` | Trigger first login, job posted steps |
+| `src/components/app/DeveloperShell.tsx` | Trigger first login step |
+| `src/components/Navigation.tsx` | Added "Journey Tips" on/off toggle in hub dropdown |
+| `src/app/page.tsx` | Render JourneyModal globally |
+
+### Journey Steps Defined
+
+**Driver:**
+- `firstLogin` - Welcome message, suggest DOT app
+- `resumeUploaded` - Suggest completing DOT app
+- `resumeBuilt` - Suggest browsing jobs
+- `dotAppCompleted` - Suggest browsing jobs
+- `mvrOrdered` - Inform about wait time
+- `jobApplied` - Suggest viewing applications
+- `resumeVerified` - Confirm blockchain verification
+
+**Employer:**
+- `firstLogin` - Welcome, suggest company profile
+- `companyProfileComplete` - Suggest posting jobs
+- `jobPosted` - Suggest finding drivers
+- `applicantReviewed` - Suggest continuing review
+- `verificationRequested` - Inform about process
+- `mvrOrdered` - Inform about wait time
+
+**Developer:**
+- `firstLogin` - Welcome, suggest portfolio
+- `portfolioAdded` - Suggest career score
+- `resumeBuilt` - Suggest connecting GitHub
+- `githubConnected` - Suggest career score
+- `careerScoreCalculated` - Suggest applying
+- `jobApplied` - Suggest viewing applications
+
+### Technical Notes
+
+- Preferences persisted to localStorage via Zustand persist middleware
+- "Show once" steps tracked in `completedJourneySteps` array
+- Modal uses z-index 100 to appear above other content
+- Escape key dismisses the modal
+- JourneyModal renders globally in page.tsx (not inside shells)
+
+---
+
 ## 🏗️ **Major Architecture Refactor — All 5 Phases** (February 2026)
 
 ### What Changed

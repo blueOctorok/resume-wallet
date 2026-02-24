@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh'
 import ShareProfileCard from './ShareProfileCard'
 import DeveloperEmploymentVerificationSection from './verification/DeveloperEmploymentVerificationSection'
 import CandidateRequestsSection from './CandidateRequestsSection'
@@ -32,6 +33,7 @@ import {
   Download,
   Eye,
   CheckCircle,
+  RefreshCw,
 } from 'lucide-react'
 
 // ============================================================
@@ -244,6 +246,17 @@ export default function DeveloperHub({
     fetchHubData()
     fetchResumes()
   }, [fetchHubData, fetchResumes])
+
+  // Combined refresh function for all hub data
+  const refreshAllData = useCallback(async () => {
+    await Promise.all([fetchHubData(), fetchResumes()])
+  }, [fetchHubData, fetchResumes])
+
+  // Auto-refresh when tab becomes visible (solves stale data after changes in other tabs)
+  const { refresh: triggerRefresh, isStale } = useVisibilityRefresh(refreshAllData, {
+    staleTime: 30000, // Consider data stale after 30 seconds
+    enabled: !!userAddress,
+  })
 
   // Auto-calculate career score when profile is loaded
   useEffect(() => {
@@ -490,11 +503,28 @@ export default function DeveloperHub({
       {/* Header */}
       <div className='flex items-center justify-between'>
         <div>
-          <h1
-            className={`text-2xl sm:text-3xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
-          >
-            Developer Hub
-          </h1>
+          <div className='flex items-center gap-2'>
+            <h1
+              className={`text-2xl sm:text-3xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
+            >
+              Developer Hub
+            </h1>
+            {/* Manual refresh button */}
+            <button
+              onClick={triggerRefresh}
+              disabled={isLoading}
+              title={isStale ? 'Data may be stale - click to refresh' : 'Refresh data'}
+              className={`p-1.5 rounded-lg transition-all ${
+                isLoading
+                  ? 'opacity-50 cursor-not-allowed'
+                  : theme === 'dark'
+                    ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                    : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+              } ${isStale ? 'text-amber-500' : ''}`}
+            >
+              <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
           <p
             className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
           >

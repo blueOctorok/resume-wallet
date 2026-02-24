@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { LayoutDashboard, Coins, ChevronDown, RefreshCw, Car, Code, Building2 } from 'lucide-react'
+import { LayoutDashboard, Coins, ChevronDown, RefreshCw, Car, Code, Building2, Sparkles, HelpCircle } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 import { useTheme } from '@/contexts/ThemeContext'
+import { usePreferencesStore, useJourneyStore } from '@/stores'
 import MvrStatusBadge from './MvrStatusBadge'
 
 // Define the navigation page type
@@ -46,6 +47,8 @@ export default function Navigation({
   const [isHubDropdownOpen, setIsHubDropdownOpen] = useState(false)
   const hubDropdownRef = useRef<HTMLDivElement>(null)
   const { theme } = useTheme()
+  const { showJourneyModals, setShowJourneyModals } = usePreferencesStore()
+  const { openGuide } = useJourneyStore()
 
   // Close hub dropdown when clicking outside
   useEffect(() => {
@@ -322,6 +325,44 @@ export default function Navigation({
                           Switch Role
                         </button>
                       )}
+                      {/* Journey Tips Toggle */}
+                      <button
+                        onClick={() => setShowJourneyModals(!showJourneyModals)}
+                        className={`w-full px-4 py-3 text-sm font-medium flex items-center justify-between border-t transition-colors ${
+                          theme === 'dark'
+                            ? 'text-gray-300 hover:bg-gray-800 border-gray-700'
+                            : 'text-gray-700 hover:bg-gray-50 border-gray-100'
+                        }`}
+                      >
+                        <span className='flex items-center gap-3'>
+                          <Sparkles className='w-4 h-4' />
+                          Journey Tips
+                        </span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          showJourneyModals
+                            ? theme === 'dark' ? 'bg-brand-mint/20 text-brand-mint' : 'bg-brand-sage/20 text-brand-sage'
+                            : theme === 'dark' ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500'
+                        }`}>
+                          {showJourneyModals ? 'On' : 'Off'}
+                        </span>
+                      </button>
+                      {/* AvA Help Button */}
+                      <button
+                        onClick={() => {
+                          openGuide()
+                          setIsHubDropdownOpen(false)
+                          setIsMenuOpen(false)
+                        }}
+                        className={`w-full px-4 py-3 text-sm font-medium flex items-center gap-3 border-t transition-colors ${
+                          theme === 'dark'
+                            ? 'text-brand-mint hover:bg-gray-800 border-gray-700'
+                            : 'text-brand-sage hover:bg-gray-50 border-gray-100'
+                        }`}
+                      >
+                        <HelpCircle className='w-4 h-4' />
+                        <span>AvA Journey Guide</span>
+                        <span className='ml-auto text-xs opacity-60'>?</span>
+                      </button>
                     </div>
                   )}
                 </div>

@@ -9,6 +9,7 @@
  * - useDotApplicationStore: DOT form data, submission state
  * - useDriverHubStore: Hub dashboard data (resumes, MVR, jobs)
  * - useUIStore: Navigation, modals, UI state
+ * - usePreferencesStore: User preferences (persisted)
  */
 
 // Auth Store
@@ -44,8 +45,24 @@ export {
   useIsModalOpen,
   useIsMounted,
   useDriverJourneyState,
+  useActiveJourneyStep,
+  useShowJourneyModal,
   createInitialJourneyState,
 } from './ui-store'
+
+// Preferences Store
+export {
+  usePreferencesStore,
+  useShowJourneyModals,
+} from './preferences-store'
+
+// Journey Store
+export {
+  useJourneyStore,
+  useJourneyProgress,
+  useIsGuideOpen,
+  useHasSeenWelcome,
+} from './journey-store'
 
 // Types
 export type {

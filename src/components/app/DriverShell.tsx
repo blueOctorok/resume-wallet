@@ -12,6 +12,7 @@ import {
   useDotApplicationStore,
   useDriverHubStore,
   useUIStore,
+  usePreferencesStore,
 } from '@/stores'
 import type { ResumeUploadEvent } from '@/types/assistant'
 
@@ -74,8 +75,6 @@ const WalletTransactions = dynamic(
 interface DriverShellProps {
   /** Called when AlchemyAuth succeeds (new login) */
   onAuthSuccess: (userData: unknown) => void
-  /** Called to reset AvA assistant state on DOT app reset */
-  onResetAvaState: () => void
   /** Called to report a resume upload event to AvA */
   onResumeUploadEvent: (event: ResumeUploadEvent) => void
   /** Called to set the latest IPFS hash (for AvA prefill) */
@@ -86,13 +85,12 @@ interface DriverShellProps {
  * DriverShell - All driver-role pages and routing in one component.
  *
  * Reads navigation state from UIStore. Updates driver journey state in UIStore
- * so TAssistant (in page.tsx) can track progress.
+ * so the AvA Journey Guide can track progress.
  *
  * All DOT application logic lives in <DotApplicationFlow />.
  */
 export default function DriverShell({
   onAuthSuccess,
-  onResetAvaState,
   onResumeUploadEvent,
   onSetLatestResumeIpfsHash,
 }: DriverShellProps) {
@@ -110,7 +108,10 @@ export default function DriverShell({
     setEditingResumeId,
     updateJourneyStep,
     resetDriverJourneyState,
+    triggerJourneyStep,
   } = useUIStore()
+  
+  const { hasCompletedJourneyStep, markJourneyStepComplete } = usePreferencesStore()
 
   const {
     isMvrModalOpen,
@@ -122,12 +123,23 @@ export default function DriverShell({
   } = hubStore
 
   // -------------------------------------------------------
-  // Journey state updates (for TAssistant via UIStore)
+  // Journey state updates (for AvA Journey Guide via UIStore)
   // -------------------------------------------------------
   useEffect(() => {
     if (walletAddress) updateJourneyStep('wallet', 'complete')
     else resetDriverJourneyState()
   }, [walletAddress])
+  
+  // First login journey modal - show welcome message for new drivers
+  useEffect(() => {
+    if (user && !hasCompletedJourneyStep('driver.firstLogin')) {
+      // Small delay to let the UI settle after login
+      const timer = setTimeout(() => {
+        triggerJourneyStep('driver.firstLogin')
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [user, hasCompletedJourneyStep, triggerJourneyStep])
 
   useEffect(() => {
     if (hubStore.hasResume) updateJourneyStep('resume', 'complete')
@@ -151,8 +163,7 @@ export default function DriverShell({
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem('dot-application')
     }
-    onResetAvaState()
-  }, [dotApp, onResetAvaState])
+  }, [dotApp])
 
   const handleDeleteInProgressDotApp = useCallback(async () => {
     if (!walletAddress) return
@@ -202,6 +213,8 @@ export default function DriverShell({
                 console.log('Resume saved:', resumeId)
                 hubStore.setHasResume(true)
                 setEditingResumeId(undefined)
+                // Trigger journey modal for resume completion
+                triggerJourneyStep('driver.resumeBuilt')
               }}
             />
             <WalletTransactions />
@@ -239,6 +252,7 @@ export default function DriverShell({
                   console.log('Resume saved:', resumeId)
                   hubStore.setHasResume(true)
                   setEditingResumeId(undefined)
+                  triggerJourneyStep('driver.resumeBuilt')
                 }}
               />
             )}

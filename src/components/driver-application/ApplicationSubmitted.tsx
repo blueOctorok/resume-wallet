@@ -1,7 +1,7 @@
 'use client'
 
 import { useTheme } from '@/contexts/ThemeContext'
-import { Shield, CheckCircle } from 'lucide-react'
+import { Shield, CheckCircle, FileText, Sparkles, Loader2 } from 'lucide-react'
 
 interface ApplicationSubmittedProps {
   onNavigateToSafetyForm: () => void
@@ -11,12 +11,24 @@ interface ApplicationSubmittedProps {
     blockNumber: number
     applicationId: number | null
   } | null
+  /** When true, shows prompt to create a resume from DOT data */
+  showResumePrompt?: boolean
+  /** Called when user clicks "Create Resume" - parent handles the API call */
+  onCreateResume?: () => void
+  /** Shows loading state while resume is being created */
+  isCreatingResume?: boolean
+  /** Shows success state after resume is created */
+  resumeCreated?: boolean
 }
 
 const ApplicationSubmitted = ({
   onNavigateToSafetyForm,
   onNavigateToDashboard,
   blockchainData,
+  showResumePrompt,
+  onCreateResume,
+  isCreatingResume,
+  resumeCreated,
 }: ApplicationSubmittedProps) => {
   const { theme } = useTheme()
   // Since we now save first and verify manually, we always show success (saved)
@@ -169,6 +181,104 @@ const ApplicationSubmitted = ({
                 </span>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Resume Creation Prompt - shows when user has no resume on file */}
+      {showResumePrompt && (
+        <div className='mb-8'>
+          <div
+            className={`p-6 rounded-xl border ${
+              resumeCreated
+                ? theme === 'dark'
+                  ? 'bg-green-900/20 border-green-500/30'
+                  : 'bg-green-50 border-green-200'
+                : theme === 'dark'
+                  ? 'bg-gradient-to-br from-brand-mint/10 to-indigo-500/10 border-brand-mint/30'
+                  : 'bg-gradient-to-br from-brand-mint/5 to-indigo-50 border-brand-mint/30'
+            }`}
+          >
+            {resumeCreated ? (
+              // Success state after resume is created
+              <div className='text-center'>
+                <div className='flex justify-center mb-3'>
+                  <div className='rounded-full h-12 w-12 bg-green-500 flex items-center justify-center'>
+                    <CheckCircle className='h-6 w-6 text-white' />
+                  </div>
+                </div>
+                <h3
+                  className={`text-lg font-semibold mb-2 ${
+                    theme === 'dark' ? 'text-green-400' : 'text-green-700'
+                  }`}
+                >
+                  Resume Created!
+                </h3>
+                <p
+                  className={`text-sm ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  }`}
+                >
+                  Your professional resume is ready. View and edit it anytime from your Hub.
+                </p>
+              </div>
+            ) : (
+              // Prompt to create resume
+              <>
+                <div className='flex items-start gap-4'>
+                  <div
+                    className={`flex-shrink-0 rounded-xl p-3 ${
+                      theme === 'dark' ? 'bg-brand-mint/20' : 'bg-brand-mint/10'
+                    }`}
+                  >
+                    <FileText className={`h-6 w-6 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`} />
+                  </div>
+                  <div className='flex-1'>
+                    <h3
+                      className={`text-lg font-semibold mb-1 flex items-center gap-2 ${
+                        theme === 'dark' ? 'text-white' : 'text-gray-900'
+                      }`}
+                    >
+                      <Sparkles className='h-4 w-4 text-brand-mint' />
+                      Want a Resume Too?
+                    </h3>
+                    <p
+                      className={`text-sm mb-4 ${
+                        theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                      }`}
+                    >
+                      We can create a professional resume from the information you just entered. 
+                      It&apos;s ready to share with employers - no extra work needed!
+                    </p>
+                    <button
+                      onClick={onCreateResume}
+                      disabled={isCreatingResume}
+                      className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all duration-200 ${
+                        isCreatingResume
+                          ? 'opacity-70 cursor-not-allowed'
+                          : 'hover:scale-105 hover:shadow-lg'
+                      } ${
+                        theme === 'dark'
+                          ? 'bg-brand-mint text-gray-900'
+                          : 'bg-brand-sage text-white'
+                      }`}
+                    >
+                      {isCreatingResume ? (
+                        <>
+                          <Loader2 className='h-4 w-4 animate-spin' />
+                          Creating Resume...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className='h-4 w-4' />
+                          Yes, Create My Resume
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
