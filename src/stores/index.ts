@@ -43,6 +43,8 @@ export {
   useCurrentPage,
   useIsModalOpen,
   useIsMounted,
+  useDriverJourneyState,
+  createInitialJourneyState,
 } from './ui-store'
 
 // Types

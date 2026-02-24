@@ -1,0 +1,101 @@
+---
+description: Core architecture standards for StormChain — component structure, state management, and routing
+alwaysApply: true
+---
+
+# StormChain Architecture Rules
+
+## Component Structure
+
+Every feature must live in its own component. `page.tsx` is routing only — no business logic, no inline UI.
+
+```
+src/
+  app/page.tsx              ← routing + auth + global layout ONLY (~300 lines max)
+  components/
+    app/                    ← role shells and feature flows
+      DriverShell.tsx       ← driver routing
+      EmployerShell.tsx     ← employer routing
+      DeveloperShell.tsx    ← developer routing
+      DotApplicationFlow.tsx ← DOT feature (self-contained)
+      ErrorBoundary.tsx
+    ui/                     ← reusable primitives (Button, Card, etc.)
+    [Feature].tsx           ← all feature components go here
+```
+
+### Rules
+
+- **No inline feature rendering in shells.** If a page block exceeds ~30 lines, extract it to a component.
+- **One concern per file.** A component renders one feature — not multiple unrelated sections.
+- **Shells route; they don't build UI.** `DriverShell` switches on `currentPage` and returns the right component. It does not contain JSX for those features.
+
+```tsx
+// ❌ BAD — feature logic inline in shell
+if (currentPage === 'resume') {
+  return (
+    <div>
+      <ResumeTabSelector ... />
+      {resumeTab === 'upload' && <ResumeUploadWithVerification ... />}
+      {resumeTab === 'create' && <ResumeBuilder ... />}
+    </div>
+  )
+}
+
+// ✅ GOOD — delegate to a dedicated component
+if (currentPage === 'resume') {
+  return <DriverResumeSection onBack={handleNavigateToHub} />
+}
+```
+
+---
+
+## State Management
+
+All state lives in Zustand stores. No `useState` for shared or feature-level data.
+
+### Stores
+
+| Store | Owns |
+|-------|------|
+| `useAuthStore` | user, walletAddress, userRole, session |
+| `useDotApplicationStore` | DOT form data, submission state, prefill |
+| `useDriverHubStore` | hub data, resumes, DOT apps, MVR records |
+| `useUIStore` | currentPage, modals, tabs, journey state |
+
+### Rules
+
+- **No prop drilling state.** If a value needs to cross more than one component boundary, put it in a store.
+- **No `useState` for data that persists across navigation.** Form progress, user data, hub data → store.
+- **`useState` is OK for:** local UI toggles, animation state, uncontrolled input refs.
+- **Stores own their own loading/error state.** Don't pass `isLoading` as props.
+
+```tsx
+// ❌ BAD — local state for shared data
+const [userRole, setUserRole] = useState(null)
+
+// ✅ GOOD — from store
+const { userRole } = useAuthStore()
+```
+
+---
+
+## File Size Limits
+
+| File type | Soft limit | Hard limit |
+|-----------|-----------|------------|
+| `page.tsx` | 300 lines | 500 lines |
+| Feature component | 300 lines | 600 lines |
+| Shell component | 150 lines | 300 lines |
+| Store file | 150 lines | 300 lines |
+
+If a file approaches its hard limit, split it.
+
+---
+
+## Adding a New Feature
+
+1. Create `src/components/app/[FeatureName]Flow.tsx` (or `src/components/[FeatureName].tsx`)
+2. Feature reads/writes its own Zustand store (or an existing one if appropriate)
+3. Shell (`DriverShell`, `EmployerShell`, etc.) adds one `if (currentPage === 'x') return <Feature />`
+4. Register the new page in `src/stores/types.ts` → `PageType`
+5. Wrap the new feature in `<ErrorBoundary section="Feature Name">` inside the shell

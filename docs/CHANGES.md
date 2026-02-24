@@ -2,6 +2,102 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🏗️ **Major Architecture Refactor — All 5 Phases** (February 2026)
+
+### What Changed
+
+A comprehensive refactor to make the app production-ready and maintainable. All five phases outlined in `docs/IMPLEMENTATION_PHASES.md` were executed.
+
+---
+
+### Phase 1 — Stabilize State (Single Source of Truth)
+
+- **Removed all `forms-${wallet}` localStorage reads/writes** from `page.tsx`. DOT application state is now owned exclusively by `useDotApplicationStore` (Zustand `dot-application` key). No more dual-persistence conflicts.
+- **`resetApplicationProgress` now calls `dotAppStore.resetApplication()` atomically** and removes the Zustand localStorage key, eliminating the "infinite loop to success screen" bug.
+- **`isApplicationCompleted` is no longer loaded from old localStorage format** — Zustand owns it exclusively.
+
+---
+
+### Phase 2 — Break Up the Monolith
+
+**`page.tsx` went from 3,032 lines → ~310 lines (90% reduction).**
+
+New files in `src/components/app/`:
+
+| File | Purpose |
+|------|---------|
+| `EmployerShell.tsx` | All employer-role pages (Hub, applicants, jobs, talent search) |
+| `DeveloperShell.tsx` | All developer-role pages (Hub, portfolio) |
+| `DotApplicationFlow.tsx` | Complete DOT application feature (forms, prefill, submit, success) |
+| `DriverShell.tsx` | All driver-role pages (Hub, DOT, resume, jobs, MVR, StormChain) |
+| `ErrorBoundary.tsx` | React error boundary for major sections |
+
+**`page.tsx` now only:**
+1. Subscribes to Alchemy hooks
+2. Manages auth + role fetch
+3. Renders global layout (nav, modals, TAssistant, background)
+4. Routes to the correct shell based on role
+
+**`useDotApplicationStore` journey state:** Added `driverJourneyState` and `updateJourneyStep` to `useUIStore`. DriverShell writes it, page.tsx reads it for TAssistant — no prop drilling needed.
+
+**TAssistant action handler** simplified: all actions just dispatch to Zustand stores. Components react to store changes; no callbacks into child components needed.
+
+---
+
+### Phase 3 — Shared UI Primitives
+
+New files in `src/components/ui/`:
+
+| File | Purpose |
+|------|---------|
+| `Button.tsx` | Reusable button (primary/secondary/ghost/danger, sm/md/lg) |
+| `Card.tsx` | Reusable card (default/elevated/flat variants) |
+| `index.ts` | Barrel export |
+
+`src/lib/utils.ts` — added `cn()` helper (clsx + tailwind-merge) for safe class merging.
+
+---
+
+### Phase 4 — Component-Level Data Refresh
+
+`DriverHub` already calls `fetchHubData()` after every mutation (delete resume, verify, DOT delete). This pattern is confirmed and documented. No full page reload is needed for any driver action.
+
+---
+
+### Phase 5 — Error Boundaries
+
+`ErrorBoundary.tsx` wraps all three shells in `page.tsx`:
+```tsx
+<ErrorBoundary section="Driver Hub">
+  <DriverShell ... />
+</ErrorBoundary>
+```
+Crashes in one role's content no longer take down the whole app. Users see a "Try again" button that re-mounts the section.
+
+---
+
+### Files Changed/Created Summary
+
+**Modified:**
+- `src/app/page.tsx` — 3,032 → ~310 lines
+- `src/stores/ui-store.ts` — added `driverJourneyState`, `updateJourneyStep`, `resetDriverJourneyState`
+- `src/stores/index.ts` — added `useDriverJourneyState`, `createInitialJourneyState` exports
+- `src/stores/dot-application-store.ts` — added `setIsApplicationCompleted` action
+- `docs/CHANGES.md`, `docs/PROJECT_ROADMAP.md` — updated
+
+**Created:**
+- `src/lib/utils.ts` — `cn()` helper
+- `src/components/ui/Button.tsx`
+- `src/components/ui/Card.tsx`
+- `src/components/ui/index.ts`
+- `src/components/app/EmployerShell.tsx`
+- `src/components/app/DeveloperShell.tsx`
+- `src/components/app/DotApplicationFlow.tsx`
+- `src/components/app/DriverShell.tsx`
+- `src/components/app/ErrorBoundary.tsx`
+
+---
+
 ## 🐛 **"New DOT App" infinite loop - Zustand persistence conflict** (February 2026)
 
 ### Problem

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { PageType } from './types'
+import type { DriverJourneyState, JourneyStatus } from '@/types/assistant'
 
 /**
  * UI Store - Manages UI state and navigation
@@ -10,14 +11,32 @@ import type { PageType } from './types'
  * - Loading indicators
  * - Tab states
  * - Component-specific UI state
+ * - Driver journey state (for TAssistant progress tracking)
  * 
  * This state is NOT persisted - it resets on page refresh.
  */
+
+const createInitialJourneyState = (): DriverJourneyState => {
+  const ts = new Date().toISOString()
+  return {
+    wallet: { status: 'pending', updatedAt: ts },
+    resume: { status: 'pending', updatedAt: ts },
+    forms: { status: 'pending', updatedAt: ts },
+    submission: { status: 'pending', updatedAt: ts },
+    currentFormStep: null,
+    lastCompletedForm: null,
+  }
+}
+
+type JourneyStageKey = 'wallet' | 'resume' | 'forms' | 'submission'
 
 interface UIState {
   // Navigation
   currentPage: PageType
   showDashboard: boolean
+  
+  // Driver journey state (session-only, used by TAssistant)
+  driverJourneyState: DriverJourneyState
   
   // Modals
   isModalOpen: boolean
@@ -42,6 +61,11 @@ interface UIActions {
   // Navigation actions
   setCurrentPage: (page: PageType) => void
   setShowDashboard: (show: boolean) => void
+  
+  // Driver journey actions
+  updateJourneyStep: (step: JourneyStageKey, status: JourneyStatus) => void
+  setDriverJourneyState: (state: DriverJourneyState) => void
+  resetDriverJourneyState: () => void
   navigateToHub: () => void
   navigateToDotApp: () => void
   navigateToResume: () => void
@@ -73,6 +97,7 @@ interface UIActions {
 const initialState: UIState = {
   currentPage: null,
   showDashboard: false,
+  driverJourneyState: createInitialJourneyState(),
   isModalOpen: false,
   modalType: null,
   resumeTab: 'upload',
@@ -90,6 +115,20 @@ export const useUIStore = create<UIState & UIActions>()(
     // Navigation actions
     setCurrentPage: (page) => set({ currentPage: page }),
     setShowDashboard: (show) => set({ showDashboard: show }),
+    
+    // Driver journey actions
+    updateJourneyStep: (step, status) =>
+      set((state) => {
+        if (state.driverJourneyState[step].status === status) return state
+        return {
+          driverJourneyState: {
+            ...state.driverJourneyState,
+            [step]: { status, updatedAt: new Date().toISOString() },
+          },
+        }
+      }),
+    setDriverJourneyState: (journeyState) => set({ driverJourneyState: journeyState }),
+    resetDriverJourneyState: () => set({ driverJourneyState: createInitialJourneyState() }),
     
     navigateToHub: () => set({ 
       currentPage: 'hub', 
@@ -157,3 +196,8 @@ export const useUIStore = create<UIState & UIActions>()(
 export const useCurrentPage = () => useUIStore((state) => state.currentPage)
 export const useIsModalOpen = () => useUIStore((state) => state.isModalOpen)
 export const useIsMounted = () => useUIStore((state) => state.isMounted)
+export const useDriverJourneyState = () => useUIStore((state) => state.driverJourneyState)
+
+// Re-export for use in components
+export { type DriverJourneyState, type JourneyStatus }
+export { createInitialJourneyState }
