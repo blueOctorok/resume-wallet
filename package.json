@@ -67,7 +67,7 @@
     "tsparticles-slim": "^2.12.0",
     "viem": "^2.37.1",
     "zod": "^4.0.17",
-    "zustand": "^5.0.8"
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^3.0.0",

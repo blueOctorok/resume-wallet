@@ -20,7 +20,6 @@ import {
   ChevronRight,
   Building2,
   Calendar,
-  TrendingUp,
   Loader2,
   X,
   MapPin,
@@ -480,7 +479,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <StatCard
           icon={<Briefcase className="w-5 h-5" />}
           label="Active Jobs"
@@ -509,6 +508,67 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           subValue={`${data.stats.hiresThisMonth} this month`}
           theme={theme}
         />
+      </div>
+
+      {/* Quick Actions - horizontal row near top */}
+      <div className={`flex flex-wrap items-center gap-2 mb-8 p-3 rounded-xl border ${
+        theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'
+      }`}>
+        <button
+          onClick={() => onNavigate('talent-search')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
+            theme === 'dark'
+              ? 'bg-teal-600 text-white hover:bg-teal-500'
+              : 'bg-teal-600 text-white hover:bg-teal-500'
+          }`}
+        >
+          <Search className="w-4 h-4" />
+          Find Talent
+        </button>
+        <button
+          onClick={() => onNavigate('post-job')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
+            theme === 'dark'
+              ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+              : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          <Plus className="w-4 h-4" />
+          Post Job
+        </button>
+        <button
+          onClick={() => onNavigate('applicants')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
+            theme === 'dark'
+              ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+              : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          Applicants
+        </button>
+        <button
+          onClick={() => onNavigate('company-profile')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
+            theme === 'dark'
+              ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+              : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          <Building2 className="w-4 h-4" />
+          Company
+        </button>
+        <button
+          onClick={() => onNavigate('reports')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
+            theme === 'dark'
+              ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+              : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          Reports
+        </button>
       </div>
 
       {/* Analytics Section */}
@@ -783,63 +843,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
               ))}
             </div>
           )}
-        </Section>
-
-        {/* Quick Actions */}
-        <Section
-          title="Quick Actions"
-          icon={<TrendingUp className="w-5 h-5" />}
-          theme={theme}
-        >
-          <div className="space-y-3">
-            {/* Primary action - Find Talent */}
-            <button
-              onClick={() => onNavigate('talent-search')}
-              className={`w-full flex items-center gap-4 p-4 rounded-xl font-medium transition-all duration-200 ${
-                theme === 'dark'
-                  ? 'bg-gradient-to-r from-teal-600 to-teal-500 text-white hover:from-teal-500 hover:to-teal-400 shadow-lg shadow-teal-500/20'
-                  : 'bg-gradient-to-r from-teal-600 to-teal-500 text-white hover:from-teal-500 hover:to-teal-400 shadow-lg shadow-teal-500/30'
-              }`}
-            >
-              <div className="p-2 bg-white/20 rounded-lg">
-                <Search className="w-5 h-5" />
-              </div>
-              <div className="text-left">
-                <span className="block font-semibold">Find Talent</span>
-                <span className="text-sm opacity-90">Search drivers & developers</span>
-              </div>
-              <ChevronRight className="w-5 h-5 ml-auto" />
-            </button>
-            
-            {/* Secondary actions grid */}
-            <div className="grid grid-cols-2 gap-3">
-              <ActionButton
-                icon={<Plus className="w-5 h-5" />}
-                label="Post New Job"
-                onClick={() => onNavigate('post-job')}
-                theme={theme}
-                primary
-              />
-              <ActionButton
-                icon={<Users className="w-5 h-5" />}
-                label="View Applicants"
-                onClick={() => onNavigate('applicants')}
-                theme={theme}
-              />
-              <ActionButton
-                icon={<Building2 className="w-5 h-5" />}
-                label="Company Profile"
-                onClick={() => onNavigate('company-profile')}
-                theme={theme}
-              />
-              <ActionButton
-                icon={<FileText className="w-5 h-5" />}
-                label="View Reports"
-                onClick={() => onNavigate('reports')}
-                theme={theme}
-              />
-            </div>
-          </div>
         </Section>
 
         {/* Application Invites - Integration Surface */}
@@ -1409,38 +1412,6 @@ function MvrRow({
         </p>
       </div>
       <StatusBadge status={mvr.status} theme={theme} />
-    </button>
-  )
-}
-
-function ActionButton({ 
-  icon, 
-  label, 
-  onClick, 
-  theme, 
-  primary 
-}: { 
-  icon: React.ReactNode
-  label: string
-  onClick: () => void
-  theme: string
-  primary?: boolean
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center justify-center gap-2 p-4 rounded-xl font-medium transition-colors ${
-        primary
-          ? theme === 'dark'
-            ? 'bg-teal-500 text-white hover:bg-teal-600'
-            : 'bg-teal-600 text-white hover:bg-teal-700'
-          : theme === 'dark'
-            ? 'bg-gray-700/50 text-white hover:bg-gray-700'
-            : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-      }`}
-    >
-      {icon}
-      <span className="text-sm">{label}</span>
     </button>
   )
 }

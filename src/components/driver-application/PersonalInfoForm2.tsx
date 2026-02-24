@@ -549,10 +549,11 @@ export default function PersonalInfoForm2({
                   </button>
                 )}
               </div>
+              {/* Label row uses min-h so multi-line labels don't push inputs down; keeps inputs aligned */}
               <div className='grid grid-cols-1 md:grid-cols-5 gap-4'>
-                <div>
+                <div className='flex flex-col'>
                   <label
-                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                    className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     DATE
                   </label>
@@ -573,9 +574,9 @@ export default function PersonalInfoForm2({
                     }`}
                   />
                 </div>
-                <div>
+                <div className='flex flex-col'>
                   <label
-                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                    className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     NATURE OF ACCIDENT
                   </label>
@@ -597,9 +598,9 @@ export default function PersonalInfoForm2({
                     }`}
                   />
                 </div>
-                <div>
+                <div className='flex flex-col'>
                   <label
-                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                    className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     # FATALITIES
                   </label>
@@ -620,9 +621,9 @@ export default function PersonalInfoForm2({
                     }`}
                   />
                 </div>
-                <div>
+                <div className='flex flex-col'>
                   <label
-                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                    className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     # INJURIES
                   </label>
@@ -643,9 +644,9 @@ export default function PersonalInfoForm2({
                     }`}
                   />
                 </div>
-                <div>
+                <div className='flex flex-col'>
                   <label
-                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                    className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     CHEMICAL SPILLS (Y/N)
                   </label>
@@ -807,9 +808,9 @@ export default function PersonalInfoForm2({
                 )}
               </div>
               <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
-                <div>
+                <div className='flex flex-col'>
                   <label
-                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                    className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     DATE CONVICTED
                   </label>
@@ -831,9 +832,9 @@ export default function PersonalInfoForm2({
                     }`}
                   />
                 </div>
-                <div>
+                <div className='flex flex-col'>
                   <label
-                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                    className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     VIOLATION
                   </label>
@@ -854,9 +855,9 @@ export default function PersonalInfoForm2({
                     }`}
                   />
                 </div>
-                <div>
+                <div className='flex flex-col'>
                   <label
-                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                    className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     STATE OF VIOLATION
                   </label>
@@ -877,9 +878,9 @@ export default function PersonalInfoForm2({
                     }`}
                   />
                 </div>
-                <div>
+                <div className='flex flex-col'>
                   <label
-                    className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                    className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     PENALTY
                   </label>

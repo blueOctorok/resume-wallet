@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
 
     console.log('[SAVE PROGRESS] Saving application progress:', {
       walletAddress,
+      walletAddressLower: walletAddress.toLowerCase(),
       currentStep,
       hasForm1: !!form1Data,
       hasForm2: !!form2Data,
@@ -59,6 +60,13 @@ export async function POST(request: NextRequest) {
       applicationData,
       currentStep
     )
+
+    console.log('[SAVE PROGRESS] Application saved successfully:', {
+      applicationId: result.id,
+      userId: result.user_id,
+      currentStep: result.current_step,
+      isComplete: result.is_complete,
+    })
 
     return NextResponse.json({
       success: true,

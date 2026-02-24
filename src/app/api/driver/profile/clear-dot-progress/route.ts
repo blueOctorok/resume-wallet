@@ -58,10 +58,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Delete in-progress DOT application rows so they disappear from the hub
+    // Only delete apps that are BOTH: not on blockchain AND not complete
+    // This prevents deleting completed apps that haven't been written to chain yet
     const { error: deleteAppsError } = await supabase
       .from('driver_applications')
       .delete()
       .eq('user_id', user.id)
+      .eq('is_complete', false)
       .is('blockchain_tx_hash', null)
 
     if (deleteAppsError) {

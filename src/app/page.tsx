@@ -37,6 +37,14 @@ import type { UnifiedDriverProfile } from '@/types/driver-profile'
 import SyncIndicator, { useSyncIndicator } from '@/components/SyncIndicator'
 import { useAvaAssistant } from '@/hooks/useAvaAssistant'
 
+// Zustand stores for centralized state management
+import {
+  useAuthStore,
+  useDotApplicationStore,
+  useDriverHubStore,
+  useUIStore,
+} from '@/stores'
+
 // Dynamic imports to avoid SSR issues with Alchemy hooks
 const ResumeUploadWithVerification = dynamic(
   () => import('@/components/ResumeUploadWithVerification'),
@@ -357,6 +365,7 @@ const HomeContent = () => {
   // Alchemy Account Kit hooks for sending transactions
   const { client } = useSmartAccountClient({ type: 'LightAccount' })
   const { sendUserOperationAsync, isSendingUserOperation } =
+    // @ts-ignore - Type instantiation too deep (Alchemy SDK type complexity issue)
     useSendUserOperation({ client })
 
   // Alchemy authentication hooks to check for existing session
@@ -364,103 +373,136 @@ const HomeContent = () => {
   const alchemyUser = useUser()
   const account = useAccount({ type: 'LightAccount' })
 
-  const [user, setUser] = useState<any>(null)
-  const [isCheckingSession, setIsCheckingSession] = useState(true) // Track if we're still checking for a session
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isMvrModalOpen, setIsMvrModalOpen] = useState(false)
-  const [isMvrManagementOpen, setIsMvrManagementOpen] = useState(false)
-  const [selectedMvrOrderId, setSelectedMvrOrderId] = useState<string | null>(
-    null
-  )
-  const [currentPage, setCurrentPage] = useState<
-    | 'signin'
-    | 'resume'
-    | 'dotapp'
-    | 'jobs'
-    | 'applications'
-    | 'mvr'
-    | 'hub'
-    | null
-  >(null)
-  const [resumeTab, setResumeTab] = useState<'upload' | 'create'>('upload')
-  const [editingResumeId, setEditingResumeId] = useState<string | undefined>(
-    undefined
-  )
+  // ============================================================
+  // ZUSTAND STORES - Centralized state management
+  // ============================================================
+  
+  // Auth store - user session, wallet, role
+  const authStore = useAuthStore()
+  const user = authStore.user
+  const setUser = authStore.setUser
+  const isCheckingSession = authStore.isCheckingSession
+  const setIsCheckingSession = authStore.setIsCheckingSession
+  const userRole = authStore.userRole
+  const setUserRole = authStore.setUserRole
+  const isRoleLoading = authStore.isRoleLoading
+  const setIsRoleLoading = authStore.setIsRoleLoading
+  const showRoleSelection = authStore.showRoleSelection
+  const setShowRoleSelection = authStore.setShowRoleSelection
+  const isSettingRole = authStore.isSettingRole
+  const setIsSettingRole = authStore.setIsSettingRole
+  const companyName = authStore.companyName
+  const setCompanyName = authStore.setCompanyName
+  // Get normalized wallet address from auth store
+  const walletAddress = authStore.walletAddress
 
-  // Role-based access control
-  const [userRole, setUserRole] = useState<
-    'driver' | 'developer' | 'employer' | null
-  >(null)
-  const [isRoleLoading, setIsRoleLoading] = useState(true)
-  const [showRoleSelection, setShowRoleSelection] = useState(false)
-  const [isSettingRole, setIsSettingRole] = useState(false)
-  const [companyName, setCompanyName] = useState<string | null>(null)
-  const [currentForm, setCurrentForm] = useState(1)
-  const [isDriverApplicationCompleted, setIsDriverApplicationCompleted] =
-    useState(false)
-  const [showEmploymentVerification, setShowEmploymentVerification] =
-    useState(false)
-  const [showDashboard, setShowDashboard] = useState(false)
-  const [blockchainData, setBlockchainData] = useState<{
-    transactionHash: string
-    blockNumber: number
-    applicationId: number | null
-  } | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submissionError, setSubmissionError] = useState<string | null>(null)
+  // DOT Application store - form data, submission state
+  const dotAppStore = useDotApplicationStore()
+  const form1Data = dotAppStore.form1Data
+  const setForm1Data = dotAppStore.setForm1Data
+  const form2Data = dotAppStore.form2Data
+  const setForm2Data = dotAppStore.setForm2Data
+  const form3Data = dotAppStore.form3Data
+  const setForm3Data = dotAppStore.setForm3Data
+  const currentForm = dotAppStore.currentForm
+  const setCurrentForm = dotAppStore.setCurrentForm
+  const formResetKey = dotAppStore.formResetKey
+  // Wrapper to maintain API compatibility - incrementFormResetKey takes no args
+  const setFormResetKey = useCallback((_updater?: unknown) => {
+    dotAppStore.incrementFormResetKey()
+  }, [])
+  const isSubmitting = dotAppStore.isSubmitting
+  const setIsSubmitting = dotAppStore.setIsSubmitting
+  const submissionError = dotAppStore.submissionError
+  const setSubmissionError = dotAppStore.setSubmissionError
+  const isDriverApplicationCompleted = dotAppStore.isApplicationCompleted
+  // Simple toggle for completed state - use for navigation (not full reset)
+  // For full reset, use resetApplicationProgress() which clears forms + this state
+  const setIsDriverApplicationCompleted = useCallback((completed: boolean) => {
+    if (completed) {
+      dotAppStore.completeApplication()
+    } else {
+      // Just toggle the UI state, don't reset form data
+      // Used when navigating from success screen back to Hub
+      dotAppStore.setIsApplicationCompleted(false)
+    }
+  }, [])
+  const blockchainData = dotAppStore.blockchainData
+  const setBlockchainData = dotAppStore.setBlockchainData
+  const hasUnsavedChanges = dotAppStore.hasUnsavedChanges
+  const setHasUnsavedChanges = dotAppStore.setHasUnsavedChanges
+  const profileDataLoaded = dotAppStore.profileDataLoaded
+  const setProfileDataLoaded = dotAppStore.setProfileDataLoaded
+  const profileSource = dotAppStore.profileSource
+  const setProfileSource = dotAppStore.setProfileSource
+  const showProfileConflictModal = dotAppStore.showProfileConflictModal
+  const setShowProfileConflictModal = dotAppStore.setShowProfileConflictModal
+  const profileConflict = dotAppStore.profileConflict
+  const setProfileConflict = dotAppStore.setProfileConflict
+  const hasPrefilled = dotAppStore.hasPrefilled
+  const setHasPrefilled = dotAppStore.setHasPrefilled
+  const showPrefillUpload = dotAppStore.showPrefillUpload
+  const setShowPrefillUpload = dotAppStore.setShowPrefillUpload
+
+  // Driver Hub store - resumes, MVR, job applications
+  const hubStore = useDriverHubStore()
+  const hasResume = hubStore.hasResume
+  const setHasResume = hubStore.setHasResume
+  const latestResumeIpfsHash = hubStore.latestResumeIpfsHash
+  const setLatestResumeIpfsHash = hubStore.setLatestResumeIpfsHash
+  const resumeUploadEvent = hubStore.resumeUploadEvent
+  const setResumeUploadEvent = hubStore.setResumeUploadEvent
+  const isMvrModalOpen = hubStore.isMvrModalOpen
+  const setIsMvrModalOpen = hubStore.setIsMvrModalOpen
+  const isMvrManagementOpen = hubStore.isMvrManagementOpen
+  const setIsMvrManagementOpen = hubStore.setIsMvrManagementOpen
+  const selectedMvrOrderId = hubStore.selectedMvrOrderId
+  const setSelectedMvrOrderId = hubStore.setSelectedMvrOrderId
+
+  // UI store - navigation, modals
+  const uiStore = useUIStore()
+  const currentPage = uiStore.currentPage
+  const setCurrentPage = uiStore.setCurrentPage
+  const showDashboard = uiStore.showDashboard
+  const setShowDashboard = uiStore.setShowDashboard
+  const isModalOpen = uiStore.isModalOpen
+  const setIsModalOpen = uiStore.setIsModalOpen
+  const resumeTab = uiStore.resumeTab
+  const setResumeTab = uiStore.setResumeTab
+  const editingResumeId = uiStore.editingResumeId
+  const setEditingResumeId = uiStore.setEditingResumeId
+  const showEmploymentVerification = uiStore.showEmploymentVerification
+  const setShowEmploymentVerification = uiStore.setShowEmploymentVerification
+
+  // ============================================================
+  // LOCAL STATE - Component-specific state that doesn't need global access
+  // ============================================================
+  
   const { theme } = useTheme()
-
-  // Store form data from all three forms
-  const [form1Data, setForm1Data] = useState<any>(null)
-  const [form2Data, setForm2Data] = useState<any>(null)
-  const [form3Data, setForm3Data] = useState<any>(null)
-  const [formResetKey, setFormResetKey] = useState(0)
-
-  // Sync indicator for save feedback
+  
+  // Sync indicator for save feedback (UI-only)
   const { startSync, syncSuccess, syncError, indicatorProps } =
     useSyncIndicator()
 
-  // Track unsaved changes (dirty state)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  // Refs for tracking async operations
   const lastSavedDataRef = useRef<{ form1: any; form2: any; form3: any }>({
     form1: null,
     form2: null,
     form3: null,
   })
-
-  // Track if data was loaded from unified profile
-  const [profileDataLoaded, setProfileDataLoaded] = useState(false)
-  const [profileSource, setProfileSource] = useState<string | null>(null)
-  const [showProfileConflictModal, setShowProfileConflictModal] =
-    useState(false)
-  const [profileConflict, setProfileConflict] = useState<{
-    conflicts: string[]
-    existing: {
-      name: string
-      cdlNumber?: string
-      email?: string
-      lastUpdatedFrom?: string
-    }
-    incoming: {
-      name: string
-      cdlNumber?: string
-      email?: string
-      source?: string
-    }
-    profileData: any
-  } | null>(null)
   const profileLoadAttemptedRef = useRef(false)
-  const [profileLoadTrigger, setProfileLoadTrigger] = useState(0) // Increment to force profile reload
   const forceProfileLoadRef = useRef(false) // When true, load from profile even if forms have data
-
-  // Track if user has used AI prefill
-  const [hasPrefilled, setHasPrefilled] = useState(false)
-  const [showPrefillUpload, setShowPrefillUpload] = useState(false) // Start with forms, prefill is in Form 1
+  
+  // Local state for profile reload trigger
+  const [profileLoadTrigger, setProfileLoadTrigger] = useState(0)
+  
+  // Journey state for driver application progress tracking
   const [journeyState, setJourneyState] = useState<DriverJourneyState>(() =>
     createInitialJourneyState()
   )
 
   // AvA Assistant state (extracted to custom hook)
+  // Use wallet address from auth store (already normalized to lowercase)
   const {
     isAvaCollapsed,
     setIsAvaCollapsed,
@@ -480,14 +522,9 @@ const HomeContent = () => {
     handlePrimerAction,
     isPrimerTriggered,
     resetAvaState,
-  } = useAvaAssistant({ userAddress: user?.address })
+  } = useAvaAssistant({ userAddress: walletAddress ?? undefined })
 
-  const [hasResume, setHasResume] = useState(false)
-  const [latestResumeIpfsHash, setLatestResumeIpfsHash] = useState<
-    string | null
-  >(null)
-  const [resumeUploadEvent, setResumeUploadEvent] =
-    useState<ResumeUploadEvent | null>(null)
+  // Refs for async operation tracking
   const resetInProgressRef = useRef(false)
   const analysisTriggeredRef = useRef<string | null>(null) // Track which IPFS hash we've already triggered analysis for
   const analysisPendingRef = useRef(false) // Prevent simultaneous analysis triggers
@@ -528,8 +565,8 @@ const HomeContent = () => {
 
   const handleRoleSelection = useCallback(
     async (role: 'driver' | 'developer' | 'employer', companyName?: string, dotNumber?: string) => {
-      if (!user?.address) {
-        console.error('No user address available')
+      if (!walletAddress) {
+        console.error('No wallet address available')
         return
       }
 
@@ -542,7 +579,7 @@ const HomeContent = () => {
           },
           body: JSON.stringify({
             role,
-            walletAddress: user.address,
+            walletAddress: walletAddress,
             // Pass company info for employers (prevents orphan "My Company" records)
             ...(role === 'employer' && companyName && { companyName, dotNumber }),
           }),
@@ -561,7 +598,7 @@ const HomeContent = () => {
           const verifyResponse = await fetch('/api/user/profile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ walletAddress: user.address }),
+            body: JSON.stringify({ walletAddress }),
           })
 
           if (verifyResponse.ok) {
@@ -609,7 +646,7 @@ const HomeContent = () => {
     console.log(
       '🔄 [RESET] ==================== START RESET ===================='
     )
-    console.log('🔄 [RESET] User address:', user?.address)
+    console.log('🔄 [RESET] Wallet address:', walletAddress)
     console.log('🔄 [RESET] Current form1Data:', form1Data)
     console.log('🔄 [RESET] Current form2Data:', form2Data)
     console.log('🔄 [RESET] Current form3Data:', form3Data)
@@ -618,68 +655,46 @@ const HomeContent = () => {
     resetInProgressRef.current = true
     console.log('🔄 [RESET] Set resetInProgressRef to true')
 
-    // Clear state first
-    console.log('🔄 [RESET] Setting form data to null...')
-    setForm1Data(null)
-    setForm2Data(null)
-    setForm3Data(null)
-    console.log('🔄 [RESET] Form data set to null')
-    setHasPrefilled(false)
-    setShowPrefillUpload(false) // Go straight to forms, prefill is in Form 1
-    setCurrentForm(1)
-    setIsDriverApplicationCompleted(false)
+    // Use Zustand's atomic reset - this clears all form data AND isApplicationCompleted
+    // and Zustand's persist middleware will save the reset state to localStorage
+    console.log('🔄 [RESET] Calling dotAppStore.resetApplication()...')
+    dotAppStore.resetApplication()
+    console.log('🔄 [RESET] Zustand store reset complete')
+    
+    // Reset non-Zustand state
     setShowEmploymentVerification(false)
     setShowDashboard(false)
-    setSubmissionError(null)
     setHasResume(false)
-    setLatestResumeIpfsHash(null) // Clear stored IPFS hash
-    resetAvaState() // Clear AvA assistant state
-    analysisTriggeredRef.current = null // Reset analysis trigger
-    analysisPendingRef.current = false // Reset pending flag
+    setLatestResumeIpfsHash(null)
+    resetAvaState()
+    analysisTriggeredRef.current = null
+    analysisPendingRef.current = false
 
-    // Clear localStorage
-    if (typeof window !== 'undefined' && user?.address) {
-      console.log('🔄 [RESET] Clearing localStorage for:', user.address)
-      const beforeForms = window.localStorage.getItem(`forms-${user.address}`)
-      const beforeJourney = window.localStorage.getItem(
-        `journey-${user.address}`
-      )
-      console.log(
-        '🔄 [RESET] Before clear - forms:',
-        beforeForms?.substring(0, 100)
-      )
-      console.log(
-        '🔄 [RESET] Before clear - journey:',
-        beforeJourney?.substring(0, 100)
-      )
-
-      // Clear all localStorage items for this user
-      window.localStorage.removeItem(`forms-${user.address}`)
-      window.localStorage.removeItem(`journey-${user.address}`)
-      window.localStorage.removeItem(`journey-primer-${user.address}`)
-
-      const afterForms = window.localStorage.getItem(`forms-${user.address}`)
-      const afterJourney = window.localStorage.getItem(
-        `journey-${user.address}`
-      )
-      console.log('✅ [RESET] After clear - forms:', afterForms)
-      console.log('✅ [RESET] After clear - journey:', afterJourney)
-      console.log('✅ [RESET] Cleared localStorage for user:', user.address)
+    // Clear all localStorage (old format + Zustand storage)
+    if (typeof window !== 'undefined') {
+      console.log('🔄 [RESET] Clearing all localStorage...')
+      
+      // Clear old format (if any)
+      if (walletAddress) {
+        window.localStorage.removeItem(`forms-${walletAddress}`)
+        window.localStorage.removeItem(`journey-${walletAddress}`)
+        window.localStorage.removeItem(`journey-primer-${walletAddress}`)
+      }
+      
+      // Clear Zustand's persisted DOT application state
+      // This forces a clean slate - Zustand will recreate with initial values
+      window.localStorage.removeItem('dot-application')
+      
+      console.log('✅ [RESET] All localStorage cleared')
     }
 
     console.log('🔄 [RESET] Resetting journey state...')
     setJourneyState(createInitialJourneyState())
     updateJourneyStep('wallet', 'complete')
 
-    // Force form components to remount with fresh state
-    const oldKey = formResetKey
-    setFormResetKey((key) => key + 1)
-    console.log(
-      '🔄 [RESET] Incremented formResetKey from',
-      oldKey,
-      'to',
-      oldKey + 1
-    )
+    console.log('🔄 [RESET] Resetting journey state...')
+    setJourneyState(createInitialJourneyState())
+    updateJourneyStep('wallet', 'complete')
 
     // Clear the reset flag after a brief delay to allow state updates to complete
     setTimeout(() => {
@@ -687,41 +702,39 @@ const HomeContent = () => {
       console.log(
         '✅ [RESET] ==================== END RESET ===================='
       )
-      console.log('✅ [RESET] Reset flag cleared')
-      console.log('✅ [RESET] form1Data should now be:', form1Data)
-      console.log('✅ [RESET] form2Data should now be:', form2Data)
-      console.log('✅ [RESET] form3Data should now be:', form3Data)
+      // Verify the reset worked by checking store directly
+      const storeState = useDotApplicationStore.getState()
+      console.log('✅ [RESET] Zustand store state after reset:', {
+        isApplicationCompleted: storeState.isApplicationCompleted,
+        currentForm: storeState.currentForm,
+        hasForm1: !!storeState.form1Data,
+        hasForm2: !!storeState.form2Data,
+        hasForm3: !!storeState.form3Data,
+      })
     }, 100)
-  }, [
-    updateJourneyStep,
-    user?.address,
-    formResetKey,
-    form1Data,
-    form2Data,
-    form3Data,
-  ])
+  }, [updateJourneyStep, walletAddress])
 
   const handleDeleteInProgressDotApp = useCallback(async () => {
-    if (!user?.address) return
+    if (!walletAddress) return
     const res = await fetch('/api/driver/profile/clear-dot-progress', {
       method: 'POST',
-      headers: { 'x-wallet-address': user.address },
+      headers: { 'x-wallet-address': walletAddress },
     })
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
       throw new Error(data.error || 'Failed to clear in-progress application')
     }
     if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(`forms-${user.address}`)
-      window.localStorage.removeItem(`journey-${user.address}`)
-      window.localStorage.removeItem(`journey-primer-${user.address}`)
+      window.localStorage.removeItem(`forms-${walletAddress}`)
+      window.localStorage.removeItem(`journey-${walletAddress}`)
+      window.localStorage.removeItem(`journey-primer-${walletAddress}`)
     }
     resetApplicationProgress()
-  }, [user?.address, resetApplicationProgress])
+  }, [walletAddress, resetApplicationProgress])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    if (!user?.address) {
+    if (!walletAddress) {
       setJourneyState(createInitialJourneyState())
       resetAvaState() // Clear AvA assistant state
       setHasResume(false)
@@ -730,7 +743,7 @@ const HomeContent = () => {
 
     try {
       const storedJourney = window.localStorage.getItem(
-        `journey-${user.address}`
+        `journey-${walletAddress}`
       )
       if (storedJourney) {
         const parsed = JSON.parse(storedJourney) as DriverJourneyState
@@ -754,7 +767,7 @@ const HomeContent = () => {
         return
       }
 
-      const storedForms = window.localStorage.getItem(`forms-${user.address}`)
+      const storedForms = window.localStorage.getItem(`forms-${walletAddress}`)
       if (storedForms) {
         const parsedForms = JSON.parse(storedForms) as {
           form1Data?: unknown
@@ -771,11 +784,8 @@ const HomeContent = () => {
         if (typeof parsedForms.currentForm === 'number') {
           setCurrentForm(parsedForms.currentForm || 1)
         }
-        if (typeof parsedForms.isDriverApplicationCompleted === 'boolean') {
-          setIsDriverApplicationCompleted(
-            parsedForms.isDriverApplicationCompleted
-          )
-        }
+        // NOTE: isDriverApplicationCompleted is now managed by Zustand's persist
+        // Do NOT load it from old localStorage format - it causes conflicts
         if (typeof parsedForms.hasPrefilled === 'boolean') {
           setHasPrefilled(parsedForms.hasPrefilled)
         }
@@ -797,7 +807,7 @@ const HomeContent = () => {
             const { getDriverApplicationClient } = await import(
               '@/lib/supabase-client-db'
             )
-            const dbApp = await getDriverApplicationClient(user.address)
+            const dbApp = await getDriverApplicationClient(walletAddress!)
 
             if (dbApp && !dbApp.is_complete && dbApp.application_data) {
               console.log(
@@ -820,7 +830,7 @@ const HomeContent = () => {
               // Also save to localStorage for faster future loads
               try {
                 window.localStorage.setItem(
-                  `forms-${user.address}`,
+                  `forms-${walletAddress}`,
                   JSON.stringify({
                     form1Data: appData.form1,
                     form2Data: appData.form2,
@@ -846,29 +856,29 @@ const HomeContent = () => {
       }
 
       const storedPrimer = window.localStorage.getItem(
-        `journey-primer-${user.address}`
+        `journey-primer-${walletAddress}`
       )
       setPrimerSeen(storedPrimer === 'seen') // Also sets primerTriggered internally
     } catch (error) {
       console.error('⚠️ Failed to restore journey state from storage', error)
     }
-  }, [user?.address])
+  }, [walletAddress])
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !user?.address) return
+    if (typeof window === 'undefined' || !walletAddress) return
     try {
       window.localStorage.setItem(
-        `journey-${user.address}`,
+        `journey-${walletAddress}`,
         JSON.stringify(journeyState)
       )
     } catch (error) {
       console.warn('⚠️ Failed to persist journey state', error)
     }
-  }, [journeyState, user?.address])
+  }, [journeyState, walletAddress])
 
   // Persist form data to localStorage
   useEffect(() => {
-    if (typeof window === 'undefined' || !user?.address) return
+    if (typeof window === 'undefined' || !walletAddress) return
 
     // Don't save during reset
     if (resetInProgressRef.current) {
@@ -889,14 +899,14 @@ const HomeContent = () => {
         form3Data,
       }
       window.localStorage.setItem(
-        `forms-${user.address}`,
+        `forms-${walletAddress}`,
         JSON.stringify(formsToSave)
       )
       // Saved to localStorage silently
     } catch (error) {
       console.warn('⚠️ Failed to persist form data', error)
     }
-  }, [form1Data, form2Data, form3Data, user?.address])
+  }, [form1Data, form2Data, form3Data, walletAddress])
 
   // Load from unified profile if no meaningful localStorage form data exists
   // This enables DOT form prefill from Resume Builder data. Only for drivers or when on DOT app.
@@ -907,7 +917,7 @@ const HomeContent = () => {
         console.log('📋 [DOT APP] Profile load already attempted, skipping')
         return
       }
-      if (!user?.address) return
+      if (!walletAddress) return
       // Don't run driver/DOT profile prefill for developers (or before role is known)
       if (userRole !== 'driver' && currentPage !== 'dotapp') return
 
@@ -960,7 +970,7 @@ const HomeContent = () => {
         console.log('📦 [DOT APP] Checking unified profile for prefill data...')
         const response = await fetch('/api/driver/profile', {
           headers: {
-            'x-wallet-address': user.address,
+            'x-wallet-address': walletAddress!,
           },
         })
 
@@ -1121,7 +1131,7 @@ const HomeContent = () => {
     }
 
     loadFromProfile()
-  }, [user?.address, userRole, currentPage, form1Data, form2Data, form3Data, profileLoadTrigger])
+  }, [walletAddress, userRole, currentPage, form1Data, form2Data, form3Data, profileLoadTrigger])
 
   // Reset profile load attempt when navigating TO DOT app (enables fresh profile check)
   // This handles: User builds resume → saves → navigates to DOT app → should see prefilled data
@@ -1136,7 +1146,7 @@ const HomeContent = () => {
 
       // Check if localStorage already has form data
       // If so, DON'T force profile load - localStorage has complete data, profile doesn't
-      const storedForms = window.localStorage.getItem(`forms-${user?.address}`)
+      const storedForms = window.localStorage.getItem(`forms-${walletAddress}`)
       const hasLocalStorageData =
         storedForms &&
         (() => {
@@ -1188,7 +1198,7 @@ const HomeContent = () => {
       }
     }
     prevPageRef.current = currentPage
-  }, [currentPage, user?.address])
+  }, [currentPage, walletAddress])
 
   useEffect(() => {
     if (journeyState.resume.status === 'complete' && !hasResume) {
@@ -1199,13 +1209,13 @@ const HomeContent = () => {
   useEffect(() => {
     if (typeof window === 'undefined') return
     const handler = (event: Event) => {
-      if (!user?.address) return
+      if (!walletAddress) return
       const detail = (event as CustomEvent).detail as {
         walletAddress?: string
       }
       if (
         detail?.walletAddress &&
-        detail.walletAddress.toLowerCase() === user.address.toLowerCase()
+        detail.walletAddress.toLowerCase() === walletAddress?.toLowerCase()
       ) {
         resetApplicationProgress()
       }
@@ -1215,13 +1225,13 @@ const HomeContent = () => {
     return () => {
       window.removeEventListener('wallet-data-reset', handler)
     }
-  }, [user?.address, resetApplicationProgress])
+  }, [walletAddress, resetApplicationProgress])
 
   useEffect(() => {
-    if (user?.address) {
+    if (walletAddress) {
       updateJourneyStep('wallet', 'complete')
     }
-  }, [user?.address, updateJourneyStep])
+  }, [walletAddress, updateJourneyStep])
 
   // Track dirty state - detect when form data changes from last saved version
   useEffect(() => {
@@ -1268,7 +1278,7 @@ const HomeContent = () => {
 
   // Fetch user role when they log in
   useEffect(() => {
-    if (!user?.address) {
+    if (!walletAddress) {
       setUserRole(null)
       setIsRoleLoading(false)
       setShowRoleSelection(false)
@@ -1289,7 +1299,7 @@ const HomeContent = () => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            walletAddress: user.address,
+            walletAddress: walletAddress!,
           }),
         })
         if (response.ok) {
@@ -1397,15 +1407,15 @@ const HomeContent = () => {
     }
 
     fetchUserRole()
-  }, [user?.address])
+  }, [walletAddress])
 
   useEffect(() => {
     if (hasResume) {
       updateJourneyStep('resume', 'complete')
-    } else if (user?.address && journeyState.resume.status !== 'pending') {
+    } else if (walletAddress && journeyState.resume.status !== 'pending') {
       updateJourneyStep('resume', 'pending')
     }
-  }, [hasResume, journeyState.resume.status, updateJourneyStep, user?.address])
+  }, [hasResume, journeyState.resume.status, updateJourneyStep, walletAddress])
 
   useEffect(() => {
     if (isDriverApplicationCompleted) {
@@ -1698,8 +1708,8 @@ const HomeContent = () => {
   useEffect(() => {
     console.log('🎯 [HOME] User state changed:', user)
     // Save wallet address for admin page access whenever user is logged in
-    if (user?.address && typeof window !== 'undefined') {
-      window.localStorage.setItem('stormchain-admin-wallet', user.address)
+    if (walletAddress && typeof window !== 'undefined') {
+      window.localStorage.setItem('stormchain-admin-wallet', walletAddress)
     }
   }, [user])
 
@@ -1840,7 +1850,7 @@ const HomeContent = () => {
       // Sync extracted data to unified profile (fire-and-forget)
       // Uses form mappers: Form 1 → personal/CDL, Form 2 → driving, Form 3 → employment
       if (
-        user?.address &&
+        walletAddress &&
         (prefillData.form1Data ||
           prefillData.form2Data ||
           prefillData.form3Data)
@@ -1863,7 +1873,7 @@ const HomeContent = () => {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
-              'x-wallet-address': user.address,
+              'x-wallet-address': walletAddress!,
             },
             body: JSON.stringify({
               profileData,
@@ -1933,7 +1943,7 @@ const HomeContent = () => {
       )
       setFormResetKey((prev) => prev + 1)
     },
-    [user?.address]
+    [walletAddress]
   )
 
   // Handler for AI prefill error
@@ -1956,7 +1966,7 @@ const HomeContent = () => {
       console.log('📝 [HOME] Form 3 completed, starting submission...')
 
       // Check if user is authenticated
-      if (!user?.address) {
+      if (!walletAddress) {
         console.error('❌ [HOME] User not authenticated')
         alert('Please sign in to submit your application.')
         setIsSubmitting(false)
@@ -1992,7 +2002,7 @@ const HomeContent = () => {
       )
 
       const duplicateCheck = await checkDuplicateApplicationHash(
-        user.address,
+        walletAddress!,
         applicationHash
       )
 
@@ -2020,9 +2030,11 @@ const HomeContent = () => {
         '@/lib/supabase-client-db'
       )
 
+      // Using 'as any' because combinedData shape differs from DriverApplicationData
+      // TODO: Align types after store migration is complete
       const dbResult = await completeDriverApplicationClient(
-        user.address,
-        combinedData,
+        walletAddress!,
+        combinedData as any,
         ipfsHash,
         applicationHash // Pass application hash so persist endpoint can find the record
       )
@@ -2053,7 +2065,7 @@ const HomeContent = () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'x-wallet-address': user.address,
+            'x-wallet-address': walletAddress!,
           },
           body: JSON.stringify({
             profileData,
@@ -2075,7 +2087,7 @@ const HomeContent = () => {
       try {
         await fetch('/api/driver/profile/clear-dot-progress', {
           method: 'POST',
-          headers: { 'x-wallet-address': user.address },
+          headers: { 'x-wallet-address': walletAddress! },
         })
         console.log('✅ [HOME] Cleared in-progress DOT state from profile')
       } catch (clearError) {
@@ -2103,7 +2115,7 @@ const HomeContent = () => {
   // Save ALL forms to driver profile AND database - called on navigation and save button
   const saveAllFormsToProfile = useCallback(
     async (showIndicator = true) => {
-      if (!user?.address) {
+      if (!walletAddress) {
         console.log('⚠️ [SAVE] No wallet address, skipping save')
         return
       }
@@ -2133,7 +2145,7 @@ const HomeContent = () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'x-wallet-address': user.address,
+            'x-wallet-address': walletAddress!,
           },
           body: JSON.stringify({
             profileData,
@@ -2155,7 +2167,7 @@ const HomeContent = () => {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'x-wallet-address': user.address,
+                'x-wallet-address': walletAddress!,
               },
               body: JSON.stringify({
                 form1Data,
@@ -2198,7 +2210,7 @@ const HomeContent = () => {
       }
     },
     [
-      user?.address,
+      walletAddress,
       form1Data,
       form2Data,
       form3Data,
@@ -2303,6 +2315,8 @@ const HomeContent = () => {
         <ApplicationSubmitted
           onNavigateToSafetyForm={handleNavigateToEmploymentVerification}
           onNavigateToDashboard={() => {
+            // Application was saved successfully, so clear dirty state explicitly
+            setHasUnsavedChanges(false)
             // Navigate to Driver Hub (home for drivers)
             setCurrentPage(null)
             setIsDriverApplicationCompleted(false)
@@ -2466,7 +2480,7 @@ const HomeContent = () => {
         )}
 
         {/* Wallet Info - Top Left Corner (Desktop Only) */}
-        {user?.address && (
+        {walletAddress && (
           <div className='fixed top-4 left-4 z-[60] pointer-events-none'>
             <div className='pointer-events-auto'>
               <WalletInfo walletAddress={user.address} onClick={openModal} />
@@ -2475,7 +2489,7 @@ const HomeContent = () => {
         )}
 
         {/* MVR Management Modal */}
-        {user?.address && (
+        {walletAddress && (
           <MvrManagementModal
             isOpen={isMvrManagementOpen}
             onClose={() => setIsMvrManagementOpen(false)}
@@ -2496,7 +2510,7 @@ const HomeContent = () => {
         )}
 
         {/* MVR View Modal */}
-        {user?.address && (
+        {walletAddress && (
           <MvrViewModal
             isOpen={isMvrModalOpen}
             onClose={() => {
@@ -2526,9 +2540,9 @@ const HomeContent = () => {
           onClose={closeModal}
           onLogout={handleLogout}
           user={{
-            email: user?.email,
-            address: user?.address,
-            chain: user?.chain,
+            email: user?.email as string | undefined,
+            address: walletAddress ?? undefined,
+            chain: user?.chain as string | undefined,
           }}
           userRole={userRole}
         />

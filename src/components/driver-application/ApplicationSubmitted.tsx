@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
-import { Shield } from 'lucide-react'
+import { Shield, CheckCircle } from 'lucide-react'
 
 interface ApplicationSubmittedProps {
   onNavigateToSafetyForm: () => void
@@ -28,30 +27,16 @@ const ApplicationSubmitted = ({
     <div
       className={`max-w-4xl mx-auto p-6 ${
         theme === 'dark'
-          ? 'bg-brand-sage-light/20 backdrop-blur-xl'
-          : 'bg-white/80 backdrop-blur-xl'
-      } rounded-2xl shadow-2xl relative z-10 border-t-4 ${
-        theme === 'dark' ? 'border-brand-mint' : 'border-brand-sage'
-      }`}
+          ? 'bg-gray-800/80 backdrop-blur-xl border border-gray-700'
+          : 'bg-white/90 backdrop-blur-xl border border-gray-200'
+      } rounded-2xl shadow-2xl relative z-10`}
     >
       {/* Header */}
       <div className='text-center mb-8'>
         <div className='mb-6'>
           <div className='flex justify-center mb-4'>
-            <div className='rounded-full h-16 w-16 bg-green-500 flex items-center justify-center'>
-              <svg
-                className='h-8 w-8 text-white'
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M5 13l4 4L19 7'
-                />
-              </svg>
+            <div className='rounded-full h-16 w-16 bg-green-500 flex items-center justify-center shadow-lg shadow-green-500/30'>
+              <CheckCircle className='h-8 w-8 text-white' strokeWidth={2.5} />
             </div>
           </div>
         </div>
@@ -81,9 +66,9 @@ const ApplicationSubmitted = ({
       {verificationStatus === 'verified' && (
         <div className='mb-8'>
           <div
-            className={`p-6 rounded-lg border-2 ${
+            className={`p-6 rounded-xl border ${
               theme === 'dark'
-                ? 'bg-green-900/20 border-green-500/50'
+                ? 'bg-green-900/20 border-green-500/30'
                 : 'bg-green-50 border-green-200'
             }`}
           >
@@ -110,7 +95,7 @@ const ApplicationSubmitted = ({
                     target='_blank'
                     rel='noopener noreferrer'
                     className={`font-mono text-sm hover:underline ${
-                      theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                      theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
                     }`}
                   >
                     {blockchainData.transactionHash.slice(0, 10)}...
@@ -137,7 +122,7 @@ const ApplicationSubmitted = ({
                 </span>
                 <span
                   className={`font-mono text-sm ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                    theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
                   }`}
                 >
                   {blockchainData?.blockNumber
@@ -157,7 +142,7 @@ const ApplicationSubmitted = ({
                   </span>
                   <span
                     className={`font-mono text-sm ${
-                      theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                      theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
                     }`}
                   >
                     #{blockchainData.applicationId}
@@ -201,15 +186,15 @@ const ApplicationSubmitted = ({
         <div className='space-y-4'>
           {verificationStatus === 'saved' && (
             <div
-              className={`p-4 rounded-lg border-2 ${
+              className={`p-4 rounded-xl border ${
                 theme === 'dark'
-                  ? 'bg-brand-mint/10 border-brand-mint/30'
-                  : 'bg-brand-sage/10 border-brand-sage/30'
+                  ? 'bg-indigo-500/10 border-indigo-500/30'
+                  : 'bg-indigo-50 border-indigo-200'
               }`}
             >
               <h3
                 className={`font-semibold mb-2 flex items-center gap-2 ${
-                  theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  theme === 'dark' ? 'text-indigo-400' : 'text-indigo-700'
                 }`}
               >
                 <Shield className="w-5 h-5" />
@@ -227,8 +212,8 @@ const ApplicationSubmitted = ({
 
           {verificationStatus === 'verified' && (
             <div
-              className={`p-4 rounded-lg ${
-                theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+              className={`p-4 rounded-xl border ${
+                theme === 'dark' ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'
               }`}
             >
               <h3
@@ -250,8 +235,8 @@ const ApplicationSubmitted = ({
           )}
 
           <div
-            className={`p-4 rounded-lg ${
-              theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+            className={`p-4 rounded-xl border ${
+              theme === 'dark' ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'
             }`}
           >
             <h3
@@ -259,7 +244,7 @@ const ApplicationSubmitted = ({
                 theme === 'dark' ? 'text-white' : 'text-gray-900'
               }`}
             >
-              {verificationStatus === 'saved' ? '2' : '2'}. Employment Verification
+              2. Employment Verification
             </h3>
             <p
               className={`text-sm ${
@@ -276,25 +261,25 @@ const ApplicationSubmitted = ({
       {/* Action Buttons */}
       <div className='flex flex-col sm:flex-row gap-4 justify-center'>
         {onNavigateToDashboard && (
-          <button
-            onClick={onNavigateToDashboard}
-            className={`px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 ${
-              theme === 'dark'
-                ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                : 'bg-brand-sage text-white hover:bg-brand-sage/90'
-            }`}
-          >
-            {verificationStatus === 'saved' ? 'Go to Hub to Verify' : 'View Dashboard'}
-          </button>
+          <div className='relative group'>
+            {/* Glowing border effect */}
+            <div className='absolute -inset-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 rounded-xl blur-md opacity-70 group-hover:opacity-100 transition-opacity duration-300 animate-pulse' />
+            <button
+              onClick={onNavigateToDashboard}
+              className='relative px-8 py-3 rounded-xl font-semibold transition-all duration-200 bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg hover:shadow-xl'
+            >
+              {verificationStatus === 'saved' ? 'Complete & Return to Hub' : 'View Dashboard'}
+            </button>
+          </div>
         )}
 
         {verificationStatus === 'verified' && (
           <button
             onClick={onNavigateToSafetyForm}
-            className={`px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 ${
+            className={`px-8 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 ${
               theme === 'dark'
-                ? 'bg-gray-700 text-white hover:bg-gray-600'
-                : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                ? 'bg-gray-700 text-white hover:bg-gray-600 border border-gray-600'
+                : 'bg-gray-100 text-gray-900 hover:bg-gray-200 border border-gray-200'
             }`}
           >
             Complete Employment Verification

@@ -304,6 +304,7 @@ export default function PersonalInfoForm3({
       email: string
       address: string
       positionHeld: string
+      duties: string
       fromDate: string
       toDate: string
       reasonForLeaving: string
@@ -413,11 +414,13 @@ export default function PersonalInfoForm3({
       setFormData({
         employers: [
           {
+            type: 'employment' as const,
             name: '',
             phone: '',
             email: '',
             address: '',
             positionHeld: '',
+            duties: '',
             fromDate: '',
             toDate: '',
             reasonForLeaving: '',
@@ -426,6 +429,10 @@ export default function PersonalInfoForm3({
             subjectToFMCSR: '',
             safetySensitiveFunction: '',
             isUnemployment: false,
+            schoolName: '',
+            courseOfStudy: '',
+            militaryBranch: '',
+            dischargeType: '',
           },
         ],
         education: [
@@ -539,8 +546,12 @@ export default function PersonalInfoForm3({
               newErrors[`employer${index}Address`] = 'Employer address is required (DOT § 383.35)'
             }
           }
-          if (!(employer.email || '').trim())
+          const emailValue = (employer.email || '').trim()
+          if (!emailValue) {
             newErrors[`employer${index}Email`] = 'Employer email is required (DOT § 383.35)'
+          } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
+            newErrors[`employer${index}Email`] = 'Please enter a valid email address (e.g., hr@company.com)'
+          }
           if (!employer.fromDate)
             newErrors[`employer${index}FromDate`] = 'Start date is required (DOT § 383.35)'
           if (!employer.toDate)
@@ -713,6 +724,7 @@ export default function PersonalInfoForm3({
           email: '',
           address: '',
           positionHeld: '',
+          duties: '',
           fromDate: '',
           toDate: '',
           reasonForLeaving: '',
@@ -854,6 +866,7 @@ export default function PersonalInfoForm3({
             email: 'hr@abctrucking.com',
             address: '123 Highway Road, Columbus, OH 43215',
             positionHeld: 'Commercial Driver',
+            duties: 'OTR freight hauling, pre-trip inspections, load securing, DOT compliance',
             fromDate: `01/${cy - 3}`,
             toDate: 'Present',
             reasonForLeaving: '',
@@ -875,6 +888,7 @@ export default function PersonalInfoForm3({
             email: 'verification@xyzlogistics.com',
             address: '456 Freight Lane, Cleveland, OH 44101',
             positionHeld: 'Delivery Driver',
+            duties: 'Local delivery routes, customer service, inventory management',
             fromDate: `01/${cy - 6}`,
             toDate: `12/${cy - 4}`,
             reasonForLeaving: 'Better opportunity',
@@ -896,6 +910,7 @@ export default function PersonalInfoForm3({
             email: '',
             address: '',
             positionHeld: '',
+            duties: '',
             fromDate: `07/${cy - 7}`,
             toDate: `12/${cy - 7}`,
             reasonForLeaving: '',
@@ -917,6 +932,7 @@ export default function PersonalInfoForm3({
             email: 'employment@midwesttransport.com',
             address: '789 Industrial Blvd, Indianapolis, IN 46225',
             positionHeld: 'Regional Driver',
+            duties: 'Regional freight routes, equipment maintenance, HazMat transport',
             fromDate: `01/${cy - 9}`,
             toDate: `06/${cy - 7}`,
             reasonForLeaving: 'Relocated for better pay',
@@ -938,6 +954,7 @@ export default function PersonalInfoForm3({
             email: '',
             address: '100 Training Center Dr, Columbus, OH 43215',
             positionHeld: '',
+            duties: '',
             fromDate: `03/${cy - 10}`,
             toDate: `12/${cy - 10}`,
             reasonForLeaving: '',
@@ -959,6 +976,7 @@ export default function PersonalInfoForm3({
             email: 'hr@firsttransport.com',
             address: '555 Main Street, Toledo, OH 43601',
             positionHeld: 'Entry Level Driver',
+            duties: 'Local routes, warehouse support, basic vehicle maintenance',
             fromDate: `01/${cy - 11}`,
             toDate: `02/${cy - 10}`,
             reasonForLeaving: 'Attended CDL training school',
@@ -1622,6 +1640,24 @@ export default function PersonalInfoForm3({
                   </div>
                 </div>
 
+                {/* Description of Duties */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    DESCRIPTION OF DUTIES
+                  </label>
+                  <textarea
+                    value={employer.duties ?? ''}
+                    onChange={(e) => handleInputChange('employers', { duties: e.target.value }, index)}
+                    rows={2}
+                    placeholder="e.g., OTR freight hauling, pre-trip inspections, load securing..."
+                    className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
+                      theme === 'dark'
+                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+                    }`}
+                  />
+                </div>
+
                 {/* Reason for Leaving */}
                 <div>
                   <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -1972,10 +2008,11 @@ export default function PersonalInfoForm3({
               </button>
             )}
           </div>
+          {/* min-h-10 on labels keeps inputs aligned when labels wrap */}
           <div className='grid grid-cols-1 md:grid-cols-6 gap-4'>
-            <div>
+            <div className='flex flex-col'>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 SCHOOL TYPE
               </label>
@@ -2004,9 +2041,9 @@ export default function PersonalInfoForm3({
                 <option value='OTHER'>Other</option>
               </select>
             </div>
-            <div className='md:col-span-2'>
+            <div className='md:col-span-2 flex flex-col'>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 NAME & LOCATION
               </label>
@@ -2027,9 +2064,9 @@ export default function PersonalInfoForm3({
                 }`}
               />
             </div>
-            <div>
+            <div className='flex flex-col'>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 COURSE OF STUDY
               </label>
@@ -2050,9 +2087,9 @@ export default function PersonalInfoForm3({
                 }`}
               />
             </div>
-            <div>
+            <div className='flex flex-col'>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 YEARS
               </label>
@@ -2073,9 +2110,9 @@ export default function PersonalInfoForm3({
                 }`}
               />
             </div>
-            <div>
+            <div className='flex flex-col'>
               <label
-                className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+                className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
               >
                 GRADUATE (Y/N)
               </label>
@@ -2239,6 +2276,7 @@ export default function PersonalInfoForm3({
         </button>
       </div>
 
+      {/* White "legal document" container - use dark text since bg is always light */}
       <div
         className={`p-6 rounded-lg border-2 ${
           theme === 'dark'
@@ -2247,7 +2285,7 @@ export default function PersonalInfoForm3({
         }`}
       >
         <div
-          className={`text-sm space-y-4 ${theme === 'dark' ? 'text-gray-900' : 'text-gray-800'}`}
+          className='text-sm space-y-4 text-gray-800'
         >
           <p>
             I authorize you to make investigations (including contacting current
@@ -2305,12 +2343,9 @@ export default function PersonalInfoForm3({
             Carrier Safety Regulations.
           </p>
 
+          {/* Reminder box inside the white container - use consistent light styling */}
           <div
-            className={`mt-4 p-4 rounded-lg border ${
-              theme === 'dark'
-                ? 'rounded-xl border border-gray-700/50 bg-gray-700/30 text-white'
-                : 'rounded-xl border border-gray-200 bg-gray-50/80 text-gray-900'
-            }`}
+            className='mt-4 p-4 rounded-xl border border-gray-300 bg-gray-100 text-gray-900'
           >
             <p className='text-sm font-semibold'>Reminder: 49 CFR 391.41 Medical Qualification</p>
             <p className='text-sm mt-2'>
@@ -2329,7 +2364,7 @@ export default function PersonalInfoForm3({
       >
         <p
           className={`text-sm font-medium mb-3 ${
-            theme === 'dark' ? 'text-gray-900' : 'text-gray-900'
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}
         >
           49 CFR 391.21(d) Disclosure — Safety Performance History Investigation
@@ -2356,7 +2391,7 @@ export default function PersonalInfoForm3({
           />
           <span
             className={`text-sm ${
-              theme === 'dark' ? 'text-gray-900' : 'text-gray-800'
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-800'
             }`}
           >
             I acknowledge that my safety performance history will be investigated and that I have been notified of my rights under 49 CFR 391.23(i).
@@ -2378,7 +2413,7 @@ export default function PersonalInfoForm3({
       >
         <p
           className={`text-sm font-medium mb-3 ${
-            theme === 'dark' ? 'text-gray-900' : 'text-gray-900'
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}
         >
           49 CFR 391.23 Consent — Previous Employer &amp; Clearinghouse Investigations
@@ -2405,7 +2440,7 @@ export default function PersonalInfoForm3({
           />
           <span
             className={`text-sm ${
-              theme === 'dark' ? 'text-gray-900' : 'text-gray-800'
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-800'
             }`}
           >
             I authorize the prospective motor carrier to investigate my driving record, prior DOT employment safety performance, drug/alcohol program history, and the FMCSA Clearinghouse as required by 49 CFR 391.23.
@@ -2427,7 +2462,7 @@ export default function PersonalInfoForm3({
       >
         <p
           className={`text-sm font-medium mb-3 ${
-            theme === 'dark' ? 'text-gray-900' : 'text-gray-900'
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}
         >
           49 CFR 391.31 Road Test Requirement
@@ -2455,7 +2490,7 @@ export default function PersonalInfoForm3({
           />
           <span
             className={`text-sm ${
-              theme === 'dark' ? 'text-gray-900' : 'text-gray-800'
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-800'
             }`}
           >
             I acknowledge that I must pass the road test described in 49 CFR 391.31 before driving for this carrier.
@@ -2470,7 +2505,7 @@ export default function PersonalInfoForm3({
         <div className='space-y-3'>
           <p
             className={`text-sm font-medium ${
-              theme === 'dark' ? 'text-gray-900' : 'text-gray-900'
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
             }`}
           >
             Have you already completed a road test (with certificate) that meets FMCSA requirements in the past 12 months?
@@ -2545,7 +2580,7 @@ export default function PersonalInfoForm3({
       >
         <p
           className={`text-sm font-medium mb-3 ${
-            theme === 'dark' ? 'text-gray-900' : 'text-gray-900'
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}
         >
           Road Test Equivalent (49 CFR 391.33)
@@ -2561,7 +2596,7 @@ export default function PersonalInfoForm3({
         <div className='space-y-3'>
           <p
             className={`text-sm font-medium ${
-              theme === 'dark' ? 'text-gray-900' : 'text-gray-900'
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
             }`}
           >
             Do you currently hold a CDL that covers the equipment we'll assign?
@@ -2642,7 +2677,7 @@ export default function PersonalInfoForm3({
       >
         <p
           className={`text-sm font-medium mb-2 ${
-            theme === 'dark' ? 'text-gray-900' : 'text-gray-900'
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}
         >
           Driver Qualification File Checklist (49 CFR 391.51)
@@ -2670,7 +2705,7 @@ export default function PersonalInfoForm3({
           />
           <span
             className={`text-sm ${
-              theme === 'dark' ? 'text-gray-900' : 'text-gray-800'
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-800'
             }`}
           >
             I acknowledge the carrier will maintain my driver qualification file and that I will provide requested documents promptly.
@@ -2686,7 +2721,7 @@ export default function PersonalInfoForm3({
           <div>
             <p
               className={`text-sm font-medium ${
-                theme === 'dark' ? 'text-gray-900' : 'text-gray-900'
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
               }`}
             >
               Employment application and background (391.51(b)(1)-(5))
@@ -2726,7 +2761,7 @@ export default function PersonalInfoForm3({
           <div>
             <p
               className={`text-sm font-medium ${
-                theme === 'dark' ? 'text-gray-900' : 'text-gray-900'
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
               }`}
             >
               Road test, CDL, or equivalent documents (391.51(b)(3))
@@ -2766,7 +2801,7 @@ export default function PersonalInfoForm3({
           <div>
             <p
               className={`text-sm font-medium ${
-                theme === 'dark' ? 'text-gray-900' : 'text-gray-900'
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
               }`}
             >
               Medical certificates, variances, and examiner verification (391.51(b)(6)-(8))
@@ -2806,7 +2841,7 @@ export default function PersonalInfoForm3({
           <div>
             <p
               className={`text-sm font-medium ${
-                theme === 'dark' ? 'text-gray-900' : 'text-gray-900'
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-900'
               }`}
             >
               I understand records stay on file during employment plus 3 years (391.51(c)-(d))

@@ -175,23 +175,38 @@ export async function saveDriverApplicationClient(
   const supabase = await getAdminSupabaseClient()
 
   try {
-    // First, get or create the user
+    // Normalize wallet address to lowercase for consistent lookup
+    const normalizedAddress = userAddress.toLowerCase()
+    
+    console.log('💾 Driver App DB: Looking up user:', {
+      original: userAddress,
+      normalized: normalizedAddress,
+    })
+    
+    // First, get or create the user (use ilike for case-insensitive match)
     let { data: userData, error: userError } = await supabase
       .from('users')
-      .select('id')
-      .eq('wallet_address', userAddress)
+      .select('id, wallet_address')
+      .ilike('wallet_address', normalizedAddress)
       .maybeSingle()
 
-    // If user doesn't exist, create them
+    console.log('💾 Driver App DB: User lookup result:', {
+      found: !!userData,
+      userId: userData?.id,
+      storedWallet: userData?.wallet_address,
+      error: userError?.message,
+    })
+
+    // If user doesn't exist, create them with lowercase address
     if (!userData) {
       console.log(
         '👤 Driver App DB: Creating new user for wallet:',
-        userAddress
+        normalizedAddress
       )
       const { data: newUser, error: createError } = await supabase
         .from('users')
         .insert({
-          wallet_address: userAddress,
+          wallet_address: normalizedAddress,
           is_active: true,
         })
         .select('id')
@@ -203,7 +218,7 @@ export async function saveDriverApplicationClient(
       }
 
       userData = newUser
-      console.log('✅ Driver App DB: User created successfully')
+      console.log('✅ Driver App DB: User created successfully with id:', userData.id)
     }
 
     // Check if an application already exists for this user
@@ -292,11 +307,14 @@ export async function getDriverApplicationClient(
   const supabase = await getAdminSupabaseClient()
 
   try {
-    // First, get the user_id from the wallet address
+    // Normalize to lowercase for consistent lookup (match saveDriverApplicationClient)
+    const normalizedAddress = userAddress.toLowerCase()
+    
+    // First, get the user_id from the wallet address (case-insensitive)
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id')
-      .eq('wallet_address', userAddress)
+      .ilike('wallet_address', normalizedAddress)
       .maybeSingle()
 
     if (!userData) {
@@ -361,14 +379,16 @@ export async function completeDriverApplicationClient(
     )
 
     // Get user_id for the update (user should exist at this point from saveDriverApplicationClient)
+    // Use ilike for case-insensitive match to stay consistent
+    const normalizedAddress = userAddress.toLowerCase()
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id')
-      .eq('wallet_address', userAddress)
+      .ilike('wallet_address', normalizedAddress)
       .maybeSingle()
 
     if (!userData) {
-      throw new Error(`User not found for wallet address: ${userAddress}`)
+      throw new Error(`User not found for wallet address: ${normalizedAddress}`)
     }
 
     // Then mark as complete and add IPFS hash and application hash
@@ -431,11 +451,14 @@ export async function checkDuplicateApplicationHash(
   const supabase = await getAdminSupabaseClient()
 
   try {
-    // Get user_id from wallet address
+    // Normalize to lowercase for consistent lookup
+    const normalizedAddress = userAddress.toLowerCase()
+    
+    // Get user_id from wallet address (case-insensitive)
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id')
-      .eq('wallet_address', userAddress)
+      .ilike('wallet_address', normalizedAddress)
       .maybeSingle()
 
     if (!userData) {
@@ -489,11 +512,14 @@ export async function getAllDriverApplicationsClient(
   const supabase = await getAdminSupabaseClient()
 
   try {
-    // Get user_id from wallet address
+    // Normalize to lowercase for consistent lookup
+    const normalizedAddress = userAddress.toLowerCase()
+    
+    // Get user_id from wallet address (case-insensitive)
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id')
-      .eq('wallet_address', userAddress)
+      .ilike('wallet_address', normalizedAddress)
       .maybeSingle()
 
     if (!userData) {
@@ -541,15 +567,18 @@ export async function deleteDriverApplicationClient(
   const supabase = await getAdminSupabaseClient()
 
   try {
-    // Get user_id from wallet address
+    // Normalize to lowercase for consistent lookup
+    const normalizedAddress = userAddress.toLowerCase()
+    
+    // Get user_id from wallet address (case-insensitive)
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id')
-      .eq('wallet_address', userAddress)
+      .ilike('wallet_address', normalizedAddress)
       .maybeSingle()
 
     if (!userData) {
-      throw new Error(`User not found for wallet address: ${userAddress}`)
+      throw new Error(`User not found for wallet address: ${normalizedAddress}`)
     }
 
     const { error } = await supabase

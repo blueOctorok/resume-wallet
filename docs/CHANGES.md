@@ -2,6 +2,230 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🐛 **"New DOT App" infinite loop - Zustand persistence conflict** (February 2026)
+
+### Problem
+
+After completing a DOT application, clicking "New DOT App" from the Hub would immediately show the "Application Saved and Complete" success screen instead of Form 1. This created an infinite loop where users couldn't start a new application.
+
+### Root Cause
+
+Multiple state persistence conflicts:
+1. Zustand's `dot-application` localStorage was persisting `isApplicationCompleted: true`
+2. The old localStorage format (`forms-${walletAddress}`) also stored `isApplicationCompleted`
+3. On reset, both storage systems were conflicting - Zustand would rehydrate the completed state
+
+### Fix
+
+1. **Added `setIsApplicationCompleted` action** to the Zustand store for simple toggling (separate from `resetApplication()` which clears form data)
+
+2. **Updated `resetApplicationProgress()`** to:
+   - Call `dotAppStore.resetApplication()` atomically instead of setting each field
+   - Clear BOTH localStorage keys: `forms-${walletAddress}` AND `dot-application`
+   
+3. **Removed old localStorage conflict** - Stopped loading `isDriverApplicationCompleted` from the deprecated `forms-${walletAddress}` format
+
+### Files
+- `src/stores/dot-application-store.ts` — Added `setIsApplicationCompleted` action
+- `src/app/page.tsx` — Updated reset logic, removed old localStorage loading
+
+---
+
+## 🐛 **Completed DOT apps being deleted** (February 2026)
+
+### Problem
+
+After completing a DOT application, it was immediately deleted and never appeared in the Driver Hub.
+
+### Root Cause
+
+The `clear-dot-progress` endpoint (called after submission to clean up in-progress state) was deleting all applications where `blockchain_tx_hash IS NULL`. Since completed applications don't have a blockchain hash until they're actually written to chain, the just-completed app was being deleted.
+
+### Fix
+
+Updated the delete query in `clear-dot-progress/route.ts` to also check `is_complete = false`:
+
+```javascript
+// Before (deleted ALL apps without blockchain hash, including completed ones)
+.delete()
+.eq('user_id', user.id)
+.is('blockchain_tx_hash', null)
+
+// After (only deletes truly in-progress apps)
+.delete()
+.eq('user_id', user.id)
+.eq('is_complete', false)
+.is('blockchain_tx_hash', null)
+```
+
+### Files
+- `src/app/api/driver/profile/clear-dot-progress/route.ts`
+
+---
+
+## 🏗️ **Zustand State Management Migration** (February 2026)
+
+### Overview
+
+Migrated from ~50 `useState` hooks in `page.tsx` to centralized Zustand stores. This addresses state management issues that were causing bugs like the DOT application not appearing in the Driver Hub.
+
+### Architecture
+
+Created 4 Zustand stores in `src/stores/`:
+
+| Store | Purpose | Persistence |
+|-------|---------|-------------|
+| `useAuthStore` | User session, wallet address, role | sessionStorage |
+| `useDotApplicationStore` | DOT form data, submission state, dirty tracking | localStorage |
+| `useDriverHubStore` | Resumes, MVR, job applications, hub stats | None (API fetch) |
+| `useUIStore` | Navigation, modals, UI state | None |
+
+### Key Benefits
+
+1. **Normalized wallet address** - Auth store normalizes to lowercase, fixing case-sensitivity bugs
+2. **Persistence** - DOT form data survives page refresh (localStorage)
+3. **Single source of truth** - No more state sync issues between components
+4. **Type safety** - Proper TypeScript interfaces for all state
+5. **DevTools support** - Zustand integrates with Redux DevTools
+
+### Files Created
+- `src/stores/index.ts` — Central export
+- `src/stores/types.ts` — Shared type definitions
+- `src/stores/auth-store.ts` — User/wallet/role state
+- `src/stores/dot-application-store.ts` — DOT form state
+- `src/stores/driver-hub-store.ts` — Hub dashboard data
+- `src/stores/ui-store.ts` — Navigation/modal state
+- `src/hooks/use-dot-application-sync.ts` — Database sync helper
+
+### Migration Notes
+
+- `page.tsx` now imports stores and destructures state/actions to maintain API compatibility
+- All `user.address` references replaced with `walletAddress` from auth store (normalized)
+- Form data types temporarily use `any` for migration compatibility; will be properly typed later
+
+---
+
+## 🐛 **Driver Hub showing 0 DOT apps – Wallet address case sensitivity fix** (February 2026)
+
+### Problem
+
+Driver Hub was showing 0 DOT applications even after completing and saving one. The application was being saved to the database, but not appearing in the Hub.
+
+### Root Cause
+
+**Wallet address case sensitivity mismatch** between save and fetch operations:
+- Hub API used `.ilike()` (case-insensitive) to find the user
+- Save functions used `.eq()` (case-sensitive) to find/create the user
+
+If wallet addresses differed by case (e.g., `0xAbC...` vs `0xabc...`), the save would create a **new user** with the original-case address, while the Hub would find a **different user** (matching via ilike) who had no applications.
+
+### Fix
+
+Updated all wallet address lookups in `supabase-client-db.ts` to:
+1. **Normalize** addresses to lowercase before any DB operation
+2. Use `.ilike()` for case-insensitive matching (consistent with Hub API)
+3. Store new users with lowercase wallet addresses
+
+### Functions Updated
+- `saveDriverApplicationClient()` – User lookup + new user creation
+- `getDriverApplicationClient()` – User lookup
+- `completeDriverApplicationClient()` – User lookup after save
+- `checkDuplicateApplicationHash()` – User lookup
+- `getAllDriverApplicationsClient()` – User lookup
+- `deleteDriverApplicationClient()` – User lookup
+
+### Files
+- `src/lib/supabase-client-db.ts` — All wallet address lookups now use `ilike()` with normalized lowercase
+
+---
+
+## 🎉 **Application Success Screen – Styling & UX improvements** (February 2026)
+
+### Changes
+
+**Button text & styling:**
+- Changed "Go to Hub to Verify" → "Complete & Return to Hub" (clearer intent)
+- Added **glowing pulsing border** effect to the main CTA button (purple/indigo gradient, animates to draw user attention)
+- Updated all colors from old sage/mint theme to modern indigo/gray palette
+
+**Unsaved changes warning fixed:**
+- When clicking the success screen button, `hasUnsavedChanges` is now explicitly cleared
+- Prevents false "unsaved changes" warning when navigating back to Hub after completing application
+
+**Container styling:**
+- Updated card background to match dark theme (`bg-gray-800/80` with `border-gray-700`)
+- Updated Next Steps cards to use indigo accents instead of sage/mint
+- Consistent border radius and spacing
+
+### Files
+- `src/components/driver-application/ApplicationSubmitted.tsx` — Complete styling overhaul
+- `src/app/page.tsx` — Added `setHasUnsavedChanges(false)` to dashboard navigation callback
+
+---
+
+## ✅ **DOT Form 3 (Driver) – Form validation & duties field** (February 2026)
+
+### Changes
+
+**Email validation:**
+- Added proper email format validation requiring `@` and domain (e.g., `hr@company.com`)
+- Previously accepted any text; now shows clear error message for invalid email format
+
+**Description of Duties field:**
+- Added new "DESCRIPTION OF DUTIES" textarea for employment entries
+- Allows drivers to describe their job responsibilities (e.g., "OTR freight hauling, pre-trip inspections, load securing...")
+- Positioned after Position/Salary, before Reason for Leaving
+
+**Education grid alignment (Page 2):**
+- Added `min-h-10` to all labels and `flex flex-col` to grid cells
+- Labels like "COURSE OF STUDY" and "GRADUATE (Y/N)" now align properly when text wraps
+
+**Compliance checkbox text readability (Page 3):**
+- Fixed dark mode text color throughout the Signature/Compliance step
+- Changed `text-gray-900` (unreadable dark text on dark bg) to `text-white` for headers and `text-gray-300` for body/checkbox labels
+- Affected sections: Safety Performance History, Employer Investigations, Road Test Requirements, DQ File Checklist
+
+**Legal disclosure text box (Page 3):**
+- The white "legal document" container now uses consistent dark text (`text-gray-800`) regardless of theme
+- Previously used `text-gray-300` in dark mode which was unreadable on the white background
+- Reminder box inside also uses light-mode styling since it sits on the white background
+
+### Files
+- `src/components/driver-application/PersonalInfoForm3.tsx` — Form UI, validation, and dark mode text fixes
+- `src/lib/dot-form-mapper.ts` — Added `duties` field to `DotForm3Employer` interface
+
+---
+
+## 📐 **DOT Form 2 (Driver) – Accident/Conviction input alignment** (February 2026)
+
+### Change
+On Form 2 (Step 2 of 3), multi-line labels (e.g. “NATURE OF ACCIDENT”, “CHEMICAL SPILLS (Y/N)”) were pushing their inputs down and breaking row alignment with single-line labels.
+
+### Fix
+- Gave each label in the accident row and convictions row a **min-height** (`min-h-10` = 2.5rem) so the label area is a fixed height; when labels wrap, the input still starts at the same vertical position.
+- Added `flex flex-col` on each grid cell so the label block + input layout is consistent.
+
+### File
+- `src/components/driver-application/PersonalInfoForm2.tsx`
+
+---
+
+## 🎯 **Employer Hub Quick Actions Layout** (February 2026)
+
+### Change
+Quick Actions moved from the bottom of the hub (inside the content grid) to a **horizontal row near the top**, directly below the stats cards.
+
+### Details
+- Single row of buttons: Find Talent (primary), Post Job, Applicants, Company, Reports
+- Same actions, more discoverable and logical placement
+- Removed duplicate Quick Actions section from the bottom grid
+- Removed unused `ActionButton` component and `TrendingUp` import
+
+### File
+- `src/components/EmployerHub.tsx`
+
+---
+
 ## 📧 **Application Invite Email Sending** (February 2026)
 
 ### New Features

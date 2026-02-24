@@ -131,6 +131,7 @@ export interface DotForm3Employer {
   email: string
   address: string
   positionHeld: string
+  duties?: string
   fromDate: string
   toDate: string
   reasonForLeaving: string
