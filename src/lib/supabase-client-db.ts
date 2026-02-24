@@ -183,43 +183,18 @@ export async function saveDriverApplicationClient(
       normalized: normalizedAddress,
     })
     
-    // First, get or create the user (use ilike for case-insensitive match)
-    let { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, wallet_address')
-      .ilike('wallet_address', normalizedAddress)
-      .maybeSingle()
+    // Single place for get-or-create user by wallet (avoids duplicate user rows)
+    const { getOrCreateUserByWallet } = await import('@/lib/user-by-wallet')
+    const { user: userData, isNew } = await getOrCreateUserByWallet(
+      supabase,
+      userAddress
+    )
 
     console.log('💾 Driver App DB: User lookup result:', {
-      found: !!userData,
-      userId: userData?.id,
-      storedWallet: userData?.wallet_address,
-      error: userError?.message,
+      found: true,
+      userId: userData.id,
+      isNew,
     })
-
-    // If user doesn't exist, create them with lowercase address
-    if (!userData) {
-      console.log(
-        '👤 Driver App DB: Creating new user for wallet:',
-        normalizedAddress
-      )
-      const { data: newUser, error: createError } = await supabase
-        .from('users')
-        .insert({
-          wallet_address: normalizedAddress,
-          is_active: true,
-        })
-        .select('id')
-        .single()
-
-      if (createError || !newUser) {
-        console.error('❌ Driver App DB: Error creating user:', createError)
-        throw new Error(`Failed to create user: ${createError?.message}`)
-      }
-
-      userData = newUser
-      console.log('✅ Driver App DB: User created successfully with id:', userData.id)
-    }
 
     // Check if an application already exists for this user
     const { data: existingApp, error: fetchError } = await supabase

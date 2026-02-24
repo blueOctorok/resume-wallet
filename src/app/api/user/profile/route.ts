@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAdminSupabaseClient } from '@/utils/supabase/admin';
+import { getUserByWallet } from '@/lib/user-by-wallet';
 
 function isNetworkError(msg: string | undefined): boolean {
   const m = (msg ?? '').toLowerCase();
@@ -17,90 +18,76 @@ export async function POST(request: Request) {
       );
     }
 
-    // Use admin client to bypass RLS (we validate wallet address server-side)
     const supabase = await getAdminSupabaseClient();
-
-    // Fetch user profile by wallet address (case-insensitive)
     console.log('[PROFILE API] Fetching user with wallet:', walletAddress);
-    
-    const { data: profile, error: profileError } = await supabase
-      .from('users')
-      .select('id, wallet_address, email, role, created_at')
-      .ilike('wallet_address', walletAddress)
-      .single();
 
-    if (profileError) {
-      if (isNetworkError(profileError.message)) {
-        console.warn('[PROFILE API] Network error:', profileError.message);
+    let profile: { id: string; wallet_address?: string; email?: string | null; role?: string | null; created_at?: string } | null = null;
+    try {
+      profile = await getUserByWallet(supabase, walletAddress);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (isNetworkError(message)) {
+        console.warn('[PROFILE API] Network error:', message);
         return NextResponse.json({ error: 'Could not reach database' }, { status: 503 });
       }
-      console.error('[PROFILE API] Error fetching user profile:', profileError);
-      
-      // Check if it's a "column does not exist" error (migration not run)
-      if (profileError.message?.includes('column') && profileError.message?.includes('role')) {
+      if (message.includes('column') && message.includes('role')) {
         return NextResponse.json(
-          { 
+          {
             error: 'Database migration required',
-            details: 'The "role" column does not exist. Please run the migration: database_migrations/002_add_role_and_companies.sql'
+            details: 'The "role" column does not exist. Please run the migration: database_migrations/002_add_role_and_companies.sql',
           },
           { status: 500 }
         );
       }
-      
-      // Check if user not found
-      if (profileError.code === 'PGRST116') {
-        console.error('[PROFILE API] User not found for wallet:', walletAddress);
-        return NextResponse.json(
-          { 
-            error: 'User not found',
-            details: `No user record found for wallet address: ${walletAddress}. User may need to sign in first.`
-          },
-          { status: 404 }
-        );
-      }
-      
+      console.error('[PROFILE API] Error fetching user profile:', err);
       return NextResponse.json(
-        { 
-          error: 'Failed to fetch profile',
-          details: profileError.message,
-          code: profileError.code
-        },
+        { error: 'Failed to fetch profile', details: message },
         { status: 500 }
+      );
+    }
+
+    if (!profile) {
+      console.error('[PROFILE API] User not found for wallet:', walletAddress);
+      return NextResponse.json(
+        {
+          error: 'User not found',
+          details: `No user record found for wallet address: ${walletAddress}. User may need to sign in first.`,
+        },
+        { status: 404 }
       );
     }
 
     console.log('[PROFILE API] User found:', profile.id, 'Role:', profile.role);
 
-    // If employer, fetch or create company data
+    // If employer, fetch company data (via ownership or team membership)
     let company = null;
     if (profile?.role === 'employer') {
-      const { data: companyData, error: companyError } = await supabase
+      // Check direct ownership first
+      const { data: ownedCompany, error: ownerError } = await supabase
         .from('companies')
         .select('*')
         .eq('employer_user_id', profile.id)
-        .single();
+        .maybeSingle();
 
-      if (companyError && companyError.code === 'PGRST116') {
-        // No company record exists - create one
-        console.log('[PROFILE API] No company record found for employer - creating one');
-        const { data: newCompany, error: createError } = await supabase
-          .from('companies')
-          .insert({
-            employer_user_id: profile.id,
-            company_name: 'My Company', // Placeholder
-          })
-          .select()
-          .single();
+      if (!ownerError && ownedCompany) {
+        company = ownedCompany;
+        console.log('[PROFILE API] Found owned company:', ownedCompany.company_name);
+      } else {
+        // Fall back to team membership (invited members)
+        const { data: membership } = await supabase
+          .from('company_members')
+          .select('company_id, companies(*)')
+          .eq('user_id', profile.id)
+          .eq('is_active', true)
+          .maybeSingle();
 
-        if (!createError && newCompany) {
-          company = newCompany;
-          console.log('[PROFILE API] Created company record:', newCompany.id);
+        if (membership?.companies) {
+          company = membership.companies;
+          console.log('[PROFILE API] Found company via membership:', (membership.companies as { company_name?: string }).company_name);
         } else {
-          console.error('[PROFILE API] Failed to create company record:', createError);
+          // No company found — hub will show "complete setup" state
+          console.log('[PROFILE API] No company found for employer:', profile.id);
         }
-      } else if (!companyError && companyData) {
-        company = companyData;
-        console.log('[PROFILE API] Found existing company:', companyData.company_name);
       }
     }
 

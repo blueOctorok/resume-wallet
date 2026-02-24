@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ethers } from 'ethers'
 import { createClient } from '@/utils/supabase/server'
+import { getUserByWallet } from '@/lib/user-by-wallet'
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_DRIVER_APP_CONTRACT_ADDRESS!
 const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY!
@@ -36,13 +37,9 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // Check DB duplicate by user
+    // Check DB duplicate by user (case-insensitive)
     if (userAddress) {
-      const { data: userRow } = await supabase
-        .from('users')
-        .select('id')
-        .eq('wallet_address', userAddress)
-        .maybeSingle()
+      const userRow = await getUserByWallet(supabase, userAddress)
 
       if (userRow) {
         const { data: existing } = await supabase

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { triggerStormReward } from '@/lib/storm-rewards'
+import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
 
 /**
  * API Route: Record MVR Payment
@@ -55,37 +56,17 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Get user ID from wallet address, or create user if doesn't exist
-    let user = null
-    const { data: existingUser, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('wallet_address', walletAddress)
-      .maybeSingle()
-
-    if (existingUser) {
-      console.log('[MVR PAYMENT] Found existing user:', existingUser.id, 'for wallet:', walletAddress)
-      user = existingUser
-    } else {
-      // User doesn't exist, create them
-      console.log('[MVR PAYMENT] User not found, creating new user for wallet:', walletAddress)
-      const { data: newUser, error: createError } = await supabase
-        .from('users')
-        .insert({
-          wallet_address: walletAddress,
-        })
-        .select('id')
-        .single()
-
-      if (createError || !newUser) {
-        console.error('[MVR PAYMENT] Error creating user:', createError)
-        return NextResponse.json(
-          { error: 'Failed to create user record', details: createError.message },
-          { status: 500 }
-        )
-      }
-      
-      user = newUser
+    // Get or create user (single place — avoids duplicate user rows)
+    let user: { id: string }
+    try {
+      const { user: u } = await getOrCreateUserByWallet(supabase, walletAddress)
+      user = { id: u.id }
+    } catch (err) {
+      console.error('[MVR PAYMENT] Error get/create user:', err)
+      return NextResponse.json(
+        { error: 'Failed to get or create user record', details: err instanceof Error ? err.message : String(err) },
+        { status: 500 }
+      )
     }
 
     // Record payment

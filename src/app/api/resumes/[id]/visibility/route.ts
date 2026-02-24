@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getUserByWallet } from '@/lib/user-by-wallet'
 
 export async function PATCH(
   req: NextRequest,
@@ -28,14 +29,9 @@ export async function PATCH(
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
+    // Get user (case-insensitive)
+    const user = await getUserByWallet(supabase, walletAddress)
+    if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 

@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getOrCreateUserByWallet, getUserByWallet } from '@/lib/user-by-wallet'
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,39 +27,8 @@ export async function POST(req: NextRequest) {
     // Use admin client to bypass RLS (we validate wallet address manually)
     const adminClient = await getAdminSupabaseClient()
 
-    // Get or create user
-    let { data: user, error: userError } = await adminClient
-      .from('users')
-      .select('id')
-      .eq('wallet_address', walletAddress)
-      .single()
-
-    if (userError && userError.code === 'PGRST116') {
-      // User doesn't exist, create them
-      const { data: newUser, error: createError } = await adminClient
-        .from('users')
-        .insert({
-          wallet_address: walletAddress,
-        })
-        .select('id')
-        .single()
-
-      if (createError || !newUser) {
-        console.error('❌ Resume Builder API: Failed to create user', createError)
-        return NextResponse.json(
-          { error: `Failed to create user: ${createError?.message || 'Unknown error'}` },
-          { status: 500 }
-        )
-      }
-
-      user = newUser
-    } else if (userError) {
-      console.error('❌ Resume Builder API: Error fetching user', userError)
-      return NextResponse.json(
-        { error: `Failed to fetch user: ${userError.message}` },
-        { status: 500 }
-      )
-    }
+    // Get or create user (uses case-insensitive lookup, handles duplicates)
+    const { user } = await getOrCreateUserByWallet(adminClient, walletAddress)
 
     // Create built resume
     const { data: resume, error: resumeError } = await adminClient
@@ -126,13 +96,8 @@ export async function PUT(req: NextRequest) {
     // Use admin client to bypass RLS (we validate wallet address manually)
     const adminClient = await getAdminSupabaseClient()
 
-    // Verify user exists
-    const { data: user } = await adminClient
-      .from('users')
-      .select('id')
-      .eq('wallet_address', walletAddress)
-      .single()
-
+    // Verify user exists (case-insensitive lookup)
+    const user = await getUserByWallet(adminClient, walletAddress)
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }

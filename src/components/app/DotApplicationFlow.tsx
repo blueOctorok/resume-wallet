@@ -665,8 +665,9 @@ export default function DotApplicationFlow({
       )
     }
 
+    // Note: key must be passed directly to JSX, not through spread
+    const formKey = `form-${dotApp.formResetKey}`
     const formProps = {
-      key: `form-${dotApp.formResetKey}`,
       onNavigateToForm: handleFormNavigation,
       walletAddress: userAddress,
       onSaveProgress: saveAllFormsToProfile,
@@ -676,6 +677,7 @@ export default function DotApplicationFlow({
       case 1:
         return (
           <PersonalInfoForm1
+            key={formKey}
             {...formProps}
             onDataChange={dotApp.setForm1Data}
             initialData={dotApp.form1Data}
@@ -684,6 +686,7 @@ export default function DotApplicationFlow({
       case 2:
         return (
           <PersonalInfoForm2
+            key={formKey}
             {...formProps}
             onDataChange={dotApp.setForm2Data}
             initialData={dotApp.form2Data}
@@ -692,6 +695,7 @@ export default function DotApplicationFlow({
       case 3:
         return (
           <PersonalInfoForm3
+            key={formKey}
             {...formProps}
             onComplete={handleDriverApplicationCompleted}
             onDataChange={dotApp.setForm3Data}
@@ -701,6 +705,7 @@ export default function DotApplicationFlow({
       default:
         return (
           <PersonalInfoForm1
+            key={formKey}
             {...formProps}
             onDataChange={dotApp.setForm1Data}
             initialData={dotApp.form1Data}

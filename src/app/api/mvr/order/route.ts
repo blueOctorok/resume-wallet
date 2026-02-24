@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
+import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
 
 /**
  * API Route: Order MVR from Accio
@@ -213,37 +214,15 @@ export async function POST(request: NextRequest) {
 
     console.log('[MVR ORDER] Starting MVR order for wallet:', walletAddress, 'with payment:', paymentTxHash)
 
-    // 1. Get or create user
-    let { data: user, error: userError } = await supabaseService
-      .from('users')
-      .select('id, email, name')
-      .ilike('wallet_address', walletAddress)
-      .single()
-
-    // If user doesn't exist, create them (they're authenticated via Alchemy)
-    if (userError && userError.code === 'PGRST116') {
-      console.log('[MVR ORDER] User not found, creating new user:', walletAddress)
-      const { data: newUser, error: createError } = await supabaseService
-        .from('users')
-        .insert({
-          wallet_address: walletAddress,
-          is_active: true,
-        })
-        .select('id, email, name')
-        .single()
-
-      if (createError || !newUser) {
-        console.error('[MVR ORDER] Error creating user:', createError)
-        return NextResponse.json(
-          { error: 'Failed to create user account' },
-          { status: 500 }
-        )
-      }
-      user = newUser
-    } else if (userError || !user) {
-      console.error('[MVR ORDER] Error fetching user:', userError)
+    // 1. Get or create user (single place — avoids duplicate user rows)
+    let user: { id: string; email?: string | null; name?: string | null }
+    try {
+      const { user: u } = await getOrCreateUserByWallet(supabaseService, walletAddress)
+      user = { id: u.id, email: u.email, name: u.name }
+    } catch (err) {
+      console.error('[MVR ORDER] Error get/create user:', err)
       return NextResponse.json(
-        { error: 'Failed to fetch user account' },
+        { error: 'Failed to get or create user account' },
         { status: 500 }
       )
     }

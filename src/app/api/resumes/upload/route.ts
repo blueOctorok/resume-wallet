@@ -7,12 +7,12 @@ import { checkUploadEligibility, recordPaidUpload } from '@/lib/pricing'
 import { createClient } from '@/utils/supabase/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { uploadToIPFS } from '@/lib/ipfs'
+import { getOrCreateUserByWallet, getUserByWallet } from '@/lib/user-by-wallet'
 
 export async function POST(req: NextRequest) {
   try {
     console.log('📝 Resume Upload API: Starting hash-first validation')
 
-    // 1. Get user from wallet address
     const walletAddress = req.headers.get('x-wallet-address')
     if (!walletAddress) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -20,52 +20,21 @@ export async function POST(req: NextRequest) {
 
     console.log('👤 Resume Upload API: Wallet address:', walletAddress)
 
-    // 2. Get or create user in database
+    // Get or create user (single place — avoids duplicate user rows)
+    const supabaseAdmin = await getAdminSupabaseClient()
+    let user: { id: string }
+    try {
+      const { user: u } = await getOrCreateUserByWallet(supabaseAdmin, walletAddress)
+      user = { id: u.id }
+    } catch (err) {
+      console.error('❌ Resume Upload API: Error get/create user:', err)
+      return NextResponse.json(
+        { error: 'Failed to get or create user' },
+        { status: 500 }
+      )
+    }
+
     const supabase = await createClient()
-    let { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('wallet_address', walletAddress)
-      .single()
-
-    if (userError && userError.code === 'PGRST116') {
-      // User doesn't exist, create them
-      console.log('👤 Resume Upload API: Creating new user')
-      const { data: newUser, error: createUserError } = await supabase
-        .from('users')
-        .insert({
-          wallet_address: walletAddress,
-          is_active: true,
-        })
-        .select('id')
-        .single()
-
-      if (createUserError) {
-        console.error(
-          '❌ Resume Upload API: Error creating user:',
-          createUserError
-        )
-        return NextResponse.json(
-          { error: 'Failed to create user' },
-          { status: 500 }
-        )
-      }
-      user = newUser
-    } else if (userError) {
-      console.error('❌ Resume Upload API: Error fetching user:', userError)
-      return NextResponse.json(
-        { error: 'Failed to fetch user' },
-        { status: 500 }
-      )
-    }
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found or created' },
-        { status: 500 }
-      )
-    }
-
     console.log('✅ Resume Upload API: User authenticated:', user.id)
 
     // 3. Rate limiting (20 uploads per hour - resource protection)
@@ -319,12 +288,9 @@ export async function GET(req: NextRequest) {
     }
 
     const supabase = await createClient()
-    const { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .eq('wallet_address', walletAddress)
-      .single()
-
+    
+    // Get user (case-insensitive)
+    const user = await getUserByWallet(supabase, walletAddress)
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }

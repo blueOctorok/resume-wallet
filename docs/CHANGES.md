@@ -2,6 +2,196 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🏢 **Employer Company Flow Fix** (February 2026)
+
+### Problem
+
+Three bugs made the employer company flow unreliable:
+
+1. `/api/user/profile` auto-created a `"My Company"` placeholder record for any employer without a company. This stale record then blocked the `set-role` route — its step 3 found "My Company" first and short-circuited, silently discarding any company name the user had typed.
+
+2. `set-role` step 3 ("user already has a company") would find the stale record and do nothing, even if the user explicitly provided a new company name in the role selection modal.
+
+3. `RoleSelectionModal` required company name to proceed, blocking invited team members who should be auto-joined via the backend invite detection logic.
+
+### Fix
+
+- **Removed "My Company" auto-create** from `/api/user/profile`. Now returns `company: null` and also checks `company_members` for invited members. Hub already handles `needsCompanySetup` state.
+- **Set-role step 3 now updates the name** if the owner explicitly provides a new one that differs from what's stored.
+- **RoleSelectionModal** no longer requires company name. Added invite hint text: "Already invited? Leave blank and you'll be auto-joined." Button shows "Continue (join via invite)" when no name is entered.
+- **DB cleanup SQL** written to `supabase/cleanup_my_company_placeholders.sql` — run in Supabase SQL editor to remove stale placeholder records.
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/app/api/user/profile/route.ts` | Remove "My Company" auto-create; check membership for invited members |
+| `src/app/api/user/set-role/route.ts` | Update existing company name when owner provides a new one (step 3) |
+| `src/components/RoleSelectionModal.tsx` | Company name optional with invite hint; button text updated |
+| `supabase/cleanup_my_company_placeholders.sql` | NEW — one-time cleanup for stale placeholder records |
+
+---
+
+## 🏢 **Employer Role Selection: Pre-populate Company Name** (February 2026)
+
+### Problem
+
+When an employer opened the role selection modal (either via "Switch Role" or on page load if their role wasn't loading correctly), they had to re-enter their company name every time. The modal didn't remember their existing company information.
+
+### Fix
+
+Updated `RoleSelectionModal` to accept and use existing role/company information:
+
+```tsx
+// New props
+existingRole?: 'driver' | 'developer' | 'employer' | null
+existingCompanyName?: string | null
+
+// Pre-select existing role and pre-populate company name
+const [selectedRole, setSelectedRole] = useState(existingRole ?? null)
+const [companyName, setCompanyName] = useState(existingCompanyName ?? '')
+```
+
+Now when an existing employer opens the modal:
+- Their current role is pre-selected
+- Their company name is pre-populated
+- They can click "Continue" immediately without re-entering anything
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/RoleSelectionModal.tsx` | Accept `existingRole` and `existingCompanyName` props |
+| `src/app/page.tsx` | Pass `userRole` and `companyName` from auth store to modal |
+
+---
+
+## 🔄 **Journey Progress Sync Fix** (February 2026)
+
+### Problem
+
+The journey guide was not updating after DOT app verification because the `DriverHub` component stored fetched data in local React `useState`, while the `useJourneyProgress` hook read from the Zustand `useDriverHubStore`. The two state sources were disconnected.
+
+### Fix
+
+Updated `DriverHub.fetchHubData()` to sync data to the Zustand store after each fetch:
+
+```ts
+// After setting local state
+useDriverHubStore.getState().loadHubData({
+  profile: data.profile,
+  resumes: data.resumes,
+  dotApplications: data.dotApplications,
+  // ...
+})
+```
+
+This ensures the journey guide re-renders when hub data changes (e.g., after blockchain verification).
+
+### Also Fixed
+
+**React key prop warning** in `DotApplicationFlow.tsx`:
+- Moved `key` out of the spread `formProps` object and passed it directly to JSX components
+- React requires `key` to be a direct prop, not spread from an object
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/DriverHub.tsx` | Sync fetched data to `useDriverHubStore` for journey progress |
+| `src/components/app/DotApplicationFlow.tsx` | Fixed key prop spreading warning |
+
+---
+
+## 🎨 **Driver Hub UI Update: Consistent Action Buttons** (February 2026)
+
+### What Changed
+
+Updated the Driver Hub DOT Applications and Resumes sections to match the Developer Hub style:
+- **Eye icon** - View/preview details
+- **Edit icon** - Edit (for in-progress or editable items)
+- **Shield icon** - Verify on blockchain (for complete but unverified items)
+- **Verified badge** - Shows green checkmark and "Verified" when blockchain tx hash exists
+
+### Status Logic Fix
+
+DOT apps now show correct verification status:
+- **Verified** (green) - Has blockchain transaction hash
+- **Pending** (yellow) - Form complete but not yet on blockchain
+- **In Progress** (blue) - Form not yet complete
+
+### Journey Progress Fix
+
+The journey guide now correctly tracks DOT app completion:
+- Step shows **complete** only when verified on blockchain (has `blockchainTxHash`)
+- Step shows **in_progress** when form is complete but not yet verified
+- Added `dotAppVerified` field to `DriverProgressData`
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/DriverHub.tsx` | Updated DOT app and resume cards with Eye/Edit/Shield buttons |
+| `src/lib/journey-progress.ts` | Added `dotAppVerified` field, updated DOT step logic |
+| `src/stores/journey-store.ts` | Populate `dotAppVerified` from hub data |
+
+---
+
+## 👤 **Wallet-first user model & single get-or-create** (February 2026)
+
+### What changed
+
+There is no traditional sign-up; the user connects a wallet. The `users` table row is created **lazily** the first time any backend action needs it (DOT form save, resume upload, role selection, MVR order, etc.). Previously, many API routes each did their own "find user by wallet → if not found, insert", which led to duplicate user rows for the same wallet and 404/500 errors.
+
+### Fix
+
+- **Single source of truth**: `src/lib/user-by-wallet.ts` now provides:
+  - `getUserByWallet(supabase, walletAddress)` — lookup only (for profile, hub "new user" checks).
+  - `getOrCreateUserByWallet(supabase, walletAddress, options?)` — get or create one user per wallet; handles existing duplicates by returning the most recent row.
+- All code paths that may create a user now use `getOrCreateUserByWallet()` instead of inlining their own insert.
+- **Model** (documented in that file): one wallet = one user record; identity is the wallet; names/profile data live in driver_profiles, application_data, etc.
+
+### Files
+
+| File | Change |
+|------|--------|
+| `src/lib/user-by-wallet.ts` | **NEW** — `getUserByWallet`, `getOrCreateUserByWallet`, wallet normalization |
+| `src/app/api/user/profile/route.ts` | Use `getUserByWallet` (no create) |
+| `src/app/api/user/set-role/route.ts` | Use `getOrCreateUserByWallet` |
+| `src/app/api/resumes/upload/route.ts` | Use `getOrCreateUserByWallet` + `getUserByWallet` |
+| `src/app/api/resumes/simple/route.ts` | Use `getOrCreateUserByWallet` |
+| `src/app/api/resumes/create/route.ts` | Use `getOrCreateUserByWallet` + `getUserByWallet` |
+| `src/app/api/resumes/[id]/route.ts` | Use `getUserByWallet` |
+| `src/app/api/resumes/[id]/visibility/route.ts` | Use `getUserByWallet` |
+| `src/app/api/resumes/[id]/verify/route.ts` | Use `getUserByWallet` |
+| `src/app/api/mvr/order/route.ts` | Use `getOrCreateUserByWallet` |
+| `src/app/api/mvr/payment/route.ts` | Use `getOrCreateUserByWallet` |
+| `src/app/api/driver-applications/[id]/route.ts` | Use `getUserByWallet` |
+| `src/app/api/driver-applications/[id]/verify/route.ts` | Use `getUserByWallet` |
+| `src/app/api/driver-applications/check-duplicate-global/route.ts` | Use `getUserByWallet` |
+| `src/app/api/driver-applications/save-employment-verification/route.ts` | Use `getUserByWallet` |
+| `src/app/api/blockchain/persist-driver-application/route.ts` | Use `getUserByWallet` |
+| `src/app/api/blockchain/submit-driver-application/route.ts` | Use `getUserByWallet` |
+| `src/app/api/blockchain/preflight-driver-application/route.ts` | Use `getUserByWallet` |
+| `src/app/api/admin/reset-wallet/route.ts` | Use `getUserByWallet` |
+| `src/lib/supabase-client-db.ts` | Driver app save uses `getOrCreateUserByWallet` |
+
+### Recommended next step: DB cleanup and unique index
+
+Clean up existing duplicate users (same wallet), then add a unique index so the DB enforces one user per wallet.
+
+**Use the FK-safe script** — do not delete from `users` until every table that references `users.id` has been updated to point to the user you keep. Otherwise you hit `23503` (foreign key violation), e.g. from `candidate_requests.requested_by_user_id`.
+
+1. Run **`supabase/cleanup_duplicate_users_fk_safe.sql`** in the Supabase SQL editor (or via `psql`). It:
+   - Builds a mapping: for each duplicate wallet, keep the most recent user (by `created_at`), mark the rest as to-delete.
+   - Reassigns every FK that points at a to-delete user to the kept user (e.g. `candidate_requests`, `applications`, `company_members`, `driver_profiles`, `resumes`, `mvr_orders`, etc.).
+   - For 1:1 tables (`driver_profiles`, `developer_profiles`), if the kept user already has a row, the duplicate’s row is dropped to avoid unique violations.
+   - Deletes the duplicate `users` rows, then creates `users_wallet_address_unique` and verifies no duplicates remain.
+
+If you previously ran an older “Step 3” that only deleted from `users` and it failed with a foreign key error, run this script instead; it does the reassign-then-delete in the right order.
+
+---
+
 ## 🤖 **AvA Journey Guide Redesign** (February 2026)
 
 ### What Changed

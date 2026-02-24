@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { sendNewCompanyNotification } from '@/lib/send-admin-notification'
+import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
 
 export async function POST(request: Request) {
   try {
@@ -28,64 +29,20 @@ export async function POST(request: Request) {
       )
     }
 
-    // Use admin client to bypass RLS (we validate wallet address server-side)
     const supabase = await getAdminSupabaseClient()
-
-    // Check if user already exists (case-insensitive wallet comparison)
-    const { data: existingUser, error: fetchError } = await supabase
-      .from('users')
-      .select('id, role')
-      .ilike('wallet_address', walletAddress)
-      .maybeSingle()
-
-    if (fetchError) {
-      console.error('Error fetching user:', fetchError)
-      return NextResponse.json(
-        { error: 'Failed to fetch user data', details: fetchError.message },
-        { status: 500 }
-      )
-    }
-
-    let userToUpdate = existingUser
-
-    // If user doesn't exist, create them (for Google auth users who haven't been created yet)
-    if (!userToUpdate) {
-      console.log(
-        `[SET ROLE] User not found for wallet ${walletAddress}, creating new user...`
-      )
-      const { data: newUser, error: createError } = await supabase
-        .from('users')
-        .insert({
-          wallet_address: walletAddress,
-          is_active: true,
-          role: role, // Set role during creation
-        })
-        .select('id, role')
-        .single()
-
-      if (createError) {
-        console.error('Error creating user:', createError)
-        return NextResponse.json(
-          { error: 'Failed to create user', details: createError.message },
-          { status: 500 }
-        )
-      }
-
-      userToUpdate = newUser
-      console.log(
-        `[SET ROLE] New user created with ID: ${userToUpdate.id}, role: ${role}`
-      )
-    }
-
-    // Allow role changes (user can switch between driver/employer) or clear role (for testing)
     const newRole = role === null || role === '' ? null : role
+
+    // Single place for "get or create user" by wallet (avoids duplicate user rows)
+    const { user: userToUpdate } = await getOrCreateUserByWallet(supabase, walletAddress, {
+      role: newRole,
+    })
+    const currentRole = userToUpdate.role ?? null
     console.log(
-      `[SET ROLE] User ${userToUpdate.id} changing role from "${userToUpdate.role}" to "${newRole || 'NULL (cleared)'}"`
+      `[SET ROLE] User ${userToUpdate.id} changing role from "${currentRole}" to "${newRole ?? 'NULL (cleared)'}"`
     )
 
-    // Update user role (set to null if clearing)
-    // Only update if role is actually changing (skip if user was just created with the role)
-    if (userToUpdate.role !== newRole) {
+    // Update user role (set to null if clearing) when it actually changed
+    if (currentRole !== newRole) {
       const { error: updateError } = await supabase
         .from('users')
         .update({ role: newRole })
@@ -200,7 +157,7 @@ export async function POST(request: Request) {
       if (!companyAssigned) {
         const { data: existingCompany } = await supabase
           .from('companies')
-          .select('id')
+          .select('id, company_name')
           .eq('employer_user_id', userToUpdate.id)
           .maybeSingle()
 
@@ -209,6 +166,17 @@ export async function POST(request: Request) {
           console.log(
             `[SET ROLE] User already owns company: ${existingCompany.id}`
           )
+          // Update name if the owner explicitly provided a new one
+          const trimmedName = companyName?.trim()
+          if (trimmedName && trimmedName !== existingCompany.company_name) {
+            await supabase
+              .from('companies')
+              .update({ company_name: trimmedName })
+              .eq('id', existingCompany.id)
+            console.log(
+              `[SET ROLE] Updated company name from "${existingCompany.company_name}" to "${trimmedName}"`
+            )
+          }
         }
       }
 

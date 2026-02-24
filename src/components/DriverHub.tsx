@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh'
+import { useDriverHubStore } from '@/stores/driver-hub-store'
 import ShareProfileCard from './ShareProfileCard'
 import DriverVerificationSection from './verification/DriverVerificationSection'
 import DriverEmploymentVerificationSection from './verification/DriverEmploymentVerificationSection'
@@ -718,6 +719,17 @@ export default function DriverHub({
         hasProfile: !!data.profile,
       })
       setHubData(data)
+      
+      // Sync to Zustand store so journey progress updates
+      useDriverHubStore.getState().loadHubData({
+        profile: data.profile,
+        displayNameFallback: data.displayNameFallback,
+        resumes: data.resumes,
+        dotApplications: data.dotApplications,
+        mvrRecords: data.mvrRecords || [],
+        jobApplications: data.jobApplications || [],
+        stats: data.stats,
+      })
     } catch (err) {
       console.error('Error fetching hub data:', err)
       setError(err instanceof Error ? err.message : 'Failed to load data')
@@ -1226,22 +1238,99 @@ export default function DriverHub({
                 // Check if resume has real IPFS hash or just a placeholder
                 const hasRealIpfs =
                   resume.ipfsHash && !resume.ipfsHash.startsWith('built_')
-                // Show DRAFT status for built resumes not yet on IPFS
-                const displayStatus =
-                  !hasRealIpfs && resume.resumeType === 'built'
-                    ? 'DRAFT'
-                    : resume.verificationStatus
+                // Determine actual status: verified if has blockchain tx hash
+                const isVerified = resume.verificationStatus === 'VERIFIED' || resume.blockchainTxHash
+                // Can verify if has real IPFS hash but not yet verified on blockchain
+                const canVerify = hasRealIpfs && !resume.blockchainTxHash
+                // Can edit if it's a built resume
+                const canEdit = resume.resumeType === 'built'
 
                 return (
-                  <ItemRow
+                  <div
                     key={resume.id}
-                    title={resume.title || resume.filename}
-                    subtitle={formatDate(resume.createdAt)}
-                    status={displayStatus}
-                    badge={resume.resumeType === 'built' ? 'Built' : undefined}
-                    onClick={() => handleSelectResume(resume)}
-                    theme={theme}
-                  />
+                    className={`flex items-center justify-between p-3 rounded-xl transition-all ${
+                      theme === 'dark'
+                        ? 'bg-gray-700/50 hover:bg-gray-600/50'
+                        : 'bg-gray-50 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className='flex-1 min-w-0'>
+                      <div className='flex items-center gap-2'>
+                        <p
+                          className={`font-medium truncate ${
+                            theme === 'dark' ? 'text-white' : 'text-gray-900'
+                          }`}
+                        >
+                          {resume.title || resume.filename}
+                        </p>
+                        {isVerified && (
+                          <span className='flex items-center gap-1 text-xs text-green-400'>
+                            <CheckCircle className='w-3 h-3' />
+                            Verified
+                          </span>
+                        )}
+                        {resume.resumeType === 'built' && !isVerified && (
+                          <span
+                            className={`flex-shrink-0 px-2 py-0.5 text-xs rounded-full ${
+                              theme === 'dark'
+                                ? 'bg-indigo-500/20 text-indigo-400'
+                                : 'bg-indigo-50 text-indigo-600'
+                            }`}
+                          >
+                            Built
+                          </span>
+                        )}
+                      </div>
+                      <p
+                        className={`text-xs ${
+                          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                        }`}
+                      >
+                        Created {formatDate(resume.createdAt)}
+                      </p>
+                    </div>
+                    <div className='flex items-center gap-2 ml-3'>
+                      {/* View button */}
+                      <button
+                        onClick={() => handleSelectResume(resume)}
+                        className={`p-2 rounded-lg ${
+                          theme === 'dark'
+                            ? 'hover:bg-gray-600 text-gray-400'
+                            : 'hover:bg-gray-200 text-gray-600'
+                        }`}
+                        title='Preview'
+                      >
+                        <Eye className='w-4 h-4' />
+                      </button>
+                      {/* Edit button - only for built resumes */}
+                      {canEdit && (
+                        <button
+                          onClick={() => {
+                            // Navigate to resume builder with this resume
+                            onNavigate('resume')
+                          }}
+                          className={`p-2 rounded-lg ${
+                            theme === 'dark'
+                              ? 'hover:bg-gray-600 text-gray-400'
+                              : 'hover:bg-gray-200 text-gray-600'
+                          }`}
+                          title='Edit'
+                        >
+                          <Edit className='w-4 h-4' />
+                        </button>
+                      )}
+                      {/* Verify button - only for resumes with IPFS hash but not yet on blockchain */}
+                      {canVerify && (
+                        <button
+                          onClick={() => handleSelectResume(resume)}
+                          className='p-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+                          title='Verify on Blockchain'
+                        >
+                          <Shield className='w-4 h-4' />
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 )
               })}
               {data.resumes.length > 3 && (
@@ -1312,41 +1401,116 @@ export default function DriverHub({
                   ? `${app.applicantName}'s Application`
                   : `DOT Application ${data.dotApplications.length - index}`
 
-                // For in-progress apps, clicking should continue the application
-                const handleClick = () => {
-                  if (app.isInProgress) {
-                    onNavigate('dotapp') // Continue the in-progress application
-                  } else {
-                    setSelectedDotApp(app) // View completed/submitted app details
-                  }
-                }
+                // Determine actual status: if has blockchain tx hash, it's VERIFIED
+                const actualStatus = app.blockchainTxHash
+                  ? 'VERIFIED'
+                  : app.isComplete
+                    ? 'PENDING'
+                    : 'IN_PROGRESS'
+
+                // Can verify if complete but not yet on blockchain
+                const canVerify = app.isComplete && !app.blockchainTxHash
 
                 return (
-                  <ItemRow
+                  <div
                     key={app.id}
-                    title={appTitle}
-                    subtitle={
-                      app.isInProgress
-                        ? 'Continue where you left off'
-                        : formatDate(app.createdAt)
-                    }
-                    status={
-                      app.isComplete ? app.verificationStatus : 'IN_PROGRESS'
-                    }
-                    badge={
-                      !app.isComplete
-                        ? `Form ${app.currentStep} of 3`
-                        : undefined
-                    }
-                    onClick={handleClick}
-                    onDelete={
-                      app.isInProgress && onDeleteInProgressDotApp
-                        ? () => handleDiscardInProgressDotApp(app)
-                        : undefined
-                    }
-                    deleteDisabled={deletingInProgressDotApp}
-                    theme={theme}
-                  />
+                    className={`flex items-center justify-between p-3 rounded-xl transition-all ${
+                      theme === 'dark'
+                        ? 'bg-gray-700/50 hover:bg-gray-600/50'
+                        : 'bg-gray-50 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className='flex-1 min-w-0'>
+                      <div className='flex items-center gap-2'>
+                        <p
+                          className={`font-medium truncate ${
+                            theme === 'dark' ? 'text-white' : 'text-gray-900'
+                          }`}
+                        >
+                          {appTitle}
+                        </p>
+                        {actualStatus === 'VERIFIED' && (
+                          <span className='flex items-center gap-1 text-xs text-green-400'>
+                            <CheckCircle className='w-3 h-3' />
+                            Verified
+                          </span>
+                        )}
+                        {!app.isComplete && (
+                          <span
+                            className={`flex-shrink-0 px-2 py-0.5 text-xs rounded-full ${
+                              theme === 'dark'
+                                ? 'bg-indigo-500/20 text-indigo-400'
+                                : 'bg-indigo-50 text-indigo-600'
+                            }`}
+                          >
+                            Form {app.currentStep} of 3
+                          </span>
+                        )}
+                      </div>
+                      <p
+                        className={`text-xs ${
+                          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                        }`}
+                      >
+                        {app.isInProgress
+                          ? 'Continue where you left off'
+                          : formatDate(app.createdAt)}
+                      </p>
+                    </div>
+                    <div className='flex items-center gap-2 ml-3'>
+                      {/* View button */}
+                      <button
+                        onClick={() => setSelectedDotApp(app)}
+                        className={`p-2 rounded-lg ${
+                          theme === 'dark'
+                            ? 'hover:bg-gray-600 text-gray-400'
+                            : 'hover:bg-gray-200 text-gray-600'
+                        }`}
+                        title='View Details'
+                      >
+                        <Eye className='w-4 h-4' />
+                      </button>
+                      {/* Edit button - only for in-progress or complete but not verified */}
+                      {(app.isInProgress || canVerify) && (
+                        <button
+                          onClick={() => onNavigate('dotapp')}
+                          className={`p-2 rounded-lg ${
+                            theme === 'dark'
+                              ? 'hover:bg-gray-600 text-gray-400'
+                              : 'hover:bg-gray-200 text-gray-600'
+                          }`}
+                          title={app.isInProgress ? 'Continue' : 'Edit'}
+                        >
+                          <Edit className='w-4 h-4' />
+                        </button>
+                      )}
+                      {/* Verify button - only for complete apps not yet on blockchain */}
+                      {canVerify && (
+                        <button
+                          onClick={() => handleVerifyDotApp(app)}
+                          className='p-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+                          title='Verify on Blockchain'
+                        >
+                          <Shield className='w-4 h-4' />
+                        </button>
+                      )}
+                      {/* Delete button - only for in-progress */}
+                      {app.isInProgress && onDeleteInProgressDotApp && (
+                        <button
+                          onClick={() => handleDiscardInProgressDotApp(app)}
+                          disabled={deletingInProgressDotApp}
+                          className={`p-2 rounded-lg ${
+                            theme === 'dark'
+                              ? 'hover:bg-red-900/30 text-red-400 disabled:opacity-50'
+                              : 'hover:bg-red-50 text-red-500 disabled:opacity-50'
+                          }`}
+                          title='Discard'
+                        >
+                          <Trash2 className='w-4 h-4' />
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 )
               })}
               {data.dotApplications.length > 3 && (

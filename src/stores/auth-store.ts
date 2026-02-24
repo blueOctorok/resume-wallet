@@ -129,11 +129,11 @@ export const useAuthStore = create<AuthState & AuthActions>()(
     {
       name: 'auth-store',
       storage: createJSONStorage(() => sessionStorage),
-      // Only persist essential auth state, not loading flags
+      // Only persist wallet + role. Do not persist companyName — it is synced from profile on load
+      // so we don't show stale "My Company" when rehydrating from an old session.
       partialize: (state) => ({
         walletAddress: state.walletAddress,
         userRole: state.userRole,
-        companyName: state.companyName,
       }),
     }
   )

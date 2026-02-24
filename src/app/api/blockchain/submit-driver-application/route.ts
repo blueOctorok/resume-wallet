@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ethers } from 'ethers'
 import { createClient } from '@/utils/supabase/server'
+import { getUserByWallet } from '@/lib/user-by-wallet'
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_DRIVER_APP_CONTRACT_ADDRESS!
 const PRIVATE_KEY = process.env.PRIVATE_KEY!
@@ -72,12 +73,8 @@ export async function POST(request: NextRequest) {
       console.log('🔍 Blockchain API: Checking database for duplicate hash...')
       const supabase = await createClient()
       
-      // Get user_id from wallet address
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('wallet_address', userAddress)
-        .maybeSingle()
+      // Get user_id from wallet address (case-insensitive)
+      const userData = await getUserByWallet(supabase, userAddress)
 
       if (userData) {
         // Check if application with this hash already exists

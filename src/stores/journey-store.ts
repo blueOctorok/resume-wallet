@@ -90,12 +90,18 @@ export function useJourneyProgress(): JourneyProgress {
 
   // Build progress based on role
   if (userRole === 'driver') {
+    // Check if any DOT app has blockchain verification
+    const hasVerifiedDotApp = hubStore.dotApplications.some(
+      (app) => app.blockchainTxHash != null
+    )
+    
     const data: DriverProgressData = {
       isWalletConnected,
       hasResume: hubStore.hasResume || hubStore.resumes.length > 0,
       resumeCount: hubStore.resumes.length,
       hasDotApplication: hubStore.dotApplications.length > 0,
       dotAppComplete: isApplicationCompleted || hubStore.stats?.completedDotApps ? hubStore.stats.completedDotApps > 0 : false,
+      dotAppVerified: hasVerifiedDotApp || (hubStore.stats?.verifiedDotApps ? hubStore.stats.verifiedDotApps > 0 : false),
       dotAppInProgress: hubStore.stats?.inProgressDotApps ? hubStore.stats.inProgressDotApps > 0 : false,
       hasMvrRecord: hubStore.mvrRecords.length > 0,
       mvrRecordCount: hubStore.mvrRecords.length,

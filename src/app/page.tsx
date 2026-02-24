@@ -70,6 +70,7 @@ const HomeContent = () => {
     isRoleLoading, setIsRoleLoading,
     showRoleSelection, setShowRoleSelection,
     isSettingRole, setIsSettingRole,
+    companyName,
     setCompanyName,
     isCheckingSession, setIsCheckingSession,
   } = authStore
@@ -153,7 +154,12 @@ const HomeContent = () => {
                 ? role
                 : null
             setUserRole(validRole)
-            if (data.profile.company) setCompanyName(data.profile.company.company_name)
+            // Keep role modal company name in sync with backend; clear when not employer so stale "My Company" doesn't show
+            if (validRole === 'employer' && data.profile.company) {
+              setCompanyName((data.profile.company as { company_name?: string }).company_name ?? null)
+            } else {
+              setCompanyName(null)
+            }
             if (!validRole) setShowRoleSelection(true)
             else {
               setShowRoleSelection(false)
@@ -322,6 +328,8 @@ const HomeContent = () => {
             isLoading={isSettingRole}
             userEmail={user?.email}
             walletAddress={user?.address}
+            existingRole={userRole}
+            existingCompanyName={companyName}
           />
         )}
 

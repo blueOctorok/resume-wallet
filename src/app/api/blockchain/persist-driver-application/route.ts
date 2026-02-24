@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getUserByWallet } from '@/lib/user-by-wallet'
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,14 +23,9 @@ export async function POST(request: NextRequest) {
     // Use admin client to bypass RLS (we validate wallet address server-side)
     const supabase = await getAdminSupabaseClient()
 
-    // Get user_id
-    const { data: userRow, error: userErr } = await supabase
-      .from('users')
-      .select('id')
-      .eq('wallet_address', userAddress)
-      .maybeSingle()
-
-    if (userErr || !userRow) {
+    // Get user_id (case-insensitive)
+    const userRow = await getUserByWallet(supabase, userAddress)
+    if (!userRow) {
       return NextResponse.json(
         { error: 'User not found for wallet address' },
         { status: 404 }

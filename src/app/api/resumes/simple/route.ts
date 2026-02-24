@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
 
 // Real API endpoint for resume uploads using Supabase
 export async function POST(request: NextRequest) {
@@ -27,7 +29,6 @@ export async function POST(request: NextRequest) {
       mimeType,
     })
 
-    // Validate required fields
     if (!ipfsHash || !title || !filename || !userAddress) {
       console.log('❌ Resume API: Missing required fields')
       return NextResponse.json(
@@ -39,58 +40,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create Supabase client
     const supabase = await createClient()
+    const supabaseAdmin = await getAdminSupabaseClient()
 
-    // First, get or create the user
-    let { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('wallet_address', userAddress)
-      .single()
-
-    if (userError && userError.code === 'PGRST116') {
-      // User doesn't exist, create them
-      console.log('👤 Resume API: Creating new user for wallet:', userAddress)
-
-      const { data: newUser, error: createUserError } = await supabase
-        .from('users')
-        .insert({
-          wallet_address: userAddress,
-          is_active: true,
-        })
-        .select('id')
-        .single()
-
-      if (createUserError) {
-        console.error('❌ Resume API: Error creating user:', createUserError)
-        return NextResponse.json(
-          {
-            error: 'Failed to create user',
-            details: createUserError.message,
-          },
-          { status: 500 }
-        )
-      }
-
-      user = newUser
-    } else if (userError) {
-      console.error('❌ Resume API: Error fetching user:', userError)
+    // Get or create user (single place — avoids duplicate user rows)
+    let user: { id: string }
+    try {
+      const { user: u } = await getOrCreateUserByWallet(supabaseAdmin, userAddress)
+      user = { id: u.id }
+    } catch (err) {
+      console.error('❌ Resume API: Error get/create user:', err)
       return NextResponse.json(
         {
-          error: 'Failed to fetch user',
-          details: userError.message,
-        },
-        { status: 500 }
-      )
-    }
-
-    // Now save the resume
-    if (!user) {
-      console.error('❌ Resume API: User is null after creation/fetch')
-      return NextResponse.json(
-        {
-          error: 'User not found or created',
+          error: 'Failed to get or create user',
+          details: err instanceof Error ? err.message : String(err),
         },
         { status: 500 }
       )

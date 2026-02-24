@@ -51,6 +51,7 @@ export interface DriverProgressData {
   resumeCount: number
   hasDotApplication: boolean
   dotAppComplete: boolean
+  dotAppVerified: boolean // Has blockchain verification (tx hash)
   dotAppInProgress: boolean
   hasMvrRecord: boolean
   mvrRecordCount: number
@@ -104,9 +105,25 @@ export function calculateDriverProgress(data: DriverProgressData): JourneyProgre
     {
       id: 'dotapp',
       label: 'DOT Application',
-      description: 'Complete your DOT compliance application',
-      status: data.dotAppComplete ? 'complete' : data.dotAppInProgress ? 'in_progress' : 'pending',
-      action: !data.dotAppComplete ? { label: data.dotAppInProgress ? 'Continue Application' : 'Start Application', target: 'dotapp' } : undefined,
+      description: 'Complete and verify your DOT compliance application on blockchain',
+      // Complete only when verified on blockchain, in_progress if form is done but not verified
+      status: data.dotAppVerified 
+        ? 'complete' 
+        : data.dotAppComplete 
+          ? 'in_progress' 
+          : data.dotAppInProgress 
+            ? 'in_progress' 
+            : 'pending',
+      action: !data.dotAppVerified 
+        ? { 
+            label: data.dotAppComplete 
+              ? 'Verify on Blockchain' 
+              : data.dotAppInProgress 
+                ? 'Continue Application' 
+                : 'Start Application', 
+            target: 'dotapp' 
+          } 
+        : undefined,
     },
     {
       id: 'profile',
@@ -461,6 +478,7 @@ export function getEmptyProgress(role: UserRole): JourneyProgress {
       resumeCount: 0,
       hasDotApplication: false,
       dotAppComplete: false,
+      dotAppVerified: false,
       dotAppInProgress: false,
       hasMvrRecord: false,
       mvrRecordCount: 0,

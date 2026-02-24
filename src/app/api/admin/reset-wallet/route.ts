@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getUserByWallet } from '@/lib/user-by-wallet'
 
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY
 
@@ -38,20 +39,8 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await getAdminSupabaseClient()
 
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('wallet_address', walletAddress)
-      .maybeSingle()
-
-    if (userError) {
-      console.error('❌ [reset-wallet] Failed to look up user:', userError)
-      return NextResponse.json(
-        { error: 'Failed to look up wallet address.' },
-        { status: 500 }
-      )
-    }
-
+    // Case-insensitive lookup
+    const user = await getUserByWallet(supabase, walletAddress)
     if (!user) {
       return NextResponse.json({
         success: true,

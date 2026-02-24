@@ -7,6 +7,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { PinataSDK } from 'pinata-web3'
 import { ethers } from 'ethers'
 import { generateStyledResumePDF } from '@/lib/resume-pdf-generator'
+import { getUserByWallet } from '@/lib/user-by-wallet'
 
 // Contract ABI for adding resume
 const RESUME_REGISTRY_ABI = [
@@ -76,14 +77,9 @@ export async function POST(
 
     const supabase = await getAdminSupabaseClient()
 
-    // 1. Verify user owns this resume
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('wallet_address', walletAddress)
-      .single()
-
-    if (userError || !user) {
+    // 1. Verify user owns this resume (case-insensitive lookup)
+    const user = await getUserByWallet(supabase, walletAddress)
+    if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 

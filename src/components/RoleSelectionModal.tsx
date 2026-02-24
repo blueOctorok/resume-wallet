@@ -46,6 +46,8 @@ interface RoleSelectionModalProps {
   isLoading?: boolean
   userEmail?: string // Used to gate Employer option
   walletAddress?: string // Used for whitelist check
+  existingRole?: 'driver' | 'developer' | 'employer' | null // Current role if switching
+  existingCompanyName?: string | null // Pre-populate for existing employers
 }
 
 export default function RoleSelectionModal({
@@ -53,20 +55,26 @@ export default function RoleSelectionModal({
   isLoading,
   userEmail,
   walletAddress,
+  existingRole,
+  existingCompanyName,
 }: RoleSelectionModalProps) {
   const { theme } = useTheme()
+  // Pre-select existing role if switching, otherwise null
   const [selectedRole, setSelectedRole] = useState<
     'driver' | 'developer' | 'employer' | null
-  >(null)
-  // Company info for employer signup (prevents orphan "My Company" records)
-  const [companyName, setCompanyName] = useState('')
+  >(existingRole ?? null)
+  // Pre-populate company name for existing employers
+  const [companyName, setCompanyName] = useState(existingCompanyName ?? '')
   const [dotNumber, setDotNumber] = useState('')
 
   // Check if user can select Employer (requires company email or whitelisted wallet)
   const isEmployerDisabled = isPersonalEmail(userEmail, walletAddress)
-  
-  // Employer needs company name to proceed
-  const canProceed = selectedRole && (selectedRole !== 'employer' || companyName.trim().length >= 2)
+
+  // Whether this employer flow looks like an invitee (no name entered, not an existing owner)
+  const isJoiningViaInvite = selectedRole === 'employer' && !companyName.trim() && !existingCompanyName
+
+  // Employer can always proceed — backend detects invite or existing company server-side
+  const canProceed = selectedRole !== null
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -504,19 +512,28 @@ export default function RoleSelectionModal({
                 ? 'bg-brand-mint/10 border-brand-mint/40'
                 : 'bg-brand-mint/5 border-brand-mint/30'
             }`}>
-              <h3 className={`text-base sm:text-lg font-semibold mb-3 ${
+              <h3 className={`text-base sm:text-lg font-semibold mb-1 ${
                 theme === 'dark' ? 'text-brand-cream' : 'text-gray-900'
               }`}>
                 Tell us about your company
               </h3>
-              
+              <p className={`text-xs mb-3 ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              }`}>
+                Already invited to join a team? Leave the name blank and you will be auto-joined.
+              </p>
+
               <div className='space-y-3'>
-                {/* Company Name - Required */}
+                {/* Company Name - Required for new employers, optional for invitees */}
                 <div>
                   <label className={`block text-sm font-medium mb-1 ${
                     theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
                   }`}>
-                    Company Name <span className='text-red-500'>*</span>
+                    Company Name{' '}
+                    {isJoiningViaInvite
+                      ? <span className='text-gray-400 font-normal'>(optional — joining via invite)</span>
+                      : <span className='text-red-500'>*</span>
+                    }
                   </label>
                   <input
                     type='text'
@@ -608,8 +625,8 @@ export default function RoleSelectionModal({
                   Setting up...
                 </span>
               ) : selectedRole ? (
-                selectedRole === 'employer' && !companyName.trim() 
-                  ? 'Enter company name to continue'
+                isJoiningViaInvite
+                  ? 'Continue (join via invite)'
                   : `Continue as ${selectedRole === 'driver' ? 'Driver' : selectedRole === 'developer' ? 'Software Engineer' : 'Employer'}`
               ) : (
                 'Select a role to continue'

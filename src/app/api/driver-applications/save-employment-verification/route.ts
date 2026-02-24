@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getUserByWallet } from '@/lib/user-by-wallet'
 
 /**
  * API route to save employment verification data to Supabase
@@ -22,14 +23,9 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // Get user_id from wallet address
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('wallet_address', userAddress)
-      .maybeSingle()
-
-    if (userError || !userData) {
+    // Get user_id from wallet address (case-insensitive)
+    const userData = await getUserByWallet(supabase, userAddress)
+    if (!userData) {
       console.error('❌ User not found for wallet address:', userAddress)
       return NextResponse.json(
         { error: 'User not found for wallet address' },

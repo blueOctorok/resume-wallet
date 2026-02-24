@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { ethers } from 'ethers'
+import { getUserByWallet } from '@/lib/user-by-wallet'
 
 // Check if driver application is a duplicate at BOTH database and blockchain levels
 export async function POST(request: NextRequest) {
@@ -36,17 +37,13 @@ export async function POST(request: NextRequest) {
       '🗄️ Driver App Global Duplicate Check API: Connected to Supabase database'
     )
 
-    // First get user_id from wallet address
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('wallet_address', userAddress)
-      .maybeSingle()
+    // First get user_id from wallet address (case-insensitive)
+    const userData = await getUserByWallet(supabase, userAddress)
 
     let userDuplicateExists = false
     let existingApp = null
 
-    if (userData && !userError) {
+    if (userData) {
       const { data, error: queryError } = await supabase
         .from('driver_applications')
         .select('id, created_at, application_hash')

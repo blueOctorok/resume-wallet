@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getUserByWallet } from '@/lib/user-by-wallet'
 
 /**
  * DELETE /api/driver-applications/[id]
@@ -24,14 +25,9 @@ export async function DELETE(
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user_id from wallet address
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('wallet_address', walletAddress)
-      .maybeSingle()
-
-    if (userError || !userData) {
+    // Get user_id from wallet address (case-insensitive)
+    const userData = await getUserByWallet(supabase, walletAddress)
+    if (!userData) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
