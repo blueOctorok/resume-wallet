@@ -233,6 +233,32 @@ export default function InvitePage() {
           <AlchemyAuth
             onAuthSuccess={handleSignInSuccess}
           />
+          {/* When already connected, show primary action to accept invite (don't rely on modal auto-close) */}
+          {walletAddress && (
+            <div className='mt-6 pt-6 border-t border-gray-600/50'>
+              <p className={`text-center text-sm mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                You&apos;re connected. Accept the invitation to join {invite?.company.name}.
+              </p>
+              <button
+                type='button'
+                onClick={handleAccept}
+                disabled={accepting}
+                className='w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed'
+              >
+                {accepting ? (
+                  <>
+                    <Loader2 className='w-5 h-5 animate-spin' />
+                    Accepting...
+                  </>
+                ) : (
+                  <>
+                    <UserCheck className='w-5 h-5' />
+                    Accept Invitation
+                  </>
+                )}
+              </button>
+            </div>
+          )}
           <button
             onClick={() => setShowSignIn(false)}
             className={`w-full mt-4 px-4 py-2 rounded-lg font-medium ${
