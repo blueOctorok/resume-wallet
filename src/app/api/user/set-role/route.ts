@@ -197,50 +197,20 @@ export async function POST(request: Request) {
         }
       }
 
-      // 5. If nothing found, create a new company with the provided name
+      // 5. If nothing found, REJECT - employer access requires invitation
+      // Public employer signup is disabled for security reasons
       if (!companyAssigned) {
-        // Company name is required from the frontend for new employers
-        const finalCompanyName = companyName?.trim() || 'My Company'
-        
-        const { data: newCompany, error: companyError } = await supabase
-          .from('companies')
-          .insert({
-            employer_user_id: userToUpdate.id,
-            company_name: finalCompanyName,
-            dot_number: dotNumber?.trim() || null,
-            status: 'active', // Active immediately since we collected real info
-            designated_owner_email: userEmail || null,
-            approved_at: new Date().toISOString(), // Auto-approved
-          })
-          .select('id')
-          .single()
-
-        if (companyError) {
-          console.error('Error creating company record:', companyError)
-        } else {
-          // Add user as owner in company_members
-          await supabase.from('company_members').insert({
-            company_id: newCompany.id,
-            user_id: userToUpdate.id,
-            role: 'owner',
-            accepted_at: new Date().toISOString(),
-            is_active: true,
-          })
-
-          console.log(
-            `[SET ROLE] New company "${finalCompanyName}" created for employer user ${userToUpdate.id}`
-          )
-
-          // Notify admins about the new company (non-blocking)
-          sendNewCompanyNotification({
-            companyName: finalCompanyName,
-            ownerEmail: userEmail || 'Unknown',
-            ownerWallet: walletAddress,
-            dotNumber: dotNumber?.trim() || null,
-          }).catch((err) => {
-            console.warn('[SET ROLE] Admin notification failed:', err)
-          })
-        }
+        console.log(
+          `[SET ROLE] Rejected employer access for ${userEmail || walletAddress} - no company/invite found`
+        )
+        return NextResponse.json(
+          {
+            error: 'Employer access requires an invitation',
+            details: 'Contact your company admin or support@stormchain.com to get access.',
+            code: 'NO_EMPLOYER_ACCESS',
+          },
+          { status: 403 }
+        )
       }
     }
 

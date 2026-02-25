@@ -21,7 +21,7 @@ export async function PATCH(
     const walletAddress = request.headers.get('x-wallet-address')
     const { memberId } = await params
     const body = await request.json()
-    const { role, jobScope, candidateScope, isActive } = body
+    const { role, jobScope, candidateScope, isActive, displayName } = body
 
     if (!walletAddress) {
       return NextResponse.json(
@@ -107,17 +107,16 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    // Can't change owner role unless you're the owner
+    // Can't modify owner unless you ARE the owner
     if (targetMember.role === 'owner' && userRole !== 'owner') {
       return NextResponse.json(
-        { error: 'Only the owner can modify owner permissions' },
+        { error: 'Only the owner can modify their own profile' },
         { status: 403 }
       )
     }
 
-    // Can't demote yourself if you're the only owner
-    if (targetMember.user_id === user.id && targetMember.role === 'owner' && role !== 'owner') {
-      // Check if there are other owners
+    // Can't demote yourself if you're the only owner (only check when role is explicitly being changed)
+    if (role !== undefined && targetMember.user_id === user.id && targetMember.role === 'owner' && role !== 'owner') {
       const { count } = await supabase
         .from('company_members')
         .select('id', { count: 'exact' })
@@ -133,32 +132,57 @@ export async function PATCH(
       }
     }
 
-    // Build update data
+    // Handle display name update (updates user record, not company_members)
+    if (displayName !== undefined && targetMember.user_id) {
+      const { error: nameError } = await supabase
+        .from('users')
+        .update({ name: displayName.trim() })
+        .eq('id', targetMember.user_id)
+
+      if (nameError) {
+        console.error('[TEAM] Error updating display name:', nameError)
+        return NextResponse.json(
+          { error: 'Failed to update display name' },
+          { status: 500 }
+        )
+      }
+
+      // If only updating display name, return early
+      if (role === undefined && jobScope === undefined && candidateScope === undefined && isActive === undefined) {
+        return NextResponse.json({
+          success: true,
+          message: 'Display name updated successfully',
+        })
+      }
+    }
+
+    // Build update data for company_members table
     const updateData: Record<string, unknown> = {}
     if (role !== undefined) updateData.role = role
     if (jobScope !== undefined) updateData.job_scope = jobScope
     if (candidateScope !== undefined) updateData.candidate_scope = candidateScope
     if (isActive !== undefined) updateData.is_active = isActive
 
-    if (Object.keys(updateData).length === 0) {
+    if (Object.keys(updateData).length === 0 && displayName === undefined) {
       return NextResponse.json(
         { error: 'No update data provided' },
         { status: 400 }
       )
     }
 
-    // Update the member
-    const { error: updateError } = await supabase
-      .from('company_members')
-      .update(updateData)
-      .eq('id', memberId)
+    if (Object.keys(updateData).length > 0) {
+      const { error: updateError } = await supabase
+        .from('company_members')
+        .update(updateData)
+        .eq('id', memberId)
 
-    if (updateError) {
-      console.error('[TEAM] Error updating member:', updateError)
-      return NextResponse.json(
-        { error: 'Failed to update member' },
-        { status: 500 }
-      )
+      if (updateError) {
+        console.error('[TEAM] Error updating member:', updateError)
+        return NextResponse.json(
+          { error: 'Failed to update member' },
+          { status: 500 }
+        )
+      }
     }
 
     return NextResponse.json({

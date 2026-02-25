@@ -45,6 +45,14 @@ const JobPostingForm = dynamic(
   }
 )
 
+const TeamManagement = dynamic(
+  () => import('@/components/employer/TeamManagement').then((mod) => mod.default),
+  {
+    ssr: false,
+    loading: () => <LoadingScreen message='Loading team...' fullScreen={false} />,
+  }
+)
+
 interface EmployerShellProps {
   walletAddress: string
 }
@@ -82,7 +90,8 @@ export default function EmployerShell({ walletAddress }: EmployerShellProps) {
             page === 'find-drivers' ||
             page === 'talent-search' ||
             page === 'company-profile' ||
-            page === 'reports'
+            page === 'reports' ||
+            page === 'team'
           ) {
             setCurrentPage(page)
           }
@@ -114,6 +123,10 @@ export default function EmployerShell({ walletAddress }: EmployerShellProps) {
         }}
       />
     )
+  }
+
+  if (currentPage === 'team') {
+    return <TeamManagement walletAddress={walletAddress} onBack={goBack} />
   }
 
   // Any unrecognised page value (e.g. 'company-profile') falls back to the hub

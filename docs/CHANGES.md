@@ -2,6 +2,187 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🧩 **UserIdentity Reusable Component** (February 2026)
+
+### Overview
+
+Created a reusable `UserIdentity` component for consistent user display throughout the app.
+
+### Features
+
+- **Avatar** - Colored initial badge with configurable colors (purple, blue, teal, green, amber, rose, gray)
+- **Name** - White text, with optional inline editing
+- **Wallet address** - Gray text with wallet icon, truncated format (`0x1234...5678`)
+- **Email** - Optional display
+- **Sizes** - `sm`, `md`, `lg`
+- **Editable** - Pass `editable={true}` and `onNameChange` callback for inline editing
+- **Copy wallet** - Set `copyWalletOnClick={true}` to enable click-to-copy
+
+### Usage
+
+```tsx
+import UserIdentity from '@/components/ui/UserIdentity'
+
+<UserIdentity
+  name="Sam Blaha"
+  walletAddress="0x9499cD25C6737A8195e74262f3c5eAE6dA607df3"
+  avatarColor="purple"
+  size="lg"
+  editable={true}
+  onNameChange={async (newName) => { /* save */ }}
+/>
+```
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/ui/UserIdentity.tsx` | NEW - Reusable user identity component |
+| `src/components/employer/TeamManagement.tsx` | Refactored to use UserIdentity, removed ~100 lines |
+
+---
+
+## 🔧 **Employer Access Check by Wallet Address** (February 2026)
+
+### Problem
+
+When a user who owns a company (like Pace Drivers) switched roles (driver → employer), the system showed "Invitation required" because the access check only looked up by email, not by wallet address.
+
+### Fix
+
+Updated `/api/user/check-employer-access` to:
+1. Accept both `email` AND `walletAddress`
+2. Check by wallet address FIRST (most authoritative since that's how users are authenticated)
+3. Fall back to email checks for pre-created companies and invitations
+
+Updated `RoleSelectionModal` to:
+1. Pass `walletAddress` to the API alongside email
+2. Always re-check access fresh when selecting employer (no stale cached data)
+3. Reset access state when switching away from employer
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/app/api/user/check-employer-access/route.ts` | Added wallet-based ownership/membership checks |
+| `src/components/RoleSelectionModal.tsx` | Pass wallet to API, fresh check on each selection |
+
+---
+
+## 👥 **Team Management UX Improvements** (February 2026)
+
+### Overview
+
+Improved the Team Management interface for better usability and clarity.
+
+### Changes
+
+#### 1. Member Display Improvements
+- Active members now show **name + wallet address** (truncated format `0x1234...5678`)
+- Added wallet icon for visual clarity
+- Members with no name set show "No name set" instead of confusing placeholder
+
+#### 2. Inline Name Editing
+- Admins can edit team member names directly in the list
+- Click pencil icon → edit → save with checkmark or cancel with X
+- Changes persist to the user's profile via `PATCH /api/employer/team/[memberId]`
+
+#### 3. API Enhancement
+- `GET /api/employer/team` now returns `walletAddress` for each member
+- `PATCH /api/employer/team/[memberId]` now supports `displayName` field to update user's name
+
+#### 4. Invite Modal Redesign
+- Cleaner, more spacious layout with proper header section
+- Email input with better styling and larger touch target
+- **Role selection as radio cards** instead of dropdown - much clearer UX
+- Each role card shows label + description
+- Indigo color scheme for better visual consistency
+- Backdrop blur on modal overlay
+
+#### 5. Button Contrast Fix
+- Changed "Invite Member" button from mint background to indigo (`bg-indigo-600`)
+- White text now has proper contrast for readability
+- Consistent indigo theme throughout the modal
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/employer/TeamManagement.tsx` | Complete redesign: name editing, wallet display, new invite modal |
+| `src/app/api/employer/team/route.ts` | Added `walletAddress` to member response |
+| `src/app/api/employer/team/[memberId]/route.ts` | Added `displayName` support to PATCH |
+
+---
+
+## 🔐 **Secure Employer Access System** (February 2026)
+
+### Overview
+
+Implemented a complete security overhaul for employer access. Employers can no longer self-register by typing any company name. Access is now gated:
+
+1. **Admin pre-creates company** with a designated owner email
+2. **Owner logs in** with matching email → automatically linked as owner
+3. **Owner invites team members** via email → invitees get a link to accept
+
+### Security Changes
+
+#### 1. Employer Access Check API
+New endpoint `POST /api/user/check-employer-access` checks if an email has:
+- A pre-created company awaiting claim
+- A pending team invitation
+- An existing company ownership/membership
+
+#### 2. Role Selection Locked Down
+- `RoleSelectionModal` now calls the check-employer-access API when user selects Employer
+- Shows access status instead of company name input
+- If no access: "Employer access requires an invitation. Contact your company admin."
+- If access granted: Shows company name and role they'll have
+
+#### 3. Set-Role API Rejects Unauthorized Signup
+- `set-role` API now returns 403 if no company match is found
+- Removed auto-create company logic for public signups
+
+#### 4. Team Management UI
+New `TeamManagement` component in EmployerHub:
+- View active team members and pending invites
+- Invite new members by email with role selection
+- Remove team members (owner only)
+
+#### 5. Invite Acceptance Flow
+New `/invite/[token]` page:
+- Shows invitation details (company, role, expiry)
+- Prompts user to connect wallet and accept
+- Validates email matches invitation
+
+#### 6. Team Invite Emails
+- `sendTeamInviteEmail()` function sends branded emails via Resend
+- Email contains invite URL, company info, role, and expiration
+
+#### 7. Admin Company Creation Modal
+Replaced browser `prompt()` dialogs with proper modal form:
+- Company name (required)
+- DOT number (optional)
+- Designated owner email (required)
+- Validation and error handling
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/app/api/user/check-employer-access/route.ts` | NEW - Check employer eligibility by email |
+| `src/app/api/user/set-role/route.ts` | Reject unauthorized employer signup |
+| `src/components/RoleSelectionModal.tsx` | Show access status instead of company name input |
+| `src/components/employer/TeamManagement.tsx` | NEW - Team list, invite modal, member actions |
+| `src/components/app/EmployerShell.tsx` | Add team page route |
+| `src/components/EmployerHub.tsx` | Add "Team" quick action button |
+| `src/stores/types.ts` | Add 'team' to PageType |
+| `src/app/invite/[token]/page.tsx` | NEW - Invite acceptance page |
+| `src/lib/send-team-invite-email.ts` | NEW - Send team invite emails |
+| `src/app/api/employer/team/route.ts` | Wire in email sending on invite |
+| `src/app/admin/AdminDashboard.tsx` | Proper modal for company creation |
+
+---
+
 ## 🏢 **Employer Company Flow Fix** (February 2026)
 
 ### Problem

@@ -1,50 +1,26 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { Loader2, CheckCircle, AlertCircle, Building2 } from 'lucide-react'
 
-// Common personal email domains - Employer requires company email
-const PERSONAL_EMAIL_DOMAINS = [
-  'gmail.com',
-  'yahoo.com',
-  'hotmail.com',
-  'outlook.com',
-  'aol.com',
-  'icloud.com',
-  'me.com',
-  'mac.com',
-  'live.com',
-  'msn.com',
-  'protonmail.com',
-  'proton.me',
-  'mail.com',
-  'zoho.com',
-  'yandex.com',
-  'gmx.com',
-  'gmx.net',
-  'fastmail.com',
-  'tutanota.com',
-]
-
-// Whitelisted wallet addresses that bypass personal email restriction (e.g., admins)
+// Whitelisted wallet addresses that bypass email requirement for employer (e.g., admins)
 const EMPLOYER_WHITELIST_WALLETS = [
   '0x9499cD25C6737A8195e74262f3c5eAE6dA607df3', // Main admin account
 ].map(w => w.toLowerCase())
 
-function isPersonalEmail(email?: string, walletAddress?: string): boolean {
-  // Check whitelist first - case-insensitive wallet comparison
-  if (walletAddress && EMPLOYER_WHITELIST_WALLETS.includes(walletAddress.toLowerCase())) {
-    return false // Whitelisted, allow employer access
-  }
-  if (!email) return true // No email = treat as personal
-  const domain = email.split('@')[1]?.toLowerCase()
-  return PERSONAL_EMAIL_DOMAINS.includes(domain)
+interface EmployerAccessStatus {
+  hasAccess: boolean
+  companyName?: string
+  accessType?: 'owner' | 'team_invite' | 'team_member'
+  role?: string
+  message?: string
 }
 
 interface RoleSelectionModalProps {
   onSelectRole: (role: 'driver' | 'developer' | 'employer', companyName?: string, dotNumber?: string) => void
   isLoading?: boolean
-  userEmail?: string // Used to gate Employer option
+  userEmail?: string // Used to check employer access
   walletAddress?: string // Used for whitelist check
   existingRole?: 'driver' | 'developer' | 'employer' | null // Current role if switching
   existingCompanyName?: string | null // Pre-populate for existing employers
@@ -63,18 +39,74 @@ export default function RoleSelectionModal({
   const [selectedRole, setSelectedRole] = useState<
     'driver' | 'developer' | 'employer' | null
   >(existingRole ?? null)
-  // Pre-populate company name for existing employers
-  const [companyName, setCompanyName] = useState(existingCompanyName ?? '')
-  const [dotNumber, setDotNumber] = useState('')
 
-  // Check if user can select Employer (requires company email or whitelisted wallet)
-  const isEmployerDisabled = isPersonalEmail(userEmail, walletAddress)
+  // Employer access check state
+  const [employerAccess, setEmployerAccess] = useState<EmployerAccessStatus | null>(null)
+  const [checkingAccess, setCheckingAccess] = useState(false)
 
-  // Whether this employer flow looks like an invitee (no name entered, not an existing owner)
-  const isJoiningViaInvite = selectedRole === 'employer' && !companyName.trim() && !existingCompanyName
+  // Check if user is whitelisted admin (bypasses email requirement)
+  const isAdminWhitelisted = walletAddress && EMPLOYER_WHITELIST_WALLETS.includes(walletAddress.toLowerCase())
 
-  // Employer can always proceed — backend detects invite or existing company server-side
-  const canProceed = selectedRole !== null
+  // Employer check needs wallet or email (unless whitelisted)
+  const needsEmailForEmployer = !userEmail && !walletAddress && !isAdminWhitelisted
+
+  // Check employer access when user selects employer (uses wallet + email)
+  const checkEmployerAccess = useCallback(async () => {
+    // Whitelisted admins get automatic access
+    if (isAdminWhitelisted) {
+      setEmployerAccess({
+        hasAccess: true,
+        message: 'Admin access granted',
+      })
+      return
+    }
+
+    // Need either wallet or email to check
+    if (!walletAddress && !userEmail) {
+      return
+    }
+
+    setCheckingAccess(true)
+    try {
+      const res = await fetch('/api/user/check-employer-access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: userEmail,
+          walletAddress: walletAddress,
+        }),
+      })
+      const data = await res.json()
+      setEmployerAccess(data)
+    } catch (err) {
+      console.error('Error checking employer access:', err)
+      setEmployerAccess({
+        hasAccess: false,
+        message: 'Error checking access. Please try again.',
+      })
+    } finally {
+      setCheckingAccess(false)
+    }
+  }, [userEmail, walletAddress, isAdminWhitelisted])
+
+  // Check access when employer is selected - always verify fresh from API
+  useEffect(() => {
+    if (selectedRole === 'employer' && !checkingAccess) {
+      // Always re-check when employer is selected (don't rely on cached data)
+      checkEmployerAccess()
+    }
+    // Reset employer access when switching away from employer
+    if (selectedRole !== 'employer') {
+      setEmployerAccess(null)
+    }
+  }, [selectedRole]) // intentionally minimal deps - we want fresh check each time
+
+  // Can proceed: driver/developer always, employer only if has access
+  const canProceed = selectedRole !== null && (
+    selectedRole !== 'employer' || 
+    (employerAccess?.hasAccess === true) ||
+    isAdminWhitelisted
+  )
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -98,7 +130,8 @@ export default function RoleSelectionModal({
   const handleConfirm = () => {
     if (selectedRole && canProceed) {
       if (selectedRole === 'employer') {
-        onSelectRole(selectedRole, companyName.trim(), dotNumber.trim() || undefined)
+        // Pass company name from access check (not user input anymore)
+        onSelectRole(selectedRole, employerAccess?.companyName)
       } else {
         onSelectRole(selectedRole)
       }
@@ -354,24 +387,20 @@ export default function RoleSelectionModal({
 
             {/* Employer Option */}
             <button
-              onClick={() => !isEmployerDisabled && setSelectedRole('employer')}
-              disabled={isLoading || isEmployerDisabled}
+              onClick={() => setSelectedRole('employer')}
+              disabled={isLoading}
               className={`
                 group relative p-4 sm:p-6 rounded-lg sm:rounded-xl transition-all duration-300 text-left
                 ${
-                  isEmployerDisabled
+                  selectedRole === 'employer'
                     ? theme === 'dark'
-                      ? 'bg-gray-800/50 border-2 border-gray-700 cursor-not-allowed opacity-60'
-                      : 'bg-gray-100 border-2 border-gray-300 cursor-not-allowed opacity-60'
-                    : selectedRole === 'employer'
-                      ? theme === 'dark'
-                        ? 'bg-gradient-to-br from-brand-mint to-teal-600 border-2 border-brand-mint shadow-lg shadow-brand-mint/50'
-                        : 'bg-gradient-to-br from-brand-mint to-teal-600 border-2 border-brand-mint shadow-lg shadow-brand-mint/50'
-                      : theme === 'dark'
-                        ? 'bg-brand-sage-light/10 border-2 border-brand-mint/30 hover:border-brand-mint hover:bg-brand-sage-light/20'
-                        : 'bg-white border-2 border-brand-sage/30 hover:border-brand-mint hover:bg-brand-mint/5'
+                      ? 'bg-gradient-to-br from-brand-mint to-teal-600 border-2 border-brand-mint shadow-lg shadow-brand-mint/50'
+                      : 'bg-gradient-to-br from-brand-mint to-teal-600 border-2 border-brand-mint shadow-lg shadow-brand-mint/50'
+                    : theme === 'dark'
+                      ? 'bg-brand-sage-light/10 border-2 border-brand-mint/30 hover:border-brand-mint hover:bg-brand-sage-light/20'
+                      : 'bg-white border-2 border-brand-sage/30 hover:border-brand-mint hover:bg-brand-mint/5'
                 }
-                ${isLoading ? 'opacity-50 cursor-not-allowed' : !isEmployerDisabled ? 'cursor-pointer active:scale-[0.98] sm:hover:scale-[1.02]' : ''}
+                ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-[0.98] sm:hover:scale-[1.02]'}
               `}
             >
               {/* Icon */}
@@ -379,15 +408,11 @@ export default function RoleSelectionModal({
                 className={`
                 inline-flex items-center justify-center w-10 h-10 sm:w-14 sm:h-14 rounded-lg mb-3 sm:mb-4
                 ${
-                  isEmployerDisabled
-                    ? theme === 'dark'
-                      ? 'bg-gray-700'
-                      : 'bg-gray-200'
-                    : selectedRole === 'employer'
-                      ? 'bg-white/20'
-                      : theme === 'dark'
-                        ? 'bg-brand-mint/20 group-hover:bg-brand-mint/30'
-                        : 'bg-brand-mint/20 group-hover:bg-brand-mint/30'
+                  selectedRole === 'employer'
+                    ? 'bg-white/20'
+                    : theme === 'dark'
+                      ? 'bg-brand-mint/20 group-hover:bg-brand-mint/30'
+                      : 'bg-brand-mint/20 group-hover:bg-brand-mint/30'
                 }
               `}
               >
@@ -397,35 +422,25 @@ export default function RoleSelectionModal({
               {/* Content */}
               <h3
                 className={`text-lg sm:text-xl font-bold mb-1 sm:mb-2 ${
-                  isEmployerDisabled
-                    ? theme === 'dark'
-                      ? 'text-gray-500'
-                      : 'text-gray-400'
-                    : selectedRole === 'employer'
-                      ? 'text-white'
-                      : theme === 'dark'
-                        ? 'text-brand-cream'
-                        : 'text-gray-900'
+                  selectedRole === 'employer'
+                    ? 'text-white'
+                    : theme === 'dark'
+                      ? 'text-brand-cream'
+                      : 'text-gray-900'
                 }`}
               >
                 Employer
               </h3>
               <p
                 className={`text-xs sm:text-sm mb-3 sm:mb-4 ${
-                  isEmployerDisabled
-                    ? theme === 'dark'
-                      ? 'text-gray-600'
-                      : 'text-gray-400'
-                    : selectedRole === 'employer'
-                      ? 'text-white/90'
-                      : theme === 'dark'
-                        ? 'text-gray-400'
-                        : 'text-gray-600'
+                  selectedRole === 'employer'
+                    ? 'text-white/90'
+                    : theme === 'dark'
+                      ? 'text-gray-400'
+                      : 'text-gray-600'
                 }`}
               >
-                {isEmployerDisabled
-                  ? 'Requires company email'
-                  : 'Hire verified talent'}
+                Hire verified talent
               </p>
 
               {/* Features */}
@@ -441,30 +456,22 @@ export default function RoleSelectionModal({
                   >
                     <span
                       className={
-                        isEmployerDisabled
-                          ? theme === 'dark'
-                            ? 'text-gray-600'
-                            : 'text-gray-400'
-                          : selectedRole === 'employer'
-                            ? 'text-white/80'
-                            : theme === 'dark'
-                              ? 'text-brand-mint'
-                              : 'text-brand-mint'
+                        selectedRole === 'employer'
+                          ? 'text-white/80'
+                          : theme === 'dark'
+                            ? 'text-brand-mint'
+                            : 'text-brand-mint'
                       }
                     >
                       ✓
                     </span>
                     <span
                       className={
-                        isEmployerDisabled
-                          ? theme === 'dark'
-                            ? 'text-gray-600'
-                            : 'text-gray-400'
-                          : selectedRole === 'employer'
-                            ? 'text-white'
-                            : theme === 'dark'
-                              ? 'text-gray-300'
-                              : 'text-gray-700'
+                        selectedRole === 'employer'
+                          ? 'text-white'
+                          : theme === 'dark'
+                            ? 'text-gray-300'
+                            : 'text-gray-700'
                       }
                     >
                       {feature}
@@ -474,7 +481,7 @@ export default function RoleSelectionModal({
               </ul>
 
               {/* Selected Indicator */}
-              {selectedRole === 'employer' && !isEmployerDisabled && (
+              {selectedRole === 'employer' && (
                 <div className='absolute top-3 right-3 sm:top-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white flex items-center justify-center'>
                   <svg
                     className='w-4 h-4 sm:w-5 sm:h-5 text-brand-mint'
@@ -489,93 +496,106 @@ export default function RoleSelectionModal({
                   </svg>
                 </div>
               )}
-
-              {/* Disabled overlay badge */}
-              {isEmployerDisabled && (
-                <div
-                  className={`absolute top-3 right-3 sm:top-4 sm:right-4 px-2 py-1 rounded text-[10px] sm:text-xs font-medium ${
-                    theme === 'dark'
-                      ? 'bg-gray-700 text-gray-400'
-                      : 'bg-gray-200 text-gray-500'
-                  }`}
-                >
-                  Company email only
-                </div>
-              )}
             </button>
           </div>
 
-          {/* Employer Company Info - appears when employer is selected */}
-          {selectedRole === 'employer' && !isEmployerDisabled && (
+          {/* Employer Access Status - appears when employer is selected */}
+          {selectedRole === 'employer' && (
             <div className={`mx-4 sm:mx-8 mb-4 p-4 sm:p-6 rounded-xl border-2 transition-all duration-300 ${
               theme === 'dark'
-                ? 'bg-brand-mint/10 border-brand-mint/40'
-                : 'bg-brand-mint/5 border-brand-mint/30'
+                ? employerAccess?.hasAccess 
+                  ? 'bg-green-900/20 border-green-500/40'
+                  : 'bg-yellow-900/20 border-yellow-500/40'
+                : employerAccess?.hasAccess
+                  ? 'bg-green-50 border-green-300'
+                  : 'bg-yellow-50 border-yellow-300'
             }`}>
-              <h3 className={`text-base sm:text-lg font-semibold mb-1 ${
-                theme === 'dark' ? 'text-brand-cream' : 'text-gray-900'
-              }`}>
-                Tell us about your company
-              </h3>
-              <p className={`text-xs mb-3 ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-              }`}>
-                Already invited to join a team? Leave the name blank and you will be auto-joined.
-              </p>
-
-              <div className='space-y-3'>
-                {/* Company Name - Required for new employers, optional for invitees */}
-                <div>
-                  <label className={`block text-sm font-medium mb-1 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
-                    Company Name{' '}
-                    {isJoiningViaInvite
-                      ? <span className='text-gray-400 font-normal'>(optional — joining via invite)</span>
-                      : <span className='text-red-500'>*</span>
-                    }
-                  </label>
-                  <input
-                    type='text'
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder='e.g. PACE Drivers LLC'
-                    className={`w-full px-4 py-2.5 rounded-lg border transition-colors ${
-                      theme === 'dark'
-                        ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500 focus:border-brand-mint'
-                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
-                    } focus:outline-none focus:ring-2 focus:ring-brand-mint/30`}
-                    disabled={isLoading}
-                  />
+              {/* Loading state */}
+              {checkingAccess && (
+                <div className='flex items-center gap-3'>
+                  <Loader2 className={`w-5 h-5 animate-spin ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`} />
+                  <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+                    Checking employer access...
+                  </span>
                 </div>
+              )}
 
-                {/* DOT Number - Optional */}
-                <div>
-                  <label className={`block text-sm font-medium mb-1 ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
-                    DOT Number <span className='text-gray-400 font-normal'>(optional)</span>
-                  </label>
-                  <input
-                    type='text'
-                    value={dotNumber}
-                    onChange={(e) => setDotNumber(e.target.value)}
-                    placeholder='e.g. 1234567'
-                    className={`w-full px-4 py-2.5 rounded-lg border transition-colors ${
-                      theme === 'dark'
-                        ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500 focus:border-brand-mint'
-                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
-                    } focus:outline-none focus:ring-2 focus:ring-brand-mint/30`}
-                    disabled={isLoading}
-                  />
+              {/* Email required */}
+              {!checkingAccess && needsEmailForEmployer && (
+                <div className='flex items-start gap-3'>
+                  <AlertCircle className='w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0' />
+                  <div>
+                    <p className={`font-medium ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-700'}`}>
+                      Email required
+                    </p>
+                    <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Please connect with an email address to access employer features.
+                      Your email is used to verify company membership.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <p className={`mt-3 text-xs ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-              }`}>
-                You can add more details later in your company profile.
-              </p>
+              {/* Access granted */}
+              {!checkingAccess && !needsEmailForEmployer && employerAccess?.hasAccess && (
+                <div className='flex items-start gap-3'>
+                  <CheckCircle className='w-5 h-5 text-green-500 mt-0.5 flex-shrink-0' />
+                  <div>
+                    <p className={`font-medium ${theme === 'dark' ? 'text-green-400' : 'text-green-700'}`}>
+                      Access granted
+                    </p>
+                    {employerAccess.companyName && (
+                      <div className={`flex items-center gap-2 mt-2 px-3 py-2 rounded-lg ${
+                        theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+                      }`}>
+                        <Building2 className={`w-4 h-4 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`} />
+                        <span className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                          {employerAccess.companyName}
+                        </span>
+                        {employerAccess.accessType === 'owner' && (
+                          <span className='text-xs px-2 py-0.5 rounded-full bg-brand-mint/20 text-brand-mint'>
+                            Owner
+                          </span>
+                        )}
+                        {employerAccess.accessType === 'team_invite' && (
+                          <span className='text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400'>
+                            Invited as {employerAccess.role}
+                          </span>
+                        )}
+                        {employerAccess.accessType === 'team_member' && (
+                          <span className='text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400'>
+                            {employerAccess.role}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <p className={`text-sm mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {employerAccess.message}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Access denied */}
+              {!checkingAccess && !needsEmailForEmployer && employerAccess && !employerAccess.hasAccess && (
+                <div className='flex items-start gap-3'>
+                  <AlertCircle className='w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0' />
+                  <div>
+                    <p className={`font-medium ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-700'}`}>
+                      Invitation required
+                    </p>
+                    <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {employerAccess.message || 'Employer access requires an invitation from a company admin.'}
+                    </p>
+                    <p className={`text-sm mt-2 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                      If you are an employer, contact your company admin or reach out to{' '}
+                      <a href='mailto:support@stormchain.com' className='text-brand-mint hover:underline'>
+                        support@stormchain.com
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -625,9 +645,13 @@ export default function RoleSelectionModal({
                   Setting up...
                 </span>
               ) : selectedRole ? (
-                isJoiningViaInvite
-                  ? 'Continue (join via invite)'
-                  : `Continue as ${selectedRole === 'driver' ? 'Driver' : selectedRole === 'developer' ? 'Software Engineer' : 'Employer'}`
+                selectedRole === 'employer' && !canProceed
+                  ? checkingAccess 
+                    ? 'Checking access...'
+                    : 'Invitation required'
+                  : selectedRole === 'employer' && employerAccess?.accessType === 'team_invite'
+                    ? `Join ${employerAccess.companyName || 'company'}`
+                    : `Continue as ${selectedRole === 'driver' ? 'Driver' : selectedRole === 'developer' ? 'Software Engineer' : 'Employer'}`
               ) : (
                 'Select a role to continue'
               )}

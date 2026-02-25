@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { nanoid } from 'nanoid'
+import { randomUUID } from 'crypto'
+import { sendTeamInviteEmail } from '@/lib/send-team-invite-email'
 
 // Roles that can manage team members
 const TEAM_ADMIN_ROLES = ['owner', 'admin']
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
-    // Get all team members
+    // Get all team members (use user_id FK so PostgREST knows which users relation we want)
     const { data: members, error: membersError } = await supabase
       .from('company_members')
       .select(`
@@ -80,7 +81,7 @@ export async function GET(request: NextRequest) {
         accepted_at,
         is_active,
         created_at,
-        users (
+        users!company_members_user_id_fkey (
           id,
           name,
           email,
@@ -105,8 +106,9 @@ export async function GET(request: NextRequest) {
         id: member.id,
         userId: member.user_id,
         role: member.role,
-        name: memberUser?.name || 'Pending Invite',
+        name: memberUser?.name || null,
         email: memberUser?.email || member.invite_email,
+        walletAddress: memberUser?.wallet_address || null,
         isActive: member.is_active,
         isPending: !member.accepted_at,
         invitedAt: member.invited_at,
@@ -186,10 +188,10 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user
+    // Get user with name for invite email
     const { data: user } = await supabase
       .from('users')
-      .select('id')
+      .select('id, name, email')
       .ilike('wallet_address', walletAddress)
       .single()
 
@@ -271,8 +273,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate invite token
-    const inviteToken = nanoid(32)
+    // Generate invite token (must be UUID format for DB column)
+    const inviteToken = randomUUID()
 
     // Create the membership record
     const { data: newMember, error: insertError } = await supabase
@@ -300,9 +302,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // TODO: Send invite email via Resend
-    // For now, return the invite token (in production, this would be sent via email)
-    const inviteUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/invite/${inviteToken}`
+    // Get company name for email
+    const { data: company } = await supabase
+      .from('companies')
+      .select('company_name')
+      .eq('id', companyId)
+      .single()
+
+    // Build invite URL
+    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/invite/${inviteToken}`
+    const inviteExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+
+    // Send invite email (non-blocking)
+    sendTeamInviteEmail({
+      to: email,
+      inviterName: user.name || user.email || 'Your team admin',
+      companyName: company?.company_name || 'Your company',
+      role,
+      inviteToken,
+      expiresAt: inviteExpiresAt,
+    }).then(result => {
+      if (result.ok) {
+        console.log(`[TEAM] Invite email sent to ${email}`)
+      } else {
+        console.warn(`[TEAM] Failed to send invite email to ${email}:`, result.error)
+      }
+    })
 
     return NextResponse.json({
       success: true,
@@ -313,8 +338,7 @@ export async function POST(request: NextRequest) {
         role,
         isPending: true,
       },
-      // Remove in production - only for testing
-      inviteUrl,
+      inviteUrl, // Still return for testing/manual sharing
     })
 
   } catch (error) {

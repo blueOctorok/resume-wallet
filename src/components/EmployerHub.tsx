@@ -42,6 +42,7 @@ import {
   ChevronDown,
   RefreshCw,
 } from 'lucide-react'
+import { getDisplayRole } from '@/lib/employer-roles'
 
 // ============================================================
 // TYPES
@@ -155,6 +156,8 @@ interface HubData {
   isNewUser: boolean
   needsCompanySetup?: boolean
   company: HubCompany | null
+  /** Current user's role in this company (owner, admin, recruiter, viewer, etc.) */
+  userRole?: string | null
   jobPostings: HubJobPosting[]
   applicants: HubApplicant[]
   mvrOrders: HubMvrOrder[]
@@ -459,12 +462,26 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             }`} />
           </div>
           <div className="flex-1">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <h1 className={`text-2xl font-bold ${
                 theme === 'dark' ? 'text-white' : 'text-gray-900'
               }`}>
                 {data.company?.name || 'Your Company'}
               </h1>
+              {/* Role badge: applied per wallet in this company; only admins can change it */}
+              {data.userRole && (
+                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                  data.userRole === 'owner'
+                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40'
+                    : data.userRole === 'admin'
+                      ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
+                      : data.userRole === 'viewer'
+                        ? 'bg-gray-500/20 text-gray-400 border border-gray-500/40'
+                        : 'bg-teal-500/20 text-teal-400 border border-teal-500/40'
+                }`}>
+                  {getDisplayRole(data.userRole)}
+                </span>
+              )}
               {/* Manual refresh button */}
               <button
                 onClick={triggerRefresh}
@@ -591,6 +608,17 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         >
           <FileText className="w-4 h-4" />
           Reports
+        </button>
+        <button
+          onClick={() => onNavigate('team')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
+            theme === 'dark'
+              ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+              : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          <Shield className="w-4 h-4" />
+          Team
         </button>
       </div>
 
