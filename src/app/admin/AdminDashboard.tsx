@@ -250,6 +250,20 @@ interface Profile {
   fullName: string
 }
 
+interface CompanyMember {
+  id: string
+  userId: string | null
+  role: string
+  isActive: boolean
+  isPending: boolean
+  invitedAt: string
+  acceptedAt: string | null
+  inviteEmail: string | null
+  name: string | null
+  email: string | null
+  walletAddress: string | null
+}
+
 interface Resume {
   id: string
   user_id: string
@@ -342,6 +356,12 @@ function AdminDashboardContent() {
 
   // User detail view
   const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null)
+
+  // Company team members expansion
+  const [expandedCompanyId, setExpandedCompanyId] = useState<string | null>(null)
+  const [companyMembers, setCompanyMembers] = useState<CompanyMember[]>([])
+  const [loadingMembers, setLoadingMembers] = useState(false)
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null)
   const [loadingUserDetail, setLoadingUserDetail] = useState(false)
 
   // MVR detail view
@@ -426,6 +446,55 @@ function AdminDashboardContent() {
       setIsAdmin(null)
     }
   }, [walletAddress])
+
+  // Fetch company members for expanded view
+  const fetchCompanyMembers = useCallback(async (companyId: string) => {
+    if (!walletAddress) return
+    
+    setLoadingMembers(true)
+    try {
+      const res = await fetch(`/api/admin/companies/${companyId}/members`, {
+        headers: { 'x-wallet-address': walletAddress },
+      })
+      const data = await res.json()
+      if (data.success) {
+        setCompanyMembers(data.members)
+      }
+    } catch (err) {
+      console.error('Failed to fetch company members:', err)
+    } finally {
+      setLoadingMembers(false)
+    }
+  }, [walletAddress])
+
+  // Remove a member from a company (admin action)
+  const handleRemoveCompanyMember = useCallback(async (companyId: string, memberId: string, memberName: string) => {
+    if (!walletAddress) return
+    
+    const confirmed = confirm(`Remove "${memberName || 'this member'}" from the company?\n\nThey will lose access to company data.`)
+    if (!confirmed) return
+    
+    setRemovingMemberId(memberId)
+    try {
+      const res = await fetch(`/api/admin/companies/${companyId}/members/${memberId}`, {
+        method: 'DELETE',
+        headers: { 'x-wallet-address': walletAddress },
+      })
+      const data = await res.json()
+      if (data.success) {
+        // Refresh members list
+        fetchCompanyMembers(companyId)
+        // Refresh main company data to update counts
+        fetchData()
+      } else {
+        alert('Failed to remove member: ' + (data.error || 'Unknown error'))
+      }
+    } catch (err) {
+      alert('Failed to remove member: Network error')
+    } finally {
+      setRemovingMemberId(null)
+    }
+  }, [walletAddress, fetchCompanyMembers])
 
   // Fetch data based on active tab
   const fetchData = useCallback(async () => {
@@ -983,12 +1052,30 @@ function AdminDashboardContent() {
                                 {company.owner?.name || company.ownerEmail || 'No owner assigned'}
                               </span>
                             </div>
-                            {company.teamMemberCount > 0 && (
-                              <div className='flex items-center gap-2 mt-1'>
-                                <Users className='w-4 h-4' />
-                                <span>{company.teamMemberCount} team member{company.teamMemberCount > 1 ? 's' : ''}</span>
-                              </div>
-                            )}
+                            {/* Clickable team member count */}
+                            <button
+                              onClick={() => {
+                                if (expandedCompanyId === company.id) {
+                                  setExpandedCompanyId(null)
+                                  setCompanyMembers([])
+                                } else {
+                                  setExpandedCompanyId(company.id)
+                                  fetchCompanyMembers(company.id)
+                                }
+                              }}
+                              className={`flex items-center gap-2 mt-1 hover:underline ${
+                                expandedCompanyId === company.id ? 'text-blue-500' : ''
+                              }`}
+                            >
+                              <Users className='w-4 h-4' />
+                              <span>
+                                {company.teamMemberCount} team member{company.teamMemberCount !== 1 ? 's' : ''}
+                                {' '}
+                                <span className='text-xs'>
+                                  {expandedCompanyId === company.id ? '▲' : '▼'}
+                                </span>
+                              </span>
+                            </button>
                           </div>
 
                           {/* Location */}
@@ -1112,6 +1199,79 @@ function AdminDashboardContent() {
                             <p className='mt-3 text-xs text-gray-500 italic line-clamp-2'>
                               {company.adminNotes}
                             </p>
+                          )}
+
+                          {/* Expanded Team Members */}
+                          {expandedCompanyId === company.id && (
+                            <div className='mt-4 pt-4 border-t border-gray-200 dark:border-gray-700'>
+                              <h4 className={`text-sm font-medium mb-3 ${
+                                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                              }`}>
+                                Team Members
+                              </h4>
+                              {loadingMembers ? (
+                                <div className='flex items-center justify-center py-4'>
+                                  <Loader2 className='w-5 h-5 animate-spin text-gray-400' />
+                                </div>
+                              ) : companyMembers.length === 0 ? (
+                                <p className='text-sm text-gray-500'>No team members</p>
+                              ) : (
+                                <div className='space-y-2'>
+                                  {companyMembers.map(member => (
+                                    <div
+                                      key={member.id}
+                                      className={`flex items-center justify-between p-2 rounded-lg ${
+                                        theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100'
+                                      }`}
+                                    >
+                                      <div className='flex-1 min-w-0'>
+                                        <div className='flex items-center gap-2'>
+                                          <span className={`text-sm font-medium truncate ${
+                                            theme === 'dark' ? 'text-white' : 'text-gray-900'
+                                          }`}>
+                                            {member.name || member.email || 'Unknown'}
+                                          </span>
+                                          <span className={`px-1.5 py-0.5 rounded text-xs ${
+                                            member.role === 'owner'
+                                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                                              : member.role === 'admin'
+                                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                                : 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
+                                          }`}>
+                                            {member.role}
+                                          </span>
+                                          {member.isPending && (
+                                            <span className='px-1.5 py-0.5 rounded text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'>
+                                              pending
+                                            </span>
+                                          )}
+                                        </div>
+                                        {member.walletAddress && (
+                                          <p className='text-xs text-gray-500 truncate'>
+                                            {member.walletAddress.slice(0, 6)}...{member.walletAddress.slice(-4)}
+                                          </p>
+                                        )}
+                                        {member.email && member.email !== member.name && (
+                                          <p className='text-xs text-gray-500 truncate'>{member.email}</p>
+                                        )}
+                                      </div>
+                                      <button
+                                        onClick={() => handleRemoveCompanyMember(company.id, member.id, member.name || member.email || '')}
+                                        disabled={removingMemberId === member.id}
+                                        className='p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 disabled:opacity-50'
+                                        title='Remove member'
+                                      >
+                                        {removingMemberId === member.id ? (
+                                          <Loader2 className='w-4 h-4 animate-spin' />
+                                        ) : (
+                                          <Trash2 className='w-4 h-4' />
+                                        )}
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                       ))}

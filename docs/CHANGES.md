@@ -2,6 +2,55 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🗑️ **Admin & Employer Member Removal Features** (February 2026)
+
+### Overview
+
+Added the ability to remove team members from companies at both the admin and employer levels.
+
+### Problem
+
+- Recruiters and team members come and go, but there was no way to revoke their access
+- Admin had to manually manipulate the database to fix membership issues
+- Company owners/admins couldn't manage their own teams effectively
+
+### Solution
+
+#### 1. Central Admin Panel - Member Management
+
+The admin can now click on the team member count for any company to expand and view all members. Each member can be removed with a single click.
+
+**New API Endpoints:**
+- `GET /api/admin/companies/[id]/members` - List all members of a company
+- `DELETE /api/admin/companies/[id]/members/[memberId]` - Remove a member (admin action)
+
+**AdminDashboard Changes:**
+- Team member count is now clickable (shows ▼ indicator)
+- Clicking expands an inline list of all members
+- Each member shows: name, role badge (owner/admin/etc), pending status, wallet, email
+- Red trash icon to remove any member
+
+#### 2. Employer Hub - Team Management (Already Existed)
+
+Company owners and admins already have the ability to remove team members via the Team Management interface. The delete functionality uses:
+
+- `DELETE /api/employer/team/[memberId]` - Remove a member (requires owner/admin role)
+
+**Safeguards:**
+- Cannot remove yourself if you're the only owner
+- Only owners can remove other owners
+- Admins can remove non-owner members
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/app/api/admin/companies/[id]/members/route.ts` | NEW - GET endpoint to list company members |
+| `src/app/api/admin/companies/[id]/members/[memberId]/route.ts` | NEW - DELETE endpoint to remove members |
+| `src/app/admin/AdminDashboard.tsx` | Added expandable team member list with remove buttons |
+
+---
+
 ## 🧩 **UserIdentity Reusable Component** (February 2026)
 
 ### Overview

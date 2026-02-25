@@ -106,12 +106,15 @@ export async function POST(request: NextRequest) {
         .eq('id', user.id)
     }
 
-    // Check if user already has a membership in any company
+    // Check if user already has a DIFFERENT accepted membership
+    // (exclude this invite, and only count fully accepted ones)
     const { data: existingMembership } = await supabase
       .from('company_members')
       .select('id, company_id')
       .eq('user_id', user.id)
       .eq('is_active', true)
+      .not('accepted_at', 'is', null) // Only accepted memberships, not pending invites
+      .neq('id', invite.id) // Exclude this invite (in case user_id was already set)
       .maybeSingle()
 
     if (existingMembership) {
