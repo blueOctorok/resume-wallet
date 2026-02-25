@@ -420,7 +420,7 @@ export async function PATCH(
 /**
  * DELETE /api/admin/companies/[id]
  * 
- * Deletes a company. Use with caution!
+ * Deletes a company and all related data. Use with caution!
  */
 export async function DELETE(
   request: NextRequest,
@@ -452,7 +452,28 @@ export async function DELETE(
       )
     }
 
-    // Delete company (cascades to company_members, job_postings, etc.)
+    // Explicitly delete related records first (in case FKs don't cascade)
+    // Order matters: children before parent
+
+    // 1. Delete company_members (team memberships and pending invites)
+    await supabase.from('company_members').delete().eq('company_id', id)
+
+    // 2. Delete job_postings applications first, then jobs
+    const { data: jobIds } = await supabase
+      .from('job_postings')
+      .select('id')
+      .eq('company_id', id)
+    
+    if (jobIds && jobIds.length > 0) {
+      const ids = jobIds.map(j => j.id)
+      await supabase.from('applications').delete().in('job_posting_id', ids)
+      await supabase.from('job_postings').delete().eq('company_id', id)
+    }
+
+    // 3. Delete status history
+    await supabase.from('company_status_history').delete().eq('company_id', id)
+
+    // 4. Finally delete the company
     const { error: deleteError } = await supabase
       .from('companies')
       .delete()
@@ -461,10 +482,12 @@ export async function DELETE(
     if (deleteError) {
       console.error('[ADMIN COMPANIES] Delete error:', deleteError)
       return NextResponse.json(
-        { error: 'Failed to delete company' },
+        { error: 'Failed to delete company: ' + deleteError.message },
         { status: 500 }
       )
     }
+
+    console.log(`[ADMIN COMPANIES] Deleted company: ${company.company_name} (${id})`)
 
     return NextResponse.json({
       success: true,

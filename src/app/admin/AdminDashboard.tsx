@@ -1078,6 +1078,33 @@ function AdminDashboardContent() {
                             >
                               Notes
                             </button>
+                            <button
+                              onClick={async () => {
+                                const confirmed = confirm(
+                                  `DELETE "${company.name}"?\n\nThis will permanently remove the company and all associated:\n- Team members\n- Job postings\n- Applications\n\nThis cannot be undone.`
+                                )
+                                if (confirmed) {
+                                  try {
+                                    const res = await fetch(`/api/admin/companies/${company.id}`, {
+                                      method: 'DELETE',
+                                      headers: { 'x-wallet-address': walletAddress || '' },
+                                    })
+                                    const data = await res.json()
+                                    if (data.success) {
+                                      fetchData()
+                                    } else {
+                                      alert('Delete failed: ' + (data.error || 'Unknown error'))
+                                    }
+                                  } catch (err) {
+                                    alert('Delete failed: Network error')
+                                  }
+                                }
+                              }}
+                              className='px-3 py-1.5 rounded-lg text-sm font-medium bg-red-500/20 text-red-500 hover:bg-red-500/30 border border-red-500/30'
+                              title='Delete company permanently'
+                            >
+                              Delete
+                            </button>
                           </div>
 
                           {/* Admin Notes Preview */}
