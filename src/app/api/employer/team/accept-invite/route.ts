@@ -29,15 +29,30 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user
-    const { data: user } = await supabase
+    // Get or create user — new invitees may have a wallet from Alchemy but no users row yet
+    let { data: user } = await supabase
       .from('users')
       .select('id, email')
       .ilike('wallet_address', walletAddress)
-      .single()
+      .maybeSingle()
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      // First time on platform via invite link — create their record
+      const { data: newUser, error: createError } = await supabase
+        .from('users')
+        .insert({
+          wallet_address: walletAddress.toLowerCase(),
+          role: 'employer',
+        })
+        .select('id, email')
+        .single()
+
+      if (createError || !newUser) {
+        console.error('[ACCEPT INVITE] Failed to create user:', createError)
+        return NextResponse.json({ error: 'Failed to create user account' }, { status: 500 })
+      }
+
+      user = newUser
     }
 
     // Find the pending invite
@@ -73,12 +88,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify email matches (case-insensitive)
-    if (user.email?.toLowerCase() !== invite.invite_email?.toLowerCase()) {
+    // Verify email matches (case-insensitive).
+    // If the user has no email stored yet (first sign-in via invite link), we trust the token
+    // as proof they own the inbox — then save their email so future checks work.
+    if (user.email && user.email.toLowerCase() !== invite.invite_email?.toLowerCase()) {
       return NextResponse.json(
         { error: 'This invitation was sent to a different email address. Please log in with the invited email.' },
         { status: 403 }
       )
+    }
+
+    // If user has no email yet, stamp it from the invite (token = proof of inbox ownership)
+    if (!user.email && invite.invite_email) {
+      await supabase
+        .from('users')
+        .update({ email: invite.invite_email.toLowerCase() })
+        .eq('id', user.id)
     }
 
     // Check if user already has a membership in any company
