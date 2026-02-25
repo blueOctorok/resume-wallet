@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useAuthStore } from '@/stores'
+import { useAccount, useUser } from '@account-kit/react'
 import {
   Building2,
   Shield,
@@ -12,10 +12,11 @@ import {
   AlertCircle,
   Clock,
   UserCheck,
-  LogIn,
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
+import { getDisplayRole } from '@/lib/employer-roles'
 
+// AlchemyAuth renders the sign-in UI (email OTP, social, etc.)
 const AlchemyAuth = dynamic(
   () => import('@/components/AlchemyAuth').then((mod) => mod.default),
   { ssr: false }
@@ -38,28 +39,28 @@ export default function InvitePage() {
   const router = useRouter()
   const token = params.token as string
   const { theme } = useTheme()
-  const { walletAddress, user } = useAuthStore()
+
+  // Use Alchemy hooks directly — auth store is only populated via page.tsx flow
+  const account = useAccount({ type: 'LightAccount' })
+  const alchemyUser = useUser()
+
+  // The connected wallet address from Alchemy (null if not signed in)
+  const connectedWallet = account?.address ?? null
+  const connectedEmail = alchemyUser?.email ?? null
 
   const [invite, setInvite] = useState<InviteData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [accepting, setAccepting] = useState(false)
   const [accepted, setAccepted] = useState(false)
-  const [showSignIn, setShowSignIn] = useState(false)
 
-  // Fetch invite details
   const fetchInvite = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
-
       const res = await fetch(`/api/employer/team/accept-invite?token=${token}`)
       const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to load invitation')
-      }
-
+      if (!res.ok) throw new Error(data.error || 'Failed to load invitation')
       setInvite(data.invite)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load invitation')
@@ -69,25 +70,11 @@ export default function InvitePage() {
   }, [token])
 
   useEffect(() => {
-    if (token) {
-      fetchInvite()
-    }
+    if (token) fetchInvite()
   }, [token, fetchInvite])
 
-  // Once wallet is available after sign-in, close the sign-in view so "Accept Invitation" shows
-  // (Auth store updates async, so we close when walletAddress appears instead of in the callback)
-  useEffect(() => {
-    if (showSignIn && walletAddress) {
-      setShowSignIn(false)
-    }
-  }, [showSignIn, walletAddress])
-
-  // Accept invitation
   const handleAccept = async () => {
-    if (!walletAddress) {
-      setShowSignIn(true)
-      return
-    }
+    if (!connectedWallet) return
 
     setAccepting(true)
     setError(null)
@@ -97,33 +84,21 @@ export default function InvitePage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
+          'x-wallet-address': connectedWallet,
         },
         body: JSON.stringify({ inviteToken: token }),
       })
 
       const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to accept invitation')
-      }
+      if (!res.ok) throw new Error(data.error || 'Failed to accept invitation')
 
       setAccepted(true)
-
-      // Redirect to employer hub after a short delay
-      setTimeout(() => {
-        router.push('/')
-      }, 2000)
+      setTimeout(() => router.push('/'), 2000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to accept invitation')
     } finally {
       setAccepting(false)
     }
-  }
-
-  // Handle successful sign in - store updates async; useEffect above closes modal when walletAddress appears
-  const handleSignInSuccess = () => {
-    // No-op here; closing sign-in view is done in useEffect when walletAddress is set
   }
 
   const cardClass = `rounded-2xl border shadow-xl ${
@@ -132,14 +107,13 @@ export default function InvitePage() {
       : 'bg-white/90 border-gray-200'
   }`
 
-  // Loading state
+  const bg = theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
+
   if (loading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center p-4 ${
-        theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
-      }`}>
+      <div className={`min-h-screen flex items-center justify-center p-4 ${bg}`}>
         <div className={`${cardClass} p-8 text-center max-w-md w-full`}>
-          <Loader2 className={`w-12 h-12 animate-spin mx-auto ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`} />
+          <Loader2 className='w-12 h-12 animate-spin mx-auto text-brand-mint' />
           <p className={`mt-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
             Loading invitation...
           </p>
@@ -148,23 +122,18 @@ export default function InvitePage() {
     )
   }
 
-  // Error state
   if (error && !invite) {
     return (
-      <div className={`min-h-screen flex items-center justify-center p-4 ${
-        theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
-      }`}>
+      <div className={`min-h-screen flex items-center justify-center p-4 ${bg}`}>
         <div className={`${cardClass} p-8 text-center max-w-md w-full`}>
           <AlertCircle className='w-16 h-16 text-red-500 mx-auto' />
           <h1 className={`text-2xl font-bold mt-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
             Invalid Invitation
           </h1>
-          <p className={`mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            {error}
-          </p>
+          <p className={`mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{error}</p>
           <button
             onClick={() => router.push('/')}
-            className='mt-6 px-6 py-2.5 rounded-lg font-medium bg-brand-mint text-white hover:bg-brand-mint/90'
+            className='mt-6 px-6 py-2.5 rounded-lg font-medium bg-indigo-600 text-white hover:bg-indigo-700'
           >
             Go to Home
           </button>
@@ -173,23 +142,20 @@ export default function InvitePage() {
     )
   }
 
-  // Expired invite
   if (invite?.isExpired) {
     return (
-      <div className={`min-h-screen flex items-center justify-center p-4 ${
-        theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
-      }`}>
+      <div className={`min-h-screen flex items-center justify-center p-4 ${bg}`}>
         <div className={`${cardClass} p-8 text-center max-w-md w-full`}>
           <Clock className='w-16 h-16 text-yellow-500 mx-auto' />
           <h1 className={`text-2xl font-bold mt-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
             Invitation Expired
           </h1>
           <p className={`mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            This invitation has expired. Please ask your team admin to send a new one.
+            This invitation has expired. Please ask your company admin to send a new one.
           </p>
           <button
             onClick={() => router.push('/')}
-            className='mt-6 px-6 py-2.5 rounded-lg font-medium bg-brand-mint text-white hover:bg-brand-mint/90'
+            className='mt-6 px-6 py-2.5 rounded-lg font-medium bg-indigo-600 text-white hover:bg-indigo-700'
           >
             Go to Home
           </button>
@@ -198,101 +164,39 @@ export default function InvitePage() {
     )
   }
 
-  // Accepted state
   if (accepted) {
     return (
-      <div className={`min-h-screen flex items-center justify-center p-4 ${
-        theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
-      }`}>
+      <div className={`min-h-screen flex items-center justify-center p-4 ${bg}`}>
         <div className={`${cardClass} p-8 text-center max-w-md w-full`}>
           <CheckCircle className='w-16 h-16 text-green-500 mx-auto' />
           <h1 className={`text-2xl font-bold mt-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
             Welcome to the Team!
           </h1>
           <p className={`mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            You have joined {invite?.company.name} as {invite?.role}. Redirecting...
+            You have joined {invite?.company.name} as {getDisplayRole(invite?.role ?? null)}. Redirecting...
           </p>
         </div>
       </div>
     )
   }
 
-  // Sign in modal - high z-index so it appears above any Account Kit UI
-  if (showSignIn) {
-    return (
-      <div className={`min-h-screen flex items-center justify-center p-4 relative z-[100] ${
-        theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
-      }`}>
-        <div className={`${cardClass} p-8 max-w-md w-full relative z-[100]`}>
-          <h1 className={`text-2xl font-bold text-center mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-            Sign In to Accept Invite
-          </h1>
-          <p className={`text-center mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            Connect your wallet to join {invite?.company.name}
-          </p>
-          <AlchemyAuth
-            onAuthSuccess={handleSignInSuccess}
-          />
-          {/* When already connected, show primary action to accept invite (don't rely on modal auto-close) */}
-          {walletAddress && (
-            <div className='mt-6 pt-6 border-t border-gray-600/50'>
-              <p className={`text-center text-sm mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                You&apos;re connected. Accept the invitation to join {invite?.company.name}.
-              </p>
-              <button
-                type='button'
-                onClick={handleAccept}
-                disabled={accepting}
-                className='w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed'
-              >
-                {accepting ? (
-                  <>
-                    <Loader2 className='w-5 h-5 animate-spin' />
-                    Accepting...
-                  </>
-                ) : (
-                  <>
-                    <UserCheck className='w-5 h-5' />
-                    Accept Invitation
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-          <button
-            onClick={() => setShowSignIn(false)}
-            className={`w-full mt-4 px-4 py-2 rounded-lg font-medium ${
-              theme === 'dark'
-                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    )
-  }
+  // Email mismatch: the connected email doesn't match the invite email
+  const emailMismatch = connectedEmail && invite?.email &&
+    connectedEmail.toLowerCase() !== invite.email.toLowerCase()
 
-  // Main invite view - high z-index so card and button sit above Account Kit / provider overlays
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 relative z-[100] ${
-      theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
-    }`}>
-      <div className={`${cardClass} p-8 max-w-md w-full relative z-[100]`}>
-        {/* Company info */}
+    <div className={`min-h-screen flex items-center justify-center p-4 ${bg}`}>
+      <div className={`${cardClass} p-8 max-w-md w-full`}>
+
+        {/* Company header */}
         <div className='text-center mb-6'>
           <div className={`w-20 h-20 rounded-2xl mx-auto flex items-center justify-center ${
-            theme === 'dark' ? 'bg-brand-mint/20' : 'bg-brand-sage/20'
+            theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-100'
           }`}>
             {invite?.company.logoUrl ? (
-              <img
-                src={invite.company.logoUrl}
-                alt={invite.company.name}
-                className='w-16 h-16 rounded-xl object-cover'
-              />
+              <img src={invite.company.logoUrl} alt={invite.company.name} className='w-16 h-16 rounded-xl object-cover' />
             ) : (
-              <Building2 className={`w-10 h-10 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`} />
+              <Building2 className='w-10 h-10 text-indigo-400' />
             )}
           </div>
           <h1 className={`text-2xl font-bold mt-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
@@ -307,83 +211,93 @@ export default function InvitePage() {
         </div>
 
         {/* Invite details */}
-        <div className={`rounded-xl p-4 mb-6 ${
-          theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100'
-        }`}>
-          <div className='space-y-3'>
-            <div className='flex justify-between'>
-              <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
-                Role
-              </span>
-              <span className={`font-medium capitalize ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                {invite?.role}
-              </span>
-            </div>
-            <div className='flex justify-between'>
-              <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
-                Invited Email
-              </span>
-              <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                {invite?.email}
-              </span>
-            </div>
-            <div className='flex justify-between'>
-              <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
-                Expires
-              </span>
-              <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                {invite?.expiresAt ? new Date(invite.expiresAt).toLocaleDateString() : '-'}
-              </span>
-            </div>
+        <div className={`rounded-xl p-4 mb-6 space-y-2 ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+          <div className='flex justify-between'>
+            <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>Role</span>
+            <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              {getDisplayRole(invite?.role ?? null)}
+            </span>
+          </div>
+          <div className='flex justify-between'>
+            <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>Invited Email</span>
+            <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              {invite?.email}
+            </span>
+          </div>
+          <div className='flex justify-between'>
+            <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>Expires</span>
+            <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              {invite?.expiresAt ? new Date(invite.expiresAt).toLocaleDateString() : '-'}
+            </span>
           </div>
         </div>
 
         {/* Error message */}
         {error && (
-          <div className='mb-4 p-3 rounded-lg bg-red-500/20 text-red-400 text-sm'>
+          <div className='mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-sm'>
             {error}
           </div>
         )}
 
-        {/* Email mismatch warning */}
-        {walletAddress && user?.email && invite?.email && 
-          user.email.toLowerCase() !== invite.email.toLowerCase() && (
-          <div className='mb-4 p-3 rounded-lg bg-yellow-500/20 text-yellow-400 text-sm'>
-            <AlertCircle className='w-4 h-4 inline mr-2' />
-            This invite was sent to {invite.email}. You are logged in with {user.email}.
-            Please log in with the correct account.
+        {/* State: not signed in → show auth UI */}
+        {!connectedWallet && (
+          <div>
+            <p className={`text-center text-sm mb-4 font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+              Sign in with the email address this invite was sent to:
+              <span className='block mt-1 text-indigo-400 font-semibold'>{invite?.email}</span>
+            </p>
+            <AlchemyAuth />
           </div>
         )}
 
-        {/* Action button */}
-        {walletAddress ? (
-          <button
-            onClick={handleAccept}
-            disabled={accepting}
-            className='w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold bg-brand-mint text-white hover:bg-brand-mint/90 disabled:opacity-50 disabled:cursor-not-allowed'
-          >
-            {accepting ? (
-              <>
-                <Loader2 className='w-5 h-5 animate-spin' />
-                Accepting...
-              </>
-            ) : (
-              <>
-                <UserCheck className='w-5 h-5' />
-                Accept Invitation
-              </>
-            )}
-          </button>
-        ) : (
-          <button
-            type='button'
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSignIn(true) }}
-            className='w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold bg-brand-mint text-white hover:bg-brand-mint/90 cursor-pointer min-h-[48px] relative z-[110] touch-manipulation select-none'
-            aria-label='Connect wallet to accept invitation'
-          >
-            <LogIn className='w-5 h-5' />
-            Connect Wallet to Accept
-          </button>
+        {/* State: signed in with wrong email → show warning */}
+        {connectedWallet && emailMismatch && (
+          <div className='p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30 mb-4'>
+            <div className='flex items-start gap-3'>
+              <AlertCircle className='w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5' />
+              <div>
+                <p className={`font-medium text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                  Wrong account signed in
+                </p>
+                <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                  This invite was sent to <strong>{invite?.email}</strong> but you&apos;re signed in as <strong>{connectedEmail}</strong>.
+                  Sign out and use the invited email to continue.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* State: signed in with correct email → show Accept button */}
+        {connectedWallet && !emailMismatch && (
+          <div>
+            <div className={`flex items-center gap-2 p-3 rounded-xl mb-4 ${
+              theme === 'dark' ? 'bg-green-500/10 border border-green-500/30' : 'bg-green-50 border border-green-200'
+            }`}>
+              <CheckCircle className='w-4 h-4 text-green-500 flex-shrink-0' />
+              <p className='text-sm text-green-500 font-medium'>
+                Signed in as {connectedEmail || connectedWallet.slice(0, 6) + '...' + connectedWallet.slice(-4)}
+              </p>
+            </div>
+            <button
+              type='button'
+              onClick={handleAccept}
+              disabled={accepting}
+              className='w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+            >
+              {accepting ? (
+                <>
+                  <Loader2 className='w-5 h-5 animate-spin' />
+                  Accepting...
+                </>
+              ) : (
+                <>
+                  <UserCheck className='w-5 h-5' />
+                  Accept &amp; Join {invite?.company.name}
+                </>
+              )}
+            </button>
+          </div>
         )}
 
         <p className={`text-center text-xs mt-4 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
