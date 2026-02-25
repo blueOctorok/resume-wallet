@@ -74,6 +74,14 @@ export default function InvitePage() {
     }
   }, [token, fetchInvite])
 
+  // Once wallet is available after sign-in, close the sign-in view so "Accept Invitation" shows
+  // (Auth store updates async, so we close when walletAddress appears instead of in the callback)
+  useEffect(() => {
+    if (showSignIn && walletAddress) {
+      setShowSignIn(false)
+    }
+  }, [showSignIn, walletAddress])
+
   // Accept invitation
   const handleAccept = async () => {
     if (!walletAddress) {
@@ -113,10 +121,9 @@ export default function InvitePage() {
     }
   }
 
-  // Handle successful sign in
+  // Handle successful sign in - store updates async; useEffect above closes modal when walletAddress appears
   const handleSignInSuccess = () => {
-    setShowSignIn(false)
-    // Re-render will show the accept button now that user is logged in
+    // No-op here; closing sign-in view is done in useEffect when walletAddress is set
   }
 
   const cardClass = `rounded-2xl border shadow-xl ${
