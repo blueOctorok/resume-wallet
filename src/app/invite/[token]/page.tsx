@@ -16,7 +16,6 @@ import {
 import dynamic from 'next/dynamic'
 import { getDisplayRole } from '@/lib/employer-roles'
 
-// AlchemyAuth renders the sign-in UI (email OTP, social, etc.)
 const AlchemyAuth = dynamic(
   () => import('@/components/AlchemyAuth').then((mod) => mod.default),
   { ssr: false }
@@ -34,24 +33,157 @@ interface InviteData {
   }
 }
 
-export default function InvitePage() {
-  const params = useParams()
-  const router = useRouter()
-  const token = params.token as string
-  const { theme } = useTheme()
+interface InviteActionsProps {
+  invite: InviteData
+  token: string
+  onAccepted: () => void
+  onError: (msg: string) => void
+}
 
-  // Use Alchemy hooks directly — auth store is only populated via page.tsx flow
+/**
+ * Separate component so Alchemy hooks only run inside the mounted provider.
+ * This is dynamically imported with ssr:false below to avoid the
+ * "must be used within AlchemyAccountProvider" error during SSR / pre-mount.
+ */
+function InviteActions({ invite, token, onAccepted, onError }: InviteActionsProps) {
+  const { theme } = useTheme()
   const account = useAccount({ type: 'LightAccount' })
   const alchemyUser = useUser()
+  const router = useRouter()
 
-  // The connected wallet address from Alchemy (null if not signed in)
   const connectedWallet = account?.address ?? null
   const connectedEmail = alchemyUser?.email ?? null
+
+  const [accepting, setAccepting] = useState(false)
+  const [localError, setLocalError] = useState<string | null>(null)
+
+  const emailMismatch = !!(connectedEmail && invite.email &&
+    connectedEmail.toLowerCase() !== invite.email.toLowerCase())
+
+  const handleAccept = async () => {
+    if (!connectedWallet) return
+    setAccepting(true)
+    setLocalError(null)
+
+    try {
+      const res = await fetch('/api/employer/team/accept-invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': connectedWallet,
+        },
+        body: JSON.stringify({ inviteToken: token }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to accept invitation')
+
+      onAccepted()
+      setTimeout(() => router.push('/'), 2000)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to accept invitation'
+      setLocalError(msg)
+      onError(msg)
+    } finally {
+      setAccepting(false)
+    }
+  }
+
+  // Not signed in — show Alchemy auth UI with a prompt
+  if (!connectedWallet) {
+    return (
+      <div>
+        <p className={`text-center text-sm mb-4 font-medium ${
+          theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+        }`}>
+          Sign in with the email this invite was sent to:
+          <span className='block mt-1 text-indigo-400 font-semibold'>{invite.email}</span>
+        </p>
+        <AlchemyAuth />
+      </div>
+    )
+  }
+
+  // Signed in with the wrong email
+  if (emailMismatch) {
+    return (
+      <div className='p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30'>
+        <div className='flex items-start gap-3'>
+          <AlertCircle className='w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5' />
+          <div>
+            <p className={`font-medium text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              Wrong account
+            </p>
+            <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              This invite was sent to <strong>{invite.email}</strong> but you&apos;re signed in as{' '}
+              <strong>{connectedEmail}</strong>. Sign out and use the invited email to continue.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Correct email — show accept button
+  return (
+    <div className='space-y-4'>
+      <div className={`flex items-center gap-2 p-3 rounded-xl ${
+        theme === 'dark'
+          ? 'bg-green-500/10 border border-green-500/30'
+          : 'bg-green-50 border border-green-200'
+      }`}>
+        <CheckCircle className='w-4 h-4 text-green-500 flex-shrink-0' />
+        <p className='text-sm text-green-500 font-medium'>
+          Signed in as {connectedEmail || `${connectedWallet.slice(0, 6)}...${connectedWallet.slice(-4)}`}
+        </p>
+      </div>
+
+      {localError && (
+        <div className='p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-sm'>
+          {localError}
+        </div>
+      )}
+
+      <button
+        type='button'
+        onClick={handleAccept}
+        disabled={accepting}
+        className='w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+      >
+        {accepting ? (
+          <>
+            <Loader2 className='w-5 h-5 animate-spin' />
+            Accepting...
+          </>
+        ) : (
+          <>
+            <UserCheck className='w-5 h-5' />
+            Accept &amp; Join {invite.company.name}
+          </>
+        )}
+      </button>
+    </div>
+  )
+}
+
+// Dynamically import so Alchemy hooks only run after AlchemyProvider mounts
+const InviteActionsClient = dynamic(
+  () => Promise.resolve(InviteActions),
+  { ssr: false, loading: () => (
+    <div className='flex items-center justify-center py-8'>
+      <Loader2 className='w-6 h-6 animate-spin text-indigo-400' />
+    </div>
+  )}
+)
+
+export default function InvitePage() {
+  const params = useParams()
+  const token = params.token as string
+  const { theme } = useTheme()
 
   const [invite, setInvite] = useState<InviteData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [accepting, setAccepting] = useState(false)
   const [accepted, setAccepted] = useState(false)
 
   const fetchInvite = useCallback(async () => {
@@ -73,40 +205,9 @@ export default function InvitePage() {
     if (token) fetchInvite()
   }, [token, fetchInvite])
 
-  const handleAccept = async () => {
-    if (!connectedWallet) return
-
-    setAccepting(true)
-    setError(null)
-
-    try {
-      const res = await fetch('/api/employer/team/accept-invite', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': connectedWallet,
-        },
-        body: JSON.stringify({ inviteToken: token }),
-      })
-
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to accept invitation')
-
-      setAccepted(true)
-      setTimeout(() => router.push('/'), 2000)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to accept invitation')
-    } finally {
-      setAccepting(false)
-    }
-  }
-
   const cardClass = `rounded-2xl border shadow-xl ${
-    theme === 'dark'
-      ? 'bg-gray-800/90 border-gray-700'
-      : 'bg-white/90 border-gray-200'
+    theme === 'dark' ? 'bg-gray-800/90 border-gray-700' : 'bg-white/90 border-gray-200'
   }`
-
   const bg = theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
 
   if (loading) {
@@ -131,12 +232,6 @@ export default function InvitePage() {
             Invalid Invitation
           </h1>
           <p className={`mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{error}</p>
-          <button
-            onClick={() => router.push('/')}
-            className='mt-6 px-6 py-2.5 rounded-lg font-medium bg-indigo-600 text-white hover:bg-indigo-700'
-          >
-            Go to Home
-          </button>
         </div>
       </div>
     )
@@ -151,14 +246,8 @@ export default function InvitePage() {
             Invitation Expired
           </h1>
           <p className={`mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            This invitation has expired. Please ask your company admin to send a new one.
+            Please ask your company admin to send a new invitation.
           </p>
-          <button
-            onClick={() => router.push('/')}
-            className='mt-6 px-6 py-2.5 rounded-lg font-medium bg-indigo-600 text-white hover:bg-indigo-700'
-          >
-            Go to Home
-          </button>
         </div>
       </div>
     )
@@ -179,10 +268,6 @@ export default function InvitePage() {
       </div>
     )
   }
-
-  // Email mismatch: the connected email doesn't match the invite email
-  const emailMismatch = connectedEmail && invite?.email &&
-    connectedEmail.toLowerCase() !== invite.email.toLowerCase()
 
   return (
     <div className={`min-h-screen flex items-center justify-center p-4 ${bg}`}>
@@ -211,7 +296,9 @@ export default function InvitePage() {
         </div>
 
         {/* Invite details */}
-        <div className={`rounded-xl p-4 mb-6 space-y-2 ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+        <div className={`rounded-xl p-4 mb-6 space-y-2 ${
+          theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100'
+        }`}>
           <div className='flex justify-between'>
             <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>Role</span>
             <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
@@ -232,75 +319,17 @@ export default function InvitePage() {
           </div>
         </div>
 
-        {/* Error message */}
-        {error && (
-          <div className='mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-sm'>
-            {error}
-          </div>
+        {/* Auth/accept actions — client-only so Alchemy hooks are safe */}
+        {invite && (
+          <InviteActionsClient
+            invite={invite}
+            token={token}
+            onAccepted={() => setAccepted(true)}
+            onError={setError}
+          />
         )}
 
-        {/* State: not signed in → show auth UI */}
-        {!connectedWallet && (
-          <div>
-            <p className={`text-center text-sm mb-4 font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              Sign in with the email address this invite was sent to:
-              <span className='block mt-1 text-indigo-400 font-semibold'>{invite?.email}</span>
-            </p>
-            <AlchemyAuth />
-          </div>
-        )}
-
-        {/* State: signed in with wrong email → show warning */}
-        {connectedWallet && emailMismatch && (
-          <div className='p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30 mb-4'>
-            <div className='flex items-start gap-3'>
-              <AlertCircle className='w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5' />
-              <div>
-                <p className={`font-medium text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                  Wrong account signed in
-                </p>
-                <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                  This invite was sent to <strong>{invite?.email}</strong> but you&apos;re signed in as <strong>{connectedEmail}</strong>.
-                  Sign out and use the invited email to continue.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* State: signed in with correct email → show Accept button */}
-        {connectedWallet && !emailMismatch && (
-          <div>
-            <div className={`flex items-center gap-2 p-3 rounded-xl mb-4 ${
-              theme === 'dark' ? 'bg-green-500/10 border border-green-500/30' : 'bg-green-50 border border-green-200'
-            }`}>
-              <CheckCircle className='w-4 h-4 text-green-500 flex-shrink-0' />
-              <p className='text-sm text-green-500 font-medium'>
-                Signed in as {connectedEmail || connectedWallet.slice(0, 6) + '...' + connectedWallet.slice(-4)}
-              </p>
-            </div>
-            <button
-              type='button'
-              onClick={handleAccept}
-              disabled={accepting}
-              className='w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
-            >
-              {accepting ? (
-                <>
-                  <Loader2 className='w-5 h-5 animate-spin' />
-                  Accepting...
-                </>
-              ) : (
-                <>
-                  <UserCheck className='w-5 h-5' />
-                  Accept &amp; Join {invite?.company.name}
-                </>
-              )}
-            </button>
-          </div>
-        )}
-
-        <p className={`text-center text-xs mt-4 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+        <p className={`text-center text-xs mt-6 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
           By accepting, you agree to join this company and access their employer dashboard.
         </p>
       </div>
