@@ -210,13 +210,13 @@ export default function InvitePage() {
     )
   }
 
-  // Sign in modal
+  // Sign in modal - high z-index so it appears above any Account Kit UI
   if (showSignIn) {
     return (
-      <div className={`min-h-screen flex items-center justify-center p-4 ${
+      <div className={`min-h-screen flex items-center justify-center p-4 relative z-[100] ${
         theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
       }`}>
-        <div className={`${cardClass} p-8 max-w-md w-full`}>
+        <div className={`${cardClass} p-8 max-w-md w-full relative z-[100]`}>
           <h1 className={`text-2xl font-bold text-center mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
             Sign In to Accept Invite
           </h1>
@@ -241,12 +241,12 @@ export default function InvitePage() {
     )
   }
 
-  // Main invite view
+  // Main invite view - high z-index so card and button sit above Account Kit / provider overlays
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 ${
+    <div className={`min-h-screen flex items-center justify-center p-4 relative z-[100] ${
       theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
     }`}>
-      <div className={`${cardClass} p-8 max-w-md w-full`}>
+      <div className={`${cardClass} p-8 max-w-md w-full relative z-[100]`}>
         {/* Company info */}
         <div className='text-center mb-6'>
           <div className={`w-20 h-20 rounded-2xl mx-auto flex items-center justify-center ${
@@ -343,8 +343,10 @@ export default function InvitePage() {
           </button>
         ) : (
           <button
-            onClick={() => setShowSignIn(true)}
-            className='w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold bg-brand-mint text-white hover:bg-brand-mint/90'
+            type='button'
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSignIn(true) }}
+            className='w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold bg-brand-mint text-white hover:bg-brand-mint/90 cursor-pointer min-h-[48px] relative z-[110] touch-manipulation select-none'
+            aria-label='Connect wallet to accept invitation'
           >
             <LogIn className='w-5 h-5' />
             Connect Wallet to Accept
