@@ -16,8 +16,8 @@ import {
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
-const AlchemySignIn = dynamic(
-  () => import('@/components/AlchemySignIn').then((mod) => mod.default),
+const AlchemyAuth = dynamic(
+  () => import('@/components/AlchemyAuth').then((mod) => mod.default),
   { ssr: false }
 )
 
@@ -223,9 +223,8 @@ export default function InvitePage() {
           <p className={`text-center mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
             Connect your wallet to join {invite?.company.name}
           </p>
-          <AlchemySignIn
-            onUserAuthenticated={handleSignInSuccess}
-            onError={(msg) => setError(msg)}
+          <AlchemyAuth
+            onAuthSuccess={handleSignInSuccess}
           />
           <button
             onClick={() => setShowSignIn(false)}
