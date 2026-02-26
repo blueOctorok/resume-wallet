@@ -1199,6 +1199,18 @@ export default function DriverHub({
             </h2>
             <div className='flex items-center gap-2'>
               <button
+                onClick={triggerRefresh}
+                disabled={loading}
+                title='Refresh section'
+                className={`p-2 rounded-lg transition-all ${
+                  loading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                    ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                    : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                } ${isStale ? 'text-amber-500' : ''}`}
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+              <button
                 onClick={() => setShowUploadResumeModal(true)}
                 className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                   theme === 'dark'
@@ -1371,17 +1383,31 @@ export default function DriverHub({
                 </span>
               )}
             </h2>
-            <button
-              onClick={onStartDotApp || (() => onNavigate('dotapp'))}
-              className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                theme === 'dark'
-                  ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
-                  : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
-              }`}
-            >
-              <Plus className='w-4 h-4' />
-              {data.dotApplications.length > 0 ? 'New Application' : 'Start Application'}
-            </button>
+            <div className='flex items-center gap-2'>
+              <button
+                onClick={triggerRefresh}
+                disabled={loading}
+                title='Refresh section'
+                className={`p-2 rounded-lg transition-all ${
+                  loading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                    ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                    : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                } ${isStale ? 'text-amber-500' : ''}`}
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+              <button
+                onClick={onStartDotApp || (() => onNavigate('dotapp'))}
+                className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                  theme === 'dark'
+                    ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
+                    : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
+                }`}
+              >
+                <Plus className='w-4 h-4' />
+                {data.dotApplications.length > 0 ? 'New Application' : 'Start Application'}
+              </button>
+            </div>
           </div>
 
           {data.dotApplications.length === 0 ? (
@@ -1551,17 +1577,31 @@ export default function DriverHub({
                 </span>
               )}
             </h2>
-            <button
-              onClick={() => onNavigate('mvr')}
-              className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                theme === 'dark'
-                  ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
-                  : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
-              }`}
-            >
-              <Plus className='w-4 h-4' />
-              Order MVR
-            </button>
+            <div className='flex items-center gap-2'>
+              <button
+                onClick={triggerRefresh}
+                disabled={loading}
+                title='Refresh section'
+                className={`p-2 rounded-lg transition-all ${
+                  loading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                    ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                    : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                } ${isStale ? 'text-amber-500' : ''}`}
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+              <button
+                onClick={() => onNavigate('mvr')}
+                className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                  theme === 'dark'
+                    ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
+                    : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
+                }`}
+              >
+                <Plus className='w-4 h-4' />
+                Order MVR
+              </button>
+            </div>
           </div>
 
           {data.mvrRecords.length === 0 ? (
@@ -1616,17 +1656,31 @@ export default function DriverHub({
                 </span>
               )}
             </h2>
-            <button
-              onClick={() => onNavigate('jobs')}
-              className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                theme === 'dark'
-                  ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
-                  : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
-              }`}
-            >
-              <Plus className='w-4 h-4' />
-              Browse Jobs
-            </button>
+            <div className='flex items-center gap-2'>
+              <button
+                onClick={triggerRefresh}
+                disabled={loading}
+                title='Refresh section'
+                className={`p-2 rounded-lg transition-all ${
+                  loading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                    ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                    : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                } ${isStale ? 'text-amber-500' : ''}`}
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+              <button
+                onClick={() => onNavigate('jobs')}
+                className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                  theme === 'dark'
+                    ? 'border-gray-600 text-indigo-400 hover:border-indigo-500/50 hover:text-indigo-300'
+                    : 'border-gray-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
+                }`}
+              >
+                <Plus className='w-4 h-4' />
+                Browse Jobs
+              </button>
+            </div>
           </div>
 
           {data.jobApplications.length === 0 ? (

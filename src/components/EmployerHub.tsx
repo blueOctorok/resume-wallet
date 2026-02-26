@@ -664,9 +664,22 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           }`}>
             Hiring Pipeline
           </h2>
-          <div className={`flex items-center gap-1 p-1 rounded-lg ${
-            theme === 'dark' ? 'bg-gray-900/50' : 'bg-gray-100'
-          }`}>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={triggerRefresh}
+              disabled={loading}
+              title="Refresh section"
+              className={`p-2 rounded-lg transition-all ${
+                loading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                  : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+              } ${isStale ? 'text-amber-500' : ''}`}
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            <div className={`flex items-center gap-1 p-1 rounded-lg ${
+              theme === 'dark' ? 'bg-gray-900/50' : 'bg-gray-100'
+            }`}>
             <button
               onClick={() => setPipelineView('list')}
               className={`p-2 rounded-md transition-colors ${
@@ -693,6 +706,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             >
               <LayoutGrid className="w-4 h-4" />
             </button>
+          </div>
           </div>
         </div>
 
@@ -771,16 +785,30 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           count={data.applicants.length}
           theme={theme}
           action={
-            data.applicants.length > 0 ? (
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => onNavigate('applicants')}
-                className={`text-sm font-medium ${
-                  theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
-                }`}
+                onClick={triggerRefresh}
+                disabled={loading}
+                title="Refresh section"
+                className={`p-2 rounded-lg transition-all ${
+                  loading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                    ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                    : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                } ${isStale ? 'text-amber-500' : ''}`}
               >
-                View All
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               </button>
-            ) : null
+              {data.applicants.length > 0 && (
+                <button
+                  onClick={() => onNavigate('applicants')}
+                  className={`text-sm font-medium ${
+                    theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
+                  }`}
+                >
+                  View All
+                </button>
+              )}
+            </div>
           }
         >
           {data.applicants.length === 0 ? (
@@ -823,15 +851,29 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           count={data.jobPostings.length}
           theme={theme}
           action={
-            <button
-              onClick={() => onNavigate('post-job')}
-              className={`flex items-center gap-1 text-sm font-medium ${
-                theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
-              }`}
-            >
-              <Plus className="w-4 h-4" />
-              Post Job
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={triggerRefresh}
+                disabled={loading}
+                title="Refresh section"
+                className={`p-2 rounded-lg transition-all ${
+                  loading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                    ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                    : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                } ${isStale ? 'text-amber-500' : ''}`}
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+              <button
+                onClick={() => onNavigate('post-job')}
+                className={`flex items-center gap-1 text-sm font-medium ${
+                  theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                Post Job
+              </button>
+            </div>
           }
         >
           {data.jobPostings.length === 0 ? (
@@ -874,6 +916,20 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           icon={<Car className="w-5 h-5" />}
           count={data.mvrOrders.length}
           theme={theme}
+          action={
+            <button
+              onClick={triggerRefresh}
+              disabled={loading}
+              title="Refresh section"
+              className={`p-2 rounded-lg transition-all ${
+                loading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                  : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+              } ${isStale ? 'text-amber-500' : ''}`}
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          }
         >
           {data.mvrOrders.length === 0 ? (
             <EmptyState
