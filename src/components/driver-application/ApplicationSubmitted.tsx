@@ -1,7 +1,7 @@
 'use client'
 
 import { useTheme } from '@/contexts/ThemeContext'
-import { Shield, CheckCircle, FileText, Sparkles, Loader2 } from 'lucide-react'
+import { Shield, CheckCircle, FileText, Sparkles, Loader2, AlertCircle } from 'lucide-react'
 
 interface ApplicationSubmittedProps {
   onNavigateToSafetyForm: () => void
@@ -11,24 +11,15 @@ interface ApplicationSubmittedProps {
     blockNumber: number
     applicationId: number | null
   } | null
-  /** When true, shows prompt to create a resume from DOT data */
-  showResumePrompt?: boolean
-  /** Called when user clicks "Create Resume" - parent handles the API call */
-  onCreateResume?: () => void
-  /** Shows loading state while resume is being created */
-  isCreatingResume?: boolean
-  /** Shows success state after resume is created */
-  resumeCreated?: boolean
+  /** Status of the automatic resume creation that runs in the background */
+  resumeAutoCreateStatus?: 'idle' | 'creating' | 'created' | 'skipped' | 'failed'
 }
 
 const ApplicationSubmitted = ({
   onNavigateToSafetyForm,
   onNavigateToDashboard,
   blockchainData,
-  showResumePrompt,
-  onCreateResume,
-  isCreatingResume,
-  resumeCreated,
+  resumeAutoCreateStatus = 'idle',
 }: ApplicationSubmittedProps) => {
   const { theme } = useTheme()
   // Since we now save first and verify manually, we always show success (saved)
@@ -185,100 +176,66 @@ const ApplicationSubmitted = ({
         </div>
       )}
 
-      {/* Resume Creation Prompt - shows when user has no resume on file */}
-      {showResumePrompt && (
+      {/* Auto Resume Creation Status - shown while/after we silently build the resume */}
+      {resumeAutoCreateStatus !== 'idle' && resumeAutoCreateStatus !== 'skipped' && (
         <div className='mb-8'>
           <div
-            className={`p-6 rounded-xl border ${
-              resumeCreated
+            className={`p-5 rounded-xl border flex items-start gap-4 ${
+              resumeAutoCreateStatus === 'created'
                 ? theme === 'dark'
                   ? 'bg-green-900/20 border-green-500/30'
                   : 'bg-green-50 border-green-200'
-                : theme === 'dark'
-                  ? 'bg-gradient-to-br from-brand-mint/10 to-indigo-500/10 border-brand-mint/30'
-                  : 'bg-gradient-to-br from-brand-mint/5 to-indigo-50 border-brand-mint/30'
+                : resumeAutoCreateStatus === 'failed'
+                  ? theme === 'dark'
+                    ? 'bg-red-900/20 border-red-500/30'
+                    : 'bg-red-50 border-red-200'
+                  : theme === 'dark'
+                    ? 'bg-brand-mint/10 border-brand-mint/30'
+                    : 'bg-brand-mint/5 border-brand-mint/20'
             }`}
           >
-            {resumeCreated ? (
-              // Success state after resume is created
-              <div className='text-center'>
-                <div className='flex justify-center mb-3'>
-                  <div className='rounded-full h-12 w-12 bg-green-500 flex items-center justify-center'>
-                    <CheckCircle className='h-6 w-6 text-white' />
-                  </div>
-                </div>
-                <h3
-                  className={`text-lg font-semibold mb-2 ${
-                    theme === 'dark' ? 'text-green-400' : 'text-green-700'
-                  }`}
-                >
-                  Resume Created!
-                </h3>
-                <p
-                  className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                  }`}
-                >
-                  Your professional resume is ready. View and edit it anytime from your Hub.
-                </p>
-              </div>
-            ) : (
-              // Prompt to create resume
-              <>
-                <div className='flex items-start gap-4'>
-                  <div
-                    className={`flex-shrink-0 rounded-xl p-3 ${
-                      theme === 'dark' ? 'bg-brand-mint/20' : 'bg-brand-mint/10'
-                    }`}
-                  >
-                    <FileText className={`h-6 w-6 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`} />
-                  </div>
-                  <div className='flex-1'>
-                    <h3
-                      className={`text-lg font-semibold mb-1 flex items-center gap-2 ${
-                        theme === 'dark' ? 'text-white' : 'text-gray-900'
-                      }`}
-                    >
-                      <Sparkles className='h-4 w-4 text-brand-mint' />
-                      Want a Resume Too?
-                    </h3>
-                    <p
-                      className={`text-sm mb-4 ${
-                        theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                      }`}
-                    >
-                      We can create a professional resume from the information you just entered. 
-                      It&apos;s ready to share with employers - no extra work needed!
-                    </p>
-                    <button
-                      onClick={onCreateResume}
-                      disabled={isCreatingResume}
-                      className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all duration-200 ${
-                        isCreatingResume
-                          ? 'opacity-70 cursor-not-allowed'
-                          : 'hover:scale-105 hover:shadow-lg'
-                      } ${
-                        theme === 'dark'
-                          ? 'bg-brand-mint text-gray-900'
-                          : 'bg-brand-sage text-white'
-                      }`}
-                    >
-                      {isCreatingResume ? (
-                        <>
-                          <Loader2 className='h-4 w-4 animate-spin' />
-                          Creating Resume...
-                        </>
-                      ) : (
-                        <>
-                          <FileText className='h-4 w-4' />
-                          Yes, Create My Resume
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
+            <div className={`flex-shrink-0 rounded-xl p-2.5 ${
+              resumeAutoCreateStatus === 'created'
+                ? 'bg-green-500'
+                : resumeAutoCreateStatus === 'failed'
+                  ? theme === 'dark' ? 'bg-red-500/20' : 'bg-red-100'
+                  : theme === 'dark' ? 'bg-brand-mint/20' : 'bg-brand-mint/10'
+            }`}>
+              {resumeAutoCreateStatus === 'creating' && (
+                <Loader2 className={`h-5 w-5 animate-spin ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`} />
+              )}
+              {resumeAutoCreateStatus === 'created' && (
+                <CheckCircle className='h-5 w-5 text-white' />
+              )}
+              {resumeAutoCreateStatus === 'failed' && (
+                <AlertCircle className={`h-5 w-5 ${theme === 'dark' ? 'text-red-400' : 'text-red-500'}`} />
+              )}
+            </div>
+            <div>
+              <h3 className={`font-semibold flex items-center gap-2 mb-1 ${
+                resumeAutoCreateStatus === 'created'
+                  ? theme === 'dark' ? 'text-green-400' : 'text-green-700'
+                  : resumeAutoCreateStatus === 'failed'
+                    ? theme === 'dark' ? 'text-red-400' : 'text-red-700'
+                    : theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+              }`}>
+                {resumeAutoCreateStatus === 'creating' && (
+                  <><Sparkles className='h-4 w-4' /> Building your resume from DOT data…</>
+                )}
+                {resumeAutoCreateStatus === 'created' && (
+                  <><FileText className='h-4 w-4' /> Resume Created!</>
+                )}
+                {resumeAutoCreateStatus === 'failed' && 'Resume creation skipped'}
+              </h3>
+              <p className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+                {resumeAutoCreateStatus === 'creating' &&
+                  "We're creating a professional resume from the information you entered. It'll be ready in your Hub."}
+                {resumeAutoCreateStatus === 'created' &&
+                  'A professional resume has been added to your Hub using your DOT application data. You can view and edit it anytime.'}
+                {resumeAutoCreateStatus === 'failed' &&
+                  'We couldn\'t auto-create a resume this time. You can build one from your Hub whenever you\'re ready.'}
+              </p>
+            </div>
           </div>
         </div>
       )}
