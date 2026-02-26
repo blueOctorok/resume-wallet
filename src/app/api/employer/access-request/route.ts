@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   try {
     const walletAddress = request.headers.get('x-wallet-address')
     const body = await request.json()
-    const { name, companyName, email } = body
+    const { name, companyName, description, email } = body
 
     if (!walletAddress) {
       return NextResponse.json(
@@ -30,6 +30,13 @@ export async function POST(request: NextRequest) {
     if (!companyName?.trim()) {
       return NextResponse.json(
         { error: 'Company name is required' },
+        { status: 400 }
+      )
+    }
+
+    if (!description?.trim()) {
+      return NextResponse.json(
+        { error: 'Please describe your role and authorization' },
         { status: 400 }
       )
     }
@@ -107,6 +114,7 @@ export async function POST(request: NextRequest) {
         email: email?.toLowerCase() || null,
         name: name.trim(),
         company_name: companyName.trim(),
+        description: description.trim(),
         status: 'pending',
       })
       .select()

@@ -48,6 +48,7 @@ export default function RoleSelectionModal({
   const [showRequestForm, setShowRequestForm] = useState(false)
   const [requestName, setRequestName] = useState('')
   const [requestCompanyName, setRequestCompanyName] = useState('')
+  const [requestDescription, setRequestDescription] = useState('')
   const [submittingRequest, setSubmittingRequest] = useState(false)
   const [requestError, setRequestError] = useState<string | null>(null)
   const [requestSubmitted, setRequestSubmitted] = useState(false)
@@ -120,7 +121,7 @@ export default function RoleSelectionModal({
 
   // Submit access request
   const handleSubmitRequest = async () => {
-    if (!walletAddress || !requestName.trim() || !requestCompanyName.trim()) return
+    if (!walletAddress || !requestName.trim() || !requestCompanyName.trim() || !requestDescription.trim()) return
     
     setSubmittingRequest(true)
     setRequestError(null)
@@ -135,6 +136,7 @@ export default function RoleSelectionModal({
         body: JSON.stringify({
           name: requestName.trim(),
           companyName: requestCompanyName.trim(),
+          description: requestDescription.trim(),
           email: userEmail,
         }),
       })
@@ -681,7 +683,7 @@ export default function RoleSelectionModal({
                         Set up your company on StormChain
                       </h4>
                       <p className={`text-xs mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Are you the owner, HR director, or hiring manager? Submit a request to set up your company account.
+                        This request is for company owners, HR directors, or hiring managers who will serve as the primary admin.
                       </p>
 
                       <div className='space-y-3'>
@@ -719,6 +721,33 @@ export default function RoleSelectionModal({
                           />
                         </div>
 
+                        <div>
+                          <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Your Role & Authorization <span className='text-red-400'>*</span>
+                          </label>
+                          <textarea
+                            value={requestDescription}
+                            onChange={(e) => setRequestDescription(e.target.value)}
+                            placeholder='e.g., "I am the Fleet Manager at Acme Trucking and have been authorized by our CEO to set up our company account. I understand I will be the primary admin and can invite other team members."'
+                            rows={3}
+                            className={`w-full px-3 py-2 rounded-lg border transition-colors text-sm resize-none ${
+                              theme === 'dark'
+                                ? 'bg-gray-900 border-gray-600 text-white placeholder-gray-500 focus:border-brand-mint'
+                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
+                            } focus:outline-none focus:ring-2 focus:ring-brand-mint/20`}
+                          />
+                          <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                            Explain your role and confirm you are authorized to set up this company account.
+                          </p>
+                        </div>
+
+                        {/* Admin responsibility notice */}
+                        <div className={`p-3 rounded-lg text-xs ${
+                          theme === 'dark' ? 'bg-yellow-500/10 border border-yellow-500/30 text-yellow-400' : 'bg-yellow-50 border border-yellow-200 text-yellow-700'
+                        }`}>
+                          <strong>Important:</strong> By submitting this request, you understand that you will become the <strong>owner/admin</strong> of this company account and will be responsible for inviting and managing team members.
+                        </div>
+
                         {requestError && (
                           <p className='text-sm text-red-500'>{requestError}</p>
                         )}
@@ -736,7 +765,7 @@ export default function RoleSelectionModal({
                           </button>
                           <button
                             onClick={handleSubmitRequest}
-                            disabled={submittingRequest || !requestName.trim() || !requestCompanyName.trim()}
+                            disabled={submittingRequest || !requestName.trim() || !requestCompanyName.trim() || !requestDescription.trim()}
                             className='flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-brand-mint text-white hover:bg-brand-mint/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
                           >
                             {submittingRequest ? (

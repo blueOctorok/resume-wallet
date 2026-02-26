@@ -323,6 +323,7 @@ function AdminDashboardContent() {
     email: string | null
     name: string
     company_name: string
+    description: string | null
     status: string
     created_at: string
   }>>([])
@@ -1068,7 +1069,7 @@ function AdminDashboardContent() {
                         >
                           <div className='flex items-start justify-between gap-4'>
                             <div className='flex-1 min-w-0'>
-                              <div className='flex items-center gap-2 mb-1'>
+                              <div className='flex items-center gap-2 mb-1 flex-wrap'>
                                 <h3 className={`font-semibold ${
                                   theme === 'dark' ? 'text-white' : 'text-gray-900'
                                 }`}>
@@ -1083,6 +1084,32 @@ function AdminDashboardContent() {
                                 }`}>
                                   {req.status}
                                 </span>
+                                {/* Domain mismatch warning */}
+                                {req.email && (() => {
+                                  const emailDomain = req.email.split('@')[1]?.toLowerCase() || ''
+                                  const companyWords = req.company_name.toLowerCase().replace(/[^a-z0-9]/g, '')
+                                  const domainBase = emailDomain.split('.')[0] || ''
+                                  const publicDomains = ['gmail', 'yahoo', 'hotmail', 'outlook', 'aol', 'icloud', 'protonmail']
+                                  const isPublicEmail = publicDomains.some(d => emailDomain.includes(d))
+                                  const domainMatchesCompany = companyWords.includes(domainBase) || domainBase.includes(companyWords.slice(0, 4))
+                                  
+                                  if (isPublicEmail) {
+                                    return (
+                                      <span className='px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-400 flex items-center gap-1'>
+                                        <AlertTriangle className='w-3 h-3' />
+                                        Personal email
+                                      </span>
+                                    )
+                                  } else if (!domainMatchesCompany && domainBase.length > 2) {
+                                    return (
+                                      <span className='px-2 py-0.5 rounded text-xs font-medium bg-orange-500/20 text-orange-400 flex items-center gap-1'>
+                                        <AlertTriangle className='w-3 h-3' />
+                                        Domain mismatch?
+                                      </span>
+                                    )
+                                  }
+                                  return null
+                                })()}
                               </div>
                               <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                                 Requested by: <strong>{req.name}</strong>
@@ -1092,7 +1119,20 @@ function AdminDashboardContent() {
                                   {req.email}
                                 </p>
                               )}
-                              <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                              
+                              {/* Description / Role explanation */}
+                              {req.description && (
+                                <div className={`mt-2 p-2 rounded-lg text-sm ${
+                                  theme === 'dark' ? 'bg-gray-700/50 text-gray-300' : 'bg-gray-100 text-gray-700'
+                                }`}>
+                                  <p className={`text-xs font-medium mb-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    Role & Authorization:
+                                  </p>
+                                  {req.description}
+                                </div>
+                              )}
+                              
+                              <p className={`text-xs mt-2 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
                                 Submitted: {new Date(req.created_at).toLocaleDateString()} at{' '}
                                 {new Date(req.created_at).toLocaleTimeString()}
                               </p>

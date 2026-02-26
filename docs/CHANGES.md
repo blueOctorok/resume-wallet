@@ -31,11 +31,16 @@ New employers can now request access to set up their company on StormChain direc
 - Team members are directed to ask their company admin for an invite
 - Users can only have one pending request at a time
 - Approved users become the **owner** of their new company
+- **Mandatory description field**: Requester must explain their role and confirm authorization
+- Yellow warning box reminds them they will be the admin
+- Admin panel shows domain mismatch warnings:
+  - 🔴 **"Personal email"** - if using gmail, yahoo, etc.
+  - 🟠 **"Domain mismatch?"** - if email domain doesn't match company name
 
 ### Database
 
 New table: `employer_access_requests`
-- `id`, `wallet_address`, `email`, `name`, `company_name`
+- `id`, `wallet_address`, `email`, `name`, `company_name`, `description`
 - `status`: pending | approved | rejected
 - `rejection_reason`, `reviewed_by`, `reviewed_at`
 - Unique constraint: Only one pending request per wallet
