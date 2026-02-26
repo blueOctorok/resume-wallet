@@ -397,14 +397,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get company name for email
-    const { data: company } = await supabase
-      .from('companies')
-      .select('company_name')
-      .eq('id', companyId)
-      .single()
-
-    // Build invite URL
+    // Build invite URL (company already fetched above for domain validation)
     const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/invite/${inviteToken}`
     const inviteExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
