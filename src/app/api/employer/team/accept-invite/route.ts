@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   try {
     const walletAddress = request.headers.get('x-wallet-address')
     const body = await request.json()
-    const { inviteToken } = body
+    const { inviteToken, displayName } = body
 
     if (!walletAddress) {
       return NextResponse.json(
@@ -168,12 +168,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update user role to employer if not already
+    // Update user role to employer and set name if provided
+    const userUpdate: Record<string, unknown> = { role: 'employer' }
+    if (displayName?.trim()) {
+      userUpdate.name = displayName.trim()
+    }
     await supabase
       .from('users')
-      .update({ role: 'employer' })
+      .update(userUpdate)
       .eq('id', user.id)
-      .neq('role', 'employer')
 
     const company = invite.companies as any
 

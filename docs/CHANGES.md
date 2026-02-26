@@ -6,27 +6,33 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ### Overview
 
-Added security validation to ensure team members can only be invited using company email addresses.
+Added security validation to ensure team members can only be invited using company email addresses, and added a name prompt during invite acceptance.
 
-### Problem
+### Problems Fixed
 
-- Anyone could be invited with a personal email (gmail, yahoo, etc.)
-- No enforcement that team members use official company emails
-- Security risk: unauthorized people could potentially gain access
+1. Anyone could be invited with a personal email (gmail, yahoo, etc.)
+2. Domain validation only ran if company had an email set (bug)
+3. New team members joined with "No name set"
 
 ### Solution
 
-When inviting a team member:
-
-1. **Company domain check**: If the company has a business email domain (e.g., `@pacedrivers.com`), invites MUST use that same domain
-2. **Public email block**: Personal email providers are always blocked:
+**Email Validation (on invite):**
+1. **Public email block (ALWAYS enforced)**: Personal email providers are blocked regardless of company settings:
    - gmail.com, yahoo.com, hotmail.com, outlook.com, aol.com
    - icloud.com, mail.com, protonmail.com, zoho.com, yandex.com
    - live.com, msn.com, me.com, inbox.com, gmx.com
 
+2. **Company domain check**: If the company has a business email domain (e.g., `@pacedrivers.com`), invites MUST use that same domain
+
+**Name Prompt (on accept):**
+- When accepting an invite, new team members must enter their name
+- Name is saved to their user profile immediately
+- Input field with helper text: "This is how you'll appear to other team members"
+
 **Example errors:**
-- "Team members must use a company email address (@pacedrivers.com)"
 - "Personal email addresses are not allowed for team members"
+- "Team members must use a company email address (@pacedrivers.com)"
+- "Please enter your name" (if name field is empty)
 
 ### Also Fixed
 
@@ -36,8 +42,9 @@ When inviting a team member:
 
 | File | Change |
 |------|--------|
-| `src/app/api/employer/team/route.ts` | Added email domain validation on invite |
-| `src/app/api/employer/team/accept-invite/route.ts` | Added safeguard for existing users accepting wrong invites |
+| `src/app/api/employer/team/route.ts` | Fixed domain validation to ALWAYS block public emails |
+| `src/app/api/employer/team/accept-invite/route.ts` | Added displayName parameter, saves name on accept |
+| `src/app/invite/[token]/page.tsx` | Added name input field to invite acceptance UI |
 
 ---
 

@@ -244,21 +244,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
-    // Validate email domain matches company domain
-    // Get company domain from company email or designated owner email
+    // Validate email domain - ALWAYS block public domains for employer team members
+    const inviteDomain = email.split('@')[1]?.toLowerCase()
+    
+    // List of public email domains that should never be allowed for employers
+    const publicDomains = [
+      'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com',
+      'icloud.com', 'mail.com', 'protonmail.com', 'zoho.com', 'yandex.com',
+      'live.com', 'msn.com', 'me.com', 'inbox.com', 'gmx.com'
+    ]
+
+    // Always block public email domains
+    if (publicDomains.includes(inviteDomain)) {
+      return NextResponse.json(
+        { 
+          error: 'Personal email addresses are not allowed for team members',
+          details: 'Please use a company email address (e.g., name@yourcompany.com)'
+        },
+        { status: 400 }
+      )
+    }
+
+    // If company has a business email, require invites to match that domain
     const companyEmail = company.email || company.designated_owner_email
     if (companyEmail) {
       const companyDomain = companyEmail.split('@')[1]?.toLowerCase()
-      const inviteDomain = email.split('@')[1]?.toLowerCase()
       
-      // List of public email domains that should never be allowed for employers
-      const publicDomains = [
-        'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com',
-        'icloud.com', 'mail.com', 'protonmail.com', 'zoho.com', 'yandex.com',
-        'live.com', 'msn.com', 'me.com', 'inbox.com', 'gmx.com'
-      ]
-
-      // If company uses a business domain, require invites to match
+      // Only enforce domain match if company uses a business domain (not a public one)
       if (companyDomain && !publicDomains.includes(companyDomain)) {
         if (inviteDomain !== companyDomain) {
           return NextResponse.json(
@@ -270,28 +282,7 @@ export async function POST(request: NextRequest) {
           )
         }
       }
-      
-      // Also block public domains for the invite even if company domain check passes
-      if (publicDomains.includes(inviteDomain)) {
-        return NextResponse.json(
-          { 
-            error: 'Personal email addresses are not allowed for team members',
-            details: 'Please use a company email address (e.g., name@yourcompany.com)'
-          },
-          { status: 400 }
-        )
-      }
     }
-
-    // Debug: Log all existing records for this email
-    const { data: debugRecords } = await supabase
-      .from('company_members')
-      .select('id, company_id, user_id, invite_email, is_active, accepted_at, invite_expires_at')
-      .ilike('invite_email', email)
-    
-    console.log('[TEAM INVITE DEBUG] Email:', email)
-    console.log('[TEAM INVITE DEBUG] Target company:', companyId)
-    console.log('[TEAM INVITE DEBUG] All company_members with this invite_email:', JSON.stringify(debugRecords, null, 2))
 
     // Check if user with this email already exists
     const { data: existingUser } = await supabase
@@ -299,18 +290,9 @@ export async function POST(request: NextRequest) {
       .select('id, email, wallet_address')
       .ilike('email', email)
       .maybeSingle()
-    
-    console.log('[TEAM INVITE DEBUG] Existing user record:', existingUser)
 
     // Check if this user/email is already a member of THIS company
     if (existingUser) {
-      // Debug: Log all memberships for this user
-      const { data: allMemberships } = await supabase
-        .from('company_members')
-        .select('id, company_id, is_active, accepted_at, invite_email')
-        .eq('user_id', existingUser.id)
-      console.log('[TEAM INVITE DEBUG] All memberships for this user:', JSON.stringify(allMemberships, null, 2))
-
       const { data: existingMember } = await supabase
         .from('company_members')
         .select('id, is_active, accepted_at')
@@ -318,8 +300,6 @@ export async function POST(request: NextRequest) {
         .eq('user_id', existingUser.id)
         .eq('is_active', true)
         .maybeSingle()
-
-      console.log('[TEAM INVITE DEBUG] Existing member in this company:', existingMember)
 
       if (existingMember) {
         // If there's a stale record (user was deleted but record lingered), clean it up

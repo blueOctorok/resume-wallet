@@ -83,10 +83,10 @@ const HomeContent = () => {
     isModalOpen, setIsModalOpen,
     driverJourneyState,
     updateJourneyStep,
+    latestResumeIpfsHash,
+    setLatestResumeIpfsHash,
+    handleResumeUploadEvent,
   } = uiStore
-
-  const [latestResumeIpfsHash, setLatestResumeIpfsHash] = useState<string | null>(null)
-  const [resumeUploadEvent, setResumeUploadEvent] = useState<ResumeUploadEvent | null>(null)
 
   // Tracks whether the user explicitly signed out. Prevents the session-sync
   // effect from immediately re-logging them in while Alchemy's async cleanup runs.
@@ -256,14 +256,6 @@ const HomeContent = () => {
     },
     [walletAddress]
   )
-
-  const handleResumeUploadEvent = useCallback((event: ResumeUploadEvent) => {
-    setResumeUploadEvent(event)
-    if (event.type === 'analysis_ready' && event.data?.ipfsHash) {
-      setLatestResumeIpfsHash(event.data.ipfsHash)
-    }
-    setTimeout(() => setResumeUploadEvent(null), 100)
-  }, [])
 
   const openModal = useCallback(() => setIsModalOpen(true), [])
   const closeModal = useCallback(() => setIsModalOpen(false), [])

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { PageType } from './types'
-import type { DriverJourneyState, JourneyStatus } from '@/types/assistant'
+import type { DriverJourneyState, JourneyStatus, ResumeUploadEvent } from '@/types/assistant'
 
 /**
  * UI Store - Manages UI state and navigation
@@ -59,6 +59,10 @@ interface UIState {
   
   // Mount state (for hydration)
   isMounted: boolean
+  
+  // Resume upload events (for cross-component communication)
+  latestResumeIpfsHash: string | null
+  resumeUploadEvent: ResumeUploadEvent | null
 }
 
 interface UIActions {
@@ -98,6 +102,11 @@ interface UIActions {
   // Mount state
   setIsMounted: (mounted: boolean) => void
   
+  // Resume upload events
+  setLatestResumeIpfsHash: (hash: string | null) => void
+  setResumeUploadEvent: (event: ResumeUploadEvent | null) => void
+  handleResumeUploadEvent: (event: ResumeUploadEvent) => void
+  
   // Reset
   resetUI: () => void
 }
@@ -116,6 +125,8 @@ const initialState: UIState = {
   isGlobalLoading: false,
   globalLoadingMessage: null,
   isMounted: false,
+  latestResumeIpfsHash: null,
+  resumeUploadEvent: null,
 }
 
 export const useUIStore = create<UIState & UIActions>()(
@@ -207,6 +218,18 @@ export const useUIStore = create<UIState & UIActions>()(
 
     // Mount state
     setIsMounted: (mounted) => set({ isMounted: mounted }),
+
+    // Resume upload events
+    setLatestResumeIpfsHash: (hash) => set({ latestResumeIpfsHash: hash }),
+    setResumeUploadEvent: (event) => set({ resumeUploadEvent: event }),
+    handleResumeUploadEvent: (event) => {
+      set({ resumeUploadEvent: event })
+      if (event.type === 'analysis_ready' && event.data?.ipfsHash) {
+        set({ latestResumeIpfsHash: event.data.ipfsHash })
+      }
+      // Auto-clear event after brief delay (for event-driven consumers)
+      setTimeout(() => set({ resumeUploadEvent: null }), 100)
+    },
 
     // Reset
     resetUI: () => set(initialState),

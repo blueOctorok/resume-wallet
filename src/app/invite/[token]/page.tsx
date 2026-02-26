@@ -56,12 +56,17 @@ function InviteActions({ invite, token, onAccepted, onError }: InviteActionsProp
 
   const [accepting, setAccepting] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
+  const [displayName, setDisplayName] = useState('')
 
   const emailMismatch = !!(connectedEmail && invite.email &&
     connectedEmail.toLowerCase() !== invite.email.toLowerCase())
 
   const handleAccept = async () => {
     if (!connectedWallet) return
+    if (!displayName.trim()) {
+      setLocalError('Please enter your name')
+      return
+    }
     setAccepting(true)
     setLocalError(null)
 
@@ -72,7 +77,7 @@ function InviteActions({ invite, token, onAccepted, onError }: InviteActionsProp
           'Content-Type': 'application/json',
           'x-wallet-address': connectedWallet,
         },
-        body: JSON.stringify({ inviteToken: token }),
+        body: JSON.stringify({ inviteToken: token, displayName: displayName.trim() }),
       })
 
       const data = await res.json()
@@ -124,7 +129,7 @@ function InviteActions({ invite, token, onAccepted, onError }: InviteActionsProp
     )
   }
 
-  // Correct email — show accept button
+  // Correct email — show name input and accept button
   return (
     <div className='space-y-4'>
       <div className={`flex items-center gap-2 p-3 rounded-xl ${
@@ -138,6 +143,29 @@ function InviteActions({ invite, token, onAccepted, onError }: InviteActionsProp
         </p>
       </div>
 
+      {/* Name input for new team member */}
+      <div>
+        <label className={`block text-sm font-medium mb-2 ${
+          theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+        }`}>
+          Your Name
+        </label>
+        <input
+          type='text'
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          placeholder='Enter your full name'
+          className={`w-full px-4 py-3 rounded-xl border transition-colors ${
+            theme === 'dark'
+              ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-indigo-500'
+              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-indigo-500'
+          } focus:outline-none focus:ring-2 focus:ring-indigo-500/20`}
+        />
+        <p className={`text-xs mt-1.5 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+          This is how you&apos;ll appear to other team members
+        </p>
+      </div>
+
       {localError && (
         <div className='p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-sm'>
           {localError}
@@ -147,7 +175,7 @@ function InviteActions({ invite, token, onAccepted, onError }: InviteActionsProp
       <button
         type='button'
         onClick={handleAccept}
-        disabled={accepting}
+        disabled={accepting || !displayName.trim()}
         className='w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
       >
         {accepting ? (
