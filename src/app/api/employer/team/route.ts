@@ -233,44 +233,139 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user with this email already exists
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('email', email)
-      .maybeSingle()
+    // Get company details for domain validation
+    const { data: company } = await supabase
+      .from('companies')
+      .select('company_name, email, designated_owner_email')
+      .eq('id', companyId)
+      .single()
 
-    // Check if this user/email is already a member
-    if (existingUser) {
-      const { data: existingMember } = await supabase
-        .from('company_members')
-        .select('id')
-        .eq('company_id', companyId)
-        .eq('user_id', existingUser.id)
-        .maybeSingle()
+    if (!company) {
+      return NextResponse.json({ error: 'Company not found' }, { status: 404 })
+    }
 
-      if (existingMember) {
+    // Validate email domain matches company domain
+    // Get company domain from company email or designated owner email
+    const companyEmail = company.email || company.designated_owner_email
+    if (companyEmail) {
+      const companyDomain = companyEmail.split('@')[1]?.toLowerCase()
+      const inviteDomain = email.split('@')[1]?.toLowerCase()
+      
+      // List of public email domains that should never be allowed for employers
+      const publicDomains = [
+        'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com',
+        'icloud.com', 'mail.com', 'protonmail.com', 'zoho.com', 'yandex.com',
+        'live.com', 'msn.com', 'me.com', 'inbox.com', 'gmx.com'
+      ]
+
+      // If company uses a business domain, require invites to match
+      if (companyDomain && !publicDomains.includes(companyDomain)) {
+        if (inviteDomain !== companyDomain) {
+          return NextResponse.json(
+            { 
+              error: `Team members must use a company email address (@${companyDomain})`,
+              details: `${company.company_name} requires team members to have a @${companyDomain} email address.`
+            },
+            { status: 400 }
+          )
+        }
+      }
+      
+      // Also block public domains for the invite even if company domain check passes
+      if (publicDomains.includes(inviteDomain)) {
         return NextResponse.json(
-          { error: 'This user is already a team member' },
-          { status: 409 }
+          { 
+            error: 'Personal email addresses are not allowed for team members',
+            details: 'Please use a company email address (e.g., name@yourcompany.com)'
+          },
+          { status: 400 }
         )
       }
     }
 
+    // Debug: Log all existing records for this email
+    const { data: debugRecords } = await supabase
+      .from('company_members')
+      .select('id, company_id, user_id, invite_email, is_active, accepted_at, invite_expires_at')
+      .ilike('invite_email', email)
+    
+    console.log('[TEAM INVITE DEBUG] Email:', email)
+    console.log('[TEAM INVITE DEBUG] Target company:', companyId)
+    console.log('[TEAM INVITE DEBUG] All company_members with this invite_email:', JSON.stringify(debugRecords, null, 2))
+
+    // Check if user with this email already exists
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id, email, wallet_address')
+      .ilike('email', email)
+      .maybeSingle()
+    
+    console.log('[TEAM INVITE DEBUG] Existing user record:', existingUser)
+
+    // Check if this user/email is already a member of THIS company
+    if (existingUser) {
+      // Debug: Log all memberships for this user
+      const { data: allMemberships } = await supabase
+        .from('company_members')
+        .select('id, company_id, is_active, accepted_at, invite_email')
+        .eq('user_id', existingUser.id)
+      console.log('[TEAM INVITE DEBUG] All memberships for this user:', JSON.stringify(allMemberships, null, 2))
+
+      const { data: existingMember } = await supabase
+        .from('company_members')
+        .select('id, is_active, accepted_at')
+        .eq('company_id', companyId)
+        .eq('user_id', existingUser.id)
+        .eq('is_active', true)
+        .maybeSingle()
+
+      console.log('[TEAM INVITE DEBUG] Existing member in this company:', existingMember)
+
+      if (existingMember) {
+        // If there's a stale record (user was deleted but record lingered), clean it up
+        if (!existingMember.accepted_at) {
+          console.log('[TEAM] Found stale membership record, deleting:', existingMember.id)
+          await supabase
+            .from('company_members')
+            .delete()
+            .eq('id', existingMember.id)
+        } else {
+          console.log('[TEAM] User already a member:', { email, memberId: existingMember.id })
+          return NextResponse.json(
+            { error: 'This user is already a team member' },
+            { status: 409 }
+          )
+        }
+      }
+    }
+
     // Check if there's already a pending invite for this email
+    // Must be active and not expired
     const { data: pendingInvite } = await supabase
       .from('company_members')
-      .select('id')
+      .select('id, invite_expires_at')
       .eq('company_id', companyId)
       .eq('invite_email', email.toLowerCase())
+      .eq('is_active', true)
       .is('accepted_at', null)
       .maybeSingle()
 
     if (pendingInvite) {
-      return NextResponse.json(
-        { error: 'There is already a pending invite for this email' },
-        { status: 409 }
-      )
+      // Check if invite has expired - if so, delete it and allow re-invite
+      const expiresAt = pendingInvite.invite_expires_at ? new Date(pendingInvite.invite_expires_at) : null
+      if (expiresAt && expiresAt < new Date()) {
+        // Delete expired invite
+        await supabase
+          .from('company_members')
+          .delete()
+          .eq('id', pendingInvite.id)
+        console.log('[TEAM] Deleted expired invite for:', email)
+      } else {
+        return NextResponse.json(
+          { error: 'There is already a pending invite for this email' },
+          { status: 409 }
+        )
+      }
     }
 
     // Generate invite token (must be UUID format for DB column)

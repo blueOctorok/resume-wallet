@@ -2,6 +2,45 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🔒 **Team Invite Email Domain Validation** (February 2026)
+
+### Overview
+
+Added security validation to ensure team members can only be invited using company email addresses.
+
+### Problem
+
+- Anyone could be invited with a personal email (gmail, yahoo, etc.)
+- No enforcement that team members use official company emails
+- Security risk: unauthorized people could potentially gain access
+
+### Solution
+
+When inviting a team member:
+
+1. **Company domain check**: If the company has a business email domain (e.g., `@pacedrivers.com`), invites MUST use that same domain
+2. **Public email block**: Personal email providers are always blocked:
+   - gmail.com, yahoo.com, hotmail.com, outlook.com, aol.com
+   - icloud.com, mail.com, protonmail.com, zoho.com, yandex.com
+   - live.com, msn.com, me.com, inbox.com, gmx.com
+
+**Example errors:**
+- "Team members must use a company email address (@pacedrivers.com)"
+- "Personal email addresses are not allowed for team members"
+
+### Also Fixed
+
+**Invite acceptance safeguard**: Prevents existing users from accidentally accepting invites meant for different emails. If you're already an active user (have DOT apps, resumes, or memberships), you cannot accept an invite sent to a different email address.
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/app/api/employer/team/route.ts` | Added email domain validation on invite |
+| `src/app/api/employer/team/accept-invite/route.ts` | Added safeguard for existing users accepting wrong invites |
+
+---
+
 ## 🗑️ **Admin & Employer Member Removal Features** (February 2026)
 
 ### Overview

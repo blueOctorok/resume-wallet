@@ -88,9 +88,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify email matches (case-insensitive).
-    // If the user has no email stored yet (first sign-in via invite link), we trust the token
-    // as proof they own the inbox — then save their email so future checks work.
+    // Check if this user already has significant activity (existing user, not a fresh invite signup)
+    // Check multiple tables to determine if this is an established account
+    const [memberships, dotApps, resumes, profiles] = await Promise.all([
+      supabase.from('company_members').select('id', { count: 'exact' }).eq('user_id', user.id).neq('id', invite.id),
+      supabase.from('driver_applications').select('id', { count: 'exact' }).eq('user_id', user.id),
+      supabase.from('resumes').select('id', { count: 'exact' }).eq('user_id', user.id),
+      supabase.from('driver_profiles').select('id', { count: 'exact' }).eq('user_id', user.id),
+    ])
+    
+    const totalActivity = (memberships.count || 0) + (dotApps.count || 0) + (resumes.count || 0) + (profiles.count || 0)
+    const isExistingActiveUser = totalActivity > 0
+    
+    console.log('[ACCEPT INVITE] User activity check:', { userId: user.id, totalActivity, isExistingActiveUser })
+
+    // Verify email matches (case-insensitive)
     if (user.email && user.email.toLowerCase() !== invite.invite_email?.toLowerCase()) {
       return NextResponse.json(
         { error: 'This invitation was sent to a different email address. Please log in with the invited email.' },
@@ -98,8 +110,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // If user has no email yet, stamp it from the invite (token = proof of inbox ownership)
-    if (!user.email && invite.invite_email) {
+    // If existing active user has no email, they shouldn't accept someone else's invite
+    // This prevents accidentally linking the wrong email to an established account
+    if (!user.email && invite.invite_email && isExistingActiveUser) {
+      console.warn('[ACCEPT INVITE] Blocking: existing user tried to accept invite for different email', {
+        userId: user.id,
+        inviteEmail: invite.invite_email,
+        walletAddress,
+      })
+      return NextResponse.json(
+        { error: 'You are already registered. This invite was sent to a different person. Please have them sign in with their own wallet.' },
+        { status: 403 }
+      )
+    }
+
+    // Only stamp email for truly new users (no existing activity)
+    if (!user.email && invite.invite_email && !isExistingActiveUser) {
       await supabase
         .from('users')
         .update({ email: invite.invite_email.toLowerCase() })
