@@ -61,23 +61,49 @@ export async function DELETE(
       }
     }
 
-    // Delete the member
-    const { error: deleteError } = await supabase
+    // FULL DELETE: Remove team member = delete from platform entirely
+    // This prevents fired employees from coming back and seeing anything
+    const targetUserId = member.user_id
+
+    // 1. Delete company_members record first
+    const { error: memberDeleteError } = await supabase
       .from('company_members')
       .delete()
       .eq('id', memberId)
 
-    if (deleteError) {
-      console.error('[ADMIN MEMBERS] Error deleting member:', deleteError)
+    if (memberDeleteError) {
+      console.error('[ADMIN MEMBERS] Error deleting member:', memberDeleteError)
       return NextResponse.json(
         { error: 'Failed to remove member' },
         { status: 500 }
       )
     }
 
+    // 2. If user exists, do full cascade delete (employer team members have no driver/dev data)
+    if (targetUserId) {
+      // Delete any other company memberships (edge case: shouldn't have any)
+      await supabase.from('company_members').delete().eq('user_id', targetUserId)
+      
+      // Delete candidate_requests they initiated
+      await supabase.from('candidate_requests').delete().eq('requested_by_user_id', targetUserId)
+      
+      // Delete the user record itself
+      const { error: userDeleteError } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', targetUserId)
+
+      if (userDeleteError) {
+        console.error('[ADMIN MEMBERS] Error deleting user:', userDeleteError)
+        // Don't fail - membership is removed, user is locked out
+      }
+
+      console.log(`[ADMIN MEMBERS] Full delete: removed user ${targetUserId} from platform`)
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Member removed successfully',
+      message: 'Member removed and deleted from platform',
     })
 
   } catch (error) {

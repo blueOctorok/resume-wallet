@@ -136,31 +136,37 @@ export async function DELETE(
     }
 
     // Delete in order (respecting foreign key constraints)
-    // 1. Delete MVR results
+    // 1. Company memberships and invites (user_id or invite rows tied to this user)
+    await supabase.from('company_members').delete().eq('user_id', id)
+
+    // 2. Delete MVR results
     await supabase.from('mvr_results').delete().eq('driver_user_id', id)
 
-    // 2. Delete MVR orders
+    // 3. Delete MVR orders
     await supabase.from('mvr_orders').delete().eq('driver_user_id', id)
 
-    // 3. Delete resumes
+    // 4. Delete resumes
     await supabase.from('resumes').delete().eq('user_id', id)
 
-    // 4. Delete driver applications
+    // 5. Delete driver applications
     await supabase.from('driver_applications').delete().eq('user_id', id)
 
-    // 5. Delete driver profile
+    // 6. Delete driver profile
     await supabase.from('driver_profiles').delete().eq('user_id', id)
 
-    // 6. Delete developer projects (before dev profile due to FK)
+    // 7. Delete developer projects (before dev profile due to FK)
     await supabase.from('developer_projects').delete().eq('user_id', id)
 
-    // 7. Delete developer profile
+    // 8. Delete developer profile
     await supabase.from('developer_profiles').delete().eq('user_id', id)
 
-    // 8. Delete payments
+    // 9. Delete payments
     await supabase.from('payments').delete().eq('user_id', id)
 
-    // 9. Delete the user
+    // 10. Delete candidate_requests where this user requested
+    await supabase.from('candidate_requests').delete().eq('requested_by_user_id', id)
+
+    // 11. Delete the user
     const { error: deleteError } = await supabase
       .from('users')
       .delete()

@@ -44,6 +44,15 @@ export default function RoleSelectionModal({
   const [employerAccess, setEmployerAccess] = useState<EmployerAccessStatus | null>(null)
   const [checkingAccess, setCheckingAccess] = useState(false)
 
+  // Employer access request state
+  const [showRequestForm, setShowRequestForm] = useState(false)
+  const [requestName, setRequestName] = useState('')
+  const [requestCompanyName, setRequestCompanyName] = useState('')
+  const [submittingRequest, setSubmittingRequest] = useState(false)
+  const [requestError, setRequestError] = useState<string | null>(null)
+  const [requestSubmitted, setRequestSubmitted] = useState(false)
+  const [pendingRequest, setPendingRequest] = useState<{ companyName: string; createdAt: string } | null>(null)
+
   // Check if user is whitelisted admin (bypasses email requirement)
   const isAdminWhitelisted = walletAddress && EMPLOYER_WHITELIST_WALLETS.includes(walletAddress.toLowerCase())
 
@@ -89,15 +98,79 @@ export default function RoleSelectionModal({
     }
   }, [userEmail, walletAddress, isAdminWhitelisted])
 
+  // Check for pending access request
+  const checkPendingRequest = useCallback(async () => {
+    if (!walletAddress) return
+    
+    try {
+      const res = await fetch('/api/employer/access-request', {
+        headers: { 'x-wallet-address': walletAddress },
+      })
+      const data = await res.json()
+      if (data.hasPendingRequest && data.request) {
+        setPendingRequest({
+          companyName: data.request.company_name,
+          createdAt: data.request.created_at,
+        })
+      }
+    } catch (err) {
+      console.error('Error checking pending request:', err)
+    }
+  }, [walletAddress])
+
+  // Submit access request
+  const handleSubmitRequest = async () => {
+    if (!walletAddress || !requestName.trim() || !requestCompanyName.trim()) return
+    
+    setSubmittingRequest(true)
+    setRequestError(null)
+    
+    try {
+      const res = await fetch('/api/employer/access-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': walletAddress,
+        },
+        body: JSON.stringify({
+          name: requestName.trim(),
+          companyName: requestCompanyName.trim(),
+          email: userEmail,
+        }),
+      })
+      
+      const data = await res.json()
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to submit request')
+      }
+      
+      setRequestSubmitted(true)
+      setPendingRequest({
+        companyName: requestCompanyName.trim(),
+        createdAt: new Date().toISOString(),
+      })
+      setShowRequestForm(false)
+    } catch (err) {
+      setRequestError(err instanceof Error ? err.message : 'Failed to submit request')
+    } finally {
+      setSubmittingRequest(false)
+    }
+  }
+
   // Check access when employer is selected - always verify fresh from API
   useEffect(() => {
     if (selectedRole === 'employer' && !checkingAccess) {
       // Always re-check when employer is selected (don't rely on cached data)
       checkEmployerAccess()
+      checkPendingRequest()
     }
-    // Reset employer access when switching away from employer
+    // Reset employer state when switching away from employer
     if (selectedRole !== 'employer') {
       setEmployerAccess(null)
+      setShowRequestForm(false)
+      setRequestError(null)
+      setRequestSubmitted(false)
     }
   }, [selectedRole]) // intentionally minimal deps - we want fresh check each time
 
@@ -576,24 +649,134 @@ export default function RoleSelectionModal({
                 </div>
               )}
 
-              {/* Access denied */}
+              {/* Access denied - show request form or pending status */}
               {!checkingAccess && !needsEmailForEmployer && employerAccess && !employerAccess.hasAccess && (
-                <div className='flex items-start gap-3'>
-                  <AlertCircle className='w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0' />
-                  <div>
-                    <p className={`font-medium ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-700'}`}>
-                      Invitation required
-                    </p>
-                    <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {employerAccess.message || 'Employer access requires an invitation from a company admin.'}
-                    </p>
-                    <p className={`text-sm mt-2 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
-                      If you are an employer, contact your company admin or reach out to{' '}
-                      <a href='mailto:support@stormchain.com' className='text-brand-mint hover:underline'>
-                        support@stormchain.com
-                      </a>
-                    </p>
-                  </div>
+                <div className='space-y-4'>
+                  {/* Pending request status */}
+                  {(pendingRequest || requestSubmitted) && (
+                    <div className={`p-4 rounded-xl ${
+                      theme === 'dark' ? 'bg-blue-500/10 border border-blue-500/30' : 'bg-blue-50 border border-blue-200'
+                    }`}>
+                      <div className='flex items-start gap-3'>
+                        <Loader2 className='w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0 animate-spin' />
+                        <div>
+                          <p className={`font-medium ${theme === 'dark' ? 'text-blue-400' : 'text-blue-700'}`}>
+                            Request pending review
+                          </p>
+                          <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                            Your request to set up <strong>{pendingRequest?.companyName || requestCompanyName}</strong> is being reviewed.
+                            You&apos;ll be able to access the employer dashboard once approved.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Request form */}
+                  {showRequestForm && !pendingRequest && !requestSubmitted && (
+                    <div className={`p-4 rounded-xl ${
+                      theme === 'dark' ? 'bg-gray-800/50 border border-gray-700' : 'bg-gray-50 border border-gray-200'
+                    }`}>
+                      <h4 className={`font-semibold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                        Set up your company on StormChain
+                      </h4>
+                      <p className={`text-xs mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Are you the owner, HR director, or hiring manager? Submit a request to set up your company account.
+                      </p>
+
+                      <div className='space-y-3'>
+                        <div>
+                          <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Your Name
+                          </label>
+                          <input
+                            type='text'
+                            value={requestName}
+                            onChange={(e) => setRequestName(e.target.value)}
+                            placeholder='e.g., John Smith'
+                            className={`w-full px-3 py-2 rounded-lg border transition-colors text-sm ${
+                              theme === 'dark'
+                                ? 'bg-gray-900 border-gray-600 text-white placeholder-gray-500 focus:border-brand-mint'
+                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
+                            } focus:outline-none focus:ring-2 focus:ring-brand-mint/20`}
+                          />
+                        </div>
+
+                        <div>
+                          <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Company Name
+                          </label>
+                          <input
+                            type='text'
+                            value={requestCompanyName}
+                            onChange={(e) => setRequestCompanyName(e.target.value)}
+                            placeholder='e.g., Acme Trucking LLC'
+                            className={`w-full px-3 py-2 rounded-lg border transition-colors text-sm ${
+                              theme === 'dark'
+                                ? 'bg-gray-900 border-gray-600 text-white placeholder-gray-500 focus:border-brand-mint'
+                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
+                            } focus:outline-none focus:ring-2 focus:ring-brand-mint/20`}
+                          />
+                        </div>
+
+                        {requestError && (
+                          <p className='text-sm text-red-500'>{requestError}</p>
+                        )}
+
+                        <div className='flex gap-2 pt-2'>
+                          <button
+                            onClick={() => setShowRequestForm(false)}
+                            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                              theme === 'dark'
+                                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleSubmitRequest}
+                            disabled={submittingRequest || !requestName.trim() || !requestCompanyName.trim()}
+                            className='flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-brand-mint text-white hover:bg-brand-mint/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                          >
+                            {submittingRequest ? (
+                              <span className='flex items-center justify-center gap-2'>
+                                <Loader2 className='w-4 h-4 animate-spin' />
+                                Submitting...
+                              </span>
+                            ) : (
+                              'Submit Request'
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      <p className={`text-xs mt-3 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                        <strong>Team members:</strong> If your company is already on StormChain, ask your admin to send you an invite instead.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Default state - show request access button */}
+                  {!showRequestForm && !pendingRequest && !requestSubmitted && (
+                    <div className='flex items-start gap-3'>
+                      <Building2 className='w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0' />
+                      <div className='flex-1'>
+                        <p className={`font-medium ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-700'}`}>
+                          Company setup required
+                        </p>
+                        <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                          To access the employer dashboard, you need to set up your company or be invited by an existing company admin.
+                        </p>
+                        <button
+                          onClick={() => setShowRequestForm(true)}
+                          className='mt-3 px-4 py-2 rounded-lg text-sm font-medium bg-brand-mint text-white hover:bg-brand-mint/90 transition-colors'
+                        >
+                          Request Company Access
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -648,7 +831,9 @@ export default function RoleSelectionModal({
                 selectedRole === 'employer' && !canProceed
                   ? checkingAccess 
                     ? 'Checking access...'
-                    : 'Invitation required'
+                    : pendingRequest || requestSubmitted
+                      ? 'Request pending review'
+                      : 'Company setup required'
                   : selectedRole === 'employer' && employerAccess?.accessType === 'team_invite'
                     ? `Join ${employerAccess.companyName || 'company'}`
                     : `Continue as ${selectedRole === 'driver' ? 'Driver' : selectedRole === 'developer' ? 'Software Engineer' : 'Employer'}`

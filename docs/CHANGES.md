@@ -2,6 +2,90 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🏢 **Self-Service Employer Access Request Flow** (February 2026)
+
+### Overview
+
+New employers can now request access to set up their company on StormChain directly from the role selection modal, instead of emailing support.
+
+### How It Works
+
+**For New Employers:**
+1. User selects "Employer" in the role selection modal
+2. System checks if they have existing access (via wallet or email)
+3. If no access found, user sees a "Request Company Access" button
+4. User fills out a simple form: **Name** + **Company Name**
+5. Request is submitted and shows "pending review" status
+6. User cannot proceed until approved
+
+**For Admin:**
+1. New "Access Requests" tab in the Admin Dashboard (under Employers section)
+2. Shows pending count badge in sidebar when requests are waiting
+3. View all requests with name, company name, email, wallet, and submission date
+4. **Approve** → Creates company + user as owner + sets up company_members record
+5. **Reject** → Marks request as rejected (optional reason)
+
+### UX Details
+
+- Clear messaging that this flow is for company owners/admins (not team members)
+- Team members are directed to ask their company admin for an invite
+- Users can only have one pending request at a time
+- Approved users become the **owner** of their new company
+
+### Database
+
+New table: `employer_access_requests`
+- `id`, `wallet_address`, `email`, `name`, `company_name`
+- `status`: pending | approved | rejected
+- `rejection_reason`, `reviewed_by`, `reviewed_at`
+- Unique constraint: Only one pending request per wallet
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/app/api/employer/access-request/route.ts` | NEW - POST to submit, GET to check pending |
+| `src/app/api/admin/employer-requests/route.ts` | NEW - GET all requests for admin |
+| `src/app/api/admin/employer-requests/[id]/route.ts` | NEW - PATCH to approve/reject, DELETE to remove |
+| `src/components/RoleSelectionModal.tsx` | Added request form UI, pending status display |
+| `src/app/admin/AdminDashboard.tsx` | Added Access Requests tab with approve/reject UI |
+
+---
+
+## 🗑️ **Remove Team Member = Full Platform Delete** (February 2026)
+
+### Overview
+
+When a team member is removed from a company (by owner/admin or central admin), they are now **completely deleted from the platform**, not just removed from the company.
+
+### Why
+
+- Employer team members (recruiters, HR, etc.) are **only** employer team members - never drivers or developers
+- Fired employees should not be able to come back and see anything
+- Prevents orphaned user records and data conflicts when re-inviting someone
+
+### What happens on removal
+
+1. `company_members` record is deleted (removes company access)
+2. Any other `company_members` records for that user are deleted (edge case cleanup)
+3. `candidate_requests` initiated by that user are deleted
+4. The `users` record itself is deleted
+
+### Applies to
+
+- **Team Management** (employer hub) → Remove member button
+- **Admin Panel** → Company → Expand team → Remove member button
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/app/api/employer/team/[memberId]/route.ts` | DELETE now does full user cascade delete |
+| `src/app/api/admin/companies/[id]/members/[memberId]/route.ts` | DELETE now does full user cascade delete |
+| `src/app/api/admin/users/[id]/route.ts` | Added company_members and candidate_requests to cascade |
+
+---
+
 ## 🔒 **Team Invite Email Domain Validation** (February 2026)
 
 ### Overview

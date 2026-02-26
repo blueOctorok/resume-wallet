@@ -44,6 +44,7 @@ const TBackendSetup = dynamic(
 
 type TabId =
   | 'companies'
+  | 'accessRequests'
   | 'jobs'
   | 'applications'
   | 'users'
@@ -314,6 +315,19 @@ function AdminDashboardContent() {
   const [companies, setCompanies] = useState<AdminCompany[]>([])
   const [companyStats, setCompanyStats] = useState({ total: 0, pending: 0, active: 0, suspended: 0 })
   const [companyStatusFilter, setCompanyStatusFilter] = useState<'all' | 'pending' | 'active' | 'suspended'>('all')
+  
+  // Access requests state
+  const [accessRequests, setAccessRequests] = useState<Array<{
+    id: string
+    wallet_address: string
+    email: string | null
+    name: string
+    company_name: string
+    status: string
+    created_at: string
+  }>>([])
+  const [accessRequestsStats, setAccessRequestsStats] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 })
+  const [processingRequestId, setProcessingRequestId] = useState<string | null>(null)
   const [jobs, setJobs] = useState<AdminJob[]>([])
   const [jobsFilter, setJobsFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const [applications, setApplications] = useState<AdminApplication[]>([])
@@ -371,6 +385,29 @@ function AdminDashboardContent() {
   } | null>(null)
   const [loadingMvrDetail, setLoadingMvrDetail] = useState(false)
   const [mvrDetailShowXml, setMvrDetailShowXml] = useState<'none' | 'order' | 'result'>('none')
+
+  // Fetch access request stats on mount (for sidebar badge)
+  const fetchAccessRequestStats = useCallback(async () => {
+    if (!walletAddress || !isAdmin) return
+    try {
+      const res = await fetch('/api/admin/employer-requests?status=all', {
+        headers: { 'x-wallet-address': walletAddress },
+      })
+      const data = await res.json()
+      if (data.success) {
+        setAccessRequestsStats(data.stats)
+      }
+    } catch (err) {
+      console.error('Failed to fetch access request stats:', err)
+    }
+  }, [walletAddress, isAdmin])
+
+  // Fetch access request stats on mount
+  useEffect(() => {
+    if (isAdmin) {
+      fetchAccessRequestStats()
+    }
+  }, [isAdmin, fetchAccessRequestStats])
 
   const fetchMvrDetail = useCallback(
     async (orderId: string) => {
@@ -520,6 +557,16 @@ function AdminDashboardContent() {
           if (data.success) {
             setCompanies(data.companies)
             setCompanyStats(data.stats)
+            setTotalCount(data.stats.total)
+          }
+          break
+
+        case 'accessRequests':
+          response = await fetch('/api/admin/employer-requests?status=all', { headers })
+          data = await response.json()
+          if (data.success) {
+            setAccessRequests(data.requests)
+            setAccessRequestsStats(data.stats)
             setTotalCount(data.stats.total)
           }
           break
@@ -733,6 +780,7 @@ function AdminDashboardContent() {
       id: 'employers',
       label: 'Employers',
       tabs: [
+        { id: 'accessRequests' as TabId, label: `Access Requests${accessRequestsStats.pending > 0 ? ` (${accessRequestsStats.pending})` : ''}`, icon: <UserPlus className='w-4 h-4' /> },
         { id: 'companies' as TabId, label: 'Companies', icon: <Building2 className='w-4 h-4' /> },
         { id: 'jobs' as TabId, label: 'Job Postings', icon: <Briefcase className='w-4 h-4' /> },
         { id: 'applications' as TabId, label: 'Applications', icon: <ClipboardList className='w-4 h-4' /> },
@@ -961,6 +1009,174 @@ function AdminDashboardContent() {
             </div>
           ) : (
             <>
+              {/* Access Requests Section */}
+              {activeTab === 'accessRequests' && (
+                <div className='p-6'>
+                  {/* Stats */}
+                  <div className='flex flex-wrap gap-2 mb-6'>
+                    <div className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
+                      theme === 'dark' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-50 text-yellow-700'
+                    }`}>
+                      <Clock className='w-4 h-4' />
+                      <span>Pending</span>
+                      <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
+                        theme === 'dark' ? 'bg-yellow-500/30' : 'bg-yellow-200'
+                      }`}>{accessRequestsStats.pending}</span>
+                    </div>
+                    <div className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
+                      theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-700'
+                    }`}>
+                      <CheckCircle2 className='w-4 h-4' />
+                      <span>Approved</span>
+                      <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
+                        theme === 'dark' ? 'bg-green-500/30' : 'bg-green-200'
+                      }`}>{accessRequestsStats.approved}</span>
+                    </div>
+                    <div className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
+                      theme === 'dark' ? 'bg-red-500/20 text-red-400' : 'bg-red-50 text-red-700'
+                    }`}>
+                      <XCircle className='w-4 h-4' />
+                      <span>Rejected</span>
+                      <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
+                        theme === 'dark' ? 'bg-red-500/30' : 'bg-red-200'
+                      }`}>{accessRequestsStats.rejected}</span>
+                    </div>
+                  </div>
+
+                  {/* Requests List */}
+                  {accessRequests.length === 0 ? (
+                    <div className='text-center py-12'>
+                      <UserPlus className='w-12 h-12 mx-auto mb-4 opacity-30' />
+                      <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>
+                        No access requests
+                      </p>
+                    </div>
+                  ) : (
+                    <div className='space-y-4'>
+                      {accessRequests.map((req) => (
+                        <div
+                          key={req.id}
+                          className={`rounded-xl border p-5 ${
+                            req.status === 'pending'
+                              ? theme === 'dark'
+                                ? 'bg-yellow-500/5 border-yellow-500/30'
+                                : 'bg-yellow-50 border-yellow-200'
+                              : theme === 'dark'
+                                ? 'bg-gray-800/50 border-gray-700'
+                                : 'bg-white border-gray-200'
+                          }`}
+                        >
+                          <div className='flex items-start justify-between gap-4'>
+                            <div className='flex-1 min-w-0'>
+                              <div className='flex items-center gap-2 mb-1'>
+                                <h3 className={`font-semibold ${
+                                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                                }`}>
+                                  {req.company_name}
+                                </h3>
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                  req.status === 'pending'
+                                    ? 'bg-yellow-500/20 text-yellow-500'
+                                    : req.status === 'approved'
+                                      ? 'bg-green-500/20 text-green-500'
+                                      : 'bg-red-500/20 text-red-500'
+                                }`}>
+                                  {req.status}
+                                </span>
+                              </div>
+                              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                                Requested by: <strong>{req.name}</strong>
+                              </p>
+                              {req.email && (
+                                <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                                  {req.email}
+                                </p>
+                              )}
+                              <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                                Submitted: {new Date(req.created_at).toLocaleDateString()} at{' '}
+                                {new Date(req.created_at).toLocaleTimeString()}
+                              </p>
+                              <p className={`text-xs font-mono ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>
+                                Wallet: {req.wallet_address.slice(0, 10)}...{req.wallet_address.slice(-6)}
+                              </p>
+                            </div>
+
+                            {/* Actions */}
+                            {req.status === 'pending' && (
+                              <div className='flex gap-2 flex-shrink-0'>
+                                <button
+                                  onClick={async () => {
+                                    setProcessingRequestId(req.id)
+                                    try {
+                                      const res = await fetch(`/api/admin/employer-requests/${req.id}`, {
+                                        method: 'PATCH',
+                                        headers: {
+                                          'Content-Type': 'application/json',
+                                          'x-wallet-address': walletAddress || '',
+                                        },
+                                        body: JSON.stringify({ action: 'approve' }),
+                                      })
+                                      if (res.ok) {
+                                        fetchData()
+                                      }
+                                    } catch (err) {
+                                      console.error('Failed to approve:', err)
+                                    } finally {
+                                      setProcessingRequestId(null)
+                                    }
+                                  }}
+                                  disabled={processingRequestId === req.id}
+                                  className='px-3 py-1.5 rounded-lg text-sm font-medium bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 transition-colors flex items-center gap-1'
+                                >
+                                  {processingRequestId === req.id ? (
+                                    <Loader2 className='w-4 h-4 animate-spin' />
+                                  ) : (
+                                    <CheckCircle className='w-4 h-4' />
+                                  )}
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (!confirm('Reject this request?')) return
+                                    setProcessingRequestId(req.id)
+                                    try {
+                                      const res = await fetch(`/api/admin/employer-requests/${req.id}`, {
+                                        method: 'PATCH',
+                                        headers: {
+                                          'Content-Type': 'application/json',
+                                          'x-wallet-address': walletAddress || '',
+                                        },
+                                        body: JSON.stringify({ action: 'reject' }),
+                                      })
+                                      if (res.ok) {
+                                        fetchData()
+                                      }
+                                    } catch (err) {
+                                      console.error('Failed to reject:', err)
+                                    } finally {
+                                      setProcessingRequestId(null)
+                                    }
+                                  }}
+                                  disabled={processingRequestId === req.id}
+                                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
+                                    theme === 'dark'
+                                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                  } disabled:opacity-50`}
+                                >
+                                  <XCircle className='w-4 h-4' />
+                                  Reject
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Companies Section */}
               {activeTab === 'companies' && (
                 <div className='p-6'>
