@@ -67,6 +67,8 @@ export default function AlchemyAuth({
   // Use ref to store callback and track the last address we called it for
   const onAuthSuccessRef = useRef(onAuthSuccess)
   const lastCalledAddressRef = useRef<string | null>(null)
+  // Track logout state to prevent stale session auto-reconnect
+  const logoutStateRef = useRef<{ timestamp: number; address: string } | null>(null)
 
   // Check Web Crypto API support on mount
   useEffect(() => {
@@ -177,12 +179,30 @@ export default function AlchemyAuth({
         userId: user.userId,
         method: 'alchemy-smart-wallet',
         isConnected: true,
-        chain: 'Base Sepolia', // We know this from our config
-        chainId: 84532, // Base Sepolia chain ID
+        chain: 'Base Sepolia',
+        chainId: 84532,
       }
 
       // Check if this is a new address (first login or address changed)
       const isNewAddress = lastCalledAddressRef.current !== authData.address
+
+      // Prevent stale session auto-reconnect: if we logged out recently (within 3s)
+      // and the SAME address is trying to reconnect, block it. This catches the case
+      // where Alchemy's SDK hasn't fully cleared its session yet. A stale reconnect
+      // happens instantly (<100ms), while a real login takes seconds (user types email).
+      const COOLDOWN_MS = 3000
+      const logoutState = logoutStateRef.current
+      const isSameAddressAsLogout = logoutState?.address === authData.address
+      const timeSinceLogout = logoutState ? Date.now() - logoutState.timestamp : Infinity
+      const isStaleReconnect = isSameAddressAsLogout && timeSinceLogout < COOLDOWN_MS
+
+      if (isStaleReconnect) {
+        console.log('⏸️ [AUTH] Ignoring stale session reconnect (logged out', timeSinceLogout, 'ms ago)')
+        return
+      }
+
+      // Clear logout state on successful auth (either different user or same user after cooldown)
+      logoutStateRef.current = null
 
       console.log('📋 [AUTH] Auth data prepared:', {
         address: authData.address,
@@ -195,13 +215,14 @@ export default function AlchemyAuth({
       setUserInfo((prev) => {
         if (prev?.address === authData.address) {
           console.log('⏭️ [AUTH] Same address, skipping userInfo update')
-          return prev // Don't update if it's the same
+          return prev
         }
         console.log('🔄 [AUTH] Updating userInfo state')
         return authData
       })
 
-      // Call the callback only for new addresses
+      // Call the callback only for new addresses OR for same address after cooldown
+      // (which means user genuinely logged in again with same email)
       if (isNewAddress && onAuthSuccessRef.current) {
         console.log(
           '🔔 [AUTH] Calling onAuthSuccess callback for new address:',
@@ -221,14 +242,24 @@ export default function AlchemyAuth({
         chain: 'Base Sepolia',
       })
     }
-  }, [isConnected, user, account]) // Removed onAuthSuccess from dependencies
+  }, [isConnected, user, account])
 
   // Handle logout
+  // Returns a promise so callers can await the full logout sequence
   const handleLogout = async () => {
     try {
+      // Record logout state to detect stale session auto-reconnects
+      // We track which address logged out and when, so we can block that
+      // specific address from auto-reconnecting for a cooldown period.
+      if (lastCalledAddressRef.current) {
+        logoutStateRef.current = {
+          timestamp: Date.now(),
+          address: lastCalledAddressRef.current,
+        }
+      }
       await logout()
       setUserInfo(null)
-      lastCalledAddressRef.current = null // Reset so callback works on next login
+      lastCalledAddressRef.current = null
       if (onLogoutSuccess) {
         onLogoutSuccess()
       }

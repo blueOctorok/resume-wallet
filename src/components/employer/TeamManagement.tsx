@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Copy,
   Trash2,
+  RefreshCw,
 } from 'lucide-react'
 import { INVITEABLE_ROLES, getDisplayRole } from '@/lib/employer-roles'
 import UserIdentity from '@/components/ui/UserIdentity'
@@ -64,10 +65,15 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
 
   // Member action state
   const [removingMember, setRemovingMember] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
 
-  const fetchTeam = useCallback(async () => {
+  const fetchTeam = useCallback(async (background = false) => {
     try {
-      setLoading(true)
+      if (!background) {
+        setLoading(true)
+      } else {
+        setRefreshing(true)
+      }
       setError(null)
 
       const res = await fetch('/api/employer/team', {
@@ -87,6 +93,7 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
       setError(err instanceof Error ? err.message : 'Failed to load team')
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }, [walletAddress])
 
@@ -126,7 +133,7 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
       setInviteSuccess(`Invitation sent to ${inviteEmail}`)
       setLastInviteUrl(data.inviteUrl)
       setInviteEmail('')
-      fetchTeam()
+      fetchTeam(true)
     } catch (err) {
       setInviteError(err instanceof Error ? err.message : 'Failed to send invite')
     } finally {
@@ -152,7 +159,7 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
         throw new Error(data.error || 'Failed to remove member')
       }
 
-      fetchTeam()
+      fetchTeam(true)
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to remove member')
     } finally {
@@ -175,7 +182,7 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
       throw new Error(data.error || 'Failed to update name')
     }
 
-    fetchTeam()
+    fetchTeam(true)
   }
 
   const copyInviteUrl = () => {
@@ -252,15 +259,30 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
           </div>
         </div>
 
-        {canManageTeam && (
+        <div className='flex items-center gap-2'>
           <button
-            onClick={() => setShowInviteModal(true)}
-            className='flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-md'
+            onClick={() => fetchTeam(true)}
+            disabled={refreshing}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
+              theme === 'dark'
+                ? 'bg-gray-700 text-gray-200 hover:bg-gray-600 disabled:opacity-50'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50'
+            }`}
+            title='Refresh team list'
           >
-            <UserPlus className='w-4 h-4' />
-            Invite Member
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
           </button>
-        )}
+          {canManageTeam && (
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className='flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-md'
+            >
+              <UserPlus className='w-4 h-4' />
+              Invite Member
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats */}

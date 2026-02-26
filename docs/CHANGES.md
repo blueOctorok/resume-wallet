@@ -9916,3 +9916,57 @@ Status-specific emails sent to candidates:
 5. Changes status via dropdown → same flow as drag-drop
 
 **Status**: ✅ Phase 4 COMPLETE
+
+---
+
+## Bug Fix: Alchemy Wallet Logout Session Persistence
+
+### Problem
+
+When users clicked "Sign Out" and then "Sign In" again, they were automatically logged back in with the same wallet address. A second sign-out was required to actually clear the session and show the email entry screen.
+
+### Root Cause
+
+Three issues combined to cause this bug:
+
+1. **Non-awaited logout**: The `handleLogout` in `page.tsx` called `__alchemyLogout()` without `await`, so Alchemy's async cleanup didn't complete before the sign-in flow started.
+
+2. **Premature callback reset**: `AlchemyAuth.handleLogout` reset `lastCalledAddressRef` to `null`, making the returning (stale) session appear as a "new" login.
+
+3. **Stale session auto-reconnect**: Alchemy's SDK has a 7-day session configured. Even after calling `logout()`, the SDK can auto-reconnect to cached credentials before fully clearing them.
+
+### Solution
+
+Implemented a **logout cooldown mechanism**:
+
+1. When user logs out, we record both the timestamp AND the address that logged out
+2. On auth success, we check if the same address is reconnecting within 3 seconds
+3. Stale reconnects (same address, <3s since logout) are blocked
+4. Genuine logins (different address, or same address after 3s) proceed normally
+
+This works because stale auto-reconnects happen instantly (~100ms), while real logins require user interaction (several seconds minimum).
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/AlchemyAuth.tsx` | Added `logoutStateRef` to track logout timestamp + address, implemented cooldown check |
+| `src/app/page.tsx` | Made `handleLogout` async, await Alchemy logout, clear user state immediately |
+
+### Technical Pattern: Time-Based Deduplication
+
+```tsx
+// Track who logged out and when
+const logoutStateRef = useRef<{ timestamp: number; address: string } | null>(null)
+
+// On auth success, check for stale reconnect
+const COOLDOWN_MS = 3000
+const isSameAddressAsLogout = logoutState?.address === authData.address
+const timeSinceLogout = logoutState ? Date.now() - logoutState.timestamp : Infinity
+const isStaleReconnect = isSameAddressAsLogout && timeSinceLogout < COOLDOWN_MS
+
+if (isStaleReconnect) return // Block stale reconnect
+```
+
+**Status**: ✅ COMPLETE
+

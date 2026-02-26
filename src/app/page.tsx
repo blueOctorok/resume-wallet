@@ -211,18 +211,23 @@ const HomeContent = () => {
     }
   }, [])
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
     // Set flag FIRST so the sync effect doesn't re-login during Alchemy's async cleanup
     didExplicitLogoutRef.current = true
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem('stormchain-admin-wallet')
     }
+    // Clear user immediately for responsive UI
+    setUser(null)
+    // Then perform Alchemy logout (which clears SDK session)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if ((window as any).__alchemyLogout) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(window as any).__alchemyLogout()
-    } else {
-      setUser(null)
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (window as any).__alchemyLogout()
+      } catch (err) {
+        console.error('Alchemy logout error:', err)
+      }
     }
   }, [])
 
