@@ -2,6 +2,121 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 📱 **Masked Input Components with react-imask** (February 2026)
+
+### Overview
+
+Added professional input masking using `react-imask` library. Inputs auto-format as users type (phone numbers, SSN, dates, ZIP codes, currency, etc.).
+
+### Why
+
+The application was using plain HTML inputs with no formatting. Users had to manually type formatting characters, leading to inconsistent data like `2125603444` instead of `(212) 560-3444`. For a professional application, proper input masking improves UX and data consistency.
+
+### Implementation
+
+**New Dependency:** `react-imask` - Industry-standard input masking library
+
+**New Component File:** `src/components/ui/MaskedInputs.tsx`
+
+Available masked inputs:
+| Component | Format | Use Case |
+|-----------|--------|----------|
+| `PhoneInput` | (XXX) XXX-XXXX | Phone numbers |
+| `SSNInput` | XXX-XX-XXXX | Social Security Numbers |
+| `ZipCodeInput` | XXXXX or XXXXX-XXXX | ZIP codes (5 or 9 digit) |
+| `DateInput` | MM/DD/YYYY | Full dates |
+| `MonthYearInput` | MM/YYYY | Employment history dates |
+| `CDLInput` | Alphanumeric, auto-uppercase | CDL numbers |
+| `CurrencyInput` | $X,XXX.XX | Salary, compensation |
+| `EINInput` | XX-XXXXXXX | Employer ID numbers |
+
+**Usage:**
+```tsx
+import { PhoneInput, SSNInput, ZipCodeInput } from '@/components/ui/MaskedInputs'
+
+<PhoneInput
+  value={formData.phone}
+  onChange={(value) => handleInputChange('phone', value)}
+  className="your-input-styles"
+/>
+```
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `package.json` | Added `react-imask` dependency |
+| `src/components/ui/MaskedInputs.tsx` | New file with all masked input components |
+| `src/components/driver-application/PersonalInfoForm3.tsx` | Updated employer phone to use PhoneInput |
+
+### Architecture Note
+
+These components work alongside existing Zustand state management - they handle input formatting/UX only, while Zustand continues to own the actual form data. The masked inputs are drop-in replacements for plain `<input>` elements.
+
+### Next Steps
+
+Roll out masked inputs to other forms:
+- `PersonalInfoForm1.tsx` (applicant phone, carrier phone)
+- `EmploymentVerificationForm.tsx`
+- `DeveloperResumeBuilder.tsx`
+- `ResumeBuilder.tsx`
+- MVR page
+- Driver public profile connect form
+
+---
+
+## 🔄 **Section-Specific Refresh Buttons** (February 2026)
+
+### Overview
+
+Each hub section (Resumes, DOT Applications, MVR Records, Job Applications, etc.) now has its own refresh button that only refreshes that specific section's data, instead of refreshing the entire hub.
+
+### Why
+
+Previously, clicking any refresh button in a hub section triggered a full hub refresh (all data). This was wasteful and caused unnecessary loading states across unrelated sections.
+
+### What Changed
+
+Each section refresh button now:
+1. Only fetches data for that specific section
+2. Has its own loading state (spinner shows only for that section)
+3. Updates only the relevant portion of the hub state
+
+### Sections by Hub
+
+**DriverHub:**
+- Resumes → `refreshResumes()` (calls `/api/resumes`)
+- DOT Applications → `refreshDotApplications()` (updates dot apps from hub endpoint)
+- MVR Records → `refreshMvrRecords()` (updates MVR from hub endpoint)
+- Job Applications → `refreshJobApplications()` (calls `/api/applications/list`)
+
+**EmployerHub:**
+- Hiring Pipeline → `refreshPipeline()` (updates pipeline/applicants)
+- Recent Applicants → `refreshApplicants()` (calls `/api/employer/applicants`)
+- Job Postings → `refreshJobPostings()` (calls `/api/employer/jobs`)
+- MVR Orders → `refreshMvrOrders()` (updates MVR from hub endpoint)
+
+**DeveloperHub:**
+- AI Career Score → `refreshCareerScore()` (recalculates score)
+- Portfolio → `refreshPortfolio()` (calls `/api/developer/projects`)
+- Tech Resume → `refreshTechResumes()` (calls `/api/developer/resume`)
+- GitHub → `refreshGithub()` (updates profile from hub endpoint)
+- Job Applications → `refreshJobApplications()` (calls `/api/applications/list`)
+
+### Header Refresh
+
+The main header refresh button (next to the hub title) still does a **full hub refresh** - this is intentional for when users want to refresh everything at once.
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/DriverHub.tsx` | Added section loading states and refresh functions |
+| `src/components/EmployerHub.tsx` | Added section loading states and refresh functions |
+| `src/components/DeveloperHub.tsx` | Added section loading states and refresh functions |
+
+---
+
 ## 🏢 **Self-Service Employer Access Request Flow** (February 2026)
 
 ### Overview

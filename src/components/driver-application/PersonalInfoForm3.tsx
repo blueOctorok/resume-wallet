@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
 import SaveProgressButton from './SaveProgressButton'
+import { PhoneInput } from '@/components/ui/MaskedInputs'
 import { HelpCircle, Briefcase, Clock, GraduationCap, Truck, Shield, X, ChevronDown, Calendar } from 'lucide-react'
 
 // History entry types
@@ -1555,10 +1556,9 @@ export default function PersonalInfoForm3({
                     <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
                       PHONE
                     </label>
-                    <input
-                      type='tel'
+                    <PhoneInput
                       value={employer.phone}
-                      onChange={(e) => handleInputChange('employers', { phone: e.target.value }, index)}
+                      onChange={(formatted) => handleInputChange('employers', { phone: formatted }, index)}
                       className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                         theme === 'dark'
                           ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'

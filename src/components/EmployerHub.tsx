@@ -202,6 +202,12 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   const [loadingEmployments, setLoadingEmployments] = useState(false)
   const [initiatingVerification, setInitiatingVerification] = useState(false)
 
+  // Section-specific loading states for granular refresh
+  const [refreshingPipeline, setRefreshingPipeline] = useState(false)
+  const [refreshingApplicants, setRefreshingApplicants] = useState(false)
+  const [refreshingJobs, setRefreshingJobs] = useState(false)
+  const [refreshingMvr, setRefreshingMvr] = useState(false)
+
   // Fetch hub data
   const fetchHubData = useCallback(async () => {
     try {
@@ -225,6 +231,79 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       setError('Failed to load your hub data. Please try again.')
     } finally {
       setLoading(false)
+    }
+  }, [walletAddress])
+
+  // Section-specific refresh functions - only fetch and update the relevant section
+  const refreshPipeline = useCallback(async () => {
+    if (!walletAddress) return
+    setRefreshingPipeline(true)
+    try {
+      const response = await fetch('/api/employer/hub', {
+        headers: { 'x-wallet-address': walletAddress },
+      })
+      if (response.ok) {
+        const result = await response.json()
+        setData(prev => prev ? { ...prev, applicants: result.applicants, pipeline: result.pipeline } : null)
+      }
+    } catch (err) {
+      console.error('Error refreshing pipeline:', err)
+    } finally {
+      setRefreshingPipeline(false)
+    }
+  }, [walletAddress])
+
+  const refreshApplicants = useCallback(async () => {
+    if (!walletAddress) return
+    setRefreshingApplicants(true)
+    try {
+      const response = await fetch('/api/employer/applicants', {
+        headers: { 'x-wallet-address': walletAddress },
+      })
+      if (response.ok) {
+        const result = await response.json()
+        setData(prev => prev ? { ...prev, applicants: result.applicants || result } : null)
+      }
+    } catch (err) {
+      console.error('Error refreshing applicants:', err)
+    } finally {
+      setRefreshingApplicants(false)
+    }
+  }, [walletAddress])
+
+  const refreshJobPostings = useCallback(async () => {
+    if (!walletAddress) return
+    setRefreshingJobs(true)
+    try {
+      const response = await fetch('/api/employer/jobs', {
+        headers: { 'x-wallet-address': walletAddress },
+      })
+      if (response.ok) {
+        const result = await response.json()
+        setData(prev => prev ? { ...prev, jobPostings: result.jobs || result } : null)
+      }
+    } catch (err) {
+      console.error('Error refreshing job postings:', err)
+    } finally {
+      setRefreshingJobs(false)
+    }
+  }, [walletAddress])
+
+  const refreshMvrOrders = useCallback(async () => {
+    if (!walletAddress) return
+    setRefreshingMvr(true)
+    try {
+      const response = await fetch('/api/employer/hub', {
+        headers: { 'x-wallet-address': walletAddress },
+      })
+      if (response.ok) {
+        const result = await response.json()
+        setData(prev => prev ? { ...prev, mvrOrders: result.mvrOrders, stats: result.stats } : null)
+      }
+    } catch (err) {
+      console.error('Error refreshing MVR orders:', err)
+    } finally {
+      setRefreshingMvr(false)
     }
   }, [walletAddress])
 
@@ -666,16 +745,16 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           </h2>
           <div className="flex items-center gap-2">
             <button
-              onClick={triggerRefresh}
-              disabled={loading}
-              title="Refresh section"
+              onClick={refreshPipeline}
+              disabled={refreshingPipeline}
+              title="Refresh pipeline"
               className={`p-2 rounded-lg transition-all ${
-                loading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                refreshingPipeline ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
                   ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                   : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
               } ${isStale ? 'text-amber-500' : ''}`}
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${refreshingPipeline ? 'animate-spin' : ''}`} />
             </button>
             <div className={`flex items-center gap-1 p-1 rounded-lg ${
               theme === 'dark' ? 'bg-gray-900/50' : 'bg-gray-100'
@@ -787,16 +866,16 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           action={
             <div className="flex items-center gap-2">
               <button
-                onClick={triggerRefresh}
-                disabled={loading}
-                title="Refresh section"
+                onClick={refreshApplicants}
+                disabled={refreshingApplicants}
+                title="Refresh applicants"
                 className={`p-2 rounded-lg transition-all ${
-                  loading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  refreshingApplicants ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 } ${isStale ? 'text-amber-500' : ''}`}
               >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 ${refreshingApplicants ? 'animate-spin' : ''}`} />
               </button>
               {data.applicants.length > 0 && (
                 <button
@@ -853,16 +932,16 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           action={
             <div className="flex items-center gap-2">
               <button
-                onClick={triggerRefresh}
-                disabled={loading}
-                title="Refresh section"
+                onClick={refreshJobPostings}
+                disabled={refreshingJobs}
+                title="Refresh job postings"
                 className={`p-2 rounded-lg transition-all ${
-                  loading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  refreshingJobs ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 } ${isStale ? 'text-amber-500' : ''}`}
               >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 ${refreshingJobs ? 'animate-spin' : ''}`} />
               </button>
               <button
                 onClick={() => onNavigate('post-job')}
@@ -918,16 +997,16 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           theme={theme}
           action={
             <button
-              onClick={triggerRefresh}
-              disabled={loading}
-              title="Refresh section"
+              onClick={refreshMvrOrders}
+              disabled={refreshingMvr}
+              title="Refresh MVR orders"
               className={`p-2 rounded-lg transition-all ${
-                loading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                refreshingMvr ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
                   ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                   : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
               } ${isStale ? 'text-amber-500' : ''}`}
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${refreshingMvr ? 'animate-spin' : ''}`} />
             </button>
           }
         >

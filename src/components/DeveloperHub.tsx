@@ -150,6 +150,13 @@ export default function DeveloperHub({
   const [showScoreDetails, setShowScoreDetails] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
 
+  // Section-specific loading states for granular refresh
+  const [refreshingCareerScore, setRefreshingCareerScore] = useState(false)
+  const [refreshingPortfolio, setRefreshingPortfolio] = useState(false)
+  const [refreshingResumes, setRefreshingResumes] = useState(false)
+  const [refreshingGithub, setRefreshingGithub] = useState(false)
+  const [refreshingJobApps, setRefreshingJobApps] = useState(false)
+
   // Fetch developer resumes
   const fetchResumes = useCallback(async () => {
     if (!userAddress) return
@@ -257,6 +264,88 @@ export default function DeveloperHub({
     staleTime: 30000, // Consider data stale after 30 seconds
     enabled: !!userAddress,
   })
+
+  // Section-specific refresh functions
+  const refreshCareerScore = useCallback(async () => {
+    if (!userAddress || !userId) return
+    setRefreshingCareerScore(true)
+    try {
+      await calculateCareerScore(true)
+    } finally {
+      setRefreshingCareerScore(false)
+    }
+  }, [userAddress, userId, calculateCareerScore])
+
+  const refreshPortfolio = useCallback(async () => {
+    if (!userAddress) return
+    setRefreshingPortfolio(true)
+    try {
+      const response = await fetch('/api/developer/projects', {
+        headers: { 'x-wallet-address': userAddress },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setProjects(data.projects || [])
+      }
+    } catch (err) {
+      console.error('Error refreshing portfolio:', err)
+    } finally {
+      setRefreshingPortfolio(false)
+    }
+  }, [userAddress])
+
+  const refreshTechResumes = useCallback(async () => {
+    if (!userAddress) return
+    setRefreshingResumes(true)
+    try {
+      await fetchResumes()
+    } finally {
+      setRefreshingResumes(false)
+    }
+  }, [userAddress, fetchResumes])
+
+  const refreshGithub = useCallback(async () => {
+    if (!userAddress) return
+    setRefreshingGithub(true)
+    try {
+      const response = await fetch('/api/developer/hub', {
+        headers: { 'x-wallet-address': userAddress },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        if (data.profile) {
+          setProfile(data.profile)
+        }
+      }
+    } catch (err) {
+      console.error('Error refreshing GitHub:', err)
+    } finally {
+      setRefreshingGithub(false)
+    }
+  }, [userAddress])
+
+  const refreshJobApplications = useCallback(async () => {
+    if (!userAddress) return
+    setRefreshingJobApps(true)
+    try {
+      const response = await fetch('/api/applications/list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress: userAddress }),
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setStats(prev => ({
+          ...prev,
+          totalJobApplications: data.applications?.length || 0,
+        }))
+      }
+    } catch (err) {
+      console.error('Error refreshing job applications:', err)
+    } finally {
+      setRefreshingJobApps(false)
+    }
+  }, [userAddress])
 
   // Auto-calculate career score when profile is loaded
   useEffect(() => {
@@ -692,16 +781,16 @@ export default function DeveloperHub({
 
           <div className='flex items-center gap-2'>
             <button
-              onClick={triggerRefresh}
-              disabled={isLoading}
-              title='Refresh section'
+              onClick={refreshCareerScore}
+              disabled={refreshingCareerScore || scoreLoading}
+              title='Refresh career score'
               className={`p-2 rounded-lg transition-all ${
-                isLoading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                (refreshingCareerScore || scoreLoading) ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
                   ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                   : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
               } ${isStale ? 'text-amber-500' : ''}`}
             >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${(refreshingCareerScore || scoreLoading) ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
@@ -930,16 +1019,16 @@ export default function DeveloperHub({
             </div>
             <div className='flex items-center gap-2'>
               <button
-                onClick={triggerRefresh}
-                disabled={isLoading}
-                title='Refresh section'
+                onClick={refreshPortfolio}
+                disabled={refreshingPortfolio}
+                title='Refresh portfolio'
                 className={`p-2 rounded-lg transition-all ${
-                  isLoading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  refreshingPortfolio ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 } ${isStale ? 'text-amber-500' : ''}`}
               >
-                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 ${refreshingPortfolio ? 'animate-spin' : ''}`} />
               </button>
               <button
                 onClick={() => onNavigate('portfolio')}
@@ -1006,16 +1095,16 @@ export default function DeveloperHub({
             </div>
             <div className='flex items-center gap-2'>
               <button
-                onClick={triggerRefresh}
-                disabled={isLoading}
-                title='Refresh section'
+                onClick={refreshTechResumes}
+                disabled={refreshingResumes}
+                title='Refresh resumes'
                 className={`p-2 rounded-lg transition-all ${
-                  isLoading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  refreshingResumes ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 } ${isStale ? 'text-amber-500' : ''}`}
               >
-                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 ${refreshingResumes ? 'animate-spin' : ''}`} />
               </button>
               <button
                 onClick={() => setShowUploadResumeModal(true)}
@@ -1160,16 +1249,16 @@ export default function DeveloperHub({
             </div>
             <div className='flex items-center gap-2'>
               <button
-                onClick={triggerRefresh}
-                disabled={isLoading}
-                title='Refresh section'
+                onClick={refreshGithub}
+                disabled={refreshingGithub}
+                title='Refresh GitHub'
                 className={`p-2 rounded-lg transition-all ${
-                  isLoading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  refreshingGithub ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 } ${isStale ? 'text-amber-500' : ''}`}
               >
-                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 ${refreshingGithub ? 'animate-spin' : ''}`} />
               </button>
               {profile?.githubConnected && (
                 <span className='flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400'>
@@ -1272,16 +1361,16 @@ export default function DeveloperHub({
             </div>
             <div className='flex items-center gap-2'>
               <button
-                onClick={triggerRefresh}
-                disabled={isLoading}
-                title='Refresh section'
+                onClick={refreshJobApplications}
+                disabled={refreshingJobApps}
+                title='Refresh job applications'
                 className={`p-2 rounded-lg transition-all ${
-                  isLoading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  refreshingJobApps ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 } ${isStale ? 'text-amber-500' : ''}`}
               >
-                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 ${refreshingJobApps ? 'animate-spin' : ''}`} />
               </button>
               <button
                 onClick={() => onNavigate('jobs')}

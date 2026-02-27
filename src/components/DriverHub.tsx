@@ -209,6 +209,12 @@ export default function DriverHub({
   } | null>(null)
   const [showUploadResumeModal, setShowUploadResumeModal] = useState(false)
 
+  // Section-specific loading states for granular refresh
+  const [refreshingResumes, setRefreshingResumes] = useState(false)
+  const [refreshingDotApps, setRefreshingDotApps] = useState(false)
+  const [refreshingMvr, setRefreshingMvr] = useState(false)
+  const [refreshingJobApps, setRefreshingJobApps] = useState(false)
+
   // Handle resume deletion
   const handleDeleteResume = async (resume: HubResume) => {
     if (!userAddress) return
@@ -738,6 +744,100 @@ export default function DriverHub({
     }
   }, [userAddress])
 
+  // Section-specific refresh functions - only fetch and update the relevant section
+  const refreshResumes = useCallback(async () => {
+    if (!userAddress) return
+    setRefreshingResumes(true)
+    try {
+      const response = await fetch('/api/resumes', {
+        headers: { 'x-wallet-address': userAddress },
+      })
+      if (response.ok) {
+        const resumes = await response.json()
+        setHubData(prev => prev ? { ...prev, resumes } : null)
+      }
+    } catch (err) {
+      console.error('Error refreshing resumes:', err)
+    } finally {
+      setRefreshingResumes(false)
+    }
+  }, [userAddress])
+
+  const refreshDotApplications = useCallback(async () => {
+    if (!userAddress) return
+    setRefreshingDotApps(true)
+    try {
+      // Re-fetch from hub endpoint but only update dot applications
+      const response = await fetch('/api/driver/hub', {
+        headers: { 'x-wallet-address': userAddress },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setHubData(prev => prev ? { 
+          ...prev, 
+          dotApplications: data.dotApplications,
+          stats: { ...prev.stats, ...data.stats }
+        } : null)
+      }
+    } catch (err) {
+      console.error('Error refreshing DOT applications:', err)
+    } finally {
+      setRefreshingDotApps(false)
+    }
+  }, [userAddress])
+
+  const refreshMvrRecords = useCallback(async () => {
+    if (!userAddress) return
+    setRefreshingMvr(true)
+    try {
+      // Re-fetch from hub endpoint but only update MVR records
+      const response = await fetch('/api/driver/hub', {
+        headers: { 'x-wallet-address': userAddress },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setHubData(prev => prev ? { 
+          ...prev, 
+          mvrRecords: data.mvrRecords,
+          stats: { ...prev.stats, ...data.stats }
+        } : null)
+      }
+    } catch (err) {
+      console.error('Error refreshing MVR records:', err)
+    } finally {
+      setRefreshingMvr(false)
+    }
+  }, [userAddress])
+
+  const refreshJobApplications = useCallback(async () => {
+    if (!userAddress) return
+    setRefreshingJobApps(true)
+    try {
+      const response = await fetch('/api/applications/list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress: userAddress }),
+      })
+      if (response.ok) {
+        const data = await response.json()
+        // Transform to match HubJobApplication format
+        const jobApplications = (data.applications || []).map((app: Record<string, unknown>) => ({
+          id: app.id,
+          status: app.status,
+          appliedAt: app.applied_at,
+          viewCount: app.view_count || 0,
+          jobTitle: app.job_title,
+          companyName: app.employer_name,
+        }))
+        setHubData(prev => prev ? { ...prev, jobApplications } : null)
+      }
+    } catch (err) {
+      console.error('Error refreshing job applications:', err)
+    } finally {
+      setRefreshingJobApps(false)
+    }
+  }, [userAddress])
+
   const handleDiscardInProgressDotApp = useCallback(
     async (app: HubDotApplication) => {
       if (!onDeleteInProgressDotApp) return
@@ -1199,16 +1299,16 @@ export default function DriverHub({
             </h2>
             <div className='flex items-center gap-2'>
               <button
-                onClick={triggerRefresh}
-                disabled={loading}
-                title='Refresh section'
+                onClick={refreshResumes}
+                disabled={refreshingResumes}
+                title='Refresh resumes'
                 className={`p-2 rounded-lg transition-all ${
-                  loading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  refreshingResumes ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 } ${isStale ? 'text-amber-500' : ''}`}
               >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 ${refreshingResumes ? 'animate-spin' : ''}`} />
               </button>
               <button
                 onClick={() => setShowUploadResumeModal(true)}
@@ -1385,16 +1485,16 @@ export default function DriverHub({
             </h2>
             <div className='flex items-center gap-2'>
               <button
-                onClick={triggerRefresh}
-                disabled={loading}
-                title='Refresh section'
+                onClick={refreshDotApplications}
+                disabled={refreshingDotApps}
+                title='Refresh DOT applications'
                 className={`p-2 rounded-lg transition-all ${
-                  loading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  refreshingDotApps ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 } ${isStale ? 'text-amber-500' : ''}`}
               >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 ${refreshingDotApps ? 'animate-spin' : ''}`} />
               </button>
               <button
                 onClick={onStartDotApp || (() => onNavigate('dotapp'))}
@@ -1579,16 +1679,16 @@ export default function DriverHub({
             </h2>
             <div className='flex items-center gap-2'>
               <button
-                onClick={triggerRefresh}
-                disabled={loading}
-                title='Refresh section'
+                onClick={refreshMvrRecords}
+                disabled={refreshingMvr}
+                title='Refresh MVR records'
                 className={`p-2 rounded-lg transition-all ${
-                  loading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  refreshingMvr ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 } ${isStale ? 'text-amber-500' : ''}`}
               >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 ${refreshingMvr ? 'animate-spin' : ''}`} />
               </button>
               <button
                 onClick={() => onNavigate('mvr')}
@@ -1658,16 +1758,16 @@ export default function DriverHub({
             </h2>
             <div className='flex items-center gap-2'>
               <button
-                onClick={triggerRefresh}
-                disabled={loading}
-                title='Refresh section'
+                onClick={refreshJobApplications}
+                disabled={refreshingJobApps}
+                title='Refresh job applications'
                 className={`p-2 rounded-lg transition-all ${
-                  loading ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  refreshingJobApps ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
                     ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
                 } ${isStale ? 'text-amber-500' : ''}`}
               >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 ${refreshingJobApps ? 'animate-spin' : ''}`} />
               </button>
               <button
                 onClick={() => onNavigate('jobs')}
