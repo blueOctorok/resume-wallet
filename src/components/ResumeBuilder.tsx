@@ -22,6 +22,7 @@ import {
   Loader2
 } from 'lucide-react'
 import { profileToResumeBuilder, resumeBuilderToProfile } from '@/lib/profile-mapper'
+import { PhoneInput } from '@/components/ui/MaskedInputs'
 import type { UnifiedDriverProfile } from '@/types/driver-profile'
 
 interface PersonalInfo {
@@ -849,9 +850,8 @@ function PersonalInfoStep({ data, onChange, theme }: PersonalInfoStepProps) {
           theme={theme}
           required
         />
-        <InputField
+        <PhoneField
           label='Phone'
-          type='tel'
           value={data.phone}
           onChange={(v) => updateField('phone', v)}
           theme={theme}
@@ -1742,9 +1742,8 @@ function ReferencesStep({
                   theme={theme}
                   placeholder='e.g., Former Supervisor, Colleague'
                 />
-                <InputField
+                <PhoneField
                   label='Phone'
-                  type='tel'
                   value={ref.phone}
                   onChange={(v) => updateReference(ref.id, { phone: v })}
                   theme={theme}
@@ -2161,6 +2160,44 @@ function InputField({
             ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-brand-mint'
             : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
         } disabled:opacity-50 disabled:cursor-not-allowed`}
+      />
+    </div>
+  )
+}
+
+function PhoneField({
+  label,
+  value,
+  onChange,
+  theme,
+  required = false,
+  className = '',
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  theme: string
+  required?: boolean
+  className?: string
+}) {
+  return (
+    <div className={className}>
+      <label
+        className={`block text-sm font-medium mb-2 ${
+          theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+        }`}
+      >
+        {label}
+        {required && <span className='text-red-500 ml-1'>*</span>}
+      </label>
+      <PhoneInput
+        value={value}
+        onChange={onChange}
+        className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-brand-mint/20 ${
+          theme === 'dark'
+            ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-brand-mint'
+            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
+        }`}
       />
     </div>
   )

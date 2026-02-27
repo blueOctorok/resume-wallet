@@ -285,6 +285,16 @@ export function rowToProfile(row: DriverProfileRow): UnifiedDriverProfile {
 }
 
 /**
+ * Truncate state to 2-character abbreviation.
+ * Database column is VARCHAR(2), so longer values will cause insert failures.
+ */
+function truncateState(state: string | undefined | null): string | null {
+  if (!state) return null
+  // Take first 2 characters and uppercase (handles both "OH" and "Ohio" → "OH")
+  return state.trim().slice(0, 2).toUpperCase() || null
+}
+
+/**
  * Convert app type (camelCase) to database format (snake_case)
  * Only includes fields that have values to avoid overwriting with nulls
  */
@@ -306,11 +316,12 @@ export function profileToRow(
   if (profile.ssnLastFour !== undefined) row.ssn_last_four = profile.ssnLastFour || null
   if (profile.address !== undefined) row.address = profile.address || null
   if (profile.city !== undefined) row.city = profile.city || null
-  if (profile.state !== undefined) row.state = profile.state || null
+  // State fields are VARCHAR(2) - must truncate to prevent DB errors
+  if (profile.state !== undefined) row.state = truncateState(profile.state)
   if (profile.zipCode !== undefined) row.zip_code = profile.zipCode || null
   if (profile.professionalSummary !== undefined) row.professional_summary = profile.professionalSummary || null
   if (profile.cdlNumber !== undefined) row.cdl_number = profile.cdlNumber || null
-  if (profile.cdlState !== undefined) row.cdl_state = profile.cdlState || null
+  if (profile.cdlState !== undefined) row.cdl_state = truncateState(profile.cdlState)
   if (profile.cdlClass !== undefined) row.cdl_class = profile.cdlClass || null
   if (profile.cdlExpiration !== undefined) row.cdl_expiration = profile.cdlExpiration || null
   if (profile.endorsements !== undefined) row.endorsements = profile.endorsements

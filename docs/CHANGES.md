@@ -2,6 +2,41 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+## 🐛 **Driver Profile Creation Bug Fix - State Field Too Long** (February 2026)
+
+### Issue
+
+Users were getting a 500 error "Failed to create driver profile" when trying to save DOT form progress. Vercel logs showed:
+
+```
+'value too long for type character varying(2)'
+```
+
+### Root Cause
+
+The `state` and `cdl_state` database columns are `VARCHAR(2)` (for state abbreviations like "OH", "CA"). The DOT form had **free text inputs** for state fields, allowing users to type full state names like "Ohio" which exceeded the 2-character limit.
+
+### Fix
+
+1. **Created `StateSelect` component** - Dropdown with all US states (only allows valid 2-letter codes)
+2. **Updated DOT Form 1** - Replaced all state text inputs with StateSelect dropdowns:
+   - Current mailing address state
+   - Previous address states
+   - Current license state (CDL state)
+   - Previous license states
+3. **Added defensive truncation** - `profileToRow()` now truncates state values to 2 characters as a safety net
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/ui/StateSelect.tsx` | New component with US states dropdown |
+| `src/components/driver-application/PersonalInfoForm1.tsx` | Replaced 4 state text inputs with StateSelect |
+| `src/types/driver-profile.ts` | Added `truncateState()` defensive function |
+| `src/app/api/driver/profile/route.ts` | Added detailed error logging |
+
+---
+
 ## 📱 **Masked Input Components with react-imask** (February 2026)
 
 ### Overview
@@ -47,21 +82,19 @@ import { PhoneInput, SSNInput, ZipCodeInput } from '@/components/ui/MaskedInputs
 |------|--------|
 | `package.json` | Added `react-imask` dependency |
 | `src/components/ui/MaskedInputs.tsx` | New file with all masked input components |
-| `src/components/driver-application/PersonalInfoForm3.tsx` | Updated employer phone to use PhoneInput |
+| `src/components/driver-application/PersonalInfoForm1.tsx` | Updated carrier phone + applicant phone |
+| `src/components/driver-application/PersonalInfoForm3.tsx` | Updated employer phone |
+| `src/components/driver-application/EmploymentVerificationForm.tsx` | Updated company phone |
+| `src/components/ResumeBuilder.tsx` | Added PhoneField, updated personal + reference phones |
+| `src/components/DeveloperResumeBuilder.tsx` | Updated personal info phone |
+| `src/app/mvr/page.tsx` | Updated phone input |
+| `src/components/verification/DriverEmploymentVerificationSection.tsx` | Updated contact phone |
+| `src/components/verification/DeveloperEmploymentVerificationSection.tsx` | Updated contact phone |
+| `src/app/d/[token]/page.tsx` | Updated employer connect phone |
 
 ### Architecture Note
 
 These components work alongside existing Zustand state management - they handle input formatting/UX only, while Zustand continues to own the actual form data. The masked inputs are drop-in replacements for plain `<input>` elements.
-
-### Next Steps
-
-Roll out masked inputs to other forms:
-- `PersonalInfoForm1.tsx` (applicant phone, carrier phone)
-- `EmploymentVerificationForm.tsx`
-- `DeveloperResumeBuilder.tsx`
-- `ResumeBuilder.tsx`
-- MVR page
-- Driver public profile connect form
 
 ---
 

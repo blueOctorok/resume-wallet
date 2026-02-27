@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
           references: [],
           education: [],
           skills: [],
-          driving_experience: {},
+          driving_experience: null,
           mvr_violations: [],
           mvr_accidents: [],
         })
@@ -179,9 +179,15 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (createError) {
-        console.error('[DRIVER PROFILE POST] Error creating profile:', createError)
+        console.error('[DRIVER PROFILE POST] Error creating profile:', {
+          code: createError.code,
+          message: createError.message,
+          details: createError.details,
+          hint: createError.hint,
+          userId: user.id,
+        })
         return NextResponse.json(
-          { error: 'Failed to create driver profile' },
+          { error: 'Failed to create driver profile', details: createError.message },
           { status: 500 }
         )
       }
@@ -362,6 +368,9 @@ export async function PUT(request: NextRequest) {
       result = updated
     } else {
       // Create new profile with the data
+      console.log('[DRIVER PROFILE PUT] Creating new profile for user:', user.id)
+      console.log('[DRIVER PROFILE PUT] Insert data:', JSON.stringify(updateData, null, 2))
+      
       const { data: created, error: createError } = await supabase
         .from('driver_profiles')
         .insert({
@@ -373,9 +382,15 @@ export async function PUT(request: NextRequest) {
         .single()
 
       if (createError) {
-        console.error('[DRIVER PROFILE PUT] Error creating profile:', createError)
+        console.error('[DRIVER PROFILE PUT] Error creating profile:', {
+          code: createError.code,
+          message: createError.message,
+          details: createError.details,
+          hint: createError.hint,
+          userId: user.id,
+        })
         return NextResponse.json(
-          { error: 'Failed to create driver profile' },
+          { error: 'Failed to create driver profile', details: createError.message },
           { status: 500 }
         )
       }

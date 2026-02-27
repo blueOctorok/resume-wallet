@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@account-kit/react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { PhoneInput } from '@/components/ui/MaskedInputs'
 
 // Client-only wrapper to prevent SSR issues with Alchemy hooks
 function MvrOrderForm() {
@@ -292,11 +293,9 @@ function MvrOrderForm() {
                   }`}>
                     Phone
                   </label>
-                  <input
-                    type="tel"
+                  <PhoneInput
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="555-555-5555"
+                    onChange={setPhone}
                     className={`w-full px-4 py-3 rounded-xl border transition-all ${
                       theme === 'light'
                         ? 'bg-white border-gray-300 text-gray-900 focus:border-brand-sage focus:ring-2 focus:ring-brand-sage/20'

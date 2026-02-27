@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { PhoneInput } from '@/components/ui/MaskedInputs'
 import {
   ArrowLeft,
   ArrowRight,
@@ -654,17 +655,15 @@ export default function DeveloperResumeBuilder({
         </div>
         <div>
           <label className={labelClass}>Phone</label>
-          <input
-            type='tel'
+          <PhoneInput
             className={inputClass}
             value={data.personalInfo.phone}
-            onChange={(e) =>
+            onChange={(value) =>
               setData((d) => ({
                 ...d,
-                personalInfo: { ...d.personalInfo, phone: e.target.value },
+                personalInfo: { ...d.personalInfo, phone: value },
               }))
             }
-            placeholder='(555) 123-4567'
           />
         </div>
       </div>

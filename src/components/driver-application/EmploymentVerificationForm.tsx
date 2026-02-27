@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { PhoneInput } from '@/components/ui/MaskedInputs'
 
 interface EmploymentVerificationData {
   // Section 1 - Driver/Applicant Authorization
@@ -716,10 +717,9 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
             >
               Phone:
             </label>
-            <input
-              type='text'
+            <PhoneInput
               value={formData.phone}
-              onChange={(e) => handleInputChange('phone', e.target.value)}
+              onChange={(value) => handleInputChange('phone', value)}
               className={`w-full px-3 py-2 rounded-md border ${
                 theme === 'dark'
                   ? 'bg-brand-cream border-gray-300 text-gray-900'

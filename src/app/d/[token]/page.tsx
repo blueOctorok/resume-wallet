@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
+import { PhoneInput } from '@/components/ui/MaskedInputs'
 import {
   User,
   MapPin,
@@ -910,14 +911,12 @@ export default function PublicDriverProfile() {
                       }
                       className='w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-brand-mint'
                     />
-                    <input
-                      type='tel'
-                      placeholder='Phone'
+                    <PhoneInput
                       value={connectForm.employerPhone}
-                      onChange={(e) =>
+                      onChange={(value) =>
                         setConnectForm({
                           ...connectForm,
-                          employerPhone: e.target.value,
+                          employerPhone: value,
                         })
                       }
                       className='w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-brand-mint'

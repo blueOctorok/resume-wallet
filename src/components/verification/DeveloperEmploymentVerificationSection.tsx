@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { PhoneInput } from '@/components/ui/MaskedInputs'
 import {
   ClipboardCheck,
   Building2,
@@ -608,11 +609,9 @@ export default function DeveloperEmploymentVerificationSection({
                   <Phone className="w-4 h-4 inline mr-1" />
                   Contact Phone (optional)
                 </label>
-                <input
-                  type="tel"
+                <PhoneInput
                   value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value)}
-                  placeholder="+1 555-123-4567"
+                  onChange={setContactPhone}
                   className={`w-full px-3 py-2 rounded-lg border ${
                     theme === 'dark'
                       ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500'

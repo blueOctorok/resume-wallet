@@ -5,6 +5,8 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
 import ResumeUploadWithPrefill from '@/components/ResumeUploadWithPrefill'
 import SaveProgressButton from './SaveProgressButton'
+import { PhoneInput } from '@/components/ui/MaskedInputs'
+import { StateSelect } from '@/components/ui/StateSelect'
 import { HelpCircle } from 'lucide-react'
 
 const DEFAULT_CARRIER_INFO = {
@@ -775,16 +777,15 @@ theme === 'dark'
             >
               MOTOR CARRIER PHONE
             </label>
-            <input
-              type='tel'
+            <PhoneInput
               value={formData.employingCarrier.phone}
-              onChange={(e) =>
+              onChange={(value) =>
                 handleInputChange('employingCarrier', {
                   ...formData.employingCarrier,
-                  phone: e.target.value,
+                  phone: value,
                 })
               }
-                          className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+              className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
             />
           </div>
         </div>
@@ -897,10 +898,9 @@ theme === 'dark'
           >
             PHONE
           </label>
-          <input
-            type='tel'
+          <PhoneInput
             value={formData.phone}
-            onChange={(e) => handleInputChange('phone', e.target.value)}
+            onChange={(value) => handleInputChange('phone', value)}
             className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
           />
         </div>
@@ -1104,16 +1104,15 @@ theme === 'dark'
             >
               STATE
             </label>
-            <input
-              type='text'
+            <StateSelect
               value={formData.currentMailing.state}
-              onChange={(e) =>
+              onChange={(value) =>
                 handleInputChange('currentMailing', {
                   ...formData.currentMailing,
-                  state: e.target.value,
+                  state: value,
                 })
               }
-                          className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+              className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
             />
           </div>
           <div>
@@ -1276,17 +1275,16 @@ theme === 'dark'
               >
                 STATE
               </label>
-              <input
-                type='text'
+              <StateSelect
                 value={address.state}
-                onChange={(e) =>
+                onChange={(value) =>
                   handleInputChange(
                     'previousAddresses',
-                    { state: e.target.value },
+                    { state: value },
                     index
                   )
                 }
-            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+                className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
               />
             </div>
             <div>
@@ -1399,13 +1397,12 @@ theme === 'dark'
               >
                 STATE
               </label>
-              <input
-                type='text'
+              <StateSelect
                 value={license.state}
-                onChange={(e) =>
+                onChange={(value) =>
                   handleInputChange(
                     'currentLicenses',
-                    { state: e.target.value },
+                    { state: value },
                     index
                   )
                 }
@@ -1536,17 +1533,16 @@ theme === 'dark'
                 >
                   STATE
                 </label>
-                <input
-                  type='text'
+                <StateSelect
                   value={license.state}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     handleInputChange(
                       'previousLicenses',
-                      { state: e.target.value },
+                      { state: value },
                       index
                     )
                   }
-className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+                  className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
                 />
               </div>
               <div>
