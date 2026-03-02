@@ -210,7 +210,17 @@ export async function GET(
       .eq('company_id', companyId)
       .in('status', ['pending', 'viewed'])
 
-    // 9. Existing applications to company's jobs
+    // 9. Background check consent — has this driver signed the disclosure for this company?
+    const { data: bgcheckConsent } = await supabase
+      .from('bgcheck_consents')
+      .select('id, signed_at')
+      .eq('company_id', companyId)
+      .eq('driver_user_id', userId)
+      .order('signed_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    // 10. Existing applications to company's jobs
     const { data: companyJobs } = await supabase
       .from('job_postings')
       .select('id')
@@ -320,6 +330,8 @@ export async function GET(
         // Company-specific context
         pendingRequests: pendingRequests || [],
         existingApplication,
+        hasBgcheckConsent: !!bgcheckConsent,
+        bgcheckConsentSignedAt: bgcheckConsent?.signed_at || null,
       },
     })
 

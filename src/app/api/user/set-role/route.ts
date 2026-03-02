@@ -3,6 +3,11 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { sendNewCompanyNotification } from '@/lib/send-admin-notification'
 import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
 
+// Admin wallets that bypass company/invite requirement for employer role (for testing)
+const EMPLOYER_WHITELIST_WALLETS = [
+  '0x9499cD25C6737A8195e74262f3c5eAE6dA607df3',
+].map(w => w.toLowerCase())
+
 export async function POST(request: Request) {
   try {
     const { role, walletAddress, companyName, dotNumber } = await request.json()
@@ -197,9 +202,10 @@ export async function POST(request: Request) {
         }
       }
 
-      // 5. If nothing found, REJECT - employer access requires invitation
-      // Public employer signup is disabled for security reasons
-      if (!companyAssigned) {
+      // 5. If nothing found, check whitelist — then REJECT if not whitelisted
+      const isWhitelisted = walletAddress && EMPLOYER_WHITELIST_WALLETS.includes(walletAddress.toLowerCase())
+
+      if (!companyAssigned && !isWhitelisted) {
         console.log(
           `[SET ROLE] Rejected employer access for ${userEmail || walletAddress} - no company/invite found`
         )
@@ -211,6 +217,31 @@ export async function POST(request: Request) {
           },
           { status: 403 }
         )
+      }
+
+      // Whitelisted admins without a company get a dev company auto-created
+      if (!companyAssigned && isWhitelisted) {
+        console.log(`[SET ROLE] Whitelisted admin ${walletAddress} - auto-creating dev company`)
+        const { data: devCompany, error: createErr } = await supabase
+          .from('companies')
+          .insert({
+            company_name: 'StormChain Dev',
+            employer_user_id: userToUpdate.id,
+            status: 'active',
+          })
+          .select('id')
+          .single()
+
+        if (!createErr && devCompany) {
+          await supabase.from('company_members').insert({
+            company_id: devCompany.id,
+            user_id: userToUpdate.id,
+            role: 'owner',
+            accepted_at: new Date().toISOString(),
+            is_active: true,
+          })
+          console.log(`[SET ROLE] Created "StormChain Dev" company for admin`)
+        }
       }
     }
 

@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { calculateProfileScore } from '@/lib/profile-completeness'
+import { form1ToProfile, form2ToProfile, form3ToProfile } from '@/lib/dot-form-mapper'
 
 /**
  * API Route: Sync DOT Application → Driver Profile
  * 
  * Called when a driver completes their DOT application.
- * Extracts relevant data and updates their driver_profiles record.
- * Calculates and updates profile_completion_score.
+ * application_data is stored as { form1, form2, form3 } by save-progress.
+ * We use the existing mapper functions to translate each form into profile fields.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     console.log('[DOT SYNC] Starting sync for wallet:', walletAddress)
 
-    const supabase = await createClient()
+    const supabase = await getAdminSupabaseClient()
 
     // 1. Get user
     const { data: user, error: userError } = await supabase
@@ -75,38 +76,38 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
 
     // 4. Extract data from DOT application
+    // Data is stored as { form1, form2, form3 } by the save-progress route
     const appData = dotApplication.application_data || {}
-    
-    // CDL Information
-    const cdlInfo = appData.cdlInfo || {}
-    const cdl_class = cdlInfo.cdlClass || null
-    const cdl_endorsements = cdlInfo.endorsements || []
-    const cdl_state = cdlInfo.cdlState || null
-    const cdl_number = cdlInfo.cdlNumber || null
+    const form1Data = appData.form1 || {}
+    const form2Data = appData.form2 || {}
+    const form3Data = appData.form3 || {}
 
-    // Driving Experience
-    const drivingExp = appData.drivingExperience || {}
+    // Use the existing mapper functions — they already know how to parse each form
+    const profileFromForms = {
+      ...form1ToProfile(form1Data),
+      ...form2ToProfile(form2Data),
+      ...form3ToProfile(form3Data),
+    }
+
+    // Calculate total driving experience from form2 directly
+    // form2ToProfile doesn't extract experience_years/miles, so we do it here
     let totalYears = 0
     let totalMiles = 0
-
-    // Calculate total experience from equipment types
-    if (drivingExp.equipmentTypes) {
-      const equipment = drivingExp.equipmentTypes
-      Object.values(equipment).forEach((exp: any) => {
-        if (exp && typeof exp === 'object') {
-          totalYears = Math.max(totalYears, exp.years || 0)
-          totalMiles += exp.miles || 0
-        }
+    const drivingExpArr = form2Data.drivingExperience || []
+    if (Array.isArray(drivingExpArr)) {
+      drivingExpArr.forEach((exp: { yearsOfExperience?: string }) => {
+        const years = parseFloat(exp.yearsOfExperience || '0') || 0
+        totalYears = Math.max(totalYears, years)
       })
     }
 
     console.log('[DOT SYNC] Extracted data:', {
-      cdl_class,
-      cdl_endorsements,
-      cdl_state,
-      cdl_number,
+      name: `${profileFromForms.firstName || ''} ${profileFromForms.lastName || ''}`.trim(),
+      cdl_class: profileFromForms.cdlClass,
+      cdl_state: profileFromForms.cdlState,
       experience_years: totalYears,
-      total_miles_driven: totalMiles
+      employment_count: profileFromForms.employmentHistory?.length ?? 0,
+      education_count: profileFromForms.education?.length ?? 0,
     })
 
     // 5. Get or create driver profile
@@ -117,7 +118,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (profileError && profileError.code === 'PGRST116') {
-      // Profile doesn't exist, create it
       console.log('[DOT SYNC] Creating new profile')
       const { data: newProfile, error: createError } = await supabase
         .from('driver_profiles')
@@ -145,17 +145,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 6. Update driver profile with DOT data
-    const updateData: any = {
+    // 6. Build update payload from mapped profile fields → DB column names
+    const updateData: Record<string, unknown> = {
       driver_application_id: dotApplication.id,
       dot_application_data: appData,
-      cdl_class,
-      cdl_endorsements,
-      cdl_state,
-      cdl_number,
+      // Personal info (Form 1)
+      first_name: profileFromForms.firstName || null,
+      middle_name: profileFromForms.middleName || null,
+      last_name: profileFromForms.lastName || null,
+      email: profileFromForms.email || null,
+      phone: profileFromForms.phone || null,
+      date_of_birth: profileFromForms.dateOfBirth || null,
+      address: profileFromForms.address || null,
+      city: profileFromForms.city || null,
+      state: profileFromForms.state || null,
+      zip_code: profileFromForms.zipCode || null,
+      // CDL info (Form 1 currentLicenses[0])
+      cdl_class: profileFromForms.cdlClass || null,
+      cdl_endorsements: profileFromForms.endorsements || [],
+      cdl_state: profileFromForms.cdlState || null,
+      cdl_number: profileFromForms.cdlNumber || null,
+      cdl_expiration: profileFromForms.cdlExpiration || null,
+      // Driving experience (Form 2)
       experience_years: totalYears > 0 ? totalYears : null,
-      total_miles_driven: totalMiles > 0 ? totalMiles : null,
-      updated_at: new Date().toISOString()
+      // Employment history & education (Form 3)
+      employment_history: profileFromForms.employmentHistory ?? [],
+      education: profileFromForms.education ?? [],
+      updated_at: new Date().toISOString(),
     }
 
     // Add resume data if available

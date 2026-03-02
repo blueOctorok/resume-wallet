@@ -1,0 +1,95 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+
+/**
+ * POST /api/candidate/bgcheck-consent
+ *
+ * Records a driver's signed authorization for a background check.
+ * - Stores the consent record in bgcheck_consents
+ * - Marks the corresponding candidate_requests entry as 'completed'
+ *
+ * Body: {
+ *   requestId: string     — candidate_requests.id being fulfilled
+ *   companyName: string   — display name for the PDF record
+ *   signedName: string    — typed signature
+ *   formData: object      — pre-filled personal info shown on the form
+ * }
+ */
+export async function POST(request: NextRequest) {
+  const walletAddress = request.headers.get('x-wallet-address')
+
+  if (!walletAddress) {
+    return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+  }
+
+  const { requestId, companyName, signedName, formData } = await request.json()
+
+  if (!requestId || !signedName?.trim()) {
+    return NextResponse.json(
+      { error: 'requestId and signedName are required' },
+      { status: 400 }
+    )
+  }
+
+  const supabase = await getAdminSupabaseClient()
+
+  // Verify the candidate owns this request
+  const { data: user } = await supabase
+    .from('users')
+    .select('id')
+    .ilike('wallet_address', walletAddress)
+    .single()
+
+  if (!user) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 })
+  }
+
+  const { data: candidateRequest } = await supabase
+    .from('candidate_requests')
+    .select('id, company_id, candidate_user_id, request_type, status')
+    .eq('id', requestId)
+    .eq('candidate_user_id', user.id)
+    .single()
+
+  if (!candidateRequest) {
+    return NextResponse.json({ error: 'Request not found' }, { status: 404 })
+  }
+
+  if (candidateRequest.request_type !== 'mvr_order') {
+    return NextResponse.json({ error: 'Consent only applies to MVR order requests' }, { status: 400 })
+  }
+
+  if (!['pending', 'viewed'].includes(candidateRequest.status)) {
+    return NextResponse.json({ error: 'This request has already been actioned' }, { status: 409 })
+  }
+
+  // Store consent record
+  const { error: insertError } = await supabase
+    .from('bgcheck_consents')
+    .insert({
+      request_id: requestId,
+      company_id: candidateRequest.company_id,
+      company_name: companyName,
+      driver_user_id: user.id,
+      signed_name: signedName.trim(),
+      form_data: formData || {},
+    })
+
+  if (insertError) {
+    console.error('[BGCHECK CONSENT] Insert error:', insertError)
+    return NextResponse.json({ error: 'Failed to store consent' }, { status: 500 })
+  }
+
+  // Mark the candidate_requests record as completed
+  const { error: updateError } = await supabase
+    .from('candidate_requests')
+    .update({ status: 'completed', completed_at: new Date().toISOString() })
+    .eq('id', requestId)
+
+  if (updateError) {
+    console.error('[BGCHECK CONSENT] Status update error:', updateError)
+    // Consent was stored — this is non-fatal, log and continue
+  }
+
+  return NextResponse.json({ success: true })
+}

@@ -17,7 +17,9 @@ import {
   ChevronRight,
   Clock,
   ExternalLink,
+  Shield,
 } from 'lucide-react'
+import BackgroundCheckDisclosure from '@/components/BackgroundCheckDisclosure'
 
 interface CandidateRequest {
   id: string
@@ -43,11 +45,11 @@ interface CandidateRequestsSectionProps {
 
 const REQUEST_TYPE_CONFIG = {
   mvr_order: {
-    icon: Car,
-    label: 'MVR Request',
-    description: 'This employer wants to order your Motor Vehicle Record',
-    color: 'text-blue-500',
-    bgColor: 'bg-blue-500/10',
+    icon: Shield,
+    label: 'Background Check Request',
+    description: 'This employer is requesting your authorization to run a background check & MVR',
+    color: 'text-teal-500',
+    bgColor: 'bg-teal-500/10',
   },
   document_upload: {
     icon: FileText,
@@ -100,6 +102,8 @@ export default function CandidateRequestsSection({
   const [pendingCount, setPendingCount] = useState(0)
   const [selectedRequest, setSelectedRequest] = useState<CandidateRequest | null>(null)
   const [updating, setUpdating] = useState(false)
+  // Controls whether the full-screen disclosure form is shown
+  const [showDisclosure, setShowDisclosure] = useState(false)
 
   const fetchRequests = useCallback(async () => {
     if (!userAddress) {
@@ -427,9 +431,12 @@ export default function CandidateRequestsSection({
               )}
 
               {selectedRequest.requestType === 'mvr_order' && (
-                <div className={`p-4 rounded-xl border ${theme === 'dark' ? 'border-blue-500/30 bg-blue-500/10' : 'border-blue-200 bg-blue-50'}`}>
-                  <p className='text-sm text-blue-600 dark:text-blue-400'>
-                    <strong>Good news!</strong> When this employer orders your MVR, it will be added to your profile and visible to all employers. This increases your chances of getting hired!
+                <div className={`p-4 rounded-xl border ${theme === 'dark' ? 'border-teal-500/30 bg-teal-500/10' : 'border-teal-200 bg-teal-50'}`}>
+                  <p className={`text-sm font-medium mb-1 ${theme === 'dark' ? 'text-teal-300' : 'text-teal-800'}`}>
+                    Your rights are protected
+                  </p>
+                  <p className={`text-sm ${theme === 'dark' ? 'text-teal-400' : 'text-teal-700'}`}>
+                    Under the Fair Credit Reporting Act (FCRA), you must review and sign a Background Check Disclosure before this employer can order a report. Click "Review & Sign Disclosure" to read the full form and authorize.
                   </p>
                 </div>
               )}
@@ -475,16 +482,11 @@ export default function CandidateRequestsSection({
 
                   {selectedRequest.requestType === 'mvr_order' && (
                     <button
-                      onClick={() => updateRequestStatus(selectedRequest.id, 'completed')}
-                      disabled={updating}
-                      className='flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition-colors disabled:opacity-50'
+                      onClick={() => setShowDisclosure(true)}
+                      className='flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition-colors'
                     >
-                      {updating ? (
-                        <Loader2 className='w-4 h-4 animate-spin' />
-                      ) : (
-                        <Check className='w-4 h-4' />
-                      )}
-                      Approve MVR Order
+                      <Shield className='w-4 h-4' />
+                      Review & Sign Disclosure
                     </button>
                   )}
 
@@ -519,6 +521,21 @@ export default function CandidateRequestsSection({
             )}
           </div>
         </div>
+      )}
+
+      {/* Full-screen FCRA disclosure form — shown when driver opens an MVR request */}
+      {showDisclosure && selectedRequest && (
+        <BackgroundCheckDisclosure
+          requestId={selectedRequest.id}
+          companyName={selectedRequest.company?.name || 'the employer'}
+          userAddress={userAddress || ''}
+          onClose={() => setShowDisclosure(false)}
+          onConsentSigned={async () => {
+            setShowDisclosure(false)
+            setSelectedRequest(null)
+            await fetchRequests()
+          }}
+        />
       )}
     </div>
   )

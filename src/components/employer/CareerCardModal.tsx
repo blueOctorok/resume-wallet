@@ -140,6 +140,8 @@ interface CareerCardData {
     status: string
     created_at: string
   } | null
+  hasBgcheckConsent: boolean
+  bgcheckConsentSignedAt: string | null
 }
 
 interface CareerCardModalProps {
@@ -634,7 +636,7 @@ export default function CareerCardModal({
                   action={
                     !careerCard.hasMvr ? (
                       <ActionButton
-                        label="Order MVR"
+                        label={careerCard.hasBgcheckConsent ? 'Request MVR' : 'Request Background Check'}
                         loading={requestLoading === 'mvr_order'}
                         disabled={hasPendingRequest('mvr_order')}
                         onClick={() => createRequest('mvr_order')}
@@ -673,10 +675,28 @@ export default function CareerCardModal({
                         </p>
                       )}
                     </div>
+                  ) : careerCard.hasBgcheckConsent ? (
+                    <div className={`p-4 rounded-lg border ${
+                      theme === 'dark'
+                        ? 'bg-teal-500/10 border-teal-500/30'
+                        : 'bg-teal-50 border-teal-200'
+                    }`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <CheckCircle className="w-4 h-4 text-teal-500" />
+                        <span className={`text-sm font-medium ${theme === 'dark' ? 'text-teal-300' : 'text-teal-800'}`}>
+                          Disclosure signed by candidate
+                        </span>
+                      </div>
+                      <p className={`text-xs ${theme === 'dark' ? 'text-teal-400/70' : 'text-teal-600'}`}>
+                        Signed {careerCard.bgcheckConsentSignedAt
+                          ? new Date(careerCard.bgcheckConsentSignedAt).toLocaleDateString()
+                          : ''} — use "Request MVR" to initiate the order
+                      </p>
+                    </div>
                   ) : (
                     <EmptyState 
                       message="No MVR on file" 
-                      subtext={hasPendingRequest('mvr_order') ? 'Request pending' : 'Order an MVR for this candidate'} 
+                      subtext={hasPendingRequest('mvr_order') ? 'Awaiting driver authorization' : 'Request a background check to get started'} 
                       theme={theme} 
                     />
                   )}

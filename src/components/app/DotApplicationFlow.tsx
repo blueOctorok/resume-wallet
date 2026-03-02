@@ -86,7 +86,6 @@ export default function DotApplicationFlow({
   const [resumeAutoCreateStatus, setResumeAutoCreateStatus] = useState<
     'idle' | 'creating' | 'created' | 'skipped' | 'failed'
   >('idle')
-  const resumeCheckDoneRef = useRef(false)
   const hubStore = useDriverHubStore()
 
   // Track save reference to detect unsaved changes
@@ -382,19 +381,19 @@ export default function DotApplicationFlow({
         return
       }
 
-      // Sync to unified profile (fire-and-forget)
+      // Sync DOT data to driver_profiles (for career cards / talent search)
+      // This is critical for the name to appear correctly in employer talent search
       try {
-        const { form1ToProfile, form2ToProfile, form3ToProfile } = await import('@/lib/dot-form-mapper')
-        const profileData = {
-          ...(dotApp.form1Data ? form1ToProfile(dotApp.form1Data) : {}),
-          ...(dotApp.form2Data ? form2ToProfile(dotApp.form2Data) : {}),
-          ...(dotApp.form3Data ? form3ToProfile(dotApp.form3Data) : {}),
+        const syncResponse = await fetch('/api/driver/sync-from-dot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ walletAddress }),
+        })
+        if (syncResponse.ok) {
+          console.log('✅ [DOT] Profile synced from DOT application')
+        } else {
+          console.warn('⚠️ [DOT] sync-from-dot returned error (non-fatal)')
         }
-        fetch('/api/driver/profile', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
-          body: JSON.stringify({ profileData, source: 'dot_application' }),
-        }).catch((err) => console.warn('⚠️ [DOT] Profile sync non-fatal:', err))
       } catch (err) {
         console.warn('⚠️ [DOT] Profile sync error (non-fatal):', err)
       }
@@ -473,26 +472,36 @@ export default function DotApplicationFlow({
   // Resume auto-creation (when DOT app completes with no resume on file)
   // Many drivers don't have resumes - we silently create one from their DOT data
   // so it's already waiting for them in the hub when they navigate back.
+  //
+  // AbortController pattern: React 18 Strict Mode double-fires effects. An abort
+  // signal is passed to all fetches so the first run's in-flight requests are
+  // cancelled when the effect re-runs, preventing duplicate resumes.
   // -------------------------------------------------------
   useEffect(() => {
-    const autoCreateResume = async () => {
-      if (!dotApp.isApplicationCompleted || !walletAddress || resumeCheckDoneRef.current) return
-      resumeCheckDoneRef.current = true
+    if (!dotApp.isApplicationCompleted || !walletAddress) return
 
+    const controller = new AbortController()
+    const { signal } = controller
+
+    const autoCreateResume = async () => {
       // Step 1: check whether the driver already has a resume
       let hasResumes = false
       try {
         const res = await fetch('/api/resumes', {
           headers: { 'x-wallet-address': walletAddress },
+          signal,
         })
         if (res.ok) {
           const resumes = await res.json()
           hasResumes = Array.isArray(resumes) && resumes.length > 0
         }
       } catch (err) {
+        if (signal.aborted) return
         console.warn('⚠️ [DOT] Failed to check for resumes:', err)
-        return // Don't attempt creation if we can't check
+        return
       }
+
+      if (signal.aborted) return
 
       if (hasResumes) {
         setResumeAutoCreateStatus('skipped')
@@ -504,11 +513,14 @@ export default function DotApplicationFlow({
       try {
         const profileRes = await fetch('/api/driver/profile', {
           headers: { 'x-wallet-address': walletAddress },
+          signal,
         })
         if (!profileRes.ok) throw new Error('Failed to fetch profile')
 
         const { profile } = await profileRes.json()
         if (!profile) throw new Error('No profile data found')
+
+        if (signal.aborted) return
 
         const resumeData = profileToResumeBuilder(profile as UnifiedDriverProfile)
 
@@ -540,7 +552,10 @@ export default function DotApplicationFlow({
             structuredData,
             resumeType: 'built',
           }),
+          signal,
         })
+
+        if (signal.aborted) return
 
         if (!createRes.ok) {
           const err = await createRes.json()
@@ -558,12 +573,16 @@ export default function DotApplicationFlow({
         }
         hubStore.setHasResume(true)
       } catch (err) {
+        if (signal.aborted) return
         console.error('❌ [DOT] Failed to auto-create resume:', err)
         setResumeAutoCreateStatus('failed')
       }
     }
 
     autoCreateResume()
+
+    // Cancel all in-flight fetches if this effect re-runs (Strict Mode double-invoke)
+    return () => controller.abort()
   }, [dotApp.isApplicationCompleted, walletAddress])
 
   // -------------------------------------------------------

@@ -101,11 +101,47 @@ export async function upsertUser(data: {
   console.log('👤 Supabase DB: Input data:', data)
 
   try {
-    // Use admin client to bypass RLS (called from API routes that validate wallet addresses)
     const supabase = await getAdminSupabaseClient()
     console.log('👤 Supabase DB: Client created successfully')
 
-    // Transform camelCase to snake_case for database
+    // Check if user exists (case-insensitive) — the unique constraint is on lower(wallet_address)
+    // so we can't use onConflict with the raw column, we need to check manually
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('*')
+      .ilike('wallet_address', data.walletAddress)
+      .single()
+
+    if (existingUser) {
+      // User exists — update if we have new data to set
+      const updateData: Record<string, string | undefined> = {}
+      if (data.name) updateData.name = data.name
+      if (data.cdlNumber) updateData.cdl_number = data.cdlNumber
+      if (data.cdlState) updateData.cdl_state = data.cdlState
+      if (data.cdlClass) updateData.cdl_class = data.cdlClass
+
+      // Only update if there's something to update
+      if (Object.keys(updateData).length > 0) {
+        const { data: updated, error: updateError } = await supabase
+          .from('users')
+          .update(updateData)
+          .eq('id', existingUser.id)
+          .select()
+          .single()
+
+        if (updateError) {
+          console.error('❌ Supabase DB: User update error:', updateError)
+          throw new Error(`Failed to update user: ${updateError.message}`)
+        }
+        console.log('✅ Supabase DB: User updated successfully:', updated)
+        return updated
+      }
+
+      console.log('✅ Supabase DB: User already exists, no update needed:', existingUser)
+      return existingUser
+    }
+
+    // User doesn't exist — insert new
     const dbData = {
       wallet_address: data.walletAddress,
       name: data.name,
@@ -113,20 +149,20 @@ export async function upsertUser(data: {
       cdl_state: data.cdlState,
       cdl_class: data.cdlClass,
     }
-    console.log('👤 Supabase DB: Transformed data:', dbData)
+    console.log('👤 Supabase DB: Inserting new user:', dbData)
 
     const { data: user, error } = await supabase
       .from('users')
-      .upsert([dbData], { onConflict: 'wallet_address' })
+      .insert([dbData])
       .select()
       .single()
 
     if (error) {
-      console.error('❌ Supabase DB: User upsert error:', error)
-      throw new Error(`Failed to upsert user: ${error.message}`)
+      console.error('❌ Supabase DB: User insert error:', error)
+      throw new Error(`Failed to insert user: ${error.message}`)
     }
 
-    console.log('✅ Supabase DB: User upserted successfully:', user)
+    console.log('✅ Supabase DB: User inserted successfully:', user)
     return user
   } catch (error) {
     console.error('❌ Supabase DB: User upsert failed:', error)

@@ -2,6 +2,112 @@
 
 This file tracks major modifications made to the ResumeWallet codebase.
 
+---
+
+## 🔧 **Fix: Resume Auto-Creation — Wrong Keys + Duplicate Generation** (March 2026)
+
+### Problem 1: Employment history and all profile data blank in auto-generated resume
+
+Every field except name was empty — employment history, CDL class, education, all missing.
+
+### Root Cause 1: Wrong `application_data` key names in `sync-from-dot`
+
+The `save-progress` route stores DOT application data as:
+```json
+{ "form1": { ... }, "form2": { ... }, "form3": { ... } }
+```
+
+But `sync-from-dot` was reading `appData.form1Data`, `appData.cdlInfo`, `appData.drivingExperience`, `appData.form3Data` — **none of which exist**. Every field synced to `driver_profiles` was `null` or `[]`.
+
+### Fix 1
+
+Rewrote the extraction section in `sync-from-dot` to:
+1. Read `appData.form1`, `appData.form2`, `appData.form3` (correct keys)
+2. Use the existing `form1ToProfile`, `form2ToProfile`, `form3ToProfile` mapper functions (DRY — no duplicate parsing logic)
+3. Map profile fields → DB column names in the update payload
+
+### Problem 2: Two duplicate resumes created on DOT app completion
+
+### Root Cause 2: React 18 Strict Mode double-fires effects
+
+In development, React 18 mounts → unmounts → remounts components. `useRef(false)` resets on remount, so the `resumeCheckDoneRef` guard didn't prevent the effect from running twice. Both runs completed their async fetch before either could see the other had run.
+
+### Fix 2
+
+Replaced the `useRef` guard with an `AbortController` cleanup pattern:
+- Each effect invocation creates a new `AbortController`
+- All fetches receive the `signal`
+- The effect cleanup calls `controller.abort()`, cancelling all in-flight requests from the previous run
+- Each async step checks `signal.aborted` before proceeding
+
+This is the correct React pattern for async effects that must not run concurrently.
+
+### Files Changed
+
+- `src/app/api/driver/sync-from-dot/route.ts` — Fixed key names, switched to mapper functions
+- `src/components/app/DotApplicationFlow.tsx` — AbortController pattern for resume auto-creation
+
+---
+
+## 📋 **FCRA Background Check Disclosure & Authorization** (March 2026)
+
+### Overview
+
+Added the legally required FCRA Background Check Disclosure & Authorization flow for employer-initiated background checks and MVR orders. Previously, when an employer sent an `mvr_order` request, the driver could "approve" it with a single click — but nothing legally covered the employer to order the check, and nothing actually triggered the order. This feature closes that gap.
+
+### What Changed
+
+**New Component: `BackgroundCheckDisclosure.tsx`**
+- Full-screen overlay showing the FCRA Background Check Disclosure & Authorization document
+- StormChain-themed with a white document area for print clarity
+- Company name pre-filled from the employer's request
+- Driver's personal info pre-filled from their DOT application (name, DOB, address, DL number)
+- Collapsible State Law Notices section (CA, ME, MD, MA/NJ, MN, NY, OR, WA)
+- Collapsible FCRA Summary of Rights
+- Typed-name digital signature with today's date auto-set
+- **Downloadable as PDF** using `html2canvas` + `jspdf` (both already installed)
+
+**New API: `GET /api/candidate/profile-info`**
+- Returns driver's personal info fields to pre-fill the authorization form
+
+**New API: `POST /api/candidate/bgcheck-consent`**
+- Stores the signed consent record in `bgcheck_consents` table
+- Marks the corresponding `candidate_requests` entry as `completed`
+
+**New DB Migration: `023_bgcheck_consents.sql`**
+- `bgcheck_consents` table with unique constraint per request
+- RLS policies for drivers (view/insert own) and employers (view their company's consents)
+
+**Updated: `CandidateRequestsSection.tsx`**
+- `mvr_order` requests now show "Review & Sign Disclosure" instead of "Approve MVR Order"
+- Updated label from "MVR Request" → "Background Check Request"
+- Opens `BackgroundCheckDisclosure` as a full-screen overlay on click
+
+**Updated: `CareerCardModal.tsx` (employer)**
+- MVR section now shows a teal "Disclosure signed by candidate" state when consent exists
+- Button label switches from "Request Background Check" → "Request MVR" once consent is on file
+- "Awaiting driver authorization" subtext while request is pending
+
+**Updated: `GET /api/employer/talent/[userId]`**
+- Now checks `bgcheck_consents` and returns `hasBgcheckConsent` + `bgcheckConsentSignedAt`
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/BackgroundCheckDisclosure.tsx` | New component |
+| `src/app/api/candidate/bgcheck-consent/route.ts` | New API route |
+| `src/app/api/candidate/profile-info/route.ts` | New API route |
+| `supabase/migrations/023_bgcheck_consents.sql` | New migration |
+| `src/components/CandidateRequestsSection.tsx` | Wired in disclosure flow |
+| `src/components/employer/CareerCardModal.tsx` | Consent state display |
+| `src/app/api/employer/talent/[userId]/route.ts` | Added consent lookup |
+
+### Legal Note
+The FCRA technically exempts the trucking industry from written consent requirements for MVRs (per FMCSA regulations), but this form is provided by Key Background Screening (Accio) as best practice — and most employers require it anyway for legal protection. This implementation mirrors the exact form Key Background uses in production.
+
+---
+
 ## 🐛 **Driver Profile Creation Bug Fix - State Field Too Long** (February 2026)
 
 ### Issue
