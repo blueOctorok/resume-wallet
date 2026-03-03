@@ -337,6 +337,7 @@ export async function GET(request: NextRequest) {
         industryType: company.industry_type,
         city: company.address_city,
         state: company.address_state,
+        onboardingCompleted: company.onboarding_completed ?? false,
       },
       // User's role within the company (owner, admin, hr_manager, hiring_manager, recruiter, interviewer, viewer)
       userRole,

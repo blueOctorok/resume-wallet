@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import LoadingScreen from '@/components/LoadingScreen'
-import { useUIStore, usePreferencesStore } from '@/stores'
+import { useUIStore } from '@/stores'
+import MotorCarrierOnboarding from '@/components/app/MotorCarrierOnboarding'
 
 const EmployerHub = dynamic(
   () => import('@/components/EmployerHub').then((mod) => mod.default),
@@ -63,19 +63,17 @@ interface EmployerShellProps {
  */
 export default function EmployerShell({ walletAddress }: EmployerShellProps) {
   const { currentPage, setCurrentPage, triggerJourneyStep } = useUIStore()
-  const { hasCompletedJourneyStep } = usePreferencesStore()
 
   const goBack = () => setCurrentPage(null)
-  
-  // First login journey modal - show welcome message for new employers
-  useEffect(() => {
-    if (walletAddress && !hasCompletedJourneyStep('employer.firstLogin')) {
-      const timer = setTimeout(() => {
-        triggerJourneyStep('employer.firstLogin')
-      }, 500)
-      return () => clearTimeout(timer)
-    }
-  }, [walletAddress, hasCompletedJourneyStep, triggerJourneyStep])
+
+  // Motor Carrier onboarding — blocking gate for new company owners
+  if (currentPage === 'company-setup') {
+    return (
+      <MotorCarrierOnboarding
+        onComplete={() => setCurrentPage(null)}
+      />
+    )
+  }
 
   // Default: Employer Hub
   if (!currentPage) {
@@ -90,6 +88,7 @@ export default function EmployerShell({ walletAddress }: EmployerShellProps) {
             page === 'find-drivers' ||
             page === 'talent-search' ||
             page === 'company-profile' ||
+            page === 'company-setup' ||
             page === 'reports' ||
             page === 'team'
           ) {

@@ -3,20 +3,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
-import ResumeUploadWithPrefill from '@/components/ResumeUploadWithPrefill'
 import SaveProgressButton from './SaveProgressButton'
 import { PhoneInput } from '@/components/ui/MaskedInputs'
 import { StateSelect } from '@/components/ui/StateSelect'
 import { HelpCircle } from 'lucide-react'
 
-const DEFAULT_CARRIER_INFO = {
-  name: process.env.NEXT_PUBLIC_CARRIER_NAME ?? 'Your Motor Carrier Name',
-  address:
-    process.env.NEXT_PUBLIC_CARRIER_ADDRESS ??
-    '1234 Logistics Way, City, ST 00000',
-  phone: process.env.NEXT_PUBLIC_CARRIER_PHONE ?? '(000) 000-0000',
-  email: process.env.NEXT_PUBLIC_CARRIER_EMAIL ?? 'hr@example.com',
-}
+// Motor carrier (employing carrier) is not collected here — it is injected by the
+// specific employer when a driver's application is linked to their company.
 
 const STEPS = [
   {
@@ -57,12 +50,6 @@ export default function PersonalInfoForm1({
   const [currentStep, setCurrentStep] = useState(1)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState({
-    employingCarrier: {
-      name: DEFAULT_CARRIER_INFO.name,
-      address: DEFAULT_CARRIER_INFO.address,
-      phone: DEFAULT_CARRIER_INFO.phone,
-      email: DEFAULT_CARRIER_INFO.email,
-    },
     // Applicant Information
     firstName: '',
     middleName: '',
@@ -161,30 +148,6 @@ export default function PersonalInfoForm1({
     onDataChange?.(formData)
   }, [formData, onDataChange, initialData])
 
-  const handlePrefillSuccess = (prefillData: any) => {
-    console.log('✅ [PREFILL] Prefill success callback called with:', prefillData)
-    
-    if (prefillData.form1Data) {
-      // Update form data with prefill results
-      setFormData((prev) => ({
-        ...prev,
-        firstName: prev.firstName || prefillData.form1Data.firstName || '',
-        middleName: prev.middleName || prefillData.form1Data.middleName || '',
-        lastName: prev.lastName || prefillData.form1Data.lastName || '',
-        phone: prev.phone || prefillData.form1Data.phone || '',
-        email: prev.email || prefillData.form1Data.email || '',
-        dateOfBirth: prev.dateOfBirth || prefillData.form1Data.dateOfBirth || '',
-        currentMailing: {
-          ...prev.currentMailing,
-          street: prev.currentMailing.street || prefillData.form1Data.currentMailing?.street || '',
-          city: prev.currentMailing.city || prefillData.form1Data.currentMailing?.city || '',
-          state: prev.currentMailing.state || prefillData.form1Data.currentMailing?.state || '',
-          zipCode: prev.currentMailing.zipCode || prefillData.form1Data.currentMailing?.zipCode || '',
-        },
-      }))
-    }
-  }
-
   // Initialize/restore from parent once to avoid loops
   const hasHydratedRef = useRef(false)
   const previousInitialDataRef = useRef<any>(null)
@@ -202,12 +165,6 @@ export default function PersonalInfoForm1({
       console.log('📋 [FORM1] Resetting form (initialData became null)')
       hasHydratedRef.current = false
       setFormData({
-        employingCarrier: {
-          name: DEFAULT_CARRIER_INFO.name,
-          address: DEFAULT_CARRIER_INFO.address,
-          phone: DEFAULT_CARRIER_INFO.phone,
-          email: DEFAULT_CARRIER_INFO.email,
-        },
         firstName: '',
         middleName: '',
         lastName: '',
@@ -285,14 +242,6 @@ export default function PersonalInfoForm1({
     const newErrors: Record<string, string> = {}
 
     if (step === 1) {
-      // Employing Motor Carrier info (49 CFR 391.21(b)(1))
-      if (!formData.employingCarrier?.name?.trim()) {
-        newErrors.employingCarrierName = 'Motor carrier name is required (49 CFR 391.21(b)(1)).'
-      }
-      if (!formData.employingCarrier?.address?.trim()) {
-        newErrors.employingCarrierAddress = 'Motor carrier mailing address is required (49 CFR 391.21(b)(1)).'
-      }
-
       // Personal Information validation
       if (!formData.firstName.trim())
         newErrors.firstName = 'First name is required'
@@ -548,12 +497,6 @@ export default function PersonalInfoForm1({
   const fillTestData = () => {
     // Smart fill: only fill EMPTY fields, preserve AI-extracted data
     setFormData((prev) => ({
-      employingCarrier: {
-        name: prev.employingCarrier?.name || DEFAULT_CARRIER_INFO.name,
-        address: prev.employingCarrier?.address || DEFAULT_CARRIER_INFO.address,
-        phone: prev.employingCarrier?.phone || DEFAULT_CARRIER_INFO.phone,
-        email: prev.employingCarrier?.email || DEFAULT_CARRIER_INFO.email,
-      },
       // Personal Information - only fill if empty
       firstName: prev.firstName || 'John',
       middleName: prev.middleName || 'Michael',
@@ -672,7 +615,6 @@ export default function PersonalInfoForm1({
                 context:
                   'Driver is completing PersonalInfoForm1 and wants clarity on the required personal details before proceeding.',
                 dataSnapshot: {
-                  employingCarrier: formData.employingCarrier,
                   personalDetails: {
                     firstName: formData.firstName,
                     lastName: formData.lastName,
@@ -695,22 +637,6 @@ theme === 'dark'
         </div>
       </div>
 
-      {/* Resume Upload with Prefill - Show on step 1 only */}
-      {currentStep === 1 && (
-        <div className='mb-8'>
-          <ResumeUploadWithPrefill
-            onPrefillSuccess={handlePrefillSuccess}
-            onPrefillError={(error) => {
-              console.error('Prefill error:', error)
-              alert(error.message || 'Failed to prefill from resume')
-            }}
-            onIpfsHashReady={(ipfsHash) => {
-              console.log('IPFS hash ready:', ipfsHash)
-            }}
-          />
-        </div>
-      )}
-
       <div className='text-center'>
         <h2
           className={`text-xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
@@ -722,123 +648,6 @@ theme === 'dark'
         >
           Complete in full or it will not be considered
         </p>
-      </div>
-
-      {/* Employing Motor Carrier (49 CFR 391.21) */}
-      <div className={`${sectionClass} space-y-4`}>
-        <div className='space-y-2'>
-          <h3
-            className={`text-lg font-semibold ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}
-          >
-            Employing motor carrier
-          </h3>
-          <p
-            className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
-          >
-            Federal rules (49 CFR 391.21) require the application to list the motor carrier's name and mailing address. Update the details below if this application is being used for a different carrier.
-          </p>
-        </div>
-
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-          <div>
-            <label
-              className={`block text-sm font-medium mb-2 ${
-                labelClass
-              }`}
-            >
-              MOTOR CARRIER NAME
-            </label>
-            <input
-              type='text'
-              value={formData.employingCarrier.name}
-              onChange={(e) =>
-                handleInputChange('employingCarrier', {
-                  ...formData.employingCarrier,
-                  name: e.target.value,
-                })
-              }
-              className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${
-                errors.employingCarrierName ? 'border-red-500' : ''
-              }`}
-            />
-            {errors.employingCarrierName && (
-              <p className='mt-1 text-sm text-red-600'>
-                {errors.employingCarrierName}
-              </p>
-            )}
-          </div>
-          <div>
-            <label
-              className={`block text-sm font-medium mb-2 ${
-                labelClass
-              }`}
-            >
-              MOTOR CARRIER PHONE
-            </label>
-            <PhoneInput
-              value={formData.employingCarrier.phone}
-              onChange={(value) =>
-                handleInputChange('employingCarrier', {
-                  ...formData.employingCarrier,
-                  phone: value,
-                })
-              }
-              className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
-            />
-          </div>
-        </div>
-
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-          <div className='md:col-span-2'>
-            <label
-              className={`block text-sm font-medium mb-2 ${
-                labelClass
-              }`}
-            >
-              MOTOR CARRIER MAILING ADDRESS
-            </label>
-            <textarea
-              value={formData.employingCarrier.address}
-              onChange={(e) =>
-                handleInputChange('employingCarrier', {
-                  ...formData.employingCarrier,
-                  address: e.target.value,
-                })
-              }
-              rows={3}
-              className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass} ${
-                errors.employingCarrierAddress ? 'border-red-500' : ''
-              }`}
-            />
-            {errors.employingCarrierAddress && (
-              <p className='mt-1 text-sm text-red-600'>
-                {errors.employingCarrierAddress}
-              </p>
-            )}
-          </div>
-          <div>
-            <label
-              className={`block text-sm font-medium mb-2 ${
-                labelClass
-              }`}
-            >
-              MOTOR CARRIER EMAIL
-            </label>
-            <input
-              type='email'
-              value={formData.employingCarrier.email}
-              onChange={(e) =>
-                handleInputChange('employingCarrier', {
-                  ...formData.employingCarrier,
-                  email: e.target.value,
-                })
-              }
-                          className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
-            />
-          </div>
-        </div>
       </div>
 
       {/* Name Section */}

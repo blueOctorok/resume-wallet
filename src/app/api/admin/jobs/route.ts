@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
-const ADMIN_WALLETS = [
-  '0x7682d6a5b1f3988f85de72a721e72c8e6279cb07',
-]
+const ADMIN_WALLETS = (process.env.ADMIN_WALLETS || '').toLowerCase().split(',').map(w => w.trim()).filter(Boolean)
 
-function isAdmin(walletAddress: string): boolean {
+function isAdmin(walletAddress: string | null): boolean {
+  if (!walletAddress) return false
   return ADMIN_WALLETS.includes(walletAddress.toLowerCase())
 }
 
@@ -29,7 +28,7 @@ export async function GET(request: NextRequest) {
         salary_min, salary_max, job_type, is_active, created_at, updated_at,
         company_id,
         companies (
-          id, name, dot_number
+          id, company_name, dot_number
         )
       `)
       .order('created_at', { ascending: false })
@@ -51,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       jobs: (jobs || []).map(job => {
-        const company = job.companies as { id: string; name: string; dot_number: string | null } | null
+        const company = job.companies as { id: string; company_name: string; dot_number: string | null } | null
         return {
           id: job.id,
           title: job.title,
@@ -66,7 +65,7 @@ export async function GET(request: NextRequest) {
           createdAt: job.created_at,
           updatedAt: job.updated_at,
           companyId: job.company_id,
-          companyName: company?.name || 'Unknown',
+          companyName: company?.company_name || 'Unknown',
           companyDotNumber: company?.dot_number,
           applicationCount: appCounts[job.id] || 0,
         }

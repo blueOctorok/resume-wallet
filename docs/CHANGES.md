@@ -4,6 +4,42 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 🏢 **Motor Carrier Onboarding Gate for New Employers** (March 2026)
+
+### Problem
+
+New employers (trucking companies) could land on the Employer Hub without providing any company information. The `companies` table had an `onboarding_completed` flag that existed but was never enforced anywhere. The "employing motor carrier" fields in DOT applications had no source to pull from.
+
+### Solution
+
+**Blocking onboarding gate for the company owner's first login.**
+
+When a new employer (role = `owner`) logs in and has no completed company profile, they are immediately routed to a full-screen Motor Carrier setup form before they can access anything in the hub. This is a one-time step — invited team members skip it entirely.
+
+**New files:**
+- `src/components/app/MotorCarrierOnboarding.tsx` — Full-screen form collecting: legal company name, USDOT number, MC number (optional), phone, email, and principal address (street, city, state, zip)
+- `src/app/api/employer/company/route.ts` — `POST` route that creates the `companies` record + owner `company_members` row, sets `onboarding_completed = true`
+
+**Updated files:**
+- `src/stores/types.ts` — Added `'company-setup'` to `PageType`
+- `src/components/app/EmployerShell.tsx` — Added `company-setup` page handler (renders `MotorCarrierOnboarding`); removed superseded first-login journey modal
+- `src/app/api/employer/hub/route.ts` — Now returns `onboarding_completed` in company payload
+- `src/components/EmployerHub.tsx` — Two-case gate: (1) no company record → redirect to setup; (2) company exists but `onboarding_completed = false` AND `userRole = 'owner'` → redirect to setup. Both redirect by calling `onNavigate('company-setup')`
+
+**Flow:**
+1. Employer logs in → `EmployerHub` fetches hub data
+2. `needsCompanySetup = true` OR `company.onboardingCompleted = false` (owner only) → hub calls `onNavigate('company-setup')`
+3. `EmployerShell` catches `'company-setup'` → renders `MotorCarrierOnboarding`
+4. Owner submits form → `POST /api/employer/company` creates company + owner membership
+5. On success → shell resets to `null` → hub re-fetches with complete company data
+6. All future logins (owner or team members) see the completed profile, no gate
+
+**Data mapping:** The motor carrier info collected here directly maps to the `employingCarrier` block in DOT Form 1 (`name`, `address`, `phone`, `email`). When a driver DOT app is linked to this employer, those fields can be populated server-side from the `companies` record.
+
+**DOT Form 1 change:** The "Employing motor carrier" section was removed from the driver-facing DOT application (Form 1). Drivers complete a generic application; the specific motor carrier (name, address, phone, email) is injected later when an employer links the application to their company. The `DotForm1Data.employingCarrier` type in `dot-form-mapper.ts` remains for that server-side merge.
+
+---
+
 ## 📋 **Admin Background Check Pipeline Visibility + Driver Consent Archive** (March 2026)
 
 ### Problem

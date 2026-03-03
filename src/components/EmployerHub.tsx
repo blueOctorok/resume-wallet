@@ -60,6 +60,7 @@ interface HubCompany {
   industryType: string[] | null
   city: string | null
   state: string | null
+  onboardingCompleted: boolean
 }
 
 interface HubJobPosting {
@@ -487,41 +488,17 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     return null
   }
 
-  // Company setup required
+  // Company doesn't exist yet — new owner needs to complete setup
   if (data.needsCompanySetup) {
-    return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className={`rounded-2xl p-8 text-center ${
-          theme === 'dark'
-            ? 'bg-gray-800/50 border border-teal-500/30'
-            : 'bg-white border border-gray-200 shadow-xl'
-        }`}>
-          <Building2 className={`w-16 h-16 mx-auto mb-6 ${
-            theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
-          }`} />
-          <h2 className={`text-2xl font-bold mb-4 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            Set Up Your Company Profile
-          </h2>
-          <p className={`mb-8 max-w-md mx-auto ${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-          }`}>
-            Before you can post jobs and review applicants, you'll need to create your company profile.
-          </p>
-          <button
-            onClick={() => onNavigate('company-setup')}
-            className={`px-8 py-3 rounded-xl font-semibold text-lg ${
-              theme === 'dark'
-                ? 'bg-teal-500 text-white hover:bg-teal-600'
-                : 'bg-teal-600 text-white hover:bg-teal-700'
-            }`}
-          >
-            Create Company Profile
-          </button>
-        </div>
-      </div>
-    )
+    onNavigate('company-setup')
+    return null
+  }
+
+  // Company exists but owner hasn't completed the Motor Carrier onboarding form yet.
+  // Team members (non-owners) skip this gate — they see whatever the owner set up.
+  if (data.company && !data.company.onboardingCompleted && data.userRole === 'owner') {
+    onNavigate('company-setup')
+    return null
   }
 
   return (

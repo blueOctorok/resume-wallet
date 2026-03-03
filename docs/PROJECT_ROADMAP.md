@@ -14,6 +14,22 @@
 
 ---
 
+## 🏢 **Motor Carrier Employer Onboarding** (March 2026)
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| MotorCarrierOnboarding component | ✅ Done | Blocking full-screen form for new company owners |
+| `POST /api/employer/company` route | ✅ Done | Creates company + owner membership, sets `onboarding_completed = true` |
+| EmployerShell gate | ✅ Done | Routes to `MotorCarrierOnboarding` when `currentPage === 'company-setup'` |
+| Hub API `onboarding_completed` | ✅ Done | Hub now returns `onboardingCompleted` in company payload |
+| EmployerHub gate checks | ✅ Done | Two cases: no company OR incomplete onboarding (owner only) → redirect to setup |
+
+**Next priorities for employer flow:**
+- Auto-populate `employingCarrier` in driver DOT apps when employer sends invite or views a submitted application
+- Allow owner to edit Motor Carrier profile from the hub settings
+
+---
+
 ## 🤖 **AvA Journey Guide** (February 2026)
 
 **Evolution:** Replaced the old chat-based TAssistant with a visual progress tracker. AvA is now a journey guide, not a chatbot.

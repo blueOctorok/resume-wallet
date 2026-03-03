@@ -1177,73 +1177,112 @@ function AdminDashboardContent() {
                             </div>
 
                             {/* Actions */}
-                            {req.status === 'pending' && (
-                              <div className='flex gap-2 flex-shrink-0'>
-                                <button
-                                  onClick={async () => {
-                                    setProcessingRequestId(req.id)
-                                    try {
-                                      const res = await fetch(`/api/admin/employer-requests/${req.id}`, {
-                                        method: 'PATCH',
-                                        headers: {
-                                          'Content-Type': 'application/json',
-                                          'x-wallet-address': walletAddress || '',
-                                        },
-                                        body: JSON.stringify({ action: 'approve' }),
-                                      })
-                                      if (res.ok) {
-                                        fetchData()
+                            <div className='flex gap-2 flex-shrink-0 items-center'>
+                              {req.status === 'pending' && (
+                                <>
+                                  <button
+                                    onClick={async () => {
+                                      setProcessingRequestId(req.id)
+                                      try {
+                                        const res = await fetch(`/api/admin/employer-requests/${req.id}`, {
+                                          method: 'PATCH',
+                                          headers: {
+                                            'Content-Type': 'application/json',
+                                            'x-wallet-address': walletAddress || '',
+                                          },
+                                          body: JSON.stringify({ action: 'approve' }),
+                                        })
+                                        if (res.ok) {
+                                          fetchData()
+                                        }
+                                      } catch (err) {
+                                        console.error('Failed to approve:', err)
+                                      } finally {
+                                        setProcessingRequestId(null)
                                       }
-                                    } catch (err) {
-                                      console.error('Failed to approve:', err)
-                                    } finally {
-                                      setProcessingRequestId(null)
-                                    }
-                                  }}
-                                  disabled={processingRequestId === req.id}
-                                  className='px-3 py-1.5 rounded-lg text-sm font-medium bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 transition-colors flex items-center gap-1'
-                                >
-                                  {processingRequestId === req.id ? (
-                                    <Loader2 className='w-4 h-4 animate-spin' />
-                                  ) : (
-                                    <CheckCircle className='w-4 h-4' />
-                                  )}
-                                  Approve
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    if (!confirm('Reject this request?')) return
-                                    setProcessingRequestId(req.id)
-                                    try {
-                                      const res = await fetch(`/api/admin/employer-requests/${req.id}`, {
-                                        method: 'PATCH',
-                                        headers: {
-                                          'Content-Type': 'application/json',
-                                          'x-wallet-address': walletAddress || '',
-                                        },
-                                        body: JSON.stringify({ action: 'reject' }),
-                                      })
-                                      if (res.ok) {
-                                        fetchData()
+                                    }}
+                                    disabled={processingRequestId === req.id}
+                                    className='px-3 py-1.5 rounded-lg text-sm font-medium bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 transition-colors flex items-center gap-1'
+                                  >
+                                    {processingRequestId === req.id ? (
+                                      <Loader2 className='w-4 h-4 animate-spin' />
+                                    ) : (
+                                      <CheckCircle className='w-4 h-4' />
+                                    )}
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm('Reject this request?')) return
+                                      setProcessingRequestId(req.id)
+                                      try {
+                                        const res = await fetch(`/api/admin/employer-requests/${req.id}`, {
+                                          method: 'PATCH',
+                                          headers: {
+                                            'Content-Type': 'application/json',
+                                            'x-wallet-address': walletAddress || '',
+                                          },
+                                          body: JSON.stringify({ action: 'reject' }),
+                                        })
+                                        if (res.ok) {
+                                          fetchData()
+                                        }
+                                      } catch (err) {
+                                        console.error('Failed to reject:', err)
+                                      } finally {
+                                        setProcessingRequestId(null)
                                       }
-                                    } catch (err) {
-                                      console.error('Failed to reject:', err)
-                                    } finally {
-                                      setProcessingRequestId(null)
+                                    }}
+                                    disabled={processingRequestId === req.id}
+                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
+                                      theme === 'dark'
+                                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                    } disabled:opacity-50`}
+                                  >
+                                    <XCircle className='w-4 h-4' />
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+                              <button
+                                onClick={async () => {
+                                  if (!confirm(`Remove this ${req.status} request from the list? This only removes the record; it does not change the company or user.`)) return
+                                  setProcessingRequestId(req.id)
+                                  try {
+                                    const res = await fetch(`/api/admin/employer-requests/${req.id}`, {
+                                      method: 'DELETE',
+                                      headers: { 'x-wallet-address': walletAddress || '' },
+                                    })
+                                    if (res.ok) {
+                                      fetchData()
+                                    } else {
+                                      const data = await res.json()
+                                      alert(data.error || 'Failed to remove request')
                                     }
-                                  }}
-                                  disabled={processingRequestId === req.id}
-                                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                                    theme === 'dark'
-                                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                  } disabled:opacity-50`}
-                                >
-                                  <XCircle className='w-4 h-4' />
-                                  Reject
-                                </button>
-                              </div>
-                            )}
+                                  } catch (err) {
+                                    console.error('Failed to remove:', err)
+                                    alert('Failed to remove request')
+                                  } finally {
+                                    setProcessingRequestId(null)
+                                  }
+                                }}
+                                disabled={processingRequestId === req.id}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 disabled:opacity-50 ${
+                                  theme === 'dark'
+                                    ? 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                }`}
+                                title='Remove from list (does not affect company or user)'
+                              >
+                                {processingRequestId === req.id ? (
+                                  <Loader2 className='w-4 h-4 animate-spin' />
+                                ) : (
+                                  <Trash2 className='w-4 h-4' />
+                                )}
+                                Remove
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
