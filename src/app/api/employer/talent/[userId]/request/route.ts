@@ -116,7 +116,7 @@ export async function POST(
 
     const companyName = company?.name || 'A company'
 
-    // Verify candidate exists and is a driver/developer
+    // Verify candidate exists
     const { data: candidate } = await supabase
       .from('users')
       .select('id, role, email, name')
@@ -130,7 +130,26 @@ export async function POST(
       )
     }
 
-    if (!['driver', 'developer'].includes(candidate.role || '')) {
+    // Check if user has driver or developer DATA (not just role column)
+    // This handles the case where someone is testing with role='employer' but has driver data
+    const { data: driverProfile } = await supabase
+      .from('driver_profiles')
+      .select('id')
+      .eq('user_id', candidateUserId)
+      .single()
+
+    const { data: developerProfile } = await supabase
+      .from('developer_profiles')
+      .select('id')
+      .eq('user_id', candidateUserId)
+      .single()
+
+    const isCandidate = 
+      ['driver', 'developer'].includes(candidate.role || '') ||
+      !!driverProfile ||
+      !!developerProfile
+
+    if (!isCandidate) {
       return NextResponse.json(
         { error: 'User is not a candidate (driver or developer)' },
         { status: 400 }

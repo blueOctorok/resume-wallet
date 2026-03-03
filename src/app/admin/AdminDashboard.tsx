@@ -52,6 +52,7 @@ type TabId =
   | 'profiles'
   | 'resumes'
   | 'mvr'
+  | 'bgcheckRequests'
   | 'devProfiles'
   | 'devProjects'
   | 'verifications'
@@ -219,6 +220,23 @@ interface MvrRow {
   resultStatus: string | null
 }
 
+interface BgcheckRequest {
+  id: string
+  companyId: string
+  companyName: string
+  candidateUserId: string
+  driverName: string
+  driverEmail: string | null
+  driverWallet: string | null
+  status: string
+  requestedAt: string
+  expiresAt: string | null
+  hasSigned: boolean
+  signedAt: string | null
+  signedName: string | null
+  consentId: string | null
+}
+
 interface VerificationRow {
   id: string
   driverId: string
@@ -341,6 +359,7 @@ function AdminDashboardContent() {
   const [devProjects, setDevProjects] = useState<DevProject[]>([])
   const [verifications, setVerifications] = useState<VerificationRow[]>([])
   const [mvrOrders, setMvrOrders] = useState<MvrRow[]>([])
+  const [bgcheckRequests, setBgcheckRequests] = useState<BgcheckRequest[]>([])
 
   // Company creation modal
   const [showCreateCompanyModal, setShowCreateCompanyModal] = useState(false)
@@ -690,6 +709,18 @@ function AdminDashboardContent() {
           }
           break
 
+        case 'bgcheckRequests':
+          response = await fetch(
+            `/api/admin/bgcheck-requests?limit=${pageSize}&offset=${offset}`,
+            { headers }
+          )
+          data = await response.json()
+          if (data.success) {
+            setBgcheckRequests(data.requests || [])
+            setTotalCount(data.total ?? 0)
+          }
+          break
+
         case 'verifications':
           response = await fetch(
             `/api/admin/verifications?limit=${pageSize}&offset=${offset}`,
@@ -749,6 +780,9 @@ function AdminDashboardContent() {
         case 'mvr':
           endpoint = `/api/admin/mvr/${deleteTarget.id}`
           break
+        case 'bgcheckRequest':
+          endpoint = `/api/admin/bgcheck-requests/${deleteTarget.id}`
+          break
         case 'application':
           endpoint = `/api/admin/applications/${deleteTarget.id}`
           break
@@ -785,6 +819,7 @@ function AdminDashboardContent() {
         { id: 'companies' as TabId, label: 'Companies', icon: <Building2 className='w-4 h-4' /> },
         { id: 'jobs' as TabId, label: 'Job Postings', icon: <Briefcase className='w-4 h-4' /> },
         { id: 'applications' as TabId, label: 'Applications', icon: <ClipboardList className='w-4 h-4' /> },
+        { id: 'bgcheckRequests' as TabId, label: 'Background Checks', icon: <ClipboardCheck className='w-4 h-4' /> },
       ],
     },
     {
@@ -2627,6 +2662,123 @@ function AdminDashboardContent() {
                   {mvrOrders.length === 0 && (
                     <div className='text-center py-12 text-gray-500'>
                       No MVR orders found
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Background Check Requests Table */}
+              {activeTab === 'bgcheckRequests' && (
+                <div className='overflow-x-auto'>
+                  <table className='w-full'>
+                    <thead
+                      className={
+                        theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'
+                      }
+                    >
+                      <tr>
+                        <th className={`${tableHeaderClass} px-4 py-3`}>
+                          Company
+                        </th>
+                        <th className={`${tableHeaderClass} px-4 py-3`}>
+                          Driver
+                        </th>
+                        <th className={`${tableHeaderClass} px-4 py-3`}>
+                          Request Status
+                        </th>
+                        <th className={`${tableHeaderClass} px-4 py-3`}>
+                          Consent
+                        </th>
+                        <th className={`${tableHeaderClass} px-4 py-3`}>
+                          Requested
+                        </th>
+                        <th className={`${tableHeaderClass} px-4 py-3`}>
+                          Signed
+                        </th>
+                        <th className={`${tableHeaderClass} px-4 py-3`}>
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className='divide-y divide-gray-200 dark:divide-gray-700'>
+                      {bgcheckRequests.map((req) => (
+                        <tr
+                          key={req.id}
+                          className={
+                            theme === 'dark'
+                              ? 'hover:bg-gray-800/50'
+                              : 'hover:bg-gray-50'
+                          }
+                        >
+                          <td className={tableCellClass}>
+                            {req.companyName}
+                          </td>
+                          <td className={tableCellClass}>
+                            <div>
+                              <div>{req.driverName}</div>
+                              {req.driverEmail && (
+                                <div className='text-xs text-gray-500'>{req.driverEmail}</div>
+                              )}
+                            </div>
+                          </td>
+                          <td className={tableCellClass}>
+                            <span
+                              className={`px-2 py-1 rounded text-xs ${
+                                req.status === 'completed'
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                  : req.status === 'pending'
+                                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                    : req.status === 'viewed'
+                                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                                      : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                              }`}
+                            >
+                              {req.status}
+                            </span>
+                          </td>
+                          <td className={tableCellClass}>
+                            {req.hasSigned ? (
+                              <div className='flex items-center gap-1 text-green-600 dark:text-green-400'>
+                                <CheckCircle className='w-4 h-4' />
+                                <span className='text-xs'>Signed</span>
+                              </div>
+                            ) : (
+                              <div className='flex items-center gap-1 text-yellow-600 dark:text-yellow-400'>
+                                <Clock className='w-4 h-4' />
+                                <span className='text-xs'>Awaiting</span>
+                              </div>
+                            )}
+                          </td>
+                          <td className={tableCellClass}>
+                            {new Date(req.requestedAt).toLocaleDateString()}
+                          </td>
+                          <td className={tableCellClass}>
+                            {req.signedAt
+                              ? new Date(req.signedAt).toLocaleDateString()
+                              : '-'}
+                          </td>
+                          <td className={tableCellClass}>
+                            <button
+                              onClick={() =>
+                                setDeleteTarget({
+                                  type: 'bgcheckRequest',
+                                  id: req.id,
+                                  name: `${req.companyName} → ${req.driverName}`,
+                                })
+                              }
+                              className='p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500'
+                              title='Remove request'
+                            >
+                              <Trash2 className='w-4 h-4' />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {bgcheckRequests.length === 0 && (
+                    <div className='text-center py-12 text-gray-500'>
+                      No background check requests found
                     </div>
                   )}
                 </div>

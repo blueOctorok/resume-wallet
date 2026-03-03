@@ -37,7 +37,8 @@ export async function GET(request: NextRequest) {
     .limit(1)
     .maybeSingle()
 
-  const form1 = dotApp?.application_data?.form1Data || {}
+  // Data is stored as { form1, form2, form3 } by save-progress route
+  const form1 = dotApp?.application_data?.form1 || {}
 
   // Get DL info from driver profile
   const { data: driverProfile } = await supabase
@@ -50,17 +51,23 @@ export async function GET(request: NextRequest) {
   const firstName = form1.firstName || nameParts[0] || ''
   const lastName = form1.lastName || nameParts.slice(1).join(' ') || ''
 
+  // Address is nested under currentMailing in Form 1
+  const mailing = form1.currentMailing || {}
+
+  // CDL info is in currentLicenses array
+  const license = form1.currentLicenses?.[0] || {}
+
   return NextResponse.json({
     profile: {
       firstName,
       lastName,
       dateOfBirth: form1.dateOfBirth || '',
-      address: form1.address || '',
-      city: form1.city || '',
-      state: form1.state || '',
-      zip: form1.zip || '',
-      dlNumber: driverProfile?.cdl_number || form1.cdlNumber || '',
-      dlState: driverProfile?.cdl_state || form1.cdlState || '',
+      address: mailing.street || '',
+      city: mailing.city || '',
+      state: mailing.state || '',
+      zip: mailing.zipCode || '',
+      dlNumber: driverProfile?.cdl_number || license.licenseNumber || '',
+      dlState: driverProfile?.cdl_state || license.state || '',
       email: user.email || form1.email || '',
     },
   })

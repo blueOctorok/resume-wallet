@@ -3,13 +3,13 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 /**
  * GET /api/employer/talent/[userId]
- * 
+ *
  * Gets the full career card data for a specific candidate.
  * Returns profile, resume, credentials, work history, and verification status.
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ userId: string }> }
+  { params }: { params: Promise<{ userId: string }> },
 ) {
   try {
     const walletAddress = request.headers.get('x-wallet-address')
@@ -18,14 +18,14 @@ export async function GET(
     if (!walletAddress) {
       return NextResponse.json(
         { error: 'Wallet address is required' },
-        { status: 401 }
+        { status: 401 },
       )
     }
 
     if (!userId) {
       return NextResponse.json(
         { error: 'User ID is required' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -39,10 +39,7 @@ export async function GET(
       .single()
 
     if (!employer) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     // Check company membership
@@ -66,10 +63,7 @@ export async function GET(
     }
 
     if (!companyId) {
-      return NextResponse.json(
-        { error: 'No company access' },
-        { status: 403 }
-      )
+      return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
 
     // Get career card from the view
@@ -82,7 +76,7 @@ export async function GET(
     if (cardError || !careerCard) {
       return NextResponse.json(
         { error: 'Candidate not found' },
-        { status: 404 }
+        { status: 404 },
       )
     }
 
@@ -100,14 +94,16 @@ export async function GET(
     if (careerCard.driver_profile_id) {
       const { data: dp } = await supabase
         .from('driver_profiles')
-        .select(`
+        .select(
+          `
           id, first_name, middle_name, last_name, email, phone,
           address, city, state, zip_code, professional_summary,
           cdl_class, cdl_state, cdl_number, cdl_expiration,
           endorsements, cdl_endorsements, restrictions,
           experience_years, employment_history, education, skills,
           share_token, share_settings, created_at
-        `)
+        `,
+        )
         .eq('id', careerCard.driver_profile_id)
         .single()
 
@@ -116,15 +112,19 @@ export async function GET(
 
     // 3. Developer profile (if developer)
     let developerProfile = null
-    if (candidate?.role === 'developer') {
+    // Fetch developer profile if no driver profile exists
+    // (determines candidate type by DATA, not by current role)
+    if (!driverProfile) {
       const { data: devp } = await supabase
         .from('developer_profiles')
-        .select(`
+        .select(
+          `
           id, full_name, email, phone, location, professional_summary,
           title, years_experience, employment_history,
           github_url, linkedin_url, portfolio_url,
           skills, education, share_token, share_settings
-        `)
+        `,
+        )
         .eq('user_id', userId)
         .single()
 
@@ -136,10 +136,12 @@ export async function GET(
     if (careerCard.resume_id) {
       const { data: res } = await supabase
         .from('resumes')
-        .select(`
+        .select(
+          `
           id, title, filename, ipfs_hash, verification_status,
           structured_data, created_at
-        `)
+        `,
+        )
         .eq('id', careerCard.resume_id)
         .single()
 
@@ -151,9 +153,11 @@ export async function GET(
     if (careerCard.driver_application_id) {
       const { data: da } = await supabase
         .from('driver_applications')
-        .select(`
+        .select(
+          `
           id, verification_status, is_complete, created_at
-        `)
+        `,
+        )
         .eq('id', careerCard.driver_application_id)
         .single()
 
@@ -165,10 +169,12 @@ export async function GET(
     if (careerCard.latest_mvr_id) {
       const { data: mvr } = await supabase
         .from('mvr_orders')
-        .select(`
+        .select(
+          `
           id, status, dl_state, created_at, completed_at,
           ordered_by_company_id
-        `)
+        `,
+        )
         .eq('id', careerCard.latest_mvr_id)
         .single()
 
@@ -176,10 +182,12 @@ export async function GET(
         // Get MVR results
         const { data: mvrResults } = await supabase
           .from('mvr_results')
-          .select(`
+          .select(
+            `
             id, license_status, license_class, total_points,
             violation_count, parsed_data
-          `)
+          `,
+          )
           .eq('mvr_order_id', mvr.id)
           .single()
 
@@ -194,11 +202,13 @@ export async function GET(
     // 7. Employment verifications
     const { data: verifications } = await supabase
       .from('employment_verification_requests')
-      .select(`
+      .select(
+        `
         id, previous_employer_name, claimed_position,
         claimed_start_date, claimed_end_date, status,
         verified_at, created_at
-      `)
+      `,
+      )
       .eq('driver_id', userId)
       .order('created_at', { ascending: false })
 
@@ -226,7 +236,7 @@ export async function GET(
       .select('id')
       .eq('company_id', companyId)
 
-    const jobIds = (companyJobs || []).map(j => j.id)
+    const jobIds = (companyJobs || []).map((j) => j.id)
     let existingApplication = null
 
     if (jobIds.length > 0) {
@@ -245,67 +255,87 @@ export async function GET(
     // Build the response
     const profile = driverProfile || developerProfile
     const fullName = driverProfile
-      ? `${driverProfile.first_name || ''} ${driverProfile.middle_name || ''} ${driverProfile.last_name || ''}`.replace(/\s+/g, ' ').trim()
+      ? `${driverProfile.first_name || ''} ${driverProfile.middle_name || ''} ${driverProfile.last_name || ''}`
+          .replace(/\s+/g, ' ')
+          .trim()
       : developerProfile?.full_name || 'Unknown'
+
+    // Determine effective candidate type based on DATA, not current role
+    // (user might be logged in as employer but still have driver data to show)
+    const effectiveRole = driverProfile ? 'driver' : developerProfile ? 'developer' : candidate?.role
 
     return NextResponse.json({
       success: true,
       careerCard: {
         // Basic info
         userId: candidate?.id,
-        role: candidate?.role,
+        role: effectiveRole,
         name: fullName || careerCard.full_name || 'Unknown',
         email: profile?.email || candidate?.email,
         phone: profile?.phone,
-        location: profile?.city && profile?.state
-          ? `${profile.city}, ${profile.state}`
-          : profile?.location || careerCard.state,
+        location:
+          profile?.city && profile?.state
+            ? `${profile.city}, ${profile.state}`
+            : profile?.location || careerCard.state,
         memberSince: candidate?.created_at,
 
         // Profile
-        profile: profile ? {
-          ...profile,
-          fullName,
-        } : null,
+        profile: profile
+          ? {
+              ...profile,
+              fullName,
+            }
+          : null,
 
         // Resume
-        resume: resume ? {
-          id: resume.id,
-          title: resume.title,
-          filename: resume.filename,
-          ipfsHash: resume.ipfs_hash,
-          verificationStatus: resume.verification_status,
-          structuredData: resume.structured_data,
-          createdAt: resume.created_at,
-        } : null,
+        resume: resume
+          ? {
+              id: resume.id,
+              title: resume.title,
+              filename: resume.filename,
+              ipfsHash: resume.ipfs_hash,
+              verificationStatus: resume.verification_status,
+              structuredData: resume.structured_data,
+              createdAt: resume.created_at,
+            }
+          : null,
 
         // Driver-specific
-        driverApplication: driverApplication ? {
-          id: driverApplication.id,
-          status: driverApplication.verification_status,
-          isComplete: driverApplication.is_complete,
-          createdAt: driverApplication.created_at,
-        } : null,
+        driverApplication: driverApplication
+          ? {
+              id: driverApplication.id,
+              status: driverApplication.verification_status,
+              isComplete: driverApplication.is_complete,
+              createdAt: driverApplication.created_at,
+            }
+          : null,
 
         // MVR
-        mvr: mvrData ? {
-          orderId: mvrData.order.id,
-          orderStatus: mvrData.order.status,
-          licenseState: mvrData.order.dl_state,
-          orderedAt: mvrData.order.created_at,
-          completedAt: mvrData.order.completed_at,
-          wasOrderedByEmployer: mvrData.wasOrderedByEmployer,
-          results: mvrData.results ? {
-            licenseStatus: mvrData.results.license_status,
-            licenseClass: mvrData.results.license_class,
-            totalPoints: mvrData.results.total_points,
-            violationCount: mvrData.results.violation_count,
-          } : null,
-        } : null,
+        mvr: mvrData
+          ? {
+              orderId: mvrData.order.id,
+              orderStatus: mvrData.order.status,
+              licenseState: mvrData.order.dl_state,
+              orderedAt: mvrData.order.created_at,
+              completedAt: mvrData.order.completed_at,
+              wasOrderedByEmployer: mvrData.wasOrderedByEmployer,
+              results: mvrData.results
+                ? {
+                    licenseStatus: mvrData.results.license_status,
+                    licenseClass: mvrData.results.license_class,
+                    totalPoints: mvrData.results.total_points,
+                    violationCount: mvrData.results.violation_count,
+                  }
+                : null,
+            }
+          : null,
 
         // Work history & verifications
-        workHistory: driverProfile?.employment_history || developerProfile?.employment_history || [],
-        verifications: (verifications || []).map(v => ({
+        workHistory:
+          driverProfile?.employment_history ||
+          developerProfile?.employment_history ||
+          [],
+        verifications: (verifications || []).map((v) => ({
           id: v.id,
           employer: v.previous_employer_name,
           position: v.claimed_position,
@@ -334,12 +364,11 @@ export async function GET(
         bgcheckConsentSignedAt: bgcheckConsent?.signed_at || null,
       },
     })
-
   } catch (error) {
     console.error('[CAREER CARD] Unexpected error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

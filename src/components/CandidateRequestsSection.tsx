@@ -35,6 +35,7 @@ interface CandidateRequest {
     name: string
     logo_url?: string | null
   } | null
+  consentId?: string | null
 }
 
 interface CandidateRequestsSectionProps {
@@ -104,6 +105,8 @@ export default function CandidateRequestsSection({
   const [updating, setUpdating] = useState(false)
   // Controls whether the full-screen disclosure form is shown
   const [showDisclosure, setShowDisclosure] = useState(false)
+  // Controls whether we're viewing a previously signed consent
+  const [viewingConsent, setViewingConsent] = useState<{ requestId: string; consentId: string; companyName: string } | null>(null)
 
   const fetchRequests = useCallback(async () => {
     if (!userAddress) {
@@ -330,11 +333,12 @@ export default function CandidateRequestsSection({
                   {completedRequests.slice(0, 5).map(request => {
                     const config = REQUEST_TYPE_CONFIG[request.requestType]
                     const statusConfig = STATUS_CONFIG[request.status]
+                    const canViewConsent = request.requestType === 'mvr_order' && request.consentId
 
                     return (
                       <div
                         key={request.id}
-                        className={`rounded-lg border p-3 opacity-75 ${cardClass}`}
+                        className={`rounded-lg border p-3 ${canViewConsent ? '' : 'opacity-75'} ${cardClass}`}
                       >
                         <div className='flex items-center justify-between'>
                           <div className='flex items-center gap-3'>
@@ -345,9 +349,24 @@ export default function CandidateRequestsSection({
                               {statusConfig.label}
                             </span>
                           </div>
-                          <span className={`text-xs ${textSecondary}`}>
-                            {request.company?.name}
-                          </span>
+                          <div className='flex items-center gap-2'>
+                            <span className={`text-xs ${textSecondary}`}>
+                              {request.company?.name}
+                            </span>
+                            {canViewConsent && (
+                              <button
+                                onClick={() => setViewingConsent({
+                                  requestId: request.id,
+                                  consentId: request.consentId!,
+                                  companyName: request.company?.name || 'the employer',
+                                })}
+                                className='flex items-center gap-1 px-2 py-1 text-xs rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 hover:bg-teal-500/20 transition-colors'
+                              >
+                                <FileText className='w-3 h-3' />
+                                View
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )
@@ -535,6 +554,19 @@ export default function CandidateRequestsSection({
             setSelectedRequest(null)
             await fetchRequests()
           }}
+        />
+      )}
+
+      {/* View previously signed consent */}
+      {viewingConsent && (
+        <BackgroundCheckDisclosure
+          requestId={viewingConsent.requestId}
+          companyName={viewingConsent.companyName}
+          userAddress={userAddress || ''}
+          onClose={() => setViewingConsent(null)}
+          onConsentSigned={() => setViewingConsent(null)}
+          viewMode
+          consentId={viewingConsent.consentId}
         />
       )}
     </div>

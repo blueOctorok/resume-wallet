@@ -34,6 +34,10 @@ interface BackgroundCheckDisclosureProps {
   userAddress: string
   onClose: () => void
   onConsentSigned: () => void
+  /** Read-only mode for viewing a previously signed consent */
+  viewMode?: boolean
+  /** Consent ID to fetch for read-only viewing */
+  consentId?: string
 }
 
 const STATE_NOTICES = [
@@ -92,27 +96,67 @@ export default function BackgroundCheckDisclosure({
   userAddress,
   onClose,
   onConsentSigned,
+  viewMode = false,
+  consentId,
 }: BackgroundCheckDisclosureProps) {
   const { theme } = useTheme()
   const printRef = useRef<HTMLDivElement>(null)
 
   const [profile, setProfile] = useState<DriverProfileInfo | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
+  const [viewCompanyName, setViewCompanyName] = useState(companyName)
 
   const [stateNoticesOpen, setStateNoticesOpen] = useState(false)
   const [fcraRightsOpen, setFcraRightsOpen] = useState(false)
 
   const [signedName, setSignedName] = useState('')
-  const [signedDate] = useState(new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }))
+  const [signedDate, setSignedDate] = useState(
+    new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
+  )
 
   const [submitting, setSubmitting] = useState(false)
-  const [signed, setSigned] = useState(false)
+  const [signed, setSigned] = useState(viewMode)
   const [error, setError] = useState<string | null>(null)
   const [generatingPdf, setGeneratingPdf] = useState(false)
 
   useEffect(() => {
-    fetchDriverProfile()
-  }, [userAddress])
+    if (viewMode && consentId) {
+      fetchSignedConsent()
+    } else {
+      fetchDriverProfile()
+    }
+  }, [userAddress, viewMode, consentId])
+
+  const fetchSignedConsent = async () => {
+    if (!consentId) return
+    try {
+      const response = await fetch(`/api/candidate/bgcheck-consent/${consentId}`, {
+        headers: { 'x-wallet-address': userAddress },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        const consent = data.consent
+        setSignedName(consent.signedName || '')
+        setSignedDate(
+          consent.signedAt
+            ? new Date(consent.signedAt).toLocaleDateString('en-US', {
+                month: '2-digit',
+                day: '2-digit',
+                year: 'numeric',
+              })
+            : ''
+        )
+        setViewCompanyName(consent.companyName || companyName)
+        if (consent.formData) {
+          setProfile(consent.formData)
+        }
+      }
+    } catch {
+      setError('Failed to load signed consent')
+    } finally {
+      setProfileLoading(false)
+    }
+  }
 
   const fetchDriverProfile = async () => {
     try {
@@ -233,7 +277,7 @@ export default function BackgroundCheckDisclosure({
           </div>
           <div>
             <h2 className={`font-semibold ${textPrimary}`}>Background Check Disclosure & Authorization</h2>
-            <p className={`text-sm ${textSecondary}`}>Requested by {companyName}</p>
+            <p className={`text-sm ${textSecondary}`}>Requested by {viewCompanyName}</p>
           </div>
         </div>
         <button
@@ -274,7 +318,7 @@ export default function BackgroundCheckDisclosure({
                 <div className="bg-gray-50 rounded-xl p-5 space-y-3 text-sm text-gray-700 leading-relaxed">
                   <p>
                     In the interest of maintaining the safety and security of our customers, employees, and property,{' '}
-                    <strong className="text-gray-900">{companyName}</strong> will order an investigative or a consumer
+                    <strong className="text-gray-900">{viewCompanyName}</strong> will order an investigative or a consumer
                     report (a background report) on you in connection with your employment application, and if you are
                     hired, or already work for the company, an additional background report(s) may be ordered for
                     employment purposes if necessary.
@@ -374,7 +418,7 @@ export default function BackgroundCheckDisclosure({
                 <div className="bg-gray-50 rounded-xl p-5 space-y-4 text-sm text-gray-700 leading-relaxed">
                   <p>
                     After carefully reading this Background Check Disclosure and Authorization form, I authorize{' '}
-                    <strong className="text-gray-900">{companyName}</strong> to order my background report, including
+                    <strong className="text-gray-900">{viewCompanyName}</strong> to order my background report, including
                     investigative or consumer report. I also authorize all relevant agencies and entities to disclose to
                     Key Background Screening, Inc. all information about or concerning me, including but not limited to
                     my past or present employers, educational institutions, law enforcement agencies, motor vehicle record
@@ -493,7 +537,7 @@ export default function BackgroundCheckDisclosure({
             <>
               <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-green-400' : 'text-green-700'}`}>
                 <CheckCircle className="w-4 h-4" />
-                Authorization sent to {companyName}
+                {viewMode ? `Signed consent for ${viewCompanyName}` : `Authorization sent to ${viewCompanyName}`}
               </div>
               <div className="flex-1" />
               <button

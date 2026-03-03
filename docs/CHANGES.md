@@ -4,6 +4,63 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 📋 **Admin Background Check Pipeline Visibility + Driver Consent Archive** (March 2026)
+
+### Problem
+
+1. **Admin had no visibility into employer-initiated background check requests.** The admin dashboard only showed actual `mvr_orders` (driver-initiated MVRs). Employer requests (`candidate_requests`) and signed consents (`bgcheck_consents`) were invisible.
+
+2. **Driver signed consent forms were lost.** If a driver signed the FCRA disclosure but didn't download the PDF immediately, they had no way to retrieve it later.
+
+### Solution
+
+**Admin Dashboard: New "Background Checks" tab**
+
+Added a new tab under Employers section showing the full background check pipeline:
+- Company that requested
+- Driver name/email
+- Request status (pending, viewed, completed)
+- Consent status (awaiting / signed)
+- Request date and signed date
+
+**New API: `GET /api/admin/bgcheck-requests`**
+- Returns all `candidate_requests` where `request_type = 'mvr_order'`
+- Joins `companies`, `users`, `driver_profiles`, and `bgcheck_consents`
+- Supports pagination and status filtering
+
+**Driver Consent Archive**
+
+Drivers can now view previously signed background check disclosures:
+- "Past Requests" section shows a **View** button for completed MVR requests
+- Clicking opens the disclosure form in **read-only mode** with their signature and personal info pre-filled
+- PDF download still available from this view
+
+**New API: `GET /api/candidate/bgcheck-consent/:consentId`**
+- Fetches a specific signed consent for viewing
+- Validates the requesting user owns the consent
+
+**Updated: `BackgroundCheckDisclosure.tsx`**
+- Added `viewMode` and `consentId` props
+- When in viewMode, fetches and displays the signed consent data
+- Form fields are read-only and signature is shown in green "Signed" state
+
+**Updated: `GET /api/candidate/requests`**
+- Now includes `consentId` for completed MVR requests
+- Used by CandidateRequestsSection to enable the View button
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/app/api/admin/bgcheck-requests/route.ts` | New admin API |
+| `src/app/api/candidate/bgcheck-consent/[consentId]/route.ts` | New API for fetching signed consent |
+| `src/app/api/candidate/requests/route.ts` | Added consentId to response |
+| `src/components/BackgroundCheckDisclosure.tsx` | Added viewMode support |
+| `src/components/CandidateRequestsSection.tsx` | Added View button for signed consents |
+| `src/app/admin/AdminDashboard.tsx` | Added bgcheckRequests tab and table |
+
+---
+
 ## 🔧 **Fix: Resume Auto-Creation — Wrong Keys + Duplicate Generation** (March 2026)
 
 ### Problem 1: Employment history and all profile data blank in auto-generated resume

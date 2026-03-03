@@ -362,7 +362,7 @@ export default function CareerCardModal({
                 {loading ? 'Loading...' : careerCard?.name || 'Career Card'}
               </h3>
               <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                {isDriver ? 'Driver' : 'Developer'} Career Card
+                {loading ? 'Career Card' : isDriver ? 'Driver Career Card' : 'Developer Career Card'}
               </p>
             </div>
           </div>

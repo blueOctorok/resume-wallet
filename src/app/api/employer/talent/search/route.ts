@@ -125,6 +125,15 @@ export async function GET(request: NextRequest) {
         p_offset: offset,
       })
 
+    console.log('[TALENT SEARCH] RPC params:', {
+      p_role: role || null,
+      p_cdl_class: cdlClass ? [cdlClass] : null,
+      p_state: state || null,
+      p_search_text: searchText || null,
+      resultCount: rpcData?.length ?? 0,
+      hasError: !!searchError,
+    })
+
     if (searchError) {
       console.error('[TALENT SEARCH] RPC error:', searchError.message, searchError.details)
 
@@ -177,6 +186,7 @@ export async function GET(request: NextRequest) {
       candidates = viewData as typeof candidates
     } else {
       candidates = rpcData as typeof candidates
+      console.log('[TALENT SEARCH] RPC returned', candidates?.length ?? 0, 'candidates')
     }
 
     // Get company's job postings for context

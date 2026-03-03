@@ -60,6 +60,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch requests' }, { status: 500 })
     }
 
+    // Get consent IDs for completed MVR requests
+    const completedMvrRequestIds = (requests || [])
+      .filter(r => r.request_type === 'mvr_order' && r.status === 'completed')
+      .map(r => r.id)
+
+    let consentMap: Map<string, string> = new Map()
+    if (completedMvrRequestIds.length > 0) {
+      const { data: consents } = await supabase
+        .from('bgcheck_consents')
+        .select('id, request_id')
+        .in('request_id', completedMvrRequestIds)
+
+      if (consents) {
+        consentMap = new Map(consents.map(c => [c.request_id, c.id]))
+      }
+    }
+
     // Count pending requests for badge
     const pendingCount = (requests || []).filter(
       r => r.status === 'pending' || r.status === 'viewed'
@@ -83,6 +100,7 @@ export async function GET(request: NextRequest) {
             name: company.company_name,
             logoUrl: company.logo_url,
           } : null,
+          consentId: consentMap.get(r.id) || null,
         }
       }),
       pendingCount,
