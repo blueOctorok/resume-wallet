@@ -31,6 +31,8 @@ import {
   CheckCircle2,
   XCircle,
   UserPlus,
+  Send,
+  Mail,
 } from 'lucide-react'
 import AdminResetWallet from '@/components/admin/AdminResetWallet'
 import dynamic from 'next/dynamic'
@@ -47,6 +49,7 @@ type TabId =
   | 'accessRequests'
   | 'jobs'
   | 'applications'
+  | 'outreach'
   | 'users'
   | 'dotApps'
   | 'profiles'
@@ -181,6 +184,26 @@ interface AdminApplication {
   dotApplicationId: string | null
   dotApplicationComplete: boolean
   dotApplicationStatus: string | null
+}
+
+// Candidate outreach invite for admin view
+interface AdminOutreach {
+  id: string
+  token: string
+  type: 'driver_dot' | 'developer_card' | 'general'
+  status: string
+  candidateEmail: string | null
+  candidateName: string | null
+  welcomeMessage: string | null
+  createdAt: string
+  expiresAt: string | null
+  emailSentAt: string | null
+  companyId: string
+  companyName: string
+  jobId: string | null
+  jobTitle: string | null
+  createdByWallet: string | null
+  createdByEmail: string | null
 }
 
 // User detail data when viewing a specific user
@@ -351,6 +374,8 @@ function AdminDashboardContent() {
   const [jobsFilter, setJobsFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const [applications, setApplications] = useState<AdminApplication[]>([])
   const [applicationsFilter, setApplicationsFilter] = useState<'all' | 'submitted' | 'under_review' | 'hired' | 'rejected'>('all')
+  const [outreach, setOutreach] = useState<AdminOutreach[]>([])
+  const [outreachFilter, setOutreachFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed' | 'cancelled'>('all')
   const [users, setUsers] = useState<User[]>([])
   const [dotApps, setDotApps] = useState<DotApp[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
@@ -625,6 +650,18 @@ function AdminDashboardContent() {
           }
           break
 
+        case 'outreach':
+          response = await fetch(
+            `/api/admin/outreach?status=${outreachFilter === 'all' ? '' : outreachFilter}&search=${encodeURIComponent(searchQuery)}&limit=${pageSize}&offset=${offset}`,
+            { headers }
+          )
+          data = await response.json()
+          if (data.success) {
+            setOutreach(data.outreach)
+            setTotalCount(data.total)
+          }
+          break
+
         case 'users':
           response = await fetch(
             `/api/admin/users?search=${encodeURIComponent(searchQuery)}&limit=${pageSize}&offset=${offset}`,
@@ -739,7 +776,7 @@ function AdminDashboardContent() {
     } finally {
       setLoading(false)
     }
-  }, [walletAddress, isAdmin, activeTab, currentPage, searchQuery, companyStatusFilter, applicationsFilter])
+  }, [walletAddress, isAdmin, activeTab, currentPage, searchQuery, companyStatusFilter, applicationsFilter, outreachFilter])
 
   useEffect(() => {
     if (activeTab !== 'tools') {
@@ -786,6 +823,9 @@ function AdminDashboardContent() {
         case 'application':
           endpoint = `/api/admin/applications/${deleteTarget.id}`
           break
+        case 'outreach':
+          endpoint = `/api/admin/outreach/${deleteTarget.id}`
+          break
       }
 
       const response = await fetch(endpoint, {
@@ -819,6 +859,7 @@ function AdminDashboardContent() {
         { id: 'companies' as TabId, label: 'Companies', icon: <Building2 className='w-4 h-4' /> },
         { id: 'jobs' as TabId, label: 'Job Postings', icon: <Briefcase className='w-4 h-4' /> },
         { id: 'applications' as TabId, label: 'Applications', icon: <ClipboardList className='w-4 h-4' /> },
+        { id: 'outreach' as TabId, label: 'Candidate Outreach', icon: <Send className='w-4 h-4' /> },
         { id: 'bgcheckRequests' as TabId, label: 'Background Checks', icon: <ClipboardCheck className='w-4 h-4' /> },
       ],
     },
@@ -1732,11 +1773,16 @@ function AdminDashboardContent() {
                           <button
                             onClick={async () => {
                               if (confirm(`Delete "${job.title}" permanently? This cannot be undone.`)) {
-                                await fetch(`/api/admin/jobs/${job.id}`, {
+                                const res = await fetch(`/api/admin/jobs/${job.id}`, {
                                   method: 'DELETE',
                                   headers: { 'x-wallet-address': walletAddress || '' },
                                 })
-                                fetchData()
+                                if (res.ok) {
+                                  fetchData()
+                                } else {
+                                  const data = await res.json()
+                                  alert(data.error || 'Failed to delete job. It may have applications linked to it.')
+                                }
                               }
                             }}
                             className='px-3 py-1.5 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600'
@@ -1886,6 +1932,144 @@ function AdminDashboardContent() {
                       }`} />
                       <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
                         No applications found
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Candidate Outreach Section */}
+              {activeTab === 'outreach' && (
+                <div className='p-6'>
+                  {/* Status Filter Pills */}
+                  <div className='flex flex-wrap gap-2 mb-6'>
+                    {(['all', 'pending', 'in_progress', 'completed', 'cancelled'] as const).map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => setOutreachFilter(status)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          outreachFilter === status
+                            ? 'bg-teal-500 text-white'
+                            : theme === 'dark'
+                            ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {status === 'all' ? 'All' : status === 'in_progress' ? 'In Progress' : status.charAt(0).toUpperCase() + status.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Outreach Table */}
+                  <div className='overflow-x-auto'>
+                    <table className='w-full'>
+                      <thead className={theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}>
+                        <tr>
+                          <th className={`${tableHeaderClass} px-4 py-3`}>Candidate</th>
+                          <th className={`${tableHeaderClass} px-4 py-3`}>Company</th>
+                          <th className={`${tableHeaderClass} px-4 py-3`}>Type</th>
+                          <th className={`${tableHeaderClass} px-4 py-3`}>Job</th>
+                          <th className={`${tableHeaderClass} px-4 py-3`}>Status</th>
+                          <th className={`${tableHeaderClass} px-4 py-3`}>Email Sent</th>
+                          <th className={`${tableHeaderClass} px-4 py-3`}>Created</th>
+                          <th className={`${tableHeaderClass} px-4 py-3`}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className={`divide-y ${theme === 'dark' ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                        {outreach.map((invite) => (
+                          <tr
+                            key={invite.id}
+                            className={`${theme === 'dark' ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'}`}
+                          >
+                            <td className={tableCellClass}>
+                              <div>
+                                <p className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                                  {invite.candidateName || 'Unnamed'}
+                                </p>
+                                <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                                  {invite.candidateEmail || '—'}
+                                </p>
+                              </div>
+                            </td>
+                            <td className={tableCellClass}>
+                              <div>
+                                <p className='truncate max-w-[120px]' title={invite.companyName}>
+                                  {invite.companyName}
+                                </p>
+                                <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                                  {invite.createdByEmail || invite.createdByWallet?.slice(0, 10) + '...'}
+                                </p>
+                              </div>
+                            </td>
+                            <td className={tableCellClass}>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                invite.type === 'driver_dot' ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400' :
+                                invite.type === 'developer_card' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400' :
+                                'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400'
+                              }`}>
+                                {invite.type === 'driver_dot' ? 'DOT App' :
+                                 invite.type === 'developer_card' ? 'Dev Card' : 'General'}
+                              </span>
+                            </td>
+                            <td className={tableCellClass}>
+                              <p className='truncate max-w-[150px]' title={invite.jobTitle || ''}>
+                                {invite.jobTitle || '—'}
+                              </p>
+                            </td>
+                            <td className={tableCellClass}>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                invite.status === 'pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                invite.status === 'in_progress' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                invite.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                invite.status === 'cancelled' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400'
+                              }`}>
+                                {invite.status === 'in_progress' ? 'In Progress' : invite.status.charAt(0).toUpperCase() + invite.status.slice(1)}
+                              </span>
+                            </td>
+                            <td className={tableCellClass}>
+                              {invite.emailSentAt ? (
+                                <div className='flex items-center gap-1 text-green-500'>
+                                  <Mail className='w-3.5 h-3.5' />
+                                  <span className='text-xs'>{new Date(invite.emailSentAt).toLocaleDateString()}</span>
+                                </div>
+                              ) : (
+                                <span className='text-gray-400'>—</span>
+                              )}
+                            </td>
+                            <td className={tableCellClass}>
+                              <p className='text-xs'>
+                                {new Date(invite.createdAt).toLocaleDateString()}
+                              </p>
+                            </td>
+                            <td className={tableCellClass}>
+                              <button
+                                onClick={() =>
+                                  setDeleteTarget({
+                                    type: 'outreach',
+                                    id: invite.id,
+                                    name: `outreach to "${invite.candidateName || invite.candidateEmail || 'Unknown'}"`,
+                                  })
+                                }
+                                className='p-1.5 rounded-lg text-red-500 hover:bg-red-500/10'
+                                title='Delete outreach invite'
+                              >
+                                <Trash2 className='w-4 h-4' />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {outreach.length === 0 && (
+                    <div className='text-center py-12'>
+                      <Send className={`w-12 h-12 mx-auto mb-4 ${
+                        theme === 'dark' ? 'text-gray-600' : 'text-gray-400'
+                      }`} />
+                      <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
+                        No outreach invites found
                       </p>
                     </div>
                   )}

@@ -40,6 +40,27 @@ body {
   color: #1e293b;
 }
 
+/* Global cursor-pointer for all clickable elements */
+button,
+[role='button'],
+[type='button'],
+[type='submit'],
+[type='reset'],
+a,
+select,
+label[for],
+input[type='checkbox'],
+input[type='radio'],
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Disabled elements should show not-allowed cursor */
+button:disabled,
+[disabled] {
+  cursor: not-allowed;
+}
+
 /* Rotating gradient border for buttons */
 @property --rotate {
   syntax: '<angle>';

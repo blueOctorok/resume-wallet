@@ -47,6 +47,11 @@ const RoleSelectionModal = dynamic(
   { ssr: false, loading: () => <LoadingScreen message='Loading...' fullScreen={false} /> }
 )
 
+const ProfileSetupModal = dynamic(
+  () => import('@/components/ProfileSetupModal').then((mod) => mod.default),
+  { ssr: false }
+)
+
 // ============================================================
 // Inner component that uses Alchemy hooks (must be inside provider)
 // ============================================================
@@ -96,6 +101,10 @@ const HomeContent = () => {
   // Tracks whether the user explicitly signed out. Prevents the session-sync
   // effect from immediately re-logging them in while Alchemy's async cleanup runs.
   const didExplicitLogoutRef = useRef(false)
+
+  // Profile setup modal state
+  const [showProfileSetup, setShowProfileSetup] = useState(false)
+  const didCheckProfileRef = useRef(false)
 
   // -------------------------------------------------------
   // Sync Alchemy session to Auth store (existing sessions + OAuth redirects)
@@ -216,6 +225,53 @@ const HomeContent = () => {
     // Clean up URL (remove query params)
     router.replace('/', { scroll: false })
   }, [searchParams, userRole, isRoleLoading, setCurrentPage, router])
+
+  // -------------------------------------------------------
+  // Check if user needs to set up profile (first-time users)
+  // Shows modal when user has a role but no profile name
+  // -------------------------------------------------------
+  useEffect(() => {
+    // Skip if already checked, or still loading, or no wallet
+    if (didCheckProfileRef.current) return
+    if (isRoleLoading || !userRole || !walletAddress) return
+    if (userRole === 'employer') return // Employers use company profile
+
+    didCheckProfileRef.current = true
+
+    async function checkProfile() {
+      try {
+        const endpoint = userRole === 'driver'
+          ? '/api/driver/profile'
+          : '/api/developer/profile'
+
+        const res = await fetch(endpoint, {
+          headers: { 'x-wallet-address': walletAddress! },
+        })
+
+        if (!res.ok) {
+          // Profile doesn't exist yet - show setup modal
+          setShowProfileSetup(true)
+          return
+        }
+
+        const data = await res.json()
+        const profile = data.profile
+
+        // Check if profile has a name set
+        const hasName = userRole === 'driver'
+          ? profile?.firstName || profile?.first_name
+          : profile?.firstName
+
+        if (!hasName) {
+          setShowProfileSetup(true)
+        }
+      } catch (err) {
+        console.error('Profile check error:', err)
+      }
+    }
+
+    checkProfile()
+  }, [userRole, isRoleLoading, walletAddress])
 
   // -------------------------------------------------------
   // Session timeout (1.5s for Alchemy to detect existing session)
@@ -359,6 +415,22 @@ const HomeContent = () => {
             walletAddress={user?.address}
             existingRole={userRole}
             existingCompanyName={companyName}
+          />
+        )}
+
+        {/* Profile Setup Modal — for first-time users to add name/contact */}
+        {user && walletAddress && (userRole === 'driver' || userRole === 'developer') && (
+          <ProfileSetupModal
+            isOpen={showProfileSetup}
+            onClose={() => setShowProfileSetup(false)}
+            onComplete={() => {
+              setShowProfileSetup(false)
+              // Reset the check flag so hub sees updated profile
+              didCheckProfileRef.current = false
+            }}
+            walletAddress={walletAddress}
+            userRole={userRole}
+            userEmail={user?.email}
           />
         )}
 

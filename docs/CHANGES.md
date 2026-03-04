@@ -4,6 +4,72 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 📊 **Admin Panel: Candidate Outreach Management** (March 2026)
+
+### What changed
+
+Added a new "Candidate Outreach" section to the central admin panel, allowing admins to view and manage all application invites across all companies.
+
+**1. New Tab in Admin Dashboard**
+- Added "Candidate Outreach" tab under the Employers section
+- Shows all `application_invites` from all companies with filterable status
+- Displays: candidate info, company, invite type (DOT App/Dev Card/General), job posting, status, email sent timestamp, creation date
+
+**2. Status Filters**
+- All, Pending, In Progress, Completed, Cancelled
+- Search by candidate name/email, company name, or job title
+
+**3. New API Endpoints**
+- `GET /api/admin/outreach` - List all outreach invites with pagination and filtering
+- `GET/PATCH/DELETE /api/admin/outreach/[id]` - View, update, or delete individual invites
+
+**Files changed:**
+- `src/app/admin/AdminDashboard.tsx` - Added tab, table UI, state management
+- `src/app/api/admin/outreach/route.ts` - New list endpoint
+- `src/app/api/admin/outreach/[id]/route.ts` - New detail/update/delete endpoint
+
+**Why this matters**: Admins can now monitor and manage candidate outreach activity across the entire platform from the central admin panel, just like they do for users, applications, companies, etc.
+
+---
+
+## 👤 **Profile Setup for New Users** (March 2026)
+
+### What changed
+
+Added a profile setup flow so new users aren't "nameless" in the system. This makes them discoverable in employer talent searches immediately after signing up.
+
+**1. New Component — `src/components/ProfileSetupModal.tsx`**
+- Modal popup for first-time driver/developer users
+- Collects: first name, last name, email, phone, location
+- Different location UI for drivers (city + state dropdown) vs developers (freeform location)
+- Saves to appropriate profile table based on role (driver_profiles or developer_profiles)
+- Can be skipped — shows reminder card on hub instead
+
+**2. New API — `src/app/api/user/update-name/route.ts`**
+- Simple endpoint to update `users.name` for display purposes
+- Called alongside profile save
+
+**3. Profile Check in `page.tsx`**
+- Added effect that checks if user has profile name after role is set
+- Shows `ProfileSetupModal` if name is missing
+- Skips for employers (they use company profile via Motor Carrier form)
+
+**4. Hub Reminder Card — `src/components/DriverHub.tsx`**
+- Shows a prominent "Complete your profile to get discovered" banner when `profileName` is empty
+- Links to resume builder for now (full profile will come from there)
+- Appears between header and quick stats sections
+
+**User Flow:**
+1. User signs up and selects driver/developer role
+2. ProfileSetupModal appears asking for basic info
+3. User fills out name + optional contact info → saves to profile
+4. User is now discoverable in employer talent searches with their real name
+5. If they skip, reminder card shows on hub until they complete profile
+
+**Why this matters**: Previously, new users were invisible in talent searches until they filled out a resume or DOT app. Now employers can find candidates even if they've just signed up with basic profile info.
+
+---
+
 ## 🔐 **Dedicated Onboarding Flow for Invite Links** (March 2026)
 
 ### What changed
