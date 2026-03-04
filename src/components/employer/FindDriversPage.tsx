@@ -21,6 +21,7 @@ import {
   UserPlus,
   Eye,
 } from 'lucide-react'
+import BackToHubButton from '@/components/ui/BackToHubButton'
 
 interface Driver {
   driverId: string
@@ -144,15 +145,14 @@ export default function FindDriversPage({ walletAddress, onBack }: FindDriversPa
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+      {/* Back button */}
+      <div className="mb-6">
+        <BackToHubButton onClick={onBack} />
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <button
-            onClick={onBack}
-            className={`mb-4 text-sm ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
-          >
-            ← Back to Hub
-          </button>
           <h1 className={`text-3xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
             Find Drivers
           </h1>

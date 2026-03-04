@@ -4,6 +4,155 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 🔐 **Dedicated Onboarding Flow for Invite Links** (March 2026)
+
+### What changed
+
+Created a seamless onboarding experience for candidates who click invite links from emails. Instead of dumping them on the main landing page where they have to figure out login, they now get a dedicated flow with inline authentication.
+
+**1. New Route — `src/app/onboard/[token]/page.tsx`**
+- Validates the invite token and shows invite context (company, type)
+- Has the Alchemy `AuthCard` embedded directly on the page
+- Auto-detects when user completes login
+- Automatically sets user role based on invite type (driver/developer)
+- Redirects to the appropriate page (DOT app, career card, etc.) after auth
+
+**2. Updated `/apply/[token]` landing page**
+- "Get Started" button now redirects to `/onboard/[token]` instead of `/?action=...`
+- Cleaner handoff — user goes directly to login flow
+
+**3. Updated `page.tsx` (main app)**
+- Added `?onboard=` query param handling
+- When user arrives from onboard flow, waits for role to load, then navigates to target page
+- Cleans up URL after handling
+
+**Flow:**
+1. Employer creates outreach invite → candidate receives email
+2. Candidate clicks link → lands on `/apply/[token]` (branded welcome screen)
+3. Clicks "Start" → goes to `/onboard/[token]` (login inline)
+4. Enters email, gets OTP → account created, role set automatically
+5. Redirected to `/?onboard=dot-application` → main app loads DOT form directly
+
+**Why this matters**: Previously the onboarding flow had a "dead end" where candidates clicked Get Started and landed on the generic StormChain homepage with no guidance. Now they flow directly from invite → login → target page with zero friction.
+
+---
+
+## 🎯 **Unified BackToHubButton Component** (March 2026)
+
+### What changed
+
+Created a reusable `BackToHubButton` component to standardize the "Back to Hub" navigation across the entire application.
+
+**1. New Component — `src/components/ui/BackToHubButton.tsx`**
+- Outlined button style with border, no background fill
+- ArrowLeft icon on the left + customizable label (defaults to "Back to Hub")
+- Theme-aware (works with light/dark mode)
+- Consistent hover states across the app
+
+**2. Updated Components**
+The following files now use the unified `BackToHubButton`:
+- `src/components/app/MotorCarrierOnboarding.tsx` — Added `showBackButton` prop; shows back button in edit mode
+- `src/components/employer/ApplicantsPage.tsx`
+- `src/components/employer/TalentSearchPage.tsx`
+- `src/components/employer/JobPostingForm.tsx`
+- `src/components/employer/TeamManagement.tsx`
+- `src/components/employer/FindDriversPage.tsx`
+- `src/components/StormChainView.tsx`
+- `src/components/ResumeBuilder.tsx` — Uses `label` prop for conditional "Back" vs "Back to Hub"
+- `src/components/DeveloperResumeBuilder.tsx`
+
+**Why this matters**: Previously each page had its own inline back button with slightly different styling (text links, icon sizes, hover colors). This unification ensures a consistent UX pattern and makes future style updates trivial — change one file, update everywhere.
+
+---
+
+## 🚀 **Employer Hub + Candidate Outreach Redesign** (March 2026)
+
+### What changed
+
+**1. DB Migration — `supabase/migrations/025_invite_type.sql`**
+- Added `type TEXT NOT NULL DEFAULT 'driver_dot'` to `application_invites`
+- Valid values: `driver_dot`, `developer_card`, `general`
+- Existing invites get the default so no data migration needed
+
+**2. New `CandidateOutreach` component — `src/components/employer/CandidateOutreach.tsx`**
+- Replaces the old `ApplicationInvites` component entirely
+- **Type picker first** — always choose `Driver DOT App`, `Developer Card`, or `General Onboarding` before anything else
+- Clean email input field in the create form (no more `window.prompt()`)
+- QR code generated client-side via `qrcode` package — scan any invite directly
+- Re-send email button: if email was sent previously, shows a RefreshCw icon; new invite shows Mail icon
+- Inline email prompt for invites with no email set (appears in-row, no modal)
+- Type badge (teal = driver, indigo = developer, slate = general) + status badge on every row
+- "Show more" pagination — displays first 6, collapses the rest
+- Scroll-to anchor: "New Outreach" quick action in the hub jumps straight to this section
+
+**3. `EmployerHub.tsx` — simplified and focused**
+- **Removed**: Analytics Dashboard section, Recent Applicants list, Job Postings grid, MVR Orders list, list/kanban toggle
+- **Kanban is now the only pipeline view** — full-width, always visible
+- Stats band updated: "In Pipeline" replaces "Total Applicants" label, emphasis on pipeline health
+- Quick Actions: "New Outreach" is now the primary action (scrolls to outreach section)
+- `CandidateOutreach` appears below the kanban on the same page — no navigation needed
+
+**4. API — `src/app/api/employer/invites/route.ts`**
+- POST now accepts `type` field, validates it, stores it
+- GET now returns `type` and `emailSentAt` on every invite row
+
+**5. API — `src/app/api/invite/[token]/route.ts`**
+- GET now returns `type` in the invite payload (used by landing page)
+
+**6. Email templates — `src/lib/send-invite-email.ts`**
+- Full rewrite with `getEmailContent(type, company, job?)` function
+- Each type produces its own subject line, headline, intro paragraph, checklist, and CTA label
+- Professional HTML email with gradient header, branded StormChain styling, fallback text link
+
+**7. Landing page — `src/app/apply/[token]/page.tsx`**
+- Full redesign with dark theme, no navbar (standalone "product moment" feel)
+- Three distinct hero layouts driven by `invite.type`: teal/Car for drivers, indigo/Code for developers, slate/Users for general
+- Type badge, company name, job pill (if applicable), custom welcome message block, checklist, time estimate
+- CTA scrolls into loading state to prevent double-clicks
+- Error states: notfound, expired, completed, cancelled — all clean dark-mode cards
+
+---
+
+## 🎯 **Enhanced Hiring Pipeline Kanban + "Add to Pipeline" in Find Talent** (March 2026)
+
+### Problem
+
+The Hiring Pipeline kanban board existed but was bare — each card only showed name, role, job title, and time in stage. There was no way to add a candidate directly from the Find Talent search page; you had to open the full Career Card modal, scroll to the bottom, and click "Recruit Candidate" buried there. The board also had no quick stage-advance mechanism, urgency indicators, or credential context.
+
+### Solution
+
+**1. Overhauled `ApplicantKanban.tsx`:**
+- Cards now show: initials avatar (role-colored), name, CDL class + experience, job title, resume verified badge, time-in-stage with urgency color coding (green = fresh, yellow = aging 3–7d, red = stale >7d)
+- **Quick advance button:** hover a card to reveal a "→ Next Stage" button that moves the candidate forward without dragging
+- Column headers now show average days in stage across all cards in that column
+- Empty columns have cleaner placeholder states
+- `KanbanApplicant` type expanded to include `cdlClass`, `experienceYears`, `hasResume`, `resumeVerified`
+
+**2. Updated `EmployerHub.tsx`:**
+- Passes the 4 new credential fields from the applicants API response to the kanban component mapping
+
+**3. Updated `TalentSearchPage.tsx`:**
+- Each candidate card now has a "+ Pipeline" button (visible only if not already in pipeline)
+- Clicking "+ Pipeline" opens a lightweight job-picker sheet (not the full Career Card modal)
+- The sheet uses the already-loaded active jobs list, so no extra API calls needed
+- On success, the candidate's "Applied" badge updates in place to "In Pipeline"
+- The full Career Card modal is still available by clicking the card body for deeper review
+
+**4. Talent Pool support (no specific job required):**
+- New "Save to Talent Pool" option in the quick-recruit modal — always available, shown prominently above job selection
+- Recruiters can now save promising candidates before having a specific role for them
+- Behind the scenes: auto-creates a hidden job posting titled "— Talent Pool —" per company (is_active = false, won't appear in public job board)
+- API updated to accept `talentPool: true` as alternative to `jobPostingId`
+- Kanban renders talent pool entries with a purple "Talent Pool" badge instead of a job title
+
+**Files changed:**
+- `src/components/employer/ApplicantKanban.tsx` — full rewrite + talent pool badge
+- `src/components/EmployerHub.tsx` — expanded kanban data mapping
+- `src/components/employer/TalentSearchPage.tsx` — pipeline button + quick-recruit modal + talent pool option
+- `src/app/api/employer/talent/[userId]/recruit/route.ts` — accepts `talentPool: true`, auto-creates hidden talent pool job
+
+---
+
 ## 🏢 **Motor Carrier Onboarding Gate for New Employers** (March 2026)
 
 ### Problem

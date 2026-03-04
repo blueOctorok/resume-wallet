@@ -18,9 +18,11 @@ import {
   Code,
   Users,
   ChevronDown,
-  Star,
   TrendingUp,
+  UserPlus,
+  Send,
 } from 'lucide-react'
+import BackToHubButton from '@/components/ui/BackToHubButton'
 import CareerCardModal from './CareerCardModal'
 
 // ============================================================
@@ -85,8 +87,65 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
   const [hasMore, setHasMore] = useState(false)
   const LIMIT = 25
   
-  // Selected candidate for detail view
+  // Selected candidate for full career card modal
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null)
+
+  // Quick "Add to Pipeline" state — holds the candidate being recruited
+  const [quickRecruitId, setQuickRecruitId] = useState<string | null>(null)
+  const [quickJobId, setQuickJobId] = useState<string | null>(null)
+  const [useTalentPool, setUseTalentPool] = useState(false)
+  const [quickRecruiting, setQuickRecruiting] = useState(false)
+  const [quickRecruitResult, setQuickRecruitResult] = useState<'success' | 'error' | null>(null)
+
+  const openQuickRecruit = (e: React.MouseEvent, candidateId: string) => {
+    e.stopPropagation()
+    setQuickRecruitId(candidateId)
+    setQuickJobId(null)
+    setUseTalentPool(false)
+    setQuickRecruitResult(null)
+  }
+
+  const closeQuickRecruit = () => {
+    setQuickRecruitId(null)
+    setQuickJobId(null)
+    setUseTalentPool(false)
+    setQuickRecruiting(false)
+    setQuickRecruitResult(null)
+  }
+
+  const submitQuickRecruit = async () => {
+    if (!quickRecruitId) return
+    // Must pick a job OR use talent pool
+    if (!quickJobId && !useTalentPool) return
+
+    try {
+      setQuickRecruiting(true)
+      const res = await fetch(`/api/employer/talent/${quickRecruitId}/recruit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': walletAddress,
+        },
+        body: JSON.stringify(
+          useTalentPool
+            ? { talentPool: true }
+            : { jobPostingId: quickJobId }
+        ),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to add to pipeline')
+      setQuickRecruitResult('success')
+      // Mark the candidate as applied in local state so the badge shows
+      setCandidates(prev =>
+        prev.map(c => c.userId === quickRecruitId ? { ...c, hasApplied: true } : c)
+      )
+      setTimeout(closeQuickRecruit, 1800)
+    } catch {
+      setQuickRecruitResult('error')
+    } finally {
+      setQuickRecruiting(false)
+    }
+  }
 
   // Search on filter change (debounced for text input)
   useEffect(() => {
@@ -173,15 +232,14 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+      {/* Back button */}
+      <div className="mb-6">
+        <BackToHubButton onClick={onBack} />
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <button
-            onClick={onBack}
-            className={`mb-4 text-sm ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
-          >
-            ← Back to Hub
-          </button>
           <h1 className={`text-3xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
             Find Talent
           </h1>
@@ -414,6 +472,7 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
                 key={candidate.userId}
                 candidate={candidate}
                 onClick={() => setSelectedCandidateId(candidate.userId)}
+                onAddToPipeline={e => openQuickRecruit(e, candidate.userId)}
                 theme={theme}
               />
             ))}
@@ -449,6 +508,156 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
           onClose={() => setSelectedCandidateId(null)}
         />
       )}
+
+      {/* Quick "Add to Pipeline" modal */}
+      {quickRecruitId && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-4"
+          onClick={closeQuickRecruit}
+        >
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div
+            className={`relative z-[10000] w-full max-w-sm rounded-2xl shadow-2xl ${
+              theme === 'dark' ? 'bg-gray-900 border border-gray-700' : 'bg-white'
+            }`}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className={`flex items-center justify-between p-5 border-b ${
+              theme === 'dark' ? 'border-gray-800' : 'border-gray-100'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-xl ${theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'}`}>
+                  <UserPlus className="w-4 h-4 text-teal-500" />
+                </div>
+                <div>
+                  <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                    Add to Pipeline
+                  </p>
+                  <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {candidates.find(c => c.userId === quickRecruitId)?.name}
+                  </p>
+                </div>
+              </div>
+              <button onClick={closeQuickRecruit} className={`p-1.5 rounded-lg ${theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}>
+                <X className={`w-4 h-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5">
+              {quickRecruitResult === 'success' ? (
+                <div className="flex flex-col items-center gap-3 py-4 text-center">
+                  <CheckCircle className="w-10 h-10 text-green-500" />
+                  <p className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                    Added to pipeline!
+                  </p>
+                  <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {useTalentPool
+                      ? 'Saved to your Talent Pool for future opportunities.'
+                      : 'They\'ll appear in your Hiring Pipeline under "New".'}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Talent Pool option — always visible */}
+                  <button
+                    onClick={() => { setUseTalentPool(true); setQuickJobId(null) }}
+                    className={`w-full text-left p-3 rounded-xl border transition-all mb-3 ${
+                      useTalentPool
+                        ? theme === 'dark'
+                          ? 'border-purple-500 bg-purple-500/10'
+                          : 'border-purple-500 bg-purple-50'
+                        : theme === 'dark'
+                          ? 'border-gray-700 hover:border-gray-600'
+                          : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                        useTalentPool ? 'border-purple-500 bg-purple-500' : theme === 'dark' ? 'border-gray-500' : 'border-gray-300'
+                      }`}>
+                        {useTalentPool && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                      <div>
+                        <span className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                          Save to Talent Pool
+                        </span>
+                        <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                          No specific job yet — save for future opportunities
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Divider */}
+                  {jobs.filter(j => j.is_active).length > 0 && (
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`flex-1 h-px ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`} />
+                      <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>or select a job</span>
+                      <div className={`flex-1 h-px ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`} />
+                    </div>
+                  )}
+
+                  {/* Job selection */}
+                  {jobs.filter(j => j.is_active).length > 0 && (
+                    <div className="space-y-2 max-h-40 overflow-y-auto mb-4">
+                      {jobs.filter(j => j.is_active).map(job => (
+                        <button
+                          key={job.id}
+                          onClick={() => { setQuickJobId(job.id); setUseTalentPool(false) }}
+                          className={`w-full text-left p-3 rounded-xl border transition-all ${
+                            quickJobId === job.id
+                              ? theme === 'dark'
+                                ? 'border-teal-500 bg-teal-500/10'
+                                : 'border-teal-500 bg-teal-50'
+                              : theme === 'dark'
+                                ? 'border-gray-700 hover:border-gray-600'
+                                : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                              quickJobId === job.id ? 'border-teal-500 bg-teal-500' : theme === 'dark' ? 'border-gray-500' : 'border-gray-300'
+                            }`}>
+                              {quickJobId === job.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                            </div>
+                            <span className={`text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                              {job.title}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {quickRecruitResult === 'error' && (
+                    <p className="text-sm text-red-400 mb-3">Something went wrong. They may already be in your pipeline.</p>
+                  )}
+
+                  <button
+                    onClick={submitQuickRecruit}
+                    disabled={(!quickJobId && !useTalentPool) || quickRecruiting}
+                    className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-medium text-sm transition-colors ${
+                      (!quickJobId && !useTalentPool)
+                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                        : useTalentPool
+                          ? 'bg-purple-600 text-white hover:bg-purple-700'
+                          : 'bg-teal-600 text-white hover:bg-teal-700'
+                    }`}
+                  >
+                    {quickRecruiting
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Send className="w-4 h-4" />
+                    }
+                    {useTalentPool ? 'Save to Talent Pool' : 'Add to Pipeline'}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -457,17 +666,26 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
 // SUB-COMPONENTS
 // ============================================================
 
-function CandidateCard({ candidate, onClick, theme }: {
+function CandidateCard({
+  candidate,
+  onClick,
+  onAddToPipeline,
+  theme,
+}: {
   candidate: Candidate
   onClick: () => void
+  onAddToPipeline: (e: React.MouseEvent) => void
   theme: string
 }) {
   const isDriver = candidate.cdlClass !== null
-  
+
   return (
-    <button
+    <div
       onClick={onClick}
-      className={`w-full text-left p-4 rounded-xl transition-all duration-200 ${
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => e.key === 'Enter' && onClick()}
+      className={`w-full text-left p-4 rounded-xl transition-all duration-200 cursor-pointer ${
         theme === 'dark'
           ? 'bg-gray-800/50 border border-gray-700 hover:bg-gray-800 hover:border-gray-600'
           : 'bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300'
@@ -504,11 +722,11 @@ function CandidateCard({ candidate, onClick, theme }: {
                 </span>
                 {candidate.hasApplied && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
-                    Applied
+                    In Pipeline
                   </span>
                 )}
               </div>
-              
+
               <div className="flex items-center gap-4 mt-2 text-xs flex-wrap">
                 {candidate.location && (
                   <span className={`flex items-center gap-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
@@ -559,8 +777,8 @@ function CandidateCard({ candidate, onClick, theme }: {
               </div>
             </div>
 
-            {/* Score */}
-            <div className="text-right flex-shrink-0">
+            {/* Right side: score + pipeline button */}
+            <div className="flex flex-col items-end gap-2 flex-shrink-0">
               <div className={`flex items-center gap-1 ${
                 candidate.completenessScore >= 80 ? 'text-green-500' :
                 candidate.completenessScore >= 60 ? 'text-yellow-500' :
@@ -570,13 +788,27 @@ function CandidateCard({ candidate, onClick, theme }: {
                 <TrendingUp className="w-4 h-4" />
                 <span className="font-semibold">{candidate.completenessScore}%</span>
               </div>
-              <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+              <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
                 Profile Score
               </p>
+              {/* Add to Pipeline button — stopPropagation so it doesn't open the modal */}
+              {!candidate.hasApplied && (
+                <button
+                  onClick={onAddToPipeline}
+                  className={`mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-teal-600 text-white hover:bg-teal-700'
+                      : 'bg-teal-600 text-white hover:bg-teal-700'
+                  }`}
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  + Pipeline
+                </button>
+              )}
             </div>
           </div>
         </div>
       </div>
-    </button>
+    </div>
   )
 }

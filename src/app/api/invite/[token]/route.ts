@@ -28,7 +28,7 @@ export async function GET(
     const { data: invite, error } = await supabase
       .from('application_invites')
       .select(`
-        id, token, status, candidate_email, candidate_name,
+        id, token, status, type, candidate_email, candidate_name,
         welcome_message, job_posting_id, expires_at, created_at, view_count,
         companies(id, company_name),
         job_postings(id, title, description, location_city, location_state)
@@ -85,6 +85,7 @@ export async function GET(
       invite: {
         id: invite.id,
         status: isExpired ? 'expired' : invite.status,
+        type: (invite as any).type || 'driver_dot',
         candidateEmail: invite.candidate_email,
         candidateName: invite.candidate_name,
         welcomeMessage: invite.welcome_message,

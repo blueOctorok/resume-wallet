@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import LoadingScreen from '@/components/LoadingScreen'
 import { useUIStore } from '@/stores'
@@ -53,9 +54,29 @@ const TeamManagement = dynamic(
   }
 )
 
+const ReportsPage = dynamic(
+  () => import('@/components/employer/ReportsPage').then((mod) => mod.default),
+  {
+    ssr: false,
+    loading: () => <LoadingScreen message='Loading reports...' fullScreen={false} />,
+  }
+)
+
 interface EmployerShellProps {
   walletAddress: string
 }
+
+// Pages that EmployerShell knows how to render
+const KNOWN_PAGES = new Set([
+  'company-setup',
+  'applicants',
+  'find-drivers',
+  'talent-search',
+  'post-job',
+  'team',
+  'company-profile',
+  'reports',
+])
 
 /**
  * EmployerShell - Contains all employer-role pages and routing.
@@ -66,35 +87,19 @@ export default function EmployerShell({ walletAddress }: EmployerShellProps) {
 
   const goBack = () => setCurrentPage(null)
 
+  // Reset unknown pages back to hub.
+  // Must be called unconditionally (Rules of Hooks) — the condition is inside.
+  useEffect(() => {
+    if (currentPage && !KNOWN_PAGES.has(currentPage)) {
+      setCurrentPage(null)
+    }
+  }, [currentPage, setCurrentPage])
+
   // Motor Carrier onboarding — blocking gate for new company owners
   if (currentPage === 'company-setup') {
     return (
       <MotorCarrierOnboarding
         onComplete={() => setCurrentPage(null)}
-      />
-    )
-  }
-
-  // Default: Employer Hub
-  if (!currentPage) {
-    return (
-      <EmployerHub
-        walletAddress={walletAddress}
-        onNavigate={(page) => {
-          if (
-            page === 'post-job' ||
-            page === 'jobs' ||
-            page === 'applicants' ||
-            page === 'find-drivers' ||
-            page === 'talent-search' ||
-            page === 'company-profile' ||
-            page === 'company-setup' ||
-            page === 'reports' ||
-            page === 'team'
-          ) {
-            setCurrentPage(page)
-          }
-        }}
       />
     )
   }
@@ -128,11 +133,38 @@ export default function EmployerShell({ walletAddress }: EmployerShellProps) {
     return <TeamManagement walletAddress={walletAddress} onBack={goBack} />
   }
 
-  // Any unrecognised page value (e.g. 'company-profile') falls back to the hub
-  // rather than rendering a blank screen.
-  if (currentPage) {
-    setCurrentPage(null)
+  if (currentPage === 'company-profile') {
+    return (
+      <MotorCarrierOnboarding
+        onComplete={() => setCurrentPage(null)}
+        showBackButton={true}
+      />
+    )
   }
 
-  return null
+  if (currentPage === 'reports') {
+    return <ReportsPage walletAddress={walletAddress} onBack={goBack} />
+  }
+
+  // Default: Employer Hub (when currentPage is null or being reset)
+  return (
+    <EmployerHub
+      walletAddress={walletAddress}
+      onNavigate={(page) => {
+        if (
+          page === 'post-job' ||
+          page === 'jobs' ||
+          page === 'applicants' ||
+          page === 'find-drivers' ||
+          page === 'talent-search' ||
+          page === 'company-profile' ||
+          page === 'company-setup' ||
+          page === 'reports' ||
+          page === 'team'
+        ) {
+          setCurrentPage(page)
+        }
+      }}
+    />
+  )
 }

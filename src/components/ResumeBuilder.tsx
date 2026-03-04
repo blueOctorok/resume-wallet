@@ -21,6 +21,7 @@ import {
   RotateCcw,
   Loader2
 } from 'lucide-react'
+import BackToHubButton from '@/components/ui/BackToHubButton'
 import { profileToResumeBuilder, resumeBuilderToProfile } from '@/lib/profile-mapper'
 import { PhoneInput } from '@/components/ui/MaskedInputs'
 import type { UnifiedDriverProfile } from '@/types/driver-profile'
@@ -615,17 +616,10 @@ export default function ResumeBuilder({
       >
         <div className='max-w-4xl mx-auto px-4 py-4'>
           <div className='flex items-center justify-between flex-wrap gap-2'>
-            <button
+            <BackToHubButton
               onClick={handleBack}
-              className={`flex items-center gap-2 ${
-                theme === 'dark'
-                  ? 'text-gray-400 hover:text-white'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <ArrowLeft className='w-5 h-5' />
-              {onBack ? 'Back to Hub' : 'Back'}
-            </button>
+              label={onBack ? 'Back to Hub' : 'Back'}
+            />
 
             <div className='flex items-center gap-2 flex-wrap'>
               {profileLoaded && profileSource && (

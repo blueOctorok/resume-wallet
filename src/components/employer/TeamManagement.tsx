@@ -9,12 +9,12 @@ import {
   Loader2,
   CheckCircle,
   Clock,
-  ChevronLeft,
   AlertCircle,
   Copy,
   Trash2,
   RefreshCw,
 } from 'lucide-react'
+import BackToHubButton from '@/components/ui/BackToHubButton'
 import { INVITEABLE_ROLES, getDisplayRole } from '@/lib/employer-roles'
 import UserIdentity from '@/components/ui/UserIdentity'
 
@@ -234,29 +234,22 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
 
   return (
     <div className='space-y-6'>
+      {/* Back button */}
+      {onBack && (
+        <div>
+          <BackToHubButton onClick={onBack} />
+        </div>
+      )}
+
       {/* Header */}
       <div className='flex items-center justify-between flex-wrap gap-4'>
-        <div className='flex items-center gap-4'>
-          {onBack && (
-            <button
-              onClick={onBack}
-              className={`p-2 rounded-lg transition-colors ${
-                theme === 'dark'
-                  ? 'hover:bg-gray-700 text-gray-400'
-                  : 'hover:bg-gray-100 text-gray-600'
-              }`}
-            >
-              <ChevronLeft className='w-5 h-5' />
-            </button>
-          )}
-          <div>
-            <h1 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              Team Management
-            </h1>
-            <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-              Manage your company team members and invitations
-            </p>
-          </div>
+        <div>
+          <h1 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            Team Management
+          </h1>
+          <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+            Manage your company team members and invitations
+          </p>
         </div>
 
         <div className='flex items-center gap-2'>

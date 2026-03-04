@@ -36,15 +36,44 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Resolve the user by wallet address
-    const { data: user, error: userError } = await supabase
+    // Resolve or create user by wallet address (first-time employer may not have a row yet)
+    let user: { id: string; email: string | null } | null = null
+    const { data: existingUser, error: userError } = await supabase
       .from('users')
       .select('id, email')
       .ilike('wallet_address', walletAddress)
-      .single()
+      .maybeSingle()
 
-    if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    if (userError) {
+      console.error('[EMPLOYER COMPANY SETUP] User lookup error:', userError)
+      return NextResponse.json(
+        { error: userError.message || 'Failed to look up user' },
+        { status: 500 }
+      )
+    }
+
+    if (existingUser) {
+      user = existingUser
+    } else {
+      // Create user so the employer can complete onboarding (e.g. first login before other APIs created them)
+      const { data: newUser, error: createErr } = await supabase
+        .from('users')
+        .insert({
+          wallet_address: walletAddress.toLowerCase().trim(),
+          email: email || null,
+          role: 'employer',
+        })
+        .select('id, email')
+        .single()
+
+      if (createErr || !newUser) {
+        console.error('[EMPLOYER COMPANY SETUP] Create user error:', createErr)
+        return NextResponse.json(
+          { error: createErr?.message || 'Failed to create user account' },
+          { status: 500 }
+        )
+      }
+      user = newUser
     }
 
     // Check for a pre-created company (admin set up a company with designated_owner_email)
@@ -86,7 +115,13 @@ export async function POST(request: NextRequest) {
         .update(companyFields)
         .eq('id', existingCompany.id)
 
-      if (updateError) throw updateError
+      if (updateError) {
+        console.error('[EMPLOYER COMPANY SETUP] Update company error:', updateError)
+        return NextResponse.json(
+          { error: updateError.message || 'Failed to update company' },
+          { status: 500 }
+        )
+      }
       companyId = existingCompany.id
     } else {
       // Create a brand new company record
@@ -99,12 +134,17 @@ export async function POST(request: NextRequest) {
         .select('id')
         .single()
 
-      if (insertError || !newCompany) throw insertError ?? new Error('Failed to create company')
+      if (insertError || !newCompany) {
+        console.error('[EMPLOYER COMPANY SETUP] Insert company error:', insertError)
+        return NextResponse.json(
+          { error: insertError?.message || 'Failed to create company' },
+          { status: 500 }
+        )
+      }
       companyId = newCompany.id
     }
 
-    // Ensure the owner has a company_members row.
-    // upsert so this is idempotent (safe to call more than once).
+    // Ensure the owner has a company_members row (upsert = insert or update if conflict).
     const { error: memberError } = await supabase
       .from('company_members')
       .upsert(
@@ -118,11 +158,18 @@ export async function POST(request: NextRequest) {
         { onConflict: 'company_id,user_id' }
       )
 
-    if (memberError) throw memberError
+    if (memberError) {
+      console.error('[EMPLOYER COMPANY SETUP] Company member upsert error:', memberError)
+      return NextResponse.json(
+        { error: memberError.message || 'Failed to link owner to company' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({ success: true, companyId })
   } catch (error) {
-    console.error('[EMPLOYER COMPANY SETUP] Error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('[EMPLOYER COMPANY SETUP] Unexpected error:', error)
+    const message = error instanceof Error ? error.message : 'Internal server error'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

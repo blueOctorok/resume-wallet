@@ -2,7 +2,6 @@
 
 import { useTheme } from '@/contexts/ThemeContext'
 import {
-  ArrowLeft,
   Briefcase,
   Coins,
   Users,
@@ -16,6 +15,7 @@ import {
   Lock,
   TrendingDown,
 } from 'lucide-react'
+import BackToHubButton from '@/components/ui/BackToHubButton'
 
 interface StormChainViewProps {
   onBack: () => void
@@ -28,17 +28,7 @@ export default function StormChainView({ onBack }: StormChainViewProps) {
     <div className='max-w-4xl mx-auto'>
       {/* Back Button */}
       <div className='mb-6'>
-        <button
-          onClick={onBack}
-          className={`inline-flex items-center gap-2 text-sm font-medium transition-colors cursor-pointer ${
-            isDark
-              ? 'text-brand-cream/70 hover:text-brand-mint'
-              : 'text-brand-sage/70 hover:text-brand-sage'
-          }`}
-        >
-          <ArrowLeft className='w-4 h-4' />
-          Back to Hub
-        </button>
+        <BackToHubButton onClick={onBack} />
       </div>
 
       {/* Hero Header */}

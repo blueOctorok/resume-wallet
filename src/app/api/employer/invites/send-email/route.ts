@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       .from('application_invites')
       .select(`
         id, token, candidate_email, candidate_name, welcome_message,
-        status, job_posting_id,
+        status, type, job_posting_id,
         companies(id, company_name),
         job_postings(id, title)
       `)
@@ -100,6 +100,7 @@ export async function POST(request: NextRequest) {
     // Send the email
     const result = await sendInviteEmail({
       to: recipientEmail,
+      type: ((invite as any).type || 'driver_dot') as 'driver_dot' | 'developer_card' | 'general',
       candidateName: invite.candidate_name || undefined,
       companyName: company?.company_name || 'Employer',
       jobTitle: job?.title || undefined,

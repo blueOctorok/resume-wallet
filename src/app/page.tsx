@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import Navigation from '@/components/Navigation'
 import StormBackground from '@/components/StormBackground'
@@ -50,6 +51,10 @@ const RoleSelectionModal = dynamic(
 // Inner component that uses Alchemy hooks (must be inside provider)
 // ============================================================
 const HomeContent = () => {
+  // Next.js hooks
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
   // Alchemy SDK hooks
   const { client } = useSmartAccountClient({ type: 'LightAccount' })
   const { sendUserOperationAsync, isSendingUserOperation } =
@@ -184,6 +189,33 @@ const HomeContent = () => {
     fetchRole()
   }, [walletAddress])
 
+  // -------------------------------------------------------
+  // Handle onboard redirect (from /onboard/[token] flow)
+  // When user logs in via invite, they land here with ?onboard=dot-application
+  // We wait for role to be set, then navigate to the appropriate page
+  // -------------------------------------------------------
+  const didHandleOnboardRef = useRef(false)
+  useEffect(() => {
+    const onboardAction = searchParams.get('onboard')
+    if (!onboardAction) return
+    if (didHandleOnboardRef.current) return
+    if (isRoleLoading || !userRole) return
+
+    didHandleOnboardRef.current = true
+
+    // Map onboard action to page type
+    const pageMap: Record<string, PageType> = {
+      'dot-application': 'dotapp',
+      'developer-profile': 'resume', // Developer resume/profile builder
+    }
+    const targetPage = pageMap[onboardAction]
+    if (targetPage) {
+      setCurrentPage(targetPage)
+    }
+
+    // Clean up URL (remove query params)
+    router.replace('/', { scroll: false })
+  }, [searchParams, userRole, isRoleLoading, setCurrentPage, router])
 
   // -------------------------------------------------------
   // Session timeout (1.5s for Alchemy to detect existing session)

@@ -3,14 +3,19 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { nanoid } from 'nanoid'
 import { sendCandidateRequestNotification } from '@/lib/send-admin-notification'
 
+// Special title used to identify the auto-created talent pool job
+const TALENT_POOL_TITLE = '— Talent Pool —'
+
 /**
  * POST /api/employer/talent/[userId]/recruit
  * 
  * Creates an employer-initiated application from a career card.
- * This is when an employer wants to recruit a candidate for a specific job.
+ * This is when an employer wants to recruit a candidate for a specific job
+ * OR save them to a "Talent Pool" for future opportunities.
  * 
  * Body:
- *   - jobPostingId: UUID of the job posting to create application for (required)
+ *   - jobPostingId: UUID of the job posting (optional if talentPool = true)
+ *   - talentPool: boolean - if true, uses/creates a hidden "Talent Pool" job
  *   - message: Optional message to the candidate
  * 
  * This will:
@@ -27,7 +32,7 @@ export async function POST(
     const { userId: candidateUserId } = await params
     const body = await request.json()
 
-    const { jobPostingId, message } = body
+    const { jobPostingId, talentPool, message } = body
 
     if (!walletAddress) {
       return NextResponse.json(
@@ -43,9 +48,10 @@ export async function POST(
       )
     }
 
-    if (!jobPostingId) {
+    // Must provide either a specific job OR request talent pool
+    if (!jobPostingId && !talentPool) {
       return NextResponse.json(
-        { error: 'Job posting ID is required' },
+        { error: 'Job posting ID is required (or set talentPool: true)' },
         { status: 400 }
       )
     }
@@ -87,30 +93,68 @@ export async function POST(
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
 
-    // Verify job posting belongs to this company
-    const { data: jobPosting, error: jobError } = await supabase
-      .from('job_postings')
-      .select('id, title, company_id, is_active')
-      .eq('id', jobPostingId)
-      .single()
+    // Resolve the job posting — either from ID or talent pool
+    let jobPosting: { id: string; title: string; company_id: string; is_active: boolean }
 
-    if (jobError || !jobPosting) {
-      console.error('[RECRUIT] Job posting lookup error:', jobError)
-      return NextResponse.json({ error: 'Job posting not found' }, { status: 404 })
-    }
+    if (talentPool) {
+      // Look for existing talent pool job for this company
+      const { data: existingPool } = await supabase
+        .from('job_postings')
+        .select('id, title, company_id, is_active')
+        .eq('company_id', companyId)
+        .eq('title', TALENT_POOL_TITLE)
+        .single()
 
-    if (jobPosting.company_id !== companyId) {
-      return NextResponse.json(
-        { error: 'Job posting does not belong to your company' },
-        { status: 403 }
-      )
-    }
+      if (existingPool) {
+        jobPosting = existingPool
+      } else {
+        // Create a hidden talent pool job for this company
+        const { data: newPool, error: createErr } = await supabase
+          .from('job_postings')
+          .insert({
+            company_id: companyId,
+            title: TALENT_POOL_TITLE,
+            description: 'Auto-created talent pool for saving promising candidates before matching to a specific role.',
+            is_active: false, // Hidden from public job board
+          })
+          .select('id, title, company_id, is_active')
+          .single()
 
-    if (!jobPosting.is_active) {
-      return NextResponse.json(
-        { error: 'Job posting is not active' },
-        { status: 400 }
-      )
+        if (createErr || !newPool) {
+          console.error('[RECRUIT] Failed to create talent pool job:', createErr)
+          return NextResponse.json({ error: 'Failed to create talent pool' }, { status: 500 })
+        }
+        jobPosting = newPool
+        console.log(`[RECRUIT] Created talent pool job ${newPool.id} for company ${companyId}`)
+      }
+    } else {
+      // Verify specific job posting belongs to this company
+      const { data: jp, error: jobError } = await supabase
+        .from('job_postings')
+        .select('id, title, company_id, is_active')
+        .eq('id', jobPostingId)
+        .single()
+
+      if (jobError || !jp) {
+        console.error('[RECRUIT] Job posting lookup error:', jobError)
+        return NextResponse.json({ error: 'Job posting not found' }, { status: 404 })
+      }
+
+      if (jp.company_id !== companyId) {
+        return NextResponse.json(
+          { error: 'Job posting does not belong to your company' },
+          { status: 403 }
+        )
+      }
+
+      if (!jp.is_active) {
+        return NextResponse.json(
+          { error: 'Job posting is not active' },
+          { status: 400 }
+        )
+      }
+
+      jobPosting = jp
     }
 
     // Verify candidate exists and is a driver/developer
@@ -252,7 +296,7 @@ export async function POST(
     const { data: application, error: insertError } = await supabase
       .from('applications')
       .insert({
-        job_posting_id: jobPostingId,
+        job_posting_id: jobPosting.id,
         applicant_user_id: candidateUserId,
         driver_application_id: careerCardSnapshot.driverApplicationId || null,
         resume_id: resume?.id || null,

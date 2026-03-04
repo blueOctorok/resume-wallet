@@ -7,7 +7,6 @@ import {
   MapPin,
   DollarSign,
   Clock,
-  ArrowLeft,
   Loader2,
   CheckCircle,
   Car,
@@ -15,6 +14,7 @@ import {
   Warehouse,
   Users,
 } from 'lucide-react'
+import BackToHubButton from '@/components/ui/BackToHubButton'
 
 interface JobPostingFormProps {
   walletAddress: string
@@ -172,17 +172,13 @@ export default function JobPostingForm({
 
   return (
     <div className='max-w-2xl mx-auto py-8 px-4'>
+      {/* Back button */}
+      <div className='mb-6'>
+        <BackToHubButton onClick={onBack} />
+      </div>
+
       {/* Header */}
       <div className='mb-8'>
-        <button
-          onClick={onBack}
-          className={`flex items-center gap-2 text-sm mb-4 ${
-            theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <ArrowLeft className='w-4 h-4' />
-          Back to Hub
-        </button>
         <h1 className={`text-2xl font-bold ${
           theme === 'dark' ? 'text-white' : 'text-gray-900'
         }`}>

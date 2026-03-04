@@ -147,6 +147,7 @@ export async function GET(request: NextRequest) {
 
       // 2. All applications to this company's jobs
       // Note: applicant_user_id was renamed from driver_user_id in migration 016
+      // driver_profiles must be nested inside users (join path: applications → users → driver_profiles)
       supabase
         .from('applications')
         .select(`
@@ -158,12 +159,12 @@ export async function GET(request: NextRequest) {
             id, title, company_id, target_role
           ),
           users!applications_applicant_user_id_fkey (
-            id, wallet_address, email, role
-          ),
-          driver_profiles (
-            first_name, last_name, phone, email,
-            cdl_number, cdl_class, cdl_state, cdl_expiration,
-            experience_years
+            id, wallet_address, email, role,
+            driver_profiles (
+              first_name, last_name, phone, email,
+              cdl_number, cdl_class, cdl_state, cdl_expiration,
+              experience_years
+            )
           ),
           resumes (
             id, title, filename, ipfs_hash, verification_status
@@ -216,12 +217,14 @@ export async function GET(request: NextRequest) {
     // Process applicants (flatten from applications)
     // Generic naming: "applicant" instead of "driver" for role-agnostic support
     const applicants = applications.map(app => {
-      const driverProfile = Array.isArray(app.driver_profiles) 
-        ? app.driver_profiles[0] 
-        : app.driver_profiles
+      const applicantUser = app.users as any
+      // driver_profiles is now nested inside users (correct join path)
+      const driverProfiles = applicantUser?.driver_profiles
+      const driverProfile = Array.isArray(driverProfiles) 
+        ? driverProfiles[0] 
+        : driverProfiles
       const resume = Array.isArray(app.resumes) ? app.resumes[0] : app.resumes
       const jobPosting = app.job_postings as any
-      const applicantUser = app.users as any
 
       return {
         applicationId: app.id,

@@ -85,9 +85,9 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('application_invites')
       .select(`
-        id, token, candidate_email, candidate_name, status,
+        id, token, candidate_email, candidate_name, status, type,
         job_posting_id, view_count, expires_at, created_at, updated_at,
-        used_at, driver_application_id,
+        used_at, driver_application_id, email_sent_at,
         job_postings(title),
         users!application_invites_used_by_user_id_fkey(name, email)
       `)
@@ -118,6 +118,7 @@ export async function GET(request: NextRequest) {
         id: invite.id,
         token: invite.token,
         url: `${baseUrl}/apply/${invite.token}`,
+        type: (invite as any).type || 'driver_dot',
         candidateEmail: invite.candidate_email,
         candidateName: invite.candidate_name,
         status: invite.status,
@@ -129,6 +130,7 @@ export async function GET(request: NextRequest) {
         usedAt: invite.used_at,
         usedByName: (invite.users as any)?.name || (invite.users as any)?.email || null,
         driverApplicationId: invite.driver_application_id,
+        emailSentAt: (invite as any).email_sent_at || null,
       })),
       companyName: ctx.companyName,
     })
@@ -166,12 +168,18 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const {
+      type = 'driver_dot',
       candidateEmail,
       candidateName,
       jobPostingId,
       welcomeMessage,
       expiresInDays = 30,
     } = body
+
+    const validTypes = ['driver_dot', 'developer_card', 'general']
+    if (!validTypes.includes(type)) {
+      return NextResponse.json({ error: 'Invalid invite type' }, { status: 400 })
+    }
 
     // Validate job posting belongs to company (if provided)
     if (jobPostingId) {
@@ -198,6 +206,7 @@ export async function POST(request: NextRequest) {
         company_id: ctx.companyId,
         created_by_user_id: ctx.userId,
         token,
+        type,
         candidate_email: candidateEmail || null,
         candidate_name: candidateName || null,
         job_posting_id: jobPostingId || null,
@@ -220,6 +229,7 @@ export async function POST(request: NextRequest) {
         id: invite.id,
         token: invite.token,
         url: `${baseUrl}/apply/${invite.token}`,
+        type: (invite as any).type || type,
         candidateEmail: invite.candidate_email,
         candidateName: invite.candidate_name,
         status: invite.status,

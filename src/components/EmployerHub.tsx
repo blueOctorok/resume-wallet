@@ -6,8 +6,7 @@ import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh'
 import EmployerVerificationSection from './verification/EmployerVerificationSection'
 import ApplicantKanban, { type KanbanApplicant } from './employer/ApplicantKanban'
 import CandidateNotesPanel from './employer/CandidateNotesPanel'
-import AnalyticsDashboard from './employer/AnalyticsDashboard'
-import ApplicationInvites from './employer/ApplicationInvites'
+import CandidateOutreach from './employer/CandidateOutreach'
 import {
   Briefcase,
   Users,
@@ -35,12 +34,9 @@ import {
   Search,
   ClipboardCheck,
   Code,
-  LayoutGrid,
-  List,
   Trash2,
-  BarChart3,
-  ChevronDown,
   RefreshCw,
+  Link2,
 } from 'lucide-react'
 import { getDisplayRole } from '@/lib/employer-roles'
 
@@ -187,10 +183,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   const [selectedJob, setSelectedJob] = useState<HubJobPosting | null>(null)
   const [selectedMvr, setSelectedMvr] = useState<HubMvrOrder | null>(null)
 
-  // Pipeline view state (list vs kanban)
-  const [pipelineView, setPipelineView] = useState<'list' | 'kanban'>('kanban')
   const [updatingApplicationId, setUpdatingApplicationId] = useState<string | null>(null)
-  const [showAnalytics, setShowAnalytics] = useState(true)
 
   // Job deletion state
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null)
@@ -205,9 +198,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
 
   // Section-specific loading states for granular refresh
   const [refreshingPipeline, setRefreshingPipeline] = useState(false)
-  const [refreshingApplicants, setRefreshingApplicants] = useState(false)
-  const [refreshingJobs, setRefreshingJobs] = useState(false)
-  const [refreshingMvr, setRefreshingMvr] = useState(false)
 
   // Fetch hub data
   const fetchHubData = useCallback(async () => {
@@ -254,60 +244,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     }
   }, [walletAddress])
 
-  const refreshApplicants = useCallback(async () => {
-    if (!walletAddress) return
-    setRefreshingApplicants(true)
-    try {
-      const response = await fetch('/api/employer/applicants', {
-        headers: { 'x-wallet-address': walletAddress },
-      })
-      if (response.ok) {
-        const result = await response.json()
-        setData(prev => prev ? { ...prev, applicants: result.applicants || result } : null)
-      }
-    } catch (err) {
-      console.error('Error refreshing applicants:', err)
-    } finally {
-      setRefreshingApplicants(false)
-    }
-  }, [walletAddress])
-
-  const refreshJobPostings = useCallback(async () => {
-    if (!walletAddress) return
-    setRefreshingJobs(true)
-    try {
-      const response = await fetch('/api/employer/jobs', {
-        headers: { 'x-wallet-address': walletAddress },
-      })
-      if (response.ok) {
-        const result = await response.json()
-        setData(prev => prev ? { ...prev, jobPostings: result.jobs || result } : null)
-      }
-    } catch (err) {
-      console.error('Error refreshing job postings:', err)
-    } finally {
-      setRefreshingJobs(false)
-    }
-  }, [walletAddress])
-
-  const refreshMvrOrders = useCallback(async () => {
-    if (!walletAddress) return
-    setRefreshingMvr(true)
-    try {
-      const response = await fetch('/api/employer/hub', {
-        headers: { 'x-wallet-address': walletAddress },
-      })
-      if (response.ok) {
-        const result = await response.json()
-        setData(prev => prev ? { ...prev, mvrOrders: result.mvrOrders, stats: result.stats } : null)
-      }
-    } catch (err) {
-      console.error('Error refreshing MVR orders:', err)
-    } finally {
-      setRefreshingMvr(false)
-    }
-  }, [walletAddress])
-
   useEffect(() => {
     if (walletAddress) {
       fetchHubData()
@@ -319,6 +255,20 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     staleTime: 30000, // Consider data stale after 30 seconds
     enabled: !!walletAddress,
   })
+
+  // Redirect to company setup if onboarding is incomplete (must be in useEffect, not during render)
+  useEffect(() => {
+    if (!data || loading) return
+    // No company at all — owner needs to create one
+    if (data.needsCompanySetup) {
+      onNavigate('company-setup')
+      return
+    }
+    // Company exists but owner hasn't completed onboarding form
+    if (data.company && !data.company.onboardingCompleted && data.userRole === 'owner') {
+      onNavigate('company-setup')
+    }
+  }, [data, loading, onNavigate])
 
   // Handle application status change (for Kanban drag-drop)
   const handleStatusChange = async (applicationId: string, newStatus: string) => {
@@ -483,21 +433,13 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     )
   }
 
-  // No data / new user state
+  // No data yet or needs redirect to company setup (handled by useEffect above)
   if (!data) {
     return null
   }
 
-  // Company doesn't exist yet — new owner needs to complete setup
-  if (data.needsCompanySetup) {
-    onNavigate('company-setup')
-    return null
-  }
-
-  // Company exists but owner hasn't completed the Motor Carrier onboarding form yet.
-  // Team members (non-owners) skip this gate — they see whatever the owner set up.
-  if (data.company && !data.company.onboardingCompleted && data.userRole === 'owner') {
-    onNavigate('company-setup')
+  // While redirecting to company-setup, show nothing (prevents flash of hub content)
+  if (data.needsCompanySetup || (data.company && !data.company.onboardingCompleted && data.userRole === 'owner')) {
     return null
   }
 
@@ -574,22 +516,22 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats band */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <StatCard
+          icon={<Users className="w-5 h-5" />}
+          label="In Pipeline"
+          value={data.stats.totalApplicants}
+          subValue={data.stats.pendingReview > 0 ? `${data.stats.pendingReview} need review` : 'All reviewed'}
+          theme={theme}
+          highlight={data.stats.pendingReview > 0}
+        />
         <StatCard
           icon={<Briefcase className="w-5 h-5" />}
           label="Active Jobs"
           value={data.stats.activeJobs}
           subValue={`${data.stats.totalJobs} total`}
           theme={theme}
-        />
-        <StatCard
-          icon={<Users className="w-5 h-5" />}
-          label="Total Applicants"
-          value={data.stats.totalApplicants}
-          subValue={`${data.stats.pendingReview} pending review`}
-          theme={theme}
-          highlight={data.stats.pendingReview > 0}
         />
         <StatCard
           icon={<MessageSquare className="w-5 h-5" />}
@@ -599,23 +541,31 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         />
         <StatCard
           icon={<UserCheck className="w-5 h-5" />}
-          label="Hires"
+          label="Hired"
           value={data.stats.totalHires}
           subValue={`${data.stats.hiresThisMonth} this month`}
           theme={theme}
         />
       </div>
 
-      {/* Quick Actions - horizontal row near top */}
+      {/* Quick Actions */}
       <div className={`flex flex-wrap items-center gap-2 mb-8 p-3 rounded-xl border ${
         theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'
       }`}>
+        {/* Primary: outreach */}
+        <button
+          onClick={() => document.getElementById('candidate-outreach')?.scrollIntoView({ behavior: 'smooth' })}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all bg-teal-600 text-white hover:bg-teal-500"
+        >
+          <Link2 className="w-4 h-4" />
+          New Outreach
+        </button>
         <button
           onClick={() => onNavigate('talent-search')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
             theme === 'dark'
-              ? 'bg-teal-600 text-white hover:bg-teal-500'
-              : 'bg-teal-600 text-white hover:bg-teal-500'
+              ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+              : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
           }`}
         >
           <Search className="w-4 h-4" />
@@ -678,153 +628,68 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         </button>
       </div>
 
-      {/* Analytics Section */}
-      <div className={`rounded-2xl mb-8 border shadow-lg transition-all duration-200 overflow-hidden ${
-        theme === 'dark'
-          ? 'bg-gray-800/50 border-gray-700'
-          : 'bg-white/70 border-gray-200'
-      }`}>
-        <button
-          onClick={() => setShowAnalytics(!showAnalytics)}
-          className={`w-full flex items-center justify-between p-4 transition-colors ${
-            theme === 'dark' ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <BarChart3 className={`w-5 h-5 ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
-            <span className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              Analytics Dashboard
-            </span>
-          </div>
-          <ChevronDown className={`w-5 h-5 transition-transform ${
-            showAnalytics ? 'rotate-180' : ''
-          } ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} />
-        </button>
-        {showAnalytics && (
-          <div className="p-6 pt-2">
-            <AnalyticsDashboard walletAddress={walletAddress} />
-          </div>
-        )}
-      </div>
-
-      {/* Pipeline Section */}
+      {/* Hiring Pipeline — full-width kanban */}
       <div className={`rounded-2xl p-6 mb-8 border shadow-lg transition-all duration-200 ${
         theme === 'dark'
           ? 'bg-gray-800/50 border-gray-700'
           : 'bg-white/70 border-gray-200'
       }`}>
-        {/* Header with View Toggle */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className={`text-lg font-semibold ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
+          <h2 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
             Hiring Pipeline
           </h2>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={refreshPipeline}
-              disabled={refreshingPipeline}
-              title="Refresh pipeline"
-              className={`p-2 rounded-lg transition-all ${
-                refreshingPipeline ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
-                  ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
-                  : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-              } ${isStale ? 'text-amber-500' : ''}`}
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshingPipeline ? 'animate-spin' : ''}`} />
-            </button>
-            <div className={`flex items-center gap-1 p-1 rounded-lg ${
-              theme === 'dark' ? 'bg-gray-900/50' : 'bg-gray-100'
-            }`}>
-            <button
-              onClick={() => setPipelineView('list')}
-              className={`p-2 rounded-md transition-colors ${
-                pipelineView === 'list'
-                  ? 'bg-teal-600 text-white'
-                  : theme === 'dark'
-                    ? 'text-gray-400 hover:text-white'
-                    : 'text-gray-500 hover:text-gray-700'
-              }`}
-              title="List view"
-            >
-              <List className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setPipelineView('kanban')}
-              className={`p-2 rounded-md transition-colors ${
-                pipelineView === 'kanban'
-                  ? 'bg-teal-600 text-white'
-                  : theme === 'dark'
-                    ? 'text-gray-400 hover:text-white'
-                    : 'text-gray-500 hover:text-gray-700'
-              }`}
-              title="Kanban view"
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
-          </div>
-          </div>
+          <button
+            onClick={refreshPipeline}
+            disabled={refreshingPipeline}
+            title="Refresh pipeline"
+            className={`p-2 rounded-lg transition-all ${
+              refreshingPipeline ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+            } ${isStale ? 'text-amber-500' : ''}`}
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshingPipeline ? 'animate-spin' : ''}`} />
+          </button>
         </div>
 
-        {/* List View - Compact Pipeline Summary */}
-        {pipelineView === 'list' && (
-          <>
-            <div className="flex flex-wrap gap-2">
-              <PipelineStage label="New" count={data.pipeline.new} color="blue" theme={theme} />
-              <ChevronRight className={`w-5 h-5 self-center ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
-              <PipelineStage label="Reviewing" count={data.pipeline.reviewing} color="purple" theme={theme} />
-              <ChevronRight className={`w-5 h-5 self-center ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
-              <PipelineStage label="Interviewing" count={data.pipeline.interviewing} color="orange" theme={theme} />
-              <ChevronRight className={`w-5 h-5 self-center ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
-              <PipelineStage label="Offer Sent" count={data.pipeline.offerSent} color="cyan" theme={theme} />
-              <ChevronRight className={`w-5 h-5 self-center ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
-              <PipelineStage label="Hired" count={data.pipeline.hired} color="green" theme={theme} />
-            </div>
-            {data.pipeline.rejected > 0 && (
-              <p className={`mt-3 text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                {data.pipeline.rejected} rejected
-              </p>
-            )}
-          </>
-        )}
-
-        {/* Kanban View - Full Board */}
-        {pipelineView === 'kanban' && (
-          <div className="-mx-2 mt-2">
-            {data.applicants.length === 0 ? (
-              <EmptyState
-                icon={<Users className="w-12 h-12" />}
-                title="No applicants yet"
-                description="Post a job or search for talent to start building your pipeline"
-                actionLabel="Find Talent"
-                onAction={() => onNavigate('talent-search')}
-                theme={theme}
-              />
-            ) : (
-              <ApplicantKanban
-                applicants={data.applicants.map(a => ({
-                  applicationId: a.applicationId,
-                  status: a.status,
-                  appliedAt: a.appliedAt,
-                  applicantUserId: a.applicantUserId,
-                  applicantName: a.applicantName,
-                  applicantRole: a.applicantRole,
-                  jobTitle: a.jobTitle,
-                  jobPostingId: a.jobPostingId,
-                }))}
-                walletAddress={walletAddress}
-                onStatusChange={handleStatusChange}
-                onSelectApplicant={(applicant) => {
-                  const fullApplicant = data.applicants.find(
-                    a => a.applicationId === applicant.applicationId
-                  )
-                  if (fullApplicant) setSelectedApplicant(fullApplicant)
-                }}
-                isUpdating={updatingApplicationId}
-              />
-            )}
-          </div>
-        )}
+        <div className="-mx-2 mt-2">
+          {data.applicants.length === 0 ? (
+            <EmptyState
+              icon={<Users className="w-12 h-12" />}
+              title="No applicants yet"
+              description="Use New Outreach to invite candidates, or Find Talent to pull them in directly"
+              actionLabel="Find Talent"
+              onAction={() => onNavigate('talent-search')}
+              theme={theme}
+            />
+          ) : (
+            <ApplicantKanban
+              applicants={data.applicants.map(a => ({
+                applicationId: a.applicationId,
+                status: a.status,
+                appliedAt: a.appliedAt,
+                applicantUserId: a.applicantUserId,
+                applicantName: a.applicantName,
+                applicantRole: a.applicantRole,
+                jobTitle: a.jobTitle,
+                jobPostingId: a.jobPostingId,
+                cdlClass: a.cdlClass ?? null,
+                experienceYears: a.experienceYears ?? null,
+                hasResume: a.hasResume ?? false,
+                resumeVerified: a.resumeVerified ?? false,
+              }))}
+              walletAddress={walletAddress}
+              onStatusChange={handleStatusChange}
+              onSelectApplicant={(applicant) => {
+                const fullApplicant = data.applicants.find(
+                  a => a.applicationId === applicant.applicationId
+                )
+                if (fullApplicant) setSelectedApplicant(fullApplicant)
+              }}
+              isUpdating={updatingApplicationId}
+            />
+          )}
+        </div>
       </div>
 
       {/* Employment Verification Section */}
@@ -832,190 +697,9 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         <EmployerVerificationSection userAddress={walletAddress} />
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Recent Applicants */}
-        <Section
-          title="Recent Applicants"
-          icon={<Users className="w-5 h-5" />}
-          count={data.applicants.length}
-          theme={theme}
-          action={
-            <div className="flex items-center gap-2">
-              <button
-                onClick={refreshApplicants}
-                disabled={refreshingApplicants}
-                title="Refresh applicants"
-                className={`p-2 rounded-lg transition-all ${
-                  refreshingApplicants ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
-                    ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
-                    : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-                } ${isStale ? 'text-amber-500' : ''}`}
-              >
-                <RefreshCw className={`w-4 h-4 ${refreshingApplicants ? 'animate-spin' : ''}`} />
-              </button>
-              {data.applicants.length > 0 && (
-                <button
-                  onClick={() => onNavigate('applicants')}
-                  className={`text-sm font-medium ${
-                    theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
-                  }`}
-                >
-                  View All
-                </button>
-              )}
-            </div>
-          }
-        >
-          {data.applicants.length === 0 ? (
-            <EmptyState
-              icon={<Users className="w-12 h-12" />}
-              title="No applicants yet"
-              description="Post a job or search for talent to start building your candidate pipeline"
-              actionLabel="Find Talent"
-              onAction={() => onNavigate('talent-search')}
-              theme={theme}
-            />
-          ) : (
-            <div className="space-y-3">
-              {data.applicants.slice(0, 5).map((applicant) => (
-                <ApplicantRow
-                  key={applicant.applicationId}
-                  applicant={applicant}
-                  onClick={() => setSelectedApplicant(applicant)}
-                  theme={theme}
-                />
-              ))}
-              {data.applicants.length > 5 && (
-                <button
-                  onClick={() => onNavigate('applicants')}
-                  className={`w-full text-center py-2 text-sm font-medium ${
-                    theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
-                  }`}
-                >
-                  +{data.applicants.length - 5} more applicants
-                </button>
-              )}
-            </div>
-          )}
-        </Section>
-
-        {/* Job Postings */}
-        <Section
-          title="Job Postings"
-          icon={<Briefcase className="w-5 h-5" />}
-          count={data.jobPostings.length}
-          theme={theme}
-          action={
-            <div className="flex items-center gap-2">
-              <button
-                onClick={refreshJobPostings}
-                disabled={refreshingJobs}
-                title="Refresh job postings"
-                className={`p-2 rounded-lg transition-all ${
-                  refreshingJobs ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
-                    ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
-                    : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-                } ${isStale ? 'text-amber-500' : ''}`}
-              >
-                <RefreshCw className={`w-4 h-4 ${refreshingJobs ? 'animate-spin' : ''}`} />
-              </button>
-              <button
-                onClick={() => onNavigate('post-job')}
-                className={`flex items-center gap-1 text-sm font-medium ${
-                  theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
-                }`}
-              >
-                <Plus className="w-4 h-4" />
-                Post Job
-              </button>
-            </div>
-          }
-        >
-          {data.jobPostings.length === 0 ? (
-            <EmptyState
-              icon={<Briefcase className="w-12 h-12" />}
-              title="No job postings"
-              description="Create your first job posting to attract qualified candidates"
-              actionLabel="Post a Job"
-              onAction={() => onNavigate('post-job')}
-              theme={theme}
-            />
-          ) : (
-            <div className="space-y-3">
-              {data.jobPostings.slice(0, 4).map((job) => (
-                <JobRow
-                  key={job.id}
-                  job={job}
-                  onClick={() => setSelectedJob(job)}
-                  onDelete={() => handleDeleteJob(job.id)}
-                  theme={theme}
-                />
-              ))}
-              {data.jobPostings.length > 4 && (
-                <button
-                  onClick={() => onNavigate('jobs')}
-                  className={`w-full text-center py-2 text-sm font-medium ${
-                    theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
-                  }`}
-                >
-                  +{data.jobPostings.length - 4} more jobs
-                </button>
-              )}
-            </div>
-          )}
-        </Section>
-
-        {/* MVR Orders */}
-        <Section
-          title="MVR Orders"
-          icon={<Car className="w-5 h-5" />}
-          count={data.mvrOrders.length}
-          theme={theme}
-          action={
-            <button
-              onClick={refreshMvrOrders}
-              disabled={refreshingMvr}
-              title="Refresh MVR orders"
-              className={`p-2 rounded-lg transition-all ${
-                refreshingMvr ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
-                  ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
-                  : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-              } ${isStale ? 'text-amber-500' : ''}`}
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshingMvr ? 'animate-spin' : ''}`} />
-            </button>
-          }
-        >
-          {data.mvrOrders.length === 0 ? (
-            <EmptyState
-              icon={<Car className="w-12 h-12" />}
-              title="No MVR orders"
-              description="Order Motor Vehicle Reports for applicants during the review process"
-              theme={theme}
-            />
-          ) : (
-            <div className="space-y-3">
-              {data.mvrOrders.slice(0, 4).map((mvr) => (
-                <MvrRow
-                  key={mvr.id}
-                  mvr={mvr}
-                  onClick={() => setSelectedMvr(mvr)}
-                  theme={theme}
-                />
-              ))}
-            </div>
-          )}
-        </Section>
-
-        {/* Application Invites - Integration Surface */}
-        <ApplicationInvites
-          walletAddress={walletAddress}
-          onExportApplication={(appId) => {
-            // Open PDF export in new tab
-            window.open(`/api/employer/applications/${appId}/export`, '_blank')
-          }}
-        />
+      {/* Candidate Outreach */}
+      <div id="candidate-outreach" className="mb-8">
+        <CandidateOutreach walletAddress={walletAddress} />
       </div>
 
       {/* Detail Modals */}
@@ -1283,32 +967,6 @@ function StatCard({
   )
 }
 
-function PipelineStage({ 
-  label, 
-  count, 
-  color, 
-  theme 
-}: { 
-  label: string
-  count: number
-  color: 'blue' | 'purple' | 'orange' | 'cyan' | 'green'
-  theme: string
-}) {
-  const colors = {
-    blue: 'bg-blue-500/20 text-blue-500 border-blue-500/30',
-    purple: 'bg-purple-500/20 text-purple-500 border-purple-500/30',
-    orange: 'bg-orange-500/20 text-orange-500 border-orange-500/30',
-    cyan: 'bg-cyan-500/20 text-cyan-500 border-cyan-500/30',
-    green: 'bg-green-500/20 text-green-500 border-green-500/30',
-  }
-
-  return (
-    <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${colors[color]}`}>
-      <span className="font-bold text-lg">{count}</span>
-      <span className="text-sm">{label}</span>
-    </div>
-  )
-}
 
 function Section({ 
   title, 
