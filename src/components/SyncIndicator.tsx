@@ -83,7 +83,7 @@ export default function SyncIndicator({
     if (theme === 'dark') {
       switch (currentStatus) {
         case 'syncing':
-          return `${base} bg-brand-sage/40 text-brand-cream border border-brand-mint/30`
+          return `${base} bg-gray-700/50 text-white border border-gray-600`
         case 'synced':
           return `${base} bg-green-900/40 text-green-400 border border-green-500/40`
         case 'error':

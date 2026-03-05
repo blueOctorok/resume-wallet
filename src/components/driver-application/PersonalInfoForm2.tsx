@@ -983,8 +983,8 @@ export default function PersonalInfoForm2({
                 rows={3}
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
-                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                    ? 'bg-white border-gray-300 text-gray-900 focus:ring-teal-400 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
+                    : 'bg-white border-gray-300 text-gray-900 focus:ring-teal-500'
                 }`}
               />
             </div>
@@ -1049,8 +1049,8 @@ export default function PersonalInfoForm2({
                 rows={3}
                 className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
                   theme === 'dark'
-                    ? 'bg-brand-cream border-gray-300 text-gray-900 focus:ring-brand-mint [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
-                    : 'bg-white border-gray-300 text-gray-900 focus:ring-brand-sage'
+                    ? 'bg-white border-gray-300 text-gray-900 focus:ring-teal-400 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
+                    : 'bg-white border-gray-300 text-gray-900 focus:ring-teal-500'
                 }`}
               />
             </div>

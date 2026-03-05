@@ -135,14 +135,14 @@ export default function ResumePreviewModal({
       <div
         className={`relative w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl flex flex-col ${
           theme === 'dark'
-            ? 'bg-brand-sage-dark border border-brand-mint/20'
+            ? 'bg-gray-800 border border-gray-700'
             : 'bg-white border border-gray-200'
         }`}
       >
         {/* Header with title and actions */}
         <div
           className={`sticky top-0 z-10 p-4 border-b ${
-            theme === 'dark' ? 'bg-brand-sage-dark border-brand-mint/20' : 'bg-white border-gray-200'
+            theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
           }`}
         >
           <div className="flex items-center justify-between mb-3">
@@ -152,7 +152,7 @@ export default function ResumePreviewModal({
             <button
               onClick={onClose}
               className={`p-2 rounded-lg transition-colors ${
-                theme === 'dark' ? 'hover:bg-brand-sage/50 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
+                theme === 'dark' ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
               }`}
             >
               <X className="w-5 h-5" />
@@ -167,8 +167,8 @@ export default function ResumePreviewModal({
               disabled={isDownloading}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 ${
                 theme === 'dark'
-                  ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                  : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+                  ? 'bg-teal-500 text-gray-900 hover:bg-teal-400'
+                  : 'bg-teal-600 text-white hover:bg-teal-700'
               }`}
             >
               {isDownloading ? (

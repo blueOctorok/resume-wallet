@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeft, CheckCircle, AlertCircle, FileText, User, CreditCard, MapPin } from 'lucide-react'
+import { CheckCircle, AlertCircle, FileText, User, CreditCard, MapPin } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import MvrPaymentButton from './MvrPaymentButton'
+import BackToHubButton from './ui/BackToHubButton'
 
 interface MvrOrderFormProps {
   userAddress: string
@@ -153,17 +154,9 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
       <div className='max-w-2xl mx-auto space-y-6'>
         {/* Header */}
         <div className={`${cardClass} p-5`}>
-          <button
-            onClick={onBack}
-            className={`inline-flex items-center gap-2 text-sm mb-4 transition-colors ${
-              theme === 'dark'
-                ? 'text-gray-400 hover:text-gray-200'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <ArrowLeft className='w-4 h-4' />
-            Back
-          </button>
+          <div className="mb-4">
+            <BackToHubButton onClick={onBack} />
+          </div>
           <div className='flex items-center gap-3'>
             <div
               className={`w-12 h-12 rounded-xl flex items-center justify-center ${

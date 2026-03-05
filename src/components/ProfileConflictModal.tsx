@@ -73,7 +73,7 @@ export default function ProfileConflictModal({
       <div
         className={`relative w-full max-w-lg rounded-2xl border p-6 shadow-2xl ${
           theme === 'dark'
-            ? 'bg-brand-sage-light border-brand-mint/30'
+            ? 'bg-gray-800 border-gray-700'
             : 'bg-white border-gray-200'
         }`}
       >
@@ -98,7 +98,7 @@ export default function ProfileConflictModal({
         <div
           className={`mb-4 p-4 rounded-lg border ${
             theme === 'dark'
-              ? 'bg-brand-sage/20 border-brand-mint/20'
+              ? 'bg-gray-700/50 border-gray-600'
               : 'bg-gray-50 border-gray-200'
           }`}
         >
@@ -120,7 +120,7 @@ export default function ProfileConflictModal({
           <div
             className={`p-3 rounded-lg border ${
               theme === 'dark'
-                ? 'bg-brand-sage/30 border-brand-mint/20'
+                ? 'bg-gray-700/50 border-gray-600'
                 : 'bg-gray-50 border-gray-200'
             }`}
           >
@@ -198,7 +198,7 @@ export default function ProfileConflictModal({
             onClick={onKeepExisting}
             className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
               theme === 'dark'
-                ? 'bg-brand-sage/30 text-brand-cream hover:bg-brand-sage/50'
+                ? 'bg-gray-700 text-white hover:bg-gray-600'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >

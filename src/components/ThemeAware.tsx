@@ -6,33 +6,33 @@ import { useTheme } from '@/contexts/ThemeContext'
 export function getThemeColors(theme: 'light' | 'dark') {
   if (theme === 'light') {
     return {
-      background: 'bg-brand-cream',
+      background: 'bg-gray-50',
       backgroundLight: 'bg-white/90',
       text: 'text-gray-800',
       textSecondary: 'text-gray-600',
       textTertiary: 'text-gray-500',
-      border: 'border-brand-sage/40',
-      borderHover: 'border-brand-sage/60',
-      button: 'bg-brand-sage',
-      buttonHover: 'bg-brand-sage-dark',
+      border: 'border-gray-300',
+      borderHover: 'border-gray-400',
+      button: 'bg-teal-600',
+      buttonHover: 'bg-teal-700',
       buttonText: 'text-white',
       card: 'bg-white/95',
-      cardBorder: 'border-brand-sage/30',
+      cardBorder: 'border-gray-200',
     }
   } else {
     return {
-      background: 'bg-brand-sage',
-      backgroundLight: 'bg-brand-sage-light/10',
-      text: 'text-brand-cream',
-      textSecondary: 'text-brand-cream/70',
-      textTertiary: 'text-brand-cream/50',
-      border: 'border-brand-mint/30',
-      borderHover: 'border-brand-mint/50',
-      button: 'bg-brand-mint',
-      buttonHover: 'bg-brand-sage-light',
-      buttonText: 'text-brand-sage',
-      card: 'bg-brand-sage-light/20',
-      cardBorder: 'border-brand-mint/30',
+      background: 'bg-gray-900',
+      backgroundLight: 'bg-gray-800/50',
+      text: 'text-white',
+      textSecondary: 'text-gray-300',
+      textTertiary: 'text-gray-400',
+      border: 'border-gray-700',
+      borderHover: 'border-gray-600',
+      button: 'bg-teal-500',
+      buttonHover: 'bg-teal-400',
+      buttonText: 'text-gray-900',
+      card: 'bg-gray-800/80',
+      cardBorder: 'border-gray-700',
     }
   }
 }

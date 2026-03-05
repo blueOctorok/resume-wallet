@@ -383,12 +383,12 @@ export default function MultiMethodAuth({
                 🔄 Refresh
               </button>
             </div>
-            <p className='text-xs text-blue-600 dark:text-brand-cream mt-1'>
+            <p className='text-xs text-blue-600 dark:text-gray-300 mt-1'>
               Base Sepolia Testnet
             </p>
           </div>
 
-          <div className='text-sm text-brand-sage/70 dark:text-brand-cream/70'>
+          <div className='text-sm text-gray-600 dark:text-gray-300'>
             <p>✅ Email verified</p>
             <p>✅ Wallet created automatically</p>
             <p>✅ Ready for transactions</p>
@@ -402,36 +402,36 @@ export default function MultiMethodAuth({
 
   // Show Alchemy AuthCard with all authentication methods
   return (
-    <div className='bg-brand-sage-light dark:bg-brand-sage p-6 rounded-lg shadow-sm border border-brand-mint/20 dark:border-brand-mint/10'>
-      <h3 className='text-lg font-medium text-brand-sage dark:text-brand-cream mb-2'>
+    <div className='bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700'>
+      <h3 className='text-lg font-medium text-gray-800 dark:text-white mb-2'>
         {content.title}
       </h3>
-      <p className='text-brand-sage/70 dark:text-brand-cream/70 mb-4'>
+      <p className='text-gray-600 dark:text-gray-300 mb-4'>
         {content.subtitle}
       </p>
 
       {/* Use Alchemy's AuthCard component for proper multi-method authentication */}
-      <div className='p-4 bg-brand-cream dark:bg-brand-sage border border-brand-mint/20 rounded-lg w-full overflow-hidden'>
+      <div className='p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg w-full overflow-hidden'>
         <AuthCard />
       </div>
 
       {/* Debug info */}
-      <div className='mt-4 p-3 bg-gray-50 dark:bg-brand-sage/30 rounded text-xs'>
-        <p className='font-medium text-brand-sage dark:text-brand-cream'>
+      <div className='mt-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded text-xs'>
+        <p className='font-medium text-gray-800 dark:text-white'>
           Debug Info:
         </p>
-        <p className='text-brand-sage/70 dark:text-brand-cream/70'>
+        <p className='text-gray-600 dark:text-gray-300'>
           Status: {status}
         </p>
-        <p className='text-brand-sage/70 dark:text-brand-cream/70'>
+        <p className='text-gray-600 dark:text-gray-300'>
           Connected: {isConnected ? 'Yes' : 'No'}
         </p>
-        <p className='text-brand-sage/70 dark:text-brand-cream/70'>
+        <p className='text-gray-600 dark:text-gray-300'>
           User: {user ? 'Authenticated' : 'Not authenticated'}
         </p>
       </div>
 
-      <div className='mt-4 text-xs text-brand-sage/60 dark:text-brand-cream/60'>
+      <div className='mt-4 text-xs text-gray-500 dark:text-gray-400'>
         <p>{content.description}</p>
         <p className='mt-1'>
           ✅ No passwords • ✅ Secure verification • ✅ Professional platform

@@ -6,7 +6,8 @@ import { encodeFunctionData } from 'viem'
 import { calculateFileHash, validateFile } from '@/lib/hash-utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
-import { Paperclip, FileText, X, ArrowLeft } from 'lucide-react'
+import { Paperclip, FileText, X } from 'lucide-react'
+import BackToHubButton from './ui/BackToHubButton'
 
 interface UploadStep {
   id: string
@@ -458,13 +459,7 @@ export default function ResumeUploadWithVerification({
   return (
     <>
       {onBack && (
-        <button
-          onClick={onBack}
-          className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-4 cursor-pointer"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back
-        </button>
+        <BackToHubButton onClick={onBack} className="mb-4" />
       )}
       <div
         className={`max-w-4xl mx-auto rounded-2xl border p-6 sm:p-8 shadow-2xl relative ${

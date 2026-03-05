@@ -114,8 +114,8 @@ export default function AdminResetWallet({
   }
 
   return (
-    <div className="rounded-2xl border border-brand-sage/30 bg-brand-sage-light/10 p-6 shadow-2xl space-y-6">
-      <h2 className="text-xl font-semibold text-brand-sage mb-4">
+    <div className="rounded-2xl border border-gray-300 bg-gray-50 p-6 shadow-2xl space-y-6">
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">
         Admin Reset Tools
       </h2>
       
@@ -128,7 +128,7 @@ export default function AdminResetWallet({
       </div>
       {!adminKey && (
         <div className="mb-4 space-y-2">
-          <p className="text-sm text-brand-sage/70">
+          <p className="text-sm text-gray-600">
             Enter your <code>ADMIN_API_KEY</code>. This value is not stored; it
             is only used for the current request.
           </p>
@@ -137,14 +137,14 @@ export default function AdminResetWallet({
             value={localAdminKey}
             onChange={(e) => setLocalAdminKey(e.target.value)}
             placeholder="Admin API Key"
-            className="w-full rounded-md border border-brand-sage/30 px-3 py-2 text-sm focus:border-brand-sage focus:outline-none focus:ring-2 focus:ring-brand-sage/30"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
           />
         </div>
       )}
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-brand-sage mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Wallet Address
           </label>
           <input
@@ -152,7 +152,7 @@ export default function AdminResetWallet({
             value={walletAddress}
             onChange={(e) => setWalletAddress(e.target.value)}
             placeholder="0x..."
-            className="w-full rounded-md border border-brand-sage/30 px-3 py-2 text-sm focus:border-brand-sage focus:outline-none focus:ring-2 focus:ring-brand-sage/30"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
           />
         </div>
 
@@ -187,7 +187,7 @@ export default function AdminResetWallet({
         )}
 
         {result && (
-          <div className="rounded-md border border-brand-sage/30 bg-brand-sage-light/20 px-3 py-2 text-sm text-brand-sage">
+          <div className="rounded-md border border-teal-300 bg-teal-50 px-3 py-2 text-sm text-teal-800">
             <p className="font-semibold">Wallet {result.walletAddress}</p>
             <p>{result.message || 'Reset complete.'}</p>
           </div>

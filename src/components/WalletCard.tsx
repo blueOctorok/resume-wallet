@@ -156,8 +156,8 @@ export default function WalletCard({
             onClick={copyToClipboard}
             className={`p-1 rounded transition-colors ${
               theme === 'light'
-                ? 'bg-brand-sage/20 hover:bg-brand-sage/30'
-                : 'bg-brand-sage/40 hover:bg-brand-sage/60'
+                ? 'bg-teal-600/20 hover:bg-teal-600/30'
+                : 'bg-teal-600/40 hover:bg-teal-600/60'
             }`}
             aria-label='Copy address'
           >

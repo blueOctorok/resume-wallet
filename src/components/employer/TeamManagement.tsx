@@ -201,7 +201,7 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
     return (
       <div className='min-h-[60vh] flex items-center justify-center'>
         <div className='text-center'>
-          <Loader2 className={`w-8 h-8 animate-spin mx-auto ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`} />
+          <Loader2 className={`w-8 h-8 animate-spin mx-auto ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
           <p className={`mt-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Loading team...</p>
         </div>
       </div>

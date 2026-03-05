@@ -340,7 +340,7 @@ export default function Navigation({
                         </span>
                         <span className={`text-xs px-2 py-0.5 rounded-full ${
                           showJourneyModals
-                            ? theme === 'dark' ? 'bg-brand-mint/20 text-brand-mint' : 'bg-brand-sage/20 text-brand-sage'
+                            ? theme === 'dark' ? 'bg-teal-500/20 text-teal-400' : 'bg-teal-100 text-teal-700'
                             : theme === 'dark' ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500'
                         }`}>
                           {showJourneyModals ? 'On' : 'Off'}
@@ -355,8 +355,8 @@ export default function Navigation({
                         }}
                         className={`w-full px-4 py-3 text-sm font-medium flex items-center gap-3 border-t transition-colors ${
                           theme === 'dark'
-                            ? 'text-brand-mint hover:bg-gray-800 border-gray-700'
-                            : 'text-brand-sage hover:bg-gray-50 border-gray-100'
+                            ? 'text-teal-400 hover:bg-gray-800 border-gray-700'
+                            : 'text-teal-600 hover:bg-gray-50 border-gray-100'
                         }`}
                       >
                         <HelpCircle className='w-4 h-4' />

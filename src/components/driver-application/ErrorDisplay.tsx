@@ -205,7 +205,7 @@ export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
       className={`border rounded-lg p-4 ${
         theme === 'light'
           ? 'bg-white border-gray-200'
-          : 'bg-brand-sage-light/10 border-brand-mint/30'
+          : 'bg-gray-800/50 border-gray-700'
       } ${className}`}
     >
       <div className='flex items-start justify-between'>

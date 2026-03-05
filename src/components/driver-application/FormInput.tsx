@@ -54,8 +54,8 @@ export const FormInput: React.FC<FormInputProps> = ({
         : hasWarning
           ? 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500'
           : theme === 'light'
-            ? 'border-gray-300 focus:ring-brand-sage'
-            : 'border-gray-300 focus:ring-blue-500'
+            ? 'border-gray-300 focus:ring-teal-500'
+            : 'border-gray-300 focus:ring-teal-500'
     }
     ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}
     ${className}
@@ -65,7 +65,7 @@ export const FormInput: React.FC<FormInputProps> = ({
     <div className='space-y-1'>
       <label
         className={`block text-sm font-medium ${
-          theme === 'light' ? 'text-gray-700' : 'text-brand-cream'
+          theme === 'light' ? 'text-gray-700' : 'text-white'
         }`}
       >
         {label}
@@ -87,7 +87,7 @@ export const FormInput: React.FC<FormInputProps> = ({
       {helpText && (
         <p
           className={`text-xs ${
-            theme === 'light' ? 'text-gray-500' : 'text-brand-cream/50'
+            theme === 'light' ? 'text-gray-500' : 'text-gray-400'
           }`}
         >
           {helpText}
@@ -139,8 +139,8 @@ export const FormSelect: React.FC<FormSelectProps> = ({
         : hasWarning
           ? 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500'
           : theme === 'light'
-            ? 'border-gray-300 focus:ring-brand-sage'
-            : 'border-gray-300 focus:ring-blue-500'
+            ? 'border-gray-300 focus:ring-teal-500'
+            : 'border-gray-300 focus:ring-teal-500'
     }
     ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}
     ${className}
@@ -150,7 +150,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
     <div className='space-y-1'>
       <label
         className={`block text-sm font-medium ${
-          theme === 'light' ? 'text-gray-700' : 'text-brand-cream'
+          theme === 'light' ? 'text-gray-700' : 'text-white'
         }`}
       >
         {label}
@@ -173,7 +173,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
       {helpText && (
         <p
           className={`text-xs ${
-            theme === 'light' ? 'text-gray-500' : 'text-brand-cream/50'
+            theme === 'light' ? 'text-gray-500' : 'text-gray-400'
           }`}
         >
           {helpText}
@@ -227,8 +227,8 @@ export const FormTextarea: React.FC<FormTextareaProps> = ({
         : hasWarning
           ? 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500'
           : theme === 'light'
-            ? 'border-gray-300 focus:ring-brand-sage'
-            : 'border-gray-300 focus:ring-blue-500'
+            ? 'border-gray-300 focus:ring-teal-500'
+            : 'border-gray-300 focus:ring-teal-500'
     }
     ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}
     ${className}
@@ -238,7 +238,7 @@ export const FormTextarea: React.FC<FormTextareaProps> = ({
     <div className='space-y-1'>
       <label
         className={`block text-sm font-medium ${
-          theme === 'light' ? 'text-gray-700' : 'text-brand-cream'
+          theme === 'light' ? 'text-gray-700' : 'text-white'
         }`}
       >
         {label}
@@ -257,7 +257,7 @@ export const FormTextarea: React.FC<FormTextareaProps> = ({
       {helpText && (
         <p
           className={`text-xs ${
-            theme === 'light' ? 'text-gray-500' : 'text-brand-cream/50'
+            theme === 'light' ? 'text-gray-500' : 'text-gray-400'
           }`}
         >
           {helpText}
@@ -306,14 +306,14 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
           disabled={disabled}
           className={`
             mt-1 h-4 w-4 focus:ring-2 border-gray-300 rounded
-            ${theme === 'light' ? 'text-brand-sage focus:ring-brand-sage' : 'text-blue-600 focus:ring-blue-500'}
+            ${theme === 'light' ? 'text-teal-600 focus:ring-teal-500' : 'text-teal-500 focus:ring-teal-500'}
             ${hasError ? 'border-red-300' : hasWarning ? 'border-yellow-300' : ''}
             ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
           `.trim()}
         />
         <span
           className={`ml-2 text-sm ${
-            theme === 'light' ? 'text-gray-700' : 'text-brand-cream'
+            theme === 'light' ? 'text-gray-700' : 'text-white'
           }`}
         >
           {label}
@@ -322,7 +322,7 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
       {helpText && (
         <p
           className={`text-xs ml-6 ${
-            theme === 'light' ? 'text-gray-500' : 'text-brand-cream/50'
+            theme === 'light' ? 'text-gray-500' : 'text-gray-400'
           }`}
         >
           {helpText}
@@ -379,7 +379,7 @@ export const FormCheckboxGroup: React.FC<FormCheckboxGroupProps> = ({
     <div className={`space-y-2 ${className}`}>
       <label
         className={`block text-sm font-medium ${
-          theme === 'light' ? 'text-gray-700' : 'text-brand-cream'
+          theme === 'light' ? 'text-gray-700' : 'text-white'
         }`}
       >
         {label}
@@ -387,7 +387,7 @@ export const FormCheckboxGroup: React.FC<FormCheckboxGroupProps> = ({
       {helpText && (
         <p
           className={`text-xs ${
-            theme === 'light' ? 'text-gray-500' : 'text-brand-cream/50'
+            theme === 'light' ? 'text-gray-500' : 'text-gray-400'
           }`}
         >
           {helpText}

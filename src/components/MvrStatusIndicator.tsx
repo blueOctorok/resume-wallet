@@ -124,11 +124,11 @@ export default function MvrStatusIndicator({
   const cardThemeClasses =
     placement === 'nav-mobile'
       ? theme === 'light'
-        ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark'
-        : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50'
+        ? 'text-white bg-teal-600 hover:bg-teal-700 border-teal-600 hover:border-teal-700'
+        : 'text-white bg-teal-600/80 hover:bg-teal-700 border-teal-500/50 hover:border-teal-500'
       : theme === 'light'
-        ? 'bg-white/90 backdrop-blur-sm border-brand-sage/40'
-        : 'bg-brand-sage-light/30 backdrop-blur-xl border-brand-mint/50'
+        ? 'bg-white/90 backdrop-blur-sm border-gray-300'
+        : 'bg-gray-800/80 backdrop-blur-xl border-teal-500/50'
 
   const cardLayoutClasses =
     placement === 'nav-mobile'

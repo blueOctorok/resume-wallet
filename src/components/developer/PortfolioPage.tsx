@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import ProjectDetailModal from './ProjectDetailModal'
+import BackToHubButton from '@/components/ui/BackToHubButton'
 import {
   Plus,
   Folder,
@@ -14,7 +15,6 @@ import {
   StarOff,
   Loader2,
   X,
-  ChevronLeft,
   Globe,
   Play,
   Image as ImageIcon,
@@ -384,18 +384,9 @@ export default function PortfolioPage({
   return (
     <div className='max-w-4xl mx-auto px-4 pb-8'>
       {/* Header */}
-      <div className='flex items-center justify-between mb-6'>
-        <div className='flex items-center gap-3'>
-          <button
-            onClick={onBack}
-            className={`p-2 rounded-lg transition-colors ${
-              theme === 'dark'
-                ? 'hover:bg-gray-700 text-gray-400'
-                : 'hover:bg-gray-100 text-gray-600'
-            }`}
-          >
-            <ChevronLeft className='w-5 h-5' />
-          </button>
+      <div className='mb-6'>
+        <BackToHubButton onClick={onBack} className="mb-4" />
+        <div className='flex items-center justify-between'>
           <div>
             <h1
               className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
@@ -408,14 +399,14 @@ export default function PortfolioPage({
               Showcase your projects to employers
             </p>
           </div>
+          <button
+            onClick={openCreateForm}
+            className='inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium hover:from-indigo-600 hover:to-purple-600 transition-all'
+          >
+            <Plus className='w-4 h-4' />
+            Add Project
+          </button>
         </div>
-        <button
-          onClick={openCreateForm}
-          className='inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium hover:from-indigo-600 hover:to-purple-600 transition-all'
-        >
-          <Plus className='w-4 h-4' />
-          Add Project
-        </button>
       </div>
 
       {error && (

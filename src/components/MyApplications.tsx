@@ -8,7 +8,6 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  ArrowLeft,
   FileText,
   Calendar,
   MapPin,
@@ -16,6 +15,7 @@ import {
 } from 'lucide-react'
 import LoadingScreen from './LoadingScreen'
 import { useTheme } from '@/contexts/ThemeContext'
+import BackToHubButton from './ui/BackToHubButton'
 
 interface Application {
   id: string
@@ -42,6 +42,7 @@ export default function MyApplications({
   userAddress,
 }: MyApplicationsProps) {
   const { theme } = useTheme()
+  const isDark = theme === 'dark'
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -65,26 +66,18 @@ export default function MyApplications({
 
       if (response.ok) {
         const data = await response.json()
-        // Always set applications array (empty array is valid - means no applications yet)
         const apps = data.applications || []
         setApplications(apps)
-        // Always clear error on successful response
         setError(null)
       } else {
-        // For any error response, treat as "no applications" and show friendly empty state
-        // This includes: user not found, API errors, etc.
-        console.warn(
-          'API returned error, treating as empty applications:',
-          response.status
-        )
+        console.warn('API returned error, treating as empty applications:', response.status)
         setApplications([])
-        setError(null) // Don't set error - just show friendly empty state
+        setError(null)
       }
     } catch (err) {
-      // On network/connection errors, also treat as "no applications"
       console.error('Error fetching applications:', err)
       setApplications([])
-      setError(null) // Don't show error - just show friendly empty state
+      setError(null)
     } finally {
       setLoading(false)
     }
@@ -143,9 +136,12 @@ export default function MyApplications({
   const copyShareLink = (token: string) => {
     const url = `${window.location.origin}/application/${token}`
     navigator.clipboard.writeText(url)
-    // Could show a toast notification here
     alert('Application link copied to clipboard!')
   }
+
+  const cardClass = isDark
+    ? 'bg-gray-800/50 border border-gray-700'
+    : 'bg-white border border-gray-200'
 
   if (loading) {
     return <LoadingScreen message='Loading your applications...' />
@@ -155,36 +151,22 @@ export default function MyApplications({
     <div className='w-full p-4 sm:p-6 lg:p-8'>
       {/* Header */}
       <div className='max-w-7xl mx-auto mb-8'>
-        <button
-          onClick={onBack}
-          className='inline-flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-4 cursor-pointer'
-        >
-          <ArrowLeft className='w-5 h-5' />
-          Back
-        </button>
+        <BackToHubButton onClick={onBack} className="mb-4" />
 
-        <div
-          className={`rounded-2xl shadow-2xl border-t-4 p-6 sm:p-8 transition-all ${
-            theme === 'dark'
-              ? 'bg-brand-sage-light/20 backdrop-blur-xl border-brand-mint'
-              : 'bg-white/80 backdrop-blur-xl border-brand-sage'
-          }`}
-        >
+        <div className={`rounded-2xl p-6 sm:p-8 ${cardClass}`}>
           <div className='flex items-center gap-4 mb-2'>
-            <div
-              className={`w-14 h-14 rounded-xl flex items-center justify-center ${
-                theme === 'dark'
-                  ? 'bg-gradient-to-br from-brand-mint to-teal-600 shadow-lg shadow-brand-mint/50'
-                  : 'bg-gradient-to-br from-brand-sage to-brand-sage-dark shadow-lg shadow-brand-sage/50'
-              }`}
-            >
-              <Briefcase className='w-7 h-7 text-white' />
+            <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${
+              isDark
+                ? 'bg-teal-500/20 border border-teal-500/30'
+                : 'bg-teal-100 border border-teal-200'
+            }`}>
+              <Briefcase className={`w-7 h-7 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
             </div>
             <div>
-              <h1 className='text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white'>
+              <h1 className={`text-3xl sm:text-4xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 My Applications
               </h1>
-              <p className='text-gray-600 dark:text-gray-400 mt-1'>
+              <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
                 Track your job applications and their status
               </p>
             </div>
@@ -195,88 +177,45 @@ export default function MyApplications({
       {/* Applications List */}
       <div className='max-w-7xl mx-auto'>
         {applications.length === 0 ? (
-          <div
-            className={`rounded-2xl shadow-2xl border-t-4 p-12 sm:p-16 text-center transition-all relative overflow-hidden ${
-              theme === 'dark'
-                ? 'bg-brand-sage-light/20 backdrop-blur-xl border-brand-mint'
-                : 'bg-white/80 backdrop-blur-xl border-brand-sage'
-            }`}
-          >
-            {/* Decorative background elements */}
-            <div className='absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-brand-mint/10 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2' />
-            <div className='absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-brand-sage/10 to-transparent rounded-full blur-3xl translate-y-1/2 -translate-x-1/2' />
-
-            <div className='relative z-10'>
-              {/* Icon with animated background */}
-              <div
-                className={`w-24 h-24 mx-auto mb-6 rounded-2xl flex items-center justify-center ${
-                  theme === 'dark'
-                    ? 'bg-gradient-to-br from-brand-mint/20 to-teal-600/20 border-2 border-brand-mint/30'
-                    : 'bg-gradient-to-br from-brand-sage/20 to-brand-sage-dark/20 border-2 border-brand-sage/30'
-                } shadow-lg`}
-              >
-                <FileText
-                  className={`w-12 h-12 ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
-                  }`}
-                />
-              </div>
-
-              <h3
-                className={`text-2xl sm:text-3xl font-bold mb-3 ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}
-              >
-                You don't have any applications yet
-              </h3>
-
-              <p
-                className={`text-lg sm:text-xl mb-2 ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                }`}
-              >
-                Start your job search journey!
-              </p>
-
-              <p
-                className={`text-base mb-8 ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                }`}
-              >
-                Browse available positions and apply to jobs using your
-                StormChain profile
-              </p>
-
-              <button
-                onClick={onBack}
-                className={`inline-flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 ${
-                  theme === 'dark'
-                    ? 'bg-gradient-to-r from-brand-mint to-teal-600 text-white hover:from-brand-mint/90 hover:to-teal-600/90'
-                    : 'bg-gradient-to-r from-brand-sage to-brand-sage-dark text-white hover:from-brand-sage/90 hover:to-brand-sage-dark/90'
-                }`}
-              >
-                <Briefcase className='w-5 h-5' />
-                Browse Jobs & Apply
-              </button>
+          <div className={`rounded-2xl p-12 sm:p-16 text-center ${cardClass}`}>
+            <div className={`w-24 h-24 mx-auto mb-6 rounded-2xl flex items-center justify-center ${
+              isDark
+                ? 'bg-teal-500/20 border border-teal-500/30'
+                : 'bg-teal-100 border border-teal-200'
+            }`}>
+              <FileText className={`w-12 h-12 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
             </div>
+
+            <h3 className={`text-2xl sm:text-3xl font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              You don't have any applications yet
+            </h3>
+
+            <p className={`text-lg sm:text-xl mb-2 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+              Start your job search journey!
+            </p>
+
+            <p className={`text-base mb-8 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              Browse available positions and apply to jobs using your StormChain profile
+            </p>
+
+            <button
+              onClick={onBack}
+              className='inline-flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-lg bg-teal-600 hover:bg-teal-500 text-white transition-all'
+            >
+              <Briefcase className='w-5 h-5' />
+              Browse Jobs & Apply
+            </button>
           </div>
         ) : (
           <div className='space-y-4'>
             {applications.map((app) => (
-              <div
-                key={app.id}
-                className={`rounded-xl shadow-2xl border-t-4 p-6 hover:shadow-xl transition-all ${
-                  theme === 'dark'
-                    ? 'bg-brand-sage-light/20 backdrop-blur-xl border-brand-mint'
-                    : 'bg-white/80 backdrop-blur-xl border-brand-sage'
-                }`}
-              >
+              <div key={app.id} className={`rounded-xl p-6 ${cardClass}`}>
                 <div className='flex items-start justify-between gap-4 mb-4'>
                   <div className='flex-1'>
-                    <h3 className='text-xl font-bold text-gray-900 dark:text-white mb-1'>
+                    <h3 className={`text-xl font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                       {app.job_title}
                     </h3>
-                    <p className='text-gray-600 dark:text-gray-400 font-semibold'>
+                    <p className={`font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                       {app.employer_name}
                     </p>
                   </div>
@@ -286,11 +225,11 @@ export default function MyApplications({
                 </div>
 
                 <div className='grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4'>
-                  <div className='flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400'>
+                  <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                     <MapPin className='w-4 h-4' />
                     {app.job_location}
                   </div>
-                  <div className='flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400'>
+                  <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                     <Calendar className='w-4 h-4' />
                     Applied {formatDate(app.created_at)}
                   </div>
@@ -300,26 +239,23 @@ export default function MyApplications({
                       {formatSalary(app.job_salary_min, app.job_salary_max)}
                     </div>
                   )}
-                  <div className='flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400'>
+                  <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                     <Eye className='w-4 h-4' />
                     {app.view_count} view{app.view_count !== 1 ? 's' : ''}
-                    {app.last_viewed_at &&
-                      ` • Last viewed ${formatDate(app.last_viewed_at)}`}
+                    {app.last_viewed_at && ` • Last viewed ${formatDate(app.last_viewed_at)}`}
                   </div>
                 </div>
 
                 <div className='flex items-center gap-3 flex-wrap'>
-                  <span
-                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold border ${getStatusColor(app.status)}`}
-                  >
+                  <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold border ${getStatusColor(app.status)}`}>
                     {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
                   </span>
 
                   <button
                     onClick={() => copyShareLink(app.share_token)}
                     className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-                      theme === 'dark'
-                        ? 'bg-gray-800 text-white hover:bg-gray-700'
+                      isDark
+                        ? 'bg-gray-700 text-white hover:bg-gray-600'
                         : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                     }`}
                   >
@@ -332,8 +268,8 @@ export default function MyApplications({
                       target='_blank'
                       rel='noopener noreferrer'
                       className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-                        theme === 'dark'
-                          ? 'bg-gray-800 text-white hover:bg-gray-700'
+                        isDark
+                          ? 'bg-gray-700 text-white hover:bg-gray-600'
                           : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                       }`}
                     >

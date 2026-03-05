@@ -100,12 +100,12 @@ export default function DriverVerificationSection({ userAddress }: DriverVerific
     return (
       <div className={`rounded-2xl p-6 ${
         theme === 'dark'
-          ? 'bg-brand-sage-dark/50 border border-brand-mint/30'
-          : 'bg-white border border-brand-sage/20 shadow-lg'
+          ? 'bg-gray-800/50 border border-gray-700'
+          : 'bg-white border border-gray-200 shadow-lg'
       }`}>
         <div className="flex items-center justify-center py-8">
           <Loader2 className={`w-6 h-6 animate-spin ${
-            theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+            theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
           }`} />
         </div>
       </div>
@@ -138,16 +138,16 @@ export default function DriverVerificationSection({ userAddress }: DriverVerific
     <>
       <div className={`rounded-2xl p-6 ${
         theme === 'dark'
-          ? 'bg-brand-sage-dark/50 border border-brand-mint/30'
-          : 'bg-white border border-brand-sage/20 shadow-lg'
+          ? 'bg-gray-800/50 border border-gray-700'
+          : 'bg-white border border-gray-200 shadow-lg'
       }`}>
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <div className={`p-2 rounded-lg ${
-            theme === 'dark' ? 'bg-brand-mint/20' : 'bg-brand-sage/10'
+            theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
           }`}>
             <ClipboardCheck className={`w-5 h-5 ${
-              theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+              theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
             }`} />
           </div>
           <div>

@@ -330,7 +330,7 @@ export default function ResumeUpload({ user }: ResumeUploadProps) {
             <button
               type='button'
               onClick={resetForm}
-              className='px-4 py-2 border border-brand-mint/30 rounded-md shadow-sm text-sm font-medium text-brand-sage bg-brand-cream hover:bg-brand-mint/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-mint'
+              className='px-4 py-2 border border-teal-300 rounded-md shadow-sm text-sm font-medium text-teal-700 bg-white hover:bg-teal-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500'
             >
               Upload Another
             </button>

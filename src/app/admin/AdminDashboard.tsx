@@ -991,8 +991,8 @@ function AdminDashboardContent() {
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                         activeTab === tab.id
                           ? theme === 'dark'
-                            ? 'bg-brand-mint text-gray-900'
-                            : 'bg-brand-sage text-white'
+                            ? 'bg-teal-500 text-gray-900'
+                            : 'bg-teal-600 text-white'
                           : theme === 'dark'
                             ? 'text-gray-400 hover:text-white hover:bg-gray-800'
                             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'

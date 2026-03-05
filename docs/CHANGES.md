@@ -4,6 +4,66 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 🎨 **Color Scheme Migration: brand-sage → teal** (March 2026)
+
+### What changed
+
+Migrated the application from the old `brand-sage` / `brand-mint` / `brand-cream` color palette to a standardized `teal` and `gray` color scheme for better consistency and maintainability.
+
+**Color Mapping Applied:**
+- `brand-sage` → `teal-600` (light mode) / `teal-500` (dark mode accents)
+- `brand-sage-dark` → `teal-700`
+- `brand-sage-light/20` → `gray-800/50` (dark mode backgrounds)
+- `brand-mint` → `teal-400` (dark mode accent)
+- `brand-cream` → `white` / `gray-100`
+- Old gradient styles → Solid teal or gray based theme-aware colors
+
+**Files Updated (Complete):**
+- `src/components/JobListings.tsx` - Full rewrite of color classes
+- `src/components/MyApplications.tsx` - Updated card and accent colors
+- `src/components/DriverHomePage.tsx` - Updated hero and card colors
+- `src/components/StormChainView.tsx` - Full rewrite of all sub-components
+- `src/components/ApplyWithStormChainModal.tsx` - Modal styling update
+- `src/components/RoleSelectionModal.tsx` - Role cards and buttons
+- `src/components/ResumeTabSelector.tsx` - Tab button colors
+- `src/components/Navigation.tsx` - Dropdown toggle badges
+- `src/components/app/DotApplicationFlow.tsx` - Form step tabs
+- `src/components/driver-application/ApplicationSubmitted.tsx` - Auto-resume status
+- `src/components/SyncIndicator.tsx` - Syncing status indicator
+- `src/components/driver-application/FormInput.tsx` - Input focus rings
+- `src/components/AlchemyAuth.tsx` - Auth card styling
+- `src/components/ScrollToTop.tsx` - Button colors
+- `src/components/WalletCard.tsx` - Card backgrounds
+- `src/components/MvrPaymentButton.tsx` - Payment button states
+- `src/components/ResumePreviewModal.tsx` - Modal and action buttons
+- `src/components/employer/TeamManagement.tsx` - Loader icon
+- `src/components/MvrStatusIndicator.tsx` - Status card theme
+- `src/components/admin/AdminResetWallet.tsx` - Admin form styling
+- `src/components/ThemeAware.tsx` - Theme utility classes (complete rewrite)
+- `src/components/EmailOTPAuth.tsx` - Auth UI styling
+- `src/components/verification/DriverVerificationSection.tsx` - Verification cards
+- `src/components/driver-application/SaveProgressButton.tsx` - Save button
+- `src/components/driver-application/ErrorDisplay.tsx` - Error card
+- `src/components/ResumeUpload.tsx` - Upload button
+- `src/app/admin/AdminDashboard.tsx` - Tab button styling
+- `src/components/driver-application/PersonalInfoForm2.tsx` - Input focus rings
+- `src/components/ProfileConflictModal.tsx` - Modal styling
+- `src/app/page.tsx` - Loading screen gradient
+
+**Files Remaining (partial migration - continue in future sessions):**
+- `src/components/ResumeDashboard.tsx` - High priority
+- `src/components/DriverApplication.tsx` - High priority
+- `src/components/driver-application/EmploymentVerificationForm.tsx`
+- `src/components/employer/FindDriversPage.tsx`
+- `src/components/employer/ApplicantsPage.tsx`
+- `src/components/MvrViewModal.tsx`
+- `src/app/mvr/page.tsx`
+- Several driver-application form components
+
+**Why this matters**: The old brand color CSS variables were inconsistent across the codebase and made theming difficult. This migration standardizes on Tailwind's built-in `teal` palette for primary accents and `gray` for backgrounds, improving maintainability and visual consistency.
+
+---
+
 ## 📊 **Admin Panel: Candidate Outreach Management** (March 2026)
 
 ### What changed

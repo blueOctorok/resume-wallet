@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { ArrowLeft } from 'lucide-react'
 import LoadingScreen from '@/components/LoadingScreen'
+import BackToHubButton from '@/components/ui/BackToHubButton'
 import ProfileConflictModal from '@/components/ProfileConflictModal'
 import SyncIndicator, { useSyncIndicator } from '@/components/SyncIndicator'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -608,7 +608,7 @@ export default function DotApplicationFlow({
         </p>
         <div
           className={`inline-block px-6 py-2 rounded-full text-sm font-medium ${
-            theme === 'dark' ? 'bg-brand-mint/20 text-brand-mint' : 'bg-brand-sage/20 text-brand-sage'
+            theme === 'dark' ? 'bg-teal-500/20 text-teal-400' : 'bg-teal-100 text-teal-700'
           }`}
         >
           Please wait...
@@ -633,9 +633,7 @@ export default function DotApplicationFlow({
               onClick={() => handleFormNavigation(step.id)}
               className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 ${
                 dotApp.currentForm === step.id
-                  ? theme === 'dark'
-                    ? 'bg-brand-mint text-white shadow-lg'
-                    : 'bg-brand-sage text-white shadow-lg'
+                  ? 'bg-teal-600 text-white shadow-lg'
                   : theme === 'dark'
                     ? 'bg-gray-700 text-white hover:bg-gray-600 border-2 border-gray-600'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-300'
@@ -746,13 +744,7 @@ export default function DotApplicationFlow({
 
       {/* Back button */}
       <div className='max-w-4xl mx-auto mb-4'>
-        <button
-          onClick={handleNavigateBack}
-          className='inline-flex items-center gap-2 px-3 py-2 sm:px-4 text-sm sm:text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer'
-        >
-          <ArrowLeft className='w-4 h-4 sm:w-5 sm:h-5' />
-          Back
-        </button>
+        <BackToHubButton onClick={handleNavigateBack} />
       </div>
 
       {/* Submission error */}

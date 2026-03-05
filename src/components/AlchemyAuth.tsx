@@ -21,7 +21,6 @@ import {
 } from '@account-kit/react'
 import { useTheme } from '@/contexts/ThemeContext'
 
-// Check Web Crypto API support for mobile browsers
 const checkWebCryptoSupport = () => {
   if (typeof window === 'undefined') return true
   
@@ -30,9 +29,6 @@ const checkWebCryptoSupport = () => {
     if (!crypto || !crypto.subtle) {
       return false
     }
-    
-    // Check if elliptic curve operations are supported
-    // This is a known issue on some mobile browsers
     return true
   } catch (e) {
     return false
@@ -55,6 +51,7 @@ export default function AlchemyAuth({
   mode = 'general',
 }: AlchemyAuthProps) {
   const { theme } = useTheme()
+  const isDark = theme === 'dark'
   const { openAuthModal } = useAuthModal()
   const { isConnected, isInitializing } = useSignerStatus()
   const user = useUser()
@@ -64,15 +61,11 @@ export default function AlchemyAuth({
   const [userInfo, setUserInfo] = useState<any>(null)
   const [cryptoError, setCryptoError] = useState<string | null>(null)
 
-  // Use ref to store callback and track the last address we called it for
   const onAuthSuccessRef = useRef(onAuthSuccess)
   const lastCalledAddressRef = useRef<string | null>(null)
-  // Track logout state to prevent stale session auto-reconnect
   const logoutStateRef = useRef<{ timestamp: number; address: string } | null>(null)
 
-  // Check Web Crypto API support on mount
   useEffect(() => {
-    // Check if error was already detected by global handler
     const hasCryptoError = sessionStorage.getItem('crypto-error')
     if (hasCryptoError) {
       setCryptoError(
@@ -88,7 +81,6 @@ export default function AlchemyAuth({
       )
     }
 
-    // Listen for crypto errors from AuthCard
     const handleError = (event: ErrorEvent) => {
       if (
         event.message?.includes('crv') ||
@@ -102,7 +94,6 @@ export default function AlchemyAuth({
       }
     }
 
-    // Also listen for unhandled promise rejections (common with async crypto operations)
     const handleRejection = (event: PromiseRejectionEvent) => {
       const reason = event.reason?.message || event.reason?.toString() || ''
       if (
@@ -126,31 +117,23 @@ export default function AlchemyAuth({
   }, [])
 
   useEffect(() => {
-    console.log('🔧 [AUTH] onAuthSuccess callback ref updated:', {
-      hasCallback: !!onAuthSuccess,
-    })
+    console.log('🔧 [AUTH] onAuthSuccess callback ref updated:', { hasCallback: !!onAuthSuccess })
     onAuthSuccessRef.current = onAuthSuccess
   }, [onAuthSuccess])
 
-  // Get mode-specific content
   const getContent = () => {
     switch (mode) {
       case 'driver':
         return {
           title: title || 'Verify Your Resume',
-          subtitle:
-            subtitle ||
-            'Enter your email to get started with professional resume verification',
+          subtitle: subtitle || 'Enter your email to get started with professional resume verification',
           welcomeMessage: 'Welcome! Your resume verification account is ready.',
         }
       case 'employer':
         return {
           title: title || 'Access Verified Drivers',
-          subtitle:
-            subtitle ||
-            'Sign in with your work email to access our verified driver database',
-          welcomeMessage:
-            'Welcome! You can now search and verify driver resumes.',
+          subtitle: subtitle || 'Sign in with your work email to access our verified driver database',
+          welcomeMessage: 'Welcome! You can now search and verify driver resumes.',
         }
       default:
         return {
@@ -163,7 +146,6 @@ export default function AlchemyAuth({
 
   const content = getContent()
 
-  // Handle authentication success
   useEffect(() => {
     console.log('🔍 [AUTH] useEffect triggered - checking connection status:', {
       isConnected,
@@ -183,13 +165,7 @@ export default function AlchemyAuth({
         chainId: 84532,
       }
 
-      // Check if this is a new address (first login or address changed)
       const isNewAddress = lastCalledAddressRef.current !== authData.address
-
-      // Prevent stale session auto-reconnect: if we logged out recently (within 3s)
-      // and the SAME address is trying to reconnect, block it. This catches the case
-      // where Alchemy's SDK hasn't fully cleared its session yet. A stale reconnect
-      // happens instantly (<100ms), while a real login takes seconds (user types email).
       const COOLDOWN_MS = 3000
       const logoutState = logoutStateRef.current
       const isSameAddressAsLogout = logoutState?.address === authData.address
@@ -201,7 +177,6 @@ export default function AlchemyAuth({
         return
       }
 
-      // Clear logout state on successful auth (either different user or same user after cooldown)
       logoutStateRef.current = null
 
       console.log('📋 [AUTH] Auth data prepared:', {
@@ -211,7 +186,6 @@ export default function AlchemyAuth({
         hasCallback: !!onAuthSuccessRef.current,
       })
 
-      // Update user info state
       setUserInfo((prev) => {
         if (prev?.address === authData.address) {
           console.log('⏭️ [AUTH] Same address, skipping userInfo update')
@@ -221,13 +195,8 @@ export default function AlchemyAuth({
         return authData
       })
 
-      // Call the callback only for new addresses OR for same address after cooldown
-      // (which means user genuinely logged in again with same email)
       if (isNewAddress && onAuthSuccessRef.current) {
-        console.log(
-          '🔔 [AUTH] Calling onAuthSuccess callback for new address:',
-          authData.address
-        )
+        console.log('🔔 [AUTH] Calling onAuthSuccess callback for new address:', authData.address)
         onAuthSuccessRef.current(authData)
         lastCalledAddressRef.current = authData.address
       } else if (!isNewAddress) {
@@ -244,13 +213,8 @@ export default function AlchemyAuth({
     }
   }, [isConnected, user, account])
 
-  // Handle logout
-  // Returns a promise so callers can await the full logout sequence
   const handleLogout = async () => {
     try {
-      // Record logout state to detect stale session auto-reconnects
-      // We track which address logged out and when, so we can block that
-      // specific address from auto-reconnecting for a cooldown period.
       if (lastCalledAddressRef.current) {
         logoutStateRef.current = {
           timestamp: Date.now(),
@@ -269,41 +233,24 @@ export default function AlchemyAuth({
     }
   }
 
-  // Export logout function for use in other components
   useEffect(() => {
     if (onLogoutSuccess && handleLogout) {
-      // Store the logout function reference for external use
       ;(window as any).__alchemyLogout = handleLogout
     }
   }, [onLogoutSuccess])
 
-  // Loading state
+  const cardClass = isDark
+    ? 'bg-gray-800/50 border-gray-700'
+    : 'bg-white/90 border-gray-200'
+
   if (isInitializing) {
     return (
-      <div
-        className={`relative backdrop-blur-xl rounded-3xl shadow-2xl border p-8 bg-brand-sage-light/20 border-brand-mint/30`}
-      >
-        {/* Inner shadow for depth */}
-        <div
-          className={`absolute inset-0 rounded-3xl pointer-events-none shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)]`}
-        />
-
-        {/* Outer glow */}
-        <div
-          className={`absolute -inset-[1px] rounded-3xl opacity-50 blur-sm -z-10 bg-gradient-to-b from-brand-mint/20 to-transparent`}
-        />
-
+      <div className={`relative backdrop-blur-xl rounded-3xl shadow-2xl border p-8 ${cardClass}`}>
         <div className='relative text-center'>
-          <div
-            className={`animate-spin rounded-full h-10 w-10 border-b-2 mx-auto mb-4 ${
-              theme === 'light' ? 'border-brand-sage' : 'border-brand-mint'
-            }`}
-          ></div>
-          <p
-            className={`${
-              theme === 'light' ? 'text-gray-600' : 'text-brand-cream/80'
-            }`}
-          >
+          <div className={`animate-spin rounded-full h-10 w-10 border-b-2 mx-auto mb-4 ${
+            isDark ? 'border-teal-400' : 'border-teal-600'
+          }`}></div>
+          <p className={isDark ? 'text-gray-300' : 'text-gray-600'}>
             Initializing authentication...
           </p>
         </div>
@@ -311,133 +258,51 @@ export default function AlchemyAuth({
     )
   }
 
-  // Authenticated state
   if (isConnected && userInfo) {
     return (
-      <div
-        className={`relative backdrop-blur-xl rounded-3xl shadow-2xl border p-6 bg-brand-sage-light/20 border-brand-mint/30`}
-      >
-        {/* Inner shadow for depth */}
-        <div
-          className={`absolute inset-0 rounded-3xl pointer-events-none shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)]`}
-        />
-
-        {/* Outer glow */}
-        <div
-          className={`absolute -inset-[1px] rounded-3xl opacity-50 blur-sm -z-10 bg-gradient-to-b from-brand-mint/20 to-transparent`}
-        />
-
+      <div className={`relative backdrop-blur-xl rounded-3xl shadow-2xl border p-6 ${cardClass}`}>
         <div className='relative'>
           <div className='text-center mb-6'>
-            <div
-              className={`w-16 h-16 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg ${
-                theme === 'light' ? 'bg-brand-sage/20' : 'bg-brand-mint/30'
-              }`}
-            >
-              <svg
-                className={`w-8 h-8 drop-shadow-sm ${
-                  theme === 'light' ? 'text-brand-sage' : 'text-brand-cream'
-                }`}
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth={2}
-                  d='M5 13l4 4L19 7'
-                />
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg ${
+              isDark ? 'bg-teal-500/20' : 'bg-teal-100'
+            }`}>
+              <svg className={`w-8 h-8 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M5 13l4 4L19 7' />
               </svg>
             </div>
-            <h2
-              className={`text-xl font-semibold mb-2 ${
-                theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
-              }`}
-            >
+            <h2 className={`text-xl font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>
               {content.welcomeMessage}
             </h2>
           </div>
 
           <div className='space-y-4'>
-            {/* User Info */}
-            <div
-              className={`backdrop-blur-sm rounded-2xl p-4 border shadow-lg ${
-                theme === 'light'
-                  ? 'bg-white/80 border-brand-sage/30'
-                  : 'bg-brand-sage/30 border-brand-mint/20'
-              }`}
-            >
+            <div className={`rounded-2xl p-4 border ${
+              isDark ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'
+            }`}>
               <div className='space-y-3 text-sm'>
                 {userInfo.email && (
                   <div className='flex justify-between items-center'>
-                    <span
-                      className={`font-medium ${
-                        theme === 'light'
-                          ? 'text-gray-600'
-                          : 'text-brand-cream/70'
-                      }`}
-                    >
-                      Email:
-                    </span>
-                    <span
-                      className={`${
-                        theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
-                      }`}
-                    >
-                      {userInfo.email}
-                    </span>
+                    <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>Email:</span>
+                    <span className={isDark ? 'text-white' : 'text-gray-900'}>{userInfo.email}</span>
                   </div>
                 )}
                 <div className='flex justify-between items-center'>
-                  <span
-                    className={`font-medium ${
-                      theme === 'light'
-                        ? 'text-gray-600'
-                        : 'text-brand-cream/70'
-                    }`}
-                  >
-                    Wallet:
-                  </span>
-                  <span
-                    className={`font-mono text-xs ${
-                      theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
-                    }`}
-                  >
-                    {userInfo.address?.slice(0, 8)}...
-                    {userInfo.address?.slice(-6)}
+                  <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>Wallet:</span>
+                  <span className={`font-mono text-xs ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {userInfo.address?.slice(0, 8)}...{userInfo.address?.slice(-6)}
                   </span>
                 </div>
                 <div className='flex justify-between items-center'>
-                  <span
-                    className={`font-medium ${
-                      theme === 'light'
-                        ? 'text-gray-600'
-                        : 'text-brand-cream/70'
-                    }`}
-                  >
-                    Network:
-                  </span>
-                  <span
-                    className={`${
-                      theme === 'light' ? 'text-gray-800' : 'text-brand-cream'
-                    }`}
-                  >
-                    {userInfo.chain}
-                  </span>
+                  <span className={isDark ? 'text-gray-400' : 'text-gray-600'}>Network:</span>
+                  <span className={isDark ? 'text-white' : 'text-gray-900'}>{userInfo.chain}</span>
                 </div>
               </div>
             </div>
 
-            {/* Actions */}
             <div className='flex gap-3'>
               <button
                 onClick={handleLogout}
-                className={`flex-1 px-4 py-3 font-medium rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl ${
-                  theme === 'light'
-                    ? 'text-white bg-brand-sage hover:bg-brand-sage-dark'
-                    : 'text-brand-sage bg-brand-mint hover:bg-brand-mint/80'
-                }`}
+                className='flex-1 px-4 py-3 font-medium rounded-xl transition-all duration-300 bg-teal-600 text-white hover:bg-teal-500'
               >
                 Sign Out
               </button>
@@ -448,23 +313,9 @@ export default function AlchemyAuth({
     )
   }
 
-  // Authentication form
   return (
-    <div
-      className={`relative backdrop-blur-xl rounded-3xl shadow-2xl border p-6 sm:p-8 bg-brand-sage-light/20 border-brand-mint/30`}
-    >
-      {/* Inner shadow for depth */}
-      <div
-        className={`absolute inset-0 rounded-3xl pointer-events-none shadow-[inset_0_2px_20px_rgba(0,0,0,0.3)]`}
-      />
-
-      {/* Outer glow */}
-      <div
-        className={`absolute -inset-[1px] rounded-3xl opacity-50 blur-sm -z-10 bg-gradient-to-b from-brand-mint/20 to-transparent`}
-      />
-
+    <div className={`relative backdrop-blur-xl rounded-3xl shadow-2xl border p-6 sm:p-8 ${cardClass}`}>
       <div className='relative overflow-hidden'>
-        {/* Error message for crypto issues */}
         {cryptoError && (
           <div className='mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg'>
             <div className='flex items-start'>
@@ -490,15 +341,12 @@ export default function AlchemyAuth({
           </div>
         )}
 
-        {/* Alchemy AuthCard - handles all the authentication logic */}
-        {/* overflow-hidden prevents Alchemy UI elements from causing flickering at certain breakpoints */}
-        {/* Mobile-specific fixes: ensure touch events work properly */}
         <div 
           className='overflow-hidden'
           style={{
-            touchAction: 'manipulation', // Enable proper touch handling on mobile
-            WebkitTapHighlightColor: 'transparent', // Remove tap highlight on iOS
-            minHeight: '200px', // Ensure enough space for AuthCard to render
+            touchAction: 'manipulation',
+            WebkitTapHighlightColor: 'transparent',
+            minHeight: '200px',
           }}
         >
           <AuthCard />
@@ -508,7 +356,6 @@ export default function AlchemyAuth({
   )
 }
 
-// Export user info hook for other components
 export function useAlchemyAuth() {
   const { isConnected, isInitializing } = useSignerStatus()
   const user = useUser()
@@ -521,6 +368,6 @@ export function useAlchemyAuth() {
     address: account?.address,
     email: user?.email,
     userId: user?.userId,
-    chain: { name: 'Base Sepolia', id: 84532 }, // From our config
+    chain: { name: 'Base Sepolia', id: 84532 },
   }
 }

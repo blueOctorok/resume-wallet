@@ -190,8 +190,8 @@ const ApplicationSubmitted = ({
                     ? 'bg-red-900/20 border-red-500/30'
                     : 'bg-red-50 border-red-200'
                   : theme === 'dark'
-                    ? 'bg-brand-mint/10 border-brand-mint/30'
-                    : 'bg-brand-mint/5 border-brand-mint/20'
+                    ? 'bg-teal-500/10 border-teal-500/30'
+                    : 'bg-teal-50 border-teal-200'
             }`}
           >
             <div className={`flex-shrink-0 rounded-xl p-2.5 ${
@@ -199,10 +199,10 @@ const ApplicationSubmitted = ({
                 ? 'bg-green-500'
                 : resumeAutoCreateStatus === 'failed'
                   ? theme === 'dark' ? 'bg-red-500/20' : 'bg-red-100'
-                  : theme === 'dark' ? 'bg-brand-mint/20' : 'bg-brand-mint/10'
+                  : theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
             }`}>
               {resumeAutoCreateStatus === 'creating' && (
-                <Loader2 className={`h-5 w-5 animate-spin ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`} />
+                <Loader2 className={`h-5 w-5 animate-spin ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
               )}
               {resumeAutoCreateStatus === 'created' && (
                 <CheckCircle className='h-5 w-5 text-white' />
@@ -217,7 +217,7 @@ const ApplicationSubmitted = ({
                   ? theme === 'dark' ? 'text-green-400' : 'text-green-700'
                   : resumeAutoCreateStatus === 'failed'
                     ? theme === 'dark' ? 'text-red-400' : 'text-red-700'
-                    : theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                    : theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
               }`}>
                 {resumeAutoCreateStatus === 'creating' && (
                   <><Sparkles className='h-4 w-4' /> Building your resume from DOT data…</>

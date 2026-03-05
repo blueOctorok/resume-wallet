@@ -493,7 +493,7 @@ const Home = () => {
 
   if (!mounted) {
     return (
-      <div className='min-h-screen bg-gradient-to-br from-brand-sage to-brand-mint flex items-center justify-center'>
+      <div className='min-h-screen bg-gradient-to-br from-teal-700 to-teal-500 flex items-center justify-center'>
         <div className='text-white text-xl'>Loading...</div>
       </div>
     )

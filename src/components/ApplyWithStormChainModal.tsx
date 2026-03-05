@@ -42,6 +42,7 @@ export default function ApplyWithStormChainModal({
   onApplicationSubmitted
 }: ApplyWithStormChainModalProps) {
   const { theme } = useTheme()
+  const isDark = theme === 'dark'
   const [profile, setProfile] = useState<DriverProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -49,7 +50,6 @@ export default function ApplyWithStormChainModal({
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
-  // Fetch driver profile when modal opens
   useEffect(() => {
     if (isOpen && userAddress) {
       fetchDriverProfile()
@@ -121,6 +121,10 @@ export default function ApplyWithStormChainModal({
 
   if (!isOpen || !job) return null
 
+  const cardClass = isDark
+    ? 'bg-gray-800/90 border border-gray-700'
+    : 'bg-white border border-gray-200'
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
@@ -130,40 +134,36 @@ export default function ApplyWithStormChainModal({
       />
 
       {/* Modal */}
-      <div className={`relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl border-t-4 transition-all ${
-        theme === 'dark'
-          ? 'bg-brand-sage-light/20 backdrop-blur-xl border-brand-mint'
-          : 'bg-white/80 backdrop-blur-xl border-brand-sage'
-      }`}>
+      <div className={`relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl ${cardClass}`}>
         
         {/* Header */}
         <div className={`sticky top-0 border-b p-6 flex items-center justify-between z-10 ${
-          theme === 'dark'
-            ? 'bg-brand-sage-light/20 backdrop-blur-xl border-gray-700'
-            : 'bg-white/80 backdrop-blur-xl border-gray-200'
+          isDark ? 'bg-gray-800/90 border-gray-700' : 'bg-white border-gray-200'
         }`}>
           <div className="flex items-center gap-3">
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-              theme === 'dark'
-                ? 'bg-gradient-to-br from-brand-mint to-teal-600 shadow-lg shadow-brand-mint/50'
-                : 'bg-gradient-to-br from-brand-sage to-brand-sage-dark shadow-lg shadow-brand-sage/50'
+              isDark
+                ? 'bg-teal-500/20 border border-teal-500/30'
+                : 'bg-teal-100 border border-teal-200'
             }`}>
-              <Briefcase className="w-6 h-6 text-white" />
+              <Briefcase className={`w-6 h-6 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 Apply with StormChain
               </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
                 Your verified application
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
+              isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+            }`}
           >
-            <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            <X className={isDark ? 'text-gray-400' : 'text-gray-600'} />
           </button>
         </div>
 
@@ -185,8 +185,8 @@ export default function ApplyWithStormChainModal({
         {/* Loading State */}
         {loading && !success && (
           <div className="p-12 text-center">
-            <div className="w-16 h-16 border-4 border-gray-200 dark:border-gray-700 border-t-[#0052FF] rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-gray-600 dark:text-gray-400">Loading your profile...</p>
+            <div className="w-16 h-16 border-4 border-gray-200 dark:border-gray-700 border-t-teal-500 rounded-full animate-spin mx-auto mb-4" />
+            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Loading your profile...</p>
           </div>
         )}
 
@@ -213,14 +213,12 @@ export default function ApplyWithStormChainModal({
               
               {/* Job Details */}
               <div className={`rounded-xl p-4 border ${
-                theme === 'dark'
-                  ? 'bg-brand-sage-light/10 border-gray-700'
-                  : 'bg-brand-sage/5 border-brand-sage/20'
+                isDark ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'
               }`}>
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                <h3 className={`font-semibold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   {job.title}
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
                   {job.company} • {job.location}
                 </p>
                 {job.salary && (
@@ -252,20 +250,20 @@ export default function ApplyWithStormChainModal({
 
               {/* What Will Be Sent */}
               <div>
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+              <h3 className={`font-semibold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 What we'll send to the employer:
               </h3>
               <div className="space-y-2">
                 <div className="flex items-center gap-3 text-sm">
                   <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                  <span className="text-gray-700 dark:text-gray-300">
+                  <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>
                     Your complete DOT application
                   </span>
                 </div>
                 {profile.resume_url && (
                   <div className="flex items-center gap-3 text-sm">
                     <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                    <span className="text-gray-700 dark:text-gray-300">
+                    <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>
                       Resume (blockchain-verified)
                     </span>
                   </div>
@@ -273,7 +271,7 @@ export default function ApplyWithStormChainModal({
                 {profile.cdl_class && (
                   <div className="flex items-center gap-3 text-sm">
                     <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                    <span className="text-gray-700 dark:text-gray-300">
+                    <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>
                       CDL Class {profile.cdl_class}
                       {profile.cdl_endorsements && profile.cdl_endorsements.length > 0 && 
                         ` with ${profile.cdl_endorsements.join(', ')} endorsements`
@@ -284,14 +282,14 @@ export default function ApplyWithStormChainModal({
                 {profile.experience_years && (
                   <div className="flex items-center gap-3 text-sm">
                     <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                    <span className="text-gray-700 dark:text-gray-300">
+                    <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>
                       {profile.experience_years} years of experience
                     </span>
                   </div>
                 )}
                 <div className="flex items-center gap-3 text-sm">
                   <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                  <span className="text-gray-700 dark:text-gray-300">
+                  <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>
                     Shareable StormChain profile link
                   </span>
                 </div>
@@ -300,17 +298,21 @@ export default function ApplyWithStormChainModal({
 
             {/* Cover Letter (Optional) */}
             <div>
-              <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+              <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 Cover Letter <span className="text-gray-500 font-normal">(Optional)</span>
               </label>
               <textarea
                 value={coverLetter}
                 onChange={(e) => setCoverLetter(e.target.value)}
                 placeholder="Why are you a great fit for this position?"
-                className="w-full h-32 px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0052FF] focus:border-transparent resize-none"
+                className={`w-full h-32 px-4 py-3 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
+                  isDark
+                    ? 'bg-gray-700 border border-gray-600 text-white placeholder-gray-400'
+                    : 'bg-white border border-gray-300 text-gray-900 placeholder-gray-500'
+                }`}
                 maxLength={1000}
               />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 {coverLetter.length} / 1000 characters
               </p>
             </div>
@@ -321,8 +323,8 @@ export default function ApplyWithStormChainModal({
                 onClick={onClose}
                 disabled={submitting}
                 className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 ${
-                  theme === 'dark'
-                    ? 'bg-gray-800 text-white hover:bg-gray-700'
+                  isDark
+                    ? 'bg-gray-700 text-white hover:bg-gray-600'
                     : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                 }`}
               >
@@ -331,11 +333,7 @@ export default function ApplyWithStormChainModal({
               <button
                 onClick={handleSubmit}
                 disabled={submitting || !profile || !eligibility.canApply}
-                className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-105 ${
-                  theme === 'dark'
-                    ? 'bg-gradient-to-r from-brand-mint to-teal-600 text-white'
-                    : 'bg-gradient-to-r from-brand-sage to-brand-sage-dark text-white'
-                }`}
+                className="flex-1 px-6 py-3 rounded-xl font-semibold bg-teal-600 hover:bg-teal-500 text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {submitting ? (
                   <>
@@ -352,7 +350,7 @@ export default function ApplyWithStormChainModal({
             </div>
 
             {/* Disclaimer */}
-            <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+            <p className={`text-xs text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               By submitting, your StormChain application will be sent directly to {job.company}.
               <br />
               You can track the status in "My Applications".

@@ -145,10 +145,10 @@ export default function SaveProgressButton({
         ? 'bg-red-600 text-white hover:bg-red-700'
         : 'bg-red-500 text-white hover:bg-red-600'
     } else {
-      // Brand colors: mint for dark mode, sage for light mode
+      // Teal colors for both themes
       colorStyles = theme === 'dark'
-        ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-md hover:shadow-lg'
-        : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-md hover:shadow-lg'
+        ? 'bg-teal-500 text-gray-900 hover:bg-teal-400 shadow-md hover:shadow-lg'
+        : 'bg-teal-600 text-white hover:bg-teal-700 shadow-md hover:shadow-lg'
     }
     
     return `${baseStyles} ${sizeStyles} ${colorStyles}`

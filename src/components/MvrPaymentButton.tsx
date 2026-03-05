@@ -213,14 +213,14 @@ export default function MvrPaymentButton({
     isLoading || isPending
       ? theme === 'light'
         ? 'text-gray-400 bg-gray-100 border-gray-200 cursor-not-allowed'
-        : 'text-brand-cream/40 bg-brand-sage-light/10 border-brand-cream/20 cursor-not-allowed'
+        : 'text-gray-500 bg-gray-800 border-gray-700 cursor-not-allowed'
       : success
         ? theme === 'light'
           ? 'text-white bg-green-600 hover:bg-green-700 border-green-600 shadow-lg'
-          : 'text-brand-cream bg-green-600/80 hover:bg-green-600 border-green-500 shadow-lg'
+          : 'text-white bg-green-600/80 hover:bg-green-600 border-green-500 shadow-lg'
         : theme === 'light'
-          ? 'text-white bg-brand-sage hover:bg-brand-sage-dark border-brand-sage hover:border-brand-sage-dark shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
-          : 'text-brand-cream bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border-brand-cream/30 hover:border-brand-cream/50 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
+          ? 'text-white bg-teal-600 hover:bg-teal-700 border-teal-600 hover:border-teal-700 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
+          : 'text-white bg-teal-600/80 hover:bg-teal-700 border-teal-500/50 hover:border-teal-500 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
   }`
 
   return (

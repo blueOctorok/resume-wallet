@@ -17,23 +17,19 @@ export default function ResumeTabSelector({
 }: ResumeTabSelectorProps) {
   const { theme: themeFromContext } = useTheme()
   const theme = themeProp || themeFromContext
+  const isDark = theme === 'dark'
+  
   return (
-    <div
-      className={`flex gap-1 sm:gap-2 p-0.5 sm:p-1 rounded-xl border ${
-        theme === 'dark'
-          ? 'bg-brand-sage-light/10 border-brand-mint/30'
-          : 'bg-white border-brand-sage/30'
-      }`}
-    >
+    <div className={`flex gap-1 sm:gap-2 p-0.5 sm:p-1 rounded-xl border ${
+      isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-200'
+    }`}>
       <button
         onClick={() => onTabChange('upload')}
         className={`flex items-center justify-center gap-1.5 sm:gap-2 flex-1 px-2 sm:px-4 py-2 sm:py-3 rounded-lg text-xs sm:text-sm md:text-base font-medium transition-all ${
           activeTab === 'upload'
-            ? theme === 'dark'
-              ? 'bg-brand-mint text-gray-900 shadow-lg'
-              : 'bg-brand-sage text-white shadow-lg'
-            : theme === 'dark'
-              ? 'text-brand-cream/70 hover:bg-brand-sage-light/10 hover:text-brand-cream'
+            ? 'bg-teal-600 text-white shadow-lg'
+            : isDark
+              ? 'text-gray-400 hover:bg-gray-700 hover:text-white'
               : 'text-gray-600 hover:bg-gray-100'
         }`}
       >
@@ -45,11 +41,9 @@ export default function ResumeTabSelector({
         onClick={() => onTabChange('create')}
         className={`flex items-center justify-center gap-1.5 sm:gap-2 flex-1 px-2 sm:px-4 py-2 sm:py-3 rounded-lg text-xs sm:text-sm md:text-base font-medium transition-all ${
           activeTab === 'create'
-            ? theme === 'dark'
-              ? 'bg-brand-mint text-gray-900 shadow-lg'
-              : 'bg-brand-sage text-white shadow-lg'
-            : theme === 'dark'
-              ? 'text-brand-cream/70 hover:bg-brand-sage-light/10 hover:text-brand-cream'
+            ? 'bg-teal-600 text-white shadow-lg'
+            : isDark
+              ? 'text-gray-400 hover:bg-gray-700 hover:text-white'
               : 'text-gray-600 hover:bg-gray-100'
         }`}
       >
