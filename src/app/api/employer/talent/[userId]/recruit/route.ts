@@ -175,11 +175,11 @@ export async function POST(
       )
     }
 
-    // Check for existing application
+    // Check for existing application (use resolved jobPosting.id, not the raw param)
     const { data: existingApp } = await supabase
       .from('applications')
       .select('id, status, initiated_by')
-      .eq('job_posting_id', jobPostingId)
+      .eq('job_posting_id', jobPosting.id)
       .eq('applicant_user_id', candidateUserId)
       .single()
 

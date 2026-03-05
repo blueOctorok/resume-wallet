@@ -189,7 +189,7 @@ export async function GET(request: NextRequest) {
       console.log('[TALENT SEARCH] RPC returned', candidates?.length ?? 0, 'candidates')
     }
 
-    // Get company's job postings for context
+    // Get company's job postings for context (active jobs shown in UI dropdown)
     const { data: jobs } = await supabase
       .from('job_postings')
       .select('id, title, target_role, is_active')
@@ -198,18 +198,25 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(20)
 
+    // Get ALL job posting IDs for this company (including inactive Talent Pool)
+    // This ensures we detect candidates already in the pipeline via Talent Pool
+    const { data: allCompanyJobs } = await supabase
+      .from('job_postings')
+      .select('id')
+      .eq('company_id', companyId)
+
     // Check which candidates have already applied to this company
     const candidateIds = (candidates || []).map((c: { user_id: string }) => c.user_id)
     
     let existingApplications: { applicant_user_id: string }[] = []
     if (candidateIds.length > 0) {
-      const jobIds = (jobs || []).map(j => j.id)
-      if (jobIds.length > 0) {
+      const allJobIds = (allCompanyJobs || []).map(j => j.id)
+      if (allJobIds.length > 0) {
         const { data: apps } = await supabase
           .from('applications')
           .select('applicant_user_id')
           .in('applicant_user_id', candidateIds)
-          .in('job_posting_id', jobIds)
+          .in('job_posting_id', allJobIds)
         
         existingApplications = apps || []
       }
@@ -217,8 +224,7 @@ export async function GET(request: NextRequest) {
 
     const appliedSet = new Set(existingApplications.map(a => a.applicant_user_id))
 
-    // Transform results
-    const results = (candidates || []).map((c: {
+    type RawCandidate = {
       user_id: string
       full_name: string | null
       email: string | null
@@ -233,9 +239,19 @@ export async function GET(request: NextRequest) {
       has_resume: boolean
       verified_jobs_count: number
       member_since: string
-    }) => ({
+    }
+
+    // Filter out users whose profile was deleted — they have no name and shouldn't appear.
+    // This is a safety net until migration 026 is applied to the DB, which fixes this at
+    // the view level by requiring dp.id IS NOT NULL OR devp.id IS NOT NULL.
+    const validCandidates = (candidates || []).filter(
+      (c: RawCandidate) => c.full_name !== null && c.full_name.trim() !== ''
+    )
+
+    // Transform results
+    const results = validCandidates.map((c: RawCandidate) => ({
       userId: c.user_id,
-      name: c.full_name || 'Unknown',
+      name: c.full_name!,
       email: c.email,
       location: c.city && c.state ? `${c.city}, ${c.state}` : c.state || c.city || null,
       state: c.state,

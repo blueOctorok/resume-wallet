@@ -4,6 +4,51 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 🐛 **Bug Fix: Deleted Developer Profiles Still in Find Talent** (March 2026)
+
+### What was wrong
+
+Deleting a developer profile from central admin only removed the `developer_profiles` row. The `users` row stayed with `role = 'developer'`, and the `career_cards` view included anyone with `role IN ('driver', 'developer')`. So deleted developers kept appearing in Find Talent as "Unknown" with leftover data.
+
+### Fix
+
+**Migration 026** (`supabase/migrations/026_career_cards_require_profile.sql`):
+
+- **`career_cards` view** now only includes users who have at least one profile: `WHERE dp.id IS NOT NULL OR devp.id IS NOT NULL`.
+- **`developer_profiles`** is added as a `LEFT JOIN` so developer names can be used for `full_name` (first_name, last_name, or display_name).
+- **`full_name`** is set from driver name, or developer name, or null.
+- **`has_profile`** and completeness score treat either a driver or developer profile as "has profile."
+
+After applying the migration, users with no `driver_profiles` and no `developer_profiles` (e.g. after admin deletes the dev profile) no longer appear in Find Talent.
+
+**Apply the migration:**  
+`npx supabase db push` (or run the SQL in the Supabase SQL editor).
+
+---
+
+## 🐛 **Bug Fix: Developer Talent Pool Detection** (March 2026)
+
+### What was broken
+
+Developer candidates added to the Talent Pool weren't being detected as "In Pipeline" when searching for talent. The "Add to Pipeline" button would still appear even though the candidate was already added.
+
+### Root cause
+
+The talent search API (`/api/employer/talent/search`) only looked at **active** job postings when checking if a candidate had already applied. But the Talent Pool uses a **hidden/inactive** job posting (`is_active: false`), so candidates in the Talent Pool weren't detected.
+
+### Fix
+
+1. **`src/app/api/employer/talent/search/route.ts`**: Now fetches ALL company job postings (including inactive Talent Pool) when checking for existing applications, not just active ones.
+
+2. **`src/app/api/employer/talent/[userId]/recruit/route.ts`**: Fixed duplicate check to use `jobPosting.id` instead of `jobPostingId` when adding to Talent Pool. Previously, the check was using `undefined` when `talentPool: true`, which caused the duplicate detection to fail.
+
+### Impact
+
+- Developers (and drivers) added to Talent Pool now correctly show "In Pipeline" badge
+- Duplicate prevention now works correctly for Talent Pool additions
+
+---
+
 ## 🎨 **Color Scheme Migration: brand-sage → teal** (March 2026)
 
 ### What changed

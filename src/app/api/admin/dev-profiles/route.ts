@@ -23,18 +23,18 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await getAdminSupabaseClient()
 
-    // Build query
+    // Build query — developer_profiles has first_name/last_name/display_name, not full_name
     let query = supabase
       .from('developer_profiles')
       .select(
-        'id, user_id, email, full_name, headline, github_username, skills, available_for_work, created_at, updated_at',
+        'id, user_id, email, first_name, last_name, display_name, headline, github_username, skills, available_for_work, created_at, updated_at',
         { count: 'exact' }
       )
 
     // Apply search filter
     if (search) {
       query = query.or(
-        `full_name.ilike.%${search}%,email.ilike.%${search}%,github_username.ilike.%${search}%,headline.ilike.%${search}%`
+        `first_name.ilike.%${search}%,last_name.ilike.%${search}%,display_name.ilike.%${search}%,email.ilike.%${search}%,github_username.ilike.%${search}%,headline.ilike.%${search}%`
       )
     }
 
@@ -80,13 +80,17 @@ export async function GET(request: NextRequest) {
     })
 
     // Enrich profiles
-    const enrichedProfiles = profiles?.map((profile) => ({
-      ...profile,
-      walletAddress: userMap.get(profile.user_id) || 'Unknown',
-      projectCount: projectCountMap.get(profile.id) || 0,
-      // Parse skills count (skills is JSONB array)
-      skillCount: Array.isArray(profile.skills) ? profile.skills.length : 0,
-    }))
+    const enrichedProfiles = profiles?.map((profile) => {
+      const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim()
+      return {
+        ...profile,
+        // Compute full_name for display in the admin table
+        full_name: fullName || profile.display_name || null,
+        walletAddress: userMap.get(profile.user_id) || 'Unknown',
+        projectCount: projectCountMap.get(profile.id) || 0,
+        skillCount: Array.isArray(profile.skills) ? profile.skills.length : 0,
+      }
+    })
 
     return NextResponse.json({
       success: true,
