@@ -134,15 +134,21 @@ export async function POST(
     // This handles the case where someone is testing with role='employer' but has driver data
     const { data: driverProfile } = await supabase
       .from('driver_profiles')
-      .select('id')
+      .select('id, email')
       .eq('user_id', candidateUserId)
       .single()
 
     const { data: developerProfile } = await supabase
       .from('developer_profiles')
-      .select('id')
+      .select('id, email')
       .eq('user_id', candidateUserId)
       .single()
+
+    // Prefer users.email but fall back to profile-level email if wallet-only signup
+    const candidateEmail = candidate.email
+      || driverProfile?.email
+      || developerProfile?.email
+      || null
 
     const isCandidate = 
       ['driver', 'developer'].includes(candidate.role || '') ||
@@ -204,9 +210,9 @@ export async function POST(
     console.log(`[CANDIDATE REQUEST] Created request ${newRequest.id} for candidate ${candidateUserId}`)
 
     // Send email notification to candidate (non-blocking)
-    if (candidate.email) {
+    if (candidateEmail) {
       sendCandidateRequestNotification({
-        candidateEmail: candidate.email,
+        candidateEmail,
         candidateName: candidate.name || 'Candidate',
         companyName,
         requestType: requestType as 'mvr_order' | 'document_upload' | 'verification' | 'profile_completion' | 'custom',
@@ -214,7 +220,7 @@ export async function POST(
         message: message || null,
       }).then(result => {
         if (result.ok) {
-          console.log(`[CANDIDATE REQUEST] Email sent to ${candidate.email}`)
+          console.log(`[CANDIDATE REQUEST] Email sent to ${candidateEmail}`)
         } else {
           console.warn(`[CANDIDATE REQUEST] Email failed: ${result.error}`)
         }
@@ -222,7 +228,7 @@ export async function POST(
         console.error('[CANDIDATE REQUEST] Email error:', err)
       })
     } else {
-      console.log('[CANDIDATE REQUEST] Candidate has no email, skipping notification')
+      console.log('[CANDIDATE REQUEST] Candidate has no email in users or profiles, skipping notification')
     }
 
     return NextResponse.json({
@@ -244,6 +250,86 @@ export async function POST(
       { error: 'Internal server error' },
       { status: 500 }
     )
+  }
+}
+
+/**
+ * PATCH /api/employer/talent/[userId]/request
+ * 
+ * Cancels a pending request by ID so the employer can resend it.
+ * Body: { requestId: string }
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ userId: string }> }
+) {
+  try {
+    const walletAddress = request.headers.get('x-wallet-address')
+    const { userId: candidateUserId } = await params
+    const { requestId } = await request.json()
+
+    if (!walletAddress || !requestId) {
+      return NextResponse.json(
+        { error: 'walletAddress and requestId are required' },
+        { status: 400 }
+      )
+    }
+
+    const supabase = await getAdminSupabaseClient()
+
+    // Verify employer identity
+    const { data: employer } = await supabase
+      .from('users')
+      .select('id')
+      .ilike('wallet_address', walletAddress)
+      .single()
+
+    if (!employer) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Get company
+    const { data: membership } = await supabase
+      .from('company_members')
+      .select('company_id')
+      .eq('user_id', employer.id)
+      .eq('is_active', true)
+      .single()
+
+    let companyId = membership?.company_id || null
+    if (!companyId) {
+      const { data: legacyCompany } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('employer_user_id', employer.id)
+        .single()
+      companyId = legacyCompany?.id || null
+    }
+
+    if (!companyId) {
+      return NextResponse.json({ error: 'No company access' }, { status: 403 })
+    }
+
+    // Only allow cancelling requests that belong to this company + candidate
+    const { error: updateError } = await supabase
+      .from('candidate_requests')
+      .update({ status: 'cancelled' })
+      .eq('id', requestId)
+      .eq('company_id', companyId)
+      .eq('candidate_user_id', candidateUserId)
+      .in('status', ['pending', 'viewed'])
+
+    if (updateError) {
+      console.error('[CANDIDATE REQUEST] Cancel error:', updateError)
+      return NextResponse.json({ error: 'Failed to cancel request' }, { status: 500 })
+    }
+
+    console.log(`[CANDIDATE REQUEST] Cancelled request ${requestId}`)
+    return NextResponse.json({ success: true })
+
+  } catch (error) {
+    console.error('[CANDIDATE REQUEST] PATCH unexpected error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 

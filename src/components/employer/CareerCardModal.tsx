@@ -170,6 +170,7 @@ export default function CareerCardModal({
   const [error, setError] = useState<string | null>(null)
   const [careerCard, setCareerCard] = useState<CareerCardData | null>(null)
   const [requestLoading, setRequestLoading] = useState<string | null>(null)
+  const [resendLoading, setResendLoading] = useState<string | null>(null)
   
   // Recruit modal state
   const [showRecruitModal, setShowRecruitModal] = useState(false)
@@ -323,9 +324,60 @@ export default function CareerCardModal({
   const isDriver = careerCard?.role === 'driver'
   const profile = careerCard?.profile
 
-  // Check if request already pending
-  const hasPendingRequest = (type: string) => 
-    careerCard?.pendingRequests?.some(r => r.request_type === type) || false
+  // Returns the pending request object if one exists for this type (so we have its ID)
+  const getPendingRequest = (type: string) =>
+    careerCard?.pendingRequests?.find(r => r.request_type === type) || null
+
+  // Cancel a pending request then immediately re-create it (resend)
+  const resendRequest = async (requestType: string, documentType?: string) => {
+    const pending = getPendingRequest(requestType)
+    if (!pending) return
+
+    try {
+      setResendLoading(requestType)
+
+      // Cancel the existing pending request
+      const cancelRes = await fetch(`/api/employer/talent/${candidateUserId}/request`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': walletAddress,
+        },
+        body: JSON.stringify({ requestId: pending.id }),
+      })
+
+      if (!cancelRes.ok) {
+        const data = await cancelRes.json()
+        throw new Error(data.error || 'Failed to cancel existing request')
+      }
+
+      // Now create a fresh request (which will also re-send the email)
+      const createRes = await fetch(`/api/employer/talent/${candidateUserId}/request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': walletAddress,
+        },
+        body: JSON.stringify({
+          requestType,
+          documentType,
+          message: `Requested via StormChain Talent Search`,
+        }),
+      })
+
+      if (!createRes.ok) {
+        const data = await createRes.json()
+        throw new Error(data.error || 'Failed to resend request')
+      }
+
+      await fetchCareerCard()
+    } catch (err) {
+      console.error('Error resending request:', err)
+      alert(err instanceof Error ? err.message : 'Failed to resend request')
+    } finally {
+      setResendLoading(null)
+    }
+  }
 
   // Render via portal to escape parent stacking contexts (nav is z-50)
   if (!mounted) return null
@@ -583,7 +635,7 @@ export default function CareerCardModal({
                 title="Resume" 
                 icon={<FileText className="w-4 h-4" />} 
                 theme={theme}
-                action={
+                  action={
                   careerCard.resume && careerCard.resume.ipfsHash && !careerCard.resume.ipfsHash.startsWith('built_') ? (
                     <a
                       href={`https://gateway.pinata.cloud/ipfs/${careerCard.resume.ipfsHash}`}
@@ -599,8 +651,10 @@ export default function CareerCardModal({
                     <ActionButton
                       label="Request Resume"
                       loading={requestLoading === 'document_upload'}
-                      disabled={hasPendingRequest('document_upload')}
+                      resendLoading={resendLoading === 'document_upload'}
+                      isPending={!!getPendingRequest('document_upload')}
                       onClick={() => createRequest('document_upload', 'resume')}
+                      onResend={() => resendRequest('document_upload', 'resume')}
                       theme={theme}
                     />
                   ) : null
@@ -638,8 +692,10 @@ export default function CareerCardModal({
                       <ActionButton
                         label={careerCard.hasBgcheckConsent ? 'Request MVR' : 'Request Background Check'}
                         loading={requestLoading === 'mvr_order'}
-                        disabled={hasPendingRequest('mvr_order')}
+                        resendLoading={resendLoading === 'mvr_order'}
+                        isPending={!!getPendingRequest('mvr_order')}
                         onClick={() => createRequest('mvr_order')}
+                        onResend={() => resendRequest('mvr_order')}
                         theme={theme}
                       />
                     ) : null
@@ -696,7 +752,7 @@ export default function CareerCardModal({
                   ) : (
                     <EmptyState 
                       message="No MVR on file" 
-                      subtext={hasPendingRequest('mvr_order') ? 'Awaiting driver authorization' : 'Request a background check to get started'} 
+                      subtext={getPendingRequest('mvr_order') ? 'Awaiting driver authorization' : 'Request a background check to get started'} 
                       theme={theme} 
                     />
                   )}
@@ -1088,37 +1144,57 @@ function EmptyState({ message, subtext, theme }: { message: string; subtext?: st
 
 function ActionButton({ 
   label, 
-  loading, 
-  disabled, 
-  onClick, 
+  loading,
+  resendLoading,
+  isPending,
+  onClick,
+  onResend,
   theme 
 }: { 
   label: string
   loading: boolean
-  disabled: boolean
+  resendLoading: boolean
+  isPending: boolean
   onClick: () => void
+  onResend: () => void
   theme: string 
 }) {
+  if (isPending) {
+    // Show a split "Pending · Resend" state so employers aren't stuck
+    return (
+      <div className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium ${
+        theme === 'dark' ? 'bg-yellow-500/10 text-yellow-400' : 'bg-yellow-50 text-yellow-700'
+      }`}>
+        {resendLoading ? (
+          <Loader2 className="w-3 h-3 animate-spin" />
+        ) : (
+          <Clock className="w-3 h-3" />
+        )}
+        <span>Pending</span>
+        <span className="opacity-40 mx-0.5">·</span>
+        <button
+          onClick={onResend}
+          disabled={resendLoading}
+          className="underline underline-offset-2 hover:opacity-70 disabled:opacity-40 cursor-pointer"
+        >
+          {resendLoading ? 'Sending...' : 'Resend'}
+        </button>
+      </div>
+    )
+  }
+
   return (
     <button
       onClick={onClick}
-      disabled={loading || disabled}
+      disabled={loading}
       className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-        disabled
-          ? theme === 'dark' ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-          : theme === 'dark'
-            ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30'
-            : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
+        theme === 'dark'
+          ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30'
+          : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
       }`}
     >
-      {loading ? (
-        <Loader2 className="w-3 h-3 animate-spin" />
-      ) : disabled ? (
-        <Clock className="w-3 h-3" />
-      ) : (
-        <Send className="w-3 h-3" />
-      )}
-      {disabled ? 'Pending' : label}
+      {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+      {label}
     </button>
   )
 }

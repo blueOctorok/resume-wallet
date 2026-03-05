@@ -4,6 +4,28 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 🐛 **Bug Fix: MVR Request Email + Stuck Pending State** (March 2026)
+
+### What was wrong
+
+1. **Email not delivering to personal addresses (Gmail, etc.)**: The candidate request notification was reading `candidate.email` from the `users` table. Drivers who signed up via Alchemy wallet often had no email in `users` — it's stored in `driver_profiles.email` instead. When null, the email was silently skipped.
+
+2. **Pending request stuck**: Once an MVR or document request was marked "Pending," the `ActionButton` was completely disabled with no way to resend or cancel. If the email never arrived, there was no recovery path.
+
+### Fix
+
+**`src/app/api/employer/talent/[userId]/request/route.ts`**:
+- Now fetches `email` from both `driver_profiles` and `developer_profiles` alongside `users.email`
+- `candidateEmail` falls back: `users.email || driverProfile.email || developerProfile.email`
+- Added a `PATCH` endpoint that sets a pending/viewed request to `cancelled` (by requestId + company guard), clearing the way for a resend
+
+**`src/components/employer/CareerCardModal.tsx`**:
+- Replaced `hasPendingRequest(type)` (boolean) with `getPendingRequest(type)` (returns the object so we have the `id`)
+- Added `resendRequest(requestType)` — cancels the old pending request via `PATCH`, then immediately creates a fresh one via `POST` (which also re-sends the email)
+- Rewrote `ActionButton` to render a "Pending · Resend" state when `isPending`, instead of a disabled grey button — employers can now always recover from a missed email
+
+---
+
 ## 🐛 **Bug Fix: Deleted Developer Profiles Still in Find Talent** (March 2026)
 
 ### What was wrong
