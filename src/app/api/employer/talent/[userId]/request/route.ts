@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { sendCandidateRequestNotification } from '@/lib/send-admin-notification'
+import { createNotification } from '@/lib/create-notification'
 
 /**
  * POST /api/employer/talent/[userId]/request
@@ -209,7 +210,26 @@ export async function POST(
 
     console.log(`[CANDIDATE REQUEST] Created request ${newRequest.id} for candidate ${candidateUserId}`)
 
-    // Send email notification to candidate (non-blocking)
+    const requestLabels: Record<string, string> = {
+      mvr_order: 'Background Check & MVR Request',
+      document_upload: 'Document Upload Request',
+      verification: 'Employment Verification Request',
+      profile_completion: 'Profile Completion Request',
+      custom: 'New Request',
+    }
+    const notifTitle = requestLabels[requestType] || 'New Request'
+    const notifBody = `${companyName} has sent you a ${requestLabels[requestType]?.toLowerCase() || 'request'}.${message ? ` Message: "${message}"` : ''}`
+
+    // In-app notification (non-blocking, fire-and-forget)
+    createNotification({
+      userId: candidateUserId,
+      type: 'candidate_request',
+      title: notifTitle,
+      body: notifBody,
+      data: { companyName, requestType, requestId: newRequest.id },
+    }).catch(err => console.error('[CANDIDATE REQUEST] Notification error:', err))
+
+    // Email notification (non-blocking)
     if (candidateEmail) {
       sendCandidateRequestNotification({
         candidateEmail,
@@ -228,7 +248,7 @@ export async function POST(
         console.error('[CANDIDATE REQUEST] Email error:', err)
       })
     } else {
-      console.log('[CANDIDATE REQUEST] Candidate has no email in users or profiles, skipping notification')
+      console.log('[CANDIDATE REQUEST] Candidate has no email, skipping email notification')
     }
 
     return NextResponse.json({

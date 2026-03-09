@@ -6,6 +6,7 @@ import ThemeToggle from './ThemeToggle'
 import { useTheme } from '@/contexts/ThemeContext'
 import { usePreferencesStore, useJourneyStore } from '@/stores'
 import MvrStatusBadge from './MvrStatusBadge'
+import NotificationBell from './ui/NotificationBell'
 
 // Define the navigation page type
 type NavPage =
@@ -24,6 +25,7 @@ interface NavigationProps {
   onStatusClick?: () => void
   onNavigate?: (page: NavPage) => void
   mvrWalletAddress?: string | null
+  walletAddress?: string | null
   tHasUnread?: boolean
   onTClick?: () => void
   /** StormChain token balance for drivers - shown in nav */
@@ -38,6 +40,7 @@ export default function Navigation({
   onStatusClick,
   onNavigate,
   mvrWalletAddress,
+  walletAddress,
   tHasUnread = false,
   onTClick,
   stormTokens = 0,
@@ -163,6 +166,11 @@ export default function Navigation({
 
               {/* AvA Assistant Indicator (Dynamic Island) and Theme Toggle - Right */}
               <div className='flex-shrink-0 flex justify-end items-center gap-2'>
+                {/* Notification Bell */}
+                {isAuthenticated && walletAddress && (
+                  <NotificationBell walletAddress={walletAddress} />
+                )}
+
                 {/* AvA Assistant Dynamic Island */}
                 {isAuthenticated && onTClick && (
                   <button

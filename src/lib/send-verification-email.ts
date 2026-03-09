@@ -1,10 +1,11 @@
 import { Resend } from 'resend'
+import { buildEmail, detailsBox, detailRow, infoBox, fallbackLink } from './email-template'
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null
 
-const FROM = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev'
+const FROM = process.env.RESEND_FROM_EMAIL ?? 'stormchain@verify.stormchain.ai'
 
 export interface SendVerificationEmailParams {
   to: string
@@ -18,7 +19,7 @@ export interface SendVerificationEmailParams {
 
 /**
  * Sends the employment verification request email to the previous employer.
- * No-op if RESEND_API_KEY is not set (logs and returns).
+ * No-op if RESEND_API_KEY is not set.
  */
 export async function sendVerificationEmail(
   params: SendVerificationEmailParams
@@ -40,29 +41,41 @@ export async function sendVerificationEmail(
 
   const dateRange =
     claimedStartDate || claimedEndDate
-      ? [claimedStartDate, claimedEndDate].filter(Boolean).join(' – ') || ''
-      : ''
+      ? [claimedStartDate, claimedEndDate].filter(Boolean).join(' – ')
+      : null
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: system-ui, sans-serif; line-height: 1.5; color: #333; max-width: 560px;">
-  <p>Hello${previousEmployerName ? ` at ${previousEmployerName}` : ''},</p>
-  <p>A former employee has requested employment verification through Storm Chain.</p>
-  <p><strong>Details they provided:</strong></p>
-  <ul>
-    <li>Position: ${claimedPosition}</li>
-    <li>Company: ${claimedCompanyName}</li>
-    ${dateRange ? `<li>Dates: ${dateRange}</li>` : ''}
-  </ul>
-  <p>Please confirm or correct this information by clicking the link below (valid for 30 days):</p>
-  <p><a href="${verificationLink}" style="display: inline-block; padding: 10px 20px; background: #0d9488; color: white; text-decoration: none; border-radius: 6px;">Verify employment</a></p>
-  <p style="color: #666; font-size: 14px;">If you did not expect this request, you can ignore this email.</p>
-  <p style="color: #666; font-size: 14px;">— Storm Chain</p>
-</body>
-</html>
-`.trim()
+  const bodyHtml = `
+    <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
+      A former employee has listed <strong>${claimedCompanyName}</strong> on their StormChain career profile and
+      requested that we verify their employment history with you.
+    </p>
+    ${detailsBox(`
+      <p style="margin:0 0 12px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;">Employment Details Provided</p>
+      ${detailRow('Position', claimedPosition)}
+      ${detailRow('Company', claimedCompanyName)}
+      ${dateRange ? detailRow('Dates', dateRange) : ''}
+    `)}
+    <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
+      Please click the button below to confirm or correct this information.
+      The link is valid for <strong>30 days</strong>.
+    </p>
+    ${infoBox(`<p style="margin:0;font-size:13px;color:#0f766e;line-height:1.5;">
+      <strong>You are not required to respond.</strong> If you choose not to respond, the
+      verification request will simply expire. Your response is kept confidential.
+    </p>`)}
+    ${fallbackLink(verificationLink)}
+  `
+
+  const html = buildEmail({
+    preheader: `Employment verification request for ${claimedPosition} at ${claimedCompanyName}`,
+    headerEyebrow: 'Employment Verification',
+    headerTitle: `Verification Request: ${claimedCompanyName}`,
+    greeting: `Hello${previousEmployerName ? ` at ${previousEmployerName}` : ''},`,
+    bodyHtml,
+    ctaLabel: 'Verify Employment',
+    ctaUrl: verificationLink,
+    footerNote: `This request was sent through StormChain on behalf of a former employee. If you weren't expecting this, you can safely ignore it.`,
+  })
 
   try {
     console.log('[VERIFICATION EMAIL] Sending to:', to, 'from:', FROM)

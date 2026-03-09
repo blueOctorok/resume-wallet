@@ -1,10 +1,11 @@
 import { Resend } from 'resend'
+import { buildEmail, detailsBox, detailRow, infoBox } from './email-template'
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null
 
-const FROM = process.env.RESEND_FROM_EMAIL ?? 'noreply@verify.stormchain.ai'
+const FROM = process.env.RESEND_FROM_EMAIL ?? 'stormchain@verify.stormchain.ai'
 const ADMIN_EMAILS = process.env.ADMIN_NOTIFICATION_EMAILS?.split(',').map(e => e.trim()) || []
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://stormchain.ai'
 
@@ -24,9 +25,18 @@ export interface CandidateRequestNotificationParams {
   message?: string | null
 }
 
+export interface ApplicationStatusNotificationParams {
+  candidateEmail: string
+  candidateName: string
+  companyName: string
+  jobTitle: string
+  newStatus: 'under_review' | 'interview' | 'offer' | 'hired' | 'rejected'
+}
+
+// ─── Admin: New Company ───────────────────────────────────────────────────────
+
 /**
  * Notifies admins when a new company is registered.
- * Skips if no admin emails configured or Resend not set up.
  */
 export async function sendNewCompanyNotification(
   params: NewCompanyNotificationParams
@@ -35,7 +45,6 @@ export async function sendNewCompanyNotification(
     console.warn('[ADMIN NOTIFICATION] RESEND_API_KEY not set, skipping send')
     return { ok: false, error: 'Email not configured' }
   }
-
   if (ADMIN_EMAILS.length === 0) {
     console.warn('[ADMIN NOTIFICATION] No ADMIN_NOTIFICATION_EMAILS configured')
     return { ok: false, error: 'No admin emails configured' }
@@ -43,50 +52,41 @@ export async function sendNewCompanyNotification(
 
   const { companyName, ownerEmail, ownerWallet, dotNumber } = params
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: system-ui, sans-serif; line-height: 1.5; color: #333; max-width: 560px;">
-  <h2 style="color: #0d9488; margin-bottom: 16px;">New Company Registered</h2>
-  
-  <p>A new employer company has been registered on StormChain:</p>
-  
-  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
-    <p style="margin: 0 0 8px;"><strong>Company:</strong> ${companyName}</p>
-    <p style="margin: 0 0 8px;"><strong>Owner Email:</strong> ${ownerEmail}</p>
-    <p style="margin: 0 0 8px;"><strong>Wallet:</strong> <code style="font-size: 12px;">${ownerWallet}</code></p>
-    ${dotNumber ? `<p style="margin: 0;"><strong>DOT Number:</strong> ${dotNumber}</p>` : ''}
-  </div>
-  
-  <p>
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://stormchain.ai'}/admin" 
-       style="display: inline-block; padding: 10px 20px; background: #0d9488; color: white; text-decoration: none; border-radius: 6px;">
-      View in Admin Panel
-    </a>
-  </p>
-  
-  <p style="color: #666; font-size: 14px; margin-top: 24px;">— StormChain System</p>
-</body>
-</html>
-`.trim()
+  const bodyHtml = `
+    <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
+      A new employer company has been registered and is pending review.
+    </p>
+    ${detailsBox(`
+      <p style="margin:0 0 12px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;">Company Details</p>
+      ${detailRow('Company Name', companyName)}
+      ${detailRow('Owner Email', ownerEmail)}
+      ${detailRow('Wallet', `<code style="font-size:12px;background:#f1f5f9;padding:2px 6px;border-radius:4px;">${ownerWallet.slice(0, 10)}...${ownerWallet.slice(-6)}</code>`)}
+      ${dotNumber ? detailRow('DOT Number', dotNumber) : ''}
+    `)}
+  `
+
+  const html = buildEmail({
+    preheader: `New company registered: ${companyName}`,
+    headerEyebrow: 'Admin Alert',
+    headerTitle: `New Company: ${companyName}`,
+    bodyHtml,
+    ctaLabel: 'Review in Admin Panel',
+    ctaUrl: `${APP_URL}/admin`,
+    footerNote: 'This is an automated notification from StormChain admin systems.',
+  })
 
   try {
-    console.log('[ADMIN NOTIFICATION] Sending new company notification to:', ADMIN_EMAILS)
-    
     const { data, error } = await resend.emails.send({
       from: FROM,
       to: ADMIN_EMAILS,
-      subject: `[StormChain] New Company: ${companyName}`,
+      subject: `[StormChain Admin] New Company: ${companyName}`,
       html,
     })
-    
     if (error) {
       console.error('[ADMIN NOTIFICATION] Resend error:', error)
       return { ok: false, error: error.message }
     }
-    
-    console.log('[ADMIN NOTIFICATION] Sent successfully. Resend id:', data?.id)
+    console.log('[ADMIN NOTIFICATION] New company email sent. Resend id:', data?.id)
     return { ok: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
@@ -95,15 +95,23 @@ export async function sendNewCompanyNotification(
   }
 }
 
-/**
- * Human-readable request type labels
- */
+// ─── Candidate: Employer Request ──────────────────────────────────────────────
+
 const REQUEST_TYPE_LABELS: Record<string, string> = {
-  mvr_order: 'Motor Vehicle Record (MVR)',
+  mvr_order: 'Background Check & MVR',
   document_upload: 'Document Upload',
   verification: 'Employment Verification',
   profile_completion: 'Profile Completion',
-  custom: 'Request',
+  custom: 'New Request',
+}
+
+const REQUEST_ACTION_TEXT: Record<string, (params: CandidateRequestNotificationParams) => string> = {
+  mvr_order: () =>
+    'They would like to order your Motor Vehicle Record (MVR). This will be added to your profile and can increase your hiring potential.',
+  document_upload: (p) => `They are requesting you upload your ${p.documentType || 'document'}.`,
+  verification: () => 'They are requesting employment verification for your work history.',
+  profile_completion: () => 'They are requesting you complete additional sections of your profile.',
+  custom: (p) => p.message || 'They have a request for you.',
 }
 
 /**
@@ -117,84 +125,48 @@ export async function sendCandidateRequestNotification(
     return { ok: false, error: 'Email not configured' }
   }
 
-  const { candidateEmail, candidateName, companyName, requestType, documentType, message } = params
-  
+  const { candidateEmail, candidateName, companyName, requestType, message } = params
   const requestLabel = REQUEST_TYPE_LABELS[requestType] || 'Request'
+  const actionText = REQUEST_ACTION_TEXT[requestType]?.(params) || ''
   const firstName = candidateName.split(' ')[0] || 'there'
 
-  // Build action description based on request type
-  let actionText = ''
-  switch (requestType) {
-    case 'mvr_order':
-      actionText = 'They would like to order your Motor Vehicle Record (MVR). This MVR will be added to your profile and visible to all employers, increasing your hiring potential.'
-      break
-    case 'document_upload':
-      actionText = `They are requesting you upload your ${documentType || 'document'}.`
-      break
-    case 'verification':
-      actionText = 'They are requesting employment verification for your work history.'
-      break
-    case 'profile_completion':
-      actionText = 'They are requesting you complete additional sections of your profile.'
-      break
-    case 'custom':
-      actionText = message || 'They have a request for you.'
-      break
-  }
+  const bodyHtml = `
+    <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
+      <strong>${companyName}</strong> is interested in your profile and has sent a new request.
+    </p>
+    ${infoBox(`
+      <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#0f766e;">${requestLabel}</p>
+      <p style="margin:0;font-size:14px;color:#334155;line-height:1.6;">${actionText}</p>
+      ${message && requestType !== 'custom' ? `<p style="margin:10px 0 0;font-size:13px;font-style:italic;color:#64748b;">"${message}"</p>` : ''}
+    `)}
+    <p style="margin:0 0 4px;color:#64748b;font-size:14px;line-height:1.6;">
+      Log in to your StormChain account to view and respond to this request.
+    </p>
+  `
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: system-ui, sans-serif; line-height: 1.6; color: #333; max-width: 560px; margin: 0 auto; padding: 20px;">
-  <div style="text-align: center; margin-bottom: 24px;">
-    <h1 style="color: #0d9488; margin: 0; font-size: 24px;">StormChain</h1>
-  </div>
-  
-  <h2 style="color: #1f2937; margin-bottom: 16px;">Hi ${firstName},</h2>
-  
-  <p>Great news! <strong>${companyName}</strong> is interested in you and has sent a request.</p>
-  
-  <div style="background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 8px; padding: 16px; margin: 20px 0;">
-    <p style="margin: 0 0 8px; font-weight: 600; color: #0d9488;">${requestLabel}</p>
-    <p style="margin: 0; color: #374151;">${actionText}</p>
-    ${message && requestType !== 'custom' ? `<p style="margin: 12px 0 0; font-style: italic; color: #6b7280;">"${message}"</p>` : ''}
-  </div>
-  
-  <p>Log in to your StormChain account to view and respond to this request.</p>
-  
-  <div style="text-align: center; margin: 24px 0;">
-    <a href="${APP_URL}" 
-       style="display: inline-block; padding: 12px 32px; background: #0d9488; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
-      View Request
-    </a>
-  </div>
-  
-  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
-  
-  <p style="color: #6b7280; font-size: 13px; margin: 0;">
-    You're receiving this because an employer on StormChain is interested in your profile.
-    <br>If you have questions, reply to this email.
-  </p>
-</body>
-</html>
-`.trim()
+  const html = buildEmail({
+    preheader: `${companyName} has a new request for you on StormChain`,
+    headerEyebrow: companyName,
+    headerTitle: `You have a new request`,
+    greeting: `Hi ${firstName},`,
+    bodyHtml,
+    ctaLabel: 'View Request',
+    ctaUrl: APP_URL,
+    footerNote: `You're receiving this because an employer on StormChain is interested in your profile. Reply to this email with any questions.`,
+  })
 
   try {
     console.log('[CANDIDATE NOTIFICATION] Sending request notification to:', candidateEmail)
-    
     const { data, error } = await resend.emails.send({
       from: FROM,
       to: candidateEmail,
       subject: `${companyName} has a request for you on StormChain`,
       html,
     })
-    
     if (error) {
       console.error('[CANDIDATE NOTIFICATION] Resend error:', error)
       return { ok: false, error: error.message }
     }
-    
     console.log('[CANDIDATE NOTIFICATION] Sent successfully. Resend id:', data?.id)
     return { ok: true }
   } catch (err) {
@@ -204,47 +176,43 @@ export async function sendCandidateRequestNotification(
   }
 }
 
-export interface ApplicationStatusNotificationParams {
-  candidateEmail: string
-  candidateName: string
-  companyName: string
-  jobTitle: string
-  newStatus: 'under_review' | 'interview' | 'offer' | 'hired' | 'rejected'
-}
+// ─── Candidate: Application Status ───────────────────────────────────────────
 
-/**
- * Status-specific messaging for application updates
- */
-const STATUS_MESSAGES: Record<string, { subject: string; heading: string; body: string; color: string }> = {
+const STATUS_CONFIG: Record<string, {
+  subject: string
+  heading: string
+  body: string
+  accentColor: string
+}> = {
   under_review: {
     subject: 'Your application is being reviewed',
     heading: 'Application Under Review',
-    body: 'Your application is now being reviewed by the hiring team. We\'ll keep you updated on any progress.',
-    color: '#eab308', // yellow
+    body: "Your application is now being reviewed by the hiring team. We'll keep you updated as things progress.",
+    accentColor: '#d97706',
   },
   interview: {
-    subject: 'Interview requested!',
-    heading: 'Interview Requested',
-    body: 'Great news! The employer would like to schedule an interview with you. They may reach out soon with more details.',
-    color: '#a855f7', // purple
+    subject: 'Interview requested',
+    heading: 'Interview Requested 🎉',
+    body: "Great news — the employer would like to schedule an interview with you. They'll be in touch with more details soon.",
+    accentColor: '#7c3aed',
   },
   offer: {
-    subject: 'You have a job offer!',
-    heading: 'Job Offer Extended',
+    subject: 'You have a job offer',
+    heading: 'Job Offer Extended 🎉',
     body: 'Congratulations! The employer has extended a job offer to you. Log in to view the details and next steps.',
-    color: '#14b8a6', // teal
+    accentColor: '#0d9488',
   },
   hired: {
     subject: 'Congratulations on your new job!',
-    heading: 'You\'re Hired!',
-    body: 'Congratulations! You\'ve been officially hired. The employer will be in touch with onboarding details.',
-    color: '#22c55e', // green
+    heading: "You're Hired! 🎉",
+    body: "Congratulations! You've been officially hired. The employer will be in touch with onboarding details.",
+    accentColor: '#16a34a',
   },
   rejected: {
-    subject: 'Application update',
+    subject: 'An update on your application',
     heading: 'Application Status Update',
-    body: 'Thank you for your interest in this position. Unfortunately, the employer has decided to move forward with other candidates. Don\'t be discouraged - keep applying!',
-    color: '#6b7280', // gray
+    body: "Thank you for your interest in this position. The employer has decided to move forward with other candidates at this time. Don't be discouraged — keep building your profile and applying.",
+    accentColor: '#64748b',
   },
 }
 
@@ -260,65 +228,50 @@ export async function sendApplicationStatusNotification(
   }
 
   const { candidateEmail, candidateName, companyName, jobTitle, newStatus } = params
-  const statusConfig = STATUS_MESSAGES[newStatus]
-  
-  if (!statusConfig) {
+  const config = STATUS_CONFIG[newStatus]
+
+  if (!config) {
     console.warn(`[STATUS NOTIFICATION] Unknown status: ${newStatus}`)
     return { ok: false, error: `Unknown status: ${newStatus}` }
   }
 
   const firstName = candidateName.split(' ')[0] || 'there'
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: system-ui, sans-serif; line-height: 1.6; color: #333; max-width: 560px; margin: 0 auto; padding: 20px;">
-  <div style="text-align: center; margin-bottom: 24px;">
-    <h1 style="color: #0d9488; margin: 0; font-size: 24px;">StormChain</h1>
-  </div>
-  
-  <h2 style="color: #1f2937; margin-bottom: 16px;">Hi ${firstName},</h2>
-  
-  <p>There's an update on your application for <strong>${jobTitle}</strong> at <strong>${companyName}</strong>.</p>
-  
-  <div style="background: ${statusConfig.color}15; border: 1px solid ${statusConfig.color}40; border-radius: 8px; padding: 16px; margin: 20px 0;">
-    <p style="margin: 0 0 8px; font-weight: 600; color: ${statusConfig.color};">${statusConfig.heading}</p>
-    <p style="margin: 0; color: #374151;">${statusConfig.body}</p>
-  </div>
-  
-  <div style="text-align: center; margin: 24px 0;">
-    <a href="${APP_URL}" 
-       style="display: inline-block; padding: 12px 32px; background: #0d9488; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
-      View Application
-    </a>
-  </div>
-  
-  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
-  
-  <p style="color: #6b7280; font-size: 13px; margin: 0;">
-    You're receiving this because you applied to a job on StormChain.
-    <br>If you have questions, reply to this email.
-  </p>
-</body>
-</html>
-`.trim()
+  const bodyHtml = `
+    <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
+      There's an update on your application for <strong>${jobTitle}</strong> at <strong>${companyName}</strong>.
+    </p>
+    ${infoBox(`
+      <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:${config.accentColor};">${config.heading}</p>
+      <p style="margin:0;font-size:14px;color:#334155;line-height:1.6;">${config.body}</p>
+    `, config.accentColor)}
+    <p style="margin:0;color:#64748b;font-size:14px;">Log in to your StormChain account to view your full application status.</p>
+  `
+
+  const html = buildEmail({
+    preheader: `${config.subject} — ${companyName}`,
+    headerEyebrow: companyName,
+    headerTitle: config.heading,
+    greeting: `Hi ${firstName},`,
+    bodyHtml,
+    ctaLabel: 'View Application',
+    ctaUrl: APP_URL,
+    accentColor: config.accentColor,
+    footerNote: `You're receiving this because you applied to a job on StormChain. Reply to this email with any questions.`,
+  })
 
   try {
     console.log(`[STATUS NOTIFICATION] Sending ${newStatus} notification to:`, candidateEmail)
-    
     const { data, error } = await resend.emails.send({
       from: FROM,
       to: candidateEmail,
-      subject: `[${companyName}] ${statusConfig.subject}`,
+      subject: `[${companyName}] ${config.subject}`,
       html,
     })
-    
     if (error) {
       console.error('[STATUS NOTIFICATION] Resend error:', error)
       return { ok: false, error: error.message }
     }
-    
     console.log('[STATUS NOTIFICATION] Sent successfully. Resend id:', data?.id)
     return { ok: true }
   } catch (err) {

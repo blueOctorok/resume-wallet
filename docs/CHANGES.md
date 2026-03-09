@@ -4,6 +4,71 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 🔔 **Notification System + Consistent Email Templates** (March 2026)
+
+### What Was Added
+
+**Email**
+- Created `src/lib/email-template.ts` — a single shared HTML email builder (`buildEmail`, `infoBox`, `detailsBox`, `detailRow`, `checklistItem`, `fallbackLink`) used by all outgoing emails.
+- Rewrote all 4 email sender files (`send-verification-email.ts`, `send-admin-notification.ts`, `send-team-invite-email.ts`, `send-invite-email.ts`) to use the shared template. Every email now has the same: teal gradient header band, white card, consistent typography, teal CTA button, branded footer.
+- Fixed "Storm Chain" → "StormChain" everywhere in email copy.
+- Changed all `FROM` fallback defaults from `onboarding@resend.dev` / `noreply@verify.stormchain.ai` to `stormchain@verify.stormchain.ai`. Update the `RESEND_FROM_EMAIL` env var in production to match.
+
+**In-App Notification System**
+- Added `supabase/migrations/026_notifications.sql`: `notifications` table with `user_id`, `type`, `title`, `body`, `data` (jsonb), `action_url`, `read`, `created_at`. RLS restricts each user to only their own rows. Index on `(user_id, read, created_at DESC)` for fast inbox queries.
+- Added `src/lib/create-notification.ts`: `createNotification()` server-side helper that API routes call fire-and-forget alongside emails.
+- Added `GET /api/notifications` and `PATCH /api/notifications` (mark all read).
+- Added `PATCH /api/notifications/[id]` (mark single read with ownership check).
+- Added `src/stores/notification-store.ts`: `useNotificationStore` Zustand store with `fetchNotifications`, `markRead`, `markAllRead`, `addNotification`. Includes optimistic updates with rollback.
+- Added `src/components/ui/NotificationBell.tsx`: bell button with unread count badge, dropdown with list of notifications sorted unread-first. Polls every 60 seconds. Supports per-item mark-read on click, "mark all read" in header.
+- Wired `NotificationBell` into `Navigation.tsx` (new `walletAddress` prop passed from `page.tsx`).
+
+**Notifications wired into API routes:**
+- `POST /api/employer/talent/[userId]/request` → candidate notified of new employer request.
+- `PATCH /api/employer/applications/[id]/status` → candidate notified of application status change.
+- `POST /api/candidate/bgcheck-consent` → employer notified when driver signs consent; driver notified that consent was recorded.
+
+---
+
+## 🪟 **Modal Primitive + Hiring Pipeline Modal Fixes** (March 2026)
+
+### Problems
+
+1. Clicking a candidate card in the kanban scrolled the background page and let the nav overlay the modal when scrolled.
+2. Clicking "Verify Employment History" inside the candidate card opened a modal behind it (z-50 vs z-[100]).
+
+### Root Causes
+
+- No body scroll-lock: `document.body.style.overflow` was never set to `hidden`.
+- The verify modal used `z-50` while the candidate card used `z-[100]`, so the verify modal rendered behind.
+- Both modals were plain `fixed` divs inline in JSX with no shared primitive, so these bugs were guaranteed to recur.
+
+### Solution
+
+**New component: `src/components/ui/Modal.tsx`**
+
+- Renders via `ReactDOM.createPortal` to `document.body`, escaping all CSS stacking contexts.
+- Locks `document.body.style.overflow = 'hidden'` on mount; restores on unmount.
+- Handles nested modals via an `openModalCount` counter — the lock only lifts when the last modal closes.
+- Closes on Escape key.
+- Accepts a `zIndex` prop (default 1000) so callers declare stacking order explicitly.
+- Ships a `ModalHeader` named export — sticky header with title, subtitle, close button.
+
+**Updated: `src/components/EmployerHub.tsx`**
+
+- All three `DetailModal` usages replaced with `<Modal>` + `<ModalHeader>`.
+- Verify employment modal: `z-50` → `zIndex={1100}` so it always renders above the candidate card.
+- Removed the old `DetailModal` inline function entirely.
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/ui/Modal.tsx` | New reusable portal modal with scroll-lock |
+| `src/components/EmployerHub.tsx` | All modals migrated to Modal primitive |
+
+---
+
 ## 🐛 **Bug Fix: MVR Request Email + Stuck Pending State** (March 2026)
 
 ### What was wrong

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { sendApplicationStatusNotification } from '@/lib/send-admin-notification'
+import { createNotification } from '@/lib/create-notification'
 
 const VALID_STATUSES = [
   'submitted',
@@ -163,31 +164,58 @@ export async function PATCH(
 
     console.log(`[APPLICATION STATUS] Updated ${applicationId} from ${application.status} to ${newStatus}`)
 
-    // Send email notification for relevant status changes
+    // Send email + in-app notifications for relevant status changes
     if (NOTIFICATION_STATUSES.includes(newStatus as typeof NOTIFICATION_STATUSES[number])) {
-      // Get candidate info
       const { data: candidate } = await supabase
         .from('users')
         .select('email, name')
         .eq('id', application.applicant_user_id)
         .single()
 
+      let candidateName = candidate?.name
+      if (!candidateName) {
+        const { data: driverProfile } = await supabase
+          .from('driver_profiles')
+          .select('full_name')
+          .eq('user_id', application.applicant_user_id)
+          .single()
+        candidateName = driverProfile?.full_name || 'Candidate'
+      }
+
+      const statusTitles: Record<string, string> = {
+        under_review: 'Your application is under review',
+        interview:    'Interview requested!',
+        offer:        'You have a job offer! 🎉',
+        hired:        "You're hired! 🎉",
+        rejected:     'Application status update',
+      }
+      const statusBodies: Record<string, string> = {
+        under_review: `${jobPosting.companies.name} is reviewing your application for ${jobPosting.title}.`,
+        interview:    `${jobPosting.companies.name} would like to interview you for ${jobPosting.title}.`,
+        offer:        `${jobPosting.companies.name} has extended a job offer for ${jobPosting.title}.`,
+        hired:        `Congratulations! ${jobPosting.companies.name} has hired you for ${jobPosting.title}.`,
+        rejected:     `Your application for ${jobPosting.title} at ${jobPosting.companies.name} was not selected.`,
+      }
+
+      // In-app notification
+      createNotification({
+        userId: application.applicant_user_id,
+        type: 'application_status',
+        title: statusTitles[newStatus] || 'Application update',
+        body: statusBodies[newStatus] || `Your application status was updated to ${newStatus}.`,
+        data: {
+          applicationId,
+          companyName: jobPosting.companies.name,
+          jobTitle: jobPosting.title,
+          status: newStatus,
+        },
+      }).catch(err => console.error('[APPLICATION STATUS] Notification error:', err))
+
+      // Email notification
       if (candidate?.email) {
-        // Get candidate name from driver/developer profile if not on user
-        let candidateName = candidate.name
-        if (!candidateName) {
-          const { data: driverProfile } = await supabase
-            .from('driver_profiles')
-            .select('full_name')
-            .eq('user_id', application.applicant_user_id)
-            .single()
-
-          candidateName = driverProfile?.full_name || 'Candidate'
-        }
-
         sendApplicationStatusNotification({
           candidateEmail: candidate.email,
-          candidateName,
+          candidateName: candidateName ?? 'Candidate',
           companyName: jobPosting.companies.name,
           jobTitle: jobPosting.title,
           newStatus: newStatus as 'under_review' | 'interview' | 'offer' | 'hired' | 'rejected',

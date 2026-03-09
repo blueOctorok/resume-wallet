@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { createNotification } from '@/lib/create-notification'
 
 /**
  * POST /api/candidate/bgcheck-consent
@@ -90,6 +91,40 @@ export async function POST(request: NextRequest) {
     console.error('[BGCHECK CONSENT] Status update error:', updateError)
     // Consent was stored — this is non-fatal, log and continue
   }
+
+  // Notify the employer who requested the background check
+  const { data: requestingUser } = await supabase
+    .from('candidate_requests')
+    .select('requested_by_user_id, candidate_user_id')
+    .eq('id', requestId)
+    .single()
+
+  if (requestingUser?.requested_by_user_id) {
+    const { data: driver } = await supabase
+      .from('users')
+      .select('name')
+      .eq('id', requestingUser.candidate_user_id)
+      .single()
+
+    const driverName = driver?.name || 'A candidate'
+
+    createNotification({
+      userId: requestingUser.requested_by_user_id,
+      type: 'consent_signed',
+      title: 'Background check consent signed',
+      body: `${driverName} has signed the background check authorization for ${companyName || 'your company'}.`,
+      data: { requestId, driverUserId: user.id, companyName },
+    }).catch(err => console.error('[BGCHECK CONSENT] Employer notification error:', err))
+  }
+
+  // Notify the driver that their consent was recorded
+  createNotification({
+    userId: user.id,
+    type: 'consent_signed',
+    title: 'Background check authorization sent',
+    body: `Your signed authorization for ${companyName || 'the employer'} has been submitted successfully.`,
+    data: { requestId, companyName },
+  }).catch(err => console.error('[BGCHECK CONSENT] Driver notification error:', err))
 
   return NextResponse.json({ success: true })
 }

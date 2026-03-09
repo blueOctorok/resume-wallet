@@ -7,6 +7,7 @@ import EmployerVerificationSection from './verification/EmployerVerificationSect
 import ApplicantKanban, { type KanbanApplicant } from './employer/ApplicantKanban'
 import CandidateNotesPanel from './employer/CandidateNotesPanel'
 import CandidateOutreach from './employer/CandidateOutreach'
+import Modal, { ModalHeader } from '@/components/ui/Modal'
 import {
   Briefcase,
   Users,
@@ -702,166 +703,158 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         <CandidateOutreach walletAddress={walletAddress} />
       </div>
 
-      {/* Detail Modals */}
+      {/* Candidate card modal — z-index 1000 */}
       {selectedApplicant && (
-        <DetailModal
-          title={selectedApplicant.applicantName || (selectedApplicant as any).driverName}
-          subtitle={`Applied for ${selectedApplicant.jobTitle}`}
+        <Modal
           onClose={() => setSelectedApplicant(null)}
-          theme={theme}
+          maxWidth="max-w-4xl"
+          zIndex={1000}
         >
-          <div className="grid md:grid-cols-3 gap-4">
-            {/* Main Applicant Details */}
+          <ModalHeader
+            title={selectedApplicant.applicantName || (selectedApplicant as { driverName?: string }).driverName || ''}
+            subtitle={`Applied for ${selectedApplicant.jobTitle}`}
+            onClose={() => setSelectedApplicant(null)}
+          />
+          <div className="p-4 grid md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
               <ApplicantDetailContent
                 applicant={selectedApplicant}
                 theme={theme}
                 walletAddress={walletAddress}
                 onOrderMvr={() => {
-                  // TODO: Implement MVR ordering
                   console.log('Order MVR for', selectedApplicant.applicantUserId)
                 }}
                 onVerifyEmployment={() => {
-                  openVerifyEmploymentModal(selectedApplicant.applicantUserId || (selectedApplicant as any).driverUserId)
+                  openVerifyEmploymentModal(
+                    selectedApplicant.applicantUserId ||
+                    (selectedApplicant as { driverUserId?: string }).driverUserId ||
+                    ''
+                  )
                 }}
                 onStatusChange={handleStatusChange}
               />
             </div>
-            {/* Notes Panel */}
             <div className="md:col-span-1">
               <CandidateNotesPanel
-                candidateUserId={selectedApplicant.applicantUserId || (selectedApplicant as any).driverUserId}
+                candidateUserId={
+                  selectedApplicant.applicantUserId ||
+                  (selectedApplicant as { driverUserId?: string }).driverUserId ||
+                  ''
+                }
                 applicationId={selectedApplicant.applicationId}
                 walletAddress={walletAddress}
-                candidateName={selectedApplicant.applicantName || (selectedApplicant as any).driverName}
+                candidateName={
+                  selectedApplicant.applicantName ||
+                  (selectedApplicant as { driverName?: string }).driverName ||
+                  ''
+                }
               />
             </div>
           </div>
-        </DetailModal>
+        </Modal>
       )}
 
+      {/* Job detail modal — z-index 1000 */}
       {selectedJob && (
-        <DetailModal
-          title={selectedJob.title}
-          subtitle={selectedJob.isActive ? 'Active' : 'Inactive'}
-          onClose={() => {
-            setSelectedJob(null)
-            setShowDeleteConfirm(false)
-          }}
-          theme={theme}
+        <Modal
+          onClose={() => { setSelectedJob(null); setShowDeleteConfirm(false) }}
+          maxWidth="max-w-lg"
+          zIndex={1000}
         >
-          <JobDetailContent job={selectedJob} theme={theme} />
-          
-          {/* Delete Confirmation or Delete Button */}
-          <div className={`mt-6 pt-4 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-            {showDeleteConfirm ? (
-              <div className="space-y-3">
-                <p className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
-                  Are you sure you want to permanently delete this job posting? This cannot be undone.
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowDeleteConfirm(false)}
-                    className={`flex-1 px-4 py-2 rounded-lg font-medium text-sm ${
-                      theme === 'dark'
-                        ? 'bg-gray-700 text-white hover:bg-gray-600'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => handleDeleteJob(selectedJob.id)}
-                    disabled={deletingJobId === selectedJob.id}
-                    className="flex-1 px-4 py-2 rounded-lg font-medium text-sm bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {deletingJobId === selectedJob.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="w-4 h-4" />
-                    )}
-                    Confirm Delete
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm ${
-                  theme === 'dark'
-                    ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
-                    : 'bg-red-50 text-red-600 hover:bg-red-100'
-                }`}
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete Job Posting
-              </button>
-            )}
-          </div>
-        </DetailModal>
-      )}
-
-      {selectedMvr && (
-        <DetailModal
-          title={`MVR - ${selectedMvr.driverName}`}
-          subtitle={selectedMvr.licenseState}
-          onClose={() => setSelectedMvr(null)}
-          theme={theme}
-        >
-          <MvrDetailContent mvr={selectedMvr} theme={theme} />
-        </DetailModal>
-      )}
-
-      {/* Employment Verification Modal */}
-      {showVerifyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-black/50" 
-            onClick={() => setShowVerifyModal(false)} 
+          <ModalHeader
+            title={selectedJob.title}
+            subtitle={selectedJob.isActive ? 'Active' : 'Inactive'}
+            onClose={() => { setSelectedJob(null); setShowDeleteConfirm(false) }}
           />
-          <div className={`relative w-full max-w-lg rounded-2xl p-6 ${
-            theme === 'dark'
-              ? 'bg-gray-900 border border-gray-700'
-              : 'bg-white shadow-2xl'
-          }`}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className={`text-lg font-semibold ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}>
-                Verify Employment History
-              </h3>
-              <button
-                onClick={() => setShowVerifyModal(false)}
-                className={`p-1 rounded-lg ${
-                  theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
-                }`}
-              >
-                <X className={`w-5 h-5 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`} />
-              </button>
+          <div className="p-4">
+            <JobDetailContent job={selectedJob} theme={theme} />
+            <div className={`mt-6 pt-4 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+              {showDeleteConfirm ? (
+                <div className="space-y-3">
+                  <p className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+                    Are you sure you want to permanently delete this job posting? This cannot be undone.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className={`flex-1 px-4 py-2 rounded-lg font-medium text-sm ${
+                        theme === 'dark' ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleDeleteJob(selectedJob.id)}
+                      disabled={deletingJobId === selectedJob.id}
+                      className="flex-1 px-4 py-2 rounded-lg font-medium text-sm bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {deletingJobId === selectedJob.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      Confirm Delete
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm ${
+                    theme === 'dark' ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' : 'bg-red-50 text-red-600 hover:bg-red-100'
+                  }`}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete Job Posting
+                </button>
+              )}
             </div>
+          </div>
+        </Modal>
+      )}
 
-            <p className={`text-sm mb-4 ${
-              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-            }`}>
+      {/* MVR detail modal — z-index 1000 */}
+      {selectedMvr && (
+        <Modal
+          onClose={() => setSelectedMvr(null)}
+          maxWidth="max-w-lg"
+          zIndex={1000}
+        >
+          <ModalHeader
+            title={`MVR - ${selectedMvr.driverName}`}
+            subtitle={selectedMvr.licenseState}
+            onClose={() => setSelectedMvr(null)}
+          />
+          <div className="p-4">
+            <MvrDetailContent mvr={selectedMvr} theme={theme} />
+          </div>
+        </Modal>
+      )}
+
+      {/* Employment Verification Modal — z-index 1100 so it stacks ABOVE the candidate card */}
+      {showVerifyModal && (
+        <Modal
+          onClose={() => setShowVerifyModal(false)}
+          maxWidth="max-w-lg"
+          zIndex={1100}
+        >
+          <ModalHeader
+            title="Verify Employment History"
+            onClose={() => setShowVerifyModal(false)}
+          />
+          <div className="p-4">
+            <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
               Select an employment record to verify with the previous employer:
             </p>
 
             {loadingEmployments ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className={`w-8 h-8 animate-spin ${
-                  theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
-                }`} />
+                <Loader2 className={`w-8 h-8 animate-spin ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
               </div>
             ) : driverEmployments.length === 0 ? (
-              <div className={`text-center py-8 ${
-                theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-              }`}>
+              <div className={`text-center py-8 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
                 <Building2 className="w-12 h-12 mx-auto mb-2 opacity-50" />
                 <p>No employment history found for this driver</p>
               </div>
             ) : (
               <div className="space-y-3 max-h-80 overflow-y-auto">
-                {driverEmployments.map((emp: any) => (
+                {driverEmployments.map((emp: { id: string; companyName: string; position: string; startDate: string; endDate?: string }) => (
                   <button
                     key={emp.id}
                     onClick={() => initiateVerification(emp.id, emp)}
@@ -874,25 +867,17 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className={`font-medium ${
-                          theme === 'dark' ? 'text-white' : 'text-gray-900'
-                        }`}>
+                        <p className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                           {emp.companyName}
                         </p>
-                        <p className={`text-sm ${
-                          theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                        }`}>
+                        <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                           {emp.position}
                         </p>
-                        <p className={`text-xs mt-1 ${
-                          theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-                        }`}>
+                        <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
                           {emp.startDate} - {emp.endDate || 'Present'}
                         </p>
                       </div>
-                      <ChevronRight className={`w-5 h-5 ${
-                        theme === 'dark' ? 'text-gray-600' : 'text-gray-400'
-                      }`} />
+                      <ChevronRight className={`w-5 h-5 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
                     </div>
                   </button>
                 ))}
@@ -900,15 +885,13 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             )}
 
             {initiatingVerification && (
-              <div className={`mt-4 flex items-center justify-center gap-2 text-sm ${
-                theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
-              }`}>
+              <div className={`mt-4 flex items-center justify-center gap-2 text-sm ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`}>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Creating verification request...
               </div>
             )}
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   )
@@ -1244,62 +1227,6 @@ function StatusBadge({ status, theme }: { status: string; theme: string }) {
       {config.icon}
       {config.label}
     </span>
-  )
-}
-
-function DetailModal({
-  title,
-  subtitle,
-  onClose,
-  theme,
-  children
-}: {
-  title: string
-  subtitle?: string
-  onClose: () => void
-  theme: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className={`relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl ${
-        theme === 'dark'
-          ? 'bg-gray-900 border border-gray-700'
-          : 'bg-white shadow-2xl'
-      }`}>
-        {/* Header */}
-        <div className={`sticky top-0 flex items-center justify-between p-4 border-b ${
-          theme === 'dark' ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'
-        }`}>
-          <div>
-            <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              {title}
-            </h3>
-            {subtitle && (
-              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                {subtitle}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            className={`p-2 rounded-lg ${
-              theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-            }`}
-          >
-            <X className={`w-5 h-5 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`} />
-          </button>
-        </div>
-        {/* Content */}
-        <div className="p-4">
-          {children}
-        </div>
-      </div>
-    </div>
   )
 }
 
