@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import CareerCard, { type CareerCardData } from '@/components/CareerCard'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
+import MvrPaymentButton from '@/components/MvrPaymentButton'
 
 // Re-export for consumers that imported from here previously
 export type { CareerCardData }
@@ -707,14 +708,16 @@ function EmployerMvrOrderForm({
     dlState:    profile.cdl_state ?? profile.state ?? '',
   })
 
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError]     = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [submitting, setSubmitting]         = useState(false)
+  const [error, setError]                   = useState<string | null>(null)
+  const [success, setSuccess]               = useState(false)
+  const [paymentTxHash, setPaymentTxHash]   = useState<string | null>(null)
+  const [isPaymentComplete, setPaymentDone] = useState(false)
 
   const set = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(prev => ({ ...prev, [field]: e.target.value }))
 
-  const isValid = Boolean(
+  const isFormValid = Boolean(
     form.firstName && form.lastName && form.dob && form.ssn &&
     form.address && form.city && form.state && form.zip &&
     form.dlNumber && form.dlState
@@ -722,13 +725,17 @@ function EmployerMvrOrderForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!isPaymentComplete || !paymentTxHash) {
+      setError('Payment required before placing order')
+      return
+    }
     setSubmitting(true)
     setError(null)
     try {
       const res = await fetch('/api/employer/mvr/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
-        body: JSON.stringify({ candidateUserId, ...form }),
+        body: JSON.stringify({ candidateUserId, paymentTxHash, ...form }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to place order')
@@ -862,6 +869,35 @@ function EmployerMvrOrderForm({
             </div>
           </div>
 
+          {/* Payment — employer pays USDC at 0.5x Storm reward rate */}
+          <div className={`rounded-xl border p-4 space-y-3 ${isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'}`}>
+            <div className="flex items-center justify-between">
+              <p className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>MVR Order Payment</p>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-700'}`}>
+                Earn Storm at 0.5× rate
+              </span>
+            </div>
+            {isPaymentComplete ? (
+              <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-green-400' : 'text-green-700'}`}>
+                <CheckCircle className="w-4 h-4" />
+                Payment confirmed — ready to submit
+              </div>
+            ) : (
+              <MvrPaymentButton
+                userAddress={walletAddress}
+                userType="employer"
+                disabled={!isFormValid}
+                onPaymentSuccess={(txHash) => { setPaymentTxHash(txHash); setPaymentDone(true); setError(null) }}
+                onPaymentError={(msg) => setError(`Payment failed: ${msg}`)}
+              />
+            )}
+            {!isFormValid && !isPaymentComplete && (
+              <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                Complete all required fields above before paying.
+              </p>
+            )}
+          </div>
+
           {error && (
             <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${isDark ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -879,7 +915,7 @@ function EmployerMvrOrderForm({
             </button>
             <button
               type="submit"
-              disabled={!isValid || submitting}
+              disabled={!isFormValid || !isPaymentComplete || submitting}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Car className="w-4 h-4" />}

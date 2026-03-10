@@ -157,7 +157,7 @@ export async function POST(
       jobPosting = jp
     }
 
-    // Verify candidate exists and is a driver/developer
+    // Verify candidate exists
     const { data: candidate } = await supabase
       .from('users')
       .select('id, role, email, name')
@@ -168,9 +168,19 @@ export async function POST(
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
     }
 
-    if (!['driver', 'developer'].includes(candidate.role || '')) {
+    // Derive effective role from profile tables — not users.role.
+    // A test wallet that is also an employer will have role='employer' in users,
+    // but may still have a valid driver or developer profile.
+    const [{ data: driverProfile }, { data: devProfile }] = await Promise.all([
+      supabase.from('driver_profiles').select('id').eq('user_id', candidateUserId).single(),
+      supabase.from('developer_profiles').select('id').eq('user_id', candidateUserId).single(),
+    ])
+
+    const effectiveRole = driverProfile ? 'driver' : devProfile ? 'developer' : null
+
+    if (!effectiveRole) {
       return NextResponse.json(
-        { error: 'User is not a candidate (driver or developer)' },
+        { error: 'User is not a candidate (no driver or developer profile found)' },
         { status: 400 }
       )
     }
@@ -202,11 +212,11 @@ export async function POST(
       capturedAt: new Date().toISOString(),
       candidateName: candidate.name,
       candidateEmail: candidate.email,
-      candidateRole: candidate.role,
+      candidateRole: effectiveRole,
     }
 
     // Get driver profile if applicable
-    if (candidate.role === 'driver') {
+    if (effectiveRole === 'driver') {
       const { data: driverProfile } = await supabase
         .from('driver_profiles')
         .select('*')
@@ -252,7 +262,7 @@ export async function POST(
     }
 
     // Get developer profile if applicable
-    if (candidate.role === 'developer') {
+    if (effectiveRole === 'developer') {
       const { data: devProfile } = await supabase
         .from('developer_profiles')
         .select('*')

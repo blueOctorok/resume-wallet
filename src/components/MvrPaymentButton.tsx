@@ -24,13 +24,16 @@ interface MvrPaymentButtonProps {
   onPaymentSuccess?: (txHash: string) => void
   onPaymentError?: (error: string) => void
   disabled?: boolean
+  /** 'applicant' = 1x Storm reward, 'employer' = 0.5x. Defaults to 'applicant'. */
+  userType?: 'applicant' | 'employer'
 }
 
 export default function MvrPaymentButton({ 
   userAddress,
   onPaymentSuccess, 
   onPaymentError,
-  disabled = false 
+  disabled = false,
+  userType = 'applicant',
 }: MvrPaymentButtonProps) {
   const { isConnected, isInitializing } = useSignerStatus()
   const { client } = useSmartAccountClient({ type: 'LightAccount' })
@@ -180,6 +183,7 @@ export default function MvrPaymentButton({
             txHash,
             amountUsdc: config.priceUsdc,
             walletAddress: walletAddress,
+            userType,
           }),
         })
 

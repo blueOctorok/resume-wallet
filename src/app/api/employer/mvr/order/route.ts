@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const {
       candidateUserId,
+      paymentTxHash,
       dlNumber,
       dlState,
       firstName,
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Validate required fields
-    const missing = ['candidateUserId','dlNumber','dlState','firstName','lastName','dob','ssn','address','city','state','zip']
+    const missing = ['candidateUserId','paymentTxHash','dlNumber','dlState','firstName','lastName','dob','ssn','address','city','state','zip']
       .filter(f => !body[f])
     if (missing.length > 0) {
       return NextResponse.json({ error: 'Missing required fields', missing }, { status: 400 })
@@ -103,6 +104,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No company access' }, { status: 403 })
     }
 
+    // Validate the USDC payment was recorded before allowing the order.
+    // The payment is written to the payments table by MvrPaymentButton → /api/mvr/payment.
+    const truncatedTxHash = paymentTxHash.length > 66 ? paymentTxHash.substring(0, 66) : paymentTxHash
+    const { data: payment } = await supabase
+      .from('payments')
+      .select('id, status, user_id')
+      .eq('tx_hash', truncatedTxHash)
+      .eq('type', 'MVR_ORDER')
+      .maybeSingle()
+
+    if (!payment) {
+      return NextResponse.json({ error: 'Payment not found — complete USDC payment first' }, { status: 402 })
+    }
+    if (payment.status !== 'COMPLETED') {
+      return NextResponse.json({ error: 'Payment not yet confirmed' }, { status: 402 })
+    }
+
     // Verify the candidate exists and has signed the disclosure
     const { data: candidate } = await supabase
       .from('users')
@@ -116,10 +134,11 @@ export async function POST(request: NextRequest) {
 
     // Check for a signed bgcheck consent from this company for this candidate.
     // The driver must have signed before the employer can run an MVR.
+    // Note: the table uses driver_user_id, not candidate_user_id.
     const { data: consent } = await supabase
       .from('bgcheck_consents')
       .select('id')
-      .eq('candidate_user_id', candidateUserId)
+      .eq('driver_user_id', candidateUserId)
       .eq('company_id', companyId)
       .order('created_at', { ascending: false })
       .limit(1)

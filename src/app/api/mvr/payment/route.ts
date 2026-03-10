@@ -14,7 +14,7 @@ import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { txHash, amountUsdc, walletAddress } = body
+    const { txHash, amountUsdc, walletAddress, userType = 'applicant' } = body
 
     if (!txHash) {
       return NextResponse.json(
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
       if (!existingDistribution) {
         console.log('[MVR PAYMENT] ⛈️ STORM not yet distributed for existing payment, distributing now...')
         try {
-          await triggerStormReward(walletAddress, existingPayment.amount_usdc, existingPayment.id, 'MVR_ORDER')
+          await triggerStormReward(walletAddress, existingPayment.amount_usdc, existingPayment.id, 'MVR_ORDER', userType)
         } catch (stormError) {
           console.error('[MVR PAYMENT] STORM reward failed for existing payment (non-fatal):', stormError)
         }
@@ -155,11 +155,10 @@ export async function POST(request: NextRequest) {
       status: 'COMPLETED'
     })
 
-    // Distribute STORM rewards for this payment
+    // Distribute STORM rewards at the caller's rate (applicant = 1x, employer = 0.5x)
     // Must await in serverless - unawaited promises get terminated when response is sent
-    // Wrapped in try/catch so STORM failure doesn't affect payment success
     try {
-      await triggerStormReward(walletAddress, payment.amount_usdc, payment.id, 'MVR_ORDER')
+      await triggerStormReward(walletAddress, payment.amount_usdc, payment.id, 'MVR_ORDER', userType)
     } catch (stormError) {
       // Log but don't fail the payment
       console.error('[MVR PAYMENT] STORM reward failed (non-fatal):', stormError)
