@@ -284,6 +284,36 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Batch-fetch live MVR status + bgcheck consent for kanban cards.
+    if (applicantUserIds.length > 0) {
+      const [{ data: allMvrOrders }, { data: consents }] = await Promise.all([
+        supabase
+          .from('mvr_orders')
+          .select('driver_user_id, status, ordered_at')
+          .in('driver_user_id', applicantUserIds)
+          .order('ordered_at', { ascending: false }),
+        supabase
+          .from('bgcheck_consents')
+          .select('driver_user_id')
+          .in('driver_user_id', applicantUserIds)
+          .eq('company_id', companyId),
+      ])
+
+      const mvrByUser = new Map<string, string>()
+      for (const order of allMvrOrders ?? []) {
+        if (!mvrByUser.has(order.driver_user_id)) {
+          mvrByUser.set(order.driver_user_id, order.status)
+        }
+      }
+      const consentUserIds = new Set((consents ?? []).map(c => c.driver_user_id))
+
+      applicants.forEach(a => {
+        (a as Record<string, unknown>).hasMvr = mvrByUser.has(a.applicantUserId)
+        ;(a as Record<string, unknown>).mvrStatus = mvrByUser.get(a.applicantUserId) ?? null
+        ;(a as Record<string, unknown>).hasBgcheckConsent = consentUserIds.has(a.applicantUserId)
+      })
+    }
+
     // Process MVR orders
     const mvrOrders = (mvrOrdersResult.data || []).map(order => {
       const result = Array.isArray(order.mvr_results) 

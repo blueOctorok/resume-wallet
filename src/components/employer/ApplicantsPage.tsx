@@ -23,6 +23,7 @@ import {
   Car,
 } from 'lucide-react'
 import BackToHubButton from '@/components/ui/BackToHubButton'
+import CareerCardModal from '@/components/employer/CareerCardModal'
 
 interface Applicant {
   applicationId: string
@@ -50,6 +51,11 @@ interface Applicant {
   resumeTitle: string | null
   resumeVerified: boolean
   resumeIpfsHash: string | null
+  // MVR & consent — live from DB, not snapshot
+  hasMvr: boolean
+  mvrStatus: string | null
+  mvrOrderedByEmployer: boolean
+  hasBgcheckConsent: boolean
 }
 
 interface Job {
@@ -453,6 +459,7 @@ function ApplicantDetailModal({
 }) {
   const [notes, setNotes] = useState(applicant.reviewerNotes || '')
   const [savingNotes, setSavingNotes] = useState(false)
+  const [showCareerCard, setShowCareerCard] = useState(false)
 
   const saveNotes = async () => {
     try {
@@ -510,16 +517,47 @@ function ApplicantDetailModal({
               Applied for {applicant.jobTitle}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className={`p-2 rounded-lg ${theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-          >
-            <X className={`w-5 h-5 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowCareerCard(true)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                theme === 'dark'
+                  ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30'
+                  : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
+              }`}
+            >
+              <Car className="w-3.5 h-3.5" />
+              Career Card
+            </button>
+            <button
+              onClick={onClose}
+              className={`p-2 rounded-lg ${theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+            >
+              <X className={`w-5 h-5 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`} />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
         <div className="p-6 space-y-6">
+          {/* MVR Status */}
+          <div className={`flex items-center justify-between px-4 py-3 rounded-xl ${
+            theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
+          }`}>
+            <div className="flex items-center gap-2">
+              <Car className={`w-4 h-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} />
+              <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Motor Vehicle Record
+              </span>
+            </div>
+            <MvrStatusBadge
+              hasMvr={applicant.hasMvr}
+              mvrStatus={applicant.mvrStatus}
+              hasBgcheckConsent={applicant.hasBgcheckConsent}
+              theme={theme}
+            />
+          </div>
+
           {/* Contact Info */}
           <div className="flex flex-wrap gap-3">
             {applicant.driverEmail && (
@@ -668,6 +706,80 @@ function ApplicantDetailModal({
         </div>
       </div>
     </div>
+
+    {/* Career card modal — layered above the detail modal */}
+    {showCareerCard && (
+      <CareerCardModal
+        candidateUserId={applicant.driverUserId}
+        walletAddress={walletAddress}
+        onClose={() => setShowCareerCard(false)}
+      />
+    )}
+  )
+}
+
+// ── MvrStatusBadge ────────────────────────────────────────────────────────────
+
+function MvrStatusBadge({
+  hasMvr,
+  mvrStatus,
+  hasBgcheckConsent,
+  theme,
+}: {
+  hasMvr: boolean
+  mvrStatus: string | null
+  hasBgcheckConsent: boolean
+  theme: string
+}) {
+  if (!hasMvr && !hasBgcheckConsent) {
+    return (
+      <span className={`text-xs px-2.5 py-1 rounded-full ${theme === 'dark' ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
+        Not requested
+      </span>
+    )
+  }
+
+  if (!hasMvr && hasBgcheckConsent) {
+    return (
+      <span className={`text-xs px-2.5 py-1 rounded-full ${theme === 'dark' ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-700'}`}>
+        Disclosure signed — ready to order
+      </span>
+    )
+  }
+
+  const normalized = mvrStatus?.toLowerCase() ?? ''
+
+  if (normalized === 'pending' || normalized === 'processing' || normalized === 'submitted') {
+    return (
+      <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full ${theme === 'dark' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-50 text-yellow-700'}`}>
+        <Clock className="w-3 h-3" />
+        Processing
+      </span>
+    )
+  }
+
+  if (normalized === 'complete' || normalized === 'completed' || normalized === 'returned') {
+    return (
+      <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full ${theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-700'}`}>
+        <CheckCircle className="w-3 h-3" />
+        Complete
+      </span>
+    )
+  }
+
+  if (normalized === 'failed' || normalized === 'error') {
+    return (
+      <span className={`text-xs px-2.5 py-1 rounded-full ${theme === 'dark' ? 'bg-red-500/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
+        Failed
+      </span>
+    )
+  }
+
+  // Fallback for any other status string
+  return (
+    <span className={`text-xs px-2.5 py-1 rounded-full capitalize ${theme === 'dark' ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
+      {mvrStatus ?? 'Ordered'}
+    </span>
   )
 }
 

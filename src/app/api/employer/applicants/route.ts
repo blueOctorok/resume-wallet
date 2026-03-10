@@ -224,6 +224,49 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Batch-fetch live MVR status and bgcheck consent for all applicants.
+    // We do this after the main map so we can use a single query per table
+    // instead of one query per applicant (N+1 problem).
+    const userIds = applicants.map(a => a.driverUserId).filter(Boolean)
+
+    const [{ data: mvrOrders }, { data: consents }] = await Promise.all([
+      userIds.length
+        ? supabase
+            .from('mvr_orders')
+            .select('driver_user_id, status, ordered_by_employer, ordered_at')
+            .in('driver_user_id', userIds)
+            .order('ordered_at', { ascending: false })
+        : Promise.resolve({ data: [] }),
+      userIds.length
+        ? supabase
+            .from('bgcheck_consents')
+            .select('driver_user_id')
+            .in('driver_user_id', userIds)
+            .eq('company_id', companyId)
+        : Promise.resolve({ data: [] }),
+    ])
+
+    // Build lookup maps userId → latest MVR + whether consent exists
+    const mvrByUser = new Map<string, { status: string; orderedByEmployer: boolean }>()
+    for (const order of mvrOrders ?? []) {
+      if (!mvrByUser.has(order.driver_user_id)) {
+        mvrByUser.set(order.driver_user_id, {
+          status: order.status,
+          orderedByEmployer: order.ordered_by_employer ?? false,
+        })
+      }
+    }
+    const consentUserIds = new Set((consents ?? []).map(c => c.driver_user_id))
+
+    // Merge MVR + consent data into each applicant
+    const enrichedApplicants = applicants.map(a => ({
+      ...a,
+      hasMvr: mvrByUser.has(a.driverUserId),
+      mvrStatus: mvrByUser.get(a.driverUserId)?.status ?? null,
+      mvrOrderedByEmployer: mvrByUser.get(a.driverUserId)?.orderedByEmployer ?? false,
+      hasBgcheckConsent: consentUserIds.has(a.driverUserId),
+    }))
+
     // Get job postings for filter dropdown
     const { data: jobs } = await supabase
       .from('job_postings')
@@ -250,7 +293,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      applicants,
+      applicants: enrichedApplicants,
       jobs: jobs || [],
       stats,
     })

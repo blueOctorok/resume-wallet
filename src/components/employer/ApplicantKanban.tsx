@@ -44,6 +44,10 @@ export interface KanbanApplicant {
   hasResume: boolean
   resumeVerified: boolean
   hasDriverApp: boolean
+  // Live MVR state
+  hasMvr: boolean
+  mvrStatus: string | null
+  hasBgcheckConsent: boolean
 }
 
 interface ApplicantKanbanProps {
@@ -388,6 +392,16 @@ export default function ApplicantKanban({
                             />
                           )
                         )}
+
+                        {/* MVR chip — only when disclosure is signed or MVR ordered */}
+                        {(applicant.hasMvr || applicant.hasBgcheckConsent) && (
+                          <MvrKanbanChip
+                            hasMvr={applicant.hasMvr}
+                            mvrStatus={applicant.mvrStatus}
+                            hasBgcheckConsent={applicant.hasBgcheckConsent}
+                            isDark={isDark}
+                          />
+                        )}
                       </div>
 
                       {/* Footer: time in stage + advance button */}
@@ -419,6 +433,66 @@ export default function ApplicantKanban({
         )
       })}
     </div>
+  )
+}
+
+// ─── MvrKanbanChip ──────────────────────────────────────────────────────────
+// Read-only MVR status chip shown on kanban cards when the disclosure is signed
+// or an MVR order exists. Gives the employer an at-a-glance view without
+// requiring them to open the full career card.
+
+function MvrKanbanChip({
+  hasMvr,
+  mvrStatus,
+  hasBgcheckConsent,
+  isDark,
+}: {
+  hasMvr: boolean
+  mvrStatus: string | null
+  hasBgcheckConsent: boolean
+  isDark: boolean
+}) {
+  if (!hasMvr) {
+    // Disclosure signed but order not placed yet
+    return (
+      <span className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md ${
+        isDark ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-600'
+      }`}>
+        <Car className='w-2.5 h-2.5' />
+        Disclosure ✓
+      </span>
+    )
+  }
+
+  const normalized = mvrStatus?.toLowerCase() ?? ''
+
+  if (normalized === 'pending' || normalized === 'processing' || normalized === 'submitted') {
+    return (
+      <span className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md ${
+        isDark ? 'bg-yellow-500/15 text-yellow-400' : 'bg-yellow-50 text-yellow-700'
+      }`}>
+        <Clock className='w-2.5 h-2.5' />
+        MVR Processing
+      </span>
+    )
+  }
+
+  if (normalized === 'complete' || normalized === 'completed' || normalized === 'returned') {
+    return (
+      <span className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md bg-green-500/15 text-green-500`}>
+        <CheckCircle className='w-2.5 h-2.5' />
+        MVR Complete
+      </span>
+    )
+  }
+
+  return (
+    <span className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md ${
+      isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
+    }`}>
+      <Car className='w-2.5 h-2.5' />
+      MVR
+    </span>
   )
 }
 
