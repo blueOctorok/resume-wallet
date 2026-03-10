@@ -22,9 +22,23 @@ import {
   X,
   RefreshCw,
   ChevronDown,
+  Search,
+  UserCheck,
+  MapPin,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+interface ProfileResult {
+  user_id: string
+  full_name: string | null
+  email: string | null
+  city: string | null
+  state: string | null
+  cdl_class: string | null
+  has_driver_app: boolean
+  has_resume: boolean
+}
 
 type InviteType = 'driver_dot' | 'developer_card' | 'general'
 type InviteStatus = 'pending' | 'viewed' | 'in_progress' | 'completed' | 'expired' | 'cancelled'
@@ -179,15 +193,26 @@ export default function CandidateOutreach({ walletAddress }: CandidateOutreachPr
     type: InviteType
     candidateEmail: string
     candidateName: string
+    candidateUserId: string   // set when employer selects an existing profile
     jobPostingId: string
     welcomeMessage: string
   }>({
     type: 'driver_dot',
     candidateEmail: '',
     candidateName: '',
+    candidateUserId: '',
     jobPostingId: '',
     welcomeMessage: '',
   })
+
+  // Profile search autocomplete state
+  const [profileQuery, setProfileQuery] = useState('')
+  const [profileResults, setProfileResults] = useState<ProfileResult[]>([])
+  const [isSearchingProfiles, setIsSearchingProfiles] = useState(false)
+  const [selectedProfile, setSelectedProfile] = useState<ProfileResult | null>(null)
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false)
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const profileSearchRef = useRef<HTMLDivElement>(null)
 
   // ── Data fetching ──────────────────────────────────────────────────────────
 
@@ -228,7 +253,96 @@ export default function CandidateOutreach({ walletAddress }: CandidateOutreachPr
     }
   }, [walletAddress, fetchInvites, fetchJobs])
 
+  // ── Profile search autocomplete ────────────────────────────────────────────
+
+  // Debounced search: fires 300 ms after the user stops typing
+  useEffect(() => {
+    if (searchTimeout.current) clearTimeout(searchTimeout.current)
+
+    const q = profileQuery.trim()
+    if (q.length < 2) {
+      setProfileResults([])
+      setShowProfileDropdown(false)
+      return
+    }
+
+    searchTimeout.current = setTimeout(async () => {
+      setIsSearchingProfiles(true)
+      try {
+        const res = await fetch(
+          `/api/employer/talent/search?search=${encodeURIComponent(q)}&limit=6`,
+          { headers: { 'x-wallet-address': walletAddress } }
+        )
+        if (res.ok) {
+          const { candidates } = await res.json()
+          // API returns camelCase; normalize to ProfileResult (snake_case) so keys and display work
+          const normalized = (candidates ?? []).map((c: { userId?: string; user_id?: string; name?: string; full_name?: string; email?: string; city?: string; state?: string; location?: string; cdlClass?: string; cdl_class?: string; hasDriverApp?: boolean; has_resume?: boolean; hasResume?: boolean }) => ({
+            user_id: c.userId ?? c.user_id ?? '',
+            full_name: c.name ?? c.full_name ?? null,
+            email: c.email ?? null,
+            city: c.city ?? (typeof c.location === 'string' ? c.location.split(',')[0]?.trim() ?? null : null),
+            state: c.state ?? null,
+            cdl_class: c.cdl_class ?? c.cdlClass ?? null,
+            has_driver_app: c.hasDriverApp ?? false,
+            has_resume: c.has_resume ?? c.hasResume ?? false,
+          }))
+          setProfileResults(normalized)
+          setShowProfileDropdown(true)
+        }
+      } catch {
+        // fail silently — search is a convenience, not a blocker
+      } finally {
+        setIsSearchingProfiles(false)
+      }
+    }, 300)
+
+    return () => {
+      if (searchTimeout.current) clearTimeout(searchTimeout.current)
+    }
+  }, [profileQuery, walletAddress])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (profileSearchRef.current && !profileSearchRef.current.contains(e.target as Node)) {
+        setShowProfileDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const handleSelectProfile = (profile: ProfileResult) => {
+    setSelectedProfile(profile)
+    setProfileQuery('')
+    setShowProfileDropdown(false)
+    setForm(f => ({
+      ...f,
+      candidateName: profile.full_name || '',
+      candidateEmail: profile.email || '',
+      candidateUserId: profile.user_id,
+    }))
+  }
+
+  const handleClearProfile = () => {
+    setSelectedProfile(null)
+    setProfileQuery('')
+    setForm(f => ({
+      ...f,
+      candidateName: '',
+      candidateEmail: '',
+      candidateUserId: '',
+    }))
+  }
+
   // ── Actions ────────────────────────────────────────────────────────────────
+
+  const resetForm = () => {
+    setForm({ type: 'driver_dot', candidateEmail: '', candidateName: '', candidateUserId: '', jobPostingId: '', welcomeMessage: '' })
+    setSelectedProfile(null)
+    setProfileQuery('')
+    setProfileResults([])
+  }
 
   const handleCreate = async () => {
     setCreating(true)
@@ -241,6 +355,7 @@ export default function CandidateOutreach({ walletAddress }: CandidateOutreachPr
           type: form.type,
           candidateEmail: form.candidateEmail || undefined,
           candidateName: form.candidateName || undefined,
+          candidateUserId: form.candidateUserId || undefined,
           jobPostingId: form.jobPostingId || undefined,
           welcomeMessage: form.welcomeMessage || undefined,
         }),
@@ -252,7 +367,7 @@ export default function CandidateOutreach({ walletAddress }: CandidateOutreachPr
       const { invite } = await res.json()
       setInvites(prev => [{ ...invite, emailSentAt: null }, ...prev])
       setShowForm(false)
-      setForm({ type: 'driver_dot', candidateEmail: '', candidateName: '', jobPostingId: '', welcomeMessage: '' })
+      resetForm()
       copyToClipboard(invite.url, invite.id)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unknown error')
@@ -355,7 +470,7 @@ export default function CandidateOutreach({ walletAddress }: CandidateOutreachPr
             </div>
           </div>
           <button
-            onClick={() => { setShowForm(true); setError(null) }}
+            onClick={() => { setShowForm(true); setError(null); resetForm() }}
             className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-sm font-medium transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -371,7 +486,7 @@ export default function CandidateOutreach({ walletAddress }: CandidateOutreachPr
                 Create Outreach Link
               </h4>
               <button
-                onClick={() => { setShowForm(false); setError(null) }}
+                onClick={() => { setShowForm(false); setError(null); resetForm() }}
                 className="text-gray-500 hover:text-gray-300"
               >
                 <X className="w-4 h-4" />
@@ -404,9 +519,128 @@ export default function CandidateOutreach({ walletAddress }: CandidateOutreachPr
               </p>
             </div>
 
+            {/* ── Profile search (links invite to an existing StormChain account) ── */}
+            <div className="mb-3" ref={profileSearchRef}>
+              <label className={label}>
+                Search existing StormChain profiles
+                <span className={`ml-1 font-normal ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>
+                  — connects invite for in-app notifications
+                </span>
+              </label>
+
+              {selectedProfile ? (
+                // Connected profile badge
+                <div className={`flex items-center justify-between px-3 py-2 rounded-lg border ${
+                  theme === 'dark'
+                    ? 'bg-teal-900/30 border-teal-700/50'
+                    : 'bg-teal-50 border-teal-200'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="w-4 h-4 text-teal-500 flex-shrink-0" />
+                    <div>
+                      <p className={`text-sm font-medium ${theme === 'dark' ? 'text-teal-300' : 'text-teal-700'}`}>
+                        {selectedProfile.full_name || selectedProfile.email}
+                      </p>
+                      <p className={`text-xs ${theme === 'dark' ? 'text-teal-500' : 'text-teal-500'}`}>
+                        Connected to StormChain · In-app notification will fire when email is sent
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleClearProfile}
+                    className={`text-xs font-medium flex items-center gap-1 cursor-pointer ${
+                      theme === 'dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    <X className="w-3 h-3" />
+                    Clear
+                  </button>
+                </div>
+              ) : (
+                // Search input
+                <div className="relative">
+                  <div className="relative">
+                    <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none ${
+                      theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                    }`} />
+                    <input
+                      type="text"
+                      placeholder="Search by name, email, or city…"
+                      value={profileQuery}
+                      onChange={e => setProfileQuery(e.target.value)}
+                      onFocus={() => profileResults.length > 0 && setShowProfileDropdown(true)}
+                      className={`${inputBase} pl-8`}
+                    />
+                    {isSearchingProfiles && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-teal-500" />
+                    )}
+                  </div>
+
+                  {showProfileDropdown && profileResults.length > 0 && (
+                    <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border shadow-xl z-50 overflow-hidden ${
+                      theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                    }`}>
+                      {profileResults.map((profile, index) => (
+                        <button
+                          key={profile.user_id || `profile-${index}`}
+                          onClick={() => handleSelectProfile(profile)}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors border-b last:border-b-0 cursor-pointer ${
+                            theme === 'dark'
+                              ? 'hover:bg-gray-700 border-gray-700/60'
+                              : 'hover:bg-gray-50 border-gray-100'
+                          }`}
+                        >
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                            theme === 'dark' ? 'bg-teal-900/50' : 'bg-teal-100'
+                          }`}>
+                            <UserCheck className="w-3.5 h-3.5 text-teal-500" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-medium truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                              {profile.full_name || profile.email || 'Unknown'}
+                            </p>
+                            <div className={`flex items-center gap-2 text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                              {profile.cdl_class && <span>CDL-{profile.cdl_class}</span>}
+                              {(profile.city || profile.state) && (
+                                <span className="flex items-center gap-0.5">
+                                  <MapPin className="w-2.5 h-2.5" />
+                                  {[profile.city, profile.state].filter(Boolean).join(', ')}
+                                </span>
+                              )}
+                              {profile.email && <span className="truncate">{profile.email}</span>}
+                            </div>
+                          </div>
+                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                            theme === 'dark' ? 'bg-teal-900/50 text-teal-400' : 'bg-teal-100 text-teal-700'
+                          }`}>
+                            StormChain
+                          </span>
+                        </button>
+                      ))}
+                      <div className={`px-3 py-2 text-xs ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>
+                        Or fill in name and email below for someone not on StormChain
+                      </div>
+                    </div>
+                  )}
+
+                  {showProfileDropdown && profileQuery.trim().length >= 2 && !isSearchingProfiles && profileResults.length === 0 && (
+                    <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border shadow-xl z-50 px-3 py-3 text-xs ${
+                      theme === 'dark' ? 'bg-gray-800 border-gray-700 text-gray-500' : 'bg-white border-gray-200 text-gray-400'
+                    }`}>
+                      No StormChain profiles found — fill in name and email below for an email-only invite
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ── Manual name/email (always visible; pre-filled when profile selected) ── */}
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
-                <label className={label}>Candidate name</label>
+                <label className={label}>
+                  Candidate name
+                  {selectedProfile && <span className="ml-1 text-teal-500">· from profile</span>}
+                </label>
                 <input
                   type="text"
                   placeholder="Optional"
@@ -416,7 +650,10 @@ export default function CandidateOutreach({ walletAddress }: CandidateOutreachPr
                 />
               </div>
               <div>
-                <label className={label}>Candidate email</label>
+                <label className={label}>
+                  Candidate email
+                  {selectedProfile && <span className="ml-1 text-teal-500">· from profile</span>}
+                </label>
                 <input
                   type="email"
                   placeholder="Optional — to send email"
@@ -469,7 +706,7 @@ export default function CandidateOutreach({ walletAddress }: CandidateOutreachPr
                 {creating ? 'Creating…' : 'Create & Copy Link'}
               </button>
               <button
-                onClick={() => { setShowForm(false); setError(null) }}
+                onClick={() => { setShowForm(false); setError(null); resetForm() }}
                 className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                   theme === 'dark' ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}

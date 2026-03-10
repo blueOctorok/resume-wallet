@@ -43,7 +43,7 @@ import {
 interface DeveloperHubProps {
   userAddress: string | null
   onNavigate: (
-    page: 'portfolio' | 'resume' | 'github' | 'jobs' | 'applications'
+    page: 'portfolio' | 'resume' | 'github' | 'jobs' | 'applications' | 'profile-setup'
   ) => void
 }
 
@@ -587,43 +587,58 @@ export default function DeveloperHub({
     )
   }
 
+  // Resolve display name the same way DriverHub does
+  const profileDisplayName = profile?.firstName || profile?.lastName
+    ? `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim()
+    : profile?.displayName || ''
+
   return (
     <div className='max-w-6xl mx-auto space-y-6 px-4 pb-8'>
-      {/* Header */}
-      <div className='flex items-center justify-between'>
-        <div>
-          <div className='flex items-center gap-2'>
-            <h1
-              className={`text-2xl sm:text-3xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
-            >
-              Developer Hub
-            </h1>
-            {/* Manual refresh button */}
-            <button
-              onClick={triggerRefresh}
-              disabled={isLoading}
-              title={isStale ? 'Data may be stale - click to refresh' : 'Refresh data'}
-              className={`p-1.5 rounded-lg transition-all ${
-                isLoading
-                  ? 'opacity-50 cursor-not-allowed'
-                  : theme === 'dark'
-                    ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
-                    : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-              } ${isStale ? 'text-amber-500' : ''}`}
-            >
-              <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
-            </button>
+      {/* Header — matches DriverHub pattern with avatar + personalized title */}
+      <div className={`p-6 rounded-2xl border ${
+        theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-white/70 border-gray-200'
+      }`}>
+        <div className='flex items-center gap-4'>
+          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+            theme === 'dark' ? 'bg-indigo-500/20 border border-indigo-500/30' : 'bg-indigo-50 border border-indigo-200'
+          }`}>
+            {profileDisplayName
+              ? <span className={`text-2xl font-bold ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}>
+                  {profileDisplayName.charAt(0).toUpperCase()}
+                </span>
+              : <Terminal className={`w-8 h-8 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
+            }
           </div>
-          <p
-            className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
-          >
-            Showcase your work, connect with employers
-          </p>
-        </div>
-        <div className='flex items-center gap-2'>
-          <Terminal
-            className={`w-8 h-8 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}
-          />
+          <div className='flex-1 min-w-0'>
+            <div className='flex items-center gap-2'>
+              <h1 className={`text-2xl sm:text-3xl font-bold truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                {profileDisplayName ? `${profileDisplayName}'s Developer Hub` : 'Developer Hub'}
+              </h1>
+              <button
+                onClick={triggerRefresh}
+                disabled={isLoading}
+                title={isStale ? 'Data may be stale - click to refresh' : 'Refresh data'}
+                className={`p-1.5 rounded-lg flex-shrink-0 transition-all ${
+                  isLoading
+                    ? 'opacity-50 cursor-not-allowed'
+                    : theme === 'dark'
+                      ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                      : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                } ${isStale ? 'text-amber-500' : ''}`}
+              >
+                <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+            {profile?.headline ? (
+              <p className={`text-sm mt-0.5 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}>
+                {profile.headline}
+              </p>
+            ) : (
+              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                Showcase your work, connect with employers
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -667,6 +682,33 @@ export default function DeveloperHub({
           {getCompletenessHint()}
         </p>
       </div>
+
+      {/* Profile setup prompt — shown when dev has no name yet */}
+      {!profile?.firstName && !profile?.lastName && !profile?.displayName && (
+        <div className={`p-4 rounded-2xl border-l-4 border-l-indigo-500 flex items-center gap-4 ${
+          theme === 'dark' ? 'bg-gray-800/50' : 'bg-white border border-gray-200'
+        }`}>
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+            theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-100'
+          }`}>
+            <Sparkles className={`w-5 h-5 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
+          </div>
+          <div className='flex-1 min-w-0'>
+            <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              Who are you? Set up your profile
+            </h3>
+            <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              Name, headline, and GitHub — under a minute. Employers need this to find you.
+            </p>
+          </div>
+          <button
+            onClick={() => onNavigate('profile-setup')}
+            className='flex-shrink-0 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl transition-colors text-sm'
+          >
+            Set Up Profile
+          </button>
+        </div>
+      )}
 
       {/* Quick Stats */}
       <div className='grid grid-cols-2 lg:grid-cols-4 gap-4'>

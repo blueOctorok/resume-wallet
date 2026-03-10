@@ -171,6 +171,7 @@ export async function POST(request: NextRequest) {
       type = 'driver_dot',
       candidateEmail,
       candidateName,
+      candidateUserId,   // set when employer picks an existing StormChain profile
       jobPostingId,
       welcomeMessage,
       expiresInDays = 30,
@@ -209,6 +210,7 @@ export async function POST(request: NextRequest) {
         type,
         candidate_email: candidateEmail || null,
         candidate_name: candidateName || null,
+        candidate_user_id: candidateUserId || null,
         job_posting_id: jobPostingId || null,
         welcome_message: welcomeMessage || null,
         expires_at: expiresAt.toISOString(),

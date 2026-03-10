@@ -24,16 +24,17 @@ export async function GET(request: NextRequest) {
     const supabase = await getAdminSupabaseClient()
 
     // Build query
+    // Column is `title` not `name` — see migration 011_developer_profiles_and_projects.sql
     let query = supabase
       .from('developer_projects')
       .select(
-        'id, user_id, developer_profile_id, name, description, tech_stack, live_url, repo_url, is_featured, is_public, role, created_at, updated_at',
+        'id, user_id, developer_profile_id, title, description, tech_stack, live_url, repo_url, is_featured, is_public, role, created_at, updated_at',
         { count: 'exact' }
       )
 
     // Apply search filter
     if (search) {
-      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`)
+      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`)
     }
 
     // Apply pagination and ordering

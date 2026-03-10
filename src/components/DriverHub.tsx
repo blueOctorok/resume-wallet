@@ -148,7 +148,7 @@ interface HubData {
 interface DriverHubProps {
   userAddress: string | null
   onNavigate: (
-    page: 'resume' | 'dotapp' | 'mvr' | 'jobs' | 'applications' | 'stormchain',
+    page: 'resume' | 'dotapp' | 'mvr' | 'jobs' | 'applications' | 'stormchain' | 'career-card' | 'profile-setup',
   ) => void
   onStartDotApp?: () => void
   onViewMvr?: (orderId: string) => void
@@ -1118,14 +1118,14 @@ export default function DriverHub({
             </div>
             <div className='flex-1 min-w-0'>
               <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                Complete your profile to get discovered
+                Who are you? Set up your profile
               </h3>
               <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                Add your name and contact info so employers can find you in talent searches.
+                A quick form so employers can find you. Name, contact, and CDL — under a minute.
               </p>
             </div>
             <button
-              onClick={() => onNavigate('resume')}
+              onClick={() => onNavigate('profile-setup')}
               className='flex-shrink-0 px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white font-medium rounded-xl transition-colors text-sm'
             >
               Set Up Profile
@@ -1281,6 +1281,33 @@ export default function DriverHub({
           }
         />
       </div>
+
+      {/* ============================================================ */}
+      {/* CAREER CARD PREVIEW CTA */}
+      {/* ============================================================ */}
+      <button
+        onClick={() => onNavigate('career-card')}
+        className={`w-full mb-6 p-4 rounded-2xl flex items-center gap-4 transition-all cursor-pointer text-left ${
+          theme === 'dark'
+            ? 'bg-gradient-to-r from-teal-500/10 to-teal-600/5 border border-teal-500/30 hover:border-teal-500/50 hover:from-teal-500/15'
+            : 'bg-gradient-to-r from-teal-50 to-teal-100/50 border border-teal-200 hover:border-teal-300'
+        }`}
+      >
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+          theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
+        }`}>
+          <Eye className={`w-5 h-5 ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
+        </div>
+        <div className='flex-1 min-w-0'>
+          <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            View Your Career Card
+          </p>
+          <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+            See exactly what employers see when they search for you
+          </p>
+        </div>
+        <ChevronRight className={`w-5 h-5 flex-shrink-0 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`} />
+      </button>
 
       {/* ============================================================ */}
       {/* EMPLOYMENT VERIFICATION - Driver only (DOT / resume data) */}
@@ -2397,7 +2424,7 @@ function DotAppDetailContent({
   dotApp: HubDotApplication
   theme: string
   onNavigate: (
-    page: 'resume' | 'dotapp' | 'mvr' | 'jobs' | 'applications' | 'stormchain',
+    page: 'resume' | 'dotapp' | 'mvr' | 'jobs' | 'applications' | 'stormchain' | 'career-card' | 'profile-setup',
   ) => void
   onStartEmploymentVerification?: () => void
   onVerify?: () => void

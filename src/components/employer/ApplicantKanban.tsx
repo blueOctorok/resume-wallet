@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   Car,
@@ -8,9 +8,11 @@ import {
   Clock,
   Loader2,
   FileText,
+  ClipboardCheck,
   User,
   ArrowRight,
   CheckCircle,
+  Send,
 } from 'lucide-react'
 
 const PIPELINE_COLUMNS = [
@@ -41,6 +43,7 @@ export interface KanbanApplicant {
   experienceYears: number | null
   hasResume: boolean
   resumeVerified: boolean
+  hasDriverApp: boolean
 }
 
 interface ApplicantKanbanProps {
@@ -50,6 +53,9 @@ interface ApplicantKanbanProps {
   onSelectApplicant: (applicant: KanbanApplicant) => void
   isUpdating?: string | null
 }
+
+// Tracks quick-request state per applicant: null | 'loading' | 'sent' | 'pending'
+type RequestState = 'loading' | 'sent' | 'pending'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -94,6 +100,7 @@ const COL_STYLES: Record<string, {
 
 export default function ApplicantKanban({
   applicants,
+  walletAddress,
   onStatusChange,
   onSelectApplicant,
   isUpdating,
@@ -103,6 +110,55 @@ export default function ApplicantKanban({
 
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
+
+  // key: `${applicantUserId}-resume` or `${applicantUserId}-dot`
+  const [requestStates, setRequestStates] = useState<Map<string, RequestState>>(new Map())
+
+  const setRequestState = (key: string, state: RequestState | null) => {
+    setRequestStates(prev => {
+      const next = new Map(prev)
+      if (state === null) next.delete(key)
+      else next.set(key, state)
+      return next
+    })
+  }
+
+  // Sends a quick request from the kanban card without opening the career card modal.
+  // Uses the same API as the career card modal — 409 means a pending request already exists.
+  const sendQuickRequest = useCallback(async (
+    e: React.MouseEvent,
+    applicantUserId: string,
+    requestType: string,
+    documentType: string,
+  ) => {
+    e.stopPropagation()
+    const key = `${applicantUserId}-${documentType}`
+    setRequestState(key, 'loading')
+
+    try {
+      const res = await fetch(`/api/employer/talent/${applicantUserId}/request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': walletAddress,
+        },
+        body: JSON.stringify({ requestType, documentType, message: 'Requested via StormChain Hiring Pipeline' }),
+      })
+
+      if (res.status === 409) {
+        // Already a pending request of this type — show pending state
+        setRequestState(key, 'pending')
+      } else if (res.ok) {
+        setRequestState(key, 'sent')
+        // Reset to neutral after 3s so the chip is usable again if needed
+        setTimeout(() => setRequestState(key, null), 3000)
+      } else {
+        setRequestState(key, null)
+      }
+    } catch {
+      setRequestState(key, null)
+    }
+  }, [walletAddress])
 
   const columns = PIPELINE_COLUMNS.map(col => ({
     ...col,
@@ -288,9 +344,10 @@ export default function ApplicantKanban({
                         </p>
                       )}
 
-                      {/* Credential chips */}
-                      {applicant.hasResume && (
-                        <div className='flex items-center gap-1 mb-2.5'>
+                      {/* Credential status chips + request chips */}
+                      <div className='flex flex-wrap items-center gap-1 mb-2.5'>
+                        {/* Resume: show status if present, request chip if missing */}
+                        {applicant.hasResume ? (
                           <span className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md ${
                             applicant.resumeVerified
                               ? 'bg-green-500/15 text-green-500'
@@ -302,8 +359,36 @@ export default function ApplicantKanban({
                             }
                             {applicant.resumeVerified ? 'Verified' : 'Resume'}
                           </span>
-                        </div>
-                      )}
+                        ) : (
+                          <QuickRequestChip
+                            label='Resume'
+                            icon={<FileText className='w-2.5 h-2.5' />}
+                            state={requestStates.get(`${applicant.applicantUserId}-resume`) ?? null}
+                            isDark={isDark}
+                            onClick={e => sendQuickRequest(e, applicant.applicantUserId, 'document_upload', 'resume')}
+                          />
+                        )}
+
+                        {/* DOT App: show status chip if present, request chip if missing (drivers only) */}
+                        {isDriver && (
+                          applicant.hasDriverApp ? (
+                            <span className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md ${
+                              isDark ? 'bg-teal-500/15 text-teal-400' : 'bg-teal-50 text-teal-600'
+                            }`}>
+                              <ClipboardCheck className='w-2.5 h-2.5' />
+                              DOT App
+                            </span>
+                          ) : (
+                            <QuickRequestChip
+                              label='DOT App'
+                              icon={<ClipboardCheck className='w-2.5 h-2.5' />}
+                              state={requestStates.get(`${applicant.applicantUserId}-dot_application`) ?? null}
+                              isDark={isDark}
+                              onClick={e => sendQuickRequest(e, applicant.applicantUserId, 'profile_completion', 'dot_application')}
+                            />
+                          )
+                        )}
+                      </div>
 
                       {/* Footer: time in stage + advance button */}
                       <div className={`flex items-center justify-between pt-1.5 border-t ${
@@ -334,6 +419,72 @@ export default function ApplicantKanban({
         )
       })}
     </div>
+  )
+}
+
+// ─── QuickRequestChip ───────────────────────────────────────────────────────
+// Small inline chip that an employer clicks to request a resume or DOT app
+// directly from a kanban card, without opening the full career card modal.
+// States: null = requestable, loading = in-flight, sent = success, pending = already pending
+
+function QuickRequestChip({
+  label,
+  icon,
+  state,
+  isDark,
+  onClick,
+}: {
+  label: string
+  icon: React.ReactNode
+  state: RequestState | null
+  isDark: boolean
+  onClick: (e: React.MouseEvent) => void
+}) {
+  if (state === 'loading') {
+    return (
+      <span className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md ${
+        isDark ? 'bg-gray-700 text-gray-500' : 'bg-gray-100 text-gray-400'
+      }`}>
+        <Loader2 className='w-2.5 h-2.5 animate-spin' />
+        {label}
+      </span>
+    )
+  }
+
+  if (state === 'sent') {
+    return (
+      <span className='flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md bg-green-500/15 text-green-500'>
+        <CheckCircle className='w-2.5 h-2.5' />
+        Sent
+      </span>
+    )
+  }
+
+  if (state === 'pending') {
+    return (
+      <span className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md ${
+        isDark ? 'bg-yellow-500/15 text-yellow-400' : 'bg-yellow-50 text-yellow-600'
+      }`}>
+        <Clock className='w-2.5 h-2.5' />
+        Pending
+      </span>
+    )
+  }
+
+  // Default: show a clickable request chip
+  return (
+    <button
+      onClick={onClick}
+      title={`Request ${label}`}
+      className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md transition-colors ${
+        isDark
+          ? 'bg-gray-700 text-gray-400 hover:bg-teal-500/20 hover:text-teal-400'
+          : 'bg-gray-100 text-gray-500 hover:bg-teal-50 hover:text-teal-600'
+      }`}
+    >
+      <Send className='w-2.5 h-2.5' />
+      {label}
+    </button>
   )
 }
 

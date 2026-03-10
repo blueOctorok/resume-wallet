@@ -263,8 +263,26 @@ export async function GET(request: NextRequest) {
           : 'Unknown',
         driverEmail: driverProfile?.email || applicantUser?.email || null,
         driverPhone: driverProfile?.phone || null,
+        // Placeholder — will be filled in batch query below
+        hasDriverApp: false,
       }
     })
+
+    // Batch-check which applicants have a completed DOT application.
+    // Single query instead of N per-applicant lookups.
+    const applicantUserIds = applicants.map(a => a.applicantUserId).filter(Boolean)
+    if (applicantUserIds.length > 0) {
+      const { data: completedApps } = await supabase
+        .from('driver_applications')
+        .select('user_id')
+        .in('user_id', applicantUserIds)
+        .eq('is_complete', true)
+
+      const completedSet = new Set((completedApps || []).map(d => d.user_id))
+      applicants.forEach(a => {
+        a.hasDriverApp = completedSet.has(a.applicantUserId)
+      })
+    }
 
     // Process MVR orders
     const mvrOrders = (mvrOrdersResult.data || []).map(order => {

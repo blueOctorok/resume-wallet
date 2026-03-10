@@ -54,8 +54,8 @@ const REQUEST_TYPE_CONFIG = {
   },
   document_upload: {
     icon: FileText,
-    label: 'Document Request',
-    description: 'This employer is requesting a document from you',
+    label: 'Resume Request',
+    description: 'This employer is requesting your resume',
     color: 'text-teal-500',
     bgColor: 'bg-teal-500/10',
   },
@@ -68,8 +68,8 @@ const REQUEST_TYPE_CONFIG = {
   },
   profile_completion: {
     icon: UserCheck,
-    label: 'Profile Request',
-    description: 'This employer wants you to complete your profile',
+    label: 'DOT Application Request',
+    description: 'This employer is requesting you complete your DOT Driver Application',
     color: 'text-amber-500',
     bgColor: 'bg-amber-500/10',
   },
@@ -482,7 +482,7 @@ export default function CandidateRequestsSection({
                       className='flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition-colors'
                     >
                       <ExternalLink className='w-4 h-4' />
-                      Upload Document
+                      Go to Resume
                     </button>
                   )}
                   
@@ -495,7 +495,7 @@ export default function CandidateRequestsSection({
                       className='flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition-colors'
                     >
                       <ExternalLink className='w-4 h-4' />
-                      Complete Profile
+                      Start DOT Application
                     </button>
                   )}
 

@@ -678,6 +678,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
                 experienceYears: a.experienceYears ?? null,
                 hasResume: a.hasResume ?? false,
                 resumeVerified: a.resumeVerified ?? false,
+                hasDriverApp: a.hasDriverApp ?? false,
               }))}
               walletAddress={walletAddress}
               onStatusChange={handleStatusChange}

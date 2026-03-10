@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import LoadingScreen from '@/components/LoadingScreen'
 import StormChainView from '@/components/StormChainView'
+import DriverCareerCardSection from '@/components/app/DriverCareerCardSection'
+import ProfileSetup from '@/components/app/ProfileSetup'
 import ResumeTabSelector from '@/components/ResumeTabSelector'
 import DotApplicationFlow from './DotApplicationFlow'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -264,6 +266,33 @@ export default function DriverShell({
   const handleNavigateToHub = useCallback(() => setCurrentPage(null), [setCurrentPage])
 
   // -------------------------------------------------------
+  // Render: Profile Setup (first-time identity form)
+  // -------------------------------------------------------
+  if (currentPage === 'profile-setup') {
+    return (
+      <ProfileSetup
+        role="driver"
+        walletAddress={walletAddress ?? ''}
+        onComplete={handleNavigateToHub}
+        onSkip={handleNavigateToHub}
+      />
+    )
+  }
+
+  // -------------------------------------------------------
+  // Render: Career Card (driver self-view — same data employers see)
+  // -------------------------------------------------------
+  if (currentPage === 'career-card') {
+    return (
+      <DriverCareerCardSection
+        walletAddress={walletAddress ?? ''}
+        onNavigate={setCurrentPage}
+        onBack={handleNavigateToHub}
+      />
+    )
+  }
+
+  // -------------------------------------------------------
   // Render: DOT app page (delegates to DotApplicationFlow)
   // -------------------------------------------------------
   if (currentPage === 'dotapp') {
@@ -412,7 +441,8 @@ export default function DriverShell({
             onNavigate={(page) => {
               if (
                 page === 'resume' || page === 'dotapp' || page === 'jobs' ||
-                page === 'applications' || page === 'mvr' || page === 'stormchain'
+                page === 'applications' || page === 'mvr' || page === 'stormchain' ||
+                page === 'career-card' || page === 'profile-setup'
               ) {
                 setCurrentPage(page)
               }

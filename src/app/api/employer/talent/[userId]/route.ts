@@ -110,25 +110,37 @@ export async function GET(
       driverProfile = dp
     }
 
-    // 3. Developer profile (if developer)
+    // 3. Developer profile — use developer_profile_id from view if available,
+    //    otherwise fall back to user_id lookup for non-driver users
     let developerProfile = null
-    // Fetch developer profile if no driver profile exists
-    // (determines candidate type by DATA, not by current role)
     if (!driverProfile) {
-      const { data: devp } = await supabase
-        .from('developer_profiles')
-        .select(
-          `
-          id, full_name, email, phone, location, professional_summary,
-          title, years_experience, employment_history,
-          github_url, linkedin_url, portfolio_url,
-          skills, education, share_token, share_settings
-        `,
-        )
-        .eq('user_id', userId)
-        .single()
+      const devpId = careerCard.developer_profile_id
+      const devpQuery = devpId
+        ? supabase.from('developer_profiles').select(
+            `id, first_name, last_name, display_name, email, phone,
+             location, bio, headline, years_experience, employment_history,
+             github_username, linkedin_url, portfolio_url, twitter_url,
+             skills, education, share_token`
+          ).eq('id', devpId)
+        : supabase.from('developer_profiles').select(
+            `id, first_name, last_name, display_name, email, phone,
+             location, bio, headline, years_experience, employment_history,
+             github_username, linkedin_url, portfolio_url, twitter_url,
+             skills, education, share_token`
+          ).eq('user_id', userId)
 
-      developerProfile = devp
+      const { data: devp } = await devpQuery.single()
+
+      if (devp) {
+        // Normalise into the shape the rest of this route + CareerCard component expects
+        developerProfile = {
+          ...devp,
+          full_name: [devp.first_name, devp.last_name].filter(Boolean).join(' ').trim() || devp.display_name || null,
+          title: devp.headline,
+          github_url: devp.github_username ? `https://github.com/${devp.github_username}` : null,
+          professional_summary: devp.bio,
+        }
+      }
     }
 
     // 4. Latest resume with structured data
@@ -215,7 +227,7 @@ export async function GET(
     // 8. Pending requests from this company
     const { data: pendingRequests } = await supabase
       .from('candidate_requests')
-      .select('id, request_type, status, created_at')
+      .select('id, request_type, document_type, status, created_at')
       .eq('candidate_user_id', userId)
       .eq('company_id', companyId)
       .in('status', ['pending', 'viewed'])
@@ -258,7 +270,7 @@ export async function GET(
       ? `${driverProfile.first_name || ''} ${driverProfile.middle_name || ''} ${driverProfile.last_name || ''}`
           .replace(/\s+/g, ' ')
           .trim()
-      : developerProfile?.full_name || 'Unknown'
+      : (developerProfile as { full_name?: string | null } | null)?.full_name || careerCard.full_name || 'Unknown'
 
     // Determine effective candidate type based on DATA, not current role
     // (user might be logged in as employer but still have driver data to show)

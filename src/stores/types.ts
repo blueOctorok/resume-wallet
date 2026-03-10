@@ -27,6 +27,8 @@ export type PageType =
   | 'github'
   | 'team'
   | 'company-setup'
+  | 'career-card'
+  | 'profile-setup'
   | null
 
 export type UserRole = 'driver' | 'developer' | 'employer' | null

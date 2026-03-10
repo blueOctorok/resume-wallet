@@ -45,6 +45,7 @@ interface Candidate {
   verifiedJobsCount: number
   memberSince: string
   hasApplied: boolean
+  role: string | null
 }
 
 interface Job {
@@ -677,7 +678,7 @@ function CandidateCard({
   onAddToPipeline: (e: React.MouseEvent) => void
   theme: string
 }) {
-  const isDriver = candidate.cdlClass !== null
+  const isDriver = candidate.role === 'driver'
 
   return (
     <div

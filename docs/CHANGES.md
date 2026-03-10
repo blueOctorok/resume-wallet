@@ -4,6 +4,151 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 📄 **Architecture: Resume `source_role` — Explicit Role Ownership** (March 2026)
+
+### Problem
+The `resumes` table was shared by all roles with no schema-level way to distinguish who owned a given resume. The driver hub was using a fragile hack (`.or('resume_type.neq.developer_built,resume_type.is.null')`) to filter out dev resumes. Adding a future role (nurse, contractor, etc.) would require yet another bespoke filter. The `career_cards` view also picked the most recent resume regardless of role, meaning a user who fills both driver and developer profiles could get the wrong resume shown in each view.
+
+### Solution
+
+**`supabase/migrations/030_resumes_source_role.sql`** — run in Supabase SQL editor:
+- Adds `source_role TEXT NOT NULL CHECK (source_role IN ('driver', 'developer', 'general'))` with default `'driver'`.
+- Backfills existing rows: `resume_type = 'developer_built'` → `source_role = 'developer'`; users with only a `developer_profiles` record → `'developer'`; everything else → `'driver'`.
+- Adds `idx_resumes_user_source_role` index on `(user_id, source_role)`.
+- Updates `career_cards` view: the LATERAL resume join now filters by `source_role` matching the candidate's effective role (driver profile → `source_role = 'driver'`; developer-only profile → `source_role = 'developer'`).
+- Recreates `search_talent()` function (unchanged logic, just re-created after view update).
+
+**`src/lib/supabase-db.ts`** — `createResume()` now accepts optional `sourceRole` param (defaults to `'driver'`). This covers the legacy file-upload path.
+
+**`src/app/api/resumes/create/route.ts`** — sets `source_role: 'driver'` on all driver builder resumes.
+
+**`src/app/api/developer/resume/route.ts`** — sets `source_role: 'developer'` on create; GET filter changed from `resume_type = 'developer_built'` to `source_role = 'developer'`.
+
+**`src/app/api/driver/hub/route.ts`** — resume query changed from the ad-hoc `resume_type.neq.developer_built` workaround to `source_role.eq.driver`. Clean and explicit.
+
+**No change needed** in `driver/career-card` or `employer/talent/[userId]` routes — they look up resumes by `resume_id` from the `career_cards` view, which already returns the role-correct ID.
+
+### Extensibility
+Adding a new role in the future requires:
+1. Add the new value to the `source_role` CHECK constraint.
+2. Set `source_role: 'new_role'` in that hub's resume creation API.
+3. Filter by `source_role = 'new_role'` in that hub's list query.
+That's it. No scattered hacks needed.
+
+---
+
+## 🔍 **Fix: Talent Search Shows Both Drivers and Developers Correctly** (March 2026)
+
+### Problem
+Using one wallet address across all three role hubs exposed two bugs in the `career_cards` view:
+1. **Developers were invisible** — the view only joined `driver_profiles`. A user with only a `developer_profiles` record (no `driver_profiles`) returned zero rows in talent search.
+2. **Wrong role label** — `role` came from `users.role` (the wallet's *current* role), not from which profile table had data. A driver card showed "developer" because the wallet had last been used in dev mode.
+
+### Solution
+
+**`supabase/migrations/029_career_cards_developer_support.sql`** — run this in Supabase SQL editor:
+- Adds `LEFT JOIN developer_profiles devp ON devp.user_id = u.id` to the view.
+- `role` is now a `CASE` expression: `'driver'` if `driver_profiles.first_name IS NOT NULL`, `'developer'` if `developer_profiles.(first_name OR display_name) IS NOT NULL`, else `users.role`. Role now reflects data presence, not the wallet's current session state.
+- `full_name` is derived from whichever profile table has the data.
+- Added `developer_profile_id`, `headline`, `github_username`, `dev_location` columns to the view.
+- `has_profile` now checks either profile table.
+- Completeness score logic branches: drivers score on profile+resume+DOT+MVR+history; developers score on profile+resume+skills+github.
+- WHERE clause: `dp.first_name IS NOT NULL OR devp.(first_name OR display_name) IS NOT NULL` — only real identity data, no phantom rows.
+- `search_talent()` function updated: searches developer name/location/headline/github, role filter uses derived role, state filter handles both `dp.state` and parsed `devp.location`.
+
+**`src/app/api/employer/talent/[userId]/route.ts`** — fixed developer profile column names (table has `first_name`/`last_name`/`headline`/`github_username`; route was selecting non-existent `full_name`/`title`/`github_url`). Now normalises these into the shape the rest of the route and `CareerCard` component expect.
+
+**`src/app/api/employer/talent/search/route.ts`** — added `role` to the candidate type and result mapping so talent search cards show the correct driver/developer label.
+
+---
+
+## 🪪 **Profile Setup — Identity-First Onboarding for Both Hubs** (March 2026)
+
+### Problem
+- Driver hub "Set Up Profile" button navigated to the Resume Builder — a long, complex form. Filling out a resume is not the right first step; knowing *who this person is* is.
+- Developer hub had no "Set Up Profile" prompt at all. A fresh developer account showed a blank hub with no guidance on how to establish identity.
+- Both hubs showed "Drivers/Developers Driver/Developer Hub" as the header when no name was set, which was disorienting.
+
+### Solution
+
+**`src/components/app/ProfileSetup.tsx`** — shared form used by both roles:
+- Driver fields: First name, Last name, Email, Phone, City, CDL Class, CDL State, Home State.
+- Developer fields: First name, Last name, Email, Headline ("Full Stack Developer · React & Node.js"), GitHub username, Location.
+- On save: writes to the role's profile table and syncs `users.name` so the hub header updates immediately.
+- "Skip for now" option available — form is a guide, not a gate.
+
+**`GET /api/driver/profile/quick-setup`** and **`GET /api/developer/profile/quick-setup`**:
+- Upsert the profile table (`driver_profiles` or `developer_profiles`) with only the submitted fields — no overwriting other data.
+- Update `users.name` with `firstName + lastName` so identity is reflected everywhere immediately.
+
+**`src/stores/types.ts`** — added `'profile-setup'` to `PageType`.
+
+**DriverShell**: Added `profile-setup` routing; updated hub's `onNavigate` whitelist to include it.
+**DriverHub**: "Set Up Profile" button now routes to `'profile-setup'` instead of `'resume'`. Updated copy to "Who are you? Set up your profile — name, contact, and CDL — under a minute."
+
+**DeveloperShell**: Added `profile-setup` routing.
+**DeveloperHub**: Added setup prompt (indigo banner matching driver hub style) when `profile?.firstName` and `profile?.lastName` and `profile?.displayName` are all empty. Routes to same `ProfileSetup` component with `role="developer"`.
+
+---
+
+## 🃏 **Unified Career Card + Live Data Sync** (March 2026)
+
+### Problem
+- Employers saw a different version of a candidate's career card than what the driver/dev saw in their own hub. Any UI or data discrepancy between the two views was a production concern.
+- After an admin deleted a resume or DOT app, the employer's kanban pipeline still showed it as "done" because `EmployerHub`'s component state was stale. The kanban didn't refresh when the user returned to the window.
+- There was no way for a driver to preview exactly what employers see before applying anywhere.
+
+### Solution
+
+**1. `src/components/CareerCard.tsx` — Single canonical display component**
+- Extracted all career card display logic into one shared component.
+- Exports `CareerCardData` type so all consumers share the identical data shape.
+- Props accept optional action slots (`resumeAction`, `dotAppAction`, `mvrAction`, `footerActions`) so the caller injects context-appropriate buttons without the component needing to know who's viewing it. Employer sees request buttons; driver sees navigation buttons; both see the same data.
+
+**2. `src/components/employer/CareerCardModal.tsx` — Thin employer wrapper**
+- Completely rewritten. Now only owns: data fetching, employer action logic (createRequest, resendRequest, recruit modal), and the modal shell.
+- Delegates all display to `<CareerCard>` with employer-specific action slots injected.
+- Added a **Refresh button** (↻) in the modal header — employer can manually sync if a candidate just updated their profile.
+- Added **window focus listener** — the modal data auto-refreshes whenever the employer returns to the browser window.
+
+**3. `src/app/api/driver/career-card/route.ts` — Driver self-view endpoint**
+- New `GET /api/driver/career-card` endpoint that returns the authenticated driver's data in the exact same `CareerCardData` shape as the employer endpoint.
+- No company context: `pendingRequests: []`, `existingApplication: null`. The rest of the data (profile, resume, DOT app, MVR, work history, verifications) is identical to what an employer sees.
+
+**4. `src/components/app/DriverCareerCardSection.tsx` — Driver self-view page**
+- New page section for drivers: "My Career Card" — shows exactly what employers see.
+- Uses the same `<CareerCard>` component with navigation action slots (Create Resume, Start Application, Order MVR) instead of employer request buttons.
+- Has a teal "Employers see this card when searching for you" banner for context.
+- Auto-refreshes on window focus.
+
+**5. `src/stores/types.ts` — Added `'career-card'` page type**
+
+**6. `src/components/app/DriverShell.tsx` — Career card routing**
+- Added `if (currentPage === 'career-card')` routing to `DriverCareerCardSection`.
+
+**7. `src/components/DriverHub.tsx` — Career card entry point**
+- Added a "View Your Career Card" teal CTA banner in the hub between the QR share card and employment verification sections. One click → the driver's self-view career card.
+
+**8. `src/hooks/useVisibilityRefresh.ts` — Window focus refresh**
+- Extended to also listen to `window focus` events (not just `document visibilitychange`). This means `EmployerHub`, `DriverHub`, and any other component using this hook will now refresh stale data when the user alt-tabs back from another app or browser window — closing the kanban staleness gap.
+
+---
+
+## 🔗 **Outreach Profile Linking — In-App Notifications for Invites** (March 2026)
+
+### Problem
+Employer outreach invites only stored a free-text name and email. There was no link to an actual StormChain `user_id`, so in-app notifications couldn't fire — we had no way to know which account to notify.
+
+### Solution
+- Added `candidate_user_id` column to `application_invites` (migration `027_invite_candidate_user_link.sql`).
+- Added a profile search autocomplete at the top of the "Create Outreach Link" form in `CandidateOutreach.tsx`. As the employer types (debounced 300ms), it queries `/api/employer/talent/search` and shows matching StormChain profiles in a dropdown.
+- Selecting a profile: pre-fills name + email, stores `candidateUserId`, shows a teal "Connected to StormChain" badge. Name/email remain editable.
+- Clearing the profile: resets to manual free-text mode (email-only invite, no in-app notification).
+- When an employer sends the email (`POST /api/employer/invites/send-email`), if `candidate_user_id` is set on the invite, an in-app notification is created for that candidate immediately.
+- Non-linked invites (free-text only) still send email as before — no regression.
+
+---
+
 ## 🔔 **Notification System + Consistent Email Templates** (March 2026)
 
 ### What Was Added
@@ -10810,6 +10955,91 @@ const isStaleReconnect = isSameAddressAsLogout && timeSinceLogout < COOLDOWN_MS
 
 if (isStaleReconnect) return // Block stale reconnect
 ```
+
+**Status**: ✅ COMPLETE
+
+---
+
+## Employer Request Actions — Career Card & Kanban (Mar 2026)
+
+### What Was Done
+
+Employers can now request a resume or DOT application directly from both the career card modal and the kanban pipeline cards, mirroring the existing MVR/background check request flow. All requests fire an in-app notification and email to the candidate.
+
+**Career Card Modal (`CareerCardModal.tsx`):**
+- Added a "Request DOT App" `ActionButton` to the DOT Application section when no application is on file. Shows "Pending · Resend" state if a request is already outstanding.
+- Updated `getPendingRequest` to accept an optional `documentType` parameter so `resume` and `dot_application` requests within the same `request_type` bucket (`document_upload` / `profile_completion`) can be distinguished.
+- The existing "Request Resume" button now uses the `document_type`-aware filter.
+
+**Career Card API (`/api/employer/talent/[userId]/route.ts`):**
+- Added `document_type` to the `pendingRequests` select so the modal can precisely identify which document is pending.
+
+**Kanban Pipeline (`ApplicantKanban.tsx`):**
+- Added `hasDriverApp: boolean` to the `KanbanApplicant` type.
+- Added a `QuickRequestChip` sub-component — a small inline chip that toggles between four states: requestable → loading → sent (resets after 3s) / pending (sticky).
+- Kanban cards now show:
+  - Resume chip: green "Verified", gray "Resume", or a tappable "Resume" request chip (with Send icon) when missing.
+  - DOT App chip (drivers only): teal "DOT App" when complete, or a tappable "DOT App" request chip when missing.
+- Clicking a chip calls the same `/api/employer/talent/[userId]/request` endpoint as the career card. A 409 response (already pending) transitions the chip to "Pending" state instead of showing an error.
+
+**Hub API (`/api/employer/hub/route.ts`):**
+- Added a single batch query against `driver_applications` after building the applicants array to populate `hasDriverApp` for all kanban cards in one round-trip.
+
+**Candidate-side (`CandidateRequestsSection.tsx`):**
+- Improved request type labels:
+  - `document_upload` → "Resume Request" (was generic "Document Request")
+  - `profile_completion` → "DOT Application Request" (was generic "Profile Request")
+- Improved action button labels: "Go to Resume" and "Start DOT Application" (were "Upload Document" / "Complete Profile").
+
+**Email notifications (`send-admin-notification.ts`):**
+- Resume request email: now says "They are requesting your resume. Log in to StormChain to upload or create one."
+- DOT app request email: now says "They are requesting you complete your DOT Driver Application on StormChain. A completed application strengthens your profile and speeds up the hiring process."
+- MVR email: updated to mention the FCRA disclosure step.
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/app/api/employer/talent/[userId]/route.ts` | Added `document_type` to `pendingRequests` select |
+| `src/app/api/employer/hub/route.ts` | Batch query for `hasDriverApp` on all kanban applicants |
+| `src/components/employer/CareerCardModal.tsx` | DOT app `ActionButton` + `document_type`-aware `getPendingRequest` |
+| `src/components/employer/ApplicantKanban.tsx` | `hasDriverApp` type field + `QuickRequestChip` on cards |
+| `src/components/EmployerHub.tsx` | Pass `hasDriverApp` in kanban applicant mapping |
+| `src/components/CandidateRequestsSection.tsx` | Improved request labels and action button text |
+| `src/lib/send-admin-notification.ts` | More specific email copy per request type/document |
+
+**Status**: ✅ COMPLETE
+
+---
+
+## Migration Hygiene & Automated Maintenance (Mar 2026)
+
+### What Was Done
+
+**Migration file cleanup:**
+- Deleted `004_enable_rls_safe.sql` — duplicate of `004_enable_rls_immediate.sql`, identical content
+- Deleted `010_add_developer_role.sql` — duplicate of `010_remove_role_check_constraint.sql`, already applied
+- Moved `018_cleanup_test_data.sql` → `supabase/scripts/cleanup_test_data.sql`
+  - This file deletes rows and is not a schema migration. Keeping it in `/migrations/` was a category error. Moved to `/scripts/` with a prominent warning header and a preview SELECT so it can be safely reviewed before execution.
+
+**Note on MVR table RLS policies (`USING (true)`):** These are intentionally left open because Accio pushes result XML back via HTTP webhook to our API routes, which use the Supabase service role key. Service role bypasses RLS entirely — so these policies never fire in practice. They are not a real-world vulnerability given our auth architecture.
+
+**New migration: `028_pg_cron_maintenance.sql`**
+- Requires Supabase Pro tier — enable `pg_cron` in Dashboard → Database → Extensions first
+- Registers three scheduled jobs:
+  - `expire-stale-invites` — hourly, marks past-due `application_invites` as `'expired'`
+  - `cleanup-old-notifications` — nightly 3 AM UTC, deletes read notifications older than 90 days
+  - `expire-verification-tokens` — nightly 3:30 AM UTC, marks stale employment verification requests as `EXPIRED`
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `supabase/migrations/004_enable_rls_safe.sql` | Deleted (duplicate) |
+| `supabase/migrations/010_add_developer_role.sql` | Deleted (duplicate) |
+| `supabase/migrations/018_cleanup_test_data.sql` | Moved to `supabase/scripts/` |
+| `supabase/scripts/cleanup_test_data.sql` | New home for the test-data cleanup script |
+| `supabase/migrations/028_pg_cron_maintenance.sql` | New — pg_cron scheduled maintenance jobs |
 
 **Status**: ✅ COMPLETE
 

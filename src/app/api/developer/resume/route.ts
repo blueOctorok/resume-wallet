@@ -84,6 +84,7 @@ export async function POST(request: NextRequest) {
         title: title || 'Developer Resume',
         filename: `${structuredData.personalInfo?.firstName || 'Developer'}_${structuredData.personalInfo?.lastName || 'Resume'}.pdf`,
         resume_type: 'developer_built',
+        source_role: 'developer',
         structured_data: structuredData,
         ipfs_hash: 'pending', // Will be set during verification
         verification_status: 'PENDING',
@@ -239,7 +240,7 @@ export async function GET(request: NextRequest) {
       .from('resumes')
       .select('*')
       .eq('user_id', user.id)
-      .eq('resume_type', 'developer_built')
+      .eq('source_role', 'developer')
       .order('created_at', { ascending: false })
 
     if (resumesError) {

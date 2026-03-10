@@ -101,7 +101,7 @@ interface DevProject {
   id: string
   user_id: string
   developer_profile_id: string | null
-  name: string
+  title: string
   description: string | null
   tech_stack: string[] | null
   live_url: string | null
@@ -2668,7 +2668,7 @@ function AdminDashboardContent() {
                           }
                         >
                           <td className={tableCellClass}>
-                            <div className='font-medium'>{project.name}</div>
+                            <div className='font-medium'>{project.title}</div>
                             <div className='text-xs opacity-60 line-clamp-1'>
                               {project.description || '-'}
                             </div>
@@ -2749,7 +2749,7 @@ function AdminDashboardContent() {
                                 setDeleteTarget({
                                   type: 'devProject',
                                   id: project.id,
-                                  name: project.name,
+                                  name: project.title,
                                 })
                               }
                               className='p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500'

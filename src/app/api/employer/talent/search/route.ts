@@ -109,8 +109,11 @@ export async function GET(request: NextRequest) {
       has_resume: boolean
       verified_jobs_count: number
       member_since: string
+      role: string | null
     }> | null = null
 
+    // Note: p_cdl_class and p_endorsements must be TEXT[] (not VARCHAR[]) to match
+    // the text[] columns in career_cards. The function was updated in migration 029.
     const { data: rpcData, error: searchError } = await supabase
       .rpc('search_talent', {
         p_role: role || null,
@@ -119,23 +122,16 @@ export async function GET(request: NextRequest) {
         p_min_experience: pMinExperience,
         p_has_mvr: hasMvr === 'true' ? true : hasMvr === 'false' ? false : null,
         p_has_driver_app: hasDriverApp === 'true' ? true : hasDriverApp === 'false' ? false : null,
-        p_endorsements: endorsements ? endorsements.split(',').map((e: string) => e.trim()).filter(Boolean) : null,
+        p_endorsements: endorsements
+          ? endorsements.split(',').map((e: string) => e.trim()).filter(Boolean)
+          : null,
         p_search_text: searchText || null,
         p_limit: limit,
         p_offset: offset,
       })
 
-    console.log('[TALENT SEARCH] RPC params:', {
-      p_role: role || null,
-      p_cdl_class: cdlClass ? [cdlClass] : null,
-      p_state: state || null,
-      p_search_text: searchText || null,
-      resultCount: rpcData?.length ?? 0,
-      hasError: !!searchError,
-    })
-
     if (searchError) {
-      console.error('[TALENT SEARCH] RPC error:', searchError.message, searchError.details)
+      console.error('[TALENT SEARCH] RPC error:', searchError.message)
 
       // Fallback: query career_cards view directly with simple filters
       const viewQuery = supabase
@@ -239,6 +235,7 @@ export async function GET(request: NextRequest) {
       has_resume: boolean
       verified_jobs_count: number
       member_since: string
+      role: string | null
     }
 
     // Filter out users whose profile was deleted — they have no name and shouldn't appear.
@@ -265,6 +262,8 @@ export async function GET(request: NextRequest) {
       verifiedJobsCount: c.verified_jobs_count,
       memberSince: c.member_since,
       hasApplied: appliedSet.has(c.user_id),
+      // Role derived from profile data in view — not users.role
+      role: c.role,
     }))
 
     return NextResponse.json({

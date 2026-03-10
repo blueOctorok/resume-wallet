@@ -7,6 +7,7 @@ export async function createResume(data: {
   ipfsHash: string
   isPublic: boolean
   userId: string
+  sourceRole?: 'driver' | 'developer' | 'general'
 }) {
   // Use admin client to bypass RLS (called from API routes that validate wallet addresses)
   const supabase = await getAdminSupabaseClient()
@@ -18,6 +19,7 @@ export async function createResume(data: {
     ipfs_hash: data.ipfsHash,
     is_public: data.isPublic,
     user_id: data.userId,
+    source_role: data.sourceRole ?? 'driver',
   }
 
   const { data: resume, error } = await supabase

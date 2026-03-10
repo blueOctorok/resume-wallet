@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import LoadingScreen from '@/components/LoadingScreen'
 import { useUIStore, usePreferencesStore, useAuthStore } from '@/stores'
+import ProfileSetup from '@/components/app/ProfileSetup'
 
 const DeveloperHub = dynamic(
   () => import('@/components/DeveloperHub').then((mod) => mod.default),
@@ -62,6 +63,17 @@ export default function DeveloperShell({ userAddress }: DeveloperShellProps) {
     }
   }, [userAddress, hasCompletedJourneyStep, triggerJourneyStep])
 
+  if (currentPage === 'profile-setup') {
+    return (
+      <ProfileSetup
+        role="developer"
+        walletAddress={userAddress}
+        onComplete={goBack}
+        onSkip={goBack}
+      />
+    )
+  }
+
   // Default: Developer Hub
   if (!currentPage) {
     return (
@@ -73,7 +85,8 @@ export default function DeveloperShell({ userAddress }: DeveloperShellProps) {
             page === 'resume' ||
             page === 'github' ||
             page === 'jobs' ||
-            page === 'applications'
+            page === 'applications' ||
+            page === 'profile-setup'
           ) {
             setCurrentPage(page)
           }

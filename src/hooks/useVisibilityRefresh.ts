@@ -64,16 +64,26 @@ export function useVisibilityRefresh(
   useEffect(() => {
     if (!enabled) return
 
+    // Refresh on tab visibility change (switching tabs in same window)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isStale()) {
         refresh()
       }
     }
 
+    // Also refresh when the OS window itself regains focus (alt-tab back from
+    // another application or another browser window). This is the main trigger
+    // for stale data after making admin changes in a separate window.
+    const handleWindowFocus = () => {
+      if (isStale()) refresh()
+    }
+
     document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleWindowFocus)
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleWindowFocus)
     }
   }, [enabled, isStale, refresh])
 

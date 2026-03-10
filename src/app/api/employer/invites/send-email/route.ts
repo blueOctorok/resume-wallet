@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { sendInviteEmail } from '@/lib/send-invite-email'
+import { createNotification } from '@/lib/create-notification'
 
 /**
  * POST /api/employer/invites/send-email
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
     const { data: invite, error: inviteError } = await supabase
       .from('application_invites')
       .select(`
-        id, token, candidate_email, candidate_name, welcome_message,
+        id, token, candidate_email, candidate_name, candidate_user_id, welcome_message,
         status, type, job_posting_id,
         companies(id, company_name),
         job_postings(id, title)
@@ -123,10 +124,38 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', inviteId)
 
+    // If this invite is linked to an existing StormChain profile, also create
+    // an in-app notification so they see it in the notification bell immediately.
+    const candidateUserId = (invite as { candidate_user_id?: string | null }).candidate_user_id
+    if (candidateUserId) {
+      const typeLabels: Record<string, string> = {
+        driver_dot:     'DOT Application Invite',
+        developer_card: 'Career Card Invite',
+        general:        'StormChain Invite',
+      }
+      const inviteType = (invite as { type?: string }).type || 'general'
+      const companyDisplayName = company?.company_name || 'An employer'
+
+      createNotification({
+        userId: candidateUserId,
+        type: 'candidate_request',
+        title: `${companyDisplayName} invited you`,
+        body: `You've been invited to complete a ${typeLabels[inviteType] || 'profile'}${job?.title ? ` for ${job.title}` : ''}.`,
+        data: {
+          inviteId,
+          companyName: companyDisplayName,
+          inviteType,
+          jobTitle: job?.title ?? null,
+        },
+        actionUrl: `${process.env.NEXT_PUBLIC_APP_URL || ''}/apply/${invite.token}`,
+      }).catch(err => console.error('[SEND INVITE EMAIL] Notification error:', err))
+    }
+
     return NextResponse.json({
       success: true,
       message: `Invite email sent to ${recipientEmail}`,
       sentTo: recipientEmail,
+      notified: !!candidateUserId,
     })
 
   } catch (error) {

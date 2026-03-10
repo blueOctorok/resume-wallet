@@ -98,19 +98,25 @@ export async function sendNewCompanyNotification(
 // ─── Candidate: Employer Request ──────────────────────────────────────────────
 
 const REQUEST_TYPE_LABELS: Record<string, string> = {
-  mvr_order: 'Background Check & MVR',
-  document_upload: 'Document Upload',
-  verification: 'Employment Verification',
-  profile_completion: 'Profile Completion',
+  mvr_order: 'Background Check & MVR Request',
+  document_upload: 'Resume Request',
+  verification: 'Employment Verification Request',
+  profile_completion: 'DOT Application Request',
   custom: 'New Request',
 }
 
 const REQUEST_ACTION_TEXT: Record<string, (params: CandidateRequestNotificationParams) => string> = {
   mvr_order: () =>
-    'They would like to order your Motor Vehicle Record (MVR). This will be added to your profile and can increase your hiring potential.',
-  document_upload: (p) => `They are requesting you upload your ${p.documentType || 'document'}.`,
+    'They would like to order your Motor Vehicle Record (MVR). Log in to StormChain to review and sign the required FCRA disclosure before the MVR can be ordered.',
+  document_upload: (p) =>
+    p.documentType === 'resume'
+      ? 'They are requesting your resume. Log in to StormChain to upload or create one.'
+      : `They are requesting you upload your ${p.documentType || 'document'}.`,
   verification: () => 'They are requesting employment verification for your work history.',
-  profile_completion: () => 'They are requesting you complete additional sections of your profile.',
+  profile_completion: (p) =>
+    p.documentType === 'dot_application'
+      ? 'They are requesting you complete your DOT Driver Application on StormChain. A completed application strengthens your profile and speeds up the hiring process.'
+      : 'They are requesting you complete additional sections of your profile.',
   custom: (p) => p.message || 'They have a request for you.',
 }
 

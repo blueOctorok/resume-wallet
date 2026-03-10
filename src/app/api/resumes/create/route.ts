@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
         mime_type: 'application/json',
         ipfs_hash: `built_${Date.now()}`, // Placeholder hash (will be replaced if exported to PDF)
         resume_type: resumeType || 'built',
+        source_role: 'driver',
         structured_data: structuredData,
         verification_status: 'PENDING',
         is_paid: false,
