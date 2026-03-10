@@ -17,6 +17,7 @@ import {
   FileText,
 } from 'lucide-react'
 import CareerCard, { type CareerCardData } from '@/components/CareerCard'
+import Modal, { ModalHeader } from '@/components/ui/Modal'
 
 // Re-export for consumers that imported from here previously
 export type { CareerCardData }
@@ -485,6 +486,7 @@ export default function CareerCardModal({
   // to actually purchase the MVR. Pre-fills from careerCard profile data.
   // Employer can review and edit before submitting to Accio.
 
+  // Modal.tsx handles its own portal — no need to wrap in createPortal
   const MvrOrderFormModal = showMvrOrderForm && careerCard
     ? <EmployerMvrOrderForm
         candidateUserId={candidateUserId}
@@ -601,7 +603,7 @@ export default function CareerCardModal({
       {createPortal(modalContent, document.body)}
       {recruitModalContent && createPortal(recruitModalContent, document.body)}
       {mvrConfirmContent && createPortal(mvrConfirmContent, document.body)}
-      {MvrOrderFormModal && createPortal(MvrOrderFormModal, document.body)}
+      {MvrOrderFormModal}
     </>
   )
 }
@@ -749,46 +751,21 @@ function EmployerMvrOrderForm({
 
   if (success) {
     return (
-      <div className="fixed inset-0 z-[10005] flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black/70 pointer-events-none" />
-        <div className={`relative z-[10006] w-full max-w-sm rounded-2xl p-8 text-center ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
+      <Modal onClose={onSuccess} maxWidth="max-w-sm" zIndex={10005} disableBackdropClose>
+        <div className="p-8 text-center">
           <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
           <p className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>MVR Order Submitted</p>
           <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Results will appear in the driver's career card when ready.</p>
         </div>
-      </div>
+      </Modal>
     )
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[10005] flex items-center justify-center p-4 overflow-hidden"
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div className="absolute inset-0 bg-black/70 pointer-events-none" />
-      <div
-        className={`relative z-[10006] w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
-          isDark ? 'bg-gray-900' : 'bg-white'
-        }`}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className={`sticky top-0 z-10 flex items-center justify-between p-5 border-b ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-xl ${isDark ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
-              <Car className="w-5 h-5 text-blue-500" />
-            </div>
-            <div>
-              <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Order MVR</h3>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{careerCard.name}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className={`p-2 rounded-lg ${isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <Modal onClose={onClose} maxWidth="max-w-lg" zIndex={10005}>
+      <ModalHeader title="Order MVR" subtitle={careerCard.name} onClose={onClose} />
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-5">
+      <form onSubmit={handleSubmit} className="p-5 space-y-5">
           {/* Consent confirmed banner */}
           <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-green-50 text-green-700 border border-green-200'}`}>
             <CheckCircle className="w-4 h-4 flex-shrink-0" />
@@ -910,7 +887,6 @@ function EmployerMvrOrderForm({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   )
 }
