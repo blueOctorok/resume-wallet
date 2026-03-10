@@ -296,7 +296,7 @@ export async function GET(request: NextRequest) {
           .from('bgcheck_consents')
           .select('driver_user_id')
           .in('driver_user_id', applicantUserIds)
-          .eq('company_id', companyId),
+          .eq('company_id', company.id),
       ])
 
       const mvrByUser = new Map<string, string>()
