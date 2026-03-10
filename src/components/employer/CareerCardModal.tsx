@@ -48,6 +48,7 @@ export default function CareerCardModal({
   const [resendLoading, setResendLoading] = useState<string | null>(null)
 
   const [showMvrConfirm, setShowMvrConfirm] = useState(false)
+  const [showMvrOrderForm, setShowMvrOrderForm] = useState(false)
   const [showRecruitModal, setShowRecruitModal] = useState(false)
   const [jobPostings, setJobPostings] = useState<JobPosting[]>([])
   const [jobsLoading, setJobsLoading] = useState(false)
@@ -226,16 +227,33 @@ export default function CareerCardModal({
   ) : null
 
   const mvrAction = !careerCard?.hasMvr ? (
-    <ActionButton
-      label="Request MVR"
-      loading={requestLoading === 'mvr_order'}
-      resendLoading={resendLoading === 'mvr_order'}
-      isPending={!!getPendingRequest('mvr_order')}
-      // Open confirmation modal first so employer can verify driver data before sending
-      onClick={() => setShowMvrConfirm(true)}
-      onResend={() => resendRequest('mvr_order')}
-      theme={theme}
-    />
+    careerCard?.hasBgcheckConsent
+      // Disclosure signed → employer can now order the MVR directly
+      ? (
+        <button
+          onClick={() => setShowMvrOrderForm(true)}
+          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            theme === 'dark'
+              ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+              : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+          }`}
+        >
+          <Car className="w-3 h-3" />
+          Order MVR
+        </button>
+      )
+      // No disclosure yet → send request to driver to sign
+      : (
+        <ActionButton
+          label="Request MVR"
+          loading={requestLoading === 'mvr_order'}
+          resendLoading={resendLoading === 'mvr_order'}
+          isPending={!!getPendingRequest('mvr_order')}
+          onClick={() => setShowMvrConfirm(true)}
+          onResend={() => resendRequest('mvr_order')}
+          theme={theme}
+        />
+      )
   ) : null
 
   const footerActions = (
@@ -462,6 +480,22 @@ export default function CareerCardModal({
     </div>
   ) : null
 
+  // ── MVR order form modal ──────────────────────────────────────────────────
+  // Shown when the driver has signed the disclosure and the employer is ready
+  // to actually purchase the MVR. Pre-fills from careerCard profile data.
+  // Employer can review and edit before submitting to Accio.
+
+  const MvrOrderFormModal = showMvrOrderForm && careerCard
+    ? <EmployerMvrOrderForm
+        candidateUserId={candidateUserId}
+        walletAddress={walletAddress}
+        careerCard={careerCard}
+        theme={theme}
+        onClose={() => setShowMvrOrderForm(false)}
+        onSuccess={() => { setShowMvrOrderForm(false); fetchCareerCard() }}
+      />
+    : null
+
   // ── MVR confirmation modal ────────────────────────────────────────────────
   // Shows driver details so the employer can verify they're sending to the right
   // person before the request (and background check disclosure) is dispatched.
@@ -567,6 +601,7 @@ export default function CareerCardModal({
       {createPortal(modalContent, document.body)}
       {recruitModalContent && createPortal(recruitModalContent, document.body)}
       {mvrConfirmContent && createPortal(mvrConfirmContent, document.body)}
+      {MvrOrderFormModal && createPortal(MvrOrderFormModal, document.body)}
     </>
   )
 }
@@ -620,5 +655,262 @@ function ActionButton({
       {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
       {label}
     </button>
+  )
+}
+
+// ── EmployerMvrOrderForm ──────────────────────────────────────────────────────
+// Pre-fills driver data from the career card so the employer just needs to
+// confirm (or correct) before submitting to Accio. No crypto payment — billed
+// to the company account.
+
+const US_STATES = [
+  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
+  'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
+  'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT',
+  'VA','WA','WV','WI','WY',
+]
+
+function EmployerMvrOrderForm({
+  candidateUserId,
+  walletAddress,
+  careerCard,
+  theme,
+  onClose,
+  onSuccess,
+}: {
+  candidateUserId: string
+  walletAddress: string
+  careerCard: CareerCardData
+  theme: string
+  onClose: () => void
+  onSuccess: () => void
+}) {
+  const isDark = theme === 'dark'
+  const profile = careerCard.profile
+
+  // Pre-fill from career card — employer can edit any field before submitting
+  const [form, setForm] = useState({
+    firstName:  profile.fullName.split(' ')[0] ?? '',
+    middleName: '',
+    lastName:   profile.fullName.split(' ').slice(-1)[0] ?? '',
+    email:      careerCard.email ?? '',
+    phone:      careerCard.phone ?? '',
+    dob:        '',
+    ssn:        '',
+    address:    '',
+    city:       profile.city ?? '',
+    state:      profile.state ?? '',
+    zip:        '',
+    dlNumber:   profile.cdl_number ?? '',
+    dlState:    profile.cdl_state ?? profile.state ?? '',
+  })
+
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError]     = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+
+  const set = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setForm(prev => ({ ...prev, [field]: e.target.value }))
+
+  const isValid = Boolean(
+    form.firstName && form.lastName && form.dob && form.ssn &&
+    form.address && form.city && form.state && form.zip &&
+    form.dlNumber && form.dlState
+  )
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/employer/mvr/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        body: JSON.stringify({ candidateUserId, ...form }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to place order')
+      setSuccess(true)
+      setTimeout(onSuccess, 1500)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to place order')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const inputCls = `w-full px-3 py-2 rounded-lg border text-sm ${
+    isDark
+      ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500'
+      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+  }`
+
+  const labelCls = `block text-xs font-medium mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`
+
+  if (success) {
+    return (
+      <div className="fixed inset-0 z-[10005] flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/70 pointer-events-none" />
+        <div className={`relative z-[10006] w-full max-w-sm rounded-2xl p-8 text-center ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
+          <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+          <p className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>MVR Order Submitted</p>
+          <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Results will appear in the driver's career card when ready.</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[10005] flex items-center justify-center p-4 overflow-hidden"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="absolute inset-0 bg-black/70 pointer-events-none" />
+      <div
+        className={`relative z-[10006] w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+          isDark ? 'bg-gray-900' : 'bg-white'
+        }`}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className={`sticky top-0 z-10 flex items-center justify-between p-5 border-b ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}>
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-xl ${isDark ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
+              <Car className="w-5 h-5 text-blue-500" />
+            </div>
+            <div>
+              <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Order MVR</h3>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{careerCard.name}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className={`p-2 rounded-lg ${isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-5 space-y-5">
+          {/* Consent confirmed banner */}
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-green-50 text-green-700 border border-green-200'}`}>
+            <CheckCircle className="w-4 h-4 flex-shrink-0" />
+            Background check disclosure signed — ready to order.
+          </div>
+
+          {/* Personal */}
+          <div>
+            <p className={`text-xs font-semibold uppercase tracking-wide mb-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Personal Information</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>First Name *</label>
+                <input value={form.firstName} onChange={set('firstName')} placeholder="First" className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Last Name *</label>
+                <input value={form.lastName} onChange={set('lastName')} placeholder="Last" className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Middle Name</label>
+                <input value={form.middleName} onChange={set('middleName')} placeholder="Optional" className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Email</label>
+                <input type="email" value={form.email} onChange={set('email')} placeholder="email@example.com" className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Date of Birth * (YYYY-MM-DD)</label>
+                <input type="date" value={form.dob} onChange={set('dob')} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>SSN Last 4 *</label>
+                <input value={form.ssn} onChange={set('ssn')} maxLength={4} placeholder="####" className={inputCls} />
+              </div>
+            </div>
+          </div>
+
+          {/* Address */}
+          <div>
+            <p className={`text-xs font-semibold uppercase tracking-wide mb-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Address</p>
+            <div className="space-y-3">
+              <div>
+                <label className={labelCls}>Street Address *</label>
+                <input value={form.address} onChange={set('address')} placeholder="123 Main St" className={inputCls} />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-1">
+                  <label className={labelCls}>City *</label>
+                  <input value={form.city} onChange={set('city')} placeholder="City" className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>State *</label>
+                  <select value={form.state} onChange={set('state')} className={inputCls}>
+                    <option value="">State</option>
+                    {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>ZIP *</label>
+                  <input value={form.zip} onChange={set('zip')} placeholder="12345" maxLength={10} className={inputCls} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* License — highlight as critical: wrong DL = wrong report */}
+          <div className={`rounded-xl border-2 p-4 ${isDark ? 'border-amber-500/40 bg-amber-500/5' : 'border-amber-300 bg-amber-50'}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              <p className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>
+                Verify Driver's License — Critical
+              </p>
+            </div>
+            <p className={`text-xs mb-3 ${isDark ? 'text-amber-300/70' : 'text-amber-700/80'}`}>
+              An incorrect license number will return results for the wrong person. Confirm this matches the driver's physical license before ordering.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>DL Number *</label>
+                <input
+                  value={form.dlNumber}
+                  onChange={set('dlNumber')}
+                  placeholder="DL123456789"
+                  className={`${inputCls} font-mono tracking-wide`}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>DL Issuing State *</label>
+                <select value={form.dlState} onChange={set('dlState')} className={inputCls}>
+                  <option value="">State</option>
+                  {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {error && (
+            <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${isDark ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              {error}
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors ${isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!isValid || submitting}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Car className="w-4 h-4" />}
+              {submitting ? 'Ordering…' : 'Place MVR Order'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }

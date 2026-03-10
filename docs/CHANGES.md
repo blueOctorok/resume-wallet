@@ -4,6 +4,31 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 🚗 **Employer MVR Order Flow** (March 2026)
+
+### Problem
+After a driver signed the background check disclosure, the employer career card still showed "Request MVR" — looping them back to the disclosure request step instead of advancing to actually purchasing the MVR. There was no employer-facing MVR order form and no dedicated API route (the only non-driver order path was `POST /api/admin/mvr/order`, locked behind `requireAdmin()`).
+
+### Solution
+
+**New API route — `POST /api/employer/mvr/order`**
+- Validates employer wallet + company membership (falls back to legacy `employer_user_id`).
+- Checks `bgcheck_consents` to confirm the driver signed before allowing an order.
+- Accepts all standard MVR fields (name, DOB, SSN last 4, address, DL number/state).
+- Calls Accio, stores order in `mvr_orders` with `ordered_by_employer = true` and `ordered_by_company_id`.
+- No crypto payment — billed to company account.
+
+**`CareerCardModal` — two-state MVR action**
+- `hasBgcheckConsent = false` → **"Request MVR"** (sends disclosure to driver, unchanged).
+- `hasBgcheckConsent = true && !hasMvr` → **"Order MVR"** (opens order form, blue button).
+
+**`EmployerMvrOrderForm` sub-component (inline in `CareerCardModal.tsx`)**
+- Pre-fills from career card data (name, email, phone, city, state, CDL number/state).
+- Employer reviews and corrects any field before submitting.
+- Confirmation success state refreshes the career card automatically.
+
+---
+
 ## 📄 **Architecture: Resume `source_role` — Explicit Role Ownership** (March 2026)
 
 ### Problem
