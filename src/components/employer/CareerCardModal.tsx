@@ -14,6 +14,7 @@ import {
   CheckCircle,
   Clock,
   RefreshCw,
+  FileText,
 } from 'lucide-react'
 import CareerCard, { type CareerCardData } from '@/components/CareerCard'
 
@@ -46,6 +47,7 @@ export default function CareerCardModal({
   const [requestLoading, setRequestLoading] = useState<string | null>(null)
   const [resendLoading, setResendLoading] = useState<string | null>(null)
 
+  const [showMvrConfirm, setShowMvrConfirm] = useState(false)
   const [showRecruitModal, setShowRecruitModal] = useState(false)
   const [jobPostings, setJobPostings] = useState<JobPosting[]>([])
   const [jobsLoading, setJobsLoading] = useState(false)
@@ -225,11 +227,12 @@ export default function CareerCardModal({
 
   const mvrAction = !careerCard?.hasMvr ? (
     <ActionButton
-      label={careerCard?.hasBgcheckConsent ? 'Request MVR' : 'Request Background Check'}
+      label="Request MVR"
       loading={requestLoading === 'mvr_order'}
       resendLoading={resendLoading === 'mvr_order'}
       isPending={!!getPendingRequest('mvr_order')}
-      onClick={() => createRequest('mvr_order')}
+      // Open confirmation modal first so employer can verify driver data before sending
+      onClick={() => setShowMvrConfirm(true)}
       onResend={() => resendRequest('mvr_order')}
       theme={theme}
     />
@@ -459,10 +462,111 @@ export default function CareerCardModal({
     </div>
   ) : null
 
+  // ── MVR confirmation modal ────────────────────────────────────────────────
+  // Shows driver details so the employer can verify they're sending to the right
+  // person before the request (and background check disclosure) is dispatched.
+
+  const mvrConfirmContent = showMvrConfirm && careerCard ? (
+    <div
+      className="fixed inset-0 z-[10003] flex items-center justify-center p-4"
+      onClick={e => { if (e.target === e.currentTarget) setShowMvrConfirm(false) }}
+    >
+      <div className="absolute inset-0 bg-black/70 pointer-events-none" />
+      <div
+        className={`relative z-[10004] w-full max-w-sm rounded-2xl shadow-2xl ${
+          theme === 'dark' ? 'bg-gray-900' : 'bg-white'
+        }`}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className={`p-6 border-b ${theme === 'dark' ? 'border-gray-800' : 'border-gray-100'}`}>
+          <div className="flex items-center gap-3">
+            <div className={`p-2.5 rounded-xl ${theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
+              <Car className="w-5 h-5 text-blue-500" />
+            </div>
+            <div>
+              <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                Confirm MVR Request
+              </h3>
+              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                Review before sending
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <div className={`p-4 rounded-xl ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+            <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${
+              theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+            }`}>Driver</p>
+            <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              {careerCard.name}
+            </p>
+            {careerCard.profile?.cdl_class && (
+              <p className={`text-sm mt-0.5 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                CDL-{careerCard.profile.cdl_class}
+                {careerCard.profile.cdl_state ? ` · ${careerCard.profile.cdl_state}` : ''}
+              </p>
+            )}
+            {careerCard.location && (
+              <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                {careerCard.location}
+              </p>
+            )}
+            {careerCard.email && (
+              <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                {careerCard.email}
+              </p>
+            )}
+          </div>
+
+          <div className={`flex items-start gap-2 p-3 rounded-xl text-sm border ${
+            theme === 'dark'
+              ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+              : 'bg-amber-50 text-amber-800 border-amber-200'
+          }`}>
+            <FileText className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <span>
+              The driver will receive a background check disclosure form to sign.
+              The MVR order is initiated after they authorize it.
+            </span>
+          </div>
+        </div>
+
+        <div className={`p-6 border-t ${theme === 'dark' ? 'border-gray-800' : 'border-gray-100'}`}>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowMvrConfirm(false)}
+              className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors ${
+                theme === 'dark'
+                  ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => { setShowMvrConfirm(false); createRequest('mvr_order') }}
+              disabled={requestLoading === 'mvr_order'}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {requestLoading === 'mvr_order'
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <Send className="w-4 h-4" />
+              }
+              Send Request
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  ) : null
+
   return (
     <>
       {createPortal(modalContent, document.body)}
       {recruitModalContent && createPortal(recruitModalContent, document.body)}
+      {mvrConfirmContent && createPortal(mvrConfirmContent, document.body)}
     </>
   )
 }

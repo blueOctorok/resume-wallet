@@ -223,11 +223,18 @@ export default function BackgroundCheckDisclosure({
         import('jspdf'),
       ])
 
-      const canvas = await html2canvas(printRef.current, {
+      const el = printRef.current
+      // html2canvas defaults to the element's clientHeight (visible area).
+      // We must pass scrollHeight so the full document — not just what's
+      // currently visible in the scrollable modal — gets captured.
+      const canvas = await html2canvas(el, {
         scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false,
+        height: el.scrollHeight,
+        windowHeight: el.scrollHeight,
+        y: 0,
       })
 
       const imgData = canvas.toDataURL('image/png')

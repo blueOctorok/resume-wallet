@@ -48,7 +48,8 @@ export default function NotificationBell({ walletAddress }: NotificationBellProp
   // Fetch on mount, then poll every 60 seconds
   useEffect(() => {
     fetchNotifications(walletAddress)
-    const interval = setInterval(() => fetchNotifications(walletAddress), 60_000)
+    // Poll every 15s so new requests (MVR, resume, DOT app) appear promptly
+    const interval = setInterval(() => fetchNotifications(walletAddress), 15_000)
     return () => clearInterval(interval)
   }, [walletAddress, fetchNotifications])
 
