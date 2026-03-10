@@ -73,21 +73,11 @@ export async function PATCH(
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Get the application with job posting info
+    // Fetch the application and its job posting separately to avoid !inner join
+    // filtering out rows when a nested FK can't be resolved (e.g. talent pool jobs).
     const { data: application } = await supabase
       .from('applications')
-      .select(`
-        id,
-        status,
-        applicant_user_id,
-        job_posting_id,
-        job_postings!inner(
-          id,
-          title,
-          company_id,
-          companies!inner(id, name)
-        )
-      `)
+      .select('id, status, applicant_user_id, job_posting_id')
       .eq('id', applicationId)
       .single()
 
@@ -95,12 +85,23 @@ export async function PATCH(
       return NextResponse.json({ error: 'Application not found' }, { status: 404 })
     }
 
-    const jobPosting = application.job_postings as {
-      id: string
-      title: string
-      company_id: string
-      companies: { id: string; name: string }
+    const { data: jobPosting } = await supabase
+      .from('job_postings')
+      .select('id, title, company_id')
+      .eq('id', application.job_posting_id)
+      .single()
+
+    if (!jobPosting) {
+      return NextResponse.json({ error: 'Job posting not found' }, { status: 404 })
     }
+
+    // Fetch company name for notifications (optional — won't block update if missing)
+    const { data: company } = await supabase
+      .from('companies')
+      .select('id, name')
+      .eq('id', jobPosting.company_id)
+      .single()
+
     const companyId = jobPosting.company_id
 
     // Verify employer has access to this company
@@ -189,12 +190,14 @@ export async function PATCH(
         hired:        "You're hired! 🎉",
         rejected:     'Application status update',
       }
+      const companyName = company?.name ?? 'The company'
+
       const statusBodies: Record<string, string> = {
-        under_review: `${jobPosting.companies.name} is reviewing your application for ${jobPosting.title}.`,
-        interview:    `${jobPosting.companies.name} would like to interview you for ${jobPosting.title}.`,
-        offer:        `${jobPosting.companies.name} has extended a job offer for ${jobPosting.title}.`,
-        hired:        `Congratulations! ${jobPosting.companies.name} has hired you for ${jobPosting.title}.`,
-        rejected:     `Your application for ${jobPosting.title} at ${jobPosting.companies.name} was not selected.`,
+        under_review: `${companyName} is reviewing your application for ${jobPosting.title}.`,
+        interview:    `${companyName} would like to interview you for ${jobPosting.title}.`,
+        offer:        `${companyName} has extended a job offer for ${jobPosting.title}.`,
+        hired:        `Congratulations! ${companyName} has hired you for ${jobPosting.title}.`,
+        rejected:     `Your application for ${jobPosting.title} at ${companyName} was not selected.`,
       }
 
       // In-app notification
@@ -205,7 +208,7 @@ export async function PATCH(
         body: statusBodies[newStatus] || `Your application status was updated to ${newStatus}.`,
         data: {
           applicationId,
-          companyName: jobPosting.companies.name,
+          companyName,
           jobTitle: jobPosting.title,
           status: newStatus,
         },
@@ -216,7 +219,7 @@ export async function PATCH(
         sendApplicationStatusNotification({
           candidateEmail: candidate.email,
           candidateName: candidateName ?? 'Candidate',
-          companyName: jobPosting.companies.name,
+          companyName: companyName,
           jobTitle: jobPosting.title,
           newStatus: newStatus as 'under_review' | 'interview' | 'offer' | 'hired' | 'rejected',
         }).then(result => {

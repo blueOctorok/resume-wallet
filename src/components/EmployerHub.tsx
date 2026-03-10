@@ -8,6 +8,7 @@ import ApplicantKanban, { type KanbanApplicant } from './employer/ApplicantKanba
 import CandidateNotesPanel from './employer/CandidateNotesPanel'
 import CandidateOutreach from './employer/CandidateOutreach'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
+import CareerCardModal from '@/components/employer/CareerCardModal'
 import {
   Briefcase,
   Users,
@@ -181,6 +182,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   
   // Detail modal states
   const [selectedApplicant, setSelectedApplicant] = useState<HubApplicant | null>(null)
+  const [careerCardApplicantId, setCareerCardApplicantId] = useState<string | null>(null)
   const [selectedJob, setSelectedJob] = useState<HubJobPosting | null>(null)
   const [selectedMvr, setSelectedMvr] = useState<HubMvrOrder | null>(null)
 
@@ -719,6 +721,24 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             subtitle={`Applied for ${selectedApplicant.jobTitle}`}
             onClose={() => setSelectedApplicant(null)}
           />
+          {/* Career Card quick-action row */}
+          <div className={`flex items-center gap-2 px-4 py-2 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
+            <button
+              onClick={() => setCareerCardApplicantId(
+                selectedApplicant.applicantUserId ||
+                (selectedApplicant as { driverUserId?: string }).driverUserId ||
+                ''
+              )}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                theme === 'dark'
+                  ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30'
+                  : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
+              }`}
+            >
+              <Car className="w-3.5 h-3.5" />
+              View Career Card
+            </button>
+          </div>
           <div className="p-4 grid md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
               <ApplicantDetailContent
@@ -756,6 +776,15 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Career Card modal — z-index 10000, above the applicant modal */}
+      {careerCardApplicantId && (
+        <CareerCardModal
+          candidateUserId={careerCardApplicantId}
+          walletAddress={walletAddress}
+          onClose={() => setCareerCardApplicantId(null)}
+        />
       )}
 
       {/* Job detail modal — z-index 1000 */}
