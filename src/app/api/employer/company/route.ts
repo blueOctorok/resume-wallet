@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       email,
     } = body
 
-    if (!companyName || !dotNumber || !addressStreet || !addressCity || !addressState || !addressZip || !phone || !email) {
+    if (!companyName || !addressStreet || !addressCity || !addressState || !addressZip || !phone || !email) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     const companyFields = {
       company_name: companyName,
-      dot_number: dotNumber,
+      dot_number: dotNumber || null,
       mc_number: mcNumber || null,
       address_street: addressStreet,
       address_city: addressCity,

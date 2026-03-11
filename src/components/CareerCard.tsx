@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   Mail,
@@ -12,7 +13,6 @@ import {
   ClipboardCheck,
   Car,
   Shield,
-  Code,
   ExternalLink,
   CheckCircle,
   Clock,
@@ -20,7 +20,13 @@ import {
   Github,
   Linkedin,
   Globe,
+  Eye,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react'
+import Modal, { ModalHeader } from '@/components/ui/Modal'
+import ResumePreviewModal from '@/components/ResumePreviewModal'
+import type { DotForm1Data, DotForm2Data, DotForm3Data } from '@/lib/dot-form-mapper'
 
 // ─── Shared type ─────────────────────────────────────────────────────────────
 // Exported so CareerCardModal (employer view) and DriverCareerCardSection
@@ -143,6 +149,8 @@ export interface CareerCardData {
 // context-appropriate buttons without this component knowing who's viewing.
 interface CareerCardProps {
   data: CareerCardData
+  // Needed to authenticate the DOT app preview fetch
+  walletAddress?: string
   // Section-level action slots (e.g. "Request Resume" or "Edit Resume")
   resumeAction?: React.ReactNode
   dotAppAction?: React.ReactNode
@@ -155,6 +163,7 @@ interface CareerCardProps {
 
 export default function CareerCard({
   data,
+  walletAddress,
   resumeAction,
   dotAppAction,
   mvrAction,
@@ -163,6 +172,39 @@ export default function CareerCard({
   const { theme } = useTheme()
   const isDriver = data.role === 'driver'
   const profile = data.profile
+
+  const [showResumePreview, setShowResumePreview] = useState(false)
+  const [showDotPreview, setShowDotPreview] = useState(false)
+
+  // Full DOT app data — fetched on demand when the employer clicks Preview
+  const [dotAppData, setDotAppData] = useState<{
+    form1: DotForm1Data | null
+    form2: DotForm2Data | null
+    form3: DotForm3Data | null
+    isComplete: boolean
+    createdAt: string
+  } | null>(null)
+  const [dotAppLoading, setDotAppLoading] = useState(false)
+  const [dotAppError, setDotAppError] = useState<string | null>(null)
+
+  const openDotPreview = async () => {
+    setShowDotPreview(true)
+    if (dotAppData) return // already fetched
+    setDotAppLoading(true)
+    setDotAppError(null)
+    try {
+      const res = await fetch(`/api/employer/talent/${data.userId}/dot-app`, {
+        headers: walletAddress ? { 'x-wallet-address': walletAddress } : {},
+      })
+      if (!res.ok) throw new Error('Failed to load DOT application')
+      const json = await res.json()
+      setDotAppData(json)
+    } catch (err) {
+      setDotAppError(err instanceof Error ? err.message : 'Failed to load DOT application')
+    } finally {
+      setDotAppLoading(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -330,18 +372,30 @@ export default function CareerCard({
         icon={<FileText className="w-4 h-4" />}
         theme={theme}
         action={
-          data.resume && data.resume.ipfsHash && !data.resume.ipfsHash.startsWith('built_') ? (
-            <a
-              href={`https://gateway.pinata.cloud/ipfs/${data.resume.ipfsHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`flex items-center gap-1 text-sm ${
-                theme === 'dark' ? 'text-teal-400 hover:text-teal-300' : 'text-teal-600 hover:text-teal-700'
-              }`}
-            >
-              View <ExternalLink className="w-3 h-3" />
-            </a>
-          ) : !data.hasResume ? resumeAction : null
+          data.resume ? (
+            // IPFS-stored resume → external link; built resume → inline preview
+            data.resume.ipfsHash && !data.resume.ipfsHash.startsWith('built_') ? (
+              <a
+                href={`https://gateway.pinata.cloud/ipfs/${data.resume.ipfsHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`flex items-center gap-1 text-sm ${
+                  theme === 'dark' ? 'text-teal-400 hover:text-teal-300' : 'text-teal-600 hover:text-teal-700'
+                }`}
+              >
+                View <ExternalLink className="w-3 h-3" />
+              </a>
+            ) : (
+              <button
+                onClick={() => setShowResumePreview(true)}
+                className={`flex items-center gap-1 text-sm ${
+                  theme === 'dark' ? 'text-teal-400 hover:text-teal-300' : 'text-teal-600 hover:text-teal-700'
+                }`}
+              >
+                <Eye className="w-3 h-3" /> Preview
+              </button>
+            )
+          ) : resumeAction ?? null
         }
       >
         {data.resume ? (
@@ -415,7 +469,18 @@ export default function CareerCard({
           title="DOT Application"
           icon={<ClipboardCheck className="w-4 h-4" />}
           theme={theme}
-          action={!data.hasDriverApp ? dotAppAction : null}
+          action={
+            data.driverApplication ? (
+              <button
+                onClick={openDotPreview}
+                className={`flex items-center gap-1 text-sm ${
+                  theme === 'dark' ? 'text-teal-400 hover:text-teal-300' : 'text-teal-600 hover:text-teal-700'
+                }`}
+              >
+                <Eye className="w-3 h-3" /> Preview
+              </button>
+            ) : dotAppAction ?? null
+          }
         >
           {data.driverApplication ? (
             <div className={`p-3 rounded-lg flex items-center gap-2 ${
@@ -495,6 +560,44 @@ export default function CareerCard({
         )}
       </Section>
 
+      {/* ── Resume Preview Modal ─────────────────────────────────────── */}
+      {showResumePreview && data.resume && (
+        <ResumePreviewModal
+          title={data.resume.title || 'Resume'}
+          structuredData={data.resume.structuredData as Parameters<typeof ResumePreviewModal>[0]['structuredData']}
+          onClose={() => setShowResumePreview(false)}
+          onDownload={() => {}}
+          theme={theme}
+          zIndex={10100}
+        />
+      )}
+
+      {/* ── DOT App Preview Modal ─────────────────────────────────────── */}
+      {showDotPreview && data.driverApplication && (
+        <Modal onClose={() => setShowDotPreview(false)} maxWidth="max-w-2xl" zIndex={10100}>
+          <ModalHeader
+            title="DOT Application"
+            subtitle={data.name}
+            onClose={() => setShowDotPreview(false)}
+          />
+          <div className="overflow-y-auto max-h-[75vh]">
+            {dotAppLoading && (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className={`w-6 h-6 animate-spin ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
+              </div>
+            )}
+            {dotAppError && (
+              <div className={`m-6 flex items-center gap-2 p-4 rounded-xl text-sm ${theme === 'dark' ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
+                <AlertCircle className="w-4 h-4 flex-shrink-0" /> {dotAppError}
+              </div>
+            )}
+            {!dotAppLoading && !dotAppError && dotAppData && (
+              <DotAppPreviewContent data={dotAppData} theme={theme} />
+            )}
+          </div>
+        </Modal>
+      )}
+
       {/* Footer */}
       {(footerActions || profile?.share_token) && (
         <div className={`pt-6 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
@@ -548,6 +651,322 @@ export function Section({
         </h4>
         {action}
       </div>
+      {children}
+    </div>
+  )
+}
+
+// ─── DOT App full preview ─────────────────────────────────────────────────────
+
+function DotField({ label, value, theme }: { label: string; value?: string | null; theme: string }) {
+  if (!value) return null
+  return (
+    <div>
+      <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>{label}</p>
+      <p className={`text-sm ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>{value}</p>
+    </div>
+  )
+}
+
+function DotSection({ title, children, theme }: { title: string; children: React.ReactNode; theme: string }) {
+  return (
+    <div className={`border-b px-6 py-5 ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
+      <p className={`text-xs font-semibold uppercase tracking-wide mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{title}</p>
+      {children}
+    </div>
+  )
+}
+
+function YesNo({ value }: { value?: string | boolean | null }) {
+  if (value == null) return <span className="text-gray-400">—</span>
+  const yes = value === true || value === 'yes' || value === 'true'
+  return (
+    <span className={yes ? 'text-yellow-500 font-medium' : 'text-gray-400'}>
+      {yes ? 'Yes' : 'No'}
+    </span>
+  )
+}
+
+function DotAppPreviewContent({
+  data,
+  theme,
+}: {
+  data: { form1: DotForm1Data | null; form2: DotForm2Data | null; form3: DotForm3Data | null; isComplete: boolean; createdAt: string }
+  theme: string
+}) {
+  const f1 = data.form1
+  const f2 = data.form2
+  const f3 = data.form3
+  const fmt = (d?: string) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'
+
+  return (
+    <div>
+      {/* Status banner */}
+      <div className={`px-6 py-4 flex items-center gap-3 border-b ${theme === 'dark' ? 'border-gray-700 bg-gray-800/50' : 'border-gray-100 bg-gray-50'}`}>
+        {data.isComplete
+          ? <CheckCircle className="w-4 h-4 text-green-500" />
+          : <Clock className="w-4 h-4 text-yellow-500" />
+        }
+        <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+          {data.isComplete ? 'Complete' : 'In Progress'} · Submitted {fmt(data.createdAt)}
+        </span>
+      </div>
+
+      {/* ── Form 1: Personal / License / Medical ─────────────────────── */}
+      {f1 && (
+        <>
+          <DotSection title="Personal Information" theme={theme}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <DotField label="Name" value={[f1.firstName, f1.middleName, f1.lastName].filter(Boolean).join(' ')} theme={theme} />
+              <DotField label="Date of Birth" value={fmt(f1.dateOfBirth)} theme={theme} />
+              <DotField label="Phone" value={f1.phone} theme={theme} />
+              <DotField label="Email" value={f1.email} theme={theme} />
+              <DotField label="Position Applied For" value={f1.positionAppliedFor} theme={theme} />
+              <DotField label="Date Available" value={fmt(f1.dateAvailableForWork)} theme={theme} />
+            </div>
+            {f1.currentMailing && (
+              <div className="mt-3">
+                <DotField
+                  label="Current Address"
+                  value={[f1.currentMailing.street, f1.currentMailing.city, f1.currentMailing.state, f1.currentMailing.zipCode].filter(Boolean).join(', ')}
+                  theme={theme}
+                />
+              </div>
+            )}
+          </DotSection>
+
+          {f1.currentLicenses && f1.currentLicenses.length > 0 && (
+            <DotSection title="Driver's Licenses" theme={theme}>
+              <div className="space-y-3">
+                {f1.currentLicenses.map((lic, i) => (
+                  <div key={i} className={`p-3 rounded-lg grid grid-cols-2 sm:grid-cols-4 gap-3 ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                    <DotField label="State" value={lic.state} theme={theme} />
+                    <DotField label="License #" value={lic.licenseNumber} theme={theme} />
+                    <DotField label="Class" value={lic.typeClass} theme={theme} />
+                    <DotField label="Endorsements" value={lic.endorsements} theme={theme} />
+                    <DotField label="Expires" value={fmt(lic.expirationDate)} theme={theme} />
+                  </div>
+                ))}
+              </div>
+            </DotSection>
+          )}
+
+          {f1.disqualificationHistory && (
+            <DotSection title="License Disqualification History" theme={theme}>
+              <div className="space-y-2 text-sm">
+                {[
+                  { q: 'License suspended/revoked?', v: f1.disqualificationHistory.hasLicenseSuspension, detail: f1.disqualificationHistory.licenseSuspensionDetails },
+                  { q: 'Disqualifying offense?',     v: f1.disqualificationHistory.hasDisqualifyingOffense, detail: f1.disqualificationHistory.disqualifyingOffenseDetails },
+                  { q: 'Out-of-service violation?',  v: f1.disqualificationHistory.hasOutOfServiceViolation, detail: f1.disqualificationHistory.outOfServiceViolationDetails },
+                  { q: 'Mobile device violation?',   v: f1.disqualificationHistory.hasMobileDeviceViolation, detail: f1.disqualificationHistory.mobileDeviceViolationDetails },
+                ].map(({ q, v, detail }) => (
+                  <div key={q} className="flex gap-3">
+                    <span className={`flex-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{q}</span>
+                    <span><YesNo value={v} /></span>
+                    {detail && <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>{detail}</span>}
+                  </div>
+                ))}
+              </div>
+            </DotSection>
+          )}
+
+          {f1.medicalQualification && (
+            <DotSection title="Medical Qualification" theme={theme}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <DotField label="Valid Medical Certificate?" value={f1.medicalQualification.hasValidMedicalCertificate} theme={theme} />
+                <DotField label="Certificate Expiration" value={fmt(f1.medicalQualification.medicalCertificateExpiration)} theme={theme} />
+                <DotField label="Exam Date" value={fmt(f1.medicalQualification.medicalExamDate)} theme={theme} />
+                <DotField label="Examiner Name" value={f1.medicalQualification.medicalExaminerName} theme={theme} />
+                <DotField label="Examiner Phone" value={f1.medicalQualification.medicalExaminerPhone} theme={theme} />
+              </div>
+            </DotSection>
+          )}
+        </>
+      )}
+
+      {/* ── Form 2: Driving Experience / Accidents / Convictions ─────── */}
+      {f2 && (
+        <>
+          {f2.drivingExperience && f2.drivingExperience.length > 0 && (
+            <DotSection title="Driving Experience" theme={theme}>
+              <div className="space-y-2">
+                {f2.drivingExperience.map((exp, i) => (
+                  <div key={i} className="flex justify-between text-sm">
+                    <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>{exp.equipmentType}</span>
+                    <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>{exp.yearsOfExperience} yrs</span>
+                  </div>
+                ))}
+              </div>
+            </DotSection>
+          )}
+
+          <DotSection title="Accident History (Past 5 Years)" theme={theme}>
+            {f2.hasNoAccidents || !f2.accidents?.length ? (
+              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>No accidents reported</p>
+            ) : (
+              <div className="space-y-3">
+                {f2.accidents.map((acc, i) => (
+                  <div key={i} className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      <DotField label="Date" value={fmt(acc.date)} theme={theme} />
+                      <DotField label="Nature" value={acc.nature} theme={theme} />
+                      <DotField label="Fatalities" value={acc.fatalities} theme={theme} />
+                      <DotField label="Injuries" value={acc.injuries} theme={theme} />
+                      <DotField label="At Fault" value={acc.atFault} theme={theme} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </DotSection>
+
+          {/* Drug & Alcohol pre-employment (49 CFR 40.25) */}
+          {f2.drugTestPositive && (
+            <DotSection title="Drug & Alcohol Pre-Employment — 49 CFR 40.25 (Past 2 Years)" theme={theme}>
+              <div className="flex items-center gap-3">
+                <span className={`text-sm font-medium px-3 py-1 rounded-full ${
+                  f2.drugTestPositive === 'yes'
+                    ? 'bg-red-500/20 text-red-500'
+                    : theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'
+                }`}>
+                  {f2.drugTestPositive === 'yes' ? 'YES — Positive / Refused' : 'NO'}
+                </span>
+              </div>
+              {f2.drugTestPositiveExplain && (
+                <p className={`mt-2 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{f2.drugTestPositiveExplain}</p>
+              )}
+            </DotSection>
+          )}
+
+          {/* 49 CFR 391.15 disqualifying convictions */}
+          {f2.cfr391ConvictedYesNo && (
+            <DotSection title="Disqualifying Convictions — 49 CFR 391.15 (Past 3 Years)" theme={theme}>
+              <div className="flex items-center gap-3 mb-2">
+                <span className={`text-sm font-medium px-3 py-1 rounded-full ${
+                  f2.cfr391ConvictedYesNo === 'yes'
+                    ? 'bg-red-500/20 text-red-500'
+                    : theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'
+                }`}>
+                  {f2.cfr391ConvictedYesNo === 'yes' ? 'YES — Convicted' : 'NO'}
+                </span>
+              </div>
+              {f2.cfr391ConvictedYesNo === 'yes' && f2.cfr391ConvictedOffenses && f2.cfr391ConvictedOffenses.length > 0 && (
+                <ul className={`text-sm space-y-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {f2.cfr391ConvictedOffenses.map((key, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-red-500 mt-0.5">•</span>
+                      <span>{key}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {f2.cfr391ConvictedExplain && (
+                <p className={`mt-2 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{f2.cfr391ConvictedExplain}</p>
+              )}
+            </DotSection>
+          )}
+
+          <DotSection title="Traffic Convictions (Past 3 Years)" theme={theme}>
+            {f2.hasNoConvictions || !f2.convictions?.length ? (
+              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>No convictions reported</p>
+            ) : (
+              <div className="space-y-3">
+                {f2.convictions.map((c, i) => (
+                  <div key={i} className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      <DotField label="Date" value={fmt(c.dateConvicted)} theme={theme} />
+                      <DotField label="Violation" value={c.violation} theme={theme} />
+                      <DotField label="State" value={c.stateOfViolation} theme={theme} />
+                      <DotField label="Penalty" value={c.penalty} theme={theme} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </DotSection>
+        </>
+      )}
+
+      {/* ── Form 3: Employment / Education / Signature ───────────────── */}
+      {f3 && (
+        <>
+          {f3.employers && f3.employers.length > 0 && (
+            <DotSection title="Employment History (10 Years)" theme={theme}>
+              <div className="space-y-4">
+                {f3.employers.filter(e => !e.isUnemployment).map((emp, i) => (
+                  <div key={i} className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <p className={`font-medium text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{emp.positionHeld}</p>
+                        <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{emp.name}</p>
+                      </div>
+                      <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                        {emp.fromDate} – {emp.toDate || 'Present'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
+                      <DotField label="Address" value={emp.address} theme={theme} />
+                      <DotField label="Phone" value={emp.phone} theme={theme} />
+                      <DotField label="Reason for Leaving" value={emp.reasonForLeaving} theme={theme} />
+                      <DotField label="Subject to FMCSR" value={emp.subjectToFMCSR} theme={theme} />
+                      <DotField label="Safety-Sensitive" value={emp.safetySensitiveFunction} theme={theme} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </DotSection>
+          )}
+
+          {f3.education && f3.education.length > 0 && (
+            <DotSection title="Education & Training" theme={theme}>
+              <div className="space-y-3">
+                {f3.education.map((edu, i) => (
+                  <div key={i} className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                    <div className="grid grid-cols-2 gap-3">
+                      <DotField label="Type" value={edu.schoolType} theme={theme} />
+                      <DotField label="School / Location" value={edu.nameAndLocation} theme={theme} />
+                      <DotField label="Course of Study" value={edu.courseOfStudy} theme={theme} />
+                      <DotField label="Years Completed" value={edu.yearsCompleted} theme={theme} />
+                      <DotField label="Graduated" value={edu.graduated} theme={theme} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </DotSection>
+          )}
+
+          {(f3.applicantSignature || f3.applicantNamePrinted) && (
+            <DotSection title="Electronic Signature" theme={theme}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <DotField label="Signed As" value={f3.applicantSignature} theme={theme} />
+                <DotField label="Printed Name" value={f3.applicantNamePrinted} theme={theme} />
+                <DotField label="Signature Date" value={fmt(f3.signatureDate)} theme={theme} />
+                {f3.signedAt && (
+                  <DotField
+                    label="Signed Date/Time"
+                    value={new Date(f3.signedAt).toLocaleString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    theme={theme}
+                  />
+                )}
+                {f3.ipAddress && <DotField label="IP Address" value={f3.ipAddress} theme={theme} />}
+                {f3.fcraAcknowledgement && (
+                  <div className={`flex items-center gap-1 text-xs ${theme === 'dark' ? 'text-green-400' : 'text-green-700'}`}>
+                    <CheckCircle className="w-3 h-3" /> FCRA Rights Acknowledged
+                  </div>
+                )}
+              </div>
+            </DotSection>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+export function PreviewSection({ title, children, theme }: { title: string; children: React.ReactNode; theme: string }) {
+  return (
+    <div>
+      <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>{title}</p>
       {children}
     </div>
   )

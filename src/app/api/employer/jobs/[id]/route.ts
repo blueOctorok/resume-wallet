@@ -111,7 +111,20 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { isActive } = body
+    const {
+      isActive,
+      title,
+      description,
+      targetRole,
+      locationCity,
+      locationState,
+      salaryMin,
+      salaryMax,
+      jobType,
+      routeType,
+      experienceRequired,
+      remoteAllowed,
+    } = body
 
     const supabase = await getAdminSupabaseClient()
 
@@ -161,11 +174,20 @@ export async function PATCH(
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
     }
 
-    // Update job
+    // Build update payload from only provided fields
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
-    if (typeof isActive === 'boolean') {
-      updates.is_active = isActive
-    }
+    if (typeof isActive === 'boolean') updates.is_active = isActive
+    if (title !== undefined) updates.title = title
+    if (description !== undefined) updates.description = description
+    if (targetRole !== undefined) updates.target_role = targetRole
+    if (locationCity !== undefined) updates.location_city = locationCity
+    if (locationState !== undefined) updates.location_state = locationState
+    if (salaryMin !== undefined) updates.salary_min = salaryMin === '' ? null : Number(salaryMin)
+    if (salaryMax !== undefined) updates.salary_max = salaryMax === '' ? null : Number(salaryMax)
+    if (jobType !== undefined) updates.job_type = jobType
+    if (routeType !== undefined) updates.route_type = routeType
+    if (experienceRequired !== undefined) updates.experience_required = experienceRequired === '' ? null : Number(experienceRequired)
+    if (typeof remoteAllowed === 'boolean') updates.remote_allowed = remoteAllowed
 
     const { data: updated, error } = await supabase
       .from('job_postings')

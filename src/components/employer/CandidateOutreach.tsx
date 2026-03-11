@@ -69,6 +69,8 @@ interface Job {
 
 interface CandidateOutreachProps {
   walletAddress: string
+  isCollapsed?: boolean
+  onToggle?: () => void
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -171,7 +173,7 @@ function QrModal({ url, name, onClose }: { url: string; name: string; onClose: (
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function CandidateOutreach({ walletAddress }: CandidateOutreachProps) {
+export default function CandidateOutreach({ walletAddress, isCollapsed = false, onToggle }: CandidateOutreachProps) {
   const { theme } = useTheme()
 
   const [invites, setInvites] = useState<Invite[]>([])
@@ -452,34 +454,42 @@ export default function CandidateOutreach({ walletAddress }: CandidateOutreachPr
     <>
       <div className={`rounded-2xl border shadow-lg ${card}`}>
         {/* Header */}
-        <div className={`flex items-center justify-between px-6 py-4 border-b ${
-          theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+        <div className={`flex items-center justify-between px-6 py-4 ${
+          !isCollapsed ? `border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}` : ''
         }`}>
-          <div className="flex items-center gap-3">
+          <button onClick={onToggle} className="flex items-center gap-3 text-left group min-w-0">
             <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-teal-900/40' : 'bg-teal-100'}`}>
               <Link2 className="w-5 h-5 text-teal-500" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                 Candidate Outreach
               </h3>
-              <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                {activeInvites.length > 0 ? `${activeInvites.length} active` : 'No active invites'}
-                {' · '}Send invite links to drivers, developers, or anyone
-              </p>
+              {!isCollapsed && (
+                <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {activeInvites.length > 0 ? `${activeInvites.length} active` : 'No active invites'}
+                  {' · '}Send invite links to drivers, developers, or anyone
+                </p>
+              )}
             </div>
-          </div>
-          <button
-            onClick={() => { setShowForm(true); setError(null); resetForm() }}
-            className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-sm font-medium transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            New Outreach
+            <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
+              theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+            } ${isCollapsed ? '-rotate-90' : ''}`} />
           </button>
+          {!isCollapsed && (
+            <button
+              onClick={() => { setShowForm(true); setError(null); resetForm() }}
+              className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-sm font-medium transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              New Outreach
+            </button>
+          )}
         </div>
 
+        {/* Body — hidden when collapsed */}
         {/* Create form */}
-        {showForm && (
+        {!isCollapsed && showForm && (
           <div className={`px-6 py-5 border-b ${theme === 'dark' ? 'border-gray-700 bg-gray-900/40' : 'border-gray-200 bg-gray-50/80'}`}>
             <div className="flex items-center justify-between mb-4">
               <h4 className={`font-semibold text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
@@ -718,7 +728,7 @@ export default function CandidateOutreach({ walletAddress }: CandidateOutreachPr
         )}
 
         {/* Invite list */}
-        <div className="divide-y divide-gray-700/50">
+        {!isCollapsed && <div className="divide-y divide-gray-700/50">
           {loading ? (
             <div className="flex items-center justify-center py-10 gap-2">
               <Loader2 className="w-5 h-5 animate-spin text-teal-500" />
@@ -756,10 +766,10 @@ export default function CandidateOutreach({ walletAddress }: CandidateOutreachPr
               />
             ))
           )}
-        </div>
+        </div>}
 
         {/* Show more */}
-        {!loading && invites.length > 6 && (
+        {!isCollapsed && !loading && invites.length > 6 && (
           <div className={`px-6 py-3 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
             <button
               onClick={() => setShowAll(v => !v)}

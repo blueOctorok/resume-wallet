@@ -78,6 +78,13 @@ export async function DELETE(
       return NextResponse.json({ error: 'Application not found' }, { status: 404 })
     }
 
+    // Null out the FK in `applications` before deleting so we don't lose
+    // pipeline records — we only want to remove the DOT document itself.
+    await supabase
+      .from('applications')
+      .update({ driver_application_id: null })
+      .eq('driver_application_id', id)
+
     // Delete the application
     const { error: deleteError } = await supabase
       .from('driver_applications')

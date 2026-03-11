@@ -4,6 +4,17 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import SaveProgressButton from './SaveProgressButton'
 
+// 49 CFR 391.15 disqualifying offenses — shown as checkboxes when driver answers "yes"
+const CFR391_OFFENSES = [
+  { key: 'bac04',             label: 'Driving a CMV with a blood alcohol concentration (BAC) of .04% or more' },
+  { key: 'dui',               label: 'Driving under the influence of alcohol, as prescribed by state law' },
+  { key: 'refusalTest',       label: 'Refusal to undergo drug and alcohol testing as required by any jurisdiction for the enforcement of FMCSA regulations' },
+  { key: 'controlledSub',     label: 'Driving a CMV under the influence of a Schedule I controlled substance, amphetamine, narcotic drug, or derivative thereof' },
+  { key: 'possession',        label: 'Transportation, possession, or unlawful use of a Schedule I controlled substance, amphetamines, or narcotic drugs while on duty driving for a motor carrier' },
+  { key: 'hitAndRun',         label: 'Leaving the scene of an accident while operating a CMV' },
+  { key: 'felony',            label: 'Any other felony involving the use of a commercial motor vehicle' },
+]
+
 const STEPS = [
   {
     id: 1,
@@ -13,12 +24,12 @@ const STEPS = [
   {
     id: 2,
     title: 'Accident Record',
-    description: 'Accidents from the past 3 years',
+    description: 'Accidents from the past 5 years',
   },
   {
     id: 3,
-    title: 'Traffic Convictions',
-    description: 'Traffic violations and penalties',
+    title: 'Safety & Compliance History',
+    description: 'Drug testing history, criminal convictions, and traffic violations',
   },
 ]
 
@@ -77,6 +88,13 @@ export default function PersonalInfoForm2({
     deniedLicenseExplain: '',
     suspendedLicense: '',
     suspendedLicenseExplain: '',
+    // Drug & Alcohol pre-employment (past 2 years)
+    drugTestPositive: '',
+    drugTestPositiveExplain: '',
+    // 49 CFR 391.15 disqualifying convictions (past 3 years)
+    cfr391ConvictedYesNo: '',
+    cfr391ConvictedOffenses: [] as string[],
+    cfr391ConvictedExplain: '',
   })
 
   const handleInputChange = (field: string, value: any, index?: number) => {
@@ -135,36 +153,20 @@ export default function PersonalInfoForm2({
     if (previousInitialDataRef.current && !initialData) {
       hasHydratedRef.current = false
       setFormData({
-        drivingExperience: [
-          {
-            equipmentType: '',
-            yearsOfExperience: '',
-          },
-        ],
-        accidents: [
-          {
-            date: '',
-            nature: '',
-            fatalities: '',
-            injuries: '',
-            chemicalSpills: '',
-            atFault: '',
-          },
-        ],
+        drivingExperience: [{ equipmentType: '', yearsOfExperience: '' }],
+        accidents: [{ date: '', nature: '', fatalities: '', injuries: '', chemicalSpills: '', atFault: '' }],
         hasNoAccidents: false,
-        convictions: [
-          {
-            dateConvicted: '',
-            violation: '',
-            stateOfViolation: '',
-            penalty: '',
-          },
-        ],
+        convictions: [{ dateConvicted: '', violation: '', stateOfViolation: '', penalty: '' }],
         hasNoConvictions: false,
         deniedLicense: '',
         deniedLicenseExplain: '',
         suspendedLicense: '',
         suspendedLicenseExplain: '',
+        drugTestPositive: '',
+        drugTestPositiveExplain: '',
+        cfr391ConvictedYesNo: '',
+        cfr391ConvictedOffenses: [],
+        cfr391ConvictedExplain: '',
       })
     }
     previousInitialDataRef.current = initialData
@@ -206,14 +208,19 @@ export default function PersonalInfoForm2({
         })
       }
     } else if (step === 3) {
-      // Traffic Convictions validation
+      // Drug/alcohol pre-employment question
+      if (!formData.drugTestPositive)
+        newErrors.drugTestPositive = 'Please answer this question'
+      // 49 CFR 391.15 question
+      if (!formData.cfr391ConvictedYesNo)
+        newErrors.cfr391ConvictedYesNo = 'Please answer this question'
+      // Traffic Convictions
       formData.convictions.forEach((conviction, index) => {
         if (conviction.dateConvicted?.trim() || conviction.violation?.trim()) {
           if (!conviction.dateConvicted?.trim())
             newErrors[`conviction${index}Date`] = 'Conviction date is required'
           if (!conviction.violation?.trim())
-            newErrors[`conviction${index}Violation`] =
-              'Violation description is required'
+            newErrors[`conviction${index}Violation`] = 'Violation description is required'
         }
       })
     }
@@ -361,20 +368,22 @@ export default function PersonalInfoForm2({
       deniedLicenseExplain: prev.deniedLicenseExplain || '',
       suspendedLicense: prev.suspendedLicense || 'no',
       suspendedLicenseExplain: prev.suspendedLicenseExplain || '',
+      // Drug/alcohol + CFR 391.15 - only fill if empty
+      drugTestPositive: prev.drugTestPositive || 'no',
+      drugTestPositiveExplain: prev.drugTestPositiveExplain || '',
+      cfr391ConvictedYesNo: prev.cfr391ConvictedYesNo || 'no',
+      cfr391ConvictedOffenses: prev.cfr391ConvictedOffenses || [],
+      cfr391ConvictedExplain: prev.cfr391ConvictedExplain || '',
     }))
     setErrors({})
   }
 
   const renderStepContent = () => {
     switch (currentStep) {
-      case 1:
-        return renderDrivingExperience()
-      case 2:
-        return renderAccidentRecord()
-      case 3:
-        return renderTrafficConvictions()
-      default:
-        return null
+      case 1: return renderDrivingExperience()
+      case 2: return renderAccidentRecord()
+      case 3: return renderSafetyCompliance()
+      default: return null
     }
   }
 
@@ -496,7 +505,7 @@ export default function PersonalInfoForm2({
         <h2
           className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
         >
-          ACCIDENT RECORD FOR THE PAST 3 YEARS
+          ACCIDENT RECORD FOR THE PAST 5 YEARS
         </h2>
         <p
           className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
@@ -521,7 +530,7 @@ export default function PersonalInfoForm2({
           htmlFor='hasNoAccidents'
           className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
         >
-          Check this box if you have had no accidents in the past 3 years
+          Check this box if you have had no accidents in the past 5 years
         </label>
       </div>
 
@@ -743,25 +752,143 @@ export default function PersonalInfoForm2({
     </div>
   )
 
-  const renderTrafficConvictions = () => (
-    <div className='space-y-8'>
+  const toggleCfr391Offense = (key: string) => {
+    setFormData(prev => {
+      const current = prev.cfr391ConvictedOffenses || []
+      return {
+        ...prev,
+        cfr391ConvictedOffenses: current.includes(key)
+          ? current.filter(k => k !== key)
+          : [...current, key],
+      }
+    })
+  }
+
+  const inputClass = `w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+    theme === 'dark'
+      ? 'bg-gray-700/50 border-gray-600 text-white'
+      : 'bg-white border-gray-200 text-gray-900'
+  }`
+
+  const renderSafetyCompliance = () => (
+    <div className='space-y-10'>
+
+      {/* ── Block 1: Drug & Alcohol Pre-Employment (49 CFR 40.25) ─────── */}
+      <div className='space-y-4'>
+        <div className='text-center'>
+          <h2 className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            SAFETY &amp; COMPLIANCE HISTORY
+          </h2>
+        </div>
+
+        <div className={`p-5 rounded-xl border-2 ${theme === 'dark' ? 'border-yellow-500/40 bg-yellow-500/5' : 'border-yellow-400 bg-yellow-50'}`}>
+          <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-700'}`}>
+            Drug &amp; Alcohol — 49 CFR 40.25 (Past 2 Years)
+          </p>
+          <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+            Within the past two years, have you tested positive, or refused to test, on a pre-employment drug or alcohol test by an employer to whom you applied, but did not obtain, safety-sensitive transportation work covered by DOT agency drug and alcohol testing rules?
+          </p>
+          <div className='flex gap-6'>
+            {['yes', 'no'].map(val => (
+              <label key={val} className='flex items-center gap-2 cursor-pointer'>
+                <input
+                  type='radio'
+                  name='drugTestPositive'
+                  value={val}
+                  checked={formData.drugTestPositive === val}
+                  onChange={e => handleInputChange('drugTestPositive', e.target.value)}
+                  className='accent-indigo-500'
+                />
+                <span className={`font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{val.toUpperCase()}</span>
+              </label>
+            ))}
+          </div>
+          {errors.drugTestPositive && <p className='mt-2 text-sm text-red-500'>{errors.drugTestPositive}</p>}
+          {formData.drugTestPositive === 'yes' && (
+            <div className='mt-4'>
+              <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Please explain:
+              </label>
+              <textarea
+                value={formData.drugTestPositiveExplain}
+                onChange={e => handleInputChange('drugTestPositiveExplain', e.target.value)}
+                rows={3}
+                className={inputClass}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Block 2: 49 CFR 391.15 Criminal Convictions ──────────────── */}
+      <div className={`p-5 rounded-xl border-2 ${theme === 'dark' ? 'border-red-500/40 bg-red-500/5' : 'border-red-300 bg-red-50'}`}>
+        <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${theme === 'dark' ? 'text-red-400' : 'text-red-700'}`}>
+          Disqualifying Convictions — 49 CFR 391.15 (Past 3 Years)
+        </p>
+        <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+          In the past three (3) years, have you ever been convicted of any of the following offenses?
+        </p>
+        <div className='flex gap-6 mb-4'>
+          {['yes', 'no'].map(val => (
+            <label key={val} className='flex items-center gap-2 cursor-pointer'>
+              <input
+                type='radio'
+                name='cfr391ConvictedYesNo'
+                value={val}
+                checked={formData.cfr391ConvictedYesNo === val}
+                onChange={e => handleInputChange('cfr391ConvictedYesNo', e.target.value)}
+                className='accent-indigo-500'
+              />
+              <span className={`font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{val.toUpperCase()}</span>
+            </label>
+          ))}
+        </div>
+        {errors.cfr391ConvictedYesNo && <p className='mb-3 text-sm text-red-500'>{errors.cfr391ConvictedYesNo}</p>}
+
+        {formData.cfr391ConvictedYesNo === 'yes' && (
+          <div className='space-y-3 mt-2'>
+            <p className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Select all that apply:</p>
+            {CFR391_OFFENSES.map(offense => (
+              <label key={offense.key} className='flex items-start gap-3 cursor-pointer'>
+                <input
+                  type='checkbox'
+                  checked={(formData.cfr391ConvictedOffenses || []).includes(offense.key)}
+                  onChange={() => toggleCfr391Offense(offense.key)}
+                  className='mt-0.5 h-4 w-4 accent-indigo-500 flex-shrink-0'
+                />
+                <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{offense.label}</span>
+              </label>
+            ))}
+            <div className='mt-3'>
+              <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Please provide details:
+              </label>
+              <textarea
+                value={formData.cfr391ConvictedExplain}
+                onChange={e => handleInputChange('cfr391ConvictedExplain', e.target.value)}
+                rows={3}
+                className={inputClass}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Always show the offense list as reference when answering "no" */}
+        {formData.cfr391ConvictedYesNo === 'no' && (
+          <div className={`mt-3 p-3 rounded-lg text-xs space-y-1 ${theme === 'dark' ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500'}`}>
+            <p className='font-medium mb-2'>Covered offenses (for reference):</p>
+            {CFR391_OFFENSES.map(o => <p key={o.key}>• {o.label}</p>)}
+          </div>
+        )}
+      </div>
+
+      {/* ── Block 3: Traffic Convictions Table ───────────────────────── */}
+      <div className='space-y-6'>
       <div className='text-center'>
-        <h2
-          className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
-        >
+        <h2 className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
           TRAFFIC CONVICTIONS AND FORFEITURES FOR THE PAST 3 YEARS
         </h2>
-        <p
-          className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
-        >
-          (OTHER THAN PARKING VIOLATIONS)
-        </p>
-        <p
-          className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
-        >
-          Attach additional sheet if more space is needed. Check this box if
-          none
-        </p>
+        <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>(OTHER THAN PARKING VIOLATIONS)</p>
       </div>
 
       {/* No Convictions Checkbox */}
@@ -1057,6 +1184,7 @@ export default function PersonalInfoForm2({
           )}
         </div>
       </div>
+      </div>{/* end Block 3 */}
     </div>
   )
 

@@ -355,6 +355,10 @@ export default function PersonalInfoForm3({
     dqInvestigationConsent: false,
     dqHasInvestigationRecords: '',
     dqUnderstandsAccessControls: '',
+    // Electronic signature metadata
+    signedAt: '',
+    ipAddress: '',
+    fcraAcknowledgement: false,
   })
 
   const handleInputChange = (field: string, value: any, index?: number) => {
@@ -466,6 +470,9 @@ export default function PersonalInfoForm3({
         dqInvestigationConsent: false,
         dqHasInvestigationRecords: '',
         dqUnderstandsAccessControls: '',
+        signedAt: '',
+        ipAddress: '',
+        fcraAcknowledgement: false,
       })
     }
     previousInitialDataRef.current = initialData
@@ -476,6 +483,24 @@ export default function PersonalInfoForm3({
       setFormData((prev) => ({ ...prev, ...initialData }))
     }
   }, [initialData])
+
+  // Capture IP address on mount — stored in form data so it's saved with the signature
+  useEffect(() => {
+    if (formData.ipAddress) return // already captured (e.g. loaded from saved data)
+    fetch('https://api.ipify.org?format=json')
+      .then(r => r.json())
+      .then((d: { ip: string }) => handleInputChange('ipAddress', d.ip))
+      .catch(() => {/* non-fatal — IP capture is best-effort */})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Auto-set signedAt timestamp the first time the applicant types their signature
+  useEffect(() => {
+    if (formData.applicantSignature && !formData.signedAt) {
+      handleInputChange('signedAt', new Date().toISOString())
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.applicantSignature])
 
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {}
@@ -683,6 +708,10 @@ export default function PersonalInfoForm3({
       if (!formData.hasValidCDL) {
         newErrors.hasValidCDL =
           'Indicate whether you hold a CDL that covers the vehicle type you will drive.'
+      }
+      if (!formData.fcraAcknowledgement) {
+        newErrors.fcraAcknowledgement =
+          'You must acknowledge receipt of the Federal FCRA Summary of Rights.'
       }
     }
 
@@ -1049,6 +1078,9 @@ export default function PersonalInfoForm3({
         prev.dqHasInvestigationRecords || 'yes',
       dqUnderstandsAccessControls:
         prev.dqUnderstandsAccessControls || 'yes',
+      fcraAcknowledgement: prev.fcraAcknowledgement ?? true,
+      signedAt: prev.signedAt || new Date().toISOString(),
+      // ipAddress is captured async; don't override if already set
     }
     })
     setErrors({})
@@ -1448,29 +1480,18 @@ export default function PersonalInfoForm3({
           <div className="p-6 space-y-5">
             {/* Date Range - Common to ALL types */}
             {(() => {
-              // Calculate date constraints for this entry
-              // Rule 1: "To" date must be >= "From" date
-              // Rule 2: Entries must be chronological - each entry's "To" must be <= previous entry's "From"
-              
-              // For first entry: To can be Present, From must be <= To
-              // For subsequent entries: To must be <= previous entry's From date
-              const prevEntry = index > 0 ? formData.employers[index - 1] : null
-              const maxToDate = prevEntry?.fromDate || undefined // Entry's To can't exceed previous entry's From
-              
-              // From date must be <= this entry's To date
-              const maxFromDate = employer.toDate && employer.toDate.toLowerCase() !== 'present' 
-                ? employer.toDate 
-                : undefined
-              
-              // Show warning if dates are out of order
+              // Only enforce that "To" is after "From" within the same entry.
+              // We intentionally allow overlapping dates between entries — drivers
+              // commonly hold two jobs simultaneously during a transition period.
               const fromNum = parseDateToNumber(employer.fromDate)
-              const toNum = parseDateToNumber(employer.toDate)
-              const dateOrderError = fromNum && toNum && fromNum > toNum
-              
-              // Show warning if entry is newer than previous entry
-              const prevFromNum = prevEntry ? parseDateToNumber(prevEntry.fromDate) : null
-              const chronologyError = prevFromNum && toNum && toNum > prevFromNum
-              
+              const toNum   = parseDateToNumber(employer.toDate)
+              const dateOrderError = !!(fromNum && toNum && fromNum > toNum)
+
+              // From's upper bound: can't be later than "To" (within same entry)
+              const maxFromDate = employer.toDate && employer.toDate.toLowerCase() !== 'present'
+                ? employer.toDate
+                : undefined
+
               return (
                 <>
                   <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
@@ -1495,27 +1516,18 @@ export default function PersonalInfoForm3({
                         value={employer.toDate}
                         onChange={(value) => handleInputChange('employers', { toDate: value }, index)}
                         placeholder="Select end date"
-                        allowPresent={index === 0} // Only first entry can be "Present"
-                        error={!!errors[`employer${index}ToDate`] || dateOrderError || chronologyError}
+                        allowPresent={index === 0}
+                        error={!!errors[`employer${index}ToDate`] || dateOrderError}
                         theme={theme}
-                        maxDate={maxToDate}
-                        minDate={employer.fromDate} // To date must be >= From date
+                        minDate={employer.fromDate}
                       />
                     </div>
                   </div>
-                  {/* Date validation errors */}
                   {dateOrderError && (
                     <div className={`p-3 rounded-lg text-sm ${
                       theme === 'dark' ? 'bg-red-900/30 text-red-400' : 'bg-red-50 text-red-600'
                     }`}>
                       ⚠️ "To" date must be after "From" date
-                    </div>
-                  )}
-                  {chronologyError && !dateOrderError && (
-                    <div className={`p-3 rounded-lg text-sm ${
-                      theme === 'dark' ? 'bg-red-900/30 text-red-400' : 'bg-red-50 text-red-600'
-                    }`}>
-                      ⚠️ This entry must end before the previous entry started ({prevEntry?.fromDate}). Enter your history from most recent to oldest.
                     </div>
                   )}
                   {index === 0 && !employer.toDate && (
@@ -2880,72 +2892,104 @@ export default function PersonalInfoForm3({
         </div>
       </div>
 
-      <div className='space-y-6'>
+      {/* ── FCRA Summary of Rights Acknowledgment ─────────────────── */}
+      <div className={`p-4 rounded-xl border-2 ${
+        theme === 'dark' ? 'border-indigo-500/40 bg-indigo-500/5' : 'border-indigo-300 bg-indigo-50'
+      }`}>
+        <p className={`text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-indigo-300' : 'text-indigo-800'}`}>
+          Federal FCRA Summary of Rights Acknowledgment
+        </p>
+        <p className={`text-sm mb-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+          You have been provided a copy of the Summary of Your Rights under the Fair Credit Reporting Act (FCRA) in connection with this application. By checking below, you acknowledge receipt of the FCRA Summary of Rights.
+        </p>
+        <label className='flex items-start gap-3 cursor-pointer'>
+          <input
+            type='checkbox'
+            checked={Boolean(formData.fcraAcknowledgement)}
+            onChange={(e) => handleInputChange('fcraAcknowledgement', e.target.checked)}
+            className={`mt-1 h-5 w-5 rounded border-2 ${
+              theme === 'dark' ? 'border-gray-600 bg-transparent accent-indigo-500' : 'border-gray-300 bg-white accent-indigo-500'
+            }`}
+          />
+          <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-800'}`}>
+            I acknowledge receipt of the Federal FCRA Summary of Rights.
+          </span>
+        </label>
+        {errors.fcraAcknowledgement && (
+          <p className='mt-2 text-sm text-red-600'>{errors.fcraAcknowledgement}</p>
+        )}
+      </div>
+
+      {/* ── Electronic Signature ────────────────────────────────────── */}
+      <div className={`p-5 rounded-xl border-2 ${
+        theme === 'dark' ? 'border-gray-600 bg-gray-800' : 'border-gray-300 bg-white'
+      }`}>
+        <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+          By signing below, I agree to use an electronic signature to demonstrate my consent. An electronic signature is as legally binding as an ink signature. This certifies that this application was completed by me, and that all entries on it and information in it are true and complete to the best of my knowledge.
+        </p>
+
         <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
           <div>
-            <label
-              className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-              }`}
-            >
-              Applicant Signature
+            <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+              Signature (type your full name)
             </label>
             <input
               type='text'
               value={formData.applicantSignature}
-              onChange={(e) =>
-                handleInputChange('applicantSignature', e.target.value)
-              }
-              placeholder='Type your full name as signature'
-              className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                theme === 'dark'
-                  ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                  : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+              onChange={(e) => handleInputChange('applicantSignature', e.target.value)}
+              placeholder='Full legal name'
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent italic ${
+                theme === 'dark' ? 'bg-gray-700/50 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'
               }`}
             />
+            {errors.applicantSignature && <p className='mt-1 text-sm text-red-600'>{errors.applicantSignature}</p>}
           </div>
           <div>
-            <label
-              className={`block text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-              }`}
-            >
+            <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
               Date
             </label>
             <input
               type='date'
               value={formData.signatureDate}
               onChange={(e) => handleInputChange('signatureDate', e.target.value)}
-              className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                theme === 'dark'
-                  ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                  : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                theme === 'dark' ? 'bg-gray-700/50 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'
               }`}
             />
+            {errors.signatureDate && <p className='mt-1 text-sm text-red-600'>{errors.signatureDate}</p>}
           </div>
         </div>
 
-        <div>
-          <label
-            className={`block text-sm font-medium mb-2 ${
-              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-            }`}
-          >
-            Applicant Name (printed)
+        <div className='mt-4'>
+          <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+            Printed Name
           </label>
           <input
             type='text'
             value={formData.applicantNamePrinted}
-            onChange={(e) =>
-              handleInputChange('applicantNamePrinted', e.target.value)
-            }
+            onChange={(e) => handleInputChange('applicantNamePrinted', e.target.value)}
             placeholder='Print your full name'
-            className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-              theme === 'dark'
-                ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
+            className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+              theme === 'dark' ? 'bg-gray-700/50 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'
             }`}
           />
+        </div>
+
+        {/* Read-only metadata — populated automatically */}
+        <div className={`mt-4 pt-4 border-t grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs ${
+          theme === 'dark' ? 'border-gray-700 text-gray-500' : 'border-gray-200 text-gray-400'
+        }`}>
+          <div>
+            <span className='font-medium'>Signed Date/Time: </span>
+            {formData.signedAt
+              ? new Date(formData.signedAt).toLocaleString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+              : <span className='italic'>Set when signature is entered</span>
+            }
+          </div>
+          <div>
+            <span className='font-medium'>IP Address: </span>
+            {formData.ipAddress || <span className='italic'>Capturing…</span>}
+          </div>
         </div>
       </div>
     </div>

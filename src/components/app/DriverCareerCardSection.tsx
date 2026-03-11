@@ -197,6 +197,7 @@ export default function DriverCareerCardSection({
 
           <CareerCard
             data={data}
+            walletAddress={walletAddress}
             resumeAction={resumeAction}
             dotAppAction={dotAppAction}
             mvrAction={mvrAction}

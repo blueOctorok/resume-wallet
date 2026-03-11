@@ -7,6 +7,7 @@ import EmployerVerificationSection from './verification/EmployerVerificationSect
 import ApplicantKanban, { type KanbanApplicant } from './employer/ApplicantKanban'
 import CandidateNotesPanel from './employer/CandidateNotesPanel'
 import CandidateOutreach from './employer/CandidateOutreach'
+import JobPostingsSection from './employer/JobPostingsSection'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import CareerCardModal from '@/components/employer/CareerCardModal'
 import {
@@ -20,6 +21,7 @@ import {
   AlertCircle,
   Eye,
   ChevronRight,
+  ChevronDown,
   Building2,
   Calendar,
   Loader2,
@@ -183,14 +185,9 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   // Detail modal states
   const [selectedApplicant, setSelectedApplicant] = useState<HubApplicant | null>(null)
   const [careerCardApplicantId, setCareerCardApplicantId] = useState<string | null>(null)
-  const [selectedJob, setSelectedJob] = useState<HubJobPosting | null>(null)
   const [selectedMvr, setSelectedMvr] = useState<HubMvrOrder | null>(null)
 
   const [updatingApplicationId, setUpdatingApplicationId] = useState<string | null>(null)
-
-  // Job deletion state
-  const [deletingJobId, setDeletingJobId] = useState<string | null>(null)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   // Employment verification states
   const [showVerifyModal, setShowVerifyModal] = useState(false)
@@ -201,6 +198,27 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
 
   // Section-specific loading states for granular refresh
   const [refreshingPipeline, setRefreshingPipeline] = useState(false)
+
+  // Collapsible section state — persisted in localStorage
+  const SECTIONS_KEY = 'employer-hub-sections'
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
+    const defaults = { jobs: true, pipeline: true, verification: false, outreach: false }
+    if (typeof window === 'undefined') return defaults
+    try {
+      const stored = localStorage.getItem(SECTIONS_KEY)
+      return stored ? { ...defaults, ...JSON.parse(stored) } : defaults
+    } catch {
+      return defaults
+    }
+  })
+
+  const toggleSection = (key: string) => {
+    setOpenSections(prev => {
+      const next = { ...prev, [key]: !prev[key] }
+      localStorage.setItem(SECTIONS_KEY, JSON.stringify(next))
+      return next
+    })
+  }
 
   // Fetch hub data
   const fetchHubData = useCallback(async () => {
@@ -299,35 +317,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       alert(err instanceof Error ? err.message : 'Failed to update status')
     } finally {
       setUpdatingApplicationId(null)
-    }
-  }
-
-  // Handle job deletion (soft delete - deactivates the job)
-  const handleDeleteJob = async (jobId: string) => {
-    try {
-      setDeletingJobId(jobId)
-      
-      const response = await fetch(`/api/employer/jobs/${jobId}`, {
-        method: 'DELETE',
-        headers: {
-          'x-wallet-address': walletAddress,
-        },
-      })
-
-      if (!response.ok) {
-        const errData = await response.json()
-        throw new Error(errData.error || 'Failed to delete job')
-      }
-
-      // Close modals and refresh data
-      setSelectedJob(null)
-      setShowDeleteConfirm(false)
-      await fetchHubData()
-    } catch (err) {
-      console.error('Error deleting job:', err)
-      alert(err instanceof Error ? err.message : 'Failed to delete job')
-    } finally {
-      setDeletingJobId(null)
     }
   }
 
@@ -631,31 +620,52 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         </button>
       </div>
 
+      {/* Job Postings — kanban by status */}
+      <JobPostingsSection
+        jobs={data.jobPostings}
+        walletAddress={walletAddress}
+        theme={theme}
+        onPostJob={() => onNavigate('post-job')}
+        onRefresh={fetchHubData}
+        isCollapsed={!openSections.jobs}
+        onToggle={() => toggleSection('jobs')}
+      />
+
       {/* Hiring Pipeline — full-width kanban */}
       <div className={`rounded-2xl p-6 mb-8 border shadow-lg transition-all duration-200 ${
         theme === 'dark'
           ? 'bg-gray-800/50 border-gray-700'
           : 'bg-white/70 border-gray-200'
       }`}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-            Hiring Pipeline
-          </h2>
+        <div className={`flex items-center justify-between ${openSections.pipeline ? 'mb-4' : ''}`}>
           <button
-            onClick={refreshPipeline}
-            disabled={refreshingPipeline}
-            title="Refresh pipeline"
-            className={`p-2 rounded-lg transition-all ${
-              refreshingPipeline ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
-                ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
-                : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-            } ${isStale ? 'text-amber-500' : ''}`}
+            onClick={() => toggleSection('pipeline')}
+            className="flex items-center gap-2 text-left group"
           >
-            <RefreshCw className={`w-4 h-4 ${refreshingPipeline ? 'animate-spin' : ''}`} />
+            <h2 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              Hiring Pipeline
+            </h2>
+            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
+              theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+            } ${!openSections.pipeline ? '-rotate-90' : ''}`} />
           </button>
+          {openSections.pipeline && (
+            <button
+              onClick={refreshPipeline}
+              disabled={refreshingPipeline}
+              title="Refresh pipeline"
+              className={`p-2 rounded-lg transition-all ${
+                refreshingPipeline ? 'opacity-50 cursor-not-allowed' : theme === 'dark'
+                  ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
+                  : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+              } ${isStale ? 'text-amber-500' : ''}`}
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshingPipeline ? 'animate-spin' : ''}`} />
+            </button>
+          )}
         </div>
 
-        <div className="-mx-2 mt-2">
+        {openSections.pipeline && <div className="-mx-2 mt-2">
           {data.applicants.length === 0 ? (
             <EmptyState
               icon={<Users className="w-12 h-12" />}
@@ -696,17 +706,25 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
               isUpdating={updatingApplicationId}
             />
           )}
-        </div>
+        </div>}
       </div>
 
       {/* Employment Verification Section */}
       <div className="mb-8">
-        <EmployerVerificationSection userAddress={walletAddress} />
+        <EmployerVerificationSection
+          userAddress={walletAddress}
+          isCollapsed={!openSections.verification}
+          onToggle={() => toggleSection('verification')}
+        />
       </div>
 
       {/* Candidate Outreach */}
       <div id="candidate-outreach" className="mb-8">
-        <CandidateOutreach walletAddress={walletAddress} />
+        <CandidateOutreach
+          walletAddress={walletAddress}
+          isCollapsed={!openSections.outreach}
+          onToggle={() => toggleSection('outreach')}
+        />
       </div>
 
       {/* Candidate card modal — z-index 1000 */}
@@ -785,61 +803,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           walletAddress={walletAddress}
           onClose={() => setCareerCardApplicantId(null)}
         />
-      )}
-
-      {/* Job detail modal — z-index 1000 */}
-      {selectedJob && (
-        <Modal
-          onClose={() => { setSelectedJob(null); setShowDeleteConfirm(false) }}
-          maxWidth="max-w-lg"
-          zIndex={1000}
-        >
-          <ModalHeader
-            title={selectedJob.title}
-            subtitle={selectedJob.isActive ? 'Active' : 'Inactive'}
-            onClose={() => { setSelectedJob(null); setShowDeleteConfirm(false) }}
-          />
-          <div className="p-4">
-            <JobDetailContent job={selectedJob} theme={theme} />
-            <div className={`mt-6 pt-4 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-              {showDeleteConfirm ? (
-                <div className="space-y-3">
-                  <p className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
-                    Are you sure you want to permanently delete this job posting? This cannot be undone.
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setShowDeleteConfirm(false)}
-                      className={`flex-1 px-4 py-2 rounded-lg font-medium text-sm ${
-                        theme === 'dark' ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={() => handleDeleteJob(selectedJob.id)}
-                      disabled={deletingJobId === selectedJob.id}
-                      className="flex-1 px-4 py-2 rounded-lg font-medium text-sm bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {deletingJobId === selectedJob.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                      Confirm Delete
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm ${
-                    theme === 'dark' ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' : 'bg-red-50 text-red-600 hover:bg-red-100'
-                  }`}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete Job Posting
-                </button>
-              )}
-            </div>
-          </div>
-        </Modal>
       )}
 
       {/* MVR detail modal — z-index 1000 */}
@@ -1138,80 +1101,6 @@ function ApplicantRow({
   )
 }
 
-function JobRow({ 
-  job, 
-  onClick,
-  onDelete,
-  theme 
-}: { 
-  job: HubJobPosting
-  onClick: () => void
-  onDelete: () => void
-  theme: string
-}) {
-  return (
-    <div
-      className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${
-        theme === 'dark'
-          ? 'hover:bg-gray-700/50'
-          : 'hover:bg-gray-50'
-      }`}
-    >
-      <button
-        onClick={onClick}
-        className="flex items-center gap-3 flex-1 min-w-0 text-left"
-      >
-        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-          job.isActive
-            ? theme === 'dark' ? 'bg-green-500/20' : 'bg-green-100'
-            : theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'
-        }`}>
-          <Briefcase className={`w-5 h-5 ${
-            job.isActive ? 'text-green-500' : theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-          }`} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className={`font-medium truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-            {job.title}
-          </p>
-          <p className={`text-sm truncate ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            {job.locationCity && job.locationState 
-              ? `${job.locationCity}, ${job.locationState}` 
-              : 'Location not set'}
-          </p>
-        </div>
-      </button>
-      <div className="flex items-center gap-3 flex-shrink-0">
-        <div className="text-right">
-          <p className={`text-sm font-medium ${
-            job.newApplications > 0 ? 'text-orange-500' : theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-          }`}>
-            {job.newApplications > 0 ? `${job.newApplications} new` : `${job.totalApplications} apps`}
-          </p>
-          <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-            {job.isActive ? 'Active' : 'Inactive'}
-          </p>
-        </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            if (confirm(`Delete "${job.title}"? This cannot be undone.`)) {
-              onDelete()
-            }
-          }}
-          className={`p-2 rounded-lg transition-colors ${
-            theme === 'dark'
-              ? 'hover:bg-red-500/20 text-red-400 hover:text-red-300'
-              : 'hover:bg-red-50 text-red-500 hover:text-red-600'
-          }`}
-          title="Delete job"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  )
-}
 
 function MvrRow({ 
   mvr, 
@@ -1530,86 +1419,6 @@ function ApplicantDetailContent({
   )
 }
 
-function JobDetailContent({ job, theme }: { job: HubJobPosting; theme: string }) {
-  const labelClass = `text-xs font-semibold uppercase tracking-wide ${
-    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-  }`
-  const valueClass = `text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
-          job.isActive
-            ? 'bg-green-500/20 text-green-500'
-            : 'bg-gray-500/20 text-gray-500'
-        }`}>
-          {job.isActive ? 'Active' : 'Inactive'}
-        </span>
-        {job.jobType && (
-          <span className={`px-2 py-1 rounded-lg text-xs ${
-            theme === 'dark' ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'
-          }`}>
-            {job.jobType}
-          </span>
-        )}
-      </div>
-
-      {job.locationCity && job.locationState && (
-        <div>
-          <p className={labelClass}>Location</p>
-          <p className={`${valueClass} flex items-center gap-1`}>
-            <MapPin className="w-4 h-4" />
-            {job.locationCity}, {job.locationState}
-          </p>
-        </div>
-      )}
-
-      {(job.salaryMin || job.salaryMax) && (
-        <div>
-          <p className={labelClass}>Salary Range</p>
-          <p className={`${valueClass} flex items-center gap-1`}>
-            <DollarSign className="w-4 h-4" />
-            {formatSalary(job.salaryMin, job.salaryMax)}
-          </p>
-        </div>
-      )}
-
-      {job.routeType && (
-        <div>
-          <p className={labelClass}>Route Type</p>
-          <p className={valueClass}>{job.routeType}</p>
-        </div>
-      )}
-
-      <div>
-        <p className={labelClass}>Posted</p>
-        <p className={valueClass}>{formatDate(job.createdAt)}</p>
-      </div>
-
-      {/* Stats */}
-      <div className={`p-4 rounded-xl ${theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
-        <h4 className={`font-medium mb-3 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-          Application Stats
-        </h4>
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div>
-            <p className="text-2xl font-bold text-blue-500">{job.totalApplications}</p>
-            <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Total</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-orange-500">{job.newApplications}</p>
-            <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>New</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-green-500">{job.viewedApplications}</p>
-            <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Viewed</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function MvrDetailContent({ mvr, theme }: { mvr: HubMvrOrder; theme: string }) {
   const labelClass = `text-xs font-semibold uppercase tracking-wide ${

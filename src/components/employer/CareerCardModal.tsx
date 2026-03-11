@@ -228,34 +228,41 @@ export default function CareerCardModal({
     />
   ) : null
 
+  // Two side-by-side buttons: whichever step is next is active, the other is dimmed.
+  // Once MVR is ordered (hasMvr), both are replaced with null.
   const mvrAction = !careerCard?.hasMvr ? (
-    careerCard?.hasBgcheckConsent
-      // Disclosure signed → employer can now order the MVR directly
-      ? (
-        <button
-          onClick={() => setShowMvrOrderForm(true)}
-          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            theme === 'dark'
+    <div className="flex items-center gap-2">
+      {/* Step 1 — send disclosure request to driver */}
+      <ActionButton
+        label="Request MVR"
+        loading={requestLoading === 'mvr_order'}
+        resendLoading={resendLoading === 'mvr_order'}
+        isPending={!!getPendingRequest('mvr_order')}
+        disabled={!!careerCard?.hasBgcheckConsent}
+        onClick={() => setShowMvrConfirm(true)}
+        onResend={() => resendRequest('mvr_order')}
+        theme={theme}
+      />
+
+      {/* Step 2 — only available once driver has signed the disclosure */}
+      <button
+        onClick={() => setShowMvrOrderForm(true)}
+        disabled={!careerCard?.hasBgcheckConsent}
+        title={!careerCard?.hasBgcheckConsent ? 'Driver must sign the disclosure first' : undefined}
+        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+          careerCard?.hasBgcheckConsent
+            ? theme === 'dark'
               ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
               : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-          }`}
-        >
-          <Car className="w-3 h-3" />
-          Order MVR
-        </button>
-      )
-      // No disclosure yet → send request to driver to sign
-      : (
-        <ActionButton
-          label="Request MVR"
-          loading={requestLoading === 'mvr_order'}
-          resendLoading={resendLoading === 'mvr_order'}
-          isPending={!!getPendingRequest('mvr_order')}
-          onClick={() => setShowMvrConfirm(true)}
-          onResend={() => resendRequest('mvr_order')}
-          theme={theme}
-        />
-      )
+            : theme === 'dark'
+              ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+        }`}
+      >
+        <Car className="w-3 h-3" />
+        Order MVR
+      </button>
+    </div>
   ) : null
 
   const footerActions = (
@@ -354,6 +361,7 @@ export default function CareerCardModal({
           {!loading && !error && careerCard && (
             <CareerCard
               data={careerCard}
+              walletAddress={walletAddress}
               resumeAction={resumeAction}
               dotAppAction={dotAppAction}
               mvrAction={mvrAction}
@@ -617,6 +625,7 @@ function ActionButton({
   loading,
   resendLoading,
   isPending,
+  disabled,
   onClick,
   onResend,
   theme,
@@ -625,10 +634,23 @@ function ActionButton({
   loading: boolean
   resendLoading: boolean
   isPending: boolean
+  disabled?: boolean
   onClick: () => void
   onResend: () => void
   theme: string
 }) {
+  // When this step is done (disabled=true), show a muted "Sent ✓" pill
+  if (disabled && !isPending) {
+    return (
+      <div className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium ${
+        theme === 'dark' ? 'bg-gray-700/50 text-gray-500' : 'bg-gray-100 text-gray-400'
+      }`}>
+        <CheckCircle className="w-3 h-3" />
+        {label}
+      </div>
+    )
+  }
+
   if (isPending) {
     return (
       <div className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium ${
@@ -647,6 +669,7 @@ function ActionButton({
       </div>
     )
   }
+
   return (
     <button
       onClick={onClick}

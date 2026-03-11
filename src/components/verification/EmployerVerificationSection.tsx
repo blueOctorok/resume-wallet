@@ -5,6 +5,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import {
   ClipboardCheck,
   ChevronRight,
+  ChevronDown,
   Loader2,
   AlertCircle,
   User,
@@ -29,11 +30,15 @@ import {
 interface EmployerVerificationSectionProps {
   userAddress: string | null
   onInitiateVerification?: (driverId: string, employmentId: string) => void
+  isCollapsed?: boolean
+  onToggle?: () => void
 }
 
 export default function EmployerVerificationSection({ 
   userAddress,
-  onInitiateVerification 
+  onInitiateVerification,
+  isCollapsed = false,
+  onToggle,
 }: EmployerVerificationSectionProps) {
   const { theme } = useTheme()
   const [loading, setLoading] = useState(true)
@@ -213,21 +218,28 @@ export default function EmployerVerificationSection({
           ? 'bg-gray-800/50 border-gray-700'
           : 'bg-white border-gray-200'
       }`}>
-        <div className="flex items-center gap-3 mb-4">
-          <ClipboardCheck className={`w-5 h-5 ${
-            theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
-          }`} />
-          <h3 className={`font-semibold ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            Employment Verification
-          </h3>
+        <div className={`flex items-center justify-between ${isCollapsed ? '' : 'mb-4'}`}>
+          <button onClick={onToggle} className="flex items-center gap-3 text-left group">
+            <ClipboardCheck className={`w-5 h-5 ${
+              theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
+            }`} />
+            <h3 className={`font-semibold ${
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}>
+              Employment Verification
+            </h3>
+            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
+              theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+            } ${isCollapsed ? '-rotate-90' : ''}`} />
+          </button>
         </div>
-        <p className={`text-sm ${
-          theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-        }`}>
-          Set up your company profile to verify driver employment history.
-        </p>
+        {!isCollapsed && (
+          <p className={`text-sm ${
+            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+          }`}>
+            Set up your company profile to verify driver employment history.
+          </p>
+        )}
       </div>
     )
   }
@@ -240,8 +252,8 @@ export default function EmployerVerificationSection({
           : 'bg-white border-gray-200'
       }`}>
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
+        <div className={`flex items-center justify-between ${isCollapsed ? '' : 'mb-6'}`}>
+          <button onClick={onToggle} className="flex items-center gap-3 text-left group">
             <div className={`p-2 rounded-lg ${
               theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
             }`}>
@@ -255,27 +267,34 @@ export default function EmployerVerificationSection({
               }`}>
                 Employment Verification
               </h3>
-              <p className={`text-sm ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              }`}>
-                Verify driver employment history with previous employers
-              </p>
+              {!isCollapsed && (
+                <p className={`text-sm ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                }`}>
+                  Verify driver employment history with previous employers
+                </p>
+              )}
             </div>
-          </div>
-          <button
-            onClick={fetchVerificationStatus}
-            className={`p-2 rounded-lg ${
-              theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
-            }`}
-          >
-            <RefreshCw className={`w-4 h-4 ${
-              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-            }`} />
+            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
+              theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+            } ${isCollapsed ? '-rotate-90' : ''}`} />
           </button>
+          {!isCollapsed && (
+            <button
+              onClick={fetchVerificationStatus}
+              className={`p-2 rounded-lg ${
+                theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
+              }`}
+            >
+              <RefreshCw className={`w-4 h-4 ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              }`} />
+            </button>
+          )}
         </div>
 
-        {/* Summary Stats */}
-        {summary && (
+        {/* Body — hidden when collapsed */}
+        {!isCollapsed && summary && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             <StatBox
               label="Total Requests"
@@ -304,8 +323,8 @@ export default function EmployerVerificationSection({
           </div>
         )}
 
-        {/* Verification Requests */}
-        {summary && summary.requests.length > 0 ? (
+        {/* Verification Requests — hidden when collapsed */}
+        {!isCollapsed && summary && summary.requests.length > 0 ? (
           <div className="space-y-2">
             <h4 className={`text-sm font-medium mb-3 ${
               theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
@@ -353,7 +372,7 @@ export default function EmployerVerificationSection({
               </div>
             ))}
           </div>
-        ) : (
+        ) : !isCollapsed ? (
           <div className={`text-center py-8 ${
             theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
           }`}>
@@ -363,7 +382,7 @@ export default function EmployerVerificationSection({
               Start by reviewing a driver's profile and verifying their employment
             </p>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Detail Modal */}

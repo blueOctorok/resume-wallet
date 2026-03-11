@@ -71,7 +71,7 @@ export default function MotorCarrierOnboarding({ onComplete, showBackButton = fa
 
     // Basic required field validation
     const required: (keyof FormData)[] = [
-      'companyName', 'dotNumber', 'addressStreet',
+      'companyName', 'addressStreet',
       'addressCity', 'addressState', 'addressZip', 'phone', 'email',
     ]
     const missing = required.filter(f => !form[f].trim())
@@ -193,7 +193,7 @@ export default function MotorCarrierOnboarding({ onComplete, showBackButton = fa
             </div>
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
               <div>
-                <label className={labelClass}>USDOT Number <span className='text-red-400'>*</span></label>
+                <label className={labelClass}>USDOT Number <span className='text-gray-400 font-normal'>(optional)</span></label>
                 <input
                   type='text'
                   className={inputClass}

@@ -4,6 +4,32 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 💼 **Job Postings Kanban Section** (March 2026)
+
+### Problem
+The employer hub had `data.jobPostings` in its data structure but never actually rendered a job postings section. `JobRow` and `JobDetailContent` were defined inline in `EmployerHub.tsx` but never called — dead code. The PATCH endpoint for jobs only supported toggling `isActive`.
+
+### Solution
+
+**Expanded `PATCH /api/employer/jobs/[id]`**
+- Now accepts all editable job fields: `title`, `description`, `targetRole`, `locationCity`, `locationState`, `salaryMin`, `salaryMax`, `jobType`, `routeType`, `experienceRequired`, `remoteAllowed`, `isActive`.
+- Only updates fields that are provided (safe partial updates).
+
+**New `src/components/employer/JobPostingsSection.tsx`**
+- Two kanban columns: **Active** (green accent) and **Closed** (gray accent).
+- Each job card shows: title, role badge (Driver/Developer/etc.), location, salary range, job type, and application count chips (total + "N new" if unreviewed).
+- **Edit**: Opens an inline modal with all editable fields and an active/closed status toggle.
+- **Close / Reactivate**: One-click toggle between columns via PATCH.
+- **Delete**: Confirmation modal before permanent deletion.
+- Empty state with "Post a Job" CTA when no jobs exist.
+
+**`EmployerHub.tsx` cleanup**
+- Removed dead `JobRow` and `JobDetailContent` sub-components.
+- Removed orphaned `selectedJob`, `deletingJobId`, `showDeleteConfirm` state and `handleDeleteJob` function.
+- Replaced the dead code with `<JobPostingsSection>` placed between the stats/quick-actions bar and the Hiring Pipeline kanban.
+
+---
+
 ## 🚗 **Employer MVR Order Flow** (March 2026)
 
 ### Problem

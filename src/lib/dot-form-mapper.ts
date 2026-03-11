@@ -99,6 +99,7 @@ export interface DotForm2Data {
     equipmentType: string
     yearsOfExperience: string
   }>
+  // Accident record covers past 5 years (per DOT requirements)
   accidents: Array<{
     date: string
     nature: string
@@ -119,6 +120,13 @@ export interface DotForm2Data {
   deniedLicenseExplain: string
   suspendedLicense: string
   suspendedLicenseExplain: string
+  // Pre-employment drug/alcohol test question (49 CFR 40.25 — past 2 years)
+  drugTestPositive?: string           // 'yes' | 'no'
+  drugTestPositiveExplain?: string
+  // 49 CFR 391.15 disqualifying criminal convictions (past 3 years)
+  cfr391ConvictedYesNo?: string       // 'yes' | 'no'
+  cfr391ConvictedOffenses?: string[]  // keys from CFR391_OFFENSES list
+  cfr391ConvictedExplain?: string
 }
 
 // =====================================================
@@ -165,6 +173,10 @@ export interface DotForm3Data {
   hasPreviousRoadTest?: string
   previousRoadTestDetails?: string
   hasValidCDL?: string
+  // Electronic signature metadata
+  signedAt?: string      // ISO timestamp auto-set when signature is typed
+  ipAddress?: string     // Captured at submission time
+  fcraAcknowledgement?: boolean
 }
 
 // =====================================================

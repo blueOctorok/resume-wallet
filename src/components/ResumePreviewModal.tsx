@@ -83,6 +83,8 @@ interface ResumePreviewModalProps {
   onDelete?: () => void
   isVerifying?: boolean
   canVerify?: boolean
+  // Allow overriding z-index when stacking above other modals
+  zIndex?: number
 }
 
 const SKILL_CATEGORIES: { value: 'equipment' | 'route' | 'technology' | 'safety' | 'other'; label: string }[] = [
@@ -105,6 +107,7 @@ export default function ResumePreviewModal({
   onDelete,
   isVerifying = false,
   canVerify = false,
+  zIndex = 50,
 }: ResumePreviewModalProps) {
   const formatDate = (dateString?: string) => {
     if (!dateString) return ''
@@ -131,7 +134,7 @@ export default function ResumePreviewModal({
   )
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" style={{ zIndex }}>
       <div
         className={`relative w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl flex flex-col ${
           theme === 'dark'
