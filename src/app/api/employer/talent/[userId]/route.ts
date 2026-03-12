@@ -101,7 +101,7 @@ export async function GET(
           cdl_class, cdl_state, cdl_number, cdl_expiration,
           endorsements, cdl_endorsements, restrictions,
           experience_years, employment_history, education, skills,
-          share_token, share_settings, created_at
+          share_token, share_settings, avatar_url, created_at
         `,
         )
         .eq('id', careerCard.driver_profile_id)
@@ -115,18 +115,18 @@ export async function GET(
     let developerProfile = null
     if (!driverProfile) {
       const devpId = careerCard.developer_profile_id
-      const devpQuery = devpId
+      const devpQuery =         devpId
         ? supabase.from('developer_profiles').select(
             `id, first_name, last_name, display_name, email, phone,
              location, bio, headline, years_experience, employment_history,
              github_username, linkedin_url, portfolio_url, twitter_url,
-             skills, education, share_token`
+             skills, education, share_token, avatar_url`
           ).eq('id', devpId)
         : supabase.from('developer_profiles').select(
             `id, first_name, last_name, display_name, email, phone,
              location, bio, headline, years_experience, employment_history,
              github_username, linkedin_url, portfolio_url, twitter_url,
-             skills, education, share_token`
+             skills, education, share_token, avatar_url`
           ).eq('user_id', userId)
 
       const { data: devp } = await devpQuery.single()
@@ -176,38 +176,53 @@ export async function GET(
       driverApplication = da
     }
 
-    // 6. MVR data
+    // 6. MVR data — dual lookup for FCRA compliance
+    //
+    // The career_cards view only surfaces self-ordered MVRs (migration 031).
+    // Employer-ordered MVRs are fetched separately and only returned to the
+    // company that paid for them — they are never visible to the driver or
+    // other employers.
+
     let mvrData = null
     if (careerCard.latest_mvr_id) {
+      // Self-ordered MVR (ordered_by_company_id IS NULL in DB, confirmed by view)
       const { data: mvr } = await supabase
         .from('mvr_orders')
-        .select(
-          `
-          id, status, dl_state, created_at, completed_at,
-          ordered_by_company_id
-        `,
-        )
+        .select('id, status, dl_state, created_at, completed_at, ordered_by_company_id')
         .eq('id', careerCard.latest_mvr_id)
         .single()
 
       if (mvr) {
-        // Get MVR results
         const { data: mvrResults } = await supabase
           .from('mvr_results')
-          .select(
-            `
-            id, license_status, license_class, total_points,
-            violation_count, parsed_data
-          `,
-          )
+          .select('id, license_status, license_class, total_points, violation_count, parsed_data')
           .eq('mvr_order_id', mvr.id)
           .single()
 
-        mvrData = {
-          order: mvr,
-          results: mvrResults,
-          wasOrderedByEmployer: !!mvr.ordered_by_company_id,
-        }
+        mvrData = { order: mvr, results: mvrResults }
+      }
+    }
+
+    // This company's own private MVR order for the candidate (employer-initiated)
+    let companyMvrData = null
+    if (companyId) {
+      const { data: companyMvr } = await supabase
+        .from('mvr_orders')
+        .select('id, status, dl_state, created_at, completed_at, ordered_by_company_id')
+        .eq('driver_user_id', userId)
+        .eq('ordered_by_company_id', companyId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (companyMvr) {
+        const { data: companyMvrResults } = await supabase
+          .from('mvr_results')
+          .select('id, license_status, license_class, total_points, violation_count, parsed_data')
+          .eq('mvr_order_id', companyMvr.id)
+          .single()
+
+        companyMvrData = { order: companyMvr, results: companyMvrResults }
       }
     }
 
@@ -283,6 +298,7 @@ export async function GET(
         userId: candidate?.id,
         role: effectiveRole,
         name: fullName || careerCard.full_name || 'Unknown',
+        avatarUrl: (profile as { avatar_url?: string | null } | null)?.avatar_url ?? null,
         email: profile?.email || candidate?.email,
         phone: profile?.phone,
         location:
@@ -322,7 +338,7 @@ export async function GET(
             }
           : null,
 
-        // MVR
+        // Self-ordered MVR (shareable, visible to driver and all employers)
         mvr: mvrData
           ? {
               orderId: mvrData.order.id,
@@ -330,13 +346,32 @@ export async function GET(
               licenseState: mvrData.order.dl_state,
               orderedAt: mvrData.order.created_at,
               completedAt: mvrData.order.completed_at,
-              wasOrderedByEmployer: mvrData.wasOrderedByEmployer,
+              wasOrderedByEmployer: false, // self-ordered by definition (view scoped this)
               results: mvrData.results
                 ? {
                     licenseStatus: mvrData.results.license_status,
                     licenseClass: mvrData.results.license_class,
                     totalPoints: mvrData.results.total_points,
                     violationCount: mvrData.results.violation_count,
+                  }
+                : null,
+            }
+          : null,
+
+        // This company's private MVR order — not visible to driver or other employers
+        companyMvr: companyMvrData
+          ? {
+              orderId: companyMvrData.order.id,
+              orderStatus: companyMvrData.order.status,
+              licenseState: companyMvrData.order.dl_state,
+              orderedAt: companyMvrData.order.created_at,
+              completedAt: companyMvrData.order.completed_at,
+              results: companyMvrData.results
+                ? {
+                    licenseStatus: companyMvrData.results.license_status,
+                    licenseClass: companyMvrData.results.license_class,
+                    totalPoints: companyMvrData.results.total_points,
+                    violationCount: companyMvrData.results.violation_count,
                   }
                 : null,
             }

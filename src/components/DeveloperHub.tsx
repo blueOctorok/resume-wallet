@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh'
 import ShareProfileCard from './ShareProfileCard'
+import AvatarUpload from './ui/AvatarUpload'
 import DeveloperEmploymentVerificationSection from './verification/DeveloperEmploymentVerificationSection'
 import CandidateRequestsSection from './CandidateRequestsSection'
 import DeveloperResumeBuilder from './DeveloperResumeBuilder'
@@ -89,6 +90,7 @@ interface DeveloperProfile {
   displayName: string | null
   headline: string | null
   bio: string | null
+  avatarUrl: string | null
   portfolioUrl: string | null
   linkedinUrl: string | null
   twitterUrl: string | null
@@ -599,16 +601,17 @@ export default function DeveloperHub({
         theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-white/70 border-gray-200'
       }`}>
         <div className='flex items-center gap-4'>
-          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 ${
-            theme === 'dark' ? 'bg-indigo-500/20 border border-indigo-500/30' : 'bg-indigo-50 border border-indigo-200'
-          }`}>
-            {profileDisplayName
-              ? <span className={`text-2xl font-bold ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}>
-                  {profileDisplayName.charAt(0).toUpperCase()}
-                </span>
-              : <Terminal className={`w-8 h-8 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
+          <AvatarUpload
+            name={profileDisplayName || '?'}
+            avatarUrl={profile?.avatarUrl ?? null}
+            size="xl"
+            color="indigo"
+            uploadEndpoint="/api/developer/avatar"
+            walletAddress={userAddress || ''}
+            onSuccess={(url) =>
+              setProfile(prev => prev ? { ...prev, avatarUrl: url } : prev)
             }
-          </div>
+          />
           <div className='flex-1 min-w-0'>
             <div className='flex items-center gap-2'>
               <h1 className={`text-2xl sm:text-3xl font-bold truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>

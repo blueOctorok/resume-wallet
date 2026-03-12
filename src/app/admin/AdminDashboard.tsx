@@ -856,7 +856,7 @@ function AdminDashboardContent() {
       label: 'Employers',
       tabs: [
         { id: 'accessRequests' as TabId, label: `Access Requests${accessRequestsStats.pending > 0 ? ` (${accessRequestsStats.pending})` : ''}`, icon: <UserPlus className='w-4 h-4' /> },
-        { id: 'companies' as TabId, label: 'Companies', icon: <Building2 className='w-4 h-4' /> },
+        { id: 'companies' as TabId, label: `Companies${companyStats.pending > 0 ? ` (${companyStats.pending})` : ''}`, icon: <Building2 className='w-4 h-4' /> },
         { id: 'jobs' as TabId, label: 'Job Postings', icon: <Briefcase className='w-4 h-4' /> },
         { id: 'applications' as TabId, label: 'Applications', icon: <ClipboardList className='w-4 h-4' /> },
         { id: 'outreach' as TabId, label: 'Candidate Outreach', icon: <Send className='w-4 h-4' /> },
@@ -1335,6 +1335,28 @@ function AdminDashboardContent() {
               {/* Companies Section */}
               {activeTab === 'companies' && (
                 <div className='p-6'>
+                  {/* Stale pending alert — companies waiting > 7 days for approval */}
+                  {(() => {
+                    const staleCount = companies.filter(c => {
+                      if (c.status !== 'pending') return false
+                      const days = Math.floor((Date.now() - new Date(c.createdAt).getTime()) / 86_400_000)
+                      return days >= 7
+                    }).length
+                    return staleCount > 0 ? (
+                      <div className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-5 border ${
+                        theme === 'dark'
+                          ? 'bg-yellow-900/20 border-yellow-700/40 text-yellow-300'
+                          : 'bg-yellow-50 border-yellow-200 text-yellow-800'
+                      }`}>
+                        <AlertTriangle className='w-4 h-4 shrink-0' />
+                        <p className='text-sm'>
+                          <span className='font-semibold'>{staleCount} {staleCount === 1 ? 'company has' : 'companies have'} been pending for 7+ days</span>
+                          {' '}— filter by <button onClick={() => setCompanyStatusFilter('pending')} className='underline font-medium'>Pending</button> to review.
+                        </p>
+                      </div>
+                    ) : null
+                  })()}
+
                   {/* Status Filter Pills */}
                   <div className='flex flex-wrap gap-2 mb-6'>
                     {(['all', 'pending', 'active', 'suspended'] as const).map((status) => (
@@ -1404,15 +1426,30 @@ function AdminDashboardContent() {
                                 <p className='text-xs text-gray-500'>DOT: {company.dotNumber}</p>
                               )}
                             </div>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              company.status === 'pending'
-                                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                : company.status === 'active'
-                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                  : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                            }`}>
-                              {company.status}
-                            </span>
+                            <div className='flex flex-col items-end gap-1'>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                company.status === 'pending'
+                                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                  : company.status === 'active'
+                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                              }`}>
+                                {company.status}
+                              </span>
+                              {company.status === 'pending' && (() => {
+                                const days = Math.floor((Date.now() - new Date(company.createdAt).getTime()) / 86_400_000)
+                                return days >= 7 ? (
+                                  <span className='flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'>
+                                    <Clock className='w-2.5 h-2.5' />
+                                    {days}d waiting
+                                  </span>
+                                ) : days > 0 ? (
+                                  <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                                    {days}d
+                                  </span>
+                                ) : null
+                              })()}
+                            </div>
                           </div>
 
                           {/* Owner Info */}

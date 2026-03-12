@@ -163,7 +163,7 @@ export async function GET(request: NextRequest) {
             driver_profiles (
               first_name, last_name, phone, email,
               cdl_number, cdl_class, cdl_state, cdl_expiration,
-              experience_years
+              experience_years, avatar_url
             )
           ),
           resumes (
@@ -238,6 +238,7 @@ export async function GET(request: NextRequest) {
         // Applicant info (generic)
         applicantUserId: app.applicant_user_id,
         applicantRole: applicantUser?.role || 'driver', // driver, developer, etc.
+        avatarUrl: driverProfile?.avatar_url ?? null,
         applicantName: driverProfile 
           ? `${driverProfile.first_name || ''} ${driverProfile.last_name || ''}`.trim() || 'Unknown'
           : 'Unknown',
@@ -285,12 +286,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Batch-fetch live MVR status + bgcheck consent for kanban cards.
+    // FCRA isolation: only surface self-ordered MVRs OR this company's own orders.
+    // An MVR ordered by a different company must not appear here.
     if (applicantUserIds.length > 0) {
       const [{ data: allMvrOrders }, { data: consents }] = await Promise.all([
         supabase
           .from('mvr_orders')
-          .select('driver_user_id, status, ordered_at')
+          .select('driver_user_id, status, ordered_by_company_id, ordered_at')
           .in('driver_user_id', applicantUserIds)
+          // self-ordered (NULL) OR this company's private order
+          .or(`ordered_by_company_id.is.null,ordered_by_company_id.eq.${company.id}`)
           .order('ordered_at', { ascending: false }),
         supabase
           .from('bgcheck_consents')
@@ -299,17 +304,21 @@ export async function GET(request: NextRequest) {
           .eq('company_id', company.id),
       ])
 
-      const mvrByUser = new Map<string, string>()
+      const mvrByUser = new Map<string, { status: string; orderedByThisCompany: boolean }>()
       for (const order of allMvrOrders ?? []) {
         if (!mvrByUser.has(order.driver_user_id)) {
-          mvrByUser.set(order.driver_user_id, order.status)
+          mvrByUser.set(order.driver_user_id, {
+            status: order.status,
+            orderedByThisCompany: order.ordered_by_company_id === company.id,
+          })
         }
       }
       const consentUserIds = new Set((consents ?? []).map(c => c.driver_user_id))
 
       applicants.forEach(a => {
         (a as Record<string, unknown>).hasMvr = mvrByUser.has(a.applicantUserId)
-        ;(a as Record<string, unknown>).mvrStatus = mvrByUser.get(a.applicantUserId) ?? null
+        ;(a as Record<string, unknown>).mvrStatus = mvrByUser.get(a.applicantUserId)?.status ?? null
+        ;(a as Record<string, unknown>).mvrOrderedByThisCompany = mvrByUser.get(a.applicantUserId)?.orderedByThisCompany ?? false
         ;(a as Record<string, unknown>).hasBgcheckConsent = consentUserIds.has(a.applicantUserId)
       })
     }

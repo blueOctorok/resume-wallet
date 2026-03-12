@@ -42,10 +42,16 @@ export default function StormChainView({ onBack }: StormChainViewProps) {
             <Coins className='w-10 h-10 text-white' />
           </div>
         </div>
-        <h1 className={`text-4xl sm:text-5xl font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+        <h1
+          className='text-4xl sm:text-5xl font-bold mb-3 text-white'
+          style={{ textShadow: '0 2px 12px rgba(0,0,0,0.9), 0 1px 4px rgba(0,0,0,0.8)' }}
+        >
           StormChain Token
         </h1>
-        <p className={`text-xl ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+        <p
+          className='text-xl text-gray-200'
+          style={{ textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}
+        >
           The reward token for verified professionals
         </p>
         <div className={`mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
@@ -132,7 +138,7 @@ export default function StormChainView({ onBack }: StormChainViewProps) {
             amount='3M'
             percentage={20}
             color='blue'
-            description='Buybacks, partnerships, liquidity'
+            description='Referral rewards, community programs, buybacks, partnerships'
           />
           <DistributionBar
             isDark={isDark}
@@ -185,6 +191,24 @@ export default function StormChainView({ onBack }: StormChainViewProps) {
               </tr>
             </tbody>
           </table>
+        </div>
+
+        {/* Treasury note */}
+        <div className={`mt-4 p-4 rounded-lg ${
+          isDark
+            ? 'bg-blue-900/20 border border-blue-500/30'
+            : 'bg-blue-50 border border-blue-200'
+        }`}>
+          <p className={`text-sm font-medium mb-1 ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>
+            About the Treasury
+          </p>
+          <p className={`text-sm ${isDark ? 'text-blue-400/80' : 'text-blue-600'}`}>
+            The 3M treasury is pre-allocated at launch, not generated from USDC
+            spend. It's reserved for referral rewards (e.g. tokens when a
+            referred user completes their first paid action), community bonuses,
+            buybacks, and partnerships. Treasury tokens are released for
+            specific events—not sold arbitrarily.
+          </p>
         </div>
       </Section>
 
@@ -320,12 +344,14 @@ export default function StormChainView({ onBack }: StormChainViewProps) {
             : 'bg-gray-100 border border-gray-200'
         }`}>
           <p className={`font-medium mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Revenue-Backed Model
+            What "backed" means
           </p>
           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            Unlike speculative tokens, STORM liquidity is funded by actual
-            platform revenue. Every token earned represents real economic
-            activity on the platform.
+            Every token <strong>earned by users</strong> (the 9M reward pool)
+            is tied to real USDC spent on the platform—no spend, no tokens.
+            Treasury, founder, and DEX allocations are pre-minted at launch
+            for operations, referral programs, and trading liquidity. DEX
+            liquidity itself is funded by actual platform revenue.
           </p>
         </div>
       </Section>
@@ -372,9 +398,9 @@ export default function StormChainView({ onBack }: StormChainViewProps) {
             Why differentiated rates?
           </p>
           <ul className={`text-sm space-y-1 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-            <li>• <strong>Applicants get full rate</strong> — The token belongs to job seekers</li>
+            <li>• <strong>Applicants get full rate</strong> — The token is community-first for job seekers</li>
             <li>• <strong>Employers get half rate</strong> — They participate but don't dominate</li>
-            <li>• <strong>Every token is backed</strong> — Both rates represent real USDC activity</li>
+            <li>• <strong>Every earned token is USDC-backed</strong> — No USDC spend, no tokens generated</li>
           </ul>
         </div>
       </Section>

@@ -13,6 +13,7 @@ import {
   Car,
 } from 'lucide-react'
 import CareerCard, { type CareerCardData } from '@/components/CareerCard'
+import Avatar from '@/components/ui/Avatar'
 import type { PageType } from '@/stores/types'
 
 interface DriverCareerCardSectionProps {
@@ -180,11 +181,12 @@ export default function DriverCareerCardSection({
         }`}>
           {/* Candidate header — same as employer modal header */}
           <div className="flex items-center gap-4 mb-8 pb-6 border-b border-gray-200 dark:border-gray-700">
-            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold ${
-              theme === 'dark' ? 'bg-teal-500/20 text-teal-400' : 'bg-teal-100 text-teal-700'
-            }`}>
-              {data.name.charAt(0).toUpperCase()}
-            </div>
+            <Avatar
+              name={data.name}
+              avatarUrl={data.avatarUrl}
+              size="xl"
+              color={data.role === 'developer' ? 'indigo' : 'teal'}
+            />
             <div>
               <h3 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                 {data.name}

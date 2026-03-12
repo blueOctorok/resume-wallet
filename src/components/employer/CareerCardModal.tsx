@@ -19,6 +19,7 @@ import {
 import CareerCard, { type CareerCardData } from '@/components/CareerCard'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import MvrPaymentButton from '@/components/MvrPaymentButton'
+import Avatar from '@/components/ui/Avatar'
 
 // Re-export for consumers that imported from here previously
 export type { CareerCardData }
@@ -229,8 +230,8 @@ export default function CareerCardModal({
   ) : null
 
   // Two side-by-side buttons: whichever step is next is active, the other is dimmed.
-  // Once MVR is ordered (hasMvr), both are replaced with null.
-  const mvrAction = !careerCard?.hasMvr ? (
+  // Once any MVR exists (self-ordered or this company's order), both are replaced with null.
+  const mvrAction = (!careerCard?.hasMvr && !careerCard?.companyMvr) ? (
     <div className="flex items-center gap-2">
       {/* Step 1 — send disclosure request to driver */}
       <ActionButton
@@ -307,16 +308,12 @@ export default function CareerCardModal({
           theme === 'dark' ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'
         }`}>
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              isDriver
-                ? theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
-                : theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-100'
-            }`}>
-              {isDriver
-                ? <Car className={theme === 'dark' ? 'text-teal-400' : 'text-teal-600'} />
-                : <Code className={theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} />
-              }
-            </div>
+            <Avatar
+              name={careerCard?.name || '?'}
+              avatarUrl={careerCard?.avatarUrl}
+              size="md"
+              color={isDriver ? 'teal' : 'indigo'}
+            />
             <div>
               <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                 {loading ? 'Loading...' : careerCard?.name || 'Career Card'}

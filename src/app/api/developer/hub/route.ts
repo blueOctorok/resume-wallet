@@ -177,6 +177,7 @@ export async function GET(request: NextRequest) {
             linkedinUrl: profile.linkedin_url,
             twitterUrl: profile.twitter_url,
             personalWebsite: profile.personal_website,
+            avatarUrl: profile.avatar_url ?? null,
             skills: profile.skills || [],
             jobTypes: profile.job_types || [],
             workStyles: profile.work_styles || [],

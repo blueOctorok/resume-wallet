@@ -9,11 +9,13 @@ import {
   Loader2,
   FileText,
   ClipboardCheck,
-  User,
   ArrowRight,
   CheckCircle,
   Send,
+  Lock,
+  User,
 } from 'lucide-react'
+import Avatar from '@/components/ui/Avatar'
 
 const PIPELINE_COLUMNS = [
   { status: 'submitted',    label: 'New',          color: 'blue'   },
@@ -36,6 +38,7 @@ export interface KanbanApplicant {
   applicantUserId: string
   applicantName: string
   applicantRole: string | null
+  avatarUrl?: string | null
   jobTitle: string
   jobPostingId: string
   // Credential fields for richer cards
@@ -47,6 +50,8 @@ export interface KanbanApplicant {
   // Live MVR state
   hasMvr: boolean
   mvrStatus: string | null
+  // true = this company paid for the MVR (private); false = candidate self-ordered
+  mvrOrderedByThisCompany: boolean
   hasBgcheckConsent: boolean
 }
 
@@ -296,17 +301,18 @@ export default function ApplicantKanban({
                     >
                       {/* Name row */}
                       <div className='flex items-center gap-2 mb-2'>
-                        {/* Initials avatar */}
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                          isDriver
-                            ? isDark ? 'bg-teal-500/20 text-teal-400' : 'bg-teal-100 text-teal-700'
-                            : isDark ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-700'
-                        }`}>
-                          {isUpdatingNow
-                            ? <Loader2 className='w-3.5 h-3.5 animate-spin' />
-                            : initials
-                          }
-                        </div>
+                        {/* Avatar */}
+                        {isUpdatingNow
+                          ? <div className='w-8 h-8 rounded-lg flex items-center justify-center bg-gray-200 dark:bg-gray-700 flex-shrink-0'>
+                              <Loader2 className='w-3.5 h-3.5 animate-spin text-gray-400' />
+                            </div>
+                          : <Avatar
+                              name={applicant.applicantName}
+                              avatarUrl={applicant.avatarUrl}
+                              size='sm'
+                              color={isDriver ? 'teal' : 'indigo'}
+                            />
+                        }
                         <div className='flex-1 min-w-0'>
                           <p className={`text-sm font-semibold truncate leading-tight ${
                             isDark ? 'text-white' : 'text-gray-900'
@@ -398,6 +404,7 @@ export default function ApplicantKanban({
                           <MvrKanbanChip
                             hasMvr={applicant.hasMvr}
                             mvrStatus={applicant.mvrStatus}
+                            mvrOrderedByThisCompany={applicant.mvrOrderedByThisCompany}
                             hasBgcheckConsent={applicant.hasBgcheckConsent}
                             isDark={isDark}
                           />
@@ -444,16 +451,18 @@ export default function ApplicantKanban({
 function MvrKanbanChip({
   hasMvr,
   mvrStatus,
+  mvrOrderedByThisCompany,
   hasBgcheckConsent,
   isDark,
 }: {
   hasMvr: boolean
   mvrStatus: string | null
+  mvrOrderedByThisCompany: boolean
   hasBgcheckConsent: boolean
   isDark: boolean
 }) {
   if (!hasMvr) {
-    // Disclosure signed but order not placed yet
+    // Disclosure signed but no MVR ordered yet
     return (
       <span className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md ${
         isDark ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-600'
@@ -465,13 +474,15 @@ function MvrKanbanChip({
   }
 
   const normalized = mvrStatus?.toLowerCase() ?? ''
+  // Lock icon indicates this company paid for the MVR (private, FCRA-isolated)
+  const PrivacyIcon = mvrOrderedByThisCompany ? Lock : undefined
 
   if (normalized === 'pending' || normalized === 'processing' || normalized === 'submitted') {
     return (
       <span className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md ${
         isDark ? 'bg-yellow-500/15 text-yellow-400' : 'bg-yellow-50 text-yellow-700'
       }`}>
-        <Clock className='w-2.5 h-2.5' />
+        {PrivacyIcon ? <PrivacyIcon className='w-2.5 h-2.5' /> : <Clock className='w-2.5 h-2.5' />}
         MVR Processing
       </span>
     )
@@ -480,7 +491,7 @@ function MvrKanbanChip({
   if (normalized === 'complete' || normalized === 'completed' || normalized === 'returned') {
     return (
       <span className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md bg-green-500/15 text-green-500`}>
-        <CheckCircle className='w-2.5 h-2.5' />
+        {PrivacyIcon ? <PrivacyIcon className='w-2.5 h-2.5' /> : <CheckCircle className='w-2.5 h-2.5' />}
         MVR Complete
       </span>
     )
@@ -490,7 +501,7 @@ function MvrKanbanChip({
     <span className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md ${
       isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
     }`}>
-      <Car className='w-2.5 h-2.5' />
+      {PrivacyIcon ? <PrivacyIcon className='w-2.5 h-2.5' /> : <Car className='w-2.5 h-2.5' />}
       MVR
     </span>
   )

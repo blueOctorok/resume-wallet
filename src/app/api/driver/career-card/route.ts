@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
            cdl_class, cdl_state, cdl_number, cdl_expiration,
            endorsements, cdl_endorsements, restrictions,
            experience_years, employment_history, education, skills,
-           share_token, share_settings, created_at`,
+           share_token, share_settings, avatar_url, created_at`,
         )
         .eq('id', careerCard.driver_profile_id)
         .single()
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
           `id, full_name, email, phone, location, professional_summary,
            title, years_experience, employment_history,
            github_url, linkedin_url, portfolio_url,
-           skills, education, share_token, share_settings`,
+           skills, education, share_token, share_settings, avatar_url`,
         )
         .eq('user_id', userId)
         .single()
@@ -176,6 +176,7 @@ export async function GET(request: NextRequest) {
         userId: user.id,
         role: effectiveRole,
         name: fullName || careerCard.full_name || 'Unknown',
+        avatarUrl: (profile as { avatar_url?: string | null } | null)?.avatar_url ?? null,
         email: profile?.email || user.email,
         phone: profile?.phone,
         location:

@@ -77,15 +77,17 @@ export async function GET(request: NextRequest) {
       { data: driverProfiles },
       { data: candidateRequests },
     ] = await Promise.all([
-      // All MVR orders for pipeline candidates (driver or employer initiated)
+      // FCRA isolation: only self-ordered MVRs OR MVRs this company ordered.
+      // MVRs ordered by other companies must not appear in this report.
       supabase
         .from('mvr_orders')
         .select(`
-          id, status, dl_state, ordered_at, ordered_by_employer,
+          id, status, dl_state, ordered_at, ordered_by_company_id,
           driver_user_id,
           mvr_results ( license_status, total_points, violation_count, result_status )
         `)
         .in('driver_user_id', candidateUserIds)
+        .or(`ordered_by_company_id.is.null,ordered_by_company_id.eq.${companyId}`)
         .order('ordered_at', { ascending: false }),
 
       // DOT application status per candidate
@@ -137,7 +139,8 @@ export async function GET(request: NextRequest) {
         status:           order.status,
         dlState:          order.dl_state,
         orderedAt:        order.ordered_at,
-        orderedByEmployer: order.ordered_by_employer ?? false,
+        // true = this company paid for it (private); false = candidate self-ordered (shareable)
+        isPrivateToCompany: !!order.ordered_by_company_id,
         result: result ? {
           licenseStatus:  result.license_status,
           totalPoints:    result.total_points,

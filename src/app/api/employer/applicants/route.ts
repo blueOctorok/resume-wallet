@@ -229,12 +229,15 @@ export async function GET(request: NextRequest) {
     // instead of one query per applicant (N+1 problem).
     const userIds = applicants.map(a => a.driverUserId).filter(Boolean)
 
+    // FCRA isolation: only surface self-ordered MVRs OR this company's own orders.
     const [{ data: mvrOrders }, { data: consents }] = await Promise.all([
       userIds.length
         ? supabase
             .from('mvr_orders')
-            .select('driver_user_id, status, ordered_by_employer, ordered_at')
+            .select('driver_user_id, status, ordered_by_company_id, ordered_at')
             .in('driver_user_id', userIds)
+            // self-ordered (NULL) OR this company's private order
+            .or(`ordered_by_company_id.is.null,ordered_by_company_id.eq.${companyId}`)
             .order('ordered_at', { ascending: false })
         : Promise.resolve({ data: [] }),
       userIds.length
@@ -247,12 +250,12 @@ export async function GET(request: NextRequest) {
     ])
 
     // Build lookup maps userId → latest MVR + whether consent exists
-    const mvrByUser = new Map<string, { status: string; orderedByEmployer: boolean }>()
+    const mvrByUser = new Map<string, { status: string; orderedByThisCompany: boolean }>()
     for (const order of mvrOrders ?? []) {
       if (!mvrByUser.has(order.driver_user_id)) {
         mvrByUser.set(order.driver_user_id, {
           status: order.status,
-          orderedByEmployer: order.ordered_by_employer ?? false,
+          orderedByThisCompany: order.ordered_by_company_id === companyId,
         })
       }
     }
@@ -263,7 +266,7 @@ export async function GET(request: NextRequest) {
       ...a,
       hasMvr: mvrByUser.has(a.driverUserId),
       mvrStatus: mvrByUser.get(a.driverUserId)?.status ?? null,
-      mvrOrderedByEmployer: mvrByUser.get(a.driverUserId)?.orderedByEmployer ?? false,
+      mvrOrderedByThisCompany: mvrByUser.get(a.driverUserId)?.orderedByThisCompany ?? false,
       hasBgcheckConsent: consentUserIds.has(a.driverUserId),
     }))
 

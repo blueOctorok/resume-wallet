@@ -5,6 +5,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh'
 import { useDriverHubStore } from '@/stores/driver-hub-store'
 import ShareProfileCard from './ShareProfileCard'
+import AvatarUpload from './ui/AvatarUpload'
 import DriverVerificationSection from './verification/DriverVerificationSection'
 import DriverEmploymentVerificationSection from './verification/DriverEmploymentVerificationSection'
 import CandidateRequestsSection from './CandidateRequestsSection'
@@ -997,15 +998,21 @@ export default function DriverHub({
         <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6'>
           {/* Profile Info */}
           <div className='flex items-center gap-4'>
-            <div
-              className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
-                theme === 'dark'
-                  ? 'bg-indigo-500/20 border border-indigo-500/30'
-                  : 'bg-indigo-50 border border-indigo-200'
-              }`}
-            >
-              <User className={`w-8 h-8 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
-            </div>
+            <AvatarUpload
+              name={displayName}
+              avatarUrl={data.profile?.avatar_url ?? null}
+              size="xl"
+              color="teal"
+              uploadEndpoint="/api/driver/avatar"
+              walletAddress={userAddress}
+              onSuccess={(url) =>
+                setHubData(prev =>
+                  prev?.profile
+                    ? { ...prev, profile: { ...prev.profile, avatar_url: url } }
+                    : prev
+                )
+              }
+            />
             <div>
               <div className='flex items-center gap-2'>
                 <h1
@@ -1276,38 +1283,10 @@ export default function DriverHub({
       <div className='mb-6'>
         <ShareProfileCard
           walletAddress={userAddress}
-          driverName={
-            profileName || (data.displayNameFallback ?? '') || undefined
-          }
+          driverName={profileName || (data.displayNameFallback ?? '') || undefined}
+          onViewCareerCard={() => onNavigate('career-card')}
         />
       </div>
-
-      {/* ============================================================ */}
-      {/* CAREER CARD PREVIEW CTA */}
-      {/* ============================================================ */}
-      <button
-        onClick={() => onNavigate('career-card')}
-        className={`w-full mb-6 p-4 rounded-2xl flex items-center gap-4 transition-all cursor-pointer text-left ${
-          theme === 'dark'
-            ? 'bg-gradient-to-r from-teal-500/10 to-teal-600/5 border border-teal-500/30 hover:border-teal-500/50 hover:from-teal-500/15'
-            : 'bg-gradient-to-r from-teal-50 to-teal-100/50 border border-teal-200 hover:border-teal-300'
-        }`}
-      >
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-          theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
-        }`}>
-          <Eye className={`w-5 h-5 ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
-        </div>
-        <div className='flex-1 min-w-0'>
-          <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-            View Your Career Card
-          </p>
-          <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            See exactly what employers see when they search for you
-          </p>
-        </div>
-        <ChevronRight className={`w-5 h-5 flex-shrink-0 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`} />
-      </button>
 
       {/* ============================================================ */}
       {/* EMPLOYMENT VERIFICATION - Driver only (DOT / resume data) */}

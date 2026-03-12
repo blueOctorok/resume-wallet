@@ -39,6 +39,7 @@ interface Applicant {
   driverEmail: string | null
   driverPhone: string | null
   driverLocation: string | null
+  avatarUrl?: string | null
   cdlClass: string | null
   cdlState: string | null
   cdlExpiration: string | null
@@ -54,7 +55,8 @@ interface Applicant {
   // MVR & consent — live from DB, not snapshot
   hasMvr: boolean
   mvrStatus: string | null
-  mvrOrderedByEmployer: boolean
+  // true = this company paid for the MVR (private); false = candidate self-ordered
+  mvrOrderedByThisCompany: boolean
   hasBgcheckConsent: boolean
 }
 

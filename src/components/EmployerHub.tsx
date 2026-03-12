@@ -98,6 +98,7 @@ interface HubApplicant {
   applicantEmail: string | null
   applicantPhone: string | null
   applicantRole: string | null  // 'driver' or 'developer'
+  avatarUrl?: string | null
   // Driver-specific (null for developers)
   cdlClass: string | null
   cdlState: string | null
@@ -684,6 +685,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
                 applicantUserId: a.applicantUserId,
                 applicantName: a.applicantName,
                 applicantRole: a.applicantRole,
+                avatarUrl: a.avatarUrl ?? null,
                 jobTitle: a.jobTitle,
                 jobPostingId: a.jobPostingId,
                 cdlClass: a.cdlClass ?? null,
@@ -693,6 +695,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
                 hasDriverApp: a.hasDriverApp ?? false,
                 hasMvr: a.hasMvr ?? false,
                 mvrStatus: a.mvrStatus ?? null,
+                mvrOrderedByThisCompany: a.mvrOrderedByThisCompany ?? false,
                 hasBgcheckConsent: a.hasBgcheckConsent ?? false,
               }))}
               walletAddress={walletAddress}

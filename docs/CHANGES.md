@@ -4,6 +4,141 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 🖼️ **Profile Avatars — Role-Isolated Photo Upload** (March 2026)
+
+### Problem
+Generic initials/icon placeholders were hardcoded inline in every component that rendered a user's identity. No way to personalize with a real photo. Logic was scattered across 7+ files with no single source of truth.
+
+### Solution
+
+**Architecture:**
+- Avatar stored on the profile table (not `users`) so one wallet can have distinct photos for their driver and developer identities.
+- Driver photo only appears in driver-related views; developer photo only in developer views. Both are visible to employers via career cards.
+
+**New files:**
+- `supabase/migrations/033_profile_avatars.sql` — adds `avatar_url TEXT` to `driver_profiles` and `developer_profiles`. Note: the `avatars` Supabase Storage bucket must be created manually in the Dashboard (public read).
+- `src/components/ui/Avatar.tsx` — pure display primitive. Shows photo if `avatarUrl` exists, otherwise first initial on tinted background. Sizes: `xs/sm/md/lg/xl`. Colors: `teal/indigo/purple/amber/gray`.
+- `src/components/ui/AvatarUpload.tsx` — wraps `Avatar` with click-to-upload. Camera icon overlays on hover; spinner during upload. Calls `POST /api/driver/avatar` or `POST /api/developer/avatar` internally, then fires `onSuccess(newUrl)` to update parent state.
+- `src/app/api/driver/avatar/route.ts` — validates file (JPEG/PNG/WebP, ≤5 MB), uploads to `avatars/driver/{userId}.{ext}` in Supabase Storage (upsert), saves public URL to `driver_profiles.avatar_url`.
+- `src/app/api/developer/avatar/route.ts` — same flow for `developer_profiles`.
+
+**Updated files (inline → `<Avatar>`):**
+- `src/components/CareerCard.tsx` — added `avatarUrl` to `CareerCardData` type.
+- `src/components/app/DriverCareerCardSection.tsx` — profile header uses `<Avatar>`.
+- `src/components/employer/CareerCardModal.tsx` — modal header shows real avatar instead of Car/Code icon.
+- `src/components/employer/ApplicantKanban.tsx` — kanban card avatar; `avatarUrl` added to `KanbanApplicant` interface.
+- `src/components/ShareProfileCard.tsx` — compact preview uses `<Avatar>` with `preview.avatarUrl`.
+- `src/components/DriverHub.tsx` — hub header uses `<AvatarUpload>` (teal, driver endpoint).
+- `src/components/DeveloperHub.tsx` — hub header uses `<AvatarUpload>` (indigo, developer endpoint).
+- `src/components/ui/UserIdentity.tsx` — delegates to `<Avatar>` primitive; accepts `avatarUrl` prop.
+- `src/components/EmployerHub.tsx` — passes `avatarUrl` through to kanban.
+- `src/components/employer/ApplicantsPage.tsx` — `avatarUrl` added to `Applicant` interface.
+- `src/app/api/driver/career-card/route.ts` — includes `avatar_url` in both profile selects; maps to `avatarUrl` in response.
+- `src/app/api/employer/talent/[userId]/route.ts` — includes `avatar_url` in both driver and developer profile selects; maps to `avatarUrl`.
+- `src/app/api/employer/hub/route.ts` — includes `avatar_url` in the driver_profiles sub-select; passes through as `avatarUrl`.
+- `src/app/api/developer/hub/route.ts` — maps `avatar_url` to `avatarUrl` in transformed profile response.
+
+---
+
+## 🪪 **Driver Hub: Career Card Preview in ShareProfileCard** (March 2026)
+
+### Problem
+The driver hub had two separate sections doing the same job: `ShareProfileCard` showing a QR code, and a standalone "View Your Career Card" button below it. Redundant and didn't give the driver a quick at-a-glance view of their card.
+
+### Solution
+
+**`src/components/ShareProfileCard.tsx`** (rewritten)
+- Main body now shows a **compact career card preview**: avatar, name, role, completeness percentage, and green/gray credential chips for Resume, DOT App, and MVR.
+- Data fetched from `/api/driver/career-card` on mount (driver only; developers skip the preview fetch).
+- Two action buttons replace the old QR-always-visible layout:
+  - **View Career Card** — calls new `onViewCareerCard?: () => void` prop.
+  - **Share QR** — opens a portal modal with the QR code, share link, copy, download, and regenerate.
+- QR modal uses `createPortal` to render above all other content.
+- Settings gear (privacy toggles) stays in the card header.
+
+**`src/components/DriverHub.tsx`**
+- Removed the standalone "View Your Career Card" button (was below `ShareProfileCard`).
+- Passes `onViewCareerCard={() => onNavigate('career-card')}` to `ShareProfileCard`.
+
+---
+
+## 🏥 **Admin: Stale Pending Company Alerts** (March 2026)
+
+### Problem
+Companies that signed up but hadn't been approved could sit in `status = 'pending'` indefinitely with no visibility into how long they'd been waiting.
+
+### Solution — `src/app/admin/AdminDashboard.tsx`
+- **Companies tab badge**: sidebar tab now shows `Companies (N)` count when any are pending, matching the existing pattern on Access Requests.
+- **Stale alert banner**: yellow warning banner appears at the top of the Companies tab whenever any company has been pending for 7+ days, with a direct link to filter to Pending.
+- **Days-waiting chip**: each pending company card now shows how long it has been waiting — an orange `Xd waiting` badge at 7+ days, a neutral gray `Xd` label for under a week.
+
+---
+
+## ⏰ **Cron Expiry Gaps Filled** (March 2026)
+
+### Problem
+Migration 028 covered 3 of 7 time-sensitive schema columns. Four columns had expiry semantics baked in but no scheduled enforcement: `company_members.invite_expires_at`, `mvr_orders.expires_at`, `candidate_requests.expires_at`, and `job_postings.expires_at`.
+
+### Solution — `supabase/migrations/032_cron_expiry_gaps.sql`
+
+| Job name | Schedule | What it does |
+|---|---|---|
+| `expire-team-invites` | Hourly +5min | NULLs `invite_token` on unaccepted `company_members` rows past their 7-day window |
+| `expire-mvr-orders` | 4 AM UTC daily | Sets `mvr_orders.status = 'expired'` when `expires_at` passes |
+| `sync-driver-mvr-expiry` | 4:10 AM UTC daily | NULLs `driver_profiles.mvr_expires_at` after expiry so `has_mvr` checks don't linger |
+| `expire-candidate-requests` | 4:30 AM UTC daily | Sets `candidate_requests.status = 'expired'` for timed-out employer→driver requests |
+| `close-expired-job-postings` | 4:45 AM UTC daily | Sets `job_postings.is_active = false` when `expires_at` passes |
+
+---
+
+## 🔒 **FCRA MVR Isolation** (March 2026)
+
+### Problem
+StormChain risked being classified as a Consumer Reporting Agency (CRA) because employer-ordered MVRs were leaking into the shared `career_cards` view. This meant:
+- A driver could see on their own career card that an employer had run a background check on them.
+- Employer B could see an MVR that Employer A paid for.
+
+### Solution
+
+**`supabase/migrations/031_fcra_mvr_isolation.sql`**
+- Changed the MVR LATERAL join in the `career_cards` view to only select `ordered_by_company_id IS NULL` (self-ordered) MVRs.
+- Updated `mvr_count` aggregate to only count self-ordered MVRs.
+- `has_mvr` and `latest_mvr_id` in the view now reflect self-ordered only.
+- Drops and recreates `search_talent()` function (CASCADE pattern).
+
+**`src/app/api/employer/talent/[userId]/route.ts`**
+- Added a second MVR lookup: `companyMvr` — fetches this company's private order for the candidate (`ordered_by_company_id = requestingCompanyId`).
+- Returns `companyMvr` in the response alongside the public `mvr` field.
+- Public `mvr.wasOrderedByEmployer` is now always `false` (by definition, view scoped it).
+
+**`src/app/api/employer/hub/route.ts` and `src/app/api/employer/applicants/route.ts`**
+- Batch MVR enrichment queries now use `.or('ordered_by_company_id.is.null,ordered_by_company_id.eq.{companyId}')` so only relevant MVRs are surfaced.
+- Added `mvrOrderedByThisCompany` boolean to enriched applicant objects, replacing the old `mvrOrderedByEmployer` boolean.
+
+**`src/app/api/employer/reports/route.ts`**
+- Applied the same `.or()` scoping filter to the MVR query.
+- Replaced `orderedByEmployer` flag with `isPrivateToCompany: !!ordered_by_company_id` on each row.
+
+**`src/components/CareerCard.tsx`**
+- Added `companyMvr` field to `CareerCardData` type (optional, only populated for employer views).
+- MVR section now renders two separate blocks:
+  - Self-ordered MVR: green **Self-Ordered** badge with a user icon.
+  - Company-ordered MVR: amber **Private to Your Company** badge with a lock icon.
+- Removed the old "* MVR ordered by employer" footnote.
+- `mvrAction` buttons hidden when either `hasMvr` (self-ordered) OR `companyMvr` exists.
+
+**`src/components/employer/ApplicantKanban.tsx`**
+- Added `mvrOrderedByThisCompany` to `KanbanApplicant` interface.
+- `MvrKanbanChip` now shows a lock icon instead of the default icon when the MVR was ordered by this company.
+
+**`src/components/employer/ApplicantsPage.tsx`**
+- Renamed `mvrOrderedByEmployer` → `mvrOrderedByThisCompany` in the `Applicant` interface.
+
+**`src/components/employer/CareerCardModal.tsx`**
+- Updated `mvrAction` guard: buttons now hide when `!hasMvr && !companyMvr` (was `!hasMvr` only).
+
+---
+
 ## 💼 **Job Postings Kanban Section** (March 2026)
 
 ### Problem

@@ -23,9 +23,12 @@ import {
   Eye,
   Loader2,
   AlertCircle,
+  User,
+  Lock,
 } from 'lucide-react'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import ResumePreviewModal from '@/components/ResumePreviewModal'
+import Avatar from '@/components/ui/Avatar'
 import type { DotForm1Data, DotForm2Data, DotForm3Data } from '@/lib/dot-form-mapper'
 
 // ─── Shared type ─────────────────────────────────────────────────────────────
@@ -36,6 +39,8 @@ export interface CareerCardData {
   userId: string
   role: string
   name: string
+  /** Profile photo URL from Supabase Storage. Null falls back to initials. */
+  avatarUrl?: string | null
   email: string | null
   phone: string | null
   location: string | null
@@ -89,6 +94,7 @@ export interface CareerCardData {
     isComplete: boolean
     createdAt: string
   } | null
+  // Self-ordered MVR — shareable, visible to driver and all employers
   mvr: {
     orderId: string
     orderStatus: string
@@ -96,6 +102,21 @@ export interface CareerCardData {
     orderedAt: string
     completedAt: string | null
     wasOrderedByEmployer: boolean
+    results: {
+      licenseStatus: string
+      licenseClass: string
+      totalPoints: number
+      violationCount: number
+    } | null
+  } | null
+  // Employer's private MVR order — only populated when the viewing employer
+  // is the one who ordered it. Never sent to the driver or other employers.
+  companyMvr?: {
+    orderId: string
+    orderStatus: string
+    licenseState: string
+    orderedAt: string
+    completedAt: string | null
     results: {
       licenseStatus: string
       licenseClass: string
@@ -425,40 +446,68 @@ export default function CareerCard({
           title="Motor Vehicle Record"
           icon={<Car className="w-4 h-4" />}
           theme={theme}
-          action={!data.hasMvr ? mvrAction : null}
+          // Hide action buttons once either a self-ordered or company-ordered MVR exists
+          action={(!data.hasMvr && !data.companyMvr) ? mvrAction : null}
         >
+          {/* Self-ordered MVR — shareable, shown to everyone */}
           {data.mvr ? (
             <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/15 text-green-500">
+                  <User className="w-3 h-3" />
+                  Self-Ordered
+                </span>
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                 <InfoItem label="License Status" value={data.mvr.results?.licenseStatus || 'Pending'} theme={theme} />
                 <InfoItem label="Class" value={data.mvr.results?.licenseClass || 'N/A'} theme={theme} />
                 <InfoItem label="Points" value={String(data.mvr.results?.totalPoints ?? 'N/A')} theme={theme} />
                 <InfoItem label="Violations" value={String(data.mvr.results?.violationCount ?? 'N/A')} theme={theme} />
               </div>
-              {data.mvr.wasOrderedByEmployer && (
-                <p className={`mt-3 text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
-                  * MVR ordered by employer
-                </p>
-              )}
             </div>
-          ) : data.hasBgcheckConsent ? (
+          ) : null}
+
+          {/* Company-ordered MVR — private to this employer only */}
+          {data.companyMvr ? (
             <div className={`p-4 rounded-lg border ${
-              theme === 'dark' ? 'bg-teal-500/10 border-teal-500/30' : 'bg-teal-50 border-teal-200'
-            }`}>
-              <div className="flex items-center gap-2 mb-1">
-                <CheckCircle className="w-4 h-4 text-teal-500" />
-                <span className={`text-sm font-medium ${theme === 'dark' ? 'text-teal-300' : 'text-teal-800'}`}>
-                  Disclosure signed
+              theme === 'dark' ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200'
+            } ${data.mvr ? 'mt-3' : ''}`}>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/15 text-amber-500">
+                  <Lock className="w-3 h-3" />
+                  Private to Your Company
                 </span>
               </div>
-              <p className={`text-xs ${theme === 'dark' ? 'text-teal-400/70' : 'text-teal-600'}`}>
-                Signed {data.bgcheckConsentSignedAt
-                  ? new Date(data.bgcheckConsentSignedAt).toLocaleDateString()
-                  : ''} — MVR order can be initiated
-              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                <InfoItem label="License Status" value={data.companyMvr.results?.licenseStatus || 'Pending'} theme={theme} />
+                <InfoItem label="Class" value={data.companyMvr.results?.licenseClass || 'N/A'} theme={theme} />
+                <InfoItem label="Points" value={String(data.companyMvr.results?.totalPoints ?? 'N/A')} theme={theme} />
+                <InfoItem label="Violations" value={String(data.companyMvr.results?.violationCount ?? 'N/A')} theme={theme} />
+              </div>
             </div>
-          ) : (
-            <EmptyState message="No MVR on file" theme={theme} />
+          ) : null}
+
+          {/* Neither ordered yet — show disclosure status or empty state */}
+          {!data.mvr && !data.companyMvr && (
+            data.hasBgcheckConsent ? (
+              <div className={`p-4 rounded-lg border ${
+                theme === 'dark' ? 'bg-teal-500/10 border-teal-500/30' : 'bg-teal-50 border-teal-200'
+              }`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <CheckCircle className="w-4 h-4 text-teal-500" />
+                  <span className={`text-sm font-medium ${theme === 'dark' ? 'text-teal-300' : 'text-teal-800'}`}>
+                    Disclosure signed
+                  </span>
+                </div>
+                <p className={`text-xs ${theme === 'dark' ? 'text-teal-400/70' : 'text-teal-600'}`}>
+                  Signed {data.bgcheckConsentSignedAt
+                    ? new Date(data.bgcheckConsentSignedAt).toLocaleDateString()
+                    : ''} — MVR order can be initiated
+                </p>
+              </div>
+            ) : (
+              <EmptyState message="No MVR on file" theme={theme} />
+            )
           )}
         </Section>
       )}

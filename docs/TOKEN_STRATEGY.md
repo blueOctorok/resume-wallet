@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-The **STORM** token is designed as a dual-purpose asset that enhances the StormChain platform without compromising user experience. **Only applicants** (drivers, devs, and future verticals) earn tokens—through their own paid platform activities (USDC). Employer spend generates tokens that flow into a platform bucket (treasury, liquidity, or random user perks), not to employers, keeping B2B relationships simple and avoiding token/compliance complexity for companies.
+The **STORM** token is designed as a dual-purpose asset that enhances the StormChain platform without compromising user experience. **Every token earned by users is directly backed by USDC spent on the platform**—applicants earn at full rate (1x), employers at half rate (0.5x). The platform's fixed supply includes separate allocations for treasury, founders, and DEX liquidity; these are pre-allocated at launch, not generated from USDC spend, and are used for operations, referral programs, and trading liquidity.
 
 ## Core Principles
 
@@ -14,17 +14,18 @@ The **STORM** token is designed as a dual-purpose asset that enhances the StormC
 - Employer plans: $199/month USDC
 - **STORM tokens are earned rewards, not payment requirements**
 
-### 2. Applicant-Only Earning
+### 2. USDC-Backed Earning
 
-- **Only applicants (drivers, devs) receive STORM tokens as rewards.** Employers never earn or receive tokens from their spend.
-- Keeps employer relationships clean: they pay USDC for verification/services without token accounting, tax, or compliance friction.
-- Avoids complicating employer business models or creating reasons for them to avoid the platform.
+- **Every earned token is backed by real USDC spend.** Applicants earn at 1x rate; employers earn at 0.5x rate. No USDC spend = no earned tokens.
+- **Applicants (drivers, devs) earn at full rate (1x)** — the token is community-first and rewards the people verifying their careers.
+- **Employers earn at half rate (0.5x)** — they participate in the token economy but don't dominate it; this prevents corporate accumulation while still tying their tokens to real spend.
+- Note: treasury, founder, and DEX allocations are pre-minted at launch and are not "earned" via USDC. See distribution section for details.
 
 ### 3. Anti-Gaming Mechanism
 
-- **Tokens can ONLY be earned through paid USDC actions** (by applicants) or allocated to the employer-spend bucket.
+- **Earned tokens can ONLY come from paid USDC actions** — no free claiming, no farming.
 - Prevents spam, bot farming, and Sybil attacks.
-- Every token represents real economic activity.
+- Every earned token represents real economic activity on the platform.
 
 ### 4. Low Supply Scarcity Model
 
@@ -40,7 +41,7 @@ The **STORM** token is designed as a dual-purpose asset that enhances the StormC
 | Allocation        | Amount    | Percentage | Purpose                                       |
 | ----------------- | --------- | ---------- | --------------------------------------------- |
 | User Rewards      | 9M tokens | 60%        | Earned by users through platform usage        |
-| Platform Treasury | 3M tokens | 20%        | Buybacks, partnerships, liquidity             |
+| Platform Treasury | 3M tokens | 20%        | Referral rewards, community programs, buybacks, partnerships |
 | Founders          | 2M tokens | ~13.3%     | 1M each to two founders (allocated at launch) |
 | DEX Liquidity     | 1M tokens | ~6.7%      | Initial trading liquidity                     |
 
@@ -131,16 +132,23 @@ _Any product, any price: tokens = f(USDC spent) with decay. No separate rules pe
 
 We chose smooth decay because **it's fairer**—the first user shouldn't get dramatically more than the hundredth user.
 
-### Employer Spend → Platform Bucket (no tokens to employers)
+### Employer Earning (Half Rate)
 
-When employers pay USDC (e.g. verification, employer plans), tokens are **not** awarded to the employer. Instead, the same formula generates tokens that go into a **platform bucket**. This bucket is used only for:
+When employers pay USDC (e.g. employer plans, bulk verification), they **earn STORM tokens at 0.5x the applicant rate** via the same decay formula. The half rate keeps the token community-first while still rewarding real employer spend.
 
-- **Treasury** — buybacks, partnerships, runway
-- **Future liquidity pools** — DEX liquidity, stability
-- **Random driver perks** — rewards to drivers (e.g. surprise bonuses, lotteries, "driver of the month")
-- **Employer rewards** — reward employers who do well on Veree (e.g. quality, engagement) with discounts
+When token utility is live, employers who **hold STORM** in their wallet get **lower USDC transaction costs** on plans and bulk verification. They never pay in STORM—only in USDC. Holding keeps token supply tighter and keeps employer books clean (all platform spend remains in one currency).
 
-Employers never earn tokens from their spend. When token utility is live, employers can optionally **buy and hold Veree** on the DEX; holding Veree in their wallet gives them **lower USDC transaction costs** on the platform. They never pay in Veree—only in USDC. Holding (instead of spending tokens at checkout) keeps the token scarcer and keeps company books and taxes simple: all platform spend stays in one currency.
+### Treasury Allocation (3M — Pre-Allocated at Launch)
+
+The 3M treasury allocation is **not generated by USDC spend**. It is pre-minted at deploy and held in a multisig for discretionary platform programs, including:
+
+- **Referral rewards** — tokens to users who refer someone who completes a paid action (e.g. first verification)
+- **Community programs** — bonuses, driver-of-the-month, surprise rewards
+- **Buybacks** — supporting token value during major dips
+- **Partnerships** — strategic ecosystem collaborations
+- **Platform runway** — operational flexibility
+
+Treasury tokens are only released when a specific event triggers them (e.g. a referred user's first USDC payment). They are not sold arbitrarily or used to fund operations from day one.
 
 ### Anti-Spam Protection
 
@@ -185,10 +193,11 @@ Example:
 
 This is a **revenue-backed token**:
 
-- Every token earned represents real USDC revenue
-- Liquidity is funded by actual business income
+- Every **earned** token (from the 9M user rewards pool) represents real USDC spend by applicants or employers
+- Treasury, founders, and DEX are fixed allocations at launch — not generated from USDC, but subject to lock/vesting (founders) and purposeful use policies (treasury)
+- DEX liquidity is funded by actual platform revenue when trading launches
 - Not speculation-driven or VC-funded
-- Sustainable economics
+- Sustainable economics tied to real platform activity
 
 ## Economic Model
 

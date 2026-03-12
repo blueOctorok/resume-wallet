@@ -3,13 +3,13 @@
 import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { Wallet, Pencil, Check, X, Loader2, Copy } from 'lucide-react'
-
-type AvatarColor = 'purple' | 'blue' | 'teal' | 'green' | 'amber' | 'rose' | 'gray'
+import Avatar, { type AvatarColor } from './Avatar'
 
 interface UserIdentityProps {
   name?: string | null
   walletAddress?: string | null
   email?: string | null
+  avatarUrl?: string | null
   avatarColor?: AvatarColor
   size?: 'sm' | 'md' | 'lg'
   showWallet?: boolean
@@ -20,20 +20,17 @@ interface UserIdentityProps {
   className?: string
 }
 
-const avatarColors: Record<AvatarColor, { bg: string; text: string }> = {
-  purple: { bg: 'bg-purple-500/20', text: 'text-purple-400' },
-  blue: { bg: 'bg-blue-500/20', text: 'text-blue-400' },
-  teal: { bg: 'bg-teal-500/20', text: 'text-teal-400' },
-  green: { bg: 'bg-green-500/20', text: 'text-green-400' },
-  amber: { bg: 'bg-amber-500/20', text: 'text-amber-400' },
-  rose: { bg: 'bg-rose-500/20', text: 'text-rose-400' },
-  gray: { bg: 'bg-gray-500/20', text: 'text-gray-400' },
-}
+// Map UserIdentity size tokens to Avatar size tokens
+const AVATAR_SIZE_MAP = {
+  sm: 'sm',
+  md: 'md',
+  lg: 'lg',
+} as const
 
 const sizeConfig = {
-  sm: { avatar: 'w-8 h-8 text-sm', name: 'text-sm', meta: 'text-xs', icon: 'w-3 h-3' },
-  md: { avatar: 'w-10 h-10 text-base', name: 'text-base', meta: 'text-sm', icon: 'w-3.5 h-3.5' },
-  lg: { avatar: 'w-12 h-12 text-lg', name: 'text-lg', meta: 'text-sm', icon: 'w-4 h-4' },
+  sm: { name: 'text-sm', meta: 'text-xs', icon: 'w-3 h-3' },
+  md: { name: 'text-base', meta: 'text-sm', icon: 'w-3.5 h-3.5' },
+  lg: { name: 'text-lg', meta: 'text-sm', icon: 'w-4 h-4' },
 }
 
 export function truncateAddress(address: string, startChars = 6, endChars = 4): string {
@@ -45,6 +42,7 @@ export default function UserIdentity({
   name,
   walletAddress,
   email,
+  avatarUrl,
   avatarColor = 'teal',
   size = 'md',
   showWallet = true,
@@ -60,10 +58,9 @@ export default function UserIdentity({
   const [isSaving, setIsSaving] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  const colors = avatarColors[avatarColor]
   const sizes = sizeConfig[size]
   const displayName = name || 'No name set'
-  const initial = (name || email || walletAddress || '?').charAt(0).toUpperCase()
+  const avatarName = name || email || walletAddress || '?'
 
   const startEdit = () => {
     setEditValue(name || '')
@@ -102,10 +99,12 @@ export default function UserIdentity({
 
   return (
     <div className={`flex items-center gap-3 ${className}`}>
-      {/* Avatar */}
-      <div className={`${sizes.avatar} rounded-full flex items-center justify-center font-semibold flex-shrink-0 ${colors.bg} ${colors.text}`}>
-        {initial}
-      </div>
+      <Avatar
+        name={avatarName}
+        avatarUrl={avatarUrl}
+        size={AVATAR_SIZE_MAP[size]}
+        color={avatarColor}
+      />
 
       {/* Info */}
       <div className='flex-1 min-w-0'>
