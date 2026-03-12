@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import LoadingScreen from '@/components/LoadingScreen'
 import { useUIStore, usePreferencesStore, useAuthStore } from '@/stores'
 import ProfileSetup from '@/components/app/ProfileSetup'
+import MessageInbox from '@/components/messaging/MessageInbox'
 
 const DeveloperHub = dynamic(
   () => import('@/components/DeveloperHub').then((mod) => mod.default),
@@ -47,7 +48,7 @@ interface DeveloperShellProps {
  * Reads currentPage from UIStore; no page state props needed.
  */
 export default function DeveloperShell({ userAddress }: DeveloperShellProps) {
-  const { currentPage, setCurrentPage, triggerJourneyStep } = useUIStore()
+  const { currentPage, setCurrentPage, triggerJourneyStep, initialThreadId } = useUIStore()
   const { hasCompletedJourneyStep } = usePreferencesStore()
   const { user } = useAuthStore()
 
@@ -86,7 +87,8 @@ export default function DeveloperShell({ userAddress }: DeveloperShellProps) {
             page === 'github' ||
             page === 'jobs' ||
             page === 'applications' ||
-            page === 'profile-setup'
+            page === 'profile-setup' ||
+            page === 'messages'
           ) {
             setCurrentPage(page)
           }
@@ -117,6 +119,18 @@ export default function DeveloperShell({ userAddress }: DeveloperShellProps) {
     return (
       <div className='max-w-7xl mx-auto relative z-0'>
         <JobListings onBack={goBack} userAddress={userAddress} />
+      </div>
+    )
+  }
+
+  if (currentPage === 'messages') {
+    return (
+      <div className='max-w-2xl mx-auto'>
+        <MessageInbox
+          walletAddress={userAddress}
+          onBack={goBack}
+          initialThreadId={initialThreadId}
+        />
       </div>
     )
   }

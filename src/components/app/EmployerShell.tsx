@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import LoadingScreen from '@/components/LoadingScreen'
 import { useUIStore } from '@/stores'
 import MotorCarrierOnboarding from '@/components/app/MotorCarrierOnboarding'
+import MessageInbox from '@/components/messaging/MessageInbox'
 
 const EmployerHub = dynamic(
   () => import('@/components/EmployerHub').then((mod) => mod.default),
@@ -76,6 +77,7 @@ const KNOWN_PAGES = new Set([
   'team',
   'company-profile',
   'reports',
+  'messages',
 ])
 
 /**
@@ -83,7 +85,7 @@ const KNOWN_PAGES = new Set([
  * Reads currentPage from UIStore; no page state props needed.
  */
 export default function EmployerShell({ walletAddress }: EmployerShellProps) {
-  const { currentPage, setCurrentPage, triggerJourneyStep } = useUIStore()
+  const { currentPage, setCurrentPage, triggerJourneyStep, initialThreadId } = useUIStore()
 
   const goBack = () => setCurrentPage(null)
 
@@ -146,6 +148,18 @@ export default function EmployerShell({ walletAddress }: EmployerShellProps) {
     return <ReportsPage walletAddress={walletAddress} onBack={goBack} />
   }
 
+  if (currentPage === 'messages') {
+    return (
+      <div className='max-w-2xl mx-auto'>
+        <MessageInbox
+          walletAddress={walletAddress}
+          onBack={goBack}
+          initialThreadId={initialThreadId}
+        />
+      </div>
+    )
+  }
+
   // Default: Employer Hub (when currentPage is null or being reset)
   return (
     <EmployerHub
@@ -160,7 +174,8 @@ export default function EmployerShell({ walletAddress }: EmployerShellProps) {
           page === 'company-profile' ||
           page === 'company-setup' ||
           page === 'reports' ||
-          page === 'team'
+          page === 'team' ||
+          page === 'messages'
         ) {
           setCurrentPage(page)
         }

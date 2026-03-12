@@ -4,6 +4,45 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 💬 **In-App Messaging System** (March 2026)
+
+### Problem
+Employers and candidates had no way to communicate inside StormChain. The only interaction was request/accept flows. Questions about a job, route, pay, or schedule required going off-platform.
+
+### Solution
+Thread-scoped in-app messaging anchored to existing relationships (applications or candidate requests). A thread can only be started if a prior connection exists — prevents cold-message spam from employers.
+
+**New database tables (`supabase/migrations/034_messages.sql`):**
+- `message_threads` — two participants, optional `application_id` or `candidate_request_id` anchor, denormalized `last_message_at` + `last_message_preview` for O(1) inbox queries. Unique constraint per context prevents duplicate threads.
+- `messages` — body, `sender_user_id`, `read_at` (NULL = unread), FK to thread with CASCADE delete.
+
+**New API routes:**
+- `GET /api/messages` — returns all threads for the auth user, enriched with other participant's name/avatar and per-thread unread count. Includes `totalUnread` for nav badges.
+- `POST /api/messages` — create or retrieve a thread. Enforces spam-protection: employers must have an existing application or candidate_request; candidates must have been contacted first.
+- `GET /api/messages/[threadId]` — returns all messages oldest-first; marks unread messages from the other participant as read.
+- `POST /api/messages/[threadId]` — sends a message, updates thread denormalized preview, creates a `notifications` row (`type: 'new_message'`) for the recipient.
+
+**New UI components (`src/components/messaging/`):**
+- `MessagingButton.tsx` — context-aware trigger. Calls `POST /api/messages`, fires `onThreadOpen(threadId)`. Two variants: `button` (full label) and `icon`.
+- `MessageInbox.tsx` — thread list page. Shows other participant avatar+name, subject, last preview, unread badge. Renders `MessageThread` in-place when a thread is opened. Polls every 15s (matching notification bell cadence).
+- `MessageThread.tsx` — conversation view. Message bubbles (mine right, theirs left). Read receipt shown on sent messages. Polls every 5s while open. Ctrl+Enter to send. 4000 char limit.
+
+**Routing:**
+- Added `'messages'` to `PageType` in `src/stores/types.ts`.
+- Added `navigateToMessages(threadId?)` action to `useUIStore` (also stores `initialThreadId` to deep-link to a specific thread).
+- `DriverShell`, `EmployerShell`, `DeveloperShell` all route `currentPage === 'messages'` to `<MessageInbox>`, passing `initialThreadId`.
+
+**Entry points where Message button appears:**
+- `CareerCardModal.tsx` — "Message" button in the footer action row (visible once an application or pending request exists).
+- `EmployerHub.tsx` — "Message" button in the selected applicant detail panel alongside "View Career Card".
+- `CandidateRequestsSection.tsx` — "Reply" button on each active request's action modal.
+
+**Notification integration:**
+- `NotificationBell` — added `new_message` icon (MessageSquare, blue) and color. Click handler now intercepts `type === 'new_message'` and calls `navigateToMessages(data.threadId)` instead of `window.location.href`.
+- `candidate/requests` API updated to include `company.ownerUserId` in the response so candidates know who to address.
+
+---
+
 ## 🖼️ **Profile Avatars — Role-Isolated Photo Upload** (March 2026)
 
 ### Problem

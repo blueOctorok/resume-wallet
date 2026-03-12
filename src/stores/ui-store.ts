@@ -63,6 +63,9 @@ interface UIState {
   // Resume upload events (for cross-component communication)
   latestResumeIpfsHash: string | null
   resumeUploadEvent: ResumeUploadEvent | null
+
+  // Messaging — thread to open when navigating to the messages page
+  initialThreadId: string | null
 }
 
 interface UIActions {
@@ -106,7 +109,10 @@ interface UIActions {
   setLatestResumeIpfsHash: (hash: string | null) => void
   setResumeUploadEvent: (event: ResumeUploadEvent | null) => void
   handleResumeUploadEvent: (event: ResumeUploadEvent) => void
-  
+
+  // Messaging
+  navigateToMessages: (threadId?: string | null) => void
+
   // Reset
   resetUI: () => void
 }
@@ -127,6 +133,7 @@ const initialState: UIState = {
   isMounted: false,
   latestResumeIpfsHash: null,
   resumeUploadEvent: null,
+  initialThreadId: null,
 }
 
 export const useUIStore = create<UIState & UIActions>()(
@@ -230,6 +237,12 @@ export const useUIStore = create<UIState & UIActions>()(
       // Auto-clear event after brief delay (for event-driven consumers)
       setTimeout(() => set({ resumeUploadEvent: null }), 100)
     },
+
+    // Messaging
+    navigateToMessages: (threadId) => set({
+      currentPage: 'messages',
+      initialThreadId: threadId ?? null,
+    }),
 
     // Reset
     resetUI: () => set(initialState),

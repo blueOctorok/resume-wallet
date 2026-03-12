@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Bell, BriefcaseBusiness, UserCheck, ShieldCheck, Users, FileText, ClipboardCheck, X, CheckCheck } from 'lucide-react'
+import { Bell, BriefcaseBusiness, UserCheck, ShieldCheck, Users, FileText, ClipboardCheck, MessageSquare, X, CheckCheck } from 'lucide-react'
 import { useNotificationStore, type AppNotification } from '@/stores/notification-store'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useUIStore } from '@/stores'
 
 interface NotificationBellProps {
   walletAddress: string
@@ -16,6 +17,7 @@ const TYPE_ICON: Record<string, React.ReactNode> = {
   team_invite:            <Users className='w-4 h-4' />,
   new_application:        <FileText className='w-4 h-4' />,
   consent_signed:         <ClipboardCheck className='w-4 h-4' />,
+  new_message:            <MessageSquare className='w-4 h-4' />,
 }
 
 const TYPE_COLOR: Record<string, string> = {
@@ -25,6 +27,7 @@ const TYPE_COLOR: Record<string, string> = {
   team_invite:             'bg-purple-500/20 text-purple-400',
   new_application:         'bg-orange-500/20 text-orange-400',
   consent_signed:          'bg-teal-500/20 text-teal-400',
+  new_message:             'bg-blue-500/20 text-blue-400',
 }
 
 function timeAgo(dateString: string): string {
@@ -70,9 +73,19 @@ export default function NotificationBell({ walletAddress }: NotificationBellProp
 
   const handleNotificationClick = (n: AppNotification) => {
     if (!n.read) markRead(n.id, walletAddress)
+    setIsOpen(false)
+
+    // Message notifications navigate in-app to the specific thread
+    if (n.type === 'new_message') {
+      const threadId = (n.data as { threadId?: string })?.threadId ?? null
+      navigateToMessages(threadId)
+      return
+    }
+
     if (n.action_url) window.location.href = n.action_url
   }
 
+  const { navigateToMessages } = useUIStore()
   const isDark = theme === 'dark'
 
   return (

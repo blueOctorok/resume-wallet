@@ -29,6 +29,7 @@ export type PageType =
   | 'company-setup'
   | 'career-card'
   | 'profile-setup'
+  | 'messages'
   | null
 
 export type UserRole = 'driver' | 'developer' | 'employer' | null

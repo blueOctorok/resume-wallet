@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import LoadingScreen from '@/components/LoadingScreen'
 import StormChainView from '@/components/StormChainView'
 import DriverCareerCardSection from '@/components/app/DriverCareerCardSection'
+import MessageInbox from '@/components/messaging/MessageInbox'
 import ProfileSetup from '@/components/app/ProfileSetup'
 import ResumeTabSelector from '@/components/ResumeTabSelector'
 import DotApplicationFlow from './DotApplicationFlow'
@@ -104,6 +105,7 @@ export default function DriverShell({
   const {
     currentPage,
     setCurrentPage,
+    initialThreadId,
     resumeTab,
     setResumeTab,
     editingResumeId,
@@ -403,6 +405,18 @@ export default function DriverShell({
     return <StormChainView onBack={handleNavigateToHub} />
   }
 
+  if (currentPage === 'messages') {
+    return (
+      <div className='max-w-2xl mx-auto'>
+        <MessageInbox
+          walletAddress={walletAddress ?? ''}
+          onBack={handleNavigateToHub}
+          initialThreadId={initialThreadId}
+        />
+      </div>
+    )
+  }
+
   if (currentPage === 'signin' && !user) {
     return (
       <div className='max-w-md mx-auto overflow-hidden'>
@@ -442,7 +456,7 @@ export default function DriverShell({
               if (
                 page === 'resume' || page === 'dotapp' || page === 'jobs' ||
                 page === 'applications' || page === 'mvr' || page === 'stormchain' ||
-                page === 'career-card' || page === 'profile-setup'
+                page === 'career-card' || page === 'profile-setup' || page === 'messages'
               ) {
                 setCurrentPage(page)
               }

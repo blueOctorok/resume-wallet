@@ -10,6 +10,8 @@ import CandidateOutreach from './employer/CandidateOutreach'
 import JobPostingsSection from './employer/JobPostingsSection'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import CareerCardModal from '@/components/employer/CareerCardModal'
+import MessagingButton from '@/components/messaging/MessagingButton'
+import { useUIStore } from '@/stores'
 import {
   Briefcase,
   Users,
@@ -179,6 +181,7 @@ interface EmployerHubProps {
 
 export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubProps) {
   const { theme } = useTheme()
+  const { navigateToMessages } = useUIStore()
   const [data, setData] = useState<HubData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -759,6 +762,20 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
               <Car className="w-3.5 h-3.5" />
               View Career Card
             </button>
+            <MessagingButton
+              otherUserId={
+                selectedApplicant.applicantUserId ||
+                (selectedApplicant as { driverUserId?: string }).driverUserId ||
+                ''
+              }
+              applicationId={selectedApplicant.applicationId}
+              subject={`Re: ${selectedApplicant.jobTitle} – ${selectedApplicant.applicantName}`}
+              walletAddress={walletAddress}
+              onThreadOpen={(threadId) => {
+                setSelectedApplicant(null)
+                navigateToMessages(threadId)
+              }}
+            />
           </div>
           <div className="p-4 grid md:grid-cols-3 gap-4">
             <div className="md:col-span-2">

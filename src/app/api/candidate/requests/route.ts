@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
         completed_at,
         expires_at,
         created_at,
-        company:companies(id, company_name, logo_url)
+        company:companies(id, company_name, logo_url, employer_user_id)
       `)
       .eq('candidate_user_id', user.id)
       .order('created_at', { ascending: false })
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       requests: (requests || []).map(r => {
-        const company = r.company as { id: string; company_name: string; logo_url: string | null } | null
+        const company = r.company as { id: string; company_name: string; logo_url: string | null; employer_user_id: string | null } | null
         return {
           id: r.id,
           requestType: r.request_type,
@@ -99,6 +99,7 @@ export async function GET(request: NextRequest) {
             id: company.id,
             name: company.company_name,
             logoUrl: company.logo_url,
+            ownerUserId: company.employer_user_id,
           } : null,
           consentId: consentMap.get(r.id) || null,
         }

@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { LayoutDashboard, Coins, ChevronDown, RefreshCw, Car, Code, Building2, Sparkles, HelpCircle } from 'lucide-react'
+import { LayoutDashboard, Coins, ChevronDown, RefreshCw, Car, Code, Building2, Sparkles, HelpCircle, MessageSquare } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 import { useTheme } from '@/contexts/ThemeContext'
-import { usePreferencesStore, useJourneyStore } from '@/stores'
+import { usePreferencesStore, useJourneyStore, useUIStore } from '@/stores'
+import { useNotificationStore } from '@/stores/notification-store'
 import MvrStatusBadge from './MvrStatusBadge'
 import NotificationBell from './ui/NotificationBell'
 
@@ -52,6 +53,10 @@ export default function Navigation({
   const { theme } = useTheme()
   const { showJourneyModals, setShowJourneyModals } = usePreferencesStore()
   const { openGuide } = useJourneyStore()
+  const { navigateToMessages } = useUIStore()
+  const { notifications } = useNotificationStore()
+  // Derive unread message count from existing notification store — no extra fetch needed
+  const unreadMessageCount = notifications.filter(n => n.type === 'new_message' && !n.read).length
 
   // Close hub dropdown when clicking outside
   useEffect(() => {
@@ -166,6 +171,26 @@ export default function Navigation({
 
               {/* AvA Assistant Indicator (Dynamic Island) and Theme Toggle - Right */}
               <div className='flex-shrink-0 flex justify-end items-center gap-2'>
+                {/* Messages Button */}
+                {isAuthenticated && (
+                  <button
+                    onClick={() => navigateToMessages()}
+                    aria-label={`Messages${unreadMessageCount > 0 ? ` (${unreadMessageCount} unread)` : ''}`}
+                    className={`relative flex items-center justify-center w-9 h-9 rounded-xl border transition-all duration-200 cursor-pointer ${
+                      theme === 'light'
+                        ? 'bg-gray-100 border-gray-200 hover:bg-gray-200 text-gray-700'
+                        : 'bg-gray-700/50 border-gray-600 hover:bg-gray-600/50 text-gray-300'
+                    }`}
+                  >
+                    <MessageSquare className='w-4 h-4' />
+                    {unreadMessageCount > 0 && (
+                      <span className='absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-blue-500 text-white text-[10px] font-bold rounded-full border-2 border-white'>
+                        {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                      </span>
+                    )}
+                  </button>
+                )}
+
                 {/* Notification Bell */}
                 {isAuthenticated && walletAddress && (
                   <NotificationBell walletAddress={walletAddress} />

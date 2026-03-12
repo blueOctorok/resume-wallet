@@ -20,6 +20,8 @@ import {
   Shield,
 } from 'lucide-react'
 import BackgroundCheckDisclosure from '@/components/BackgroundCheckDisclosure'
+import MessagingButton from '@/components/messaging/MessagingButton'
+import { useUIStore } from '@/stores'
 
 interface CandidateRequest {
   id: string
@@ -34,6 +36,7 @@ interface CandidateRequest {
     id: string
     name: string
     logo_url?: string | null
+    ownerUserId?: string | null
   } | null
   consentId?: string | null
 }
@@ -97,6 +100,7 @@ export default function CandidateRequestsSection({
   onNavigateToDotApp,
 }: CandidateRequestsSectionProps) {
   const { theme } = useTheme()
+  const { navigateToMessages } = useUIStore()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [requests, setRequests] = useState<CandidateRequest[]>([])
@@ -535,6 +539,21 @@ export default function CandidateRequestsSection({
                   >
                     Decline
                   </button>
+
+                  {/* Reply — only when a company owner user ID is known */}
+                  {selectedRequest.company?.ownerUserId && userAddress && (
+                    <MessagingButton
+                      otherUserId={selectedRequest.company.ownerUserId}
+                      candidateRequestId={selectedRequest.id}
+                      subject={`Re: ${REQUEST_TYPE_CONFIG[selectedRequest.requestType].label} from ${selectedRequest.company.name}`}
+                      walletAddress={userAddress}
+                      onThreadOpen={(threadId) => {
+                        setSelectedRequest(null)
+                        navigateToMessages(threadId)
+                      }}
+                      variant='button'
+                    />
+                  )}
                 </div>
               </div>
             )}

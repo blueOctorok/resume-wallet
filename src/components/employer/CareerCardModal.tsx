@@ -20,6 +20,8 @@ import CareerCard, { type CareerCardData } from '@/components/CareerCard'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import MvrPaymentButton from '@/components/MvrPaymentButton'
 import Avatar from '@/components/ui/Avatar'
+import MessagingButton from '@/components/messaging/MessagingButton'
+import { useUIStore } from '@/stores'
 
 // Re-export for consumers that imported from here previously
 export type { CareerCardData }
@@ -49,6 +51,8 @@ export default function CareerCardModal({
 
   const [requestLoading, setRequestLoading] = useState<string | null>(null)
   const [resendLoading, setResendLoading] = useState<string | null>(null)
+
+  const { navigateToMessages } = useUIStore()
 
   const [showMvrConfirm, setShowMvrConfirm] = useState(false)
   const [showMvrOrderForm, setShowMvrOrderForm] = useState(false)
@@ -266,6 +270,13 @@ export default function CareerCardModal({
     </div>
   ) : null
 
+  // Messaging is available once there's an existing application or pending request
+  const messagingContext = careerCard?.existingApplication?.id
+    ? { applicationId: careerCard.existingApplication.id }
+    : careerCard?.pendingRequests?.[0]?.id
+      ? { candidateRequestId: careerCard.pendingRequests[0].id }
+      : null
+
   const footerActions = (
     <>
       {careerCard?.existingApplication ? (
@@ -284,6 +295,21 @@ export default function CareerCardModal({
           Recruit Candidate
         </button>
       )}
+
+      {/* Message button — only visible once a relationship exists */}
+      {messagingContext && careerCard && (
+        <MessagingButton
+          otherUserId={candidateUserId}
+          {...messagingContext}
+          subject={`Re: ${careerCard.name}`}
+          walletAddress={walletAddress}
+          onThreadOpen={(threadId) => {
+            onClose()
+            navigateToMessages(threadId)
+          }}
+        />
+      )}
+
       {careerCard?.pendingRequests && careerCard.pendingRequests.length > 0 && (
         <span className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm ${
           theme === 'dark' ? 'bg-yellow-900/20 text-yellow-400' : 'bg-yellow-50 text-yellow-700'
