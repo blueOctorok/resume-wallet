@@ -5,7 +5,6 @@ import { useTheme } from '@/contexts/ThemeContext'
 import {
   Loader2,
   AlertCircle,
-  ArrowLeft,
   Eye,
   RefreshCw,
   FileText,
@@ -13,6 +12,7 @@ import {
   Car,
 } from 'lucide-react'
 import CareerCard, { type CareerCardData } from '@/components/CareerCard'
+import BackToHubButton from '@/components/ui/BackToHubButton'
 import Avatar from '@/components/ui/Avatar'
 import type { PageType } from '@/stores/types'
 
@@ -112,14 +112,7 @@ export default function DriverCareerCardSection({
       {/* Page header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <button
-            onClick={onBack}
-            className={`p-2 rounded-lg transition-colors ${
-              theme === 'dark' ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'
-            }`}
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          <BackToHubButton onClick={onBack} />
           <div>
             <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
               My Career Card

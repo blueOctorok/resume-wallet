@@ -1,0 +1,54 @@
+---
+description: State management standards — when to use useState vs Zustand stores
+globs: src/**/*.tsx,src/**/*.ts
+alwaysApply: false
+---
+
+# State Management Standards
+
+## The Rule
+
+`useState` is only allowed for **local UI toggles** that no other component needs.
+Everything else lives in a Zustand store.
+
+```tsx
+// ✅ useState IS allowed for:
+const [isExpanded, setIsExpanded] = useState(false)   // local accordion
+const [hovering, setHovering] = useState(false)        // animation state
+const [inputValue, setInputValue] = useState('')        // uncontrolled input (if not shared)
+
+// ❌ useState is NOT allowed for:
+const [userRole, setUserRole] = useState(null)          // → useAuthStore
+const [showModal, setShowModal] = useState(false)       // if triggered from another component → store
+const [resumes, setResumes] = useState([])              // any data fetched from API → store
+const [currentPage, setCurrentPage] = useState('hub')  // navigation → useUIStore
+const [installedBlocks, setInstalledBlocks] = useState([]) // hub data → useHubBlocksStore
+```
+
+## page.tsx Is Routing Only
+
+`src/app/page.tsx` must contain **zero business logic and zero `useState` calls** (except the hydration `mounted` guard). All logic belongs in stores or shell components.
+
+```tsx
+// ❌ BAD — logic in page.tsx
+const [showProfileSetup, setShowProfileSetup] = useState(false)
+useEffect(() => { /* profile check API call */ }, [userRole])
+
+// ✅ GOOD — in useAuthStore
+checkAndShowProfileSetup(walletAddress, userRole)
+```
+
+## Adding State to a Store
+
+When adding new feature state, add it to the **relevant existing store** rather than creating a new store unless the feature is genuinely standalone:
+
+| What | Store |
+|---|---|
+| Auth, role, profile setup | `useAuthStore` |
+| Page navigation, modals, tabs | `useUIStore` |
+| Installed hub blocks, picker open | `useHubBlocksStore` |
+| DOT form data, step progress | `useDotApplicationStore` |
+| Driver hub data (resumes, MVR, etc.) | `useDriverHubStore` (to be decomposed) |
+| User preferences (persisted) | `usePreferencesStore` |
+
+New blocks get their own store (e.g. `useMvrBlockStore`, `useResumeBlockStore`).

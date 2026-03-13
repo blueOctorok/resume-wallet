@@ -1,4 +1,7 @@
 export { default as Button } from './Button'
 export { default as Card } from './Card'
+export { default as BlockCard } from './BlockCard'
+export { default as BackToHubButton } from './BackToHubButton'
 export { default as JourneyModal } from './JourneyModal'
 export { default as AvaFloatingButton } from './AvaFloatingButton'
+export type { BlockStatus } from './BlockCard'

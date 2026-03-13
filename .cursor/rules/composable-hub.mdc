@@ -1,0 +1,77 @@
+---
+description: Composable hub standards — how blocks are built, registered, and rendered
+globs: src/components/blocks/**,src/stores/**,src/lib/block-registry.ts
+alwaysApply: false
+---
+
+# Composable Hub Standards
+
+## Every Hub Feature Is a Block
+
+The candidate hub is a blank slate. Every feature (DOT app, MVR, resume, portfolio, etc.)
+is a self-contained block with its own component, its own Zustand store, and its own data.
+The hub itself is stateless — it only reads `useHubBlocksStore` and renders.
+
+## Adding a New Block
+
+1. Add a `BlockDefinition` entry to `src/lib/block-registry.ts`
+2. Create the block component in `src/components/blocks/[BlockName]Block.tsx`
+3. Create the block's store in `src/stores/[block-name]-block-store.ts`
+4. Lazy-import the component in `CandidateShell`
+5. No schema changes needed — `hub_blocks.block_type` is open text
+
+## Every Block MUST Use `BlockCard` as Its Outer Wrapper
+
+```tsx
+// ❌ BAD — custom card shell
+<div className="bg-white rounded-2xl border ...">
+  <h3>DOT Application</h3>
+  ...
+</div>
+
+// ✅ GOOD
+import BlockCard from '@/components/ui/BlockCard'
+import { ClipboardList } from 'lucide-react'
+
+<BlockCard
+  icon={ClipboardList}
+  title="DOT Application"
+  description="Federal driver qualification file"
+  status="in-progress"
+  onRemove={handleRemove}
+>
+  {/* block content */}
+</BlockCard>
+```
+
+## Block Status
+
+Derive `status` from the block's own store — never from the hub:
+
+```tsx
+// ✅ GOOD — block owns its completion status
+const { isComplete, hasStarted } = useDotBlockStore()
+const status = isComplete ? 'complete' : hasStarted ? 'in-progress' : 'empty'
+```
+
+## The Career Card Is Read-Only
+
+The career card is a projection of whatever blocks the user has installed.
+It contains **zero logic** — only rendering. It receives block data and displays it.
+Never add data fetching or business logic to the career card.
+
+## Block Registry Is the Source of Truth
+
+All block metadata (label, description, icon, category, suggestedFor keywords)
+lives in `src/lib/block-registry.ts`. Never hardcode block labels or categories
+in UI components — always read from the registry.
+
+```tsx
+// ❌ BAD
+<h3>DOT Application</h3>
+
+// ✅ GOOD
+import { getBlockDefinition } from '@/lib/block-registry'
+const def = getBlockDefinition(block.blockType)
+<BlockCard icon={...} title={def.label} description={def.description} ...>
+```

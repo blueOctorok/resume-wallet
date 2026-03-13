@@ -1,4 +1,24 @@
-# DriverAppChain - Complete Project Roadmap
+# StormChain - Complete Project Roadmap
+
+## 🧱 **Composable Hub Refactor** (March 2026 — In Progress)
+
+The platform is transitioning from role-specific hubs (DriverHub, DeveloperHub)
+to a single composable candidate hub. Candidates start with an empty hub and
+build it by adding blocks. Role selection simplified to `candidate` vs `employer`.
+The career card becomes a pure read-only projection of the hub.
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| Phase 1 — Foundation | ✅ Done | Migration 035, block registry, hub-blocks-store, types |
+| Phase 2 — API routes | 🔲 Next | CRUD for hub_blocks + hub_onboarding endpoints |
+| Phase 3 — Onboarding form | 🔲 Pending | Mandatory "who you are" context form + AvA integration |
+| Phase 4 — Block picker modal | 🔲 Pending | Categorized catalog with drag-and-drop and click-to-add |
+| Phase 5 — CandidateShell | 🔲 Pending | Replaces DriverShell + DeveloperShell, renders blocks |
+| Phase 6 — Port existing blocks | 🔲 Pending | Wrap DOT app, MVR, resumes, portfolio as block components |
+| Phase 7 — Career card projection | 🔲 Pending | Career card rebuilt as a read-only renderer over hub blocks |
+| Phase 8 — Role selection update | 🔲 Pending | Simplify modal to candidate vs employer |
+
+---
 
 ## 🏗️ **Architecture Refactor — All 5 Phases Complete** (February 2026)
 

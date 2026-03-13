@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+// NOTE: useState is only used for `mounted` (hydration guard) and nothing else.
+// All application state lives in Zustand stores.
 import { useSearchParams, useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import Navigation from '@/components/Navigation'
@@ -18,8 +20,6 @@ import { AssistantBridgeProvider } from '@/contexts/AssistantBridgeContext'
 import type { ResumeUploadEvent } from '@/types/assistant'
 import {
   useAuthStore,
-  useDotApplicationStore,
-  useDriverHubStore,
   useUIStore,
 } from '@/stores'
 import type { PageType } from '@/stores'
@@ -85,15 +85,11 @@ const HomeContent = () => {
     isCheckingSession, setIsCheckingSession,
   } = authStore
 
-  const dotApp = useDotApplicationStore()
-  const hubStore = useDriverHubStore()
   const uiStore = useUIStore()
   const {
     currentPage, setCurrentPage,
     isModalOpen, setIsModalOpen,
     driverJourneyState,
-    updateJourneyStep,
-    latestResumeIpfsHash,
     setLatestResumeIpfsHash,
     handleResumeUploadEvent,
   } = uiStore
@@ -102,9 +98,11 @@ const HomeContent = () => {
   // effect from immediately re-logging them in while Alchemy's async cleanup runs.
   const didExplicitLogoutRef = useRef(false)
 
-  // Profile setup modal state
-  const [showProfileSetup, setShowProfileSetup] = useState(false)
-  const didCheckProfileRef = useRef(false)
+  const {
+    showProfileSetup,
+    setShowProfileSetup,
+    checkAndShowProfileSetup,
+  } = authStore
 
   // -------------------------------------------------------
   // Sync Alchemy session to Auth store (existing sessions + OAuth redirects)
@@ -227,50 +225,13 @@ const HomeContent = () => {
   }, [searchParams, userRole, isRoleLoading, setCurrentPage, router])
 
   // -------------------------------------------------------
-  // Check if user needs to set up profile (first-time users)
-  // Shows modal when user has a role but no profile name
+  // Check if user needs profile setup (first-time users with no name)
+  // Logic lives in useAuthStore.checkAndShowProfileSetup
   // -------------------------------------------------------
   useEffect(() => {
-    // Skip if already checked, or still loading, or no wallet
-    if (didCheckProfileRef.current) return
-    if (isRoleLoading || !userRole || !walletAddress) return
-    if (userRole === 'employer') return // Employers use company profile
-
-    didCheckProfileRef.current = true
-
-    async function checkProfile() {
-      try {
-        const endpoint = userRole === 'driver'
-          ? '/api/driver/profile'
-          : '/api/developer/profile'
-
-        const res = await fetch(endpoint, {
-          headers: { 'x-wallet-address': walletAddress! },
-        })
-
-        if (!res.ok) {
-          // Profile doesn't exist yet - show setup modal
-          setShowProfileSetup(true)
-          return
-        }
-
-        const data = await res.json()
-        const profile = data.profile
-
-        // Check if profile has a name set
-        const hasName = userRole === 'driver'
-          ? profile?.firstName || profile?.first_name
-          : profile?.firstName
-
-        if (!hasName) {
-          setShowProfileSetup(true)
-        }
-      } catch (err) {
-        console.error('Profile check error:', err)
-      }
+    if (!isRoleLoading && userRole && walletAddress) {
+      checkAndShowProfileSetup(walletAddress, userRole)
     }
-
-    checkProfile()
   }, [userRole, isRoleLoading, walletAddress])
 
   // -------------------------------------------------------

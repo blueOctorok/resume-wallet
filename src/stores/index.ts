@@ -64,7 +64,22 @@ export {
   useHasSeenWelcome,
 } from './journey-store'
 
+// Hub Blocks Store (composable hub)
+export {
+  useHubBlocksStore,
+  useInstalledBlocks,
+  useIsPickerOpen,
+  useNeedsOnboarding,
+  useHubOnboarding,
+  useAvailableBlocks,
+} from './hub-blocks-store'
+
 // Types
+export type {
+  InstalledBlock,
+  HubOnboarding,
+} from './hub-blocks-store'
+
 export type {
   PageType,
   UserRole,

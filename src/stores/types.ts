@@ -32,7 +32,10 @@ export type PageType =
   | 'messages'
   | null
 
-export type UserRole = 'driver' | 'developer' | 'employer' | null
+// Candidate encompasses all non-employer roles (driver, developer, pilot, etc.)
+// 'driver' and 'developer' remain valid for existing users — new users get 'candidate'
+// until the composable hub refactor is complete.
+export type UserRole = 'driver' | 'developer' | 'employer' | 'candidate' | null
 
 // DOT Application types - using `any` for now to maintain compatibility
 // with existing form components during migration

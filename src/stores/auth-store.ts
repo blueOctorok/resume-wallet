@@ -31,6 +31,9 @@ interface AuthState {
   isSettingRole: boolean
   companyName: string | null
   
+  // Profile setup — shown once for first-time users who have no name set
+  showProfileSetup: boolean
+
   // Session state
   isCheckingSession: boolean
   isInitialized: boolean
@@ -48,6 +51,15 @@ interface AuthActions {
   setIsSettingRole: (setting: boolean) => void
   setCompanyName: (name: string | null) => void
   
+  // Profile setup actions
+  setShowProfileSetup: (show: boolean) => void
+  /**
+   * Checks whether the user has a name set in their profile.
+   * Shows the profile setup modal if not. Safe to call multiple times —
+   * uses an internal flag to only run once per session per wallet.
+   */
+  checkAndShowProfileSetup: (walletAddress: string, userRole: UserRole) => Promise<void>
+
   // Session actions
   setIsCheckingSession: (checking: boolean) => void
   setIsInitialized: (initialized: boolean) => void
@@ -66,9 +78,13 @@ const initialState: AuthState = {
   showRoleSelection: false,
   isSettingRole: false,
   companyName: null,
+  showProfileSetup: false,
   isCheckingSession: true,
   isInitialized: false,
 }
+
+// Prevents the profile check from running more than once per session per wallet
+let profileCheckRanForWallet: string | null = null
 
 export const useAuthStore = create<AuthState & AuthActions>()(
   persist(
@@ -93,6 +109,38 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       setIsSettingRole: (setting) => set({ isSettingRole: setting }),
       setCompanyName: (name) => set({ companyName: name }),
 
+      // Profile setup actions
+      setShowProfileSetup: (show) => set({ showProfileSetup: show }),
+
+      checkAndShowProfileSetup: async (walletAddress, userRole) => {
+        // Employers use company profile — no personal profile setup needed
+        if (!walletAddress || !userRole || userRole === 'employer') return
+        // Only run once per session per wallet to avoid redundant API calls
+        if (profileCheckRanForWallet === walletAddress) return
+        profileCheckRanForWallet = walletAddress
+
+        try {
+          const endpoint = userRole === 'developer'
+            ? '/api/developer/profile'
+            : '/api/driver/profile'
+
+          const res = await fetch(endpoint, {
+            headers: { 'x-wallet-address': walletAddress },
+          })
+
+          if (!res.ok) {
+            set({ showProfileSetup: true })
+            return
+          }
+
+          const data = await res.json()
+          const hasName = data.profile?.firstName || data.profile?.first_name
+          if (!hasName) set({ showProfileSetup: true })
+        } catch {
+          // Non-blocking — if the check fails, don't interrupt the user's session
+        }
+      },
+
       // Session actions
       setIsCheckingSession: (checking) => set({ isCheckingSession: checking }),
       setIsInitialized: (initialized) => set({ isInitialized: initialized }),
@@ -108,6 +156,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       },
 
       logout: () => {
+        profileCheckRanForWallet = null
         set({
           ...initialState,
           isCheckingSession: false,

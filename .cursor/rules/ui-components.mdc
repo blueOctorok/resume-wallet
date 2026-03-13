@@ -1,0 +1,68 @@
+---
+description: UI component standards — enforces use of shared primitives for buttons, cards, and back navigation
+globs: src/**/*.tsx
+alwaysApply: false
+---
+
+# UI Component Standards
+
+## Back Navigation — Always Use `BackToHubButton`
+
+Any button that navigates back to the hub or a parent view MUST use `BackToHubButton`.
+Never create a custom back button with `ArrowLeft` + inline Tailwind.
+
+```tsx
+// ❌ BAD — custom back button
+import { ArrowLeft } from 'lucide-react'
+<button onClick={onBack} className="p-2 rounded-lg ...">
+  <ArrowLeft className="w-5 h-5" />
+</button>
+
+// ✅ GOOD
+import BackToHubButton from '@/components/ui/BackToHubButton'
+<BackToHubButton onClick={onBack} />
+
+// ✅ GOOD — custom label for non-hub destinations
+<BackToHubButton onClick={onBack} label="Back to Inbox" />
+```
+
+`ArrowLeft` from lucide-react is only acceptable inside multi-step form wizard "Previous" buttons — not for page navigation.
+
+---
+
+## Cards — Always Use `Card` or `BlockCard`
+
+Never use raw `<div>` with custom border/background/shadow classes as a card container.
+
+```tsx
+// ❌ BAD
+<div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-6">
+
+// ✅ GOOD — general content card
+import Card from '@/components/ui/Card'
+<Card variant="elevated">
+
+// ✅ GOOD — composable hub block
+import BlockCard from '@/components/ui/BlockCard'
+<BlockCard icon={ClipboardList} title="DOT Application" status="in-progress">
+```
+
+---
+
+## Buttons — Always Use `Button`
+
+Use the `Button` component for all interactive buttons. Inline button Tailwind is not allowed for primary/secondary/danger actions.
+
+```tsx
+// ❌ BAD
+<button className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-500">
+
+// ✅ GOOD
+import Button from '@/components/ui/Button'
+<Button variant="primary">Save</Button>
+<Button variant="secondary">Cancel</Button>
+<Button variant="danger" size="sm">Delete</Button>
+<Button isLoading={saving}>Save</Button>
+```
+
+`ghost` variant is acceptable for icon-only utility buttons inside complex UI (e.g. modal close X).

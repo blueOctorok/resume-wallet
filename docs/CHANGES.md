@@ -4,6 +4,61 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 🧱 **Composable Hub — Foundation** (March 2026)
+
+### Decision
+Moved away from role-specific hubs (DriverHub, DeveloperHub) toward a single
+composable candidate hub. Every candidate starts with an empty hub and builds
+it by adding "blocks" — self-contained feature units. Role selection simplified
+to `candidate` vs `employer`. The career card becomes a pure read-only projection
+of whatever blocks the user has installed.
+
+### What was built (Phase 1 — foundation only, UI in next phase)
+
+**Migration 035 (`supabase/migrations/035_composable_hub.sql`):**
+- `hub_blocks` — tracks which blocks a user has installed, their position, and
+  optional display config. Unique constraint on `(user_id, block_type)`.
+- `hub_onboarding` — stores the mandatory "who you are / why you're here" context
+  form. AvA reads `occupation` + `seeking_reason` to populate `suggested_categories`.
+
+**Block Registry (`src/lib/block-registry.ts`):**
+- Single source of truth for all block types and categories.
+- Categories: General, Drivers, Developers (more added as new roles are built).
+- Current blocks: `general-skills`, `general-work-history`, `driver-resume`,
+  `driver-dot-application`, `driver-mvr`, `driver-cdl-credentials`,
+  `developer-resume`, `developer-portfolio`, `developer-projects`, `developer-github`.
+- Resume is intentionally role-specific — driver resume ≠ developer resume.
+- `suggestBlocks()` and `suggestCategories()` helpers for AvA to recommend blocks
+  from free-text occupation + reason (lightweight keyword match, no LLM required).
+
+**Hub Blocks Store (`src/stores/hub-blocks-store.ts`):**
+- `useHubBlocksStore` — manages installed blocks, picker open state, and onboarding.
+- Optimistic add/remove with rollback on failure.
+- `reorderBlocks()` — called after drag-and-drop, updates positions and syncs to API.
+- `needsOnboarding` flag — true when `hub_onboarding` row doesn't exist yet,
+  triggers the mandatory context form.
+- Fine-grained selector hooks: `useInstalledBlocks`, `useAvailableBlocks`,
+  `useNeedsOnboarding`, `useIsPickerOpen`, `useHubOnboarding`.
+
+**Store / Type updates:**
+- `UserRole` in `types.ts` now includes `'candidate'` alongside existing roles.
+  Existing `'driver'` and `'developer'` users remain valid during transition.
+- `stores/index.ts` exports the new store and its types.
+
+**Dependency added:** `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`
+for drag-and-drop block reordering in the picker modal.
+
+### What's next (Phase 2)
+- API routes: `GET/POST /api/hub/blocks`, `DELETE /api/hub/blocks/[id]`,
+  `PATCH /api/hub/blocks/reorder`, `POST /api/hub/onboarding`
+- `HubOnboardingForm` component (mandatory context form, shown on first visit)
+- `BlockPickerModal` component (categorized catalog, click or drag to add)
+- `CandidateShell` — replaces DriverShell + DeveloperShell
+- Port existing features as blocks (DotApplicationBlock, MvrBlock, etc.)
+- Career card rebuilt as a block projection renderer
+
+---
+
 ## 💬 **In-App Messaging System** (March 2026)
 
 ### Problem

@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { ArrowLeft, Send, Loader2, AlertCircle, MessageSquare } from 'lucide-react'
+import { Send, Loader2, AlertCircle, MessageSquare } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import Avatar from '@/components/ui/Avatar'
+import BackToHubButton from '@/components/ui/BackToHubButton'
 
 interface Message {
   id: string
@@ -167,12 +168,7 @@ export default function MessageThread({ threadId, walletAddress, onBack }: Messa
     <div className={`flex flex-col h-full rounded-2xl overflow-hidden border ${borderCls} ${cardBg}`}>
       {/* Header */}
       <div className={`flex items-center gap-3 px-4 py-3 border-b ${borderCls} ${isDark ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
-        <button
-          onClick={onBack}
-          className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
-        >
-          <ArrowLeft className='w-4 h-4' />
-        </button>
+        <BackToHubButton onClick={onBack} label='Back to Inbox' />
 
         <Avatar
           name={thread.otherParticipant.name}
