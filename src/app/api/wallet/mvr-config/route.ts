@@ -3,27 +3,17 @@ import { privateKeyToAccount } from 'viem/accounts'
 
 /**
  * GET /api/wallet/mvr-config
- * Returns MVR payment configuration for frontend
- * 
- * MVR payments are routed to the x402 payment wallet to fund AI services.
- * This creates a circular funding mechanism where user payments for MVRs
- * automatically fund the AI services.
- * 
- * Note: Currently MVR payments are on Base Sepolia (for testing with Alchemy Account Kit),
- * while x402 payments are on Base Mainnet. The wallet address is the same across networks,
- * but you'll need to ensure the x402 wallet is funded on the same network as MVR payments.
- * For production, consider aligning both on the same network (likely Base Mainnet).
+ * Returns MVR payment configuration for frontend.
+ * Derives the treasury wallet address from the payment private key.
  */
 export async function GET(request: NextRequest) {
   try {
     const usdcAddress = process.env.USDC_BASE_SEPOLIA_ADDRESS
     
-    // Route MVR payments to the x402 payment wallet (same wallet that funds AI)
-    // This creates a circular funding mechanism
     const paymentKey = process.env.X402_PAYMENT_PRIVATE_KEY || process.env.PRIVATE_KEY
     if (!paymentKey) {
       return NextResponse.json(
-        { error: 'X402 payment wallet not configured' },
+        { error: 'Payment wallet not configured' },
         { status: 500 }
       )
     }

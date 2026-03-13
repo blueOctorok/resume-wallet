@@ -97,148 +97,16 @@ export default function ResumeUploadWithPrefill({
       console.log('✅ [PREFILL] IPFS upload successful:', result.ipfsHash)
       console.log('   Gateway URL:', result.url)
 
-      // Step 2: Call AI prefill API
-      setUploadStatus('extracting')
-      console.log('🤖 [PREFILL] Step 2: Extracting data with AI...')
-      const startTime = Date.now()
-
-      // Try CID first (T Backend can fetch from IPFS directly)
-      // Fallback to public gateway URL if needed
-      const publicGatewayUrl = `https://ipfs.io/ipfs/${result.ipfsHash}`
-      console.log('   Using CID:', result.ipfsHash)
-      console.log('   Gateway URL (fallback):', publicGatewayUrl)
-
-      const prefillResponse = await fetch('/api/ai/prefill-resume', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          // Use CID directly (T Backend handles IPFS fetching)
-          cid: result.ipfsHash,
-          // Alternative: resumeUrl if CID doesn't work
-          // resumeUrl: publicGatewayUrl,
-        }),
-      })
-
-      const processingTime = ((Date.now() - startTime) / 1000).toFixed(1)
-      console.log(`   ⏱️ Processing time: ${processingTime}s`)
-
-      if (!prefillResponse.ok) {
-        let errorData
-        const errorText = await prefillResponse.text()
-        try {
-          errorData = JSON.parse(errorText)
-        } catch {
-          errorData = { error: 'Server error', detail: errorText }
-        }
-        console.error('❌ [PREFILL] API Error Response:', errorData)
-        console.error('   Status:', prefillResponse.status, prefillResponse.statusText)
-        
-        // Handle timeout specifically
-        if (prefillResponse.status === 504 || prefillResponse.status === 408) {
-          throw new Error(
-            `AI processing timed out after ${processingTime}s. ` +
-            `T Backend processing can take 20-40 seconds depending on resume complexity. ` +
-            `Please try again - it may work on the next attempt.`
-          )
-        }
-        
-        throw new Error(errorData.error || errorData.detail || 'Failed to extract data from resume')
-      }
-
-      const prefillData = await prefillResponse.json()
-      console.log('✅ [PREFILL] AI extraction successful')
-      console.log('   Full response:', prefillData)
-      console.log(`   Extracted ${prefillData.stats.extracted}/${prefillData.stats.total} fields`)
-      console.log(`   Fields: ${prefillData.stats.fieldNames.join(', ')}`)
-      console.log('   Form1 Data:', prefillData.form1Data)
-      console.log('   Form2 Data:', prefillData.form2Data)
-      console.log('   Raw text available:', !!prefillData.metadata?.raw)
-
-      // Check if extraction returned empty data
-      const hasRawText = prefillData.metadata?.raw && prefillData.metadata.raw.length > 0
-      const extractedCount = prefillData.stats?.extracted || 0
-
-      if (extractedCount === 0) {
-        if (!hasRawText) {
-          // No text extracted - likely duplicate or scanned PDF
-          const duplicateWarning = 
-            '⚠️ No data extracted. This might be because:\n' +
-            '• This resume was already processed (duplicate detection)\n' +
-            '• The file is a scanned PDF (no extractable text)\n' +
-            '• Try uploading a different file or rename the current one'
-          
-          console.warn('⚠️ [PREFILL]', duplicateWarning)
-          setErrorMessage(duplicateWarning)
-          setUploadStatus('error')
-          
-          // Notify T Assistant about the error
-          notifyResumeUploadEvent?.({
-            type: 'upload_error',
-            step: 'extraction',
-            error: duplicateWarning,
-            message: '⚠️ I couldn\'t extract data from your resume. This might be a duplicate or scanned PDF. You can still fill the forms manually!',
-          })
-          
-          if (onPrefillError) {
-            onPrefillError(duplicateWarning)
-          }
-          return
-        } else {
-          // Text extracted but no fields parsed - parsing issue
-          console.warn('⚠️ [PREFILL] Text extracted but no fields parsed - parsing may have failed')
-          setErrorMessage(
-            'Text extracted but no fields found. The resume format might not be recognized. ' +
-            'You can still fill the forms manually.'
-          )
-        }
-      }
-
-      // Store extracted data for preview (don't prefill immediately)
-      setExtractedData(prefillData)
-      setExtractedStats(prefillData.stats)
+      // AI prefill is being rebuilt with Claude — resume is uploaded to IPFS successfully
+      // Prefill extraction will return as a composable hub block
       setUploadStatus('success')
-
-      // Notify T Assistant about successful extraction with insights
-      const insights: string[] = []
-      if (prefillData.form1Data) {
-        if (prefillData.form1Data.firstName || prefillData.form1Data.lastName) {
-          insights.push(`✓ Found name: ${prefillData.form1Data.firstName || ''} ${prefillData.form1Data.lastName || ''}`.trim())
-        }
-        if (prefillData.form1Data.email) insights.push(`✓ Found email: ${prefillData.form1Data.email}`)
-        if (prefillData.form1Data.phone) insights.push(`✓ Found phone: ${prefillData.form1Data.phone}`)
-        if (prefillData.form1Data.currentLicenses?.[0]?.licenseNumber) {
-          const license = prefillData.form1Data.currentLicenses[0]
-          insights.push(`✓ Found license: ${license.licenseNumber} (${license.state || 'State'}) - ${license.typeClass || 'Class'}`)
-        }
-        if (prefillData.form1Data.currentLicenses?.[0]?.endorsements) {
-          insights.push(`✓ Found endorsements: ${prefillData.form1Data.currentLicenses[0].endorsements}`)
-        }
-        if (prefillData.form1Data.medicalQualification?.medicalCertificateExpiration) {
-          insights.push(`✓ Found medical cert expiration: ${prefillData.form1Data.medicalQualification.medicalCertificateExpiration}`)
-        }
-      }
-      if (prefillData.form2Data?.workHistory && prefillData.form2Data.workHistory.length > 0) {
-        insights.push(`✓ Found ${prefillData.form2Data.workHistory.length} employment record(s)`)
-      }
-
-      const insightsText = insights.length > 0
-        ? `\n\n**Here's what I found:**\n${insights.join('\n')}\n\nI extracted ${prefillData.stats.extracted} out of ${prefillData.stats.total} fields.`
-        : `\n\nI extracted ${prefillData.stats.extracted} out of ${prefillData.stats.total} fields.`
 
       notifyResumeUploadEvent?.({
         type: 'analysis_ready',
         step: 'prefill',
-        data: {
-          ipfsHash: result.ipfsHash,
-          prefillData: prefillData, // Pass full data for preview
-        },
-        message: `✅ Analysis complete!${insightsText} Ready to prefill your forms?`,
+        data: { ipfsHash: result.ipfsHash },
+        message: '✅ Resume uploaded successfully! AI extraction is being upgraded and will return soon.',
       })
-
-      // Don't auto-prefill - wait for user confirmation via T Assistant
-      // The user will confirm through T Assistant, which will then call onPrefillSuccess
     } catch (error) {
       console.error('❌ [PREFILL] Error:', error)
       setUploadStatus('error')

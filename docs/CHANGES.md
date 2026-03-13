@@ -4,6 +4,86 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 🧱 **Phase 4: Block Picker Modal** (March 2026)
+
+### What was built
+- `BlockPickerModal.tsx` — main modal overlay triggered by `useIsPickerOpen()`
+- `BlockPickerCategory.tsx` — accordion sections showing blocks per category
+
+### Key design decisions
+- **No separate `BlockPickerItem.tsx`** — block items are simple enough to live inside the category component (KISS)
+- **Accordion pattern** — categories expand/collapse; suggested ones (from AvA onboarding) start open
+- **Optimistic add** — clicking "Add" updates the hub instantly with a spinner, rolls back on failure
+- **Sorted categories** — suggested categories float to the top, marked with a teal "Suggested" badge
+- **Already-installed blocks** are greyed out with "Added ✓" — not clickable
+- **Escape / backdrop click** closes the modal cleanly
+
+---
+
+## 🤖 **Anthropic Migration + Career Score Removal** (March 2026)
+
+### Motivation
+- T Backend (Fluxpoint Studios) routed every AvA chat message through an on-chain USDC micropayment, making reliability dependent on Base Sepolia and wallet state
+- Career scoring was removed — algorithmic + AI scores were unreliable signals and not worth maintaining
+
+### What changed
+
+**Removed — Career Scoring**
+- `src/app/api/ai/career-score/route.ts`
+- `src/app/api/ai/driver-career-score/route.ts`
+- `src/lib/career-score-prompt.ts` + test file
+- Score UI stripped from `DeveloperHub.tsx`, `dev-card/[token]/page.tsx`, `d/[token]/page.tsx`
+
+**Added — Anthropic SDK**
+- `npm install @anthropic-ai/sdk`
+- `ANTHROPIC_API_KEY` env var (set in `.env.local` and Vercel)
+
+**Replaced — `/api/ai/chat/route.ts`**
+- 430 lines of T Backend proxy + USDC payment flow → 80 lines of clean Anthropic SDK call
+- Model: `claude-sonnet-4-6` (fast, intelligent, cost-effective)
+- No more blockchain I/O in the chat path
+
+**New — `src/lib/ava-context.ts`**
+- Hub-aware system prompt builder for AvA
+- Accepts `HubContext` (occupation, seekingReason, installedBlocks) and optional `BlockContext`
+- Replaces the 719-line `ava-brain.ts` template/regex system as the primary context source
+- `ava-brain.ts` retained for now — will be simplified or removed in the AvA rebuild phase
+
+**Complete Fluxpoint / T Backend Removal**
+All references to Fluxpoint Studios' T Backend API have been removed. Since no users are
+in production (still on Sepolia testnet), there was no migration risk.
+
+Deleted files:
+- `src/lib/x402-payment.ts` — USDC micropayment system for AI calls
+- `src/lib/t-backend-knowledge-graph.ts` — RAG knowledge graph management
+- `src/lib/t-backend-vector-store.ts` — RAG vector store management
+- `src/lib/ai-prefill-mapper.ts` — T Backend response → form data mapper
+- `src/lib/career-score-prompt.ts` + test file
+- `src/app/api/credits/route.ts` — T Backend credit balance tracking
+- `src/app/api/admin/credits/route.ts` — admin credit view
+- `src/app/api/ai/prefill-resume/route.ts` — T Backend PDF extraction
+- `src/app/api/ai/compliance-review/start/route.ts` — T Backend compliance audit (o3)
+- `src/app/api/ai/compliance-review/status/route.ts` — compliance job polling
+- `src/app/api/t-backend/setup-knowledge-graph/route.ts`
+- `src/app/api/t-backend/setup-vector-store/route.ts`
+- `src/app/api/t-backend/upload-authenticated/route.ts`
+- `src/app/api/t-backend/admin/setup/route.ts`
+- `src/components/admin/TBackendSetup.tsx` — admin RAG setup panel
+- `src/components/CreditsDisplay.tsx` — T Backend credit display
+
+Stubbed components (functional but degraded until rebuilt with Claude):
+- `ComplianceReview.tsx` — shows "being upgraded" placeholder
+- `ResumeUploadWithPrefill.tsx` — IPFS upload still works, AI extraction skipped
+
+Env vars no longer needed: `T_BACKEND_API_KEY`, `T_BACKEND_BASE_URL`
+
+### Token cost reference
+- Claude Sonnet 4.6: $3 input / $15 output per million tokens
+- Typical AvA interaction: ~2,000 tokens → ~$0.005 per conversation
+- ~$5 in free trial credits on new Anthropic accounts (phone verification required)
+
+---
+
 ## 🧹 **Dead Code Cleanup** (March 2026)
 
 Systematic audit and removal of all unused components, API routes, and pages
@@ -52,6 +132,19 @@ The following are confirmed dead by the audit but intentionally left for discuss
 - `/api/resumes/[id]/visibility`, `/api/admin/credits`, `/api/employer/applications/[id]/export`,
   `/api/admin/mvr/order`, `/api/driver/leads` — could be upcoming features
 - `/api/t-backend/setup-knowledge-graph` — unclear if replaced or future-planned
+
+---
+
+## 🧱 **Composable Hub — Phase 3: Onboarding Form** (March 2026)
+
+**New file:** `src/components/hub/HubOnboardingForm.tsx`
+
+Full-screen blocking overlay shown to new candidates before their hub loads.
+Two required fields — "What do you do?" and "Why are you here?" — feed AvA's
+block suggestion engine. On submit, calls `completeOnboarding()` in the store
+(which POSTs to `/api/hub/onboarding` and derives `suggested_categories`), then
+immediately opens the block picker. The picker will pre-filter to those categories
+when built in Phase 4. Component is rendered by `CandidateHub` (Phase 5).
 
 ---
 

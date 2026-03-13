@@ -32,6 +32,7 @@
   "dependencies": {
     "@account-kit/core": "^4.64.0",
     "@account-kit/react": "^4.64.0",
+    "@anthropic-ai/sdk": "^0.78.0",
     "@base-org/account": "^2.2.0",
     "@base-org/account-ui": "^1.0.1",
     "@coinbase/onchainkit": "^1.1.2",

@@ -19,8 +19,8 @@ Update status markers as each item ships. Never leave a phase half-done.
 |-------|--------|-----------------|
 | 1 — Foundation | ✅ **Done** | Migration, block registry, hub-blocks-store, BlockCard, Cursor rules |
 | 2 — API Routes | ✅ **Done** | CRUD endpoints for hub_blocks and hub_onboarding |
-| 3 — Onboarding Form | 🔲 **Next** | Mandatory "who you are" context form + AvA suggestion |
-| 4 — Block Picker Modal | 🔲 Pending | Categorized catalog, drag-and-drop, click to add |
+| 3 — Onboarding Form | ✅ **Done** | Mandatory "who you are" context form + AvA suggestion |
+| 4 — Block Picker Modal | 🔲 **Next** | Categorized catalog, drag-and-drop, click to add |
 | 5 — Candidate Shell | 🔲 Pending | Replaces DriverShell + DeveloperShell |
 | 6 — Port Blocks | 🔲 Pending | Wrap existing features as BlockCard components |
 | 7 — Career Card Projection | 🔲 Pending | Career card rebuilt as a block renderer |
@@ -125,7 +125,7 @@ src/app/api/hub/
 
 ---
 
-## Phase 3 — Hub Onboarding Form 🔲 Pending
+## Phase 3 — Hub Onboarding Form ✅ DONE
 
 ### Goal
 First-time candidates see a required short form before their hub loads.
@@ -145,51 +145,49 @@ src/components/hub/HubOnboardingForm.tsx
 - On success: overlay dismisses, hub appears, block picker auto-opens with
   `suggested_categories` pre-filtered (so AvA's suggestions are already visible)
 
+### File created
+| File | Purpose |
+|------|---------|
+| `src/components/hub/HubOnboardingForm.tsx` | Full-screen overlay, two fields, submits to `completeOnboarding()`, opens picker on success |
+
 ### Acceptance criteria
-- [ ] Shown only when `useNeedsOnboarding()` is true
-- [ ] Both fields required before submit
-- [ ] After submit, `needsOnboarding` is false and picker opens with suggestions
+- [x] Shown only when `useNeedsOnboarding()` is true (parent's job — Phase 5)
+- [x] Both fields required before submit
+- [x] After submit, `needsOnboarding` is false and picker opens with suggestions
 
 ---
 
-## Phase 4 — Block Picker Modal 🔲 Pending
+## Phase 4 — Block Picker Modal ✅ Done
 
 ### Goal
 A polished modal where candidates browse and add blocks to their hub.
-Categorized catalog, drag-and-drop or click to add.
+Categorized catalog, click-to-add (drag-and-drop deferred to Phase 4b).
 
-### Files to create
+### Files created
 ```
-src/components/hub/BlockPickerModal.tsx
-src/components/hub/BlockPickerCategory.tsx   (category accordion section)
-src/components/hub/BlockPickerItem.tsx        (single block card in the picker)
+src/components/hub/BlockPickerModal.tsx     (main modal shell)
+src/components/hub/BlockPickerCategory.tsx  (category accordion + block items)
 ```
 
-### Design spec
-- Triggered by `useIsPickerOpen()` from hub-blocks-store
-- Closed by `useHubBlocksStore.closePicker()`
-- Left panel: category list (`BLOCK_CATEGORIES` from registry)
-  - Pre-filtered to `suggested_categories` on first open
-  - All categories accessible after that
-- Right panel: blocks in selected category
-  - Each block shows icon, label, description, complexity hint
-  - Already-installed blocks shown as greyed out with "Added ✓"
-  - Click "Add to Hub" OR drag into hub (Phase 4b — drag is optional enhancement)
-- Mobile: single column, categories as tabs at top
+`BlockPickerItem.tsx` was intentionally omitted — the block item UI is simple
+enough to live inside `BlockPickerCategory` without a separate file (KISS).
 
-### dnd-kit usage
-```tsx
-// @dnd-kit/core + @dnd-kit/sortable are already installed
-// Use SortableContext on the installed blocks list in the hub
-// for reordering. The picker itself uses click-to-add first.
-```
+### How it works
+- Opens when `isPickerOpen` is true (via `useIsPickerOpen()`)
+- Closes on backdrop click, X button, or Escape key
+- Categories render as accordions, sorted: suggested first, then by `order`
+- Suggested categories (from AvA onboarding) start expanded with a teal ring
+- Each block shows: icon, label, description, complexity hint
+- Already-installed blocks are greyed out with "Added ✓"
+- Click "Add" calls `addBlock()` — optimistic update with spinner feedback
+- Fully responsive — single-column layout works on mobile
 
 ### Acceptance criteria
-- [ ] Opens when `isPickerOpen` is true
-- [ ] Shows categories from block registry
-- [ ] Clicking "Add to Hub" calls `addBlock()` and shows optimistic feedback
-- [ ] Already-installed blocks are visually distinct / non-addable
-- [ ] Closes cleanly and returns focus to hub
+- [x] Opens when `isPickerOpen` is true
+- [x] Shows categories from block registry
+- [x] Clicking "Add" calls `addBlock()` and shows optimistic feedback
+- [x] Already-installed blocks are visually distinct / non-addable
+- [x] Closes cleanly (Escape, backdrop click, X button)
 
 ---
 

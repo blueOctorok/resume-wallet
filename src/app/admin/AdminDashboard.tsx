@@ -35,13 +35,7 @@ import {
   Mail,
 } from 'lucide-react'
 import AdminResetWallet from '@/components/admin/AdminResetWallet'
-import dynamic from 'next/dynamic'
 
-const TBackendSetup = dynamic(
-  () => import('@/components/admin/TBackendSetup'),
-  {
-    ssr: false,
-  }
 )
 
 type TabId =
@@ -1078,7 +1072,6 @@ function AdminDashboardContent() {
           {activeTab === 'tools' ? (
             <div className='p-6 space-y-8'>
               <AdminResetWallet initialWalletAddress={walletAddress || ''} />
-              <TBackendSetup />
             </div>
           ) : loading ? (
             <div className='flex items-center justify-center py-12'>

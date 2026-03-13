@@ -104,19 +104,6 @@ interface Resume {
   structuredData?: DriverResumeStructuredData
 }
 
-/** Driver career score from /api/ai/driver-career-score */
-interface DriverCareerScore {
-  score: number
-  grade: 'A' | 'B' | 'C' | 'D' | 'F'
-  breakdown: {
-    mvr: { score: number; weight: number; factors: Record<string, number> }
-    experience: { score: number; weight: number; factors: Record<string, number> }
-    credentials: { score: number; weight: number; factors: Record<string, number> }
-    profile: { score: number; weight: number; factors: Record<string, number> }
-  }
-  suggestions: string[]
-  analyzedAt: string
-}
 
 interface DotApp {
   id: string
@@ -172,10 +159,6 @@ export default function PublicDriverProfile() {
   const [data, setData] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [careerScore, setCareerScore] = useState<DriverCareerScore | null>(null)
-  const [scoreLoading, setScoreLoading] = useState(false)
-  const [showScoreBreakdown, setShowScoreBreakdown] = useState(false)
-
   // Connect form state
   const [showConnectForm, setShowConnectForm] = useState(false)
   const [connectForm, setConnectForm] = useState({
@@ -192,10 +175,6 @@ export default function PublicDriverProfile() {
   useEffect(() => {
     if (token) fetchProfile()
   }, [token])
-
-  useEffect(() => {
-    if (data && token) fetchCareerScore()
-  }, [data, token])
 
   const fetchProfile = async () => {
     try {
@@ -220,21 +199,6 @@ export default function PublicDriverProfile() {
       setError('Failed to load profile')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const fetchCareerScore = async () => {
-    try {
-      setScoreLoading(true)
-      const response = await fetch(`/api/ai/driver-career-score?token=${token}`)
-      if (response.ok) {
-        const result = await response.json()
-        if (result.success) setCareerScore(result)
-      }
-    } catch (err) {
-      console.error('Error fetching driver career score:', err)
-    } finally {
-      setScoreLoading(false)
     }
   }
 
@@ -490,70 +454,6 @@ export default function PublicDriverProfile() {
                     </p>
                   ) : (
                     <p className='text-sm text-gray-500'>No MVR on file</p>
-                  )}
-                </div>
-                <div className='text-center relative'>
-                  <button
-                    onClick={() => setShowScoreBreakdown(!showScoreBreakdown)}
-                    className='focus:outline-none'
-                    title='Click to see score breakdown'
-                  >
-                    <div
-                      className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold cursor-pointer transition-all hover:scale-105 ${
-                        scoreLoading
-                          ? 'bg-gray-600/20 text-gray-400 border-2 border-gray-600/50 animate-pulse'
-                          : careerScore?.grade === 'A'
-                            ? 'bg-green-500/20 text-green-400 border-2 border-green-500/50'
-                            : careerScore?.grade === 'B'
-                              ? 'bg-brand-mint/20 text-brand-mint border-2 border-brand-mint/50'
-                              : careerScore?.grade === 'C'
-                                ? 'bg-yellow-500/20 text-yellow-400 border-2 border-yellow-500/50'
-                                : careerScore?.grade === 'D'
-                                  ? 'bg-orange-500/20 text-orange-400 border-2 border-orange-500/50'
-                                  : 'bg-gray-600/20 text-gray-400 border-2 border-gray-600/50'
-                      }`}
-                    >
-                      {scoreLoading ? '...' : careerScore?.grade || '—'}
-                    </div>
-                  </button>
-                  <p className='text-xs text-gray-500 mt-1'>
-                    {careerScore ? `Score: ${careerScore.score}` : 'Driver Score'}
-                  </p>
-                  {showScoreBreakdown && careerScore && (
-                    <div className='absolute right-0 top-20 z-30 w-64 p-4 bg-gray-800 rounded-xl border border-gray-700 shadow-xl text-left'>
-                      <button
-                        onClick={() => setShowScoreBreakdown(false)}
-                        className='absolute top-2 right-2 text-gray-500 hover:text-white'
-                      >
-                        ×
-                      </button>
-                      <p className='text-sm font-semibold text-white mb-3'>Score Breakdown</p>
-                      <div className='space-y-2 text-xs'>
-                        <div className='flex justify-between'>
-                          <span className='text-gray-400'>MVR Record</span>
-                          <span className='text-white font-medium'>{careerScore.breakdown.mvr.score}/100</span>
-                        </div>
-                        <div className='flex justify-between'>
-                          <span className='text-gray-400'>Experience</span>
-                          <span className='text-white font-medium'>{careerScore.breakdown.experience.score}/100</span>
-                        </div>
-                        <div className='flex justify-between'>
-                          <span className='text-gray-400'>Credentials</span>
-                          <span className='text-white font-medium'>{careerScore.breakdown.credentials.score}/100</span>
-                        </div>
-                        <div className='flex justify-between'>
-                          <span className='text-gray-400'>Profile</span>
-                          <span className='text-white font-medium'>{careerScore.breakdown.profile.score}/100</span>
-                        </div>
-                        <div className='border-t border-gray-700 pt-2 mt-2 flex justify-between font-semibold'>
-                          <span className='text-brand-mint'>Overall</span>
-                          <span className='text-brand-mint'>{careerScore.score}/100</span>
-                        </div>
-                      </div>
-                      <p className='text-[10px] text-gray-500 mt-3'>
-                        Analyzed • {new Date(careerScore.analyzedAt).toLocaleDateString()}
-                      </p>
-                    </div>
                   )}
                 </div>
               </div>
