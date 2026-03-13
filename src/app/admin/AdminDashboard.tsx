@@ -36,8 +36,6 @@ import {
 } from 'lucide-react'
 import AdminResetWallet from '@/components/admin/AdminResetWallet'
 
-)
-
 type TabId =
   | 'companies'
   | 'accessRequests'
