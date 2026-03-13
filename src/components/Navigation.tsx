@@ -5,6 +5,7 @@ import { LayoutDashboard, Coins, ChevronDown, RefreshCw, Car, Code, Building2, S
 import ThemeToggle from './ThemeToggle'
 import { useTheme } from '@/contexts/ThemeContext'
 import { usePreferencesStore, useJourneyStore, useUIStore } from '@/stores'
+import type { UserRole } from '@/stores/types'
 import { useNotificationStore } from '@/stores/notification-store'
 import MvrStatusBadge from './MvrStatusBadge'
 import NotificationBell from './ui/NotificationBell'
@@ -22,7 +23,7 @@ type NavPage =
 
 interface NavigationProps {
   isAuthenticated?: boolean
-  userRole?: 'driver' | 'developer' | 'employer' | null
+  userRole?: UserRole
   onStatusClick?: () => void
   onNavigate?: (page: NavPage) => void
   mvrWalletAddress?: string | null

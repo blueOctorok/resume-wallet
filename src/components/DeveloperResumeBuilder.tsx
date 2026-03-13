@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { PhoneInput } from '@/components/ui/MaskedInputs'
 import {
+  ArrowLeft,
   ArrowRight,
   Save,
   Plus,

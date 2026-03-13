@@ -4,6 +4,57 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 🧹 **Dead Code Cleanup** (March 2026)
+
+Systematic audit and removal of all unused components, API routes, and pages
+accumulated across the project's history of major architectural pivots.
+
+### Deleted — Test / Debug Components (9 files)
+`WebhookTest`, `SimulationAPITest`, `TokenAPITest`, `RpcProviderTest`,
+`AlchemyAuthTest`, `AlchemyTest`, `RawTransfersAPITest`, `TransfersAPITest`,
+`USDCDebugTest` — all dev panels, never imported by any shell or page.
+
+### Deleted — Superseded Business Components (6 files)
+- `DriverApplication.tsx` — replaced by `DotApplicationFlow.tsx`
+- `DriverHomePage.tsx` — not imported anywhere; shells use `HomePage.tsx`
+- `EmployerDashboard.tsx` — replaced by `EmployerHub.tsx`
+- `SimpleBaseAuth.tsx`, `BaseAccountAuth.tsx`, `EmailOTPAuth.tsx` — auth experiments
+  superseded by `AlchemyAuth.tsx`
+
+### Deleted — Unused UI Components (5 files)
+`ERC20GasPayment`, `NetworkDiscovery`, `AnimatedBackground` (replaced by
+`StormBackground`), `ThemeAware`, `QuickStats` — never rendered by any active component.
+
+### Deleted — Dead API Routes (10 routes)
+- `blockchain/add-resume`, `add-resume-simple`, `persist-driver-application`,
+  `preflight-driver-application` — replaced by `submit-driver-application`
+- `paymaster/data`, `paymaster/accepted-tokens` — paymaster feature was never wired up
+- `dev/clear-rate-limits` — dev utility never connected
+- `resumes/simple`, `resumes/check-user-file`, `resumes/check-duplicate-global` —
+  no callers anywhere in the codebase
+
+### Deleted — Orphaned Page
+- `src/app/mvr/page.tsx` — standalone `/mvr` URL leftover from pre-SPA days.
+  MVR is now rendered inline by `DriverShell` via `setCurrentPage('mvr')`.
+
+### Fixed (incidental)
+- `DeveloperResumeBuilder.tsx` — pre-existing bug: `ArrowLeft` was used but never
+  imported. Added to lucide imports.
+- `Navigation.tsx`, `UserStatusModal.tsx` — updated `userRole` prop type from hardcoded
+  union to `UserRole` from types to support the new `'candidate'` role.
+- `page.tsx` — removed stale `didCheckProfileRef.current` reference (ref moved to
+  auth store in a prior session).
+
+### What was deliberately NOT deleted
+The following are confirmed dead by the audit but intentionally left for discussion:
+- `CreditsDisplay.tsx`, `PaymentStatusTracker.tsx`, `MvrStatusIndicator.tsx`,
+  `PrefillBanner.tsx`, `ResumeDashboard.tsx` — may have planned use
+- `/api/resumes/[id]/visibility`, `/api/admin/credits`, `/api/employer/applications/[id]/export`,
+  `/api/admin/mvr/order`, `/api/driver/leads` — could be upcoming features
+- `/api/t-backend/setup-knowledge-graph` — unclear if replaced or future-planned
+
+---
+
 ## 🧱 **Composable Hub — Foundation** (March 2026)
 
 ### Decision

@@ -10,6 +10,7 @@ import TransactionHistory from './TransactionHistory'
 import StormEarningsHistory from './StormEarningsHistory'
 import BuyUSDCButton from './BuyUSDCButton'
 import { useTheme } from '@/contexts/ThemeContext'
+import type { UserRole } from '@/stores/types'
 import {
   Wallet,
   Send,
@@ -32,7 +33,7 @@ interface UserStatusModalProps {
     address?: string
     chain?: string
   }
-  userRole?: 'driver' | 'developer' | 'employer' | null
+  userRole?: UserRole
 }
 
 type WalletTab = 'overview' | 'send' | 'receive' | 'earnings' | 'history'

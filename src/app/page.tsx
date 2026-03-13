@@ -375,7 +375,9 @@ const HomeContent = () => {
             isLoading={isSettingRole}
             userEmail={user?.email}
             walletAddress={user?.address}
-            existingRole={userRole}
+            // RoleSelectionModal will be updated in Phase 8 to accept 'candidate'.
+            // For now, 'candidate' users won't see the modal (they already have a role).
+            existingRole={userRole as 'driver' | 'developer' | 'employer' | null}
             existingCompanyName={companyName}
           />
         )}
@@ -387,8 +389,6 @@ const HomeContent = () => {
             onClose={() => setShowProfileSetup(false)}
             onComplete={() => {
               setShowProfileSetup(false)
-              // Reset the check flag so hub sees updated profile
-              didCheckProfileRef.current = false
             }}
             walletAddress={walletAddress}
             userRole={userRole}
