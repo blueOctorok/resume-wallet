@@ -205,6 +205,109 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
   },
 ]
 
+// ── Block accent colors ──────────────────────────────────────────────────────
+// Each block gets a unique accent so the hub grid isn't monotone.
+// Keys: dark-mode & light-mode Tailwind classes for bg, border, text, and glow.
+
+export interface BlockColorSet {
+  /** Icon circle background */
+  iconBg: { dark: string; light: string }
+  /** Icon text color */
+  iconText: { dark: string; light: string }
+  /** Hover border glow */
+  borderHover: { dark: string; light: string }
+  /** Box-shadow glow on hover (raw CSS value) */
+  glowColor: string
+  /** Status badge accent */
+  badgeColor: string
+}
+
+export const BLOCK_COLORS: Record<string, BlockColorSet> = {
+  'driver-resume': {
+    iconBg:      { dark: 'bg-blue-500/15',   light: 'bg-blue-50' },
+    iconText:    { dark: 'text-blue-400',     light: 'text-blue-600' },
+    borderHover: { dark: 'border-blue-500/40', light: 'border-blue-400/50' },
+    glowColor:   'rgba(59,130,246,0.15)',
+    badgeColor:  'bg-blue-500',
+  },
+  'driver-dot-application': {
+    iconBg:      { dark: 'bg-amber-500/15',   light: 'bg-amber-50' },
+    iconText:    { dark: 'text-amber-400',     light: 'text-amber-600' },
+    borderHover: { dark: 'border-amber-500/40', light: 'border-amber-400/50' },
+    glowColor:   'rgba(245,158,11,0.15)',
+    badgeColor:  'bg-amber-500',
+  },
+  'driver-mvr': {
+    iconBg:      { dark: 'bg-purple-500/15',   light: 'bg-purple-50' },
+    iconText:    { dark: 'text-purple-400',     light: 'text-purple-600' },
+    borderHover: { dark: 'border-purple-500/40', light: 'border-purple-400/50' },
+    glowColor:   'rgba(168,85,247,0.15)',
+    badgeColor:  'bg-purple-500',
+  },
+  'driver-cdl-credentials': {
+    iconBg:      { dark: 'bg-emerald-500/15',   light: 'bg-emerald-50' },
+    iconText:    { dark: 'text-emerald-400',     light: 'text-emerald-600' },
+    borderHover: { dark: 'border-emerald-500/40', light: 'border-emerald-400/50' },
+    glowColor:   'rgba(16,185,129,0.15)',
+    badgeColor:  'bg-emerald-500',
+  },
+  'developer-resume': {
+    iconBg:      { dark: 'bg-cyan-500/15',   light: 'bg-cyan-50' },
+    iconText:    { dark: 'text-cyan-400',     light: 'text-cyan-600' },
+    borderHover: { dark: 'border-cyan-500/40', light: 'border-cyan-400/50' },
+    glowColor:   'rgba(6,182,212,0.15)',
+    badgeColor:  'bg-cyan-500',
+  },
+  'developer-portfolio': {
+    iconBg:      { dark: 'bg-pink-500/15',   light: 'bg-pink-50' },
+    iconText:    { dark: 'text-pink-400',     light: 'text-pink-600' },
+    borderHover: { dark: 'border-pink-500/40', light: 'border-pink-400/50' },
+    glowColor:   'rgba(236,72,153,0.15)',
+    badgeColor:  'bg-pink-500',
+  },
+  'developer-projects': {
+    iconBg:      { dark: 'bg-orange-500/15',   light: 'bg-orange-50' },
+    iconText:    { dark: 'text-orange-400',     light: 'text-orange-600' },
+    borderHover: { dark: 'border-orange-500/40', light: 'border-orange-400/50' },
+    glowColor:   'rgba(249,115,22,0.15)',
+    badgeColor:  'bg-orange-500',
+  },
+  'developer-github': {
+    iconBg:      { dark: 'bg-gray-500/15',   light: 'bg-gray-100' },
+    iconText:    { dark: 'text-gray-300',     light: 'text-gray-700' },
+    borderHover: { dark: 'border-gray-400/40', light: 'border-gray-400/50' },
+    glowColor:   'rgba(156,163,175,0.15)',
+    badgeColor:  'bg-gray-500',
+  },
+  'general-skills': {
+    iconBg:      { dark: 'bg-indigo-500/15',   light: 'bg-indigo-50' },
+    iconText:    { dark: 'text-indigo-400',     light: 'text-indigo-600' },
+    borderHover: { dark: 'border-indigo-500/40', light: 'border-indigo-400/50' },
+    glowColor:   'rgba(99,102,241,0.15)',
+    badgeColor:  'bg-indigo-500',
+  },
+  'general-work-history': {
+    iconBg:      { dark: 'bg-rose-500/15',   light: 'bg-rose-50' },
+    iconText:    { dark: 'text-rose-400',     light: 'text-rose-600' },
+    borderHover: { dark: 'border-rose-500/40', light: 'border-rose-400/50' },
+    glowColor:   'rgba(244,63,94,0.15)',
+    badgeColor:  'bg-rose-500',
+  },
+}
+
+/** Fallback color set for unknown block types */
+const DEFAULT_BLOCK_COLOR: BlockColorSet = {
+  iconBg:      { dark: 'bg-teal-500/15',   light: 'bg-teal-50' },
+  iconText:    { dark: 'text-teal-400',     light: 'text-teal-600' },
+  borderHover: { dark: 'border-teal-500/40', light: 'border-teal-400/50' },
+  glowColor:   'rgba(20,184,166,0.15)',
+  badgeColor:  'bg-teal-500',
+}
+
+export function getBlockColor(blockType: string): BlockColorSet {
+  return BLOCK_COLORS[blockType] ?? DEFAULT_BLOCK_COLOR
+}
+
 // ── Lookup helpers ────────────────────────────────────────────────────────────
 
 /** Get a block definition by its id. Returns undefined for unknown types. */

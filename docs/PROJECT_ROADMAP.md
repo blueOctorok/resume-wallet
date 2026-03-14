@@ -18,6 +18,9 @@ The career card becomes a pure read-only projection of the hub.
 | Hub profile layout | ✅ Done | Profile header, quick stats, career card CTA, STORM footer |
 | Phase 7 — Career card projection | ✅ Done | Career card rebuilt as a read-only renderer over hub blocks |
 | Phase 8 — Role selection update | ✅ Done | Simplify modal to candidate vs employer |
+| iPhone Home Screen Hub | ✅ Done | 2-col tile grid with jiggle-mode editing, long-press, status badges |
+| Premium Glass Tiles | ✅ Done | Glassmorphic tiles with per-block colors, illustrations, Atropos 3D tilt |
+| Hub layout pass | ✅ Done | Career Card banner + on-chain verification bar, removed old stats |
 
 ---
 

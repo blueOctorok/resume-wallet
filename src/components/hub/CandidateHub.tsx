@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
-import { Plus, Loader2, AlertCircle, GripVertical, Trash2, ChevronRight, Eye } from 'lucide-react'
-import * as LucideIcons from 'lucide-react'
+import { useEffect, useCallback } from 'react'
+import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore } from '@/stores'
@@ -10,15 +9,19 @@ import {
   useHubBlocksStore,
   useInstalledBlocks,
   useNeedsOnboarding,
+  useIsEditMode,
 } from '@/stores/hub-blocks-store'
 import type { InstalledBlock } from '@/stores/hub-blocks-store'
 import type { PageType } from '@/stores/types'
-import { BLOCK_DEFINITIONS } from '@/lib/block-registry'
+import { getBlockColor } from '@/lib/block-registry'
+import { getBlockIllustration } from './BlockIllustrations'
 import Button from '@/components/ui/Button'
 import AvatarUpload from '@/components/ui/AvatarUpload'
 import STORMBalance from '@/components/STORMBalance'
 import HubOnboardingForm from './HubOnboardingForm'
 import BlockPickerModal from './BlockPickerModal'
+import Atropos from 'atropos/react'
+import 'atropos/css'
 
 import {
   DndContext,
@@ -31,108 +34,178 @@ import {
 import {
   SortableContext,
   useSortable,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
-function resolveIcon(name: string) {
-  const Icon = (LucideIcons as Record<string, LucideIcons.LucideIcon>)[name]
-  return Icon ?? LucideIcons.Box
-}
+// ── Block Tile (glassmorphic + 3D tilt) ──────────────────────────────────────
 
-// ── Sortable block card ──────────────────────────────────────────────────────
-
-interface SortableBlockCardProps {
+interface BlockTileProps {
   block: InstalledBlock
+  index: number
+  isEditing: boolean
   onRemove: () => void
   onOpen: (() => void) | null
 }
 
-function SortableBlockCard({ block, onRemove, onOpen }: SortableBlockCardProps) {
+function BlockTile({ block, index, isEditing, onRemove, onOpen }: BlockTileProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: block.id,
+  })
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
   }
 
-  const Icon = block.definition ? resolveIcon(block.definition.icon) : LucideIcons.Box
-  const isClickable = !!onOpen
+  const colors = getBlockColor(block.blockType)
+  const hasRoute = !!block.definition?.pageRoute
+  const Illustration = getBlockIllustration(block.blockType)
 
+  const handleClick = () => {
+    if (isEditing || !onOpen) return
+    onOpen()
+  }
+
+  // The inner card content — shared between Atropos-wrapped and plain modes
+  const tileContent = (
+    <div
+      className={cn(
+        'relative h-full rounded-2xl border flex flex-col p-4 select-none transition-all duration-300 overflow-hidden',
+        // Glass effect
+        isDark
+          ? 'bg-white/[0.04] border-white/[0.08] backdrop-blur-md'
+          : 'bg-white/60 border-white/40 backdrop-blur-md',
+        // Hover glow (non-edit mode only)
+        !isEditing && hasRoute && (isDark ? colors.borderHover.dark : colors.borderHover.light),
+        isDragging && 'opacity-60 scale-105 z-20',
+        isEditing && !isDragging && 'cursor-grab active:cursor-grabbing',
+        isEditing && !isDragging && (index % 2 === 0
+          ? '[animation:jiggle_0.3s_ease-in-out_infinite]'
+          : '[animation:jiggle-alt_0.28s_ease-in-out_infinite]'
+        ),
+      )}
+      style={{
+        // Per-block accent glow on hover via box-shadow
+        ...((!isEditing && hasRoute) ? {
+          boxShadow: `0 0 0 0 ${colors.glowColor}`,
+        } : {}),
+      }}
+      onMouseEnter={(e) => {
+        if (!isEditing && hasRoute) {
+          (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 32px ${colors.glowColor}, 0 0 0 1px ${colors.glowColor}`
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isEditing && hasRoute) {
+          (e.currentTarget as HTMLElement).style.boxShadow = `0 0 0 0 ${colors.glowColor}`
+        }
+      }}
+    >
+      {/* Remove badge (edit mode only) */}
+      {isEditing && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onRemove() }}
+          className='absolute -top-1.5 -left-1.5 z-10 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors'
+          aria-label={`Remove ${block.definition?.label ?? block.blockType}`}
+        >
+          <X className='w-3.5 h-3.5 text-white' />
+        </button>
+      )}
+
+      {/* Header: label + status badge */}
+      <div className='flex items-center justify-between mb-auto'>
+        <p className={cn(
+          'text-xs font-bold tracking-wide uppercase truncate',
+          isDark ? colors.iconText.dark : colors.iconText.light,
+        )}>
+          {block.definition?.label ?? block.blockType}
+        </p>
+
+        {!isEditing && (
+          <div className='flex-shrink-0 ml-1.5'>
+            {!hasRoute ? (
+              <span className={cn(
+                'text-[8px] font-semibold px-1.5 py-0.5 rounded-full',
+                isDark ? 'bg-white/10 text-gray-500' : 'bg-gray-100 text-gray-400'
+              )}>
+                SOON
+              </span>
+            ) : (
+              <div
+                className={cn(
+                  'w-2.5 h-2.5 rounded-full [animation:status-pulse_2s_ease-in-out_infinite]',
+                  colors.badgeColor,
+                )}
+                style={{ color: colors.glowColor }}
+              />
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Center: styled placeholder illustration */}
+      <div className='flex-1 flex items-center justify-center'>
+        <div data-atropos-offset='3'>
+          <Illustration
+            accentText={isDark ? colors.iconText.dark : colors.iconText.light}
+            isDark={isDark}
+          />
+        </div>
+      </div>
+
+      {/* Bottom: description teaser */}
+      {block.definition?.description && (
+        <p className={cn(
+          'text-[10px] leading-snug line-clamp-2 mt-auto',
+          isDark ? 'text-gray-500' : 'text-gray-400',
+        )}>
+          {block.definition.description}
+        </p>
+      )}
+
+      {/* Subtle gradient overlay at bottom for depth */}
+      <div className={cn(
+        'absolute inset-x-0 bottom-0 h-12 rounded-b-2xl pointer-events-none',
+        isDark
+          ? 'bg-gradient-to-t from-black/20 to-transparent'
+          : 'bg-gradient-to-t from-white/30 to-transparent',
+      )} />
+    </div>
+  )
+
+  // Sortable wrapper (always needed for dnd-kit)
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
-        'group flex items-center gap-3 rounded-xl border p-4 transition-all',
-        isDark
-          ? 'bg-gray-800/60 border-gray-700 hover:border-gray-600'
-          : 'bg-white border-gray-200 hover:border-gray-300',
-        isClickable && 'cursor-pointer',
-        isDragging && 'opacity-50 shadow-lg scale-[1.02]'
+        'aspect-square',
+        !isEditing && hasRoute && 'cursor-pointer',
       )}
-      onClick={onOpen ?? undefined}
+      onClick={handleClick}
+      {...attributes}
+      {...listeners}
     >
-      <button
-        {...attributes}
-        {...listeners}
-        onClick={(e) => e.stopPropagation()}
-        className={cn(
-          'flex-shrink-0 cursor-grab active:cursor-grabbing p-1 rounded',
-          isDark ? 'text-gray-600 hover:text-gray-400' : 'text-gray-300 hover:text-gray-500'
-        )}
-        aria-label='Drag to reorder'
-      >
-        <GripVertical className='w-4 h-4' />
-      </button>
-
-      <div className={cn(
-        'flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center',
-        isDark ? 'bg-gray-700' : 'bg-gray-100'
-      )}>
-        <Icon className={cn('w-5 h-5', isDark ? 'text-gray-300' : 'text-gray-600')} />
-      </div>
-
-      <div className='flex-1 min-w-0'>
-        <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
-          {block.definition?.label ?? block.blockType}
-        </p>
-        {block.definition?.description && (
-          <p className={cn('text-xs truncate', isDark ? 'text-gray-500' : 'text-gray-400')}>
-            {block.definition.description}
-          </p>
-        )}
-      </div>
-
-      {isClickable ? (
-        <ChevronRight className={cn(
-          'w-4 h-4 flex-shrink-0',
-          isDark ? 'text-gray-500' : 'text-gray-400'
-        )} />
+      {/* Atropos 3D tilt — only in normal mode, not during edit/drag */}
+      {!isEditing && !isDragging ? (
+        <Atropos
+          className='h-full'
+          innerClassName='h-full'
+          rotateXMax={8}
+          rotateYMax={8}
+          shadow={false}
+          highlight={false}
+          rotateTouch={false}
+        >
+          {tileContent}
+        </Atropos>
       ) : (
-        <span className={cn(
-          'text-[10px] flex-shrink-0 px-2 py-0.5 rounded-full',
-          isDark ? 'bg-gray-700 text-gray-500' : 'bg-gray-100 text-gray-400'
-        )}>
-          Soon
-        </span>
+        tileContent
       )}
-
-      <button
-        onClick={(e) => { e.stopPropagation(); onRemove() }}
-        className={cn(
-          'flex-shrink-0 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity',
-          isDark
-            ? 'text-gray-500 hover:text-red-400 hover:bg-gray-700'
-            : 'text-gray-400 hover:text-red-500 hover:bg-gray-100'
-        )}
-        aria-label={`Remove ${block.definition?.label ?? block.blockType}`}
-      >
-        <Trash2 className='w-4 h-4' />
-      </button>
     </div>
   )
 }
@@ -159,7 +232,6 @@ function HubProfileHeader() {
     isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white/70 border-gray-200'
   )
 
-  // Profile completeness: has name, has occupation, has avatar, has at least one block
   const completionChecks = [
     !!userProfile?.firstName,
     !!occupation,
@@ -171,7 +243,6 @@ function HubProfileHeader() {
   return (
     <div className={cardClass}>
       <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6'>
-        {/* Avatar + name + occupation */}
         <div className='flex items-center gap-4'>
           <AvatarUpload
             name={displayName}
@@ -201,7 +272,6 @@ function HubProfileHeader() {
           </div>
         </div>
 
-        {/* Profile completeness bar */}
         <div className='flex-shrink-0 w-full lg:w-72'>
           <div className='flex items-center justify-between mb-2'>
             <span className={cn('text-sm font-semibold', isDark ? 'text-gray-300' : 'text-gray-600')}>
@@ -233,74 +303,145 @@ function HubProfileHeader() {
   )
 }
 
-// ── Quick stats ──────────────────────────────────────────────────────────────
+// ── Career Card banner ───────────────────────────────────────────────────────
 
-function HubQuickStats() {
+/**
+ * Maps block types to their on-chain verifiable document label.
+ * Only blocks that produce a verifiable PDF/doc appear here.
+ * This is intentionally open-ended — any future role's documents
+ * just need an entry here to show up in the verification bar.
+ */
+const VERIFIABLE_BLOCKS: Record<string, string> = {
+  'driver-resume':          'Resume',
+  'developer-resume':       'Resume',
+  'driver-dot-application': 'DOT Application',
+  'driver-mvr':             'MVR Report',
+}
+
+function CareerCardBanner() {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
-  const installedBlocks = useInstalledBlocks()
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
 
-  const stats = [
-    {
-      label: 'Blocks Added',
-      value: installedBlocks.length,
-      total: BLOCK_DEFINITIONS.length,
-      color: 'teal',
-    },
-    {
-      label: 'Verified Docs',
-      value: 0, // TODO: count verified blocks once verification is wired up
-      color: 'green',
-    },
-  ]
-
-  const cardClass = cn(
-    'rounded-2xl border p-5',
-    isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white/70 border-gray-200'
-  )
-
   return (
-    <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
-      {stats.map((stat) => (
-        <div key={stat.label} className={cardClass}>
-          <p className={cn('text-xs font-medium mb-1', isDark ? 'text-gray-400' : 'text-gray-500')}>
-            {stat.label}
-          </p>
-          <p className={cn('text-2xl font-bold', isDark ? 'text-white' : 'text-gray-900')}>
-            {stat.value}
-            {stat.total !== undefined && (
-              <span className={cn('text-sm font-normal ml-1', isDark ? 'text-gray-500' : 'text-gray-400')}>
-                / {stat.total}
-              </span>
-            )}
-          </p>
-        </div>
-      ))}
-
-      {/* Career card quick action */}
-      <button
-        onClick={() => setCurrentPage('career-card' as PageType)}
-        className={cn(
-          cardClass,
-          'flex items-center gap-3 text-left cursor-pointer hover:border-teal-500/50 transition-colors'
-        )}
-      >
+    <div className={cn(
+      'rounded-2xl border p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4',
+      isDark
+        ? 'bg-gradient-to-r from-teal-500/10 via-gray-800/50 to-gray-800/50 border-teal-500/20'
+        : 'bg-gradient-to-r from-teal-50 via-white/70 to-white/70 border-teal-200/60',
+    )}>
+      <div className='flex items-center gap-3'>
         <div className={cn(
-          'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
-          isDark ? 'bg-teal-500/20' : 'bg-teal-50'
+          'w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0',
+          isDark ? 'bg-teal-500/20' : 'bg-teal-100'
         )}>
           <Eye className={cn('w-5 h-5', isDark ? 'text-teal-400' : 'text-teal-600')} />
         </div>
         <div>
-          <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+          <p className={cn('text-sm font-bold', isDark ? 'text-white' : 'text-gray-900')}>
             Career Card
           </p>
           <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
-            View your public profile
+            Your public professional profile built from your hub
           </p>
         </div>
-      </button>
+      </div>
+
+      <div className='flex items-center gap-2 sm:flex-shrink-0'>
+        <button
+          onClick={() => setCurrentPage('career-card' as PageType)}
+          className={cn(
+            'flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-colors',
+            isDark
+              ? 'bg-teal-500 text-white hover:bg-teal-400'
+              : 'bg-teal-600 text-white hover:bg-teal-500',
+          )}
+        >
+          <ExternalLink className='w-3.5 h-3.5' />
+          View Career Card
+        </button>
+        <button
+          onClick={() => setCurrentPage('career-card' as PageType)}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors',
+            isDark
+              ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
+          )}
+        >
+          <QrCode className='w-3.5 h-3.5' />
+          QR Code
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── On-chain verification bar ────────────────────────────────────────────────
+
+function VerificationBar() {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  const installedBlocks = useInstalledBlocks()
+
+  // Dynamically determine which installed blocks can be verified on-chain
+  const verifiableItems = installedBlocks
+    .filter((b) => VERIFIABLE_BLOCKS[b.blockType])
+    .map((b) => ({
+      id: b.blockType,
+      label: VERIFIABLE_BLOCKS[b.blockType],
+      verified: false, // TODO: wire to actual on-chain verification status
+    }))
+
+  if (verifiableItems.length === 0) return null
+
+  return (
+    <div className={cn(
+      'rounded-2xl border p-4',
+      isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white/70 border-gray-200',
+    )}>
+      <div className='flex items-center gap-2 mb-3'>
+        <ShieldCheck className={cn('w-4 h-4', isDark ? 'text-teal-400' : 'text-teal-600')} />
+        <p className={cn('text-xs font-bold uppercase tracking-wide', isDark ? 'text-gray-300' : 'text-gray-600')}>
+          On-Chain Verification
+        </p>
+      </div>
+
+      <div className='flex flex-wrap gap-2'>
+        {verifiableItems.map((item) => (
+          <button
+            key={item.id}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+              item.verified
+                ? isDark
+                  ? 'bg-green-500/15 text-green-400 border border-green-500/30'
+                  : 'bg-green-50 text-green-700 border border-green-200'
+                : isDark
+                  ? 'bg-gray-700/80 text-gray-400 hover:bg-gray-600 border border-gray-600'
+                  : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200',
+            )}
+          >
+            <ShieldCheck className={cn(
+              'w-3 h-3',
+              item.verified
+                ? 'text-green-500'
+                : isDark ? 'text-gray-500' : 'text-gray-400',
+            )} />
+            {item.label}
+            {item.verified ? (
+              <Check className='w-3 h-3 text-green-500' />
+            ) : (
+              <span className={cn(
+                'text-[9px] px-1 py-0.5 rounded',
+                isDark ? 'bg-gray-600 text-gray-400' : 'bg-gray-200 text-gray-500',
+              )}>
+                Verify
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
@@ -319,19 +460,46 @@ export default function CandidateHub() {
   const openPicker = useHubBlocksStore((s) => s.openPicker)
   const removeBlock = useHubBlocksStore((s) => s.removeBlock)
   const reorderBlocks = useHubBlocksStore((s) => s.reorderBlocks)
+  const setEditMode = useHubBlocksStore((s) => s.setEditMode)
 
   const installedBlocks = useInstalledBlocks()
   const needsOnboarding = useNeedsOnboarding()
+  const isEditing = useIsEditMode()
 
   useEffect(() => {
     if (walletAddress) fetchHubData(walletAddress)
   }, [walletAddress, fetchHubData])
 
+  // Exit edit mode on Escape
+  useEffect(() => {
+    if (!isEditing) return
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setEditMode(false)
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [isEditing, setEditMode])
+
+  // Desktop drag: distance-based activation
+  const desktopSensor = useSensor(PointerSensor, {
+    activationConstraint: { distance: 8 },
+  })
+
+  // Mobile long-press: delay-based activation (enters edit mode + starts drag)
+  const mobileSensor = useSensor(PointerSensor, {
+    activationConstraint: { delay: 500, tolerance: 5 },
+  })
+
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    isEditing ? desktopSensor : mobileSensor
   )
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragStart = useCallback(() => {
+    // Long-press drag on mobile automatically enters edit mode
+    if (!isEditing) setEditMode(true)
+  }, [isEditing, setEditMode])
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id || !walletAddress) return
 
@@ -341,7 +509,7 @@ export default function CandidateHub() {
 
     const reordered = arrayMove(installedBlocks, oldIndex, newIndex)
     reorderBlocks(reordered, walletAddress)
-  }
+  }, [installedBlocks, walletAddress, reorderBlocks])
 
   if (isLoading) {
     return (
@@ -377,22 +545,39 @@ export default function CandidateHub() {
       <BlockPickerModal />
 
       <div className='max-w-3xl mx-auto space-y-6'>
-        {/* ── Profile Header ── */}
         <HubProfileHeader />
+        <CareerCardBanner />
+        <VerificationBar />
 
-        {/* ── Quick Stats + Career Card ── */}
-        <HubQuickStats />
-
-        {/* ── Block Grid ── */}
+        {/* ── Block Grid (iPhone home screen) ── */}
         <div>
-          <div className='flex items-center justify-between mb-3'>
+          <div className='flex items-center justify-between mb-4'>
             <h2 className={cn('text-lg font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
               My Blocks
             </h2>
-            <Button variant='primary' size='sm' onClick={openPicker}>
-              <Plus className='w-4 h-4' />
-              Add Blocks
-            </Button>
+            <div className='flex items-center gap-2'>
+              {/* Edit / Done toggle — desktop entry point for jiggle mode */}
+              {installedBlocks.length > 0 && (
+                <button
+                  onClick={() => setEditMode(!isEditing)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                    isEditing
+                      ? 'bg-teal-500 text-white hover:bg-teal-600'
+                      : isDark
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  )}
+                >
+                  {isEditing ? <Check className='w-3.5 h-3.5' /> : <Pencil className='w-3.5 h-3.5' />}
+                  {isEditing ? 'Done' : 'Edit'}
+                </button>
+              )}
+              <Button variant='primary' size='sm' onClick={openPicker}>
+                <Plus className='w-4 h-4' />
+                Add
+              </Button>
+            </div>
           </div>
 
           {installedBlocks.length === 0 ? (
@@ -414,13 +599,23 @@ export default function CandidateHub() {
               </Button>
             </div>
           ) : (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={installedBlocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-                <div className='space-y-2'>
-                  {installedBlocks.map((block) => (
-                    <SortableBlockCard
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={installedBlocks.map((b) => b.id)}
+                strategy={rectSortingStrategy}
+              >
+                <div className='grid grid-cols-2 gap-4'>
+                  {installedBlocks.map((block, idx) => (
+                    <BlockTile
                       key={block.id}
                       block={block}
+                      index={idx}
+                      isEditing={isEditing}
                       onRemove={() => walletAddress && removeBlock(block.id, walletAddress)}
                       onOpen={block.definition?.pageRoute
                         ? () => setCurrentPage(block.definition!.pageRoute as PageType)

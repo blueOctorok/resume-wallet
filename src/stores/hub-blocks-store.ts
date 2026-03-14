@@ -38,6 +38,7 @@ interface HubBlocksState {
 
   isLoading: boolean
   isPickerOpen: boolean
+  isEditMode: boolean
   fetchError: string | null
 
   /** Whether the mandatory onboarding form needs to be shown */
@@ -67,6 +68,9 @@ interface HubBlocksActions {
   // Profile
   updateAvatarUrl: (url: string) => void
 
+  // Edit mode (jiggle / rearrange)
+  setEditMode: (on: boolean) => void
+
   // Picker modal
   openPicker: () => void
   closePicker: () => void
@@ -80,6 +84,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
   userProfile: null,
   isLoading: false,
   isPickerOpen: false,
+  isEditMode: false,
   fetchError: null,
   needsOnboarding: false,
 
@@ -262,6 +267,9 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
         : { firstName: '', lastName: '', avatarUrl: url },
     })),
 
+  // ── Edit mode ──────────────────────────────────────────────────────────────
+  setEditMode: (on) => set({ isEditMode: on }),
+
   // ── Picker ─────────────────────────────────────────────────────────────────
   openPicker: () => set({ isPickerOpen: true }),
   closePicker: () => set({ isPickerOpen: false }),
@@ -275,6 +283,9 @@ export const useInstalledBlocks = () =>
 
 export const useIsPickerOpen = () =>
   useHubBlocksStore((s) => s.isPickerOpen)
+
+export const useIsEditMode = () =>
+  useHubBlocksStore((s) => s.isEditMode)
 
 export const useNeedsOnboarding = () =>
   useHubBlocksStore((s) => s.needsOnboarding)

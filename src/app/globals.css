@@ -348,3 +348,19 @@ button:disabled,
     appearance: none !important;
   }
 }
+
+/* iPhone-style jiggle for hub edit mode */
+@keyframes jiggle {
+  0%, 100% { transform: rotate(-1.2deg); }
+  50% { transform: rotate(1.2deg); }
+}
+@keyframes jiggle-alt {
+  0%, 100% { transform: rotate(1deg); }
+  50% { transform: rotate(-1deg); }
+}
+
+/* Pulsing glow ring for block tile status badges */
+@keyframes status-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 currentColor; }
+  50% { box-shadow: 0 0 6px 2px currentColor; }
+}

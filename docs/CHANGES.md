@@ -4,6 +4,92 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 🏠 **Hub Layout: Career Card Banner + Verification Bar** (March 2026)
+
+### What changed
+- Removed `HubQuickStats` component (Blocks Added, Verified Docs stats, Career Card button)
+- Added **Career Card banner** — full-width card above the block grid with gradient accent, "View Career Card" button, and "QR Code" button
+- Added **On-Chain Verification bar** — full-width card below the Career Card banner showing which installed blocks can be verified on-chain, rendered dynamically from a `VERIFIABLE_BLOCKS` map
+- Verification bar only appears when the user has at least one verifiable block installed
+- Each verification item is a pill button showing the doc name, a shield icon, and "Verify" or a green check
+- Removed `BLOCK_DEFINITIONS` import from CandidateHub (no longer needed after removing stats)
+
+### Hub layout order
+1. Profile Header (name, avatar, occupation, completeness bar)
+2. Career Card Banner (View + QR Code)
+3. On-Chain Verification Bar (dynamic per installed blocks)
+4. My Blocks grid (2-col glassmorphic tiles)
+5. STORM Token Footer
+
+### Design decision
+The `VERIFIABLE_BLOCKS` map is intentionally a simple record outside the `BlockDefinition` type. This keeps the block registry clean (it doesn't need to know about blockchain concerns) while making it trivial to add new verifiable doc types for any future role — just add one line to the map.
+
+### Files modified
+- `src/components/hub/CandidateHub.tsx` — replaced `HubQuickStats` with `CareerCardBanner` + `VerificationBar`
+
+---
+
+## ✨ **Premium Glass Block Tiles** (March 2026)
+
+### What changed
+- Block tiles redesigned from flat empty squares to **glassmorphic cards** with depth, color, and illustrations
+- Each block type now has a **unique accent color** (blue for driver resume, amber for DOT app, purple for MVR, etc.) defined in `BLOCK_COLORS`
+- Added **styled placeholder illustrations** per block type (mini document with lines for resume, clipboard with checks for DOT, shield for MVR, etc.)
+- **Atropos** library added (~2KB) for subtle 3D tilt-on-hover effect with parallax layers
+- Tiles now have a **glassmorphism** treatment: `backdrop-blur-md`, semi-transparent backgrounds, and white/colored border glow
+- Tile layout changed: **header label at top** (uppercase, colored), **illustration in center**, **description teaser at bottom**
+- Status badges now **pulse with a colored glow ring** matching the block's accent
+- Hover state adds a colored `box-shadow` glow that fades in smoothly
+- Atropos tilt is disabled during jiggle/edit mode to prevent conflicts with drag-and-drop
+- Subtle gradient overlay at tile bottom adds depth
+
+### Files created
+- `src/components/hub/BlockIllustrations.tsx` — per-block placeholder illustration components
+
+### Files modified
+- `src/lib/block-registry.ts` — added `BlockColorSet` interface, `BLOCK_COLORS` map, and `getBlockColor()` helper
+- `src/components/hub/CandidateHub.tsx` — `BlockTile` rewritten with glass effect, Atropos wrapper, per-block colors, and new layout
+- `src/app/globals.css` — added `@keyframes status-pulse` for badge glow animation
+- `package.json` — added `atropos` dependency
+
+### Design decisions
+- **Atropos over Framer Motion**: We only need 3D tilt, not a full animation framework. Atropos is 2KB vs 34KB.
+- **Per-block colors over uniform teal**: Makes each tile visually distinct and the grid more interesting at a glance.
+- **Styled illustrations over real data**: Keeps tiles fast (no extra API calls per tile) while still giving each block a unique visual identity. Real data previews can be added later.
+- **Glass effect via CSS only**: `backdrop-blur-md` + transparent backgrounds + border glow — no JS animation overhead.
+
+---
+
+## 📱 **iPhone Home Screen Hub Layout** (March 2026)
+
+### What changed
+- Hub block grid redesigned from vertical list rows to a **2-column square tile grid** mimicking iPhone app icons
+- Each tile shows a centered icon in a tinted circle, a label, and a status badge (green dot = has route, "Soon" pill = no page yet)
+- **Jiggle mode** (edit mode) added — tiles wobble with CSS animation, X badge appears at top-left for removal, drag-to-reorder enabled
+- Two entry points for jiggle mode: **Edit button** (desktop) and **long-press 500ms** (mobile)
+- Exit jiggle mode via Done button, Escape key, or completing a drag
+- `SortableBlockCard` (old full-width row) replaced by `BlockTile` (square, aspect-ratio 1:1)
+- `verticalListSortingStrategy` replaced by `rectSortingStrategy` for proper grid reordering
+- `PointerSensor` configured with delay constraint (long-press) for mobile and distance constraint for desktop edit mode
+- Clicking a tile in normal mode navigates to the block page; clicking in edit mode is suppressed to prevent accidental navigation
+
+### Store changes
+- Added `isEditMode: boolean` and `setEditMode(on: boolean)` to `useHubBlocksStore`
+- Added `useIsEditMode` selector hook
+
+### Files modified
+- `src/components/hub/CandidateHub.tsx` — complete rewrite of block grid section
+- `src/stores/hub-blocks-store.ts` — added edit mode state
+- `src/app/globals.css` — added `@keyframes jiggle` and `@keyframes jiggle-alt`
+
+### Design decision
+The iPhone home screen metaphor was chosen because users already understand the pattern: tap to open,
+long-press to rearrange/delete. The 2-column layout gives tiles enough space to show meaningful info
+(icon + label + status) without feeling cramped. Alternating jiggle animation directions (jiggle vs
+jiggle-alt) prevents adjacent tiles from wobbling in sync, matching the real iOS behavior.
+
+---
+
 ## 🧱 **Phase 7: Career Card as Hub Projection** (March 2026)
 
 ### What changed
