@@ -191,93 +191,88 @@ enough to live inside `BlockPickerCategory` without a separate file (KISS).
 
 ---
 
-## Phase 5 — Candidate Shell 🔲 Pending
+## Phase 5 — Candidate Shell ✅ Done
 
 ### Goal
 A single `CandidateShell` that replaces `DriverShell` and `DeveloperShell`.
 It reads installed blocks and renders them. The hub is the blank slate.
 
-### Files to create / modify
+### Files created / modified
 ```
-src/components/app/CandidateShell.tsx     NEW
-src/components/hub/CandidateHub.tsx       NEW — the empty hub + block grid
-src/app/page.tsx                          UPDATE — add candidate role routing
-```
-
-### Hub layout
-```
-[  + Add Blocks  ]        ← always visible button that opens picker
-
-[ BlockA ]  [ BlockB ]    ← installed blocks in a responsive grid
-[ BlockC ]  [ BlockD ]    ← draggable for reordering (@dnd-kit/sortable)
+src/components/app/CandidateShell.tsx     NEW — role shell (routing)
+src/components/hub/CandidateHub.tsx       NEW — empty hub + block grid + drag-and-drop
+src/app/page.tsx                          UPDATE — candidate role routing + profile check
+src/components/app/ProfileSetup.tsx       UPDATE — accept 'candidate' role
+src/components/ProfileSetupModal.tsx      UPDATE — accept 'candidate' role
 ```
 
-### CandidateShell routing
-```tsx
-// Mirrors DriverShell pattern — reads currentPage, returns right component
-if (currentPage === 'dotapp')    return <DotApplicationFlow ... />
-if (currentPage === 'mvr')       return <MvrOrderForm ... />
-// etc. — each block's "full page" view routes here
-
-// Default: empty hub
-return <CandidateHub />
-```
-
-### page.tsx update
-```tsx
-// Add alongside existing employer/driver/developer checks:
-{user && userRole === 'candidate' && !isRoleLoading && (
-  <ErrorBoundary section='Candidate Hub'>
-    <CandidateShell />
-  </ErrorBoundary>
-)}
-```
+### How it works
+- `page.tsx` routes `userRole === 'candidate'` to `<CandidateShell />`
+- `CandidateShell` reads `currentPage` from UIStore and routes to sub-views
+  - Default (`null`) renders `<CandidateHub />`
+  - Also handles: profile-setup, jobs, applications, stormchain, messages
+  - Block-specific full-page views (DOT app, MVR, resume) added in Phase 6
+- `CandidateHub` lifecycle:
+  1. Fetches hub data on mount (blocks + onboarding)
+  2. Shows `HubOnboardingForm` overlay if `needsOnboarding` is true
+  3. Shows block grid with drag-and-drop reordering (@dnd-kit)
+  4. "Add Blocks" button opens the `BlockPickerModal`
+  5. Each block card has a drag handle and a hover-to-reveal remove button
 
 ### Acceptance criteria
-- [ ] `candidate` role shows CandidateShell
-- [ ] Hub renders installed blocks from `useInstalledBlocks()`
-- [ ] Hub shows onboarding form when `needsOnboarding` is true
-- [ ] Hub shows "Add blocks" button that opens picker
-- [ ] Blocks are reorderable via drag-and-drop
+- [x] `candidate` role shows CandidateShell
+- [x] Hub renders installed blocks from `useInstalledBlocks()`
+- [x] Hub shows onboarding form when `needsOnboarding` is true
+- [x] Hub shows "Add blocks" button that opens picker
+- [x] Blocks are reorderable via drag-and-drop
 
 ---
 
-## Phase 6 — Port Existing Features as Blocks 🔲 Pending
+## Phase 6 — Port Existing Features as Blocks ✅ Done
 
 ### Goal
-Wrap existing feature components in the block interface.
-Each block gets its own Zustand store and uses `BlockCard` as its shell.
+Make installed hub blocks clickable — clicking navigates to the existing
+full-page component. No wrapper components needed; reuse existing code directly.
 
-### Blocks to port
+### Approach (simplified from original plan)
+Instead of creating thin wrapper `BlockCard` components with per-block stores,
+we took the simpler route:
+1. Added `pageRoute` to `BlockDefinition` — maps each block to its shell page
+2. Made block cards in `CandidateHub` clickable (chevron arrow + cursor)
+3. Added full-page routes in `CandidateShell` for DOT app, MVR, resume, portfolio
 
-| Block ID | Existing Component | New Block Component | New Store |
-|----------|-------------------|---------------------|-----------|
-| `driver-dot-application` | `DotApplicationFlow` | `DotApplicationBlock.tsx` | `useDotBlockStore` (rename existing) |
-| `driver-mvr` | `MvrOrderForm` + `MvrManagementModal` | `MvrBlock.tsx` | `useMvrBlockStore` (split from driver-hub-store) |
-| `driver-resume` | `ResumeBuilder` | `DriverResumeBlock.tsx` | `useResumeBlockStore` |
-| `driver-cdl-credentials` | (inline in DriverHub) | `CdlCredentialsBlock.tsx` | part of useResumeBlockStore |
-| `developer-resume` | `DeveloperResumeBuilder` | `DeveloperResumeBlock.tsx` | `useDeveloperResumeBlockStore` |
-| `developer-portfolio` | `PortfolioPage` | `PortfolioBlock.tsx` | `usePortfolioBlockStore` |
-| `developer-projects` | (inline in DeveloperHub) | `ProjectsBlock.tsx` | `useProjectsBlockStore` |
-| `developer-github` | `GitHubContributionGraph` | `GithubBlock.tsx` | reuse existing |
-| `general-skills` | (none — new) | `SkillsBlock.tsx` | `useSkillsBlockStore` |
-| `general-work-history` | (partial in driver hub) | `WorkHistoryBlock.tsx` | `useWorkHistoryBlockStore` |
+This avoids creating 10+ new files. Existing components are reused as-is.
+Dedicated block stores can be added later when blocks need inline hub views.
 
-### Rules when porting
-- The existing component code doesn't change — it gets wrapped, not rewritten
-- The block component is a thin wrapper: `BlockCard` shell + mounts the existing component
-- The block's store handles its own loading, error, and data state
-- Status is derived by the block itself (not passed from the hub)
+### Block → Page mapping
+
+| Block | pageRoute | Component |
+|-------|-----------|-----------|
+| `driver-dot-application` | `dotapp` | `DotApplicationFlow` |
+| `driver-mvr` | `mvr` | `MvrOrderForm` |
+| `driver-resume` | `resume` | `ResumeBuilder` |
+| `developer-resume` | `resume` | `ResumeBuilder` |
+| `developer-portfolio` | `portfolio` | `PortfolioPage` |
+| `driver-cdl-credentials` | `null` | Coming soon |
+| `developer-projects` | `null` | Coming soon |
+| `developer-github` | `null` | Coming soon |
+| `general-skills` | `null` | Coming soon |
+| `general-work-history` | `null` | Coming soon |
+
+### UI behavior
+- Blocks with a `pageRoute` show a chevron arrow and are clickable
+- Blocks without a `pageRoute` show a "Soon" badge
+- Drag handle and remove button still work (stopPropagation on both)
 
 ### Acceptance criteria
-- [ ] Each block renders correctly inside `BlockCard`
-- [ ] Each block's status badge reflects real state (complete/in-progress/empty)
-- [ ] Removing a block from the hub unmounts it cleanly (no orphaned state)
-- [ ] `useDriverHubStore` is fully decomposed after this phase (delete it)
+- [x] Clicking a block with a pageRoute navigates to the full-page component
+- [x] Back button from each component returns to CandidateHub
+- [x] Blocks without pageRoute are visually distinct (non-clickable, "Soon" label)
+- [x] Existing components render without modification
 
 ---
 
-## Phase 7 — Career Card as Block Projection 🔲 Pending
+## Phase 7 — Career Card as Block Projection ✅ Done
 
 ### Goal
 The career card stops being a separate feature and becomes a pure read-only
@@ -309,29 +304,37 @@ career card view.
 
 ---
 
-## Phase 8 — Role Selection Update 🔲 Pending
+## Phase 8 — Role Selection Update ✅ Done
 
 ### Goal
 Simplify `RoleSelectionModal` from 3 choices (driver/developer/employer)
 to 2 choices (candidate/employer). Existing users keep their roles — new
 users get `candidate`.
 
-### Changes
-- `RoleSelectionModal.tsx` — remove driver/developer options, replace with single "Candidate" option
-- `src/app/api/user/set-role/route.ts` — add `'candidate'` to allowed roles
-- `page.tsx` routing — existing `driver` and `developer` role users still route correctly during transition
-- Eventually deprecate `driver`/`developer` roles once all existing users are migrated
+### Files modified
+```
+src/components/RoleSelectionModal.tsx     REWRITE — 2-column grid (Candidate + Employer)
+src/app/api/user/set-role/route.ts       UPDATE  — accept 'candidate' in valid roles
+src/app/page.tsx                         UPDATE  — handleRoleSelection type + remove cast
+```
+
+### What changed
+- Modal now shows two cards: **Candidate** ("Build your professional profile") and **Employer** ("Hire verified talent")
+- The entire employer access-check flow (whitelist, pending requests, company setup form) is preserved unchanged
+- `set-role` API validates `'candidate'` as a valid role
+- `page.tsx` handler types updated from `'driver' | 'developer' | 'employer'` to `'candidate' | 'employer'`
+- `existingRole` prop no longer needs a type cast
 
 ### Migration strategy for existing users
-- Do NOT auto-migrate existing driver/developer accounts
-- During transition period, all three roles (`driver`, `developer`, `candidate`) route to `CandidateShell`
-- Old DriverShell/DeveloperShell remain available but are flagged for removal
-- Remove old shells after all users have naturally re-engaged with the new hub
+- Existing `driver` and `developer` users still route to their original shells (DriverShell / DeveloperShell)
+- New users selecting "Candidate" get `candidate` role → CandidateShell → composable hub
+- Old shells stay available until Phase 6 ports all features as blocks, at which point
+  existing driver/developer users can be migrated to `candidate`
 
 ### Acceptance criteria
-- [ ] New users only see "Candidate" and "Employer" on signup
-- [ ] Existing driver/developer users are not disrupted
-- [ ] `candidate` role routes to CandidateShell
+- [x] New users only see "Candidate" and "Employer" on signup
+- [x] Existing driver/developer users are not disrupted
+- [x] `candidate` role routes to CandidateShell
 
 ---
 

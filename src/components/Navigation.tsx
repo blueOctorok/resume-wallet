@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { LayoutDashboard, Coins, ChevronDown, RefreshCw, Car, Code, Building2, Sparkles, HelpCircle, MessageSquare } from 'lucide-react'
+import { LayoutDashboard, Coins, ChevronDown, RefreshCw, Car, Code, Building2, Sparkles, HelpCircle, MessageSquare, User } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 import { useTheme } from '@/contexts/ThemeContext'
 import { usePreferencesStore, useJourneyStore, useUIStore } from '@/stores'
@@ -313,16 +313,18 @@ export default function Navigation({
                       {userRole === 'driver' && <Car className='w-4 h-4' />}
                       {userRole === 'employer' && <Building2 className='w-4 h-4' />}
                       {userRole === 'developer' && <Code className='w-4 h-4' />}
+                      {userRole === 'candidate' && <User className='w-4 h-4' />}
                       {userRole === 'driver' && 'Driver Hub'}
                       {userRole === 'employer' && 'Employer Hub'}
                       {userRole === 'developer' && 'Developer Hub'}
+                      {userRole === 'candidate' && 'My Hub'}
                       <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${isHubDropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
                   </div>
 
                   {/* Dropdown menu */}
                   {isHubDropdownOpen && (
-                    <div className={`absolute top-full left-0 right-0 mt-2 rounded-xl shadow-xl border overflow-hidden z-50 ${
+                    <div className={`absolute top-full left-1/2 -translate-x-1/2 min-w-[200px] mt-2 rounded-xl shadow-xl border overflow-hidden z-50 ${
                       theme === 'dark'
                         ? 'bg-gray-900 border-gray-700'
                         : 'bg-white border-gray-200'

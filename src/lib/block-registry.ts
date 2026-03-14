@@ -37,6 +37,11 @@ export interface BlockDefinition {
   complexity: 'simple' | 'moderate' | 'complex'
   /** Whether this block contributes a section to the career card */
   appearsOnCareerCard: boolean
+  /**
+   * The page route in CandidateShell when this block is clicked.
+   * null means the block has no full-page view yet (future work).
+   */
+  pageRoute: string | null
 }
 
 export interface BlockCategory {
@@ -93,6 +98,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     suggestedFor: ['skills', 'certifications', 'tools', 'experience'],
     complexity: 'simple',
     appearsOnCareerCard: true,
+    pageRoute: null,
   },
   {
     id: 'general-work-history',
@@ -103,6 +109,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     suggestedFor: ['work', 'jobs', 'employment', 'history', 'experience'],
     complexity: 'moderate',
     appearsOnCareerCard: true,
+    pageRoute: null,
   },
 
   // ── Drivers ────────────────────────────────────────────────────────────────
@@ -115,6 +122,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     suggestedFor: ['driver', 'cdl', 'trucking', 'hauling', 'logistics', 'freight', 'commercial'],
     complexity: 'moderate',
     appearsOnCareerCard: true,
+    pageRoute: 'resume',
   },
   {
     id: 'driver-dot-application',
@@ -125,6 +133,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     suggestedFor: ['driver', 'cdl', 'dot', 'fmcsa', 'trucking', 'commercial', 'motor carrier'],
     complexity: 'complex',
     appearsOnCareerCard: true,
+    pageRoute: 'dotapp',
   },
   {
     id: 'driver-mvr',
@@ -135,6 +144,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     suggestedFor: ['driver', 'cdl', 'mvr', 'driving record', 'motor vehicle', 'trucking'],
     complexity: 'moderate',
     appearsOnCareerCard: true,
+    pageRoute: 'mvr',
   },
   {
     id: 'driver-cdl-credentials',
@@ -145,6 +155,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     suggestedFor: ['driver', 'cdl', 'license', 'endorsements', 'hazmat', 'tanker'],
     complexity: 'simple',
     appearsOnCareerCard: true,
+    pageRoute: null,
   },
 
   // ── Developers ─────────────────────────────────────────────────────────────
@@ -157,6 +168,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     suggestedFor: ['developer', 'software', 'engineer', 'programmer', 'coder', 'tech', 'web', 'mobile'],
     complexity: 'moderate',
     appearsOnCareerCard: true,
+    pageRoute: 'resume',
   },
   {
     id: 'developer-portfolio',
@@ -167,6 +179,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     suggestedFor: ['developer', 'software', 'portfolio', 'projects', 'design', 'frontend', 'fullstack'],
     complexity: 'moderate',
     appearsOnCareerCard: true,
+    pageRoute: 'portfolio',
   },
   {
     id: 'developer-projects',
@@ -177,6 +190,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     suggestedFor: ['developer', 'software', 'projects', 'open source', 'github', 'code'],
     complexity: 'simple',
     appearsOnCareerCard: true,
+    pageRoute: null,
   },
   {
     id: 'developer-github',
@@ -187,6 +201,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     suggestedFor: ['developer', 'software', 'github', 'open source', 'contributions', 'code'],
     complexity: 'simple',
     appearsOnCareerCard: true,
+    pageRoute: null,
   },
 ]
 

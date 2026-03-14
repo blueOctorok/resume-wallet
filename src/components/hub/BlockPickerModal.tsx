@@ -7,11 +7,10 @@ import { useTheme } from '@/contexts/ThemeContext'
 import {
   useHubBlocksStore,
   useIsPickerOpen,
-  useAvailableBlocks,
   useInstalledBlocks,
   useHubOnboarding,
 } from '@/stores/hub-blocks-store'
-import { BLOCK_CATEGORIES, getBlocksByCategory } from '@/lib/block-registry'
+import { BLOCK_CATEGORIES, BLOCK_DEFINITIONS, getBlocksByCategory } from '@/lib/block-registry'
 import { useAuthStore } from '@/stores'
 import BlockPickerCategory from './BlockPickerCategory'
 
@@ -27,7 +26,6 @@ export default function BlockPickerModal() {
   const isDark = theme === 'dark'
 
   const isOpen = useIsPickerOpen()
-  const availableBlocks = useAvailableBlocks()
   const installedBlocks = useInstalledBlocks()
   const onboarding = useHubOnboarding()
   const closePicker = useHubBlocksStore((s) => s.closePicker)
@@ -38,6 +36,8 @@ export default function BlockPickerModal() {
 
   const installedTypes = new Set(installedBlocks.map((b) => b.blockType))
   const suggestedCategoryIds = onboarding?.suggestedCategories ?? []
+  // Derived without a selector — avoids a new array ref on every render
+  const allAdded = installedBlocks.length >= BLOCK_DEFINITIONS.length
 
   // Sort categories: suggested first, then by defined order
   const sortedCategories = [...BLOCK_CATEGORIES].sort((a, b) => {
@@ -68,8 +68,6 @@ export default function BlockPickerModal() {
   }, [isOpen, closePicker])
 
   if (!isOpen) return null
-
-  const allAdded = availableBlocks.length === 0
 
   return (
     <div
@@ -105,7 +103,7 @@ export default function BlockPickerModal() {
               </h2>
               <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
                 {allAdded
-                  ? 'You've added all available blocks!'
+                  ? "You've added all available blocks!"
                   : 'Choose blocks to build your hub'}
               </p>
             </div>

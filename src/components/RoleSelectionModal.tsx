@@ -17,11 +17,11 @@ interface EmployerAccessStatus {
 }
 
 interface RoleSelectionModalProps {
-  onSelectRole: (role: 'driver' | 'developer' | 'employer', companyName?: string, dotNumber?: string) => void
+  onSelectRole: (role: 'candidate' | 'employer', companyName?: string, dotNumber?: string) => void
   isLoading?: boolean
   userEmail?: string
   walletAddress?: string
-  existingRole?: 'driver' | 'developer' | 'employer' | null
+  existingRole?: 'driver' | 'developer' | 'employer' | 'candidate' | null
   existingCompanyName?: string | null
 }
 
@@ -35,7 +35,12 @@ export default function RoleSelectionModal({
 }: RoleSelectionModalProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
-  const [selectedRole, setSelectedRole] = useState<'driver' | 'developer' | 'employer' | null>(existingRole ?? null)
+
+  // Map legacy roles to the new two-option model
+  const initialRole = existingRole === 'driver' || existingRole === 'developer'
+    ? 'candidate'
+    : existingRole ?? null
+  const [selectedRole, setSelectedRole] = useState<'candidate' | 'employer' | null>(initialRole)
 
   const [employerAccess, setEmployerAccess] = useState<EmployerAccessStatus | null>(null)
   const [checkingAccess, setCheckingAccess] = useState(false)
@@ -97,10 +102,10 @@ export default function RoleSelectionModal({
 
   const handleSubmitRequest = async () => {
     if (!walletAddress || !requestName.trim() || !requestCompanyName.trim() || !requestDescription.trim()) return
-    
+
     setSubmittingRequest(true)
     setRequestError(null)
-    
+
     try {
       const res = await fetch('/api/employer/access-request', {
         method: 'POST',
@@ -115,11 +120,11 @@ export default function RoleSelectionModal({
           email: userEmail,
         }),
       })
-      
+
       const data = await res.json()
-      
+
       if (!res.ok) throw new Error(data.error || 'Failed to submit request')
-      
+
       setRequestSubmitted(true)
       setPendingRequest({
         companyName: requestCompanyName.trim(),
@@ -147,11 +152,12 @@ export default function RoleSelectionModal({
   }, [selectedRole])
 
   const canProceed = selectedRole !== null && (
-    selectedRole !== 'employer' || 
+    selectedRole !== 'employer' ||
     (employerAccess?.hasAccess === true) ||
     isAdminWhitelisted
   )
 
+  // Lock body scroll while modal is open
   useEffect(() => {
     const originalOverflow = document.body.style.overflow
     const originalPosition = document.body.style.position
@@ -182,6 +188,12 @@ export default function RoleSelectionModal({
     ? 'bg-gray-900 border-gray-600 text-white placeholder-gray-500 focus:border-teal-500'
     : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
 
+  const checkmarkIcon = (
+    <svg className='w-4 h-4 sm:w-5 sm:h-5 text-teal-600' fill='currentColor' viewBox='0 0 20 20'>
+      <path fillRule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clipRule='evenodd' />
+    </svg>
+  )
+
   return (
     <div
       className='fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 overflow-y-auto overscroll-none'
@@ -190,7 +202,7 @@ export default function RoleSelectionModal({
       <div className='absolute inset-0 bg-black/50 backdrop-blur-sm' style={{ touchAction: 'none' }} />
 
       <div
-        className={`relative max-w-3xl w-full rounded-xl sm:rounded-2xl shadow-2xl my-auto max-h-[95vh] flex flex-col overflow-hidden ${
+        className={`relative max-w-2xl w-full rounded-xl sm:rounded-2xl shadow-2xl my-auto max-h-[95vh] flex flex-col overflow-hidden ${
           isDark
             ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border border-gray-700'
             : 'bg-gradient-to-br from-white via-gray-50 to-white border border-gray-200'
@@ -211,14 +223,14 @@ export default function RoleSelectionModal({
             </p>
           </div>
 
-          {/* Role Options */}
-          <div className='p-4 sm:p-8 grid gap-4 sm:gap-6 md:grid-cols-3'>
-            {/* Driver Option */}
+          {/* Role Options — 2 columns */}
+          <div className='p-4 sm:p-8 grid gap-4 sm:gap-6 md:grid-cols-2'>
+            {/* Candidate Option */}
             <button
-              onClick={() => setSelectedRole('driver')}
+              onClick={() => setSelectedRole('candidate')}
               disabled={isLoading}
               className={`group relative p-4 sm:p-6 rounded-lg sm:rounded-xl transition-all duration-300 text-left ${
-                selectedRole === 'driver'
+                selectedRole === 'candidate'
                   ? 'bg-gradient-to-br from-teal-600 to-teal-700 border-2 border-teal-400 shadow-lg shadow-teal-500/50'
                   : isDark
                     ? 'bg-gray-800/50 border-2 border-gray-700 hover:border-teal-500 hover:bg-gray-800'
@@ -226,91 +238,38 @@ export default function RoleSelectionModal({
               } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-[0.98] sm:hover:scale-[1.02]'}`}
             >
               <div className={`inline-flex items-center justify-center w-10 h-10 sm:w-14 sm:h-14 rounded-lg mb-3 sm:mb-4 ${
-                selectedRole === 'driver'
+                selectedRole === 'candidate'
                   ? 'bg-white/20'
                   : isDark
                     ? 'bg-teal-500/20 group-hover:bg-teal-500/30'
                     : 'bg-teal-100 group-hover:bg-teal-200'
               }`}>
-                <span className='text-2xl sm:text-3xl'>🚗</span>
+                <span className='text-2xl sm:text-3xl'>🧑‍💼</span>
               </div>
 
               <h3 className={`text-lg sm:text-xl font-bold mb-1 sm:mb-2 ${
-                selectedRole === 'driver' ? 'text-white' : isDark ? 'text-white' : 'text-gray-900'
+                selectedRole === 'candidate' ? 'text-white' : isDark ? 'text-white' : 'text-gray-900'
               }`}>
-                Driver
+                Candidate
               </h3>
               <p className={`text-xs sm:text-sm mb-3 sm:mb-4 ${
-                selectedRole === 'driver' ? 'text-white/90' : isDark ? 'text-gray-400' : 'text-gray-600'
+                selectedRole === 'candidate' ? 'text-white/90' : isDark ? 'text-gray-400' : 'text-gray-600'
               }`}>
-                Build your verified DQ file
+                Build your professional profile
               </p>
 
               <ul className='space-y-1.5 sm:space-y-2'>
-                {['DOT applications', 'MVR & credentials', 'Career Card'].map((feature, idx) => (
+                {['Composable hub you build', 'Verified credentials & history', 'Shareable Career Card'].map((feature, idx) => (
                   <li key={idx} className='flex items-start gap-1.5 sm:gap-2 text-xs sm:text-sm'>
-                    <span className={selectedRole === 'driver' ? 'text-teal-200' : isDark ? 'text-teal-400' : 'text-teal-600'}>✓</span>
-                    <span className={selectedRole === 'driver' ? 'text-white' : isDark ? 'text-gray-300' : 'text-gray-700'}>{feature}</span>
+                    <span className={selectedRole === 'candidate' ? 'text-teal-200' : isDark ? 'text-teal-400' : 'text-teal-600'}>✓</span>
+                    <span className={selectedRole === 'candidate' ? 'text-white' : isDark ? 'text-gray-300' : 'text-gray-700'}>{feature}</span>
                   </li>
                 ))}
               </ul>
 
-              {selectedRole === 'driver' && (
+              {selectedRole === 'candidate' && (
                 <div className='absolute top-3 right-3 sm:top-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white flex items-center justify-center'>
-                  <svg className='w-4 h-4 sm:w-5 sm:h-5 text-teal-600' fill='currentColor' viewBox='0 0 20 20'>
-                    <path fillRule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clipRule='evenodd' />
-                  </svg>
-                </div>
-              )}
-            </button>
-
-            {/* Software Engineer Option */}
-            <button
-              onClick={() => setSelectedRole('developer')}
-              disabled={isLoading}
-              className={`group relative p-4 sm:p-6 rounded-lg sm:rounded-xl transition-all duration-300 text-left ${
-                selectedRole === 'developer'
-                  ? 'bg-gradient-to-br from-indigo-600 to-purple-700 border-2 border-indigo-400 shadow-lg shadow-indigo-500/50'
-                  : isDark
-                    ? 'bg-gray-800/50 border-2 border-gray-700 hover:border-indigo-400 hover:bg-gray-800'
-                    : 'bg-white border-2 border-gray-200 hover:border-indigo-500 hover:bg-indigo-50'
-              } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-[0.98] sm:hover:scale-[1.02]'}`}
-            >
-              <div className={`inline-flex items-center justify-center w-10 h-10 sm:w-14 sm:h-14 rounded-lg mb-3 sm:mb-4 ${
-                selectedRole === 'developer'
-                  ? 'bg-white/20'
-                  : isDark
-                    ? 'bg-indigo-500/20 group-hover:bg-indigo-500/30'
-                    : 'bg-indigo-100 group-hover:bg-indigo-200'
-              }`}>
-                <span className='text-2xl sm:text-3xl'>💻</span>
-              </div>
-
-              <h3 className={`text-lg sm:text-xl font-bold mb-1 sm:mb-2 ${
-                selectedRole === 'developer' ? 'text-white' : isDark ? 'text-white' : 'text-gray-900'
-              }`}>
-                Software Engineer
-              </h3>
-              <p className={`text-xs sm:text-sm mb-3 sm:mb-4 ${
-                selectedRole === 'developer' ? 'text-white/90' : isDark ? 'text-gray-400' : 'text-gray-600'
-              }`}>
-                Showcase your work
-              </p>
-
-              <ul className='space-y-1.5 sm:space-y-2'>
-                {['Portfolio & GitHub', 'Verified work history', 'Career Card'].map((feature, idx) => (
-                  <li key={idx} className='flex items-start gap-1.5 sm:gap-2 text-xs sm:text-sm'>
-                    <span className={selectedRole === 'developer' ? 'text-indigo-200' : isDark ? 'text-indigo-400' : 'text-indigo-600'}>✓</span>
-                    <span className={selectedRole === 'developer' ? 'text-white' : isDark ? 'text-gray-300' : 'text-gray-700'}>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {selectedRole === 'developer' && (
-                <div className='absolute top-3 right-3 sm:top-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white flex items-center justify-center'>
-                  <svg className='w-4 h-4 sm:w-5 sm:h-5 text-indigo-600' fill='currentColor' viewBox='0 0 20 20'>
-                    <path fillRule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clipRule='evenodd' />
-                  </svg>
+                  {checkmarkIcon}
                 </div>
               )}
             </button>
@@ -359,9 +318,7 @@ export default function RoleSelectionModal({
 
               {selectedRole === 'employer' && (
                 <div className='absolute top-3 right-3 sm:top-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white flex items-center justify-center'>
-                  <svg className='w-4 h-4 sm:w-5 sm:h-5 text-teal-600' fill='currentColor' viewBox='0 0 20 20'>
-                    <path fillRule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clipRule='evenodd' />
-                  </svg>
+                  {checkmarkIcon}
                 </div>
               )}
             </button>
@@ -371,7 +328,7 @@ export default function RoleSelectionModal({
           {selectedRole === 'employer' && (
             <div className={`mx-4 sm:mx-8 mb-4 p-4 sm:p-6 rounded-xl border-2 transition-all duration-300 ${
               isDark
-                ? employerAccess?.hasAccess 
+                ? employerAccess?.hasAccess
                   ? 'bg-green-900/20 border-green-500/40'
                   : 'bg-yellow-900/20 border-yellow-500/40'
                 : employerAccess?.hasAccess
@@ -548,11 +505,9 @@ export default function RoleSelectionModal({
               disabled={!canProceed || isLoading}
               className={`w-full sm:w-auto px-6 sm:px-8 py-3 rounded-lg font-semibold text-base sm:text-lg transition-all duration-300 ${
                 canProceed && !isLoading
-                  ? selectedRole === 'driver'
+                  ? selectedRole === 'candidate'
                     ? 'bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-600 text-white shadow-lg shadow-teal-500/50 active:scale-[0.98] sm:hover:scale-105'
-                    : selectedRole === 'developer'
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-purple-700 hover:to-indigo-600 text-white shadow-lg shadow-indigo-500/50 active:scale-[0.98] sm:hover:scale-105'
-                      : 'bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-cyan-600 hover:to-teal-500 text-white shadow-lg shadow-teal-500/50 active:scale-[0.98] sm:hover:scale-105'
+                    : 'bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-cyan-600 hover:to-teal-500 text-white shadow-lg shadow-teal-500/50 active:scale-[0.98] sm:hover:scale-105'
                   : isDark
                     ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -568,14 +523,14 @@ export default function RoleSelectionModal({
                 </span>
               ) : selectedRole ? (
                 selectedRole === 'employer' && !canProceed
-                  ? checkingAccess 
+                  ? checkingAccess
                     ? 'Checking access...'
                     : pendingRequest || requestSubmitted
                       ? 'Request pending review'
                       : 'Company setup required'
                   : selectedRole === 'employer' && employerAccess?.accessType === 'team_invite'
                     ? `Join ${employerAccess.companyName || 'company'}`
-                    : `Continue as ${selectedRole === 'driver' ? 'Driver' : selectedRole === 'developer' ? 'Software Engineer' : 'Employer'}`
+                    : `Continue as ${selectedRole === 'candidate' ? 'Candidate' : 'Employer'}`
               ) : 'Select a role to continue'}
             </button>
           </div>

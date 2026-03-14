@@ -45,7 +45,7 @@ interface ShareProfileCardProps {
   walletAddress?: string
   userAddress?: string
   driverName?: string
-  userRole?: 'driver' | 'developer'
+  userRole?: 'driver' | 'developer' | 'candidate'
   onViewCareerCard?: () => void
 }
 
@@ -53,14 +53,14 @@ export default function ShareProfileCard({
   walletAddress,
   userAddress,
   driverName,
-  userRole = 'driver',
+  userRole = 'candidate',
   onViewCareerCard,
 }: ShareProfileCardProps) {
   const { theme } = useTheme()
   const address = walletAddress ?? userAddress
-  const shareApiUrl = userRole === 'developer' ? '/api/developer/share' : '/api/driver/share'
-  const profileBasePath = userRole === 'developer' ? '/dev-card' : '/d'
-  const careerCardApiUrl = userRole === 'driver' ? '/api/driver/career-card' : null
+  const shareApiUrl = '/api/career-card/share'
+  const profileBasePath = '/card'
+  const careerCardApiUrl = '/api/career-card'
 
   const [shareToken, setShareToken] = useState<string | null>(null)
   const [settings, setSettings] = useState<ShareSettings>({
@@ -122,16 +122,17 @@ export default function ShareProfileCard({
       })
       if (res.ok) {
         const json = await res.json()
-        const cc = json.careerCard
+        const cc = json.card
         if (cc) {
+          const sectionTypes = new Set((cc.sections ?? []).map((s: { blockType: string }) => s.blockType))
           setPreview({
             name: cc.name || driverName || 'Unknown',
-            role: cc.role || 'driver',
+            role: cc.occupation || 'Candidate',
             avatarUrl: cc.avatarUrl ?? null,
-            hasResume: cc.hasResume ?? false,
-            hasDriverApp: cc.hasDriverApp ?? false,
-            hasMvr: cc.hasMvr ?? false,
-            completenessScore: cc.completenessScore ?? 0,
+            hasResume: sectionTypes.has('driver-resume') || sectionTypes.has('developer-resume'),
+            hasDriverApp: sectionTypes.has('driver-dot-application'),
+            hasMvr: sectionTypes.has('driver-mvr'),
+            completenessScore: cc.sections?.length ?? 0,
           })
         }
       }

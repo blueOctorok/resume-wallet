@@ -28,6 +28,7 @@ import type { PageType } from '@/stores'
 import DriverShell from '@/components/app/DriverShell'
 import EmployerShell from '@/components/app/EmployerShell'
 import DeveloperShell from '@/components/app/DeveloperShell'
+import CandidateShell from '@/components/app/CandidateShell'
 import ErrorBoundary from '@/components/app/ErrorBoundary'
 import { JourneyModal, AvaFloatingButton } from '@/components/ui'
 import AvaJourneyGuide from '@/components/AvaJourneyGuide'
@@ -162,7 +163,7 @@ const HomeContent = () => {
           if (data.success && data.profile) {
             const role = data.profile.role
             const validRole =
-              role === 'driver' || role === 'employer' || role === 'developer'
+              role === 'driver' || role === 'employer' || role === 'developer' || role === 'candidate'
                 ? role
                 : null
             setUserRole(validRole)
@@ -281,7 +282,7 @@ const HomeContent = () => {
   }, [])
 
   const handleRoleSelection = useCallback(
-    async (role: 'driver' | 'developer' | 'employer', companyName?: string, dotNumber?: string) => {
+    async (role: 'candidate' | 'employer', companyName?: string, dotNumber?: string) => {
       if (!walletAddress) return
       setIsSettingRole(true)
       try {
@@ -375,15 +376,13 @@ const HomeContent = () => {
             isLoading={isSettingRole}
             userEmail={user?.email}
             walletAddress={user?.address}
-            // RoleSelectionModal will be updated in Phase 8 to accept 'candidate'.
-            // For now, 'candidate' users won't see the modal (they already have a role).
-            existingRole={userRole as 'driver' | 'developer' | 'employer' | null}
+            existingRole={userRole}
             existingCompanyName={companyName}
           />
         )}
 
         {/* Profile Setup Modal — for first-time users to add name/contact */}
-        {user && walletAddress && (userRole === 'driver' || userRole === 'developer') && (
+        {user && walletAddress && (userRole === 'driver' || userRole === 'developer' || userRole === 'candidate') && (
           <ProfileSetupModal
             isOpen={showProfileSetup}
             onClose={() => setShowProfileSetup(false)}
@@ -428,6 +427,13 @@ const HomeContent = () => {
           {user && userRole === 'developer' && !isRoleLoading && (
             <ErrorBoundary section='Developer Hub'>
               <DeveloperShell userAddress={user.address} />
+            </ErrorBoundary>
+          )}
+
+          {/* ── Candidate (composable hub) ── */}
+          {user && userRole === 'candidate' && !isRoleLoading && (
+            <ErrorBoundary section='Candidate Hub'>
+              <CandidateShell />
             </ErrorBoundary>
           )}
 

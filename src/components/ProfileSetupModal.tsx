@@ -10,7 +10,7 @@ interface ProfileSetupModalProps {
   onClose: () => void
   onComplete: () => void
   walletAddress: string
-  userRole: 'driver' | 'developer'
+  userRole: 'driver' | 'developer' | 'candidate'
   userEmail?: string | null
 }
 

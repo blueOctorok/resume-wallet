@@ -27,7 +27,7 @@ interface DevFields {
 }
 
 interface ProfileSetupProps {
-  role: 'driver' | 'developer'
+  role: 'driver' | 'developer' | 'candidate'
   walletAddress: string
   onComplete: () => void
   onSkip?: () => void

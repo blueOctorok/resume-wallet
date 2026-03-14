@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const [blocksResult, onboardingResult] = await Promise.all([
+    const [blocksResult, onboardingResult, profileResult] = await Promise.all([
       supabase
         .from('hub_blocks')
         .select('id, block_type, position, config, added_at')
@@ -33,6 +33,11 @@ export async function GET(request: NextRequest) {
       supabase
         .from('hub_onboarding')
         .select('occupation, seeking_reason, suggested_categories, completed_at, updated_at')
+        .eq('user_id', user.id)
+        .maybeSingle(),
+      supabase
+        .from('driver_profiles')
+        .select('first_name, last_name, avatar_url')
         .eq('user_id', user.id)
         .maybeSingle(),
     ])
@@ -45,6 +50,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       blocks: blocksResult.data ?? [],
       onboarding: onboardingResult.data ?? null,
+      profile: profileResult.data ?? null,
     })
   } catch (err) {
     console.error('[HUB BLOCKS] GET unexpected error:', err)

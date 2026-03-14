@@ -16,12 +16,12 @@ export async function POST(request: Request) {
     if (
       role !== null &&
       role !== '' &&
-      !['driver', 'developer', 'employer'].includes(role)
+      !['driver', 'developer', 'employer', 'candidate'].includes(role)
     ) {
       return NextResponse.json(
         {
           error:
-            'Invalid role. Must be "driver", "developer", "employer", or null/empty to clear.',
+            'Invalid role. Must be "driver", "developer", "employer", "candidate", or null/empty to clear.',
         },
         { status: 400 }
       )

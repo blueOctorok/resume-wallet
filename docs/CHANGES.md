@@ -4,6 +4,116 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 🧱 **Phase 7: Career Card as Hub Projection** (March 2026)
+
+### What changed
+- Career card rebuilt as a read-only projection of the candidate's installed hub blocks
+- New unified `/api/career-card` endpoint builds sections dynamically from `hub_blocks` table
+- Each installed block with `appearsOnCareerCard: true` maps to a typed section (Resume, DOT App, MVR, CDL, Portfolio, GitHub, Projects, Skills, Work History)
+- New `ProjectedCareerCard` component renders sections dynamically — no role branching
+- Self-view: each section has action buttons (Update, Continue, View) that navigate to the block's page
+- Public view: unified at `/card/[token]` with a connect form for employer outreach
+- Share token moved from `driver_profiles`/`developer_profiles` to the `users` table (migration 036)
+- `/api/career-card/share` handles token generation and privacy settings
+- `/api/career-card/connect` handles public connect requests
+- Old routes `/d/[token]` and `/dev-card/[token]` permanently redirect to `/card/[token]`
+- `ShareProfileCard` updated to use new unified share API and `/card/` path
+- `CandidateShell` now routes `career-card` to new `CareerCardView` (replaces `DriverCareerCardSection`)
+
+### Files created
+- `src/types/career-card.ts` — typed section data interfaces and ProjectedCareerCard type
+- `src/app/api/career-card/route.ts` — projection API (GET)
+- `src/app/api/career-card/share/route.ts` — share token CRUD
+- `src/app/api/career-card/connect/route.ts` — public connect endpoint
+- `src/components/career-card/ProjectedCareerCard.tsx` — block-driven card renderer
+- `src/components/career-card/sections/` — 9 section renderer components
+- `src/components/app/CareerCardView.tsx` — self-view wrapper
+- `src/app/card/[token]/page.tsx` — unified public career card page
+- `supabase/migrations/036_unified_share_token.sql`
+
+### Design decision
+The career card no longer has any `isDriver` / `isDeveloper` branching. Sections render based
+solely on what blocks the user has installed. This means future roles (pilots, warehouse, etc.)
+get career card sections automatically when they add blocks — zero code changes to the card itself.
+The old public pages and APIs are preserved but redirected, ensuring existing shared links still work.
+
+---
+
+## 🧱 **Hub Profile Layout Pass** (March 2026)
+
+### What changed
+- `CandidateHub` now has a full profile feel matching the old DriverHub layout:
+  - **Profile header**: Avatar (with upload), display name, occupation from onboarding, profile completeness bar
+  - **Quick stats row**: Blocks added count, verified docs count, Career Card quick action button
+  - **Block grid**: Unchanged drag-and-drop block cards (moved under a "My Blocks" heading)
+  - **STORM token footer**: Inline `STORMBalance` card at the bottom showing Sepolia/Mainnet balances
+- `/api/hub/blocks` GET now returns `profile` (first_name, last_name, avatar_url) from `driver_profiles` alongside blocks and onboarding — single round-trip fetch
+- `useHubBlocksStore` now stores `userProfile` (HubUserProfile) and exposes `updateAvatarUrl` action
+- `CandidateShell` now routes `career-card` page to `DriverCareerCardSection`
+
+### Design decision
+Rather than a separate API call for profile data, we piggyback on the existing `/api/hub/blocks` endpoint.
+This keeps the hub mount to a single fetch. The `HubProfileHeader` and `HubQuickStats` are internal
+components within `CandidateHub.tsx` — not extracted to separate files — because they only exist
+in the context of the hub and share the same store selectors.
+
+---
+
+## 🧱 **Phase 6: Block Navigation** (March 2026)
+
+### What changed
+- Added `pageRoute` field to `BlockDefinition` — maps each block type to its CandidateShell page
+- Block cards in CandidateHub are now clickable: chevron arrow, cursor pointer, navigate on click
+- Blocks without a full-page view show a "Soon" badge instead
+- `CandidateShell` now routes to: DOT app, MVR order form, Resume builder, Portfolio page
+- Drag handle and remove button use `stopPropagation` so they don't trigger navigation
+
+### Design decision
+The original plan called for thin wrapper "block components" with per-block Zustand stores.
+We simplified: blocks navigate directly to the existing full-page components via the shell router.
+This avoids 10+ new files and keeps existing code unchanged. Dedicated block stores can be
+added later when blocks need inline hub views (e.g. showing a mini status card in the grid).
+
+---
+
+## 🧱 **Phase 8: Role Selection Update** (March 2026)
+
+### What changed
+- `RoleSelectionModal` rewritten from 3 cards (Driver / Developer / Employer) to 2 cards (Candidate / Employer)
+- Candidate card: "Build your professional profile" — composable hub, verified credentials, shareable Career Card
+- Employer card and its access-check flow (whitelist, pending requests, company setup) preserved unchanged
+- `set-role` API route now accepts `'candidate'` as a valid role
+- `page.tsx` handler types updated from `'driver' | 'developer' | 'employer'` to `'candidate' | 'employer'`
+
+### Backward compatibility
+- Existing `driver` / `developer` users still route to DriverShell / DeveloperShell
+- Only new signups see the simplified 2-option modal and get routed to CandidateShell
+
+---
+
+## 🧱 **Phase 5: CandidateShell + CandidateHub** (March 2026)
+
+### What was built
+- `CandidateShell.tsx` — the role shell for `candidate` users, mirrors DriverShell/DeveloperShell pattern
+- `CandidateHub.tsx` — the composable empty-slate hub with:
+  - Onboarding overlay (blocks hub until user fills out "who you are" form)
+  - Block grid showing installed blocks with drag-and-drop reordering (@dnd-kit)
+  - "Add Blocks" button that opens the Phase 4 picker modal
+  - Hover-to-reveal remove buttons on each block card
+  - Loading and error states
+
+### What was wired up
+- `page.tsx` now routes `userRole === 'candidate'` to `<CandidateShell />`
+- `page.tsx` role fetch accepts `'candidate'` as a valid role
+- `ProfileSetupModal` and `ProfileSetup` accept `'candidate'` role
+
+### How to test
+To test, a user needs the `candidate` role set in the database. Currently no user has this
+role — the role selection modal (Phase 8) will offer it. You can manually set it via Supabase
+for testing: `UPDATE profiles SET role = 'candidate' WHERE wallet_address = '...'`
+
+---
+
 ## 🧱 **Phase 4: Block Picker Modal** (March 2026)
 
 ### What was built

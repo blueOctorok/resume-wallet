@@ -2,13 +2,27 @@ import path from 'path'
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  // Base Account SDK works with Turbopack out of the box
-  // No special configuration needed
-
   // Temporarily disable TypeScript checking for deployment
   typescript: {
     ignoreBuildErrors: true,
   },
+
+  // Redirect old role-specific card routes to unified /card/[token]
+  async redirects() {
+    return [
+      {
+        source: '/d/:token',
+        destination: '/card/:token',
+        permanent: true,
+      },
+      {
+        source: '/dev-card/:token',
+        destination: '/card/:token',
+        permanent: true,
+      },
+    ]
+  },
+
   webpack: (config) => {
     config.resolve = config.resolve ?? {}
     config.resolve.alias = {

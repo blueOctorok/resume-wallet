@@ -13,10 +13,11 @@ The career card becomes a pure read-only projection of the hub.
 | Phase 2 — API routes | ✅ Done | CRUD for hub_blocks + hub_onboarding endpoints |
 | Phase 3 — Onboarding form | ✅ Done | Mandatory "who you are" context form + AvA integration |
 | Phase 4 — Block picker modal | ✅ Done | Categorized catalog with click-to-add (drag deferred to 4b) |
-| Phase 5 — CandidateShell | 🔲 Next | Replaces DriverShell + DeveloperShell, renders blocks |
-| Phase 6 — Port existing blocks | 🔲 Pending | Wrap DOT app, MVR, resumes, portfolio as block components |
-| Phase 7 — Career card projection | 🔲 Pending | Career card rebuilt as a read-only renderer over hub blocks |
-| Phase 8 — Role selection update | 🔲 Pending | Simplify modal to candidate vs employer |
+| Phase 5 — CandidateShell | ✅ Done | Replaces DriverShell + DeveloperShell, renders blocks |
+| Phase 6 — Port existing blocks | ✅ Done | Block cards clickable → navigate to existing components |
+| Hub profile layout | ✅ Done | Profile header, quick stats, career card CTA, STORM footer |
+| Phase 7 — Career card projection | ✅ Done | Career card rebuilt as a read-only renderer over hub blocks |
+| Phase 8 — Role selection update | ✅ Done | Simplify modal to candidate vs employer |
 
 ---
 

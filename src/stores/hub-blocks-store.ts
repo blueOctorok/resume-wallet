@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { shallow } from 'zustand/shallow'
 import { BLOCK_DEFINITIONS, getBlockDefinition } from '@/lib/block-registry'
 import type { BlockDefinition } from '@/lib/block-registry'
 
@@ -23,9 +24,17 @@ export interface HubOnboarding {
   completedAt: string
 }
 
+/** Lightweight profile info shown in the hub header */
+export interface HubUserProfile {
+  firstName: string
+  lastName: string
+  avatarUrl: string | null
+}
+
 interface HubBlocksState {
   installedBlocks: InstalledBlock[]
   onboarding: HubOnboarding | null
+  userProfile: HubUserProfile | null
 
   isLoading: boolean
   isPickerOpen: boolean
@@ -55,6 +64,9 @@ interface HubBlocksActions {
     walletAddress: string
   ) => Promise<void>
 
+  // Profile
+  updateAvatarUrl: (url: string) => void
+
   // Picker modal
   openPicker: () => void
   closePicker: () => void
@@ -65,6 +77,7 @@ interface HubBlocksActions {
 export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((set, get) => ({
   installedBlocks: [],
   onboarding: null,
+  userProfile: null,
   isLoading: false,
   isPickerOpen: false,
   fetchError: null,
@@ -91,10 +104,20 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
         })
       )
 
+      // Profile comes from the same endpoint (driver_profiles row)
+      const rawProfile = data.profile as { first_name: string; last_name: string; avatar_url: string | null } | null
+      const userProfile: HubUserProfile | null = rawProfile
+        ? {
+            firstName: rawProfile.first_name ?? '',
+            lastName: rawProfile.last_name ?? '',
+            avatarUrl: rawProfile.avatar_url ?? null,
+          }
+        : null
+
       set({
         installedBlocks,
         onboarding: data.onboarding ?? null,
-        // Show onboarding form if the user has never filled it out
+        userProfile,
         needsOnboarding: !data.onboarding,
         isLoading: false,
       })
@@ -231,6 +254,15 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
   },
 
   // ── Picker ──────────────────────────────────────────────────────────────────
+  // ── Profile ─────────────────────────────────────────────────────────────────
+  updateAvatarUrl: (url) =>
+    set((s) => ({
+      userProfile: s.userProfile
+        ? { ...s.userProfile, avatarUrl: url }
+        : { firstName: '', lastName: '', avatarUrl: url },
+    })),
+
+  // ── Picker ─────────────────────────────────────────────────────────────────
   openPicker: () => set({ isPickerOpen: true }),
   closePicker: () => set({ isPickerOpen: false }),
 }))
@@ -250,9 +282,16 @@ export const useNeedsOnboarding = () =>
 export const useHubOnboarding = () =>
   useHubBlocksStore((s) => s.onboarding)
 
-/** Returns block types the user has NOT yet installed — drives the picker catalog */
+/**
+ * Returns block definitions the user has NOT yet installed.
+ * Uses shallow equality so a new array reference from .filter()
+ * doesn't cause an infinite re-render loop.
+ */
 export const useAvailableBlocks = () =>
-  useHubBlocksStore((s) => {
-    const installedTypes = new Set(s.installedBlocks.map((b) => b.blockType))
-    return BLOCK_DEFINITIONS.filter((b) => !installedTypes.has(b.id))
-  })
+  useHubBlocksStore(
+    (s) => {
+      const installedTypes = new Set(s.installedBlocks.map((b) => b.blockType))
+      return BLOCK_DEFINITIONS.filter((b) => !installedTypes.has(b.id))
+    },
+    shallow
+  )
