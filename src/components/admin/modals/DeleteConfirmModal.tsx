@@ -10,6 +10,7 @@ interface DeleteConfirmModalProps {
   onClose: () => void
   onConfirm: () => void
   deleting: boolean
+  error?: string | null
 }
 
 export default function DeleteConfirmModal({
@@ -18,6 +19,7 @@ export default function DeleteConfirmModal({
   onClose,
   onConfirm,
   deleting,
+  error,
 }: DeleteConfirmModalProps) {
   const [confirmText, setConfirmText] = useState('')
 
@@ -77,6 +79,11 @@ export default function DeleteConfirmModal({
             placeholder='DELETE'
           />
         </div>
+        {error && (
+          <p className='mb-3 text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2'>
+            {error}
+          </p>
+        )}
         <div className='flex gap-3'>
           <button
             onClick={handleClose}

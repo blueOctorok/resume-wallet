@@ -83,9 +83,32 @@ export default function ProfileSetupModal({
     setSaving(true)
 
     try {
+      // Always write to user_profiles — this is the hub's source of truth for name display.
+      // driver/developer role setups also write to their role-specific table below,
+      // but user_profiles must always be populated so checkAndShowProfileSetup works correctly.
+      const profileSetupRes = await fetch('/api/user/profile-setup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': walletAddress,
+        },
+        body: JSON.stringify({
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          email: form.email.trim() || undefined,
+          phone: form.phone.trim() || undefined,
+          city: form.city.trim() || undefined,
+          state: form.state || undefined,
+        }),
+      })
+
+      if (!profileSetupRes.ok) {
+        throw new Error('Failed to save profile')
+      }
+
+      // For driver role, also write CDL-aware data to driver_profiles
       if (userRole === 'driver') {
-        // Update driver profile
-        const res = await fetch('/api/driver/profile', {
+        await fetch('/api/driver/profile', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -102,14 +125,12 @@ export default function ProfileSetupModal({
             },
             source: 'manual',
           }),
-        })
+        }).catch(() => {})
+      }
 
-        if (!res.ok) {
-          throw new Error('Failed to save profile')
-        }
-      } else {
-        // Update developer profile
-        const res = await fetch('/api/developer/profile', {
+      // For developer role, also write to developer_profiles
+      if (userRole === 'developer') {
+        await fetch('/api/developer/profile', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -122,22 +143,8 @@ export default function ProfileSetupModal({
             phone: form.phone.trim() || undefined,
             location: form.location.trim() || undefined,
           }),
-        })
-
-        if (!res.ok) {
-          throw new Error('Failed to save profile')
-        }
+        }).catch(() => {})
       }
-
-      // Also update users.name for display purposes
-      await fetch('/api/user/update-name', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          walletAddress,
-          name: `${form.firstName.trim()} ${form.lastName.trim()}`,
-        }),
-      }).catch(() => {})
 
       onComplete()
     } catch (err) {

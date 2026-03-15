@@ -144,40 +144,44 @@ export async function DELETE(
     }
 
     // Delete in order (respecting foreign key constraints)
-    // 1. Company memberships and invites (user_id or invite rows tied to this user)
+    // 1. Company memberships (user is a team member)
     await supabase.from('company_members').delete().eq('user_id', id)
 
-    // 2. Delete MVR results
+    // 2. Delete MVR results and orders
     await supabase.from('mvr_results').delete().eq('driver_user_id', id)
-
-    // 3. Delete MVR orders
     await supabase.from('mvr_orders').delete().eq('driver_user_id', id)
 
-    // 4. Delete resumes
+    // 3. Delete resumes and driver applications
     await supabase.from('resumes').delete().eq('user_id', id)
-
-    // 5. Delete driver applications
     await supabase.from('driver_applications').delete().eq('user_id', id)
 
-    // 6. Delete driver profile
+    // 4. Delete profiles
     await supabase.from('driver_profiles').delete().eq('user_id', id)
-
-    // 6b. Delete unified user profile
     await supabase.from('user_profiles').delete().eq('user_id', id)
-
-    // 7. Delete developer projects (before dev profile due to FK)
     await supabase.from('developer_projects').delete().eq('user_id', id)
-
-    // 8. Delete developer profile
     await supabase.from('developer_profiles').delete().eq('user_id', id)
 
-    // 9. Delete payments
+    // 5. Delete payments and candidate requests
     await supabase.from('payments').delete().eq('user_id', id)
-
-    // 10. Delete candidate_requests where this user requested
     await supabase.from('candidate_requests').delete().eq('requested_by_user_id', id)
 
-    // 11. Delete the user
+    // 6. Delete employer-created data rows where this user was the creator
+    //    (employer_candidate_data.created_by is NOT NULL, so we must delete instead of null)
+    await supabase.from('employer_candidate_data').delete().eq('created_by', id)
+
+    // 7. NULL OUT non-cascade FK references that would block the users row delete.
+    //    These columns reference users(id) with no ON DELETE action (default = RESTRICT),
+    //    meaning Postgres refuses to delete the user row if any row still points to it.
+    //    We null them out so the final delete can proceed cleanly.
+    await supabase.from('companies').update({ approved_by: null }).eq('approved_by', id)
+    await supabase.from('companies').update({ suspended_by: null }).eq('suspended_by', id)
+    await supabase.from('company_status_history').update({ changed_by: null }).eq('changed_by', id)
+    await supabase.from('applications').update({ recruited_by_user_id: null }).eq('recruited_by_user_id', id)
+    await supabase.from('mvr_orders').update({ ordered_by_user_id: null }).eq('ordered_by_user_id', id)
+    await supabase.from('employer_candidate_data').update({ updated_by: null }).eq('updated_by', id)
+    await supabase.from('company_members').update({ invited_by: null }).eq('invited_by', id)
+
+    // 8. Delete the user
     const { error: deleteError } = await supabase
       .from('users')
       .delete()

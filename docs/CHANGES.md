@@ -4,6 +4,27 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 🐛 **Admin User Delete Fix + Profile Setup Fix** (March 2026)
+
+### Problem
+After deleting a user in the admin dashboard and logging back in with the same wallet, the user's name (e.g. "Barry Burton") would reappear. Three bugs caused this:
+
+1. **Silent delete failure** — `handleDelete` in `AdminDashboardShell` swallowed API errors, so if the delete returned a 500, the admin saw no feedback and assumed success.
+2. **Incomplete delete cascade** — Several FK columns reference `users(id)` without `ON DELETE CASCADE`. When the admin (who also has a `users` row) had approved companies or made admin actions, those FK references blocked the `users` row deletion with a PostgreSQL constraint violation. The affected columns: `companies.approved_by`, `companies.suspended_by`, `company_status_history.changed_by`, `applications.recruited_by_user_id`, `mvr_orders.ordered_by_user_id`, `employer_candidate_data.created_by` (NOT NULL, must delete rows), `employer_candidate_data.updated_by`, `company_members.invited_by`.
+3. **Wrong profile write** — `ProfileSetupModal` for `candidate` role incorrectly called `/api/developer/profile`, which writes to `developer_profiles`. The hub's `checkAndShowProfileSetup` check reads from `user_profiles.first_name`, which was never populated — so every candidate would be re-prompted for profile setup on every login.
+
+### What changed
+- **`src/app/api/admin/users/[id]/route.ts`** — Added step 6 to delete `employer_candidate_data` rows where `created_by = id` (NOT NULL FK), and added step 7 to null out all non-cascade FK references before deleting the `users` row.
+- **`src/components/admin/AdminDashboardShell.tsx`** — Added `deleteError` state; `handleDelete` now calls `setDeleteError(data.error)` on non-ok responses instead of silently ignoring them. `onClose` on the modal also clears the error.
+- **`src/components/admin/modals/DeleteConfirmModal.tsx`** — Added optional `error` prop; renders a red error message inside the modal when delete fails.
+- **`src/components/ProfileSetupModal.tsx`** — Refactored `handleSubmit` to always call the new `/api/user/profile-setup` endpoint first (writes to `user_profiles`). Driver and developer roles still also call their own profile endpoints as a secondary step.
+- **`src/app/api/user/profile-setup/route.ts`** *(new)* — Generic profile setup endpoint: upserts `user_profiles` and syncs `users.name`. Replaces the role-conditional pattern in `ProfileSetupModal` for `candidate` role.
+
+### Teaching note
+PostgreSQL FK constraints default to `ON DELETE RESTRICT` (also called `NO ACTION`) — meaning if any row in another table points to the row you're trying to delete, the delete fails. This is intentional: the DB is protecting referential integrity. The fix pattern is: before deleting the parent row, either `DELETE` the child rows (if the FK is `NOT NULL`) or `UPDATE ... SET fk_column = NULL` (if nullable). This is what migration-level `ON DELETE CASCADE` / `ON DELETE SET NULL` automates — but some audit-trail columns intentionally omit cascade to preserve history, so we null them out manually in the API.
+
+---
+
 ## 🏗️ **Admin Dashboard Audit Refactor** (March 2026)
 
 ### What changed

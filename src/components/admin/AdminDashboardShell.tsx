@@ -73,6 +73,7 @@ function AdminDashboardContent() {
   // Delete modal state
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   // Create company modal
   const [showCreateCompanyModal, setShowCreateCompanyModal] = useState(false)
@@ -131,6 +132,7 @@ function AdminDashboardContent() {
     if (!deleteTarget || !walletAddress) return
 
     setDeleting(true)
+    setDeleteError(null)
     try {
       const endpointMap: Record<string, string> = {
         user: `/api/admin/users/${deleteTarget.id}`,
@@ -152,12 +154,17 @@ function AdminDashboardContent() {
         method: 'DELETE',
         headers: { 'x-wallet-address': walletAddress },
       })
+
       if (response.ok) {
         setDeleteTarget(null)
+        setDeleteError(null)
         setRefreshKey((k) => k + 1)
+      } else {
+        const data = await response.json().catch(() => ({}))
+        setDeleteError(data.error || 'Delete failed. Please try again.')
       }
     } catch {
-      // Delete failed silently — tab will show stale data
+      setDeleteError('Network error. Please try again.')
     } finally {
       setDeleting(false)
     }
@@ -454,9 +461,10 @@ function AdminDashboardContent() {
       <DeleteConfirmModal
         theme={theme as 'light' | 'dark'}
         target={deleteTarget}
-        onClose={() => setDeleteTarget(null)}
+        onClose={() => { setDeleteTarget(null); setDeleteError(null) }}
         onConfirm={handleDelete}
         deleting={deleting}
+        error={deleteError}
       />
 
       <CreateCompanyModal
