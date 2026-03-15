@@ -6,21 +6,17 @@ import {
   Search,
   Filter,
   MapPin,
-  Award,
-  Briefcase,
   CheckCircle,
   X,
   Loader2,
   FileText,
-  ClipboardCheck,
-  Car,
   Shield,
-  Code,
   Users,
   ChevronDown,
   TrendingUp,
   UserPlus,
   Send,
+  User,
 } from 'lucide-react'
 import BackToHubButton from '@/components/ui/BackToHubButton'
 import CareerCardModal from './CareerCardModal'
@@ -36,11 +32,7 @@ interface Candidate {
   location: string | null
   state: string | null
   yearsExperience: number | null
-  cdlClass: string | null
-  endorsements: string[]
   completenessScore: number
-  hasMvr: boolean
-  hasDriverApp: boolean
   hasResume: boolean
   verifiedJobsCount: number
   memberSince: string
@@ -73,12 +65,8 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
   
   // Filters
   const [filters, setFilters] = useState({
-    role: '' as '' | 'driver' | 'developer',
-    cdlClass: '',
     state: '',
     minExperience: '',
-    hasMvr: false,
-    hasDriverApp: false,
     search: '',
   })
   const [showFilters, setShowFilters] = useState(true)
@@ -164,12 +152,8 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
       const currentOffset = resetPagination ? 0 : offset
 
       const params = new URLSearchParams()
-      if (filters.role) params.append('role', filters.role)
-      if (filters.cdlClass) params.append('cdlClass', filters.cdlClass)
       if (filters.state) params.append('state', filters.state)
       if (filters.minExperience) params.append('minExperience', filters.minExperience)
-      if (filters.hasMvr) params.append('hasMvr', 'true')
-      if (filters.hasDriverApp) params.append('hasDriverApp', 'true')
       if (filters.search) params.append('search', filters.search)
       params.append('limit', String(LIMIT))
       params.append('offset', String(currentOffset))
@@ -212,23 +196,15 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
 
   const clearFilters = () => {
     setFilters({
-      role: '',
-      cdlClass: '',
       state: '',
       minExperience: '',
-      hasMvr: false,
-      hasDriverApp: false,
       search: '',
     })
   }
 
   const activeFilterCount = [
-    filters.role,
-    filters.cdlClass,
     filters.state,
     filters.minExperience,
-    filters.hasMvr,
-    filters.hasDriverApp,
   ].filter(Boolean).length
 
   return (
@@ -245,7 +221,7 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
             Find Talent
           </h1>
           <p className={`mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            Search for qualified drivers and developers who match your criteria
+            Search for qualified candidates who match your criteria
           </p>
         </div>
       </div>
@@ -312,50 +288,7 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {/* Role Filter */}
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                Role
-              </label>
-              <select
-                value={filters.role}
-                onChange={(e) => setFilters({ ...filters, role: e.target.value as '' | 'driver' | 'developer' })}
-                className={`w-full px-4 py-2.5 rounded-xl border ${
-                  theme === 'dark'
-                    ? 'bg-gray-900 border-gray-700 text-white'
-                    : 'bg-white border-gray-300 text-gray-900'
-                } focus:outline-none focus:ring-2 focus:ring-teal-500/50`}
-              >
-                <option value="">All Roles</option>
-                <option value="driver">Drivers</option>
-                <option value="developer">Developers</option>
-              </select>
-            </div>
-
-            {/* CDL Class (shown for all/drivers) */}
-            {filters.role !== 'developer' && (
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                  CDL Class
-                </label>
-                <select
-                  value={filters.cdlClass}
-                  onChange={(e) => setFilters({ ...filters, cdlClass: e.target.value })}
-                  className={`w-full px-4 py-2.5 rounded-xl border ${
-                    theme === 'dark'
-                      ? 'bg-gray-900 border-gray-700 text-white'
-                      : 'bg-white border-gray-300 text-gray-900'
-                  } focus:outline-none focus:ring-2 focus:ring-teal-500/50`}
-                >
-                  <option value="">Any Class</option>
-                  <option value="A">Class A</option>
-                  <option value="B">Class B</option>
-                  <option value="C">Class C</option>
-                </select>
-              </div>
-            )}
-
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* State */}
             <div>
               <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -392,36 +325,6 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
                 } focus:outline-none focus:ring-2 focus:ring-teal-500/50`}
               />
             </div>
-          </div>
-
-          {/* Checkboxes */}
-          <div className="flex flex-wrap gap-6 mt-4 pt-4 border-t border-gray-700/50">
-            {filters.role !== 'developer' && (
-              <>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filters.hasMvr}
-                    onChange={(e) => setFilters({ ...filters, hasMvr: e.target.checked })}
-                    className="w-4 h-4 rounded border-gray-600 text-teal-500 focus:ring-teal-500"
-                  />
-                  <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Has MVR Record
-                  </span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filters.hasDriverApp}
-                    onChange={(e) => setFilters({ ...filters, hasDriverApp: e.target.checked })}
-                    className="w-4 h-4 rounded border-gray-600 text-teal-500 focus:ring-teal-500"
-                  />
-                  <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Complete DOT Application
-                  </span>
-                </label>
-              </>
-            )}
           </div>
         </div>
       )}
@@ -678,8 +581,6 @@ function CandidateCard({
   onAddToPipeline: (e: React.MouseEvent) => void
   theme: string
 }) {
-  const isDriver = candidate.role === 'driver'
-
   return (
     <div
       onClick={onClick}
@@ -693,17 +594,11 @@ function CandidateCard({
       }`}
     >
       <div className="flex items-start gap-4">
-        {/* Avatar */}
+        {/* Avatar — neutral teal for all candidates */}
         <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-          isDriver
-            ? theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
-            : theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-100'
+          theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
         }`}>
-          {isDriver ? (
-            <Car className={`w-6 h-6 ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
-          ) : (
-            <Code className={`w-6 h-6 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
-          )}
+          <User className={`w-6 h-6 ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
         </div>
 
         {/* Info */}
@@ -714,13 +609,6 @@ function CandidateCard({
                 <h3 className={`font-semibold truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                   {candidate.name}
                 </h3>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  isDriver
-                    ? 'bg-teal-500/20 text-teal-400'
-                    : 'bg-indigo-500/20 text-indigo-400'
-                }`}>
-                  {isDriver ? 'Driver' : 'Developer'}
-                </span>
                 {candidate.hasApplied && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
                     In Pipeline
@@ -735,38 +623,14 @@ function CandidateCard({
                     {candidate.location}
                   </span>
                 )}
-                {isDriver && candidate.cdlClass && (
-                  <span className={`flex items-center gap-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
-                    <Award className="w-3 h-3" />
-                    CDL {candidate.cdlClass}
-                  </span>
-                )}
-                {candidate.yearsExperience !== null && (
-                  <span className={`flex items-center gap-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
-                    <Briefcase className="w-3 h-3" />
-                    {candidate.yearsExperience} yrs exp
-                  </span>
-                )}
               </div>
 
-              {/* Credentials */}
+              {/* Credentials — universal only */}
               <div className="flex items-center gap-3 mt-2 flex-wrap">
                 {candidate.hasResume && (
                   <span className="flex items-center gap-1 text-xs text-green-500">
                     <FileText className="w-3 h-3" />
                     Resume
-                  </span>
-                )}
-                {candidate.hasDriverApp && (
-                  <span className="flex items-center gap-1 text-xs text-green-500">
-                    <ClipboardCheck className="w-3 h-3" />
-                    DOT App
-                  </span>
-                )}
-                {candidate.hasMvr && (
-                  <span className="flex items-center gap-1 text-xs text-green-500">
-                    <Car className="w-3 h-3" />
-                    MVR
                   </span>
                 )}
                 {candidate.verifiedJobsCount > 0 && (

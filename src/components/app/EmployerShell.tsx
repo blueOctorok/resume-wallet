@@ -160,23 +160,14 @@ export default function EmployerShell({ walletAddress }: EmployerShellProps) {
     )
   }
 
-  // Default: Employer Hub (when currentPage is null or being reset)
+  // Default: Employer Hub (when currentPage is null or being reset).
+  // onNavigate accepts any string — KNOWN_PAGES validation in the useEffect
+  // above will bounce unknown routes back to the hub.
   return (
     <EmployerHub
       walletAddress={walletAddress}
       onNavigate={(page) => {
-        if (
-          page === 'post-job' ||
-          page === 'jobs' ||
-          page === 'applicants' ||
-          page === 'find-drivers' ||
-          page === 'talent-search' ||
-          page === 'company-profile' ||
-          page === 'company-setup' ||
-          page === 'reports' ||
-          page === 'team' ||
-          page === 'messages'
-        ) {
+        if (KNOWN_PAGES.has(page)) {
           setCurrentPage(page)
         }
       }}

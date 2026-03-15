@@ -4,6 +4,168 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 🏗️ **Role-Agnostic Hub Refactor** (March 2026)
+
+### What changed
+Full refactor to remove all hardcoded driver/developer assumptions from permanent hub components. The employer and candidate hubs are now truly "dumb" — they only know universal data (name, email, status, resume). Role-specific data (CDL, MVR, DOT, GitHub, portfolio) stays in its existing tables and is only surfaced when the employer has installed the matching block.
+
+### Database
+- **New table: `user_profiles`** (migration `039_user_profiles.sql`): Unified identity table with shared fields (`first_name`, `last_name`, `email`, `phone`, `avatar_url`, `headline`, `city`, `state`, `zip_code`, `date_of_birth`, `professional_summary`). Seeded from existing `driver_profiles` and `developer_profiles`. Neither old table is dropped — blocks still use them.
+- RLS: users can CRUD their own row; employers can read any row; service role has full access.
+
+### Phase A: Core Data Layer
+- `/api/hub/blocks/route.ts`: reads profile from `user_profiles` instead of `driver_profiles`
+- `hub-blocks-store.ts`: parses `user_profiles` shape
+- **New endpoint** `/api/user/avatar`: role-agnostic avatar upload writing to `user_profiles.avatar_url` (replaces `/api/driver/avatar` for candidate hub)
+- `CandidateHub.tsx`: points to `/api/user/avatar`
+- `auth-store.ts`: profile setup check uses `/api/hub/blocks` (which now queries `user_profiles`) instead of branching between driver/developer profile endpoints
+
+### Phase B: Employer Hub API
+- `/api/employer/hub/route.ts`: **rewritten** — JOINs `user_profiles` instead of `driver_profiles`. All driver-specific batch queries (DOT app completions, MVR status, bgcheck consents) and `mvrOrders` response removed. Stats stripped of MVR counts.
+- **New endpoint** `/api/employer/hub/driver-data/route.ts`: block-conditional endpoint returning CDL, DOT status, MVR status, bgcheck consent for a set of applicant IDs. Only called when driver-related blocks are installed.
+
+### Phase C: Employer Hub UI
+- **EmployerHub.tsx**: `HubApplicant` stripped to universal fields. `HubMvrOrder` interface removed. `HubStats` stripped of MVR counts. `mvrOrders` removed from `HubData`. MVR detail modal, employment verification modal, and all associated state removed. `ApplicantDetailContent` rewritten — only shows status, headline, contact, dates, resume, cover letter. `ApplicantRow` uses neutral teal coloring for all. `MvrRow` and `MvrDetailContent` removed. Unused imports (`Car`, `ClipboardCheck`, `Code`) removed.
+- **ApplicantKanban.tsx**: `KanbanApplicant` stripped to: `applicationId`, `status`, `appliedAt`, `applicantUserId`, `applicantName`, `applicantRole`, `avatarUrl`, `jobTitle`, `jobPostingId`, `hasResume`, `resumeVerified`. DOT chip, MVR chip, CDL badge removed. `MvrKanbanChip` removed entirely. Role badge removed — neutral teal avatar for all. `QuickRequestChip` retained for resume requests only.
+- **ApplicantsPage.tsx**: `Applicant` interface stripped of driver/developer fields. CDL section, MVR section removed from detail modal. `Car` replaced with `User`. Neutral avatar for all.
+- **CareerCardModal.tsx**: DOT App request, MVR request/order actions removed. `EmployerMvrOrderForm` removed. Subtitle is generic "Career Card". Neutral teal avatar. Viewer-only.
+- **TalentSearchPage.tsx**: CDL Class filter, hasMvr filter, hasDriverApp filter removed. Role filter replaced with text search. CandidateCard uses neutral teal User icon. Driver/developer-specific chips removed.
+- **EmployerVerificationSection.tsx**: "driver" copy → "candidate". DOT-specific answer fields (`hadAccident`, `failedClearinghouseTest`, `randomDrugTestOrRefused`) now conditionally rendered only when present. `driverId` → `candidateId` in callback types.
+
+### Key design decisions
+- **Dumb hub model**: Permanent UI components show only universal data. Industry-specific enrichment happens through installed blocks.
+- **Unified identity**: `user_profiles` is the single source of truth for candidate identity (name, contact, avatar). Role-specific extension tables (`driver_profiles`, `developer_profiles`) are kept for block-specific data.
+- **Block-conditional API**: Driver data is fetched via `/api/employer/hub/driver-data` only when the employer has driver-related blocks installed. A steel or paint company's hub never queries driver tables at all.
+- **No data loss**: `driver_profiles` and `developer_profiles` are NOT dropped. All existing block flows continue to work unchanged.
+
+---
+
+## 📋 **TalentSearchPage Role-Agnostic Refactor** (March 2026)
+
+### What changed
+`TalentSearchPage.tsx` was refactored to be role-agnostic. All driver-specific filters and candidate card badges were removed so the talent search works for any candidate type.
+
+### Files modified
+- `src/components/employer/TalentSearchPage.tsx`:
+  - **Removed filters**: CDL Class dropdown, hasMvr checkbox, hasDriverApp checkbox, Drivers/Developers role filter
+  - **Kept filters**: Search (name, city, email), State, Min Experience (years)
+  - **CandidateCard**: Removed role badge (Driver/Developer), CDL badge, experience years badge, MVR status badge, DOT App badge; replaced Car/Code avatars with neutral teal User icon; kept Resume and Verified credentials
+  - **Imports**: Removed `Car`, `Code`, `Award`, `Briefcase`, `ClipboardCheck`; added `User`
+
+### Key design decisions
+- **Simple text search**: Role filtering replaced by the existing search bar — employers search by name, city, or email instead of selecting a role.
+- **Neutral teal**: All candidates use the same teal avatar and styling; no role-based color branching.
+
+---
+
+## 📋 **CareerCardModal Role-Agnostic Refactor** (March 2026)
+
+### What changed
+`CareerCardModal.tsx` was refactored to be a **viewer-only** component. All driver-specific actions (DOT Application request, MVR request/order) were removed. The modal now displays career card data for any role without action buttons for DOT or MVR.
+
+### Files modified
+- `src/components/employer/CareerCardModal.tsx`:
+  - **Removed**: `dotAppAction` (Request DOT App), `mvrAction` (Request MVR / Order MVR), `EmployerMvrOrderForm` component, MVR order form modal, MVR confirmation modal
+  - **Subtitle**: Replaced "Driver Career Card" / "Developer Career Card" with "Career Card"
+  - **Avatar**: Always uses teal color (removed role-based indigo for developers)
+  - **Kept**: "Request Resume" action (universal), Recruit Candidate, Messaging, pending requests display
+  - **Imports**: Removed `Car`, `Code`, `FileText`, `Modal`, `ModalHeader`, `MvrPaymentButton`, `useRef`
+
+### Key design decisions
+- **Viewer-only**: The career card modal is now a pure viewer — it shows block-driven career card data without employer-initiated DOT or MVR flows. Those flows can be reintroduced later via composable blocks if needed.
+- **Role-agnostic**: No `isDriver` checks; subtitle and avatar styling are neutral across all candidate types.
+
+---
+
+## 📋 **ApplicantsPage Role-Agnostic Refactor** (March 2026)
+
+### What changed
+`ApplicantsPage.tsx` was refactored to be role-agnostic. The `Applicant` interface now uses generic `applicant*` fields instead of driver-specific ones. CDL, MVR, and location UI were removed so the page works for any candidate role (driver, developer, or generic candidate).
+
+### Files modified
+- `src/components/employer/ApplicantsPage.tsx`:
+  - **Interface**: Replaced `driverUserId`, `driverName`, `driverEmail`, `driverPhone`, `driverLocation`, `cdlClass`, `cdlState`, `cdlExpiration`, `experienceYears`, `hasMvr`, `mvrStatus`, `mvrOrderedByThisCompany`, `hasBgcheckConsent` with `applicantUserId`, `applicantName`, `applicantEmail`, `applicantPhone`, `applicantRole`, `jobTargetRole`
+  - **UI**: Removed CDL badge, MVR status section, CDL Information section, location display; swapped `Car` icon for `User` on Career Card button; removed `MvrStatusBadge` component
+  - **Search**: Now filters by `applicantName`, `jobTitle`, `applicantEmail` only
+  - **Imports**: Removed `Car`, `Award`, `MapPin`, `Filter`, `ChevronDown`, `CheckCircle`; added `User`
+
+---
+
+## 🏢 **Employer Composable Hub — Phase 2: Role-Agnostic Polish** (March 2026)
+
+### What changed
+The employer-facing components (Kanban, Applicant Detail Modal, quick actions) were updated to handle the new `candidate` role from the composable hub. Previously, the code branched on `role === 'driver'` vs `role === 'developer'`. Now, role detection is **data-driven**: a candidate with CDL credentials or driver blocks is identified as a driver regardless of their stored role string.
+
+### Files modified
+- `src/components/employer/ApplicantKanban.tsx` — `isDriver` check now includes `cdlClass` and `hasDriverApp` alongside `role === 'driver'`. Role badge adds a third branch for generic `Candidate` label. Avatar color defaults to `gray` for candidates without a specific role.
+- `src/components/EmployerHub.tsx` — Major cleanup:
+  - `ApplicantDetailContent`: `isDriver` is now data-driven (`cdlClass || cdlState`). "Verify Employment" and "Order MVR" buttons wrapped in `{isDriver && ...}` so non-driver candidates don't see driver-specific actions.
+  - `ApplicantRow`: Added `roleDisplay` object with label/colors for 3 role types (driver, dev, candidate).
+  - Quick actions: "Reports" button now conditional on having `employer-compliance-reports` block installed.
+  - Removed all legacy `driverUserId`, `driverName`, `driverEmail` fallback casts — `applicantUserId` and `applicantName` are now the sole source of truth.
+  - Renamed `verifyingDriverId` → `verifyingCandidateId`, `driverEmployments` → `candidateEmployments`.
+  - Swapped `Car` icon for `CreditCard` on "View Career Card" button.
+
+### Key design decisions
+- **Data-driven role detection**: Instead of matching `role === 'driver'`, we check `applicant.cdlClass || applicant.cdlState`. This means a `candidate`-role user who installed driver blocks and filled in CDL data gets the full driver experience in the employer view — without any code changes to the employer hub when new block types are added.
+- **Three-tier role display**: Kanban cards and applicant rows now show "Driver" (teal), "Dev" (indigo), or "Candidate" (gray) — covering all legacy and composable hub users.
+- **Block-conditional quick actions**: The "Reports" shortcut only appears when the employer has the compliance reports block installed, reinforcing the composable model.
+
+---
+
+## 🔗 **Generic Block-Based Outreach** (March 2026)
+
+### What changed
+The candidate outreach system was reworked from hardcoded invite types (`driver_dot`, `developer_card`, `general`) to a generic, block-aware system. Employers can now create outreach linked to ANY candidate block from the registry. Invitees who click the link are automatically set up as candidates with that specific block pre-installed on their hub and are routed directly into the block's flow.
+
+### Files created
+- `supabase/migrations/038_invite_target_block.sql` — adds `target_block_type TEXT` column to `application_invites` table
+
+### Files modified
+- `src/app/api/employer/invites/route.ts` — POST now accepts `targetBlockType` (validates against block registry), GET returns `targetBlockType` in invite list. Old `type` field derived: `'block'` when targetBlockType is set, `'general'` otherwise
+- `src/app/api/invite/[token]/route.ts` — GET now selects and returns `targetBlockType` in public response
+- `src/app/api/employer/invites/send-email/route.ts` — uses `targetBlockType` instead of old `type` for email content and notification labels
+- `src/lib/send-invite-email.ts` — complete rewrite: replaced `InviteType` switch with block registry lookup via `getBlockDefinition()`. Email subject, headline, intro, and checklist now dynamically generated from any block definition
+- `src/components/employer/CandidateOutreach.tsx` — replaced 3 hardcoded `TYPE_OPTIONS` with a two-step picker: "General Onboarding" or "Request Specific Block". Block picker shows candidate blocks filtered by the employer's installed block categories. Invite list dynamically resolves block label/icon from registry
+- `src/app/apply/[token]/page.tsx` — replaced hardcoded `TYPE_CONFIG` with `buildLandingContent()` that generates all content from block registry. Works for any current or future block type automatically
+- `src/app/onboard/[token]/page.tsx` — critical flow change: when `targetBlockType` is set, post-auth flow now (1) sets role to `'candidate'`, (2) installs target block on hub, (3) creates minimal onboarding record, (4) redirects to `/?onboard={block.pageRoute}`. General flow remains unchanged
+
+### Key design decisions
+- **Block registry as single source of truth**: email templates, landing pages, and onboard flow all derive content from `getBlockDefinition()` — adding a new block type in the future requires zero changes to the outreach system
+- **Two invite types**: `type='general'` (no target block) and `type='block'` (with `target_block_type` set) — clean and extensible
+- **Employer block filtering**: the outreach block picker shows candidate blocks whose categories match the employer's installed blocks (e.g. employer has DOT Compliance → show driver-category candidate blocks). Falls back to showing all blocks if no employer blocks are installed
+- **Forced block flow**: block-targeted invites bypass role selection and onboarding form, going straight to the block's page after auth
+- **No backward compat needed**: no production users, so old invite types are replaced entirely
+
+---
+
+## 🏢 **Employer Composable Hub — Phase 1: Architecture** (March 2026)
+
+### What changed
+The employer hub is now a **hybrid model**: universal employer features (Kanban, jobs, team, outreach) remain permanent, while industry-specific tools become composable blocks that employers add based on what they hire for.
+
+### Files created
+- `src/lib/employer-block-registry.ts` — defines `EmployerBlockDefinition`, `EmployerBlockCategory`, 3 categories (Drivers, Developers, General), 5 block definitions (MVR Ordering, DOT Compliance, Find Drivers, Compliance Reports, Employment Verification), lookup/suggestion helpers
+- `src/stores/employer-blocks-store.ts` — Zustand store mirroring the candidate `hub-blocks-store` pattern: `installedBlocks`, `companyId`, `fetchEmployerBlocks()`, `addBlock()`, `removeBlock()`, edit mode, picker modal state
+- `supabase/migrations/037_employer_hub_blocks.sql` — `employer_hub_blocks` table (company_id-scoped, unique block_type per company), RLS via `company_members`, adds `hiring_categories TEXT[]` column to `companies` table
+- `src/app/api/employer/blocks/route.ts` — GET (list employer blocks) and POST (add block), resolves wallet → user → company membership
+- `src/app/api/employer/blocks/[id]/route.ts` — DELETE (remove block), verifies company membership before deleting
+- `src/components/employer/EmployerBlockPickerModal.tsx` — modal for browsing/adding employer blocks, same visual pattern as candidate block picker
+
+### Files modified
+- `src/components/EmployerHub.tsx` — added "Industry Tools" composable block grid between Kanban and Verification sections; blocks render in a responsive tile grid with edit/jiggle mode and remove buttons
+- `src/components/app/MotorCarrierOnboarding.tsx` — renamed header to "Company Profile", added multi-select "What do you hire for?" section (Drivers, Developers, Warehouse, Other), DOT/MC fields now only appear when Drivers is selected
+- `src/app/api/employer/company/route.ts` — accepts and saves `hiring_categories` array
+- `src/components/app/EmployerShell.tsx` — simplified `onNavigate` to use `KNOWN_PAGES.has()` check
+
+### Key design decisions
+- **Company-scoped blocks** (not user-scoped): all team members in a company share the same installed blocks, unlike candidate blocks which are per-user
+- **Hiring categories drive suggestions**: the `suggestEmployerBlocks()` function in the registry matches company hiring categories against block keywords to recommend relevant tools
+- **DOT/MC fields are conditional**: only shown during company setup when "Drivers" is selected as a hiring category — makes the form generic for any employer type
+- **Hybrid architecture**: permanent core (Kanban, jobs, team, outreach) is always present; the block grid sits between Kanban and Verification sections
+
+---
+
 ## 🏠 **Hub Layout: Career Card Banner + Verification Bar** (March 2026)
 
 ### What changed

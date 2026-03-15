@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
       addressZip,
       phone,
       email,
+      hiringCategories,
     } = body
 
     if (!companyName || !addressStreet || !addressCity || !addressState || !addressZip || !phone || !email) {
@@ -102,6 +103,7 @@ export async function POST(request: NextRequest) {
       address_zip: addressZip,
       phone,
       email,
+      hiring_categories: Array.isArray(hiringCategories) ? hiringCategories : [],
       onboarding_completed: true,
       updated_at: new Date().toISOString(),
     }

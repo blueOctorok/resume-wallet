@@ -249,7 +249,7 @@ function HubProfileHeader() {
             avatarUrl={userProfile?.avatarUrl ?? null}
             size='xl'
             color='teal'
-            uploadEndpoint='/api/driver/avatar'
+            uploadEndpoint='/api/user/avatar'
             walletAddress={walletAddress ?? ''}
             onSuccess={updateAvatarUrl}
           />

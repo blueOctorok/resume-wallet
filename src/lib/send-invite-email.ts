@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { buildEmail, infoBox, fallbackLink } from './email-template'
+import { getBlockDefinition } from './block-registry'
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -7,11 +8,9 @@ const resend = process.env.RESEND_API_KEY
 
 const FROM = process.env.RESEND_FROM_EMAIL ?? 'stormchain@verify.stormchain.ai'
 
-export type InviteType = 'driver_dot' | 'developer_card' | 'general'
-
 export interface SendInviteEmailParams {
   to: string
-  type: InviteType
+  targetBlockType: string | null
   candidateName?: string
   companyName: string
   jobTitle?: string
@@ -29,63 +28,59 @@ interface EmailContent {
   ctaLabel: string
 }
 
-function getEmailContent(type: InviteType, companyName: string, jobTitle?: string): EmailContent {
+/**
+ * Build email content from a block definition (or fall back to general).
+ *
+ * This is the key insight: instead of a 3-way switch on hardcoded invite types,
+ * we use the block registry to dynamically generate email content for ANY block.
+ * When a new block is added to the registry in the future, emails work automatically.
+ */
+function getEmailContent(targetBlockType: string | null, companyName: string, jobTitle?: string): EmailContent {
   const job = jobTitle ? ` for ${jobTitle}` : ''
 
-  switch (type) {
-    case 'developer_card':
-      return {
-        subject: `${companyName} wants to connect — set up your StormChain career card`,
-        headline: `${companyName} found your profile`,
-        intro: `${companyName} is interested in connecting with you${job}. They'd like you to set up your StormChain career card — a verified professional profile that showcases your skills, work history, and credentials.`,
-        checklistTitle: "What you'll add to your career card:",
-        checklist: [
-          'Professional summary and skills',
-          'GitHub, LinkedIn, or portfolio links',
-          'Work history and experience',
-          'Relevant certifications',
-        ],
-        timeEstimate: '10–15 minutes to complete',
-        ctaLabel: 'Set Up My Career Card',
-      }
-    case 'general':
-      return {
-        subject: `You've been invited to StormChain by ${companyName}`,
-        headline: `${companyName} invited you to StormChain`,
-        intro: `StormChain is a blockchain-verified credential platform for drivers and developers. ${companyName} is using it to find and verify top talent. Joining takes just a few minutes.`,
-        checklistTitle: "What you'll do:",
-        checklist: [
-          'Create your free StormChain account',
-          'Choose your role (driver or developer)',
-          'Build your verified professional profile',
-          `Connect directly with companies like ${companyName}`,
-        ],
-        timeEstimate: '5–10 minutes to get started',
-        ctaLabel: 'Join StormChain',
-      }
-    case 'driver_dot':
-    default:
-      return {
-        subject: jobTitle
-          ? `${companyName} — Complete your DOT application for ${jobTitle}`
-          : `${companyName} — Complete your DOT application`,
-        headline: `${companyName} wants you on their team${job}`,
-        intro: `${companyName} has invited you to complete a DOT application through StormChain — a secure, blockchain-verified platform. Your application data is stored safely and only shared with the companies you authorize.`,
-        checklistTitle: "What you'll need:",
-        checklist: [
-          "Driver's license / CDL information",
-          'Employment history (last 10 years)',
-          'Driving record (accidents, violations)',
-          'Medical certificate information',
-        ],
-        timeEstimate: '15–25 minutes to complete',
-        ctaLabel: 'Start My DOT Application',
-      }
+  // Block-targeted invite — pull label/description from registry
+  if (targetBlockType) {
+    const block = getBlockDefinition(targetBlockType)
+    const label = block?.label ?? 'Application'
+    const description = block?.description ?? 'Complete your professional profile'
+
+    return {
+      subject: jobTitle
+        ? `${companyName} — Complete your ${label} for ${jobTitle}`
+        : `${companyName} — Complete your ${label}`,
+      headline: `${companyName} wants you on their team${job}`,
+      intro: `${companyName} has invited you to complete a ${label} through StormChain — a secure, blockchain-verified platform. ${description}. Your data is stored safely and only shared with companies you authorize.`,
+      checklistTitle: "What you'll do:",
+      checklist: [
+        'Create your free StormChain account',
+        `Complete your ${label}`,
+        'Review and submit your information',
+        `Connect directly with ${companyName}`,
+      ],
+      timeEstimate: '10–20 minutes',
+      ctaLabel: `Start My ${label}`,
+    }
+  }
+
+  // General invite — no specific block target
+  return {
+    subject: `You've been invited to StormChain by ${companyName}`,
+    headline: `${companyName} invited you to StormChain`,
+    intro: `StormChain is a blockchain-verified credential platform for professionals. ${companyName} is using it to find and verify top talent. Joining takes just a few minutes.`,
+    checklistTitle: "What you'll do:",
+    checklist: [
+      'Create your free StormChain account',
+      'Set up your professional profile',
+      'Add relevant credentials and documents',
+      `Connect directly with companies like ${companyName}`,
+    ],
+    timeEstimate: '5–10 minutes to get started',
+    ctaLabel: 'Join StormChain',
   }
 }
 
 /**
- * Sends a typed outreach invite email to a candidate.
+ * Sends a block-aware outreach invite email to a candidate.
  * No-op if RESEND_API_KEY is not set.
  */
 export async function sendInviteEmail(
@@ -96,8 +91,8 @@ export async function sendInviteEmail(
     return { ok: false, error: 'Email not configured' }
   }
 
-  const { candidateName, companyName, inviteLink, welcomeMessage, type } = params
-  const content = getEmailContent(type, companyName, params.jobTitle)
+  const { candidateName, companyName, inviteLink, welcomeMessage, targetBlockType } = params
+  const content = getEmailContent(targetBlockType, companyName, params.jobTitle)
   const greeting = candidateName ? `Hi ${candidateName.split(' ')[0]},` : 'Hello,'
 
   const checklistHtml = content.checklist
@@ -140,7 +135,7 @@ export async function sendInviteEmail(
   })
 
   try {
-    console.log('[INVITE EMAIL] Sending type=%s to=%s from=%s', type, params.to, FROM)
+    console.log('[INVITE EMAIL] Sending targetBlock=%s to=%s from=%s', targetBlockType ?? 'general', params.to, FROM)
     const { data, error } = await resend.emails.send({
       from: FROM,
       to: params.to,

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { getBlockDefinition, type BlockDefinition } from '@/lib/block-registry'
 import LoadingScreen from '@/components/LoadingScreen'
 import {
   CheckCircle,
@@ -12,21 +13,19 @@ import {
   Shield,
   Briefcase,
   MapPin,
-  Car,
-  Code,
   Users,
+  Package,
 } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-
-type InviteType = 'driver_dot' | 'developer_card' | 'general'
 
 interface InviteData {
   valid: boolean
   invite: {
     id: string
     status: string
-    type: InviteType
+    type: string
+    targetBlockType: string | null
     candidateEmail: string | null
     candidateName: string | null
     welcomeMessage: string | null
@@ -37,73 +36,69 @@ interface InviteData {
   invalidReason: 'expired' | 'completed' | 'cancelled' | null
 }
 
-// ─── Per-type content config ─────────────────────────────────────────────────
+// ─── Dynamic landing content builder ─────────────────────────────────────────
+//
+// Instead of a 3-way TYPE_CONFIG switch, we generate everything from the block
+// registry. When someone adds a new block type in the future, the landing page
+// works automatically — no code changes needed here.
 
-const TYPE_CONFIG = {
-  driver_dot: {
+interface LandingContent {
+  accent: string
+  accentLight: string
+  accentText: string
+  icon: React.ReactNode
+  label: string
+  headline: (company: string) => string
+  description: (company: string) => string
+  checklistTitle: string
+  checklist: string[]
+  timeEstimate: string
+  ctaLabel: string
+}
+
+function buildLandingContent(block: BlockDefinition | null): LandingContent {
+  if (!block) {
+    // General invite — no specific block
+    return {
+      accent: 'from-slate-700 to-slate-800',
+      accentLight: 'bg-slate-500/10 border-slate-500/30',
+      accentText: 'text-slate-300',
+      icon: <Users className="w-8 h-8 text-white" />,
+      label: 'Join StormChain',
+      headline: (company) => `${company} invited you to StormChain`,
+      description: (company) =>
+        `StormChain is a blockchain-verified credential platform for professionals. ${company} is using it to find and verify top talent. Joining only takes a few minutes.`,
+      checklistTitle: "What you'll do:",
+      checklist: [
+        'Create your free StormChain account',
+        'Set up your professional profile',
+        'Add relevant credentials and documents',
+      ],
+      timeEstimate: '5–10 minutes',
+      ctaLabel: 'Join StormChain',
+    }
+  }
+
+  // Block-targeted invite — everything comes from the registry
+  return {
     accent: 'from-teal-600 to-teal-700',
     accentLight: 'bg-teal-500/10 border-teal-500/30',
     accentText: 'text-teal-400',
-    badge: 'bg-teal-500/20 text-teal-300',
-    icon: <Car className="w-8 h-8 text-white" />,
-    label: 'DOT Application',
-    headline: (company: string) => `${company} wants you on their team`,
-    description: (company: string) =>
-      `${company} has invited you to complete a DOT application through StormChain — a secure, blockchain-verified platform. Your data is stored safely and only shared with companies you authorize.`,
-    checklistTitle: "What you'll need:",
-    checklist: [
-      "Driver's license / CDL information",
-      'Employment history (last 10 years)',
-      'Driving record — accidents & violations',
-      'Medical certificate information',
-    ],
-    timeEstimate: '15–25 minutes',
-    ctaLabel: 'Start My DOT Application',
-    redirectAction: 'dot-application',
-  },
-  developer_card: {
-    accent: 'from-indigo-600 to-violet-700',
-    accentLight: 'bg-indigo-500/10 border-indigo-500/30',
-    accentText: 'text-indigo-400',
-    badge: 'bg-indigo-500/20 text-indigo-300',
-    icon: <Code className="w-8 h-8 text-white" />,
-    label: 'Career Card',
-    headline: (company: string) => `${company} found your profile`,
-    description: (company: string) =>
-      `${company} is interested in connecting with you. Set up your StormChain career card — a verified professional profile that showcases your skills, work history, and credentials in one place.`,
-    checklistTitle: "What you'll add to your career card:",
-    checklist: [
-      'Professional summary and skill set',
-      'GitHub, LinkedIn, or portfolio links',
-      'Work history and experience',
-      'Any relevant certifications or achievements',
-    ],
-    timeEstimate: '10–15 minutes',
-    ctaLabel: 'Set Up My Career Card',
-    redirectAction: 'developer-profile',
-  },
-  general: {
-    accent: 'from-slate-700 to-slate-800',
-    accentLight: 'bg-slate-500/10 border-slate-500/30',
-    accentText: 'text-slate-300',
-    badge: 'bg-slate-500/20 text-slate-300',
-    icon: <Users className="w-8 h-8 text-white" />,
-    label: 'Join StormChain',
-    headline: (company: string) => `${company} invited you to StormChain`,
-    description: (company: string) =>
-      `StormChain is a blockchain-verified credential platform for drivers and developers. ${company} is using it to find and verify top talent. Joining only takes a few minutes.`,
+    icon: <Package className="w-8 h-8 text-white" />,
+    label: block.label,
+    headline: (company) => `${company} wants you on their team`,
+    description: (company) =>
+      `${company} has invited you to complete a ${block.label} through StormChain — a secure, blockchain-verified platform. ${block.description}. Your data is stored safely and only shared with companies you authorize.`,
     checklistTitle: "What you'll do:",
     checklist: [
       'Create your free StormChain account',
-      'Choose your role — driver or developer',
-      'Build your verified professional profile',
-      'Connect directly with companies like ' + '',
+      `Complete your ${block.label}`,
+      'Review and submit your information',
     ],
-    timeEstimate: '5–10 minutes',
-    ctaLabel: 'Join StormChain',
-    redirectAction: 'onboarding',
-  },
-} as const
+    timeEstimate: block.complexity === 'complex' ? '15–25 minutes' : block.complexity === 'moderate' ? '10–15 minutes' : '5–10 minutes',
+    ctaLabel: `Start My ${block.label}`,
+  }
+}
 
 // ─── Error / state screens ────────────────────────────────────────────────────
 
@@ -182,19 +177,15 @@ export default function ApplyPage() {
   const handleStart = useCallback(() => {
     if (starting) return
     setStarting(true)
-    // Navigate to dedicated onboard flow with inline login
     router.push(`/onboard/${token}`)
   }, [token, router, starting])
 
-  // ── Loading ──
   if (loading) return <LoadingScreen message="Loading your invite..." />
 
-  // ── Not found ──
   if (fetchError || !inviteData) {
     return <InvalidScreen reason="notfound" onGoHome={() => router.push('/')} />
   }
 
-  // ── Invalid invite ──
   if (!inviteData.valid) {
     return (
       <InvalidScreen
@@ -205,18 +196,20 @@ export default function ApplyPage() {
     )
   }
 
-  // ── Valid invite — render type-specific branded screen ──
-  const type = inviteData.invite.type || 'driver_dot'
-  const cfg = TYPE_CONFIG[type]
+  // Resolve block from registry (null for general invites)
+  const blockDef = inviteData.invite.targetBlockType
+    ? getBlockDefinition(inviteData.invite.targetBlockType) ?? null
+    : null
+
+  const cfg = buildLandingContent(blockDef)
   const company = inviteData.company
   const job = inviteData.job
   const invite = inviteData.invite
 
-  // For "general" type we need the company name in the checklist
-  const checklist =
-    type === 'general'
-      ? [...cfg.checklist.slice(0, 3), `Connect directly with ${company?.name || 'top companies'}`]
-      : cfg.checklist
+  // For general invites, inject company name into checklist
+  const checklist = blockDef
+    ? [...cfg.checklist, `Connect directly with ${company?.name || 'top companies'}`]
+    : [...cfg.checklist.slice(0, 3), `Connect directly with ${company?.name || 'top companies'}`]
 
   return (
     <div className="min-h-screen bg-gray-950">
@@ -237,12 +230,10 @@ export default function ApplyPage() {
 
           {/* Hero gradient header */}
           <div className={`bg-gradient-to-br ${cfg.accent} px-8 py-10`}>
-            {/* Company name */}
             <p className="text-white/60 text-sm font-semibold tracking-widest uppercase mb-2">
               {company?.name || 'Company'}
             </p>
 
-            {/* Type badge */}
             <div className="flex items-center gap-2 mb-5">
               <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center">
                 {cfg.icon}
@@ -250,12 +241,10 @@ export default function ApplyPage() {
               <span className="text-white/80 text-sm font-medium">{cfg.label}</span>
             </div>
 
-            {/* Main headline */}
             <h1 className="text-3xl font-bold text-white leading-tight">
               {cfg.headline(company?.name || 'A Company')}
             </h1>
 
-            {/* Job pill if present */}
             {job && (
               <div className="mt-4 inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-xl px-4 py-2">
                 <Briefcase className="w-4 h-4 text-white/70" />
@@ -273,20 +262,17 @@ export default function ApplyPage() {
 
           {/* Body */}
           <div className="bg-gray-900 px-8 py-8">
-            {/* Custom welcome message */}
             {invite.welcomeMessage && (
               <div className={`border rounded-xl p-4 mb-6 ${cfg.accentLight}`}>
-                <p className="text-gray-300 text-sm italic">"{invite.welcomeMessage}"</p>
+                <p className="text-gray-300 text-sm italic">&quot;{invite.welcomeMessage}&quot;</p>
                 <p className={`text-xs mt-2 ${cfg.accentText}`}>— {company?.name}</p>
               </div>
             )}
 
-            {/* Description */}
             <p className="text-gray-300 text-base leading-relaxed mb-6">
               {cfg.description(company?.name || 'This company')}
             </p>
 
-            {/* Checklist */}
             <div className="bg-gray-800/60 rounded-xl p-5 mb-6 border border-gray-700/50">
               <p className="text-white font-semibold text-sm mb-3">{cfg.checklistTitle}</p>
               <ul className="space-y-2.5">
@@ -303,7 +289,6 @@ export default function ApplyPage() {
               </div>
             </div>
 
-            {/* CTA */}
             <button
               onClick={handleStart}
               disabled={starting}
@@ -326,7 +311,6 @@ export default function ApplyPage() {
               )}
             </button>
 
-            {/* Trust line */}
             <div className="mt-6 flex items-center justify-center gap-2 text-xs text-gray-500">
               <Shield className="w-3.5 h-3.5 text-teal-500" />
               <span>Blockchain-verified · Only {company?.name || 'this company'} sees your data</span>
@@ -334,7 +318,6 @@ export default function ApplyPage() {
           </div>
         </div>
 
-        {/* Expiry notice */}
         {invite.expiresAt && (
           <p className="text-center text-xs text-gray-600 mt-4">
             This invite expires on {new Date(invite.expiresAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}

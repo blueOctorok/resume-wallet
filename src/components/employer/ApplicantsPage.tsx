@@ -4,23 +4,18 @@ import { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   Users,
-  Filter,
   Search,
-  ChevronDown,
   Eye,
   FileText,
-  CheckCircle,
   Clock,
   MessageSquare,
   UserCheck,
   UserX,
-  MapPin,
-  Award,
   Calendar,
   X,
   Loader2,
   ExternalLink,
-  Car,
+  User,
 } from 'lucide-react'
 import BackToHubButton from '@/components/ui/BackToHubButton'
 import CareerCardModal from '@/components/employer/CareerCardModal'
@@ -30,21 +25,15 @@ interface Applicant {
   status: string
   appliedAt: string
   viewCount: number
-  lastViewedAt: string | null
   coverLetter: string | null
   reviewerNotes: string | null
   shareToken: string | null
-  driverUserId: string
-  driverName: string
-  driverEmail: string | null
-  driverPhone: string | null
-  driverLocation: string | null
+  applicantUserId: string
+  applicantName: string
+  applicantEmail: string | null
+  applicantPhone: string | null
+  applicantRole: string
   avatarUrl?: string | null
-  cdlClass: string | null
-  cdlState: string | null
-  cdlExpiration: string | null
-  experienceYears: number | null
-  professionalSummary: string | null
   jobPostingId: string
   jobTitle: string
   hasResume: boolean
@@ -52,12 +41,7 @@ interface Applicant {
   resumeTitle: string | null
   resumeVerified: boolean
   resumeIpfsHash: string | null
-  // MVR & consent — live from DB, not snapshot
-  hasMvr: boolean
-  mvrStatus: string | null
-  // true = this company paid for the MVR (private); false = candidate self-ordered
-  mvrOrderedByThisCompany: boolean
-  hasBgcheckConsent: boolean
+  jobTargetRole: string
 }
 
 interface Job {
@@ -91,7 +75,6 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
   const [selectedJob, setSelectedJob] = useState<string>('all')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [showFilters, setShowFilters] = useState(false)
   
   // Selected applicant for detail view
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null)
@@ -164,10 +147,9 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
     if (!searchQuery) return true
     const query = searchQuery.toLowerCase()
     return (
-      applicant.driverName.toLowerCase().includes(query) ||
+      applicant.applicantName.toLowerCase().includes(query) ||
       applicant.jobTitle.toLowerCase().includes(query) ||
-      applicant.driverEmail?.toLowerCase().includes(query) ||
-      applicant.driverLocation?.toLowerCase().includes(query)
+      applicant.applicantEmail?.toLowerCase().includes(query)
     )
   })
 
@@ -393,7 +375,7 @@ function ApplicantCard({
           <span className={`text-lg font-bold ${
             theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
           }`}>
-            {applicant.driverName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+            {applicant.applicantName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
           </span>
         </div>
 
@@ -402,24 +384,12 @@ function ApplicantCard({
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <h3 className={`font-semibold truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                {applicant.driverName}
+                {applicant.applicantName}
               </h3>
               <p className={`text-sm truncate ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                 {applicant.jobTitle}
               </p>
               <div className="flex items-center gap-4 mt-2 text-xs">
-                {applicant.driverLocation && (
-                  <span className={`flex items-center gap-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
-                    <MapPin className="w-3 h-3" />
-                    {applicant.driverLocation}
-                  </span>
-                )}
-                {applicant.cdlClass && (
-                  <span className={`flex items-center gap-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
-                    <Award className="w-3 h-3" />
-                    CDL {applicant.cdlClass} • {applicant.experienceYears || 0} yrs
-                  </span>
-                )}
                 <span className={`flex items-center gap-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
                   <Calendar className="w-3 h-3" />
                   {formatDate(applicant.appliedAt)}
@@ -514,7 +484,7 @@ function ApplicantDetailModal({
         }`}>
           <div>
             <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              {applicant.driverName}
+              {applicant.applicantName}
             </h3>
             <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
               Applied for {applicant.jobTitle}
@@ -529,7 +499,7 @@ function ApplicantDetailModal({
                   : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
               }`}
             >
-              <Car className="w-3.5 h-3.5" />
+              <User className="w-3.5 h-3.5" />
               Career Card
             </button>
             <button
@@ -543,29 +513,11 @@ function ApplicantDetailModal({
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* MVR Status */}
-          <div className={`flex items-center justify-between px-4 py-3 rounded-xl ${
-            theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
-          }`}>
-            <div className="flex items-center gap-2">
-              <Car className={`w-4 h-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} />
-              <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                Motor Vehicle Record
-              </span>
-            </div>
-            <MvrStatusBadge
-              hasMvr={applicant.hasMvr}
-              mvrStatus={applicant.mvrStatus}
-              hasBgcheckConsent={applicant.hasBgcheckConsent}
-              theme={theme}
-            />
-          </div>
-
           {/* Contact Info */}
           <div className="flex flex-wrap gap-3">
-            {applicant.driverEmail && (
+            {applicant.applicantEmail && (
               <a
-                href={`mailto:${applicant.driverEmail}`}
+                href={`mailto:${applicant.applicantEmail}`}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${
                   theme === 'dark'
                     ? 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
@@ -573,12 +525,12 @@ function ApplicantDetailModal({
                 }`}
               >
                 <span>📧</span>
-                {applicant.driverEmail}
+                {applicant.applicantEmail}
               </a>
             )}
-            {applicant.driverPhone && (
+            {applicant.applicantPhone && (
               <a
-                href={`tel:${applicant.driverPhone}`}
+                href={`tel:${applicant.applicantPhone}`}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${
                   theme === 'dark'
                     ? 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
@@ -586,33 +538,9 @@ function ApplicantDetailModal({
                 }`}
               >
                 <span>📞</span>
-                {applicant.driverPhone}
+                {applicant.applicantPhone}
               </a>
             )}
-          </div>
-
-          {/* CDL Info */}
-          <div className={`p-4 rounded-xl ${theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
-            <h4 className={`font-medium mb-3 flex items-center gap-2 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}>
-              <Award className="w-4 h-4" />
-              CDL Information
-            </h4>
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div>
-                <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>Class</p>
-                <p className={theme === 'dark' ? 'text-white' : 'text-gray-900'}>{applicant.cdlClass || 'N/A'}</p>
-              </div>
-              <div>
-                <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>State</p>
-                <p className={theme === 'dark' ? 'text-white' : 'text-gray-900'}>{applicant.cdlState || 'N/A'}</p>
-              </div>
-              <div>
-                <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>Experience</p>
-                <p className={theme === 'dark' ? 'text-white' : 'text-gray-900'}>{applicant.experienceYears || 0} years</p>
-              </div>
-            </div>
           </div>
 
           {/* Resume */}
@@ -713,77 +641,12 @@ function ApplicantDetailModal({
     {/* Career card modal — layered above the detail modal */}
     {showCareerCard && (
       <CareerCardModal
-        candidateUserId={applicant.driverUserId}
+        candidateUserId={applicant.applicantUserId}
         walletAddress={walletAddress}
         onClose={() => setShowCareerCard(false)}
       />
     )}
     </>
-  )
-}
-
-// ── MvrStatusBadge ────────────────────────────────────────────────────────────
-
-function MvrStatusBadge({
-  hasMvr,
-  mvrStatus,
-  hasBgcheckConsent,
-  theme,
-}: {
-  hasMvr: boolean
-  mvrStatus: string | null
-  hasBgcheckConsent: boolean
-  theme: string
-}) {
-  if (!hasMvr && !hasBgcheckConsent) {
-    return (
-      <span className={`text-xs px-2.5 py-1 rounded-full ${theme === 'dark' ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
-        Not requested
-      </span>
-    )
-  }
-
-  if (!hasMvr && hasBgcheckConsent) {
-    return (
-      <span className={`text-xs px-2.5 py-1 rounded-full ${theme === 'dark' ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-700'}`}>
-        Disclosure signed — ready to order
-      </span>
-    )
-  }
-
-  const normalized = mvrStatus?.toLowerCase() ?? ''
-
-  if (normalized === 'pending' || normalized === 'processing' || normalized === 'submitted') {
-    return (
-      <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full ${theme === 'dark' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-50 text-yellow-700'}`}>
-        <Clock className="w-3 h-3" />
-        Processing
-      </span>
-    )
-  }
-
-  if (normalized === 'complete' || normalized === 'completed' || normalized === 'returned') {
-    return (
-      <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full ${theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-700'}`}>
-        <CheckCircle className="w-3 h-3" />
-        Complete
-      </span>
-    )
-  }
-
-  if (normalized === 'failed' || normalized === 'error') {
-    return (
-      <span className={`text-xs px-2.5 py-1 rounded-full ${theme === 'dark' ? 'bg-red-500/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
-        Failed
-      </span>
-    )
-  }
-
-  // Fallback for any other status string
-  return (
-    <span className={`text-xs px-2.5 py-1 rounded-full capitalize ${theme === 'dark' ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
-      {mvrStatus ?? 'Ordered'}
-    </span>
   )
 }
 

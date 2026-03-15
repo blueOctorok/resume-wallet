@@ -113,18 +113,13 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       setShowProfileSetup: (show) => set({ showProfileSetup: show }),
 
       checkAndShowProfileSetup: async (walletAddress, userRole) => {
-        // Employers use company profile — no personal profile setup needed
         if (!walletAddress || !userRole || userRole === 'employer') return
-        // Only run once per session per wallet to avoid redundant API calls
         if (profileCheckRanForWallet === walletAddress) return
         profileCheckRanForWallet = walletAddress
 
         try {
-          const endpoint = userRole === 'developer'
-            ? '/api/developer/profile'
-            : '/api/driver/profile'
-
-          const res = await fetch(endpoint, {
+          // Use the hub blocks endpoint which returns user_profiles data
+          const res = await fetch('/api/hub/blocks', {
             headers: { 'x-wallet-address': walletAddress },
           })
 
@@ -134,7 +129,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           }
 
           const data = await res.json()
-          const hasName = data.profile?.firstName || data.profile?.first_name
+          const hasName = data.profile?.first_name
           if (!hasName) set({ showProfileSetup: true })
         } catch {
           // Non-blocking — if the check fails, don't interrupt the user's session

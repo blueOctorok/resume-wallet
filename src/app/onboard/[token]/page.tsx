@@ -3,12 +3,12 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useSignerStatus, useUser, useAccount, AuthCard } from '@account-kit/react'
+import { getBlockDefinition } from '@/lib/block-registry'
 import LoadingScreen from '@/components/LoadingScreen'
 import {
   Shield,
-  Car,
-  Code,
   Users,
+  Package,
   CheckCircle,
   AlertCircle,
   Loader2,
@@ -16,14 +16,13 @@ import {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type InviteType = 'driver_dot' | 'developer_card' | 'general'
-
 interface InviteData {
   valid: boolean
   invite: {
     id: string
     status: string
-    type: InviteType
+    type: string
+    targetBlockType: string | null
     candidateEmail: string | null
     candidateName: string | null
     welcomeMessage: string | null
@@ -34,35 +33,6 @@ interface InviteData {
   invalidReason: 'expired' | 'completed' | 'cancelled' | null
 }
 
-// ─── Per-type config ─────────────────────────────────────────────────────────
-
-const TYPE_CONFIG = {
-  driver_dot: {
-    accent: 'from-teal-600 to-teal-700',
-    icon: <Car className="w-6 h-6" />,
-    label: 'DOT Application',
-    roleHint: 'driver',
-    postAuthPage: 'dot-application', // Maps to 'dotapp' PageType in main app
-    description: "Complete your DOT driver application with blockchain-verified credentials.",
-  },
-  developer_card: {
-    accent: 'from-indigo-600 to-violet-700',
-    icon: <Code className="w-6 h-6" />,
-    label: 'Career Card',
-    roleHint: 'developer',
-    postAuthPage: 'developer-profile', // Maps to 'resume' PageType in main app
-    description: "Set up your verified developer career card to showcase your skills.",
-  },
-  general: {
-    accent: 'from-slate-700 to-slate-800',
-    icon: <Users className="w-6 h-6" />,
-    label: 'Join StormChain',
-    roleHint: null, // User picks their role after login
-    postAuthPage: null,
-    description: "Create your StormChain account and choose your professional path.",
-  },
-} as const
-
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 export default function OnboardPage() {
@@ -70,17 +40,14 @@ export default function OnboardPage() {
   const router = useRouter()
   const token = params.token as string
 
-  // Invite data state
   const [loading, setLoading] = useState(true)
   const [inviteData, setInviteData] = useState<InviteData | null>(null)
   const [fetchError, setFetchError] = useState(false)
 
-  // Auth state from Alchemy
   const { isConnected, isInitializing } = useSignerStatus()
   const user = useUser()
   const account = useAccount({ type: 'LightAccount' })
 
-  // Track if we've already triggered post-auth flow
   const didRedirectRef = useRef(false)
   const [redirecting, setRedirecting] = useState(false)
 
@@ -99,7 +66,6 @@ export default function OnboardPage() {
         const data = await res.json()
         setInviteData(data)
 
-        // Store token in session for the main app to pick up
         sessionStorage.setItem('stormchain_invite_token', token)
       } catch {
         setFetchError(true)
@@ -113,19 +79,16 @@ export default function OnboardPage() {
 
   // ─── Handle post-authentication redirect ────────────────────────────────────
   useEffect(() => {
-    // Wait until we have invite data and auth is ready
     if (loading || isInitializing) return
     if (!inviteData?.valid) return
     if (!isConnected || !user || !account?.address) return
     if (didRedirectRef.current) return
 
-    // User is authenticated — set up their role and redirect
     didRedirectRef.current = true
     setRedirecting(true)
 
     async function setupAndRedirect() {
-      const type = inviteData!.invite.type || 'driver_dot'
-      const cfg = TYPE_CONFIG[type]
+      const targetBlockType = inviteData!.invite.targetBlockType
       const walletAddress = account!.address
 
       try {
@@ -136,35 +99,61 @@ export default function OnboardPage() {
           body: JSON.stringify({ walletAddress }),
         })
 
-        // 2. If we have a role hint (driver/developer), set it
-        if (cfg.roleHint) {
+        if (targetBlockType) {
+          // ── Block-targeted flow ─────────────────────────────────────────
+          // Set role to 'candidate' (universal — no more driver/developer assumption)
           await fetch('/api/user/set-role', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: 'candidate', walletAddress }),
+          })
+
+          // Install the target block on the new user's hub
+          await fetch('/api/hub/blocks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+            body: JSON.stringify({ blockType: targetBlockType }),
+          })
+
+          // Create minimal onboarding record so the hub doesn't show the onboarding form
+          await fetch('/api/hub/onboarding', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
             body: JSON.stringify({
-              role: cfg.roleHint,
-              walletAddress,
+              occupation: 'Invited via outreach',
+              seekingReason: `Completing ${getBlockDefinition(targetBlockType)?.label ?? 'block'}`,
             }),
           })
+
+          // Mark invite as in_progress
+          await fetch(`/api/invite/${token}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ walletAddress }),
+          }).catch(() => {})
+
+          // Redirect to the block's page via the onboard query param
+          const blockDef = getBlockDefinition(targetBlockType)
+          const pageRoute = blockDef?.pageRoute
+          const destination = pageRoute
+            ? `/?onboard=${pageRoute}&invite=${token}`
+            : `/?invite=${token}`
+          
+          router.push(destination)
+        } else {
+          // ── General flow ────────────────────────────────────────────────
+          // Mark invite as in_progress
+          await fetch(`/api/invite/${token}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ walletAddress }),
+          }).catch(() => {})
+
+          // Land on role selection → empty hub → onboarding form (existing flow)
+          router.push('/')
         }
-
-        // 3. Mark invite as in_progress
-        await fetch(`/api/invite/${token}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
-        }).catch(() => {})
-
-        // 4. Redirect to the appropriate page
-        // Use a query param so the main app knows to show the right view
-        const destination = cfg.postAuthPage
-          ? `/?onboard=${cfg.postAuthPage}&invite=${token}`
-          : '/'
-        
-        router.push(destination)
       } catch (err) {
         console.error('Onboard setup error:', err)
-        // Fallback: just go home
         router.push('/')
       }
     }
@@ -205,8 +194,6 @@ export default function OnboardPage() {
     )
   }
 
-  // ─── Redirecting state ──────────────────────────────────────────────────────
-
   if (redirecting) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
@@ -221,9 +208,18 @@ export default function OnboardPage() {
 
   // ─── Main render: invite info + auth card ───────────────────────────────────
 
-  const type = inviteData.invite.type || 'driver_dot'
-  const cfg = TYPE_CONFIG[type]
+  const targetBlockType = inviteData.invite.targetBlockType
+  const blockDef = targetBlockType ? getBlockDefinition(targetBlockType) : null
   const company = inviteData.company
+
+  const accentGradient = blockDef ? 'from-teal-600 to-teal-700' : 'from-slate-700 to-slate-800'
+  const icon = blockDef
+    ? <Package className="w-6 h-6" />
+    : <Users className="w-6 h-6" />
+  const label = blockDef?.label ?? 'Join StormChain'
+  const description = blockDef
+    ? `Complete your ${blockDef.label} with blockchain-verified credentials.`
+    : 'Create your StormChain account and set up your professional profile.'
 
   return (
     <div className="min-h-screen bg-gray-950">
@@ -240,22 +236,22 @@ export default function OnboardPage() {
 
       <main className="max-w-lg mx-auto px-4 py-10">
         {/* Context card */}
-        <div className={`rounded-2xl overflow-hidden border border-gray-800 shadow-xl mb-6`}>
-          <div className={`bg-gradient-to-br ${cfg.accent} px-6 py-5`}>
+        <div className="rounded-2xl overflow-hidden border border-gray-800 shadow-xl mb-6">
+          <div className={`bg-gradient-to-br ${accentGradient} px-6 py-5`}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center text-white">
-                {cfg.icon}
+                {icon}
               </div>
               <div>
                 <p className="text-white/60 text-xs font-medium uppercase tracking-wide">
                   {company?.name || 'Company'}
                 </p>
-                <p className="text-white font-semibold">{cfg.label}</p>
+                <p className="text-white font-semibold">{label}</p>
               </div>
             </div>
           </div>
           <div className="bg-gray-900 px-6 py-4">
-            <p className="text-gray-300 text-sm">{cfg.description}</p>
+            <p className="text-gray-300 text-sm">{description}</p>
           </div>
         </div>
 
@@ -268,7 +264,6 @@ export default function OnboardPage() {
             Enter your email to create your secure account. No password needed — we&apos;ll send you a verification code.
           </p>
 
-          {/* Show loading state while Alchemy initializes */}
           {isInitializing ? (
             <div className="py-8 text-center">
               <Loader2 className="w-8 h-8 text-teal-400 animate-spin mx-auto mb-3" />
@@ -280,7 +275,6 @@ export default function OnboardPage() {
             </div>
           )}
 
-          {/* Trust indicators */}
           <div className="mt-6 pt-4 border-t border-gray-800">
             <div className="flex items-center gap-4 text-xs text-gray-500">
               <div className="flex items-center gap-1.5">
@@ -295,7 +289,6 @@ export default function OnboardPage() {
           </div>
         </div>
 
-        {/* Already have an account? */}
         <p className="text-center text-gray-500 text-sm mt-6">
           Already have an account?{' '}
           <button

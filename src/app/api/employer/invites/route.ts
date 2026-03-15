@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getBlockDefinition } from '@/lib/block-registry'
 import crypto from 'crypto'
 
 /**
@@ -86,6 +87,7 @@ export async function GET(request: NextRequest) {
       .from('application_invites')
       .select(`
         id, token, candidate_email, candidate_name, status, type,
+        target_block_type,
         job_posting_id, view_count, expires_at, created_at, updated_at,
         used_at, driver_application_id, email_sent_at,
         job_postings(title),
@@ -118,7 +120,8 @@ export async function GET(request: NextRequest) {
         id: invite.id,
         token: invite.token,
         url: `${baseUrl}/apply/${invite.token}`,
-        type: (invite as any).type || 'driver_dot',
+        type: (invite as any).type || 'general',
+        targetBlockType: (invite as any).target_block_type || null,
         candidateEmail: invite.candidate_email,
         candidateName: invite.candidate_name,
         status: invite.status,
@@ -168,19 +171,25 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const {
-      type = 'driver_dot',
+      targetBlockType,
       candidateEmail,
       candidateName,
-      candidateUserId,   // set when employer picks an existing StormChain profile
+      candidateUserId,
       jobPostingId,
       welcomeMessage,
       expiresInDays = 30,
     } = body
 
-    const validTypes = ['driver_dot', 'developer_card', 'general']
-    if (!validTypes.includes(type)) {
-      return NextResponse.json({ error: 'Invalid invite type' }, { status: 400 })
+    // If a target block is specified, validate it exists in the registry
+    if (targetBlockType) {
+      const blockDef = getBlockDefinition(targetBlockType)
+      if (!blockDef) {
+        return NextResponse.json({ error: `Unknown block type: ${targetBlockType}` }, { status: 400 })
+      }
     }
+
+    // Derive type from presence of targetBlockType
+    const type = targetBlockType ? 'block' : 'general'
 
     // Validate job posting belongs to company (if provided)
     if (jobPostingId) {
@@ -208,6 +217,7 @@ export async function POST(request: NextRequest) {
         created_by_user_id: ctx.userId,
         token,
         type,
+        target_block_type: targetBlockType || null,
         candidate_email: candidateEmail || null,
         candidate_name: candidateName || null,
         candidate_user_id: candidateUserId || null,
@@ -232,6 +242,7 @@ export async function POST(request: NextRequest) {
         token: invite.token,
         url: `${baseUrl}/apply/${invite.token}`,
         type: (invite as any).type || type,
+        targetBlockType: (invite as any).target_block_type || null,
         candidateEmail: invite.candidate_email,
         candidateName: invite.candidate_name,
         status: invite.status,

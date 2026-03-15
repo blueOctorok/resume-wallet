@@ -36,8 +36,8 @@ export async function GET(request: NextRequest) {
         .eq('user_id', user.id)
         .maybeSingle(),
       supabase
-        .from('driver_profiles')
-        .select('first_name, last_name, avatar_url')
+        .from('user_profiles')
+        .select('first_name, last_name, avatar_url, headline')
         .eq('user_id', user.id)
         .maybeSingle(),
     ])

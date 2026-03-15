@@ -3,16 +3,12 @@
 import { useState, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
-  Car,
-  Code,
   Clock,
   Loader2,
   FileText,
-  ClipboardCheck,
   ArrowRight,
   CheckCircle,
   Send,
-  Lock,
   User,
 } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
@@ -26,7 +22,6 @@ const PIPELINE_COLUMNS = [
   { status: 'rejected',     label: 'Rejected',     color: 'gray'   },
 ] as const
 
-// Special job title that indicates a talent pool entry
 const TALENT_POOL_TITLE = '— Talent Pool —'
 
 type PipelineStatus = typeof PIPELINE_COLUMNS[number]['status']
@@ -41,18 +36,8 @@ export interface KanbanApplicant {
   avatarUrl?: string | null
   jobTitle: string
   jobPostingId: string
-  // Credential fields for richer cards
-  cdlClass: string | null
-  experienceYears: number | null
   hasResume: boolean
   resumeVerified: boolean
-  hasDriverApp: boolean
-  // Live MVR state
-  hasMvr: boolean
-  mvrStatus: string | null
-  // true = this company paid for the MVR (private); false = candidate self-ordered
-  mvrOrderedByThisCompany: boolean
-  hasBgcheckConsent: boolean
 }
 
 interface ApplicantKanbanProps {
@@ -63,10 +48,7 @@ interface ApplicantKanbanProps {
   isUpdating?: string | null
 }
 
-// Tracks quick-request state per applicant: null | 'loading' | 'sent' | 'pending'
 type RequestState = 'loading' | 'sent' | 'pending'
-
-// ─── helpers ────────────────────────────────────────────────────────────────
 
 function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
@@ -77,7 +59,6 @@ function getDaysInStage(appliedAt: string) {
     (Date.now() - new Date(appliedAt).getTime()) / (1000 * 60 * 60 * 24)
   )
   const label = days === 0 ? 'Today' : days === 1 ? '1d' : `${days}d`
-  // urgency levels: green → normal → yellow → red
   const urgency =
     days === 0 ? 'fresh'
     : days <= 3  ? 'normal'
@@ -93,7 +74,6 @@ const URGENCY_CLASS: Record<string, string> = {
   stale:  'text-red-400',
 }
 
-// Per-column style tokens
 const COL_STYLES: Record<string, {
   bar: string; badge: string; drop: string; advance: string
 }> = {
@@ -104,8 +84,6 @@ const COL_STYLES: Record<string, {
   green:  { bar: 'bg-green-500',  badge: 'bg-green-500/20 text-green-400',  drop: 'bg-green-500/8 border-green-500/40',  advance: 'bg-green-500/15 text-green-400 hover:bg-green-500/25' },
   gray:   { bar: 'bg-gray-500',   badge: 'bg-gray-500/20 text-gray-400',   drop: 'bg-gray-500/8 border-gray-500/40',   advance: 'bg-gray-500/15 text-gray-400 hover:bg-gray-500/25' },
 }
-
-// ─── component ──────────────────────────────────────────────────────────────
 
 export default function ApplicantKanban({
   applicants,
@@ -120,7 +98,6 @@ export default function ApplicantKanban({
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
 
-  // key: `${applicantUserId}-resume` or `${applicantUserId}-dot`
   const [requestStates, setRequestStates] = useState<Map<string, RequestState>>(new Map())
 
   const setRequestState = (key: string, state: RequestState | null) => {
@@ -132,8 +109,6 @@ export default function ApplicantKanban({
     })
   }
 
-  // Sends a quick request from the kanban card without opening the career card modal.
-  // Uses the same API as the career card modal — 409 means a pending request already exists.
   const sendQuickRequest = useCallback(async (
     e: React.MouseEvent,
     applicantUserId: string,
@@ -155,11 +130,9 @@ export default function ApplicantKanban({
       })
 
       if (res.status === 409) {
-        // Already a pending request of this type — show pending state
         setRequestState(key, 'pending')
       } else if (res.ok) {
         setRequestState(key, 'sent')
-        // Reset to neutral after 3s so the chip is usable again if needed
         setTimeout(() => setRequestState(key, null), 3000)
       } else {
         setRequestState(key, null)
@@ -174,18 +147,15 @@ export default function ApplicantKanban({
     applicants: applicants.filter(a => a.status === col.status),
   }))
 
-  // Move to the next stage without dragging
   const handleAdvance = async (e: React.MouseEvent, applicant: KanbanApplicant) => {
     e.stopPropagation()
     const colIndex = PIPELINE_COLUMNS.findIndex(c => c.status === applicant.status)
     const next = PIPELINE_COLUMNS[colIndex + 1]
-    // Don't advance into "rejected" via the quick button
     if (next && next.status !== 'rejected') {
       await onStatusChange(applicant.applicationId, next.status)
     }
   }
 
-  // Drag handlers
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedId(id)
     e.dataTransfer.effectAllowed = 'move'
@@ -206,7 +176,6 @@ export default function ApplicantKanban({
     setDragOverColumn(null)
   }
 
-  // Shared card base
   const cardBase = isDark
     ? 'bg-gray-800 border-gray-700 hover:border-gray-500'
     : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-md'
@@ -217,7 +186,6 @@ export default function ApplicantKanban({
         const styles = COL_STYLES[column.color]
         const isDropTarget = dragOverColumn === column.status && draggedId !== null
 
-        // Average days in stage
         const avgDays = column.applicants.length > 0
           ? Math.round(
               column.applicants.reduce((sum, a) =>
@@ -282,10 +250,8 @@ export default function ApplicantKanban({
                   const isDragging    = draggedId === applicant.applicationId
                   const isUpdatingNow = isUpdating === applicant.applicationId
                   const { label: timeLabel, urgency } = getDaysInStage(applicant.appliedAt)
-                  const isDriver   = applicant.applicantRole === 'driver'
                   const initials   = getInitials(applicant.applicantName)
                   const colIndex   = PIPELINE_COLUMNS.findIndex(c => c.status === column.status)
-                  // Can advance if not already at hired or rejected
                   const canAdvance = colIndex >= 0 && colIndex < PIPELINE_COLUMNS.length - 2
 
                   return (
@@ -301,7 +267,6 @@ export default function ApplicantKanban({
                     >
                       {/* Name row */}
                       <div className='flex items-center gap-2 mb-2'>
-                        {/* Avatar */}
                         {isUpdatingNow
                           ? <div className='w-8 h-8 rounded-lg flex items-center justify-center bg-gray-200 dark:bg-gray-700 flex-shrink-0'>
                               <Loader2 className='w-3.5 h-3.5 animate-spin text-gray-400' />
@@ -310,7 +275,7 @@ export default function ApplicantKanban({
                               name={applicant.applicantName}
                               avatarUrl={applicant.avatarUrl}
                               size='sm'
-                              color={isDriver ? 'teal' : 'indigo'}
+                              color='teal'
                             />
                         }
                         <div className='flex-1 min-w-0'>
@@ -319,25 +284,6 @@ export default function ApplicantKanban({
                           }`}>
                             {applicant.applicantName}
                           </p>
-                          {/* Role + CDL + exp */}
-                          <div className='flex items-center gap-1 mt-0.5 flex-wrap'>
-                            {isDriver ? (
-                              <span className='flex items-center gap-0.5 text-xs text-teal-500'>
-                                <Car className='w-2.5 h-2.5' />
-                                {applicant.cdlClass ? `CDL-${applicant.cdlClass}` : 'Driver'}
-                              </span>
-                            ) : (
-                              <span className='flex items-center gap-0.5 text-xs text-indigo-500'>
-                                <Code className='w-2.5 h-2.5' />
-                                Dev
-                              </span>
-                            )}
-                            {applicant.experienceYears !== null && (
-                              <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                                · {applicant.experienceYears}yr
-                              </span>
-                            )}
-                          </div>
                         </div>
                       </div>
 
@@ -354,9 +300,8 @@ export default function ApplicantKanban({
                         </p>
                       )}
 
-                      {/* Credential status chips + request chips */}
+                      {/* Universal credential chips: resume only */}
                       <div className='flex flex-wrap items-center gap-1 mb-2.5'>
-                        {/* Resume: show status if present, request chip if missing */}
                         {applicant.hasResume ? (
                           <span className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md ${
                             applicant.resumeVerified
@@ -376,37 +321,6 @@ export default function ApplicantKanban({
                             state={requestStates.get(`${applicant.applicantUserId}-resume`) ?? null}
                             isDark={isDark}
                             onClick={e => sendQuickRequest(e, applicant.applicantUserId, 'document_upload', 'resume')}
-                          />
-                        )}
-
-                        {/* DOT App: show status chip if present, request chip if missing (drivers only) */}
-                        {isDriver && (
-                          applicant.hasDriverApp ? (
-                            <span className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md ${
-                              isDark ? 'bg-teal-500/15 text-teal-400' : 'bg-teal-50 text-teal-600'
-                            }`}>
-                              <ClipboardCheck className='w-2.5 h-2.5' />
-                              DOT App
-                            </span>
-                          ) : (
-                            <QuickRequestChip
-                              label='DOT App'
-                              icon={<ClipboardCheck className='w-2.5 h-2.5' />}
-                              state={requestStates.get(`${applicant.applicantUserId}-dot_application`) ?? null}
-                              isDark={isDark}
-                              onClick={e => sendQuickRequest(e, applicant.applicantUserId, 'profile_completion', 'dot_application')}
-                            />
-                          )
-                        )}
-
-                        {/* MVR chip — only when disclosure is signed or MVR ordered */}
-                        {(applicant.hasMvr || applicant.hasBgcheckConsent) && (
-                          <MvrKanbanChip
-                            hasMvr={applicant.hasMvr}
-                            mvrStatus={applicant.mvrStatus}
-                            mvrOrderedByThisCompany={applicant.mvrOrderedByThisCompany}
-                            hasBgcheckConsent={applicant.hasBgcheckConsent}
-                            isDark={isDark}
                           />
                         )}
                       </div>
@@ -443,74 +357,7 @@ export default function ApplicantKanban({
   )
 }
 
-// ─── MvrKanbanChip ──────────────────────────────────────────────────────────
-// Read-only MVR status chip shown on kanban cards when the disclosure is signed
-// or an MVR order exists. Gives the employer an at-a-glance view without
-// requiring them to open the full career card.
-
-function MvrKanbanChip({
-  hasMvr,
-  mvrStatus,
-  mvrOrderedByThisCompany,
-  hasBgcheckConsent,
-  isDark,
-}: {
-  hasMvr: boolean
-  mvrStatus: string | null
-  mvrOrderedByThisCompany: boolean
-  hasBgcheckConsent: boolean
-  isDark: boolean
-}) {
-  if (!hasMvr) {
-    // Disclosure signed but no MVR ordered yet
-    return (
-      <span className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md ${
-        isDark ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-600'
-      }`}>
-        <Car className='w-2.5 h-2.5' />
-        Disclosure ✓
-      </span>
-    )
-  }
-
-  const normalized = mvrStatus?.toLowerCase() ?? ''
-  // Lock icon indicates this company paid for the MVR (private, FCRA-isolated)
-  const PrivacyIcon = mvrOrderedByThisCompany ? Lock : undefined
-
-  if (normalized === 'pending' || normalized === 'processing' || normalized === 'submitted') {
-    return (
-      <span className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md ${
-        isDark ? 'bg-yellow-500/15 text-yellow-400' : 'bg-yellow-50 text-yellow-700'
-      }`}>
-        {PrivacyIcon ? <PrivacyIcon className='w-2.5 h-2.5' /> : <Clock className='w-2.5 h-2.5' />}
-        MVR Processing
-      </span>
-    )
-  }
-
-  if (normalized === 'complete' || normalized === 'completed' || normalized === 'returned') {
-    return (
-      <span className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md bg-green-500/15 text-green-500`}>
-        {PrivacyIcon ? <PrivacyIcon className='w-2.5 h-2.5' /> : <CheckCircle className='w-2.5 h-2.5' />}
-        MVR Complete
-      </span>
-    )
-  }
-
-  return (
-    <span className={`flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-md ${
-      isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
-    }`}>
-      {PrivacyIcon ? <PrivacyIcon className='w-2.5 h-2.5' /> : <Car className='w-2.5 h-2.5' />}
-      MVR
-    </span>
-  )
-}
-
 // ─── QuickRequestChip ───────────────────────────────────────────────────────
-// Small inline chip that an employer clicks to request a resume or DOT app
-// directly from a kanban card, without opening the full career card modal.
-// States: null = requestable, loading = in-flight, sent = success, pending = already pending
 
 function QuickRequestChip({
   label,
@@ -556,7 +403,6 @@ function QuickRequestChip({
     )
   }
 
-  // Default: show a clickable request chip
   return (
     <button
       onClick={onClick}

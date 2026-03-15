@@ -29,7 +29,7 @@ import {
 
 interface EmployerVerificationSectionProps {
   userAddress: string | null
-  onInitiateVerification?: (driverId: string, employmentId: string) => void
+  onInitiateVerification?: (candidateId: string, employmentId: string) => void
   isCollapsed?: boolean
   onToggle?: () => void
 }
@@ -237,7 +237,7 @@ export default function EmployerVerificationSection({
           <p className={`text-sm ${
             theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
           }`}>
-            Set up your company profile to verify driver employment history.
+            Set up your company profile to verify candidate employment history.
           </p>
         )}
       </div>
@@ -271,7 +271,7 @@ export default function EmployerVerificationSection({
                 <p className={`text-sm ${
                   theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
                 }`}>
-                  Verify driver employment history with previous employers
+                  Verify candidate employment history with previous employers
                 </p>
               )}
             </div>
@@ -349,7 +349,7 @@ export default function EmployerVerificationSection({
                     <p className={`font-medium truncate ${
                       theme === 'dark' ? 'text-white' : 'text-gray-900'
                     }`}>
-                      {(req as any).driverName || 'Unknown Driver'}
+                      {(req as any).candidateName || (req as any).driverName || 'Unknown Candidate'}
                     </p>
                     <p className={`text-sm truncate ${
                       theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
@@ -379,7 +379,7 @@ export default function EmployerVerificationSection({
             <ClipboardCheck className="w-12 h-12 mx-auto mb-3 opacity-50" />
             <p>No verification requests yet</p>
             <p className="text-sm mt-1">
-              Start by reviewing a driver's profile and verifying their employment
+              Start by reviewing a candidate's profile and verifying their employment
             </p>
           </div>
         ) : null}
@@ -527,7 +527,7 @@ function EmployerVerificationDetailModal({
               <h4 className={`text-sm font-medium mb-2 ${
                 theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
               }`}>
-                Driver's Claimed Employment
+                Candidate's Claimed Employment
               </h4>
               <div className={`rounded-xl p-4 ${
                 theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
@@ -696,24 +696,31 @@ function EmployerVerificationDetailModal({
                       theme={theme}
                       goodValue="yes"
                     />
-                    <AnswerRow
-                      label="Had accident"
-                      value={request.answers.hadAccident}
-                      theme={theme}
-                      goodValue="no"
-                    />
-                    <AnswerRow
-                      label="Failed Clearinghouse test"
-                      value={request.answers.failedClearinghouseTest}
-                      theme={theme}
-                      goodValue="no"
-                    />
-                    <AnswerRow
-                      label="Random drug test/refused"
-                      value={request.answers.randomDrugTestOrRefused}
-                      theme={theme}
-                      goodValue="no"
-                    />
+                    {/* DOT-specific fields rendered only when present */}
+                    {request.answers.hadAccident !== undefined && (
+                      <AnswerRow
+                        label="Had accident"
+                        value={request.answers.hadAccident}
+                        theme={theme}
+                        goodValue="no"
+                      />
+                    )}
+                    {request.answers.failedClearinghouseTest !== undefined && (
+                      <AnswerRow
+                        label="Failed Clearinghouse test"
+                        value={request.answers.failedClearinghouseTest}
+                        theme={theme}
+                        goodValue="no"
+                      />
+                    )}
+                    {request.answers.randomDrugTestOrRefused !== undefined && (
+                      <AnswerRow
+                        label="Random drug test/refused"
+                        value={request.answers.randomDrugTestOrRefused}
+                        theme={theme}
+                        goodValue="no"
+                      />
+                    )}
                   </div>
                   {request.answers.additionalNotes && (
                     <div className="mt-3 pt-3 border-t border-gray-700">

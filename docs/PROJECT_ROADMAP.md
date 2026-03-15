@@ -21,6 +21,10 @@ The career card becomes a pure read-only projection of the hub.
 | iPhone Home Screen Hub | ✅ Done | 2-col tile grid with jiggle-mode editing, long-press, status badges |
 | Premium Glass Tiles | ✅ Done | Glassmorphic tiles with per-block colors, illustrations, Atropos 3D tilt |
 | Hub layout pass | ✅ Done | Career Card banner + on-chain verification bar, removed old stats |
+| Employer Composable Hub Phase 1 | ✅ Done | Hybrid employer hub: permanent core + composable industry blocks, generic company setup |
+| Employer Composable Hub Phase 2 | ✅ Done | Role-agnostic polish: data-driven driver detection, 3-tier role badges, block-conditional quick actions, legacy cleanup |
+| Generic Block-Based Outreach | ✅ Done | Outreach reworked from hardcoded invite types to block-aware system with deep-linking |
+| Role-Agnostic Hub Refactor | ✅ Done | Unified `user_profiles` table, stripped all driver/dev assumptions from permanent hub UI, block-conditional data enrichment API |
 
 ---
 

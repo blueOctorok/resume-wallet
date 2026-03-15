@@ -1,7 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { BLOCK_DEFINITIONS, BLOCK_CATEGORIES, getBlockDefinition } from '@/lib/block-registry'
+import { EMPLOYER_BLOCK_DEFINITIONS } from '@/lib/employer-block-registry'
+import { useEmployerInstalledBlocks } from '@/stores/employer-blocks-store'
 import QRCode from 'qrcode'
 import {
   Link2,
@@ -15,8 +18,6 @@ import {
   Loader2,
   Mail,
   Send,
-  Car,
-  Code,
   Users,
   QrCode,
   X,
@@ -25,6 +26,8 @@ import {
   Search,
   UserCheck,
   MapPin,
+  Package,
+  ArrowLeft,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -40,14 +43,14 @@ interface ProfileResult {
   has_resume: boolean
 }
 
-type InviteType = 'driver_dot' | 'developer_card' | 'general'
 type InviteStatus = 'pending' | 'viewed' | 'in_progress' | 'completed' | 'expired' | 'cancelled'
 
 interface Invite {
   id: string
   token: string
   url: string
-  type: InviteType
+  type: string
+  targetBlockType: string | null
   candidateEmail: string | null
   candidateName: string | null
   status: InviteStatus
@@ -75,33 +78,6 @@ interface CandidateOutreachProps {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const TYPE_OPTIONS: { value: InviteType; label: string; icon: React.ReactNode; description: string; color: string; badge: string }[] = [
-  {
-    value: 'driver_dot',
-    label: 'Driver DOT App',
-    icon: <Car className="w-4 h-4" />,
-    description: 'Invite a driver to complete a DOT application',
-    color: 'border-teal-500 bg-teal-500/10 text-teal-400',
-    badge: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
-  },
-  {
-    value: 'developer_card',
-    label: 'Developer Card',
-    icon: <Code className="w-4 h-4" />,
-    description: 'Invite a developer to set up their career card',
-    color: 'border-indigo-500 bg-indigo-500/10 text-indigo-400',
-    badge: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
-  },
-  {
-    value: 'general',
-    label: 'General Onboarding',
-    icon: <Users className="w-4 h-4" />,
-    description: 'Invite anyone to join StormChain and pick their role',
-    color: 'border-slate-500 bg-slate-500/10 text-slate-300',
-    badge: 'bg-slate-500/20 text-slate-300 border-slate-500/30',
-  },
-]
-
 const STATUS_CONFIG: Record<InviteStatus, { label: string; icon: React.ReactNode; classes: string }> = {
   pending: { label: 'Pending', icon: <Clock className="w-3 h-3" />, classes: 'bg-amber-500/15 text-amber-400 border-amber-500/30' },
   viewed: { label: 'Viewed', icon: <Eye className="w-3 h-3" />, classes: 'bg-blue-500/15 text-blue-400 border-blue-500/30' },
@@ -113,12 +89,20 @@ const STATUS_CONFIG: Record<InviteStatus, { label: string; icon: React.ReactNode
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function TypeBadge({ type }: { type: InviteType }) {
-  const cfg = TYPE_OPTIONS.find(o => o.value === type)!
+function TypeBadge({ targetBlockType }: { targetBlockType: string | null }) {
+  if (!targetBlockType) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border bg-slate-500/20 text-slate-300 border-slate-500/30">
+        <Users className="w-3 h-3" />
+        General
+      </span>
+    )
+  }
+  const block = getBlockDefinition(targetBlockType)
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${cfg.badge}`}>
-      {cfg.icon}
-      {cfg.label}
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border bg-teal-500/20 text-teal-300 border-teal-500/30">
+      <Package className="w-3 h-3" />
+      {block?.label ?? targetBlockType}
     </span>
   )
 }
@@ -191,15 +175,11 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
   const [emailInput, setEmailInput] = useState('')
   const [showAll, setShowAll] = useState(false)
 
-  const [form, setForm] = useState<{
-    type: InviteType
-    candidateEmail: string
-    candidateName: string
-    candidateUserId: string   // set when employer selects an existing profile
-    jobPostingId: string
-    welcomeMessage: string
-  }>({
-    type: 'driver_dot',
+  // Two-step type picker: "general" | "block" (then pick which block)
+  const [outreachKind, setOutreachKind] = useState<'general' | 'block'>('general')
+  const [selectedBlockType, setSelectedBlockType] = useState<string | null>(null)
+
+  const [form, setForm] = useState({
     candidateEmail: '',
     candidateName: '',
     candidateUserId: '',
@@ -215,6 +195,41 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
   const [showProfileDropdown, setShowProfileDropdown] = useState(false)
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const profileSearchRef = useRef<HTMLDivElement>(null)
+
+  // Employer installed blocks — used to filter candidate blocks by relevant categories
+  const employerInstalledBlocks = useEmployerInstalledBlocks()
+
+  /**
+   * Filter candidate blocks to only categories the employer has installed blocks for.
+   * e.g. employer has DOT Compliance (drivers category) → show driver candidate blocks.
+   * If no employer blocks are installed, show ALL candidate blocks (no filtering).
+   */
+  const relevantCandidateBlocks = useMemo(() => {
+    if (employerInstalledBlocks.length === 0) return BLOCK_DEFINITIONS
+
+    const employerCategories = new Set<string>()
+    for (const installedBlock of employerInstalledBlocks) {
+      const def = EMPLOYER_BLOCK_DEFINITIONS.find(b => b.id === installedBlock.blockType)
+      if (def) employerCategories.add(def.categoryId)
+    }
+    // Always include general candidate blocks
+    employerCategories.add('general')
+
+    return BLOCK_DEFINITIONS.filter(b => employerCategories.has(b.categoryId))
+  }, [employerInstalledBlocks])
+
+  // Group relevant candidate blocks by category for the picker UI
+  const blocksByCategory = useMemo(() => {
+    const map = new Map<string, typeof BLOCK_DEFINITIONS>()
+    for (const block of relevantCandidateBlocks) {
+      const existing = map.get(block.categoryId) ?? []
+      existing.push(block)
+      map.set(block.categoryId, existing)
+    }
+    return BLOCK_CATEGORIES
+      .filter(cat => map.has(cat.id))
+      .map(cat => ({ category: cat, blocks: map.get(cat.id)! }))
+  }, [relevantCandidateBlocks])
 
   // ── Data fetching ──────────────────────────────────────────────────────────
 
@@ -257,7 +272,6 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
 
   // ── Profile search autocomplete ────────────────────────────────────────────
 
-  // Debounced search: fires 300 ms after the user stops typing
   useEffect(() => {
     if (searchTimeout.current) clearTimeout(searchTimeout.current)
 
@@ -277,7 +291,6 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
         )
         if (res.ok) {
           const { candidates } = await res.json()
-          // API returns camelCase; normalize to ProfileResult (snake_case) so keys and display work
           const normalized = (candidates ?? []).map((c: { userId?: string; user_id?: string; name?: string; full_name?: string; email?: string; city?: string; state?: string; location?: string; cdlClass?: string; cdl_class?: string; hasDriverApp?: boolean; has_resume?: boolean; hasResume?: boolean }) => ({
             user_id: c.userId ?? c.user_id ?? '',
             full_name: c.name ?? c.full_name ?? null,
@@ -303,7 +316,6 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
     }
   }, [profileQuery, walletAddress])
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (profileSearchRef.current && !profileSearchRef.current.contains(e.target as Node)) {
@@ -340,7 +352,9 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
   // ── Actions ────────────────────────────────────────────────────────────────
 
   const resetForm = () => {
-    setForm({ type: 'driver_dot', candidateEmail: '', candidateName: '', candidateUserId: '', jobPostingId: '', welcomeMessage: '' })
+    setForm({ candidateEmail: '', candidateName: '', candidateUserId: '', jobPostingId: '', welcomeMessage: '' })
+    setOutreachKind('general')
+    setSelectedBlockType(null)
     setSelectedProfile(null)
     setProfileQuery('')
     setProfileResults([])
@@ -350,11 +364,13 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
     setCreating(true)
     setError(null)
     try {
+      const targetBlockType = outreachKind === 'block' ? selectedBlockType : null
+
       const res = await fetch('/api/employer/invites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
         body: JSON.stringify({
-          type: form.type,
+          targetBlockType,
           candidateEmail: form.candidateEmail || undefined,
           candidateName: form.candidateName || undefined,
           candidateUserId: form.candidateUserId || undefined,
@@ -435,7 +451,7 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
 
   const activeInvites = invites.filter(i => !['cancelled', 'completed'].includes(i.status))
   const displayed = showAll ? invites : invites.slice(0, 6)
-  const isDriver = form.type === 'driver_dot'
+  const canSubmit = outreachKind === 'general' || selectedBlockType !== null
 
   // ── Shared styling shortcuts ───────────────────────────────────────────────
   const card = theme === 'dark'
@@ -468,7 +484,7 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
               {!isCollapsed && (
                 <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
                   {activeInvites.length > 0 ? `${activeInvites.length} active` : 'No active invites'}
-                  {' · '}Send invite links to drivers, developers, or anyone
+                  {' · '}Send invite links to candidates
                 </p>
               )}
             </div>
@@ -487,7 +503,6 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
           )}
         </div>
 
-        {/* Body — hidden when collapsed */}
         {/* Create form */}
         {!isCollapsed && showForm && (
           <div className={`px-6 py-5 border-b ${theme === 'dark' ? 'border-gray-700 bg-gray-900/40' : 'border-gray-200 bg-gray-50/80'}`}>
@@ -503,33 +518,101 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
               </button>
             </div>
 
-            {/* Type picker — always visible first */}
+            {/* Step 1: Choose outreach kind */}
             <div className="mb-4">
-              <p className={label}>Outreach type *</p>
-              <div className="grid grid-cols-3 gap-2">
-                {TYPE_OPTIONS.map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setForm(f => ({ ...f, type: opt.value }))}
-                    className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center text-xs font-medium transition-all ${
-                      form.type === opt.value
-                        ? opt.color
-                        : theme === 'dark'
-                          ? 'border-gray-600 text-gray-400 hover:border-gray-500'
-                          : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                    }`}
-                  >
-                    {opt.icon}
-                    <span>{opt.label}</span>
-                  </button>
-                ))}
+              <p className={label}>What kind of outreach? *</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => { setOutreachKind('general'); setSelectedBlockType(null) }}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center text-xs font-medium transition-all ${
+                    outreachKind === 'general'
+                      ? 'border-slate-500 bg-slate-500/10 text-slate-300'
+                      : theme === 'dark'
+                        ? 'border-gray-600 text-gray-400 hover:border-gray-500'
+                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                  <span>General Onboarding</span>
+                </button>
+                <button
+                  onClick={() => setOutreachKind('block')}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center text-xs font-medium transition-all ${
+                    outreachKind === 'block'
+                      ? 'border-teal-500 bg-teal-500/10 text-teal-400'
+                      : theme === 'dark'
+                        ? 'border-gray-600 text-gray-400 hover:border-gray-500'
+                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                  }`}
+                >
+                  <Package className="w-4 h-4" />
+                  <span>Request Specific Block</span>
+                </button>
               </div>
               <p className={`text-xs mt-1.5 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                {TYPE_OPTIONS.find(o => o.value === form.type)?.description}
+                {outreachKind === 'general'
+                  ? 'Invite anyone to join StormChain and set up their profile'
+                  : 'Invite a candidate to complete a specific block (DOT App, Resume, etc.)'}
               </p>
             </div>
 
-            {/* ── Profile search (links invite to an existing StormChain account) ── */}
+            {/* Step 2: Block picker (only when outreachKind === 'block') */}
+            {outreachKind === 'block' && (
+              <div className="mb-4">
+                <p className={label}>Which block should they complete? *</p>
+                {selectedBlockType ? (
+                  // Show selected block with a "change" button
+                  <SelectedBlockPill
+                    blockType={selectedBlockType}
+                    theme={theme}
+                    onClear={() => setSelectedBlockType(null)}
+                  />
+                ) : (
+                  <div className={`rounded-xl border overflow-hidden ${
+                    theme === 'dark' ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-white'
+                  }`}>
+                    <div className="max-h-56 overflow-y-auto">
+                      {blocksByCategory.map(({ category, blocks }) => (
+                        <div key={category.id}>
+                          <div className={`px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider sticky top-0 z-10 ${
+                            theme === 'dark' ? 'bg-gray-800 text-gray-500 border-b border-gray-700' : 'bg-gray-50 text-gray-400 border-b border-gray-200'
+                          }`}>
+                            {category.label}
+                          </div>
+                          {blocks.map(block => (
+                            <button
+                              key={block.id}
+                              onClick={() => setSelectedBlockType(block.id)}
+                              className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
+                                theme === 'dark'
+                                  ? 'hover:bg-gray-700/50 border-b border-gray-700/50'
+                                  : 'hover:bg-gray-50 border-b border-gray-100'
+                              }`}
+                            >
+                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                theme === 'dark' ? 'bg-teal-900/40' : 'bg-teal-100'
+                              }`}>
+                                <Package className="w-3.5 h-3.5 text-teal-500" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                                  {block.label}
+                                </p>
+                                <p className={`text-xs truncate ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                                  {block.description}
+                                </p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Profile search */}
             <div className="mb-3" ref={profileSearchRef}>
               <label className={label}>
                 Search existing StormChain profiles
@@ -539,7 +622,6 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
               </label>
 
               {selectedProfile ? (
-                // Connected profile badge
                 <div className={`flex items-center justify-between px-3 py-2 rounded-lg border ${
                   theme === 'dark'
                     ? 'bg-teal-900/30 border-teal-700/50'
@@ -567,7 +649,6 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
                   </button>
                 </div>
               ) : (
-                // Search input
                 <div className="relative">
                   <div className="relative">
                     <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none ${
@@ -644,7 +725,7 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
               )}
             </div>
 
-            {/* ── Manual name/email (always visible; pre-filled when profile selected) ── */}
+            {/* Manual name/email */}
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
                 <label className={label}>
@@ -674,8 +755,8 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
               </div>
             </div>
 
-            {/* Only show job picker for driver_dot invites */}
-            {isDriver && jobs.length > 0 && (
+            {/* Job picker — always available */}
+            {jobs.length > 0 && (
               <div className="mb-3">
                 <label className={label}>Link to job posting (optional)</label>
                 <select
@@ -709,7 +790,7 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
             <div className="flex gap-2">
               <button
                 onClick={handleCreate}
-                disabled={creating}
+                disabled={creating || !canSubmit}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-medium text-sm transition-colors disabled:opacity-50"
               >
                 {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
@@ -794,6 +875,46 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
   )
 }
 
+// ─── Selected block pill ──────────────────────────────────────────────────────
+
+function SelectedBlockPill({ blockType, theme, onClear }: { blockType: string; theme: string; onClear: () => void }) {
+  const block = getBlockDefinition(blockType)
+  if (!block) return null
+
+  return (
+    <div className={`flex items-center justify-between px-3 py-2.5 rounded-xl border ${
+      theme === 'dark'
+        ? 'bg-teal-900/30 border-teal-700/50'
+        : 'bg-teal-50 border-teal-200'
+    }`}>
+      <div className="flex items-center gap-2.5">
+        <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+          theme === 'dark' ? 'bg-teal-900/50' : 'bg-teal-100'
+        }`}>
+          <Package className="w-3.5 h-3.5 text-teal-500" />
+        </div>
+        <div>
+          <p className={`text-sm font-medium ${theme === 'dark' ? 'text-teal-300' : 'text-teal-700'}`}>
+            {block.label}
+          </p>
+          <p className={`text-xs ${theme === 'dark' ? 'text-teal-500/80' : 'text-teal-500'}`}>
+            {block.description}
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={onClear}
+        className={`text-xs font-medium flex items-center gap-1 ${
+          theme === 'dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
+        }`}
+      >
+        <ArrowLeft className="w-3 h-3" />
+        Change
+      </button>
+    </div>
+  )
+}
+
 // ─── Invite row ───────────────────────────────────────────────────────────────
 
 interface InviteRowProps {
@@ -851,7 +972,7 @@ function InviteRow({
         {/* Left: info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center flex-wrap gap-1.5 mb-1.5">
-            <TypeBadge type={invite.type} />
+            <TypeBadge targetBlockType={invite.targetBlockType} />
             <StatusBadge status={invite.status} />
             {invite.jobTitle && (
               <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
@@ -923,7 +1044,6 @@ function InviteRow({
 
         {/* Right: actions */}
         <div className="flex items-center gap-1 flex-shrink-0">
-          {/* Copy link */}
           <button
             onClick={() => onCopy(invite.url, invite.id)}
             title="Copy invite link"
@@ -936,7 +1056,6 @@ function InviteRow({
             {isCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
           </button>
 
-          {/* QR code */}
           <button
             onClick={onShowQr}
             title="Show QR code"
@@ -947,7 +1066,6 @@ function InviteRow({
             <QrCode className="w-4 h-4" />
           </button>
 
-          {/* Send / re-send email */}
           {canAct && (
             <button
               onClick={() => {
@@ -981,7 +1099,6 @@ function InviteRow({
             </button>
           )}
 
-          {/* Cancel */}
           {canAct && (
             <button
               onClick={() => onCancel(invite.id)}

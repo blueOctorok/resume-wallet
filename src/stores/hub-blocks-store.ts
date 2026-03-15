@@ -109,8 +109,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
         })
       )
 
-      // Profile comes from the same endpoint (driver_profiles row)
-      const rawProfile = data.profile as { first_name: string; last_name: string; avatar_url: string | null } | null
+      const rawProfile = data.profile as { first_name: string; last_name: string; avatar_url: string | null; headline?: string | null } | null
       const userProfile: HubUserProfile | null = rawProfile
         ? {
             firstName: rawProfile.first_name ?? '',

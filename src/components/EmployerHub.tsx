@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import * as LucideIcons from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh'
 import EmployerVerificationSection from './verification/EmployerVerificationSection'
@@ -11,12 +12,18 @@ import JobPostingsSection from './employer/JobPostingsSection'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import CareerCardModal from '@/components/employer/CareerCardModal'
 import MessagingButton from '@/components/messaging/MessagingButton'
+import EmployerBlockPickerModal from '@/components/employer/EmployerBlockPickerModal'
 import { useUIStore } from '@/stores'
+import { useAuthStore } from '@/stores'
+import {
+  useEmployerBlocksStore,
+  useEmployerInstalledBlocks,
+  useEmployerIsEditMode,
+} from '@/stores/employer-blocks-store'
 import {
   Briefcase,
   Users,
   FileText,
-  Car,
   Plus,
   CheckCircle,
   Clock,
@@ -38,13 +45,15 @@ import {
   Mail,
   Shield,
   Search,
-  ClipboardCheck,
-  Code,
   Trash2,
   RefreshCw,
   Link2,
+  Pencil,
+  Package,
+  CreditCard,
 } from 'lucide-react'
 import { getDisplayRole } from '@/lib/employer-roles'
+import { cn } from '@/lib/utils'
 
 // ============================================================
 // TYPES
@@ -95,43 +104,18 @@ interface HubApplicant {
   coverLetter: string | null
   reviewerNotes: string | null
   shareToken: string | null
-  applicantUserId: string  // Renamed from driverUserId for generic use
-  applicantName: string    // Renamed from driverName
+  applicantUserId: string
+  applicantName: string
   applicantEmail: string | null
   applicantPhone: string | null
-  applicantRole: string | null  // 'driver' or 'developer'
+  applicantRole: string | null
   avatarUrl?: string | null
-  // Driver-specific (null for developers)
-  cdlClass: string | null
-  cdlState: string | null
-  cdlExpiration: string | null
-  experienceYears: number | null
-  // Developer-specific (null for drivers)
-  skills: string[] | null
-  githubUrl: string | null
-  portfolioUrl: string | null
-  // Common
+  applicantHeadline?: string | null
   jobPostingId: string
   jobTitle: string
   hasResume: boolean
   resumeId: string | null
   resumeVerified: boolean
-}
-
-interface HubMvrOrder {
-  id: string
-  status: string
-  licenseState: string
-  createdAt: string
-  completedAt: string | null
-  feeAmount: string | null
-  driverUserId: string
-  driverName: string
-  hasResult: boolean
-  licenseStatus: string | null
-  totalPoints: number | null
-  violationCount: number
-  resultStatus: string | null
 }
 
 interface HubStats {
@@ -142,8 +126,6 @@ interface HubStats {
   interviewing: number
   hiresThisMonth: number
   totalHires: number
-  totalMvrOrders: number
-  completedMvrOrders: number
 }
 
 interface HubPipeline {
@@ -164,7 +146,6 @@ interface HubData {
   userRole?: string | null
   jobPostings: HubJobPosting[]
   applicants: HubApplicant[]
-  mvrOrders: HubMvrOrder[]
   stats: HubStats
   pipeline: HubPipeline
   memberSince?: string
@@ -185,20 +166,20 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   const [data, setData] = useState<HubData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Composable employer blocks
+  const fetchEmployerBlocks = useEmployerBlocksStore((s) => s.fetchEmployerBlocks)
+  const employerBlocks = useEmployerInstalledBlocks()
+  const isEditMode = useEmployerIsEditMode()
+  const setEditMode = useEmployerBlocksStore((s) => s.setEditMode)
+  const removeBlock = useEmployerBlocksStore((s) => s.removeBlock)
+  const openPicker = useEmployerBlocksStore((s) => s.openPicker)
   
   // Detail modal states
   const [selectedApplicant, setSelectedApplicant] = useState<HubApplicant | null>(null)
   const [careerCardApplicantId, setCareerCardApplicantId] = useState<string | null>(null)
-  const [selectedMvr, setSelectedMvr] = useState<HubMvrOrder | null>(null)
 
   const [updatingApplicationId, setUpdatingApplicationId] = useState<string | null>(null)
-
-  // Employment verification states
-  const [showVerifyModal, setShowVerifyModal] = useState(false)
-  const [verifyingDriverId, setVerifyingDriverId] = useState<string | null>(null)
-  const [driverEmployments, setDriverEmployments] = useState<any[]>([])
-  const [loadingEmployments, setLoadingEmployments] = useState(false)
-  const [initiatingVerification, setInitiatingVerification] = useState(false)
 
   // Section-specific loading states for granular refresh
   const [refreshingPipeline, setRefreshingPipeline] = useState(false)
@@ -272,8 +253,9 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   useEffect(() => {
     if (walletAddress) {
       fetchHubData()
+      fetchEmployerBlocks(walletAddress)
     }
-  }, [walletAddress, fetchHubData])
+  }, [walletAddress, fetchHubData, fetchEmployerBlocks])
 
   // Auto-refresh when tab becomes visible (solves stale data after changes in other tabs)
   const { refresh: triggerRefresh, isStale } = useVisibilityRefresh(fetchHubData, {
@@ -321,69 +303,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       alert(err instanceof Error ? err.message : 'Failed to update status')
     } finally {
       setUpdatingApplicationId(null)
-    }
-  }
-
-  // Open employment verification modal
-  const openVerifyEmploymentModal = async (driverUserId: string) => {
-    setVerifyingDriverId(driverUserId)
-    setShowVerifyModal(true)
-    setLoadingEmployments(true)
-    setDriverEmployments([])
-
-    try {
-      // Fetch driver's employment history
-      const response = await fetch(`/api/driver/profile?userId=${driverUserId}`, {
-        headers: { 'x-wallet-address': walletAddress },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setDriverEmployments(data.profile?.employmentHistory || [])
-      }
-    } catch (err) {
-      console.error('Error fetching driver employment:', err)
-    } finally {
-      setLoadingEmployments(false)
-    }
-  }
-
-  // Initiate verification for selected employment
-  const initiateVerification = async (employmentId: string, employment: any) => {
-    if (!verifyingDriverId) return
-
-    setInitiatingVerification(true)
-    try {
-      const response = await fetch('/api/verification/initiate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': walletAddress,
-        },
-        body: JSON.stringify({
-          driverId: verifyingDriverId,
-          employmentId: employmentId,
-          previousEmployerEmail: employment.supervisorEmail,
-          previousEmployerPhone: employment.supervisorPhone,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        alert('Verification request created successfully!')
-        setShowVerifyModal(false)
-        setSelectedApplicant(null)
-        // Refresh the page to show updated verification status
-        fetchHubData()
-      } else {
-        alert(data.error || 'Failed to create verification request')
-      }
-    } catch (err) {
-      console.error('Error initiating verification:', err)
-      alert('Failed to create verification request')
-    } finally {
-      setInitiatingVerification(false)
     }
   }
 
@@ -600,17 +519,19 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           <Building2 className="w-4 h-4" />
           Company
         </button>
-        <button
-          onClick={() => onNavigate('reports')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
-            theme === 'dark'
-              ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-              : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-          }`}
-        >
-          <FileText className="w-4 h-4" />
-          Reports
-        </button>
+        {employerBlocks.some(b => b.blockType === 'employer-compliance-reports') && (
+          <button
+            onClick={() => onNavigate('reports')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
+              theme === 'dark'
+                ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            Reports
+          </button>
+        )}
         <button
           onClick={() => onNavigate('team')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
@@ -691,15 +612,8 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
                 avatarUrl: a.avatarUrl ?? null,
                 jobTitle: a.jobTitle,
                 jobPostingId: a.jobPostingId,
-                cdlClass: a.cdlClass ?? null,
-                experienceYears: a.experienceYears ?? null,
                 hasResume: a.hasResume ?? false,
                 resumeVerified: a.resumeVerified ?? false,
-                hasDriverApp: a.hasDriverApp ?? false,
-                hasMvr: a.hasMvr ?? false,
-                mvrStatus: a.mvrStatus ?? null,
-                mvrOrderedByThisCompany: a.mvrOrderedByThisCompany ?? false,
-                hasBgcheckConsent: a.hasBgcheckConsent ?? false,
               }))}
               walletAddress={walletAddress}
               onStatusChange={handleStatusChange}
@@ -714,6 +628,18 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           )}
         </div>}
       </div>
+
+      {/* ── Composable Employer Blocks ──────────────────────────────── */}
+      <EmployerBlockPickerModal />
+      <EmployerBlockGrid
+        blocks={employerBlocks}
+        isEditMode={isEditMode}
+        theme={theme}
+        onOpen={(pageRoute) => { if (pageRoute) onNavigate(pageRoute) }}
+        onRemove={(blockId) => removeBlock(blockId, walletAddress)}
+        onEdit={() => setEditMode(!isEditMode)}
+        onAdd={() => openPicker()}
+      />
 
       {/* Employment Verification Section */}
       <div className="mb-8">
@@ -741,33 +667,25 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           zIndex={1000}
         >
           <ModalHeader
-            title={selectedApplicant.applicantName || (selectedApplicant as { driverName?: string }).driverName || ''}
+            title={selectedApplicant.applicantName || ''}
             subtitle={`Applied for ${selectedApplicant.jobTitle}`}
             onClose={() => setSelectedApplicant(null)}
           />
           {/* Career Card quick-action row */}
           <div className={`flex items-center gap-2 px-4 py-2 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
             <button
-              onClick={() => setCareerCardApplicantId(
-                selectedApplicant.applicantUserId ||
-                (selectedApplicant as { driverUserId?: string }).driverUserId ||
-                ''
-              )}
+              onClick={() => setCareerCardApplicantId(selectedApplicant.applicantUserId)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 theme === 'dark'
                   ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30'
                   : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
               }`}
             >
-              <Car className="w-3.5 h-3.5" />
+              <CreditCard className="w-3.5 h-3.5" />
               View Career Card
             </button>
             <MessagingButton
-              otherUserId={
-                selectedApplicant.applicantUserId ||
-                (selectedApplicant as { driverUserId?: string }).driverUserId ||
-                ''
-              }
+              otherUserId={selectedApplicant.applicantUserId}
               applicationId={selectedApplicant.applicationId}
               subject={`Re: ${selectedApplicant.jobTitle} – ${selectedApplicant.applicantName}`}
               walletAddress={walletAddress}
@@ -782,34 +700,15 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
               <ApplicantDetailContent
                 applicant={selectedApplicant}
                 theme={theme}
-                walletAddress={walletAddress}
-                onOrderMvr={() => {
-                  console.log('Order MVR for', selectedApplicant.applicantUserId)
-                }}
-                onVerifyEmployment={() => {
-                  openVerifyEmploymentModal(
-                    selectedApplicant.applicantUserId ||
-                    (selectedApplicant as { driverUserId?: string }).driverUserId ||
-                    ''
-                  )
-                }}
                 onStatusChange={handleStatusChange}
               />
             </div>
             <div className="md:col-span-1">
               <CandidateNotesPanel
-                candidateUserId={
-                  selectedApplicant.applicantUserId ||
-                  (selectedApplicant as { driverUserId?: string }).driverUserId ||
-                  ''
-                }
+                candidateUserId={selectedApplicant.applicantUserId}
                 applicationId={selectedApplicant.applicationId}
                 walletAddress={walletAddress}
-                candidateName={
-                  selectedApplicant.applicantName ||
-                  (selectedApplicant as { driverName?: string }).driverName ||
-                  ''
-                }
+                candidateName={selectedApplicant.applicantName || ''}
               />
             </div>
           </div>
@@ -825,90 +724,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         />
       )}
 
-      {/* MVR detail modal — z-index 1000 */}
-      {selectedMvr && (
-        <Modal
-          onClose={() => setSelectedMvr(null)}
-          maxWidth="max-w-lg"
-          zIndex={1000}
-        >
-          <ModalHeader
-            title={`MVR - ${selectedMvr.driverName}`}
-            subtitle={selectedMvr.licenseState}
-            onClose={() => setSelectedMvr(null)}
-          />
-          <div className="p-4">
-            <MvrDetailContent mvr={selectedMvr} theme={theme} />
-          </div>
-        </Modal>
-      )}
-
-      {/* Employment Verification Modal — z-index 1100 so it stacks ABOVE the candidate card */}
-      {showVerifyModal && (
-        <Modal
-          onClose={() => setShowVerifyModal(false)}
-          maxWidth="max-w-lg"
-          zIndex={1100}
-        >
-          <ModalHeader
-            title="Verify Employment History"
-            onClose={() => setShowVerifyModal(false)}
-          />
-          <div className="p-4">
-            <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-              Select an employment record to verify with the previous employer:
-            </p>
-
-            {loadingEmployments ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className={`w-8 h-8 animate-spin ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
-              </div>
-            ) : driverEmployments.length === 0 ? (
-              <div className={`text-center py-8 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                <Building2 className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p>No employment history found for this driver</p>
-              </div>
-            ) : (
-              <div className="space-y-3 max-h-80 overflow-y-auto">
-                {driverEmployments.map((emp: { id: string; companyName: string; position: string; startDate: string; endDate?: string }) => (
-                  <button
-                    key={emp.id}
-                    onClick={() => initiateVerification(emp.id, emp)}
-                    disabled={initiatingVerification}
-                    className={`w-full text-left p-4 rounded-xl border transition-colors ${
-                      theme === 'dark'
-                        ? 'bg-gray-800/50 border-gray-700 hover:border-teal-500/50 hover:bg-gray-800'
-                        : 'bg-gray-50 border-gray-200 hover:border-teal-500/50 hover:bg-gray-100'
-                    } ${initiatingVerification ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                          {emp.companyName}
-                        </p>
-                        <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                          {emp.position}
-                        </p>
-                        <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                          {emp.startDate} - {emp.endDate || 'Present'}
-                        </p>
-                      </div>
-                      <ChevronRight className={`w-5 h-5 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {initiatingVerification && (
-              <div className={`mt-4 flex items-center justify-center gap-2 text-sm ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`}>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Creating verification request...
-              </div>
-            )}
-          </div>
-        </Modal>
-      )}
     </div>
   )
 }
@@ -1068,10 +883,8 @@ function ApplicantRow({
   onClick: () => void
   theme: string
 }) {
-  // Support both old field names (driverName) and new (applicantName) during transition
-  const name = (applicant as any).applicantName || (applicant as any).driverName || 'Unknown'
-  const role = (applicant as any).applicantRole || 'driver'
-  
+  const name = applicant.applicantName || 'Unknown'
+
   return (
     <button
       onClick={onClick}
@@ -1082,33 +895,18 @@ function ApplicantRow({
       }`}
     >
       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-        role === 'developer'
-          ? theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'
-          : theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
+        theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
       }`}>
         <span className={`text-sm font-bold ${
-          role === 'developer'
-            ? theme === 'dark' ? 'text-purple-400' : 'text-purple-600'
-            : theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
+          theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
         }`}>
           {name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
         </span>
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className={`font-medium truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-            {name}
-          </p>
-          {role && (
-            <span className={`text-xs px-1.5 py-0.5 rounded ${
-              role === 'developer'
-                ? 'bg-purple-500/10 text-purple-500'
-                : 'bg-teal-500/10 text-teal-500'
-            }`}>
-              {role === 'developer' ? 'Dev' : 'Driver'}
-            </span>
-          )}
-        </div>
+        <p className={`font-medium truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+          {name}
+        </p>
         <p className={`text-sm truncate ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
           {applicant.jobTitle}
         </p>
@@ -1117,47 +915,6 @@ function ApplicantRow({
         <StatusBadge status={applicant.status} theme={theme} />
         <ChevronRight className={`w-4 h-4 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
       </div>
-    </button>
-  )
-}
-
-
-function MvrRow({ 
-  mvr, 
-  onClick, 
-  theme 
-}: { 
-  mvr: HubMvrOrder
-  onClick: () => void
-  theme: string
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-colors ${
-        theme === 'dark'
-          ? 'hover:bg-gray-700/50'
-          : 'hover:bg-gray-50'
-      }`}
-    >
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-        mvr.hasResult
-          ? theme === 'dark' ? 'bg-green-500/20' : 'bg-green-100'
-          : theme === 'dark' ? 'bg-yellow-500/20' : 'bg-yellow-100'
-      }`}>
-        <Car className={`w-5 h-5 ${
-          mvr.hasResult ? 'text-green-500' : 'text-yellow-500'
-        }`} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className={`font-medium truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-          {mvr.driverName}
-        </p>
-        <p className={`text-sm truncate ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-          {mvr.licenseState} • {formatDate(mvr.createdAt)}
-        </p>
-      </div>
-      <StatusBadge status={mvr.status} theme={theme} />
     </button>
   )
 }
@@ -1172,43 +929,21 @@ function StatusBadge({ status, theme }: { status: string; theme: string }) {
   )
 }
 
-function ApplicantDetailContent({ 
-  applicant, 
+function ApplicantDetailContent({
+  applicant,
   theme,
-  walletAddress,
-  onOrderMvr,
-  onVerifyEmployment,
   onStatusChange,
-}: { 
+}: {
   applicant: HubApplicant
   theme: string
-  walletAddress: string
-  onOrderMvr: () => void
-  onVerifyEmployment: () => void
   onStatusChange: (applicationId: string, newStatus: string) => Promise<void>
 }) {
   const [changingStatus, setChangingStatus] = useState(false)
-  
+
   const labelClass = `text-xs font-semibold uppercase tracking-wide ${
     theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
   }`
   const valueClass = `text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`
-  
-  // Support both old and new field names during transition
-  const email = (applicant as any).applicantEmail || (applicant as any).driverEmail
-  const phone = (applicant as any).applicantPhone || (applicant as any).driverPhone
-  const role = (applicant as any).applicantRole || 'driver'
-  const isDriver = role === 'driver'
-
-  const statusLabels: Record<string, { label: string; color: string }> = {
-    submitted: { label: 'New', color: 'blue' },
-    under_review: { label: 'Reviewing', color: 'yellow' },
-    interview: { label: 'Interviewing', color: 'purple' },
-    offer: { label: 'Offer Sent', color: 'teal' },
-    hired: { label: 'Hired', color: 'green' },
-    rejected: { label: 'Rejected', color: 'gray' },
-    withdrawn: { label: 'Withdrawn', color: 'gray' },
-  }
 
   const handleStatusChange = async (newStatus: string) => {
     if (newStatus === applicant.status) return
@@ -1232,7 +967,7 @@ function ApplicantDetailContent({
             <p className={`text-sm font-medium ${
               theme === 'dark' ? 'text-white' : 'text-gray-900'
             }`}>
-              {statusLabels[applicant.status]?.label || applicant.status}
+              {applicant.status}
             </p>
           </div>
           <select
@@ -1257,11 +992,19 @@ function ApplicantDetailContent({
         </div>
       </div>
 
+      {/* Headline */}
+      {applicant.applicantHeadline && (
+        <div>
+          <p className={labelClass}>Headline</p>
+          <p className={valueClass}>{applicant.applicantHeadline}</p>
+        </div>
+      )}
+
       {/* Contact Info */}
       <div className="flex flex-wrap gap-3">
-        {email && (
+        {applicant.applicantEmail && (
           <a
-            href={`mailto:${email}`}
+            href={`mailto:${applicant.applicantEmail}`}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
               theme === 'dark'
                 ? 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
@@ -1269,12 +1012,12 @@ function ApplicantDetailContent({
             }`}
           >
             <Mail className="w-4 h-4" />
-            {email}
+            {applicant.applicantEmail}
           </a>
         )}
-        {phone && (
+        {applicant.applicantPhone && (
           <a
-            href={`tel:${phone}`}
+            href={`tel:${applicant.applicantPhone}`}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
               theme === 'dark'
                 ? 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
@@ -1282,86 +1025,10 @@ function ApplicantDetailContent({
             }`}
           >
             <Phone className="w-4 h-4" />
-            {phone}
+            {applicant.applicantPhone}
           </a>
         )}
       </div>
-
-      {/* Driver-specific: CDL Info */}
-      {isDriver && (applicant.cdlClass || applicant.cdlState) && (
-        <div className={`p-4 rounded-xl ${
-          theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
-        }`}>
-          <h4 className={`font-medium mb-3 flex items-center gap-2 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            <Shield className="w-4 h-4" />
-            CDL Information
-          </h4>
-          <div className="grid grid-cols-3 gap-4">
-            {applicant.cdlClass && (
-              <div>
-                <p className={labelClass}>Class</p>
-                <p className={valueClass}>{applicant.cdlClass}</p>
-              </div>
-            )}
-            {applicant.cdlState && (
-              <div>
-                <p className={labelClass}>State</p>
-                <p className={valueClass}>{applicant.cdlState}</p>
-              </div>
-            )}
-            {applicant.experienceYears && (
-              <div>
-                <p className={labelClass}>Experience</p>
-                <p className={valueClass}>{applicant.experienceYears} years</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Developer-specific: Skills & Links */}
-      {!isDriver && (applicant.skills || applicant.githubUrl || applicant.portfolioUrl) && (
-        <div className={`p-4 rounded-xl ${
-          theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
-        }`}>
-          <h4 className={`font-medium mb-3 flex items-center gap-2 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            <Code className="w-4 h-4" />
-            Developer Info
-          </h4>
-          {applicant.skills && applicant.skills.length > 0 && (
-            <div className="mb-3">
-              <p className={labelClass}>Skills</p>
-              <div className="flex flex-wrap gap-1.5 mt-1">
-                {applicant.skills.map((skill, i) => (
-                  <span key={i} className={`px-2 py-0.5 rounded text-xs ${
-                    theme === 'dark' ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-100 text-purple-700'
-                  }`}>
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-          <div className="flex gap-3">
-            {applicant.githubUrl && (
-              <a href={applicant.githubUrl} target="_blank" rel="noopener noreferrer" 
-                className={`text-sm ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'} hover:underline`}>
-                GitHub ↗
-              </a>
-            )}
-            {applicant.portfolioUrl && (
-              <a href={applicant.portfolioUrl} target="_blank" rel="noopener noreferrer"
-                className={`text-sm ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'} hover:underline`}>
-                Portfolio ↗
-              </a>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Application Details */}
       <div>
@@ -1407,97 +1074,144 @@ function ApplicantDetailContent({
           </p>
         </div>
       )}
-
-      {/* Actions */}
-      <div className="pt-4 space-y-3">
-        <button
-          onClick={onVerifyEmployment}
-          className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors ${
-            theme === 'dark'
-              ? 'bg-teal-500 text-white hover:bg-teal-400'
-              : 'bg-teal-600 text-white hover:bg-teal-500'
-          }`}
-        >
-          <ClipboardCheck className="w-4 h-4" />
-          Verify Employment History
-        </button>
-        {isDriver && (
-          <button
-            onClick={onOrderMvr}
-            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors ${
-              theme === 'dark'
-                ? 'bg-teal-500/20 text-teal-400 border border-teal-500/40 hover:bg-teal-500/30'
-                : 'bg-teal-50 text-teal-600 border border-teal-200 hover:bg-teal-100'
-            }`}
-          >
-            <Car className="w-4 h-4" />
-            Order MVR Report
-          </button>
-        )}
-      </div>
     </div>
   )
 }
 
+// ============================================================
+// EMPLOYER BLOCK GRID
+// ============================================================
 
-function MvrDetailContent({ mvr, theme }: { mvr: HubMvrOrder; theme: string }) {
-  const labelClass = `text-xs font-semibold uppercase tracking-wide ${
-    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-  }`
-  const valueClass = `text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`
+function resolveIcon(name: string) {
+  const Icon = (LucideIcons as Record<string, LucideIcons.LucideIcon>)[name]
+  return Icon ?? LucideIcons.Box
+}
+
+interface EmployerBlockGridProps {
+  blocks: { id: string; blockType: string; definition: { label: string; description: string; icon: string; pageRoute: string | null } | null }[]
+  isEditMode: boolean
+  theme: string
+  onOpen: (pageRoute: string | null) => void
+  onRemove: (blockId: string) => void
+  onEdit: () => void
+  onAdd: () => void
+}
+
+function EmployerBlockGrid({ blocks, isEditMode, theme, onOpen, onRemove, onEdit, onAdd }: EmployerBlockGridProps) {
+  const isDark = theme === 'dark'
 
   return (
-    <div className="space-y-4">
-      <div>
-        <p className={labelClass}>Status</p>
-        <StatusBadge status={mvr.status} theme={theme} />
-      </div>
-      <div>
-        <p className={labelClass}>License State</p>
-        <p className={valueClass}>{mvr.licenseState}</p>
-      </div>
-      <div>
-        <p className={labelClass}>Ordered</p>
-        <p className={valueClass}>{formatDate(mvr.createdAt)}</p>
-      </div>
-      {mvr.completedAt && (
-        <div>
-          <p className={labelClass}>Completed</p>
-          <p className={valueClass}>{formatDate(mvr.completedAt)}</p>
-        </div>
-      )}
-
-      {mvr.hasResult && (
-        <div className={`p-4 rounded-xl ${theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
-          <h4 className={`font-medium mb-3 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-            MVR Results
-          </h4>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className={labelClass}>License Status</p>
-              <p className={`${valueClass} ${
-                mvr.licenseStatus === 'Valid' ? 'text-green-500' : 'text-red-500'
-              }`}>
-                {mvr.licenseStatus || 'Unknown'}
-              </p>
-            </div>
-            <div>
-              <p className={labelClass}>Total Points</p>
-              <p className={valueClass}>{mvr.totalPoints ?? 'N/A'}</p>
-            </div>
-            <div>
-              <p className={labelClass}>Violations</p>
-              <p className={`${valueClass} ${
-                mvr.violationCount > 0 ? 'text-orange-500' : 'text-green-500'
-              }`}>
-                {mvr.violationCount}
-              </p>
-            </div>
-            <div>
-              <p className={labelClass}>Result Status</p>
-              <p className={valueClass}>{mvr.resultStatus || 'Pending'}</p>
-            </div>
+    <div className={cn(
+      'rounded-2xl p-6 mb-8 border shadow-lg transition-all duration-200',
+      isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white/70 border-gray-200'
+    )}>
+      <div className='flex items-center justify-between mb-4'>
+        <div className='flex items-center gap-3'>
+          <div className={cn('p-2 rounded-lg', isDark ? 'bg-blue-500/20' : 'bg-blue-100')}>
+            <Package className={cn('w-5 h-5', isDark ? 'text-blue-400' : 'text-blue-600')} />
           </div>
+          <h3 className={cn('font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+            Industry Tools
+          </h3>
+          {blocks.length > 0 && (
+            <span className={cn('text-sm px-2.5 py-0.5 rounded-full font-medium', isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600')}>
+              {blocks.length}
+            </span>
+          )}
+        </div>
+        <div className='flex items-center gap-2'>
+          {blocks.length > 0 && (
+            <button
+              onClick={onEdit}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
+                isEditMode
+                  ? 'bg-blue-500 text-white'
+                  : isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              )}
+            >
+              <Pencil className='w-3.5 h-3.5' />
+              {isEditMode ? 'Done' : 'Edit'}
+            </button>
+          )}
+          <button
+            onClick={onAdd}
+            className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors'
+          >
+            <Plus className='w-3.5 h-3.5' />
+            Add
+          </button>
+        </div>
+      </div>
+
+      {blocks.length === 0 ? (
+        <div className={cn(
+          'text-center py-8 px-4 rounded-xl border-2 border-dashed',
+          isDark ? 'border-gray-700 bg-gray-800/30' : 'border-gray-200 bg-gray-50'
+        )}>
+          <Package className={cn('w-12 h-12 mx-auto mb-2', isDark ? 'text-gray-600' : 'text-gray-400')} />
+          <h4 className={cn('font-semibold mb-2', isDark ? 'text-gray-300' : 'text-gray-700')}>
+            No industry tools added yet
+          </h4>
+          <p className={cn('text-sm mb-4', isDark ? 'text-gray-500' : 'text-gray-500')}>
+            Add tools specific to your hiring needs — driver compliance, code assessments, and more.
+          </p>
+          <button
+            onClick={onAdd}
+            className='px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors'
+          >
+            Browse Tools
+          </button>
+        </div>
+      ) : (
+        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
+          {blocks.map((block) => {
+            const def = block.definition
+            if (!def) return null
+            const BlockIcon = resolveIcon(def.icon)
+
+            return (
+              <div
+                key={block.id}
+                className={cn(
+                  'relative group rounded-xl border p-4 transition-all duration-200 cursor-pointer',
+                  isDark
+                    ? 'bg-gray-700/30 border-gray-600 hover:border-blue-500/40 hover:bg-gray-700/50'
+                    : 'bg-white border-gray-200 hover:border-blue-400/50 hover:bg-blue-50/30',
+                  isEditMode && '[animation:jiggle_0.3s_ease-in-out_infinite]'
+                )}
+                onClick={() => {
+                  if (isEditMode) return
+                  onOpen(def.pageRoute)
+                }}
+              >
+                {isEditMode && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onRemove(block.id) }}
+                    className='absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 z-10'
+                  >
+                    <X className='w-3.5 h-3.5' />
+                  </button>
+                )}
+                <div className='flex items-center gap-3'>
+                  <div className={cn(
+                    'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0',
+                    isDark ? 'bg-blue-500/15' : 'bg-blue-50'
+                  )}>
+                    <BlockIcon className={cn('w-5 h-5', isDark ? 'text-blue-400' : 'text-blue-600')} />
+                  </div>
+                  <div className='min-w-0'>
+                    <p className={cn('text-sm font-semibold truncate', isDark ? 'text-white' : 'text-gray-900')}>
+                      {def.label}
+                    </p>
+                    <p className={cn('text-xs truncate', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                      {def.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

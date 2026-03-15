@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       return {
         id: invite.id,
         token: invite.token,
-        type: invite.type || 'driver_dot',
+        type: invite.type || 'general',
         status: invite.status,
         candidateEmail: invite.candidate_email,
         candidateName: invite.candidate_name,

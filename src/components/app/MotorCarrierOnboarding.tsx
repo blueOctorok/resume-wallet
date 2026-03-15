@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore } from '@/stores'
-import { Building2, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Building2, Loader2, AlertCircle, CheckCircle2, Check } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import BackToHubButton from '@/components/ui/BackToHubButton'
 
 interface MotorCarrierOnboardingProps {
@@ -14,6 +15,7 @@ interface MotorCarrierOnboardingProps {
 
 interface FormData {
   companyName: string
+  hiringCategories: string[]
   dotNumber: string
   mcNumber: string
   addressStreet: string
@@ -26,6 +28,7 @@ interface FormData {
 
 const EMPTY_FORM: FormData = {
   companyName: '',
+  hiringCategories: [],
   dotNumber: '',
   mcNumber: '',
   addressStreet: '',
@@ -36,6 +39,13 @@ const EMPTY_FORM: FormData = {
   email: '',
 }
 
+const HIRING_CATEGORY_OPTIONS = [
+  { id: 'drivers', label: 'Drivers', description: 'CDL drivers, freight, logistics' },
+  { id: 'developers', label: 'Developers', description: 'Software engineers, IT professionals' },
+  { id: 'warehouse', label: 'Warehouse', description: 'Warehouse staff, forklift operators' },
+  { id: 'other', label: 'Other', description: 'Any other industry or role' },
+]
+
 const US_STATES = [
   'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA',
   'HI','ID','IL','IN','IA','KS','KY','LA','ME','MD',
@@ -45,9 +55,9 @@ const US_STATES = [
 ]
 
 /**
- * Blocking full-screen onboarding gate shown to the company owner on first login.
- * Collects the Employing Motor Carrier information required for DOT applications.
- * This runs once — after submit the company is created and the flag is set permanently.
+ * Company onboarding gate shown to the company owner on first login.
+ * Collects company info, hiring categories, and — if hiring drivers — DOT/MC numbers.
+ * This runs once; after submit the company is created and onboarding_completed is set.
  */
 export default function MotorCarrierOnboarding({ onComplete, showBackButton = false }: MotorCarrierOnboardingProps) {
   const { theme } = useTheme()
@@ -59,9 +69,23 @@ export default function MotorCarrierOnboarding({ onComplete, showBackButton = fa
   const [success, setSuccess] = useState(false)
 
   const isDark = theme === 'dark'
+  const hiresDrivers = form.hiringCategories.includes('drivers')
 
   function handleChange(field: keyof FormData, value: string) {
     setForm(prev => ({ ...prev, [field]: value }))
+    if (error) setError(null)
+  }
+
+  function toggleHiringCategory(categoryId: string) {
+    setForm(prev => {
+      const has = prev.hiringCategories.includes(categoryId)
+      return {
+        ...prev,
+        hiringCategories: has
+          ? prev.hiringCategories.filter(c => c !== categoryId)
+          : [...prev.hiringCategories, categoryId],
+      }
+    })
     if (error) setError(null)
   }
 
@@ -70,13 +94,17 @@ export default function MotorCarrierOnboarding({ onComplete, showBackButton = fa
     setError(null)
 
     // Basic required field validation
-    const required: (keyof FormData)[] = [
+    const requiredText: (keyof FormData)[] = [
       'companyName', 'addressStreet',
       'addressCity', 'addressState', 'addressZip', 'phone', 'email',
     ]
-    const missing = required.filter(f => !form[f].trim())
+    const missing = requiredText.filter(f => !(form[f] as string).trim())
     if (missing.length > 0) {
       setError('Please fill in all required fields.')
+      return
+    }
+    if (form.hiringCategories.length === 0) {
+      setError('Please select at least one hiring category.')
       return
     }
 
@@ -93,7 +121,12 @@ export default function MotorCarrierOnboarding({ onComplete, showBackButton = fa
           'Content-Type': 'application/json',
           'x-wallet-address': walletAddress,
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          // Clear DOT/MC if they aren't hiring drivers
+          dotNumber: hiresDrivers ? form.dotNumber : '',
+          mcNumber: hiresDrivers ? form.mcNumber : '',
+        }),
       })
 
       let data: { error?: string; success?: boolean; companyId?: string } = {}
@@ -164,11 +197,11 @@ export default function MotorCarrierOnboarding({ onComplete, showBackButton = fa
         <div className='flex items-center gap-3 mb-2'>
           <Building2 className={`w-6 h-6 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
           <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Motor Carrier Profile
+            Company Profile
           </h1>
         </div>
         <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-          This information appears on all DOT applications sent through StormChain.
+          Set up your company and tell us what you hire for. Industry-specific tools will be suggested based on your selections.
         </p>
       </div>
 
@@ -186,11 +219,73 @@ export default function MotorCarrierOnboarding({ onComplete, showBackButton = fa
               <input
                 type='text'
                 className={inputClass}
-                placeholder='Acme Trucking LLC'
+                placeholder='Acme LLC'
                 value={form.companyName}
                 onChange={e => handleChange('companyName', e.target.value)}
               />
             </div>
+          </div>
+        </div>
+
+        {/* Hiring Categories */}
+        <div className={`rounded-2xl border p-6 ${cardClass}`}>
+          <h2 className={`text-sm font-semibold uppercase tracking-wide mb-2 ${
+            isDark ? 'text-teal-400' : 'text-teal-600'
+          }`}>
+            What do you hire for? <span className='text-red-400'>*</span>
+          </h2>
+          <p className={cn('text-xs mb-4', isDark ? 'text-gray-500' : 'text-gray-400')}>
+            Select all that apply. We&apos;ll suggest industry tools for your hub.
+          </p>
+          <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+            {HIRING_CATEGORY_OPTIONS.map((cat) => {
+              const selected = form.hiringCategories.includes(cat.id)
+              return (
+                <button
+                  key={cat.id}
+                  type='button'
+                  onClick={() => toggleHiringCategory(cat.id)}
+                  className={cn(
+                    'flex items-center gap-3 p-4 rounded-xl border text-left transition-all',
+                    selected
+                      ? isDark
+                        ? 'border-teal-500 bg-teal-500/10'
+                        : 'border-teal-500 bg-teal-50'
+                      : isDark
+                        ? 'border-gray-700 hover:border-gray-600'
+                        : 'border-gray-200 hover:border-gray-300'
+                  )}
+                >
+                  <div className={cn(
+                    'w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border transition-colors',
+                    selected
+                      ? 'bg-teal-500 border-teal-500'
+                      : isDark ? 'border-gray-600' : 'border-gray-300'
+                  )}>
+                    {selected && <Check className='w-3.5 h-3.5 text-white' />}
+                  </div>
+                  <div>
+                    <p className={cn('text-sm font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                      {cat.label}
+                    </p>
+                    <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                      {cat.description}
+                    </p>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* DOT/MC — only when hiring drivers */}
+        {hiresDrivers && (
+          <div className={`rounded-2xl border p-6 ${cardClass}`}>
+            <h2 className={`text-sm font-semibold uppercase tracking-wide mb-4 ${
+              isDark ? 'text-teal-400' : 'text-teal-600'
+            }`}>
+              Motor Carrier Information
+            </h2>
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
               <div>
                 <label className={labelClass}>USDOT Number <span className='text-gray-400 font-normal'>(optional)</span></label>
@@ -203,18 +298,18 @@ export default function MotorCarrierOnboarding({ onComplete, showBackButton = fa
                 />
               </div>
               <div>
-                <label className={labelClass}>MC Number</label>
+                <label className={labelClass}>MC Number <span className='text-gray-400 font-normal'>(optional)</span></label>
                 <input
                   type='text'
                   className={inputClass}
-                  placeholder='MC-123456 (optional)'
+                  placeholder='MC-123456'
                   value={form.mcNumber}
                   onChange={e => handleChange('mcNumber', e.target.value)}
                 />
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Contact */}
         <div className={`rounded-2xl border p-6 ${cardClass}`}>

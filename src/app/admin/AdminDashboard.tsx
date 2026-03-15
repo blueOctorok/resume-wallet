@@ -182,7 +182,7 @@ interface AdminApplication {
 interface AdminOutreach {
   id: string
   token: string
-  type: 'driver_dot' | 'developer_card' | 'general'
+  type: string
   status: string
   candidateEmail: string | null
   candidateName: string | null
@@ -2031,12 +2031,10 @@ function AdminDashboardContent() {
                             </td>
                             <td className={tableCellClass}>
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                invite.type === 'driver_dot' ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400' :
-                                invite.type === 'developer_card' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400' :
+                                invite.type === 'block' ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400' :
                                 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400'
                               }`}>
-                                {invite.type === 'driver_dot' ? 'DOT App' :
-                                 invite.type === 'developer_card' ? 'Dev Card' : 'General'}
+                                {invite.type === 'block' ? 'Block' : 'General'}
                               </span>
                             </td>
                             <td className={tableCellClass}>

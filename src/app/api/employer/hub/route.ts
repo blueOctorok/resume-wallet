@@ -3,28 +3,26 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
 /**
  * GET /api/employer/hub
- * 
- * Aggregates all employer data for the Employer Hub dashboard.
- * Single API call to fetch everything needed for the hub view.
- * 
- * Now supports team-based access via company_members table.
- * 
+ *
+ * Role-agnostic employer hub data. Returns universal applicant info only.
+ * Role-specific data (CDL, MVR, DOT) is fetched by separate block-conditional
+ * endpoints (e.g. /api/employer/hub/driver-data).
+ *
  * Headers:
  *   x-wallet-address: User's wallet address
- * 
+ *
  * Returns:
  *   - company: Employer's company profile
- *   - userRole: User's role within the company (owner, admin, recruiter, etc.)
+ *   - userRole: User's role within the company
  *   - jobPostings: All job postings with application counts
- *   - applicants: Recent applicants across all jobs
- *   - mvrOrders: MVR orders placed for applicants
- *   - stats: Computed statistics for quick view
+ *   - applicants: Recent applicants (universal fields only)
+ *   - stats: Computed statistics
  *   - pipeline: Application status breakdown
  */
 export async function GET(request: NextRequest) {
   try {
     const walletAddress = request.headers.get('x-wallet-address')
-    
+
     if (!walletAddress) {
       return NextResponse.json(
         { error: 'Wallet address is required' },
@@ -34,7 +32,6 @@ export async function GET(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user by wallet address
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id, created_at, role')
@@ -42,21 +39,18 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (userError || !user) {
-      // User not found - return empty hub (new user state)
       return NextResponse.json({
         success: true,
         isNewUser: true,
         company: null,
         jobPostings: [],
         applicants: [],
-        mvrOrders: [],
         stats: {
           activeJobs: 0,
           totalApplicants: 0,
           pendingReview: 0,
           interviewing: 0,
           hiresThisMonth: 0,
-          totalMvrOrders: 0,
         },
         pipeline: {
           new: 0,
@@ -82,7 +76,6 @@ export async function GET(request: NextRequest) {
       .eq('is_active', true)
       .maybeSingle()
 
-    // Fall back to legacy employer_user_id check if no membership found
     let company = membership?.companies as any
     let userRole = membership?.role || null
 
@@ -92,12 +85,11 @@ export async function GET(request: NextRequest) {
         .select('*')
         .eq('employer_user_id', user.id)
         .maybeSingle()
-      
+
       company = legacyCompany
-      userRole = legacyCompany ? 'owner' : null // Legacy single-owner is always owner
+      userRole = legacyCompany ? 'owner' : null
     }
 
-    // If no company, return empty state (employer needs to create company first)
     if (!company) {
       return NextResponse.json({
         success: true,
@@ -107,14 +99,12 @@ export async function GET(request: NextRequest) {
         userRole: null,
         jobPostings: [],
         applicants: [],
-        mvrOrders: [],
         stats: {
           activeJobs: 0,
           totalApplicants: 0,
           pendingReview: 0,
           interviewing: 0,
           hiresThisMonth: 0,
-          totalMvrOrders: 0,
         },
         pipeline: {
           new: 0,
@@ -128,13 +118,8 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Fetch all data in parallel for performance
-    const [
-      jobPostingsResult,
-      applicationsResult,
-      mvrOrdersResult,
-    ] = await Promise.all([
-      // 1. All job postings for this company
+    // Fetch universal data in parallel — no role-specific queries
+    const [jobPostingsResult, applicationsResult] = await Promise.all([
       supabase
         .from('job_postings')
         .select(`
@@ -145,9 +130,7 @@ export async function GET(request: NextRequest) {
         .eq('company_id', company.id)
         .order('created_at', { ascending: false }),
 
-      // 2. All applications to this company's jobs
-      // Note: applicant_user_id was renamed from driver_user_id in migration 016
-      // driver_profiles must be nested inside users (join path: applications → users → driver_profiles)
+      // JOIN user_profiles instead of driver_profiles for role-agnostic identity
       supabase
         .from('applications')
         .select(`
@@ -160,10 +143,8 @@ export async function GET(request: NextRequest) {
           ),
           users!applications_applicant_user_id_fkey (
             id, wallet_address, email, role,
-            driver_profiles (
-              first_name, last_name, phone, email,
-              cdl_number, cdl_class, cdl_state, cdl_expiration,
-              experience_years, avatar_url
+            user_profiles (
+              first_name, last_name, phone, email, avatar_url, headline
             )
           ),
           resumes (
@@ -172,22 +153,8 @@ export async function GET(request: NextRequest) {
         `)
         .eq('job_postings.company_id', company.id)
         .order('applied_at', { ascending: false }),
-
-      // 3. MVR orders placed by this employer for applicants
-      supabase
-        .from('mvr_orders')
-        .select(`
-          id, status, dl_state, created_at, completed_at, fee_amount,
-          driver_user_id,
-          mvr_results (
-            id, license_status, total_points, violation_count, result_status
-          )
-        `)
-        .eq('employer_user_id', user.id)
-        .order('created_at', { ascending: false }),
     ])
 
-    // Process job postings with application counts
     const applications = applicationsResult.data || []
     const jobPostings = (jobPostingsResult.data || []).map(job => {
       const jobApps = applications.filter(a => a.job_posting_id === job.id)
@@ -207,22 +174,19 @@ export async function GET(request: NextRequest) {
         experienceRequired: job.experience_required,
         routeType: job.route_type,
         remoteAllowed: job.remote_allowed,
-        // Computed counts
         totalApplications: jobApps.length,
         newApplications: jobApps.filter(a => a.status === 'submitted').length,
         viewedApplications: jobApps.filter(a => a.view_count > 0).length,
       }
     })
 
-    // Process applicants (flatten from applications)
-    // Generic naming: "applicant" instead of "driver" for role-agnostic support
+    // Process applicants — universal fields only
     const applicants = applications.map(app => {
       const applicantUser = app.users as any
-      // driver_profiles is now nested inside users (correct join path)
-      const driverProfiles = applicantUser?.driver_profiles
-      const driverProfile = Array.isArray(driverProfiles) 
-        ? driverProfiles[0] 
-        : driverProfiles
+      const userProfiles = applicantUser?.user_profiles
+      const profile = Array.isArray(userProfiles)
+        ? userProfiles[0]
+        : userProfiles
       const resume = Array.isArray(app.resumes) ? app.resumes[0] : app.resumes
       const jobPosting = app.job_postings as any
 
@@ -235,122 +199,25 @@ export async function GET(request: NextRequest) {
         coverLetter: app.cover_letter,
         reviewerNotes: app.reviewer_notes,
         shareToken: app.share_token,
-        // Applicant info (generic)
         applicantUserId: app.applicant_user_id,
-        applicantRole: applicantUser?.role || 'driver', // driver, developer, etc.
-        avatarUrl: driverProfile?.avatar_url ?? null,
-        applicantName: driverProfile 
-          ? `${driverProfile.first_name || ''} ${driverProfile.last_name || ''}`.trim() || 'Unknown'
+        applicantRole: applicantUser?.role || 'candidate',
+        avatarUrl: profile?.avatar_url ?? null,
+        applicantName: profile
+          ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown'
           : 'Unknown',
-        applicantEmail: driverProfile?.email || applicantUser?.email || null,
-        applicantPhone: driverProfile?.phone || null,
-        // CDL info (driver-specific, null for other roles)
-        cdlClass: driverProfile?.cdl_class || null,
-        cdlState: driverProfile?.cdl_state || null,
-        cdlExpiration: driverProfile?.cdl_expiration || null,
-        experienceYears: driverProfile?.experience_years || null,
-        // Job info
+        applicantEmail: profile?.email || applicantUser?.email || null,
+        applicantPhone: profile?.phone || null,
+        applicantHeadline: profile?.headline || null,
         jobPostingId: app.job_posting_id,
         jobTitle: jobPosting?.title || 'Unknown Position',
-        jobTargetRole: jobPosting?.target_role || 'driver',
-        // Resume info
+        jobTargetRole: jobPosting?.target_role || null,
         hasResume: !!resume,
         resumeId: resume?.id || null,
         resumeVerified: resume?.verification_status === 'VERIFIED',
-        // Legacy aliases for backward compatibility
-        driverUserId: app.applicant_user_id,
-        driverName: driverProfile 
-          ? `${driverProfile.first_name || ''} ${driverProfile.last_name || ''}`.trim() || 'Unknown'
-          : 'Unknown',
-        driverEmail: driverProfile?.email || applicantUser?.email || null,
-        driverPhone: driverProfile?.phone || null,
-        // Placeholder — will be filled in batch query below
-        hasDriverApp: false,
       }
     })
 
-    // Batch-check which applicants have a completed DOT application.
-    // Single query instead of N per-applicant lookups.
-    const applicantUserIds = applicants.map(a => a.applicantUserId).filter(Boolean)
-    if (applicantUserIds.length > 0) {
-      const { data: completedApps } = await supabase
-        .from('driver_applications')
-        .select('user_id')
-        .in('user_id', applicantUserIds)
-        .eq('is_complete', true)
-
-      const completedSet = new Set((completedApps || []).map(d => d.user_id))
-      applicants.forEach(a => {
-        a.hasDriverApp = completedSet.has(a.applicantUserId)
-      })
-    }
-
-    // Batch-fetch live MVR status + bgcheck consent for kanban cards.
-    // FCRA isolation: only surface self-ordered MVRs OR this company's own orders.
-    // An MVR ordered by a different company must not appear here.
-    if (applicantUserIds.length > 0) {
-      const [{ data: allMvrOrders }, { data: consents }] = await Promise.all([
-        supabase
-          .from('mvr_orders')
-          .select('driver_user_id, status, ordered_by_company_id, ordered_at')
-          .in('driver_user_id', applicantUserIds)
-          // self-ordered (NULL) OR this company's private order
-          .or(`ordered_by_company_id.is.null,ordered_by_company_id.eq.${company.id}`)
-          .order('ordered_at', { ascending: false }),
-        supabase
-          .from('bgcheck_consents')
-          .select('driver_user_id')
-          .in('driver_user_id', applicantUserIds)
-          .eq('company_id', company.id),
-      ])
-
-      const mvrByUser = new Map<string, { status: string; orderedByThisCompany: boolean }>()
-      for (const order of allMvrOrders ?? []) {
-        if (!mvrByUser.has(order.driver_user_id)) {
-          mvrByUser.set(order.driver_user_id, {
-            status: order.status,
-            orderedByThisCompany: order.ordered_by_company_id === company.id,
-          })
-        }
-      }
-      const consentUserIds = new Set((consents ?? []).map(c => c.driver_user_id))
-
-      applicants.forEach(a => {
-        (a as Record<string, unknown>).hasMvr = mvrByUser.has(a.applicantUserId)
-        ;(a as Record<string, unknown>).mvrStatus = mvrByUser.get(a.applicantUserId)?.status ?? null
-        ;(a as Record<string, unknown>).mvrOrderedByThisCompany = mvrByUser.get(a.applicantUserId)?.orderedByThisCompany ?? false
-        ;(a as Record<string, unknown>).hasBgcheckConsent = consentUserIds.has(a.applicantUserId)
-      })
-    }
-
-    // Process MVR orders
-    const mvrOrders = (mvrOrdersResult.data || []).map(order => {
-      const result = Array.isArray(order.mvr_results) 
-        ? order.mvr_results[0] 
-        : order.mvr_results
-      
-      // Find applicant name for this MVR (using applicantUserId or legacy driverUserId)
-      const applicant = applicants.find(a => a.applicantUserId === order.driver_user_id)
-      
-      return {
-        id: order.id,
-        status: order.status,
-        licenseState: order.dl_state,
-        createdAt: order.created_at,
-        completedAt: order.completed_at,
-        feeAmount: order.fee_amount,
-        driverUserId: order.driver_user_id,
-        driverName: applicant?.driverName || 'Unknown',
-        // Result data
-        hasResult: !!result,
-        licenseStatus: result?.license_status || null,
-        totalPoints: result?.total_points || null,
-        violationCount: result?.violation_count || 0,
-        resultStatus: result?.result_status || null,
-      }
-    })
-
-    // Calculate pipeline stats
+    // Pipeline stats
     const pipeline = {
       new: applications.filter(a => a.status === 'submitted').length,
       reviewing: applications.filter(a => a.status === 'reviewing' || a.status === 'viewed').length,
@@ -360,15 +227,13 @@ export async function GET(request: NextRequest) {
       rejected: applications.filter(a => a.status === 'rejected').length,
     }
 
-    // Calculate this month's hires
     const thisMonth = new Date()
     thisMonth.setDate(1)
     thisMonth.setHours(0, 0, 0, 0)
-    const hiresThisMonth = applications.filter(a => 
+    const hiresThisMonth = applications.filter(a =>
       a.status === 'hired' && new Date(a.applied_at) >= thisMonth
     ).length
 
-    // Calculate stats
     const stats = {
       activeJobs: jobPostings.filter(j => j.isActive).length,
       totalJobs: jobPostings.length,
@@ -377,8 +242,6 @@ export async function GET(request: NextRequest) {
       interviewing: pipeline.interviewing,
       hiresThisMonth,
       totalHires: pipeline.hired,
-      totalMvrOrders: mvrOrders.length,
-      completedMvrOrders: mvrOrders.filter(m => m.status === 'completed').length,
     }
 
     return NextResponse.json({
@@ -399,11 +262,9 @@ export async function GET(request: NextRequest) {
         state: company.address_state,
         onboardingCompleted: company.onboarding_completed ?? false,
       },
-      // User's role within the company (owner, admin, hr_manager, hiring_manager, recruiter, interviewer, viewer)
       userRole,
       jobPostings,
       applicants,
-      mvrOrders,
       stats,
       pipeline,
       memberSince: user.created_at,
