@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       supabase.from('company_members').select('id', { count: 'exact' }).eq('user_id', user.id).neq('id', invite.id),
       supabase.from('driver_applications').select('id', { count: 'exact' }).eq('user_id', user.id),
       supabase.from('resumes').select('id', { count: 'exact' }).eq('user_id', user.id),
-      supabase.from('driver_profiles').select('id', { count: 'exact' }).eq('user_id', user.id),
+      supabase.from('user_profiles').select('id', { count: 'exact' }).eq('user_id', user.id),
     ])
     
     const totalActivity = (memberships.count || 0) + (dotApps.count || 0) + (resumes.count || 0) + (profiles.count || 0)

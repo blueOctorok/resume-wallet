@@ -57,7 +57,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'Request not found' }, { status: 404 })
     }
 
-    if (accessRequest.status !== 'pending') {
+    // Admin can approve/reject pending or flagged requests
+    if (!['pending', 'flagged'].includes(accessRequest.status)) {
       return NextResponse.json(
         { error: `Request already ${accessRequest.status}` },
         { status: 409 }

@@ -54,8 +54,11 @@ export async function GET(request: NextRequest) {
 
     const stats = {
       pending: allRequests?.filter(r => r.status === 'pending').length || 0,
+      flagged: allRequests?.filter(r => r.status === 'flagged').length || 0,
       approved: allRequests?.filter(r => r.status === 'approved').length || 0,
+      auto_approved: allRequests?.filter(r => r.status === 'auto_approved').length || 0,
       rejected: allRequests?.filter(r => r.status === 'rejected').length || 0,
+      blocked: allRequests?.filter(r => r.status === 'blocked').length || 0,
       total: allRequests?.length || 0,
     }
 

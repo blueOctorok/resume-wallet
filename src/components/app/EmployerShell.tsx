@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import LoadingScreen from '@/components/LoadingScreen'
 import { useUIStore } from '@/stores'
-import MotorCarrierOnboarding from '@/components/app/MotorCarrierOnboarding'
+import CompanyOnboarding from '@/components/app/CompanyOnboarding'
 import MessageInbox from '@/components/messaging/MessageInbox'
 
 const EmployerHub = dynamic(
@@ -100,7 +100,7 @@ export default function EmployerShell({ walletAddress }: EmployerShellProps) {
   // Motor Carrier onboarding — blocking gate for new company owners
   if (currentPage === 'company-setup') {
     return (
-      <MotorCarrierOnboarding
+      <CompanyOnboarding
         onComplete={() => setCurrentPage(null)}
       />
     )
@@ -137,7 +137,7 @@ export default function EmployerShell({ walletAddress }: EmployerShellProps) {
 
   if (currentPage === 'company-profile') {
     return (
-      <MotorCarrierOnboarding
+      <CompanyOnboarding
         onComplete={() => setCurrentPage(null)}
         showBackButton={true}
       />

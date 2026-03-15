@@ -7,7 +7,7 @@ import { Building2, Loader2, AlertCircle, CheckCircle2, Check } from 'lucide-rea
 import { cn } from '@/lib/utils'
 import BackToHubButton from '@/components/ui/BackToHubButton'
 
-interface MotorCarrierOnboardingProps {
+interface CompanyOnboardingProps {
   onComplete: () => void
   /** If true, shows a back button (edit mode). If false, it's a blocking gate. */
   showBackButton?: boolean
@@ -59,7 +59,7 @@ const US_STATES = [
  * Collects company info, hiring categories, and — if hiring drivers — DOT/MC numbers.
  * This runs once; after submit the company is created and onboarding_completed is set.
  */
-export default function MotorCarrierOnboarding({ onComplete, showBackButton = false }: MotorCarrierOnboardingProps) {
+export default function CompanyOnboarding({ onComplete, showBackButton = false }: CompanyOnboardingProps) {
   const { theme } = useTheme()
   const { walletAddress } = useAuthStore()
 
@@ -284,7 +284,7 @@ export default function MotorCarrierOnboarding({ onComplete, showBackButton = fa
             <h2 className={`text-sm font-semibold uppercase tracking-wide mb-4 ${
               isDark ? 'text-teal-400' : 'text-teal-600'
             }`}>
-              Motor Carrier Information
+              DOT / Motor Carrier Information
             </h2>
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
               <div>

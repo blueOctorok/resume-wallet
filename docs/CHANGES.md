@@ -4,6 +4,36 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 🤖 **AI-Gated Employer Access** (March 2026)
+
+### What changed
+Replaced the manual admin approval bottleneck for employer onboarding with an AI-gated instant access system. AvA (Claude Sonnet) evaluates access requests in real-time and auto-approves legitimate businesses, flags uncertain ones for human review, and blocks obvious spam.
+
+### New files
+- **`src/lib/ava-employer-eval.ts`**: One-shot AI evaluation module. Builds a structured prompt with company name, description, email domain, and existing company names for duplicate detection. Returns `{ decision: 'approve' | 'flag' | 'block', reason, confidence }`. Falls back to `flag` on AI errors (safe default).
+- **`supabase/migrations/040_employer_access_ai_columns.sql`**: Adds `ai_decision`, `ai_reason`, `ai_confidence` columns to `employer_access_requests`.
+
+### Modified files
+- **`src/app/api/employer/access-request/route.ts`**: POST now calls AvA before inserting. On `approve`: creates company + owner + membership instantly (same logic as admin approval). On `flag`: inserts with `status: 'flagged'` for human review. On `block`: inserts with `status: 'blocked'` and returns denial. GET now checks for both `pending` and `flagged` statuses.
+- **`src/components/RoleSelectionModal.tsx`**: `handleSubmitRequest` handles `autoApproved` response (instant flow-through to employer role), `blocked` response (shows error), and `flagged` (existing pending state).
+- **`src/app/api/admin/employer-requests/[id]/route.ts`**: PATCH now accepts both `pending` and `flagged` requests for admin approve/reject.
+- **`src/app/api/admin/employer-requests/route.ts`**: Stats now include `flagged`, `auto_approved`, `blocked` counts.
+- **`src/app/admin/AdminDashboard.tsx`**: Employer Requests tab shows AI Flagged stat badge, new status badge colors (orange for flagged, teal for AI approved), AvA reason display with confidence %, approve/reject buttons for flagged requests.
+
+### Renamed
+- **`MotorCarrierOnboarding.tsx` → `CompanyOnboarding.tsx`**: Generic company name, updated all imports in EmployerShell.
+
+### Fixed
+- **`src/app/api/employer/team/accept-invite/route.ts`**: Changed `driver_profiles` activity check to `user_profiles` (unified table from previous refactor).
+
+### Key design decisions
+- **3-tier system**: approve/flag/block. Most legitimate businesses get instant access. Edge cases get human review. Spam is blocked.
+- **Safe fallback**: If the AI call fails, the request is flagged (never auto-approved on error).
+- **Audit trail**: All requests are recorded with AvA's decision, reason, and confidence score for transparency.
+- **No status migration needed**: `employer_access_requests.status` is TEXT with no CHECK constraint — new values just work.
+
+---
+
 ## 🏗️ **Role-Agnostic Hub Refactor** (March 2026)
 
 ### What changed

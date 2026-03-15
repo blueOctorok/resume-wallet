@@ -125,6 +125,19 @@ export default function RoleSelectionModal({
 
       if (!res.ok) throw new Error(data.error || 'Failed to submit request')
 
+      // AvA auto-approved — skip straight to employer role
+      if (data.autoApproved) {
+        onSelectRole('employer', data.company?.name)
+        return
+      }
+
+      // AvA blocked — show denial reason
+      if (data.blocked) {
+        setRequestError(data.message || 'Your request could not be approved at this time.')
+        return
+      }
+
+      // Flagged / pending — show "under review" state
       setRequestSubmitted(true)
       setPendingRequest({
         companyName: requestCompanyName.trim(),

@@ -358,9 +358,12 @@ function AdminDashboardContent() {
     company_name: string
     description: string | null
     status: string
+    ai_decision: string | null
+    ai_reason: string | null
+    ai_confidence: number | null
     created_at: string
   }>>([])
-  const [accessRequestsStats, setAccessRequestsStats] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 })
+  const [accessRequestsStats, setAccessRequestsStats] = useState({ pending: 0, approved: 0, rejected: 0, flagged: 0, auto_approved: 0, blocked: 0, total: 0 })
   const [processingRequestId, setProcessingRequestId] = useState<string | null>(null)
   const [jobs, setJobs] = useState<AdminJob[]>([])
   const [jobsFilter, setJobsFilter] = useState<'all' | 'active' | 'inactive'>('all')
@@ -847,7 +850,7 @@ function AdminDashboardContent() {
       id: 'employers',
       label: 'Employers',
       tabs: [
-        { id: 'accessRequests' as TabId, label: `Access Requests${accessRequestsStats.pending > 0 ? ` (${accessRequestsStats.pending})` : ''}`, icon: <UserPlus className='w-4 h-4' /> },
+        { id: 'accessRequests' as TabId, label: `Access Requests${(accessRequestsStats.pending + accessRequestsStats.flagged) > 0 ? ` (${accessRequestsStats.pending + accessRequestsStats.flagged})` : ''}`, icon: <UserPlus className='w-4 h-4' /> },
         { id: 'companies' as TabId, label: `Companies${companyStats.pending > 0 ? ` (${companyStats.pending})` : ''}`, icon: <Building2 className='w-4 h-4' /> },
         { id: 'jobs' as TabId, label: 'Job Postings', icon: <Briefcase className='w-4 h-4' /> },
         { id: 'applications' as TabId, label: 'Applications', icon: <ClipboardList className='w-4 h-4' /> },
@@ -1092,22 +1095,31 @@ function AdminDashboardContent() {
                       }`}>{accessRequestsStats.pending}</span>
                     </div>
                     <div className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
+                      theme === 'dark' ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-50 text-orange-700'
+                    }`}>
+                      <AlertTriangle className='w-4 h-4' />
+                      <span>AI Flagged</span>
+                      <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
+                        theme === 'dark' ? 'bg-orange-500/30' : 'bg-orange-200'
+                      }`}>{accessRequestsStats.flagged}</span>
+                    </div>
+                    <div className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
                       theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-700'
                     }`}>
                       <CheckCircle2 className='w-4 h-4' />
                       <span>Approved</span>
                       <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
                         theme === 'dark' ? 'bg-green-500/30' : 'bg-green-200'
-                      }`}>{accessRequestsStats.approved}</span>
+                      }`}>{accessRequestsStats.approved + (accessRequestsStats.auto_approved || 0)}</span>
                     </div>
                     <div className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
                       theme === 'dark' ? 'bg-red-500/20 text-red-400' : 'bg-red-50 text-red-700'
                     }`}>
                       <XCircle className='w-4 h-4' />
-                      <span>Rejected</span>
+                      <span>Rejected / Blocked</span>
                       <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
                         theme === 'dark' ? 'bg-red-500/30' : 'bg-red-200'
-                      }`}>{accessRequestsStats.rejected}</span>
+                      }`}>{accessRequestsStats.rejected + (accessRequestsStats.blocked || 0)}</span>
                     </div>
                   </div>
 
@@ -1129,9 +1141,13 @@ function AdminDashboardContent() {
                               ? theme === 'dark'
                                 ? 'bg-yellow-500/5 border-yellow-500/30'
                                 : 'bg-yellow-50 border-yellow-200'
-                              : theme === 'dark'
-                                ? 'bg-gray-800/50 border-gray-700'
-                                : 'bg-white border-gray-200'
+                              : req.status === 'flagged'
+                                ? theme === 'dark'
+                                  ? 'bg-orange-500/5 border-orange-500/30'
+                                  : 'bg-orange-50 border-orange-200'
+                                : theme === 'dark'
+                                  ? 'bg-gray-800/50 border-gray-700'
+                                  : 'bg-white border-gray-200'
                           }`}
                         >
                           <div className='flex items-start justify-between gap-4'>
@@ -1145,11 +1161,17 @@ function AdminDashboardContent() {
                                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                                   req.status === 'pending'
                                     ? 'bg-yellow-500/20 text-yellow-500'
-                                    : req.status === 'approved'
-                                      ? 'bg-green-500/20 text-green-500'
-                                      : 'bg-red-500/20 text-red-500'
+                                    : req.status === 'flagged'
+                                      ? 'bg-orange-500/20 text-orange-500'
+                                      : req.status === 'auto_approved'
+                                        ? 'bg-teal-500/20 text-teal-500'
+                                        : req.status === 'approved'
+                                          ? 'bg-green-500/20 text-green-500'
+                                          : req.status === 'blocked'
+                                            ? 'bg-red-500/20 text-red-500'
+                                            : 'bg-red-500/20 text-red-500'
                                 }`}>
-                                  {req.status}
+                                  {req.status === 'auto_approved' ? 'AI Approved' : req.status === 'flagged' ? 'AI Flagged' : req.status}
                                 </span>
                                 {/* Domain mismatch warning */}
                                 {req.email && (() => {
@@ -1199,6 +1221,23 @@ function AdminDashboardContent() {
                                 </div>
                               )}
                               
+                              {/* AvA evaluation info */}
+                              {req.ai_reason && (
+                                <div className={`mt-2 p-2 rounded-lg text-xs flex items-start gap-2 ${
+                                  req.ai_decision === 'approve'
+                                    ? theme === 'dark' ? 'bg-teal-500/10 text-teal-400' : 'bg-teal-50 text-teal-700'
+                                    : req.ai_decision === 'flag'
+                                      ? theme === 'dark' ? 'bg-orange-500/10 text-orange-400' : 'bg-orange-50 text-orange-700'
+                                      : theme === 'dark' ? 'bg-red-500/10 text-red-400' : 'bg-red-50 text-red-700'
+                                }`}>
+                                  <span className='font-medium shrink-0'>AvA:</span>
+                                  <span>{req.ai_reason}</span>
+                                  {req.ai_confidence != null && (
+                                    <span className='shrink-0 opacity-60'>({Math.round(req.ai_confidence * 100)}%)</span>
+                                  )}
+                                </div>
+                              )}
+
                               <p className={`text-xs mt-2 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
                                 Submitted: {new Date(req.created_at).toLocaleDateString()} at{' '}
                                 {new Date(req.created_at).toLocaleTimeString()}
@@ -1210,7 +1249,7 @@ function AdminDashboardContent() {
 
                             {/* Actions */}
                             <div className='flex gap-2 flex-shrink-0 items-center'>
-                              {req.status === 'pending' && (
+                              {(req.status === 'pending' || req.status === 'flagged') && (
                                 <>
                                   <button
                                     onClick={async () => {

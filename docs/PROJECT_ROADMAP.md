@@ -25,6 +25,7 @@ The career card becomes a pure read-only projection of the hub.
 | Employer Composable Hub Phase 2 | ✅ Done | Role-agnostic polish: data-driven driver detection, 3-tier role badges, block-conditional quick actions, legacy cleanup |
 | Generic Block-Based Outreach | ✅ Done | Outreach reworked from hardcoded invite types to block-aware system with deep-linking |
 | Role-Agnostic Hub Refactor | ✅ Done | Unified `user_profiles` table, stripped all driver/dev assumptions from permanent hub UI, block-conditional data enrichment API |
+| AI-Gated Employer Access | ✅ Done | AvA evaluates employer signup requests in real-time: auto-approve, flag for review, or block. Renamed MotorCarrierOnboarding → CompanyOnboarding. Fixed driver_profiles → user_profiles in team invite. |
 
 ---
 
