@@ -57,13 +57,19 @@ export async function GET(request: NextRequest) {
     // Get counts and profile data for each user
     const userIds = users?.map((u) => u.id) || []
 
-    // Get driver profile data (including names for display)
+    // Unified profile (primary source for display name/email)
+    const { data: userProfiles } = await supabase
+      .from('user_profiles')
+      .select('user_id, first_name, last_name, email')
+      .in('user_id', userIds)
+
+    // Driver profile data (fallback + hasProfile indicator)
     const { data: driverProfiles } = await supabase
       .from('driver_profiles')
       .select('user_id, first_name, last_name, email')
       .in('user_id', userIds)
 
-    // Get developer profile data
+    // Developer profile data (fallback + hasDevProfile indicator)
     const { data: devProfiles } = await supabase
       .from('developer_profiles')
       .select('user_id, full_name, email, github_username')
@@ -88,24 +94,13 @@ export async function GET(request: NextRequest) {
       .in('user_id', userIds)
 
     // Build lookup maps
-    const driverProfileMap = new Map<
-      string,
-      {
-        first_name: string | null
-        last_name: string | null
-        email: string | null
-      }
-    >()
+    const userProfileMap = new Map<string, { first_name: string | null; last_name: string | null; email: string | null }>()
+    userProfiles?.forEach((p) => userProfileMap.set(p.user_id, p))
+
+    const driverProfileMap = new Map<string, { first_name: string | null; last_name: string | null; email: string | null }>()
     driverProfiles?.forEach((p) => driverProfileMap.set(p.user_id, p))
 
-    const devProfileMap = new Map<
-      string,
-      {
-        full_name: string | null
-        email: string | null
-        github_username: string | null
-      }
-    >()
+    const devProfileMap = new Map<string, { full_name: string | null; email: string | null; github_username: string | null }>()
     devProfiles?.forEach((p) => devProfileMap.set(p.user_id, p))
 
     const resumeCountMap = new Map<string, number>()
@@ -128,12 +123,17 @@ export async function GET(request: NextRequest) {
 
     // Enrich users with counts, profile data, and admin status
     const enrichedUsers = users?.map((user) => {
+      const userProfile = userProfileMap.get(user.id)
       const driverProfile = driverProfileMap.get(user.id)
       const devProfile = devProfileMap.get(user.id)
 
-      // Build display name: prefer driver profile, then dev profile, then users.name
+      // Build display name: prefer user_profiles, then driver, then dev, then users.name
       let displayName: string | null = null
-      if (driverProfile?.first_name && driverProfile?.last_name) {
+      if (userProfile?.first_name && userProfile?.last_name) {
+        displayName = `${userProfile.first_name} ${userProfile.last_name}`
+      } else if (userProfile?.first_name) {
+        displayName = userProfile.first_name
+      } else if (driverProfile?.first_name && driverProfile?.last_name) {
         displayName = `${driverProfile.first_name} ${driverProfile.last_name}`
       } else if (driverProfile?.first_name) {
         displayName = driverProfile.first_name
@@ -145,9 +145,8 @@ export async function GET(request: NextRequest) {
         displayName = user.name || null
       }
 
-      // Use profile email if available, fall back to users.email
       const displayEmail =
-        driverProfile?.email || devProfile?.email || user.email || null
+        userProfile?.email || driverProfile?.email || devProfile?.email || user.email || null
 
       return {
         ...user,

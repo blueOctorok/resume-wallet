@@ -26,6 +26,7 @@ The career card becomes a pure read-only projection of the hub.
 | Generic Block-Based Outreach | ✅ Done | Outreach reworked from hardcoded invite types to block-aware system with deep-linking |
 | Role-Agnostic Hub Refactor | ✅ Done | Unified `user_profiles` table, stripped all driver/dev assumptions from permanent hub UI, block-conditional data enrichment API |
 | AI-Gated Employer Access | ✅ Done | AvA evaluates employer signup requests in real-time: auto-approve, flag for review, or block. Renamed MotorCarrierOnboarding → CompanyOnboarding. Fixed driver_profiles → user_profiles in team invite. |
+| Admin Dashboard Audit Refactor | ✅ Done | Split ~4000-line monolith into ~20 focused components (shell + 15 tabs + 3 modals). Updated sidebar labels ("Driver Blocks" / "Developer Blocks"), role badges, resume labels, column headers. Added `user_profiles` to admin users & resumes APIs. |
 
 ---
 

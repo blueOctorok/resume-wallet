@@ -4,6 +4,64 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 🏗️ **Admin Dashboard Audit Refactor** (March 2026)
+
+### What changed
+Broke the ~4000-line `AdminDashboard.tsx` monolith into ~20 focused components under `src/components/admin/`. The old file is deleted; `admin/page.tsx` now imports `AdminDashboardShell`. Also updated sidebar labels, role badges, column headers, resume type labels, and API routes to align with the composable hub architecture.
+
+### New structure
+```
+src/components/admin/
+  AdminDashboardShell.tsx    — sidebar, header, search, pagination, tab routing (~300 lines)
+  admin-types.ts             — all shared interfaces (TabId, AdminTabProps, User, etc.)
+  admin-styles.ts            — getCardClass, getTableHeaderClass, getTableCellClass
+  tabs/
+    AccessRequestsTab.tsx    — stats badges, AvA evaluation, approve/reject/remove
+    CompaniesTab.tsx          — grid cards, team expansion, approve/suspend/notes/delete
+    JobsTab.tsx               — grid cards, activate/deactivate/delete
+    ApplicationsTab.tsx       — table, status filters
+    OutreachTab.tsx           — table, status filters, email sent indicator
+    BgcheckRequestsTab.tsx   — table, "Candidate" header (was "Driver")
+    ProfilesTab.tsx           — driver profiles table
+    DotAppsTab.tsx            — DOT applications table
+    ResumesTab.tsx            — table, updated type labels: "Resume (Built)", etc.
+    MvrTab.tsx                — table + inline detail view, "Candidate" header
+    VerificationsTab.tsx      — employment verifications table
+    DevProfilesTab.tsx        — developer profiles with GitHub links
+    DevProjectsTab.tsx        — projects with tech stack badges
+    UsersTab.tsx              — user list + UserDetailModal, updated role badges
+    ToolsTab.tsx              — wraps AdminResetWallet
+  modals/
+    DeleteConfirmModal.tsx    — DELETE text confirmation
+    CreateCompanyModal.tsx    — pre-create company form
+    UserDetailModal.tsx       — full user detail slide-over
+```
+
+### Deleted
+- `src/app/admin/AdminDashboard.tsx` (the ~4000-line monolith)
+
+### Architecture pattern
+- **Shell owns:** `activeTab`, `searchQuery`, `currentPage`, badge counts, delete modal, create company modal
+- **Each tab owns:** its own data, loading state, filters, and fetch logic via `useCallback` + `useEffect`
+- **Modals own:** their internal form/confirmation state
+- Tabs receive `AdminTabProps` and call `setTotalCount` / `onDelete` to communicate with the shell
+- `refreshKey` prop forces tab re-mount after deletes or creates
+
+### Label & badge fixes
+- Sidebar: "Drivers" → "Driver Blocks", "Developers" → "Developer Blocks"
+- Users tab role badges: `candidate` = teal, `employer` = purple (no more driver/developer colors)
+- Data badges: "Driver Profile" (was "Driver"), "Dev Profile" (was "Dev")
+- Resume type labels: `built` → "Resume (Built)", `developer_built` → "Resume (Dev Built)", `uploaded` → "Resume (Uploaded)"
+- MVR table header: "Driver" → "Candidate"
+- Background Checks table header: "Driver" → "Candidate"
+
+### API changes
+- **`admin/users/route.ts`**: Added `user_profiles` join as primary source for display name/email, falling back to `driver_profiles` → `developer_profiles` → `users.name`
+- **`admin/users/[id]/route.ts`**: Added `userProfile` to the detail response; added `user_profiles` to delete cascade
+- **`admin/resumes/route.ts`**: Switched from `driver_profiles` to `user_profiles` for owner name resolution, with `driver_profiles` fallback
+
+---
+
 ## 🤖 **AI-Gated Employer Access** (March 2026)
 
 ### What changed

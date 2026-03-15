@@ -29,6 +29,13 @@ export async function GET(
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
+    // Get unified profile (primary source for name/email)
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', id)
+      .maybeSingle()
+
     // Get driver profile
     const { data: profile } = await supabase
       .from('driver_profiles')
@@ -78,6 +85,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       user,
+      userProfile,
       profile,
       devProfile,
       devProjects: devProjects || [],
@@ -153,6 +161,9 @@ export async function DELETE(
 
     // 6. Delete driver profile
     await supabase.from('driver_profiles').delete().eq('user_id', id)
+
+    // 6b. Delete unified user profile
+    await supabase.from('user_profiles').delete().eq('user_id', id)
 
     // 7. Delete developer projects (before dev profile due to FK)
     await supabase.from('developer_projects').delete().eq('user_id', id)
