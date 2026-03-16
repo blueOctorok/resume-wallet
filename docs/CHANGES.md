@@ -4,6 +4,150 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Whitepaper Button in STORM Balance + Employer Access** (March 13, 2026)
+
+### What changed
+The `StormChainView` (the whitepaper page) was previously only accessible from the old `DriverHub` "Learn More" button and the nav bar for `driver`/`developer` roles. Now it's accessible from everywhere:
+
+1. **`STORMBalance` component** gets a new "Whitepaper" button in its footer row, next to the contract address link. Both `CandidateHub` and `EmployerHub` pass `onReadWhitepaper` to navigate to the `stormchain` page.
+2. **`EmployerShell`** now routes `currentPage === 'stormchain'` to `StormChainView` (was missing).
+3. **Navigation** STORM token counter now shows for all roles (`userRole && ...`) instead of just `driver`/`developer`. Employers earn STORM at 0.5x per the whitepaper, so they should see their balance too.
+
+### Files changed
+| File | Change |
+|------|--------|
+| `src/components/STORMBalance.tsx` | Added `onReadWhitepaper` prop + "Whitepaper" button in footer |
+| `src/components/hub/CandidateHub.tsx` | Passes `onReadWhitepaper` to `STORMBalance` |
+| `src/components/EmployerHub.tsx` | Added `STORMBalance` with `onReadWhitepaper` at bottom of hub |
+| `src/components/app/EmployerShell.tsx` | Added `stormchain` to `KNOWN_PAGES` + route to `StormChainView` |
+| `src/components/Navigation.tsx` | STORM counter visible for all roles, not just driver/developer |
+
+---
+
+## **AvA Chat UX Fixes — Keyboard Shortcut + Step Ordering** (March 13, 2026)
+
+### What changed
+1. **Removed `?` keyboard shortcut** — it was closing the journey guide every time you typed a question mark in the chat input. Only `Cmd+/` / `Ctrl+/` remains as a toggle shortcut.
+2. **"Complete Your Profile" moved to end of progress list** — block-specific action items (DOT app, resume, etc.) now appear first since they're the most actionable. Profile completion sits just above "Browse Jobs" at the bottom.
+
+### Files changed
+| File | Change |
+|------|--------|
+| `src/components/ui/AvaFloatingButton.tsx` | Removed `?` key handler, kept `Cmd+/` only |
+| `src/components/AvaJourneyGuide.tsx` | Removed `?` hint from chat input placeholder |
+| `src/lib/journey-progress.ts` | Reordered steps: wallet → block steps → profile → jobs |
+
+---
+
+## **AvA Block-Aware Personality — Blank Slate vs Career-Specific** (March 13, 2026)
+
+### What changed
+AvA now has two distinct modes based on installed blocks:
+
+1. **Zero blocks / general-only blocks**: AvA makes no assumptions about the user's career. She asks what they do, suggests general blocks, and points them to the Block Store. The system prompt explicitly forbids guessing an occupation.
+2. **Career-specific blocks installed** (e.g. `driver-*`, `developer-*`): AvA leans in and speaks confidently about that industry. She references CDL/DOT/trucking for driver blocks, or portfolios/GitHub/tech for developer blocks. She recommends related blocks they haven't installed yet.
+
+This is the "blank slate → opinionated guide" progression: blocks are the signal, not a role dropdown.
+
+### Files changed
+| File | Change |
+|------|--------|
+| `src/lib/ava-context.ts` | Zero-block: never assume occupation, ask instead. Has blocks: infer career from block prefixes (`driver-*`, `developer-*`, `general-*`) and give industry-specific guidance. |
+| `src/lib/journey-progress.ts` | Zero-block users get "Explore the Block Store" as primary next action |
+| `src/components/AvaJourneyGuide.tsx` | `handleNavigate` handles virtual `block-store` target by opening picker modal |
+
+---
+
+## **AvA Live Chat in Journey Guide** (March 13, 2026)
+
+### What changed
+Added a live conversational AI chat to the AvA Journey Guide panel. Users can now type questions and get context-aware responses from Claude Sonnet, powered by the existing `/api/ai/chat` endpoint. For zero-block users, AvA auto-sends a welcome message explaining what StormChain is, what blocks are, and what to do first.
+
+### Architecture
+- Chat state lives locally in `AvaJourneyGuide.tsx` via `useState` — no new store
+- `useHubContext()` hook assembles `HubContext` from `useHubBlocksStore` and passes it with every message so AvA always knows the user's installed blocks, occupation, and seeking reason
+- `sendToAva()` helper POSTs to `/api/ai/chat` (no new API routes)
+- Auto-welcome triggers once per guide open when `installedBlocks.length === 0` and no messages exist yet
+
+### New components (all in `AvaJourneyGuide.tsx`)
+| Component | Purpose |
+|-----------|---------|
+| `AvaChatThread` | Renders message bubbles — AvA left-aligned with Bot icon, user right-aligned in mint |
+| `AvaChatInput` | Text input + send button replaces the old static "Press ? anytime" footer |
+| `useHubContext` | Assembles `HubContext` from installed blocks and onboarding data |
+
+### System prompt enhancement (`ava-context.ts`)
+When the hub is empty, the system prompt now instructs AvA to:
+1. Welcome the user warmly and explain StormChain in 1-2 sentences
+2. Explain what blocks are (credentials, documents, skill sets)
+3. Recommend 2-3 blocks based on occupation (if known)
+4. Direct them to the Block Store
+
+### Files changed
+| File | Change |
+|------|--------|
+| `src/components/AvaJourneyGuide.tsx` | Added chat thread, chat input, hub context hook, auto-welcome logic |
+| `src/lib/ava-context.ts` | Enhanced zero-block section of system prompt with welcome guidance |
+
+---
+
+## **Block-Inferred Journey — AvA Guides Based on Installed Blocks** (March 13, 2026)
+
+### What changed
+Replaced the rigid role-based journey progress system with a block-aware system. AvA no longer assumes you're a "driver" or "developer" — she reads your installed hub blocks and builds journey steps dynamically from them.
+
+**Before**: `userRole === 'driver'` → hardcoded 6-step driver checklist, always showing DOT/MVR/resume steps regardless of what the user actually installed.
+
+**After**: Journey steps come from a `BLOCK_JOURNEY_MAP`. Each block type declares the steps it contributes. A user with only `general-skills` sees generic guidance. Installing `driver-dot-application` adds DOT-specific steps. No blocks = "Add blocks to get started" with a link to the block picker.
+
+### Architecture
+- `BLOCK_JOURNEY_MAP` in `journey-progress.ts` — each block type maps to `{ resolve(data) → JourneyStep[], nextAction(data) → NextAction | null }`
+- `calculateBlockJourney(installedBlockTypes, progressData)` — single calculator that builds steps from installed blocks + baseline steps (wallet, profile, jobs)
+- Employer journey stays role-based (separate hub system)
+- `AskAvaButton` simplified — no more `impliedRole` prop; journey is fully block-inferred
+
+### Removed
+- `calculateDriverProgress`, `calculateDeveloperProgress`, `getEmptyProgress` — replaced by `calculateBlockJourney`
+- `DriverProgressData`, `DeveloperProgressData` interfaces — replaced by `BlockProgressData`
+- `impliedRole` prop and role-setting logic from `AskAvaButton`
+- Role labels ("Driver Journey", "Developer Journey") from the guide header — now just "Your Journey"
+
+### Files changed
+| File | Change |
+|------|--------|
+| `src/lib/journey-progress.ts` | Rewritten: `BLOCK_JOURNEY_MAP` + `calculateBlockJourney` replaces 3 role calculators |
+| `src/stores/journey-store.ts` | `useJourneyProgress` reads installed blocks instead of branching on `userRole` |
+| `src/components/AvaJourneyGuide.tsx` | Empty state → "Add blocks" with picker button; removed role label from overview |
+| `src/components/ui/AskAvaButton.tsx` | Simplified — removed `impliedRole`, role-setting logic, auth store imports |
+| `src/components/ui/AvaFloatingButton.tsx` | Auto-open triggers on `steps.length > 0` instead of `progress.role` |
+| `src/components/hub/CandidateHub.tsx` | Removed `impliedRole` from `AskAvaButton` |
+| `src/components/EmployerHub.tsx` | Removed `impliedRole` from `AskAvaButton` |
+
+---
+
+## **Ask AvA Button — Reusable Component + Hub Integration** (March 13, 2026)
+
+### What changed
+Created a shared `AskAvaButton` component (`src/components/ui/AskAvaButton.tsx`) that encapsulates the rotating silver border animation and "Ask AvA" styling into a single reusable primitive.
+
+- **New component**: `AskAvaButton` — accepts `label`, optional `onClick` override, and `className` for positioning
+- **Default behavior**: Opens the AvA Journey Guide (via `useJourneyStore.openGuide`)
+- **CandidateHub**: Added prominently between Career Card banner and Verification bar
+- **EmployerHub**: Added after the Quick Actions bar, before Job Postings
+- **DOT Form 1** (`PersonalInfoForm1.tsx`): Refactored inline button to use `AskAvaButton` with custom `onClick`
+- **DOT Form 3** (`PersonalInfoForm3.tsx`): Same refactor, removed `HelpCircle` import
+
+### Files changed
+| File | Change |
+|------|--------|
+| `src/components/ui/AskAvaButton.tsx` | New shared component |
+| `src/components/hub/CandidateHub.tsx` | Added Ask AvA button |
+| `src/components/EmployerHub.tsx` | Added Ask AvA button |
+| `src/components/driver-application/PersonalInfoForm1.tsx` | Refactored to use shared component |
+| `src/components/driver-application/PersonalInfoForm3.tsx` | Refactored to use shared component |
+
+---
+
 ## 🗑️ **Drop `users.name` Column — Remove References from Non-Admin APIs** (March 16, 2026)
 
 ### Problem

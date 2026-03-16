@@ -6,7 +6,7 @@ import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
 import SaveProgressButton from './SaveProgressButton'
 import { PhoneInput } from '@/components/ui/MaskedInputs'
 import { StateSelect } from '@/components/ui/StateSelect'
-import { HelpCircle } from 'lucide-react'
+import AskAvaButton from '@/components/ui/AskAvaButton'
 
 // Motor carrier (employing carrier) is not collected here — it is injected by the
 // specific employer when a driver's application is linked to their company.
@@ -602,40 +602,29 @@ export default function PersonalInfoForm1({
 
   const renderApplicantInformation = () => (
     <div className='space-y-8'>
-      <div className='flex justify-end'>
-        <div className='rotating-silver-border'>
-          <button
-            type='button'
-            onClick={() =>
-              requestHelp({
-                section: 'Form 1 – Personal Information',
-                question:
-                  'What details are required for the personal information section of the FMCSA driver application and why does the carrier need them?',
-                regulation: '49 CFR 391.21',
-                context:
-                  'Driver is completing PersonalInfoForm1 and wants clarity on the required personal details before proceeding.',
-                dataSnapshot: {
-                  personalDetails: {
-                    firstName: formData.firstName,
-                    lastName: formData.lastName,
-                    phone: formData.phone,
-                    email: formData.email,
-                    dateOfBirth: formData.dateOfBirth,
-                  },
-                },
-              })
-            }
-            className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-colors cursor-pointer ${
-theme === 'dark'
-              ? 'bg-gray-700/50 text-gray-200 hover:bg-gray-600'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <HelpCircle className='w-4 h-4' strokeWidth={2} />
-            <span>Ask AvA about this section</span>
-          </button>
-        </div>
-      </div>
+      <AskAvaButton
+        label='Ask AvA about this section'
+        className='justify-end'
+        onClick={() =>
+          requestHelp({
+            section: 'Form 1 – Personal Information',
+            question:
+              'What details are required for the personal information section of the FMCSA driver application and why does the carrier need them?',
+            regulation: '49 CFR 391.21',
+            context:
+              'Driver is completing PersonalInfoForm1 and wants clarity on the required personal details before proceeding.',
+            dataSnapshot: {
+              personalDetails: {
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                phone: formData.phone,
+                email: formData.email,
+                dateOfBirth: formData.dateOfBirth,
+              },
+            },
+          })
+        }
+      />
 
       <div className='text-center'>
         <h2

@@ -1,13 +1,17 @@
 /**
- * Journey Progress Calculator
- * 
- * Consolidates all progress tracking into one source of truth.
- * Used by the AvA Journey Guide to show accurate completion status.
+ * Block-Inferred Journey Progress
+ *
+ * Instead of hardcoded role-based checklists, AvA builds journey steps
+ * dynamically from the blocks the user has installed. A user with only
+ * general blocks sees generic guidance; adding a driver-dot-application
+ * block automatically surfaces DOT-specific steps.
+ *
+ * Employer journey remains role-based (separate hub/block system).
  */
 
-import type { PageType, UserRole, DriverHubStats } from '@/stores/types'
+import type { PageType, UserRole } from '@/stores/types'
 
-// ===== TYPES =====
+// ===== SHARED TYPES (unchanged — consumed by AvaJourneyGuide) =====
 
 export type StepStatus = 'complete' | 'in_progress' | 'pending' | 'skipped'
 
@@ -17,7 +21,7 @@ export interface JourneyStep {
   description: string
   status: StepStatus
   completedAt?: string
-  progress?: number // 0-100 for partial completion (e.g., profile 60%)
+  progress?: number
   action?: {
     label: string
     target: PageType
@@ -34,7 +38,7 @@ export interface NextAction {
 
 export interface JourneyProgress {
   role: UserRole
-  overallProgress: number // 0-100
+  overallProgress: number
   completedSteps: number
   totalSteps: number
   steps: JourneyStep[]
@@ -43,22 +47,308 @@ export interface JourneyProgress {
   greeting: string
 }
 
-// ===== DATA INTERFACES (what we need from stores) =====
+// ===== BLOCK-AWARE PROGRESS DATA =====
 
-export interface DriverProgressData {
+/**
+ * Flat bag of completion signals that the journey store assembles
+ * from various stores. Each block's step resolver picks what it needs.
+ */
+export interface BlockProgressData {
   isWalletConnected: boolean
+  profileCompleteness: number
   hasResume: boolean
   resumeCount: number
-  hasDotApplication: boolean
   dotAppComplete: boolean
-  dotAppVerified: boolean // Has blockchain verification (tx hash)
+  dotAppVerified: boolean
   dotAppInProgress: boolean
   hasMvrRecord: boolean
-  mvrRecordCount: number
-  profileCompleteness: number
   hasAppliedToJobs: boolean
   jobApplicationCount: number
+  hasPortfolioProjects: boolean
+  portfolioProjectCount: number
+  hasConnectedGithub: boolean
 }
+
+// ===== BLOCK → JOURNEY STEP MAP =====
+
+/**
+ * Each block type declares the journey steps it contributes.
+ * `resolve` receives the shared progress data and returns fully-hydrated steps.
+ * This is the only place you need to touch when adding a new block type.
+ */
+interface BlockJourneyEntry {
+  resolve: (data: BlockProgressData) => JourneyStep[]
+  /** Optional next-action when the block's work isn't done yet */
+  nextAction?: (data: BlockProgressData) => NextAction | null
+}
+
+const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
+  'driver-resume': {
+    resolve: (d) => [{
+      id: 'driver-resume',
+      label: 'Upload Your Resume',
+      description: 'Build or upload a professional resume',
+      status: d.hasResume ? 'complete' : 'pending',
+      action: !d.hasResume ? { label: 'Create Resume', target: 'resume' } : undefined,
+    }],
+    nextAction: (d) => !d.hasResume ? {
+      label: 'Create Your Resume',
+      description: 'Stand out to employers with a professional resume',
+      target: 'resume',
+      priority: 'high',
+    } : null,
+  },
+
+  'developer-resume': {
+    resolve: (d) => [{
+      id: 'developer-resume',
+      label: 'Build Your Resume',
+      description: 'Create a developer-focused resume',
+      status: d.hasResume ? 'complete' : 'pending',
+      action: !d.hasResume ? { label: 'Build Resume', target: 'resume' } : undefined,
+    }],
+    nextAction: (d) => !d.hasResume ? {
+      label: 'Build Your Resume',
+      description: 'Showcase your experience to hiring managers',
+      target: 'resume',
+      priority: 'high',
+    } : null,
+  },
+
+  'driver-dot-application': {
+    resolve: (d) => [{
+      id: 'driver-dot-application',
+      label: 'DOT Application',
+      description: 'Complete and verify your DOT compliance application',
+      status: d.dotAppVerified
+        ? 'complete'
+        : (d.dotAppComplete || d.dotAppInProgress) ? 'in_progress' : 'pending',
+      action: !d.dotAppVerified
+        ? {
+            label: d.dotAppComplete
+              ? 'Verify on Blockchain'
+              : d.dotAppInProgress ? 'Continue Application' : 'Start Application',
+            target: 'dotapp',
+          }
+        : undefined,
+    }],
+    nextAction: (d) => !d.dotAppVerified ? {
+      label: d.dotAppInProgress ? 'Finish DOT Application' : 'Start DOT Application',
+      description: 'Complete your DOT compliance application',
+      target: 'dotapp',
+      priority: 'high',
+    } : null,
+  },
+
+  'driver-mvr': {
+    resolve: (d) => [{
+      id: 'driver-mvr',
+      label: 'Motor Vehicle Record',
+      description: 'Order your MVR for employer verification',
+      status: d.hasMvrRecord ? 'complete' : 'pending',
+      action: !d.hasMvrRecord ? { label: 'Order MVR', target: 'mvr' } : undefined,
+      isOptional: true,
+    }],
+    nextAction: (d) => !d.hasMvrRecord ? {
+      label: 'Order MVR',
+      description: 'Add your driving record to boost your profile',
+      target: 'mvr',
+      priority: 'medium',
+    } : null,
+  },
+
+  'driver-cdl-credentials': {
+    // No active journey step — CDL credentials are informational
+    resolve: () => [],
+  },
+
+  'developer-portfolio': {
+    resolve: (d) => [{
+      id: 'developer-portfolio',
+      label: 'Add Portfolio Projects',
+      description: 'Showcase your best work to employers',
+      status: d.hasPortfolioProjects ? 'complete' : 'pending',
+      action: !d.hasPortfolioProjects ? { label: 'Add Project', target: 'portfolio' } : undefined,
+    }],
+    nextAction: (d) => !d.hasPortfolioProjects ? {
+      label: 'Add Your First Project',
+      description: 'Showcase your best work',
+      target: 'portfolio',
+      priority: 'high',
+    } : null,
+  },
+
+  'developer-github': {
+    resolve: (d) => [{
+      id: 'developer-github',
+      label: 'Connect GitHub',
+      description: 'Link your GitHub to show contributions',
+      status: d.hasConnectedGithub ? 'complete' : 'pending',
+      action: !d.hasConnectedGithub ? { label: 'Connect GitHub', target: null } : undefined,
+    }],
+    nextAction: (d) => !d.hasConnectedGithub ? {
+      label: 'Connect GitHub',
+      description: 'Show employers your open-source contributions',
+      target: null,
+      priority: 'medium',
+    } : null,
+  },
+
+  'developer-projects': {
+    // Covered by developer-portfolio; no separate step
+    resolve: () => [],
+  },
+
+  'general-skills': {
+    // Informational block — no journey step (skills are part of profile completeness)
+    resolve: () => [],
+  },
+
+  'general-work-history': {
+    // Informational block — no journey step (work history is part of profile completeness)
+    resolve: () => [],
+  },
+}
+
+// ===== CANDIDATE / BLOCK-BASED JOURNEY =====
+
+export function calculateBlockJourney(
+  installedBlockTypes: string[],
+  data: BlockProgressData,
+): JourneyProgress {
+  // 1. Wallet step — always first
+  const walletStep: JourneyStep = {
+    id: 'wallet',
+    label: 'Connect Wallet',
+    description: 'Sign in with your wallet to get started',
+    status: data.isWalletConnected ? 'complete' : 'pending',
+    action: !data.isWalletConnected ? { label: 'Sign In', target: 'signin' } : undefined,
+  }
+
+  // 2. Block-contributed steps
+  const blockSteps: JourneyStep[] = []
+  const blockActions: NextAction[] = []
+
+  for (const blockType of installedBlockTypes) {
+    const entry = BLOCK_JOURNEY_MAP[blockType]
+    if (!entry) continue
+    blockSteps.push(...entry.resolve(data))
+    if (entry.nextAction) {
+      const action = entry.nextAction(data)
+      if (action) blockActions.push(action)
+    }
+  }
+
+  // 3. Profile step — after block steps so actionable items come first
+  const profileStep: JourneyStep = {
+    id: 'profile',
+    label: 'Complete Your Profile',
+    description: 'Fill out your name, headline, and avatar',
+    status: data.profileCompleteness >= 80
+      ? 'complete'
+      : data.profileCompleteness > 0 ? 'in_progress' : 'pending',
+    progress: data.profileCompleteness,
+    action: data.profileCompleteness < 80 ? { label: 'View Profile', target: null } : undefined,
+  }
+
+  // 4. "Browse Jobs" baseline — always last
+  const jobStep: JourneyStep = {
+    id: 'apply',
+    label: 'Browse & Apply to Jobs',
+    description: 'Find positions that match your profile',
+    status: data.hasAppliedToJobs ? 'complete' : 'pending',
+    action: !data.hasAppliedToJobs ? { label: 'Browse Jobs', target: 'jobs' } : undefined,
+  }
+
+  const steps = [walletStep, ...blockSteps, profileStep, jobStep]
+
+  // 4. Calculate progress
+  const requiredSteps = steps.filter((s) => !s.isOptional)
+  const completedSteps = steps.filter((s) => s.status === 'complete').length
+  const totalSteps = requiredSteps.length
+  const overallProgress = steps.length > 0
+    ? Math.round((completedSteps / steps.length) * 100)
+    : 0
+
+  const currentStep = steps.find((s) => s.status !== 'complete') || null
+
+  // 5. Build next actions — block-specific first, then generic fallbacks
+  const nextActions: NextAction[] = []
+
+  if (!data.isWalletConnected) {
+    nextActions.push({
+      label: 'Sign In',
+      description: 'Connect your wallet to get started',
+      target: 'signin',
+      priority: 'high',
+    })
+  } else if (installedBlockTypes.length === 0) {
+    // Zero blocks — the most important action is discovering the Block Store
+    nextActions.push({
+      label: 'Explore the Block Store',
+      description: 'Browse blocks to build your professional profile',
+      target: 'block-store',
+      priority: 'high',
+    })
+    if (data.profileCompleteness < 80) {
+      nextActions.push({
+        label: 'Complete Profile',
+        description: `Your profile is ${data.profileCompleteness}% complete`,
+        target: null,
+        priority: 'medium',
+      })
+    }
+  } else {
+    // Has blocks — show block-specific actions first
+    nextActions.push(...blockActions)
+
+    if (data.profileCompleteness < 80) {
+      nextActions.push({
+        label: 'Complete Profile',
+        description: `Your profile is ${data.profileCompleteness}% complete`,
+        target: null,
+        priority: 'low',
+      })
+    }
+    if (!data.hasAppliedToJobs) {
+      nextActions.push({
+        label: 'Browse Jobs',
+        description: 'Find positions that match your profile',
+        target: 'jobs',
+        priority: 'low',
+      })
+    }
+  }
+
+  // 6. Greeting
+  let greeting: string
+  if (!data.isWalletConnected) {
+    greeting = "Welcome to StormChain! Let's get you started."
+  } else if (installedBlockTypes.length === 0) {
+    greeting = "Add blocks to your hub to build your professional profile."
+  } else if (overallProgress < 30) {
+    greeting = "Great start! Let's keep building your profile."
+  } else if (overallProgress < 60) {
+    greeting = "You're making solid progress!"
+  } else if (overallProgress < 90) {
+    greeting = "Almost there — just a few more steps."
+  } else {
+    greeting = "Looking great! Your profile is ready to impress."
+  }
+
+  return {
+    role: null,
+    overallProgress,
+    completedSteps,
+    totalSteps,
+    steps,
+    currentStep,
+    nextActions: nextActions.slice(0, 3),
+    greeting,
+  }
+}
+
+// ===== EMPLOYER JOURNEY (role-based — separate hub system) =====
 
 export interface EmployerProgressData {
   isWalletConnected: boolean
@@ -70,173 +360,6 @@ export interface EmployerProgressData {
   applicantCount: number
   hasRequestedVerification: boolean
 }
-
-export interface DeveloperProgressData {
-  isWalletConnected: boolean
-  hasPortfolioProjects: boolean
-  portfolioProjectCount: number
-  hasResume: boolean
-  hasConnectedGithub: boolean
-  hasCareerScore: boolean
-  careerScore: number
-  hasAppliedToJobs: boolean
-  jobApplicationCount: number
-}
-
-// ===== DRIVER JOURNEY =====
-
-export function calculateDriverProgress(data: DriverProgressData): JourneyProgress {
-  const steps: JourneyStep[] = [
-    {
-      id: 'wallet',
-      label: 'Connect Wallet',
-      description: 'Sign in with your wallet to get started',
-      status: data.isWalletConnected ? 'complete' : 'pending',
-      completedAt: data.isWalletConnected ? new Date().toISOString() : undefined,
-      action: !data.isWalletConnected ? { label: 'Sign In', target: 'signin' } : undefined,
-    },
-    {
-      id: 'resume',
-      label: 'Create Resume',
-      description: 'Upload or build your professional driver resume',
-      status: data.hasResume ? 'complete' : 'pending',
-      action: !data.hasResume ? { label: 'Create Resume', target: 'resume' } : undefined,
-    },
-    {
-      id: 'dotapp',
-      label: 'DOT Application',
-      description: 'Complete and verify your DOT compliance application on blockchain',
-      // Complete only when verified on blockchain, in_progress if form is done but not verified
-      status: data.dotAppVerified 
-        ? 'complete' 
-        : data.dotAppComplete 
-          ? 'in_progress' 
-          : data.dotAppInProgress 
-            ? 'in_progress' 
-            : 'pending',
-      action: !data.dotAppVerified 
-        ? { 
-            label: data.dotAppComplete 
-              ? 'Verify on Blockchain' 
-              : data.dotAppInProgress 
-                ? 'Continue Application' 
-                : 'Start Application', 
-            target: 'dotapp' 
-          } 
-        : undefined,
-    },
-    {
-      id: 'profile',
-      label: 'Complete Profile',
-      description: 'Reach 80% profile completeness for better visibility',
-      status: data.profileCompleteness >= 80 ? 'complete' : data.profileCompleteness > 0 ? 'in_progress' : 'pending',
-      progress: data.profileCompleteness,
-      // null = navigate to hub (shells show hub when currentPage is null)
-      action: data.profileCompleteness < 80 ? { label: 'View Profile', target: null } : undefined,
-    },
-    {
-      id: 'mvr',
-      label: 'MVR Record',
-      description: 'Order your Motor Vehicle Record for verification',
-      status: data.hasMvrRecord ? 'complete' : 'pending',
-      action: !data.hasMvrRecord ? { label: 'Order MVR', target: 'mvr' } : undefined,
-      isOptional: true,
-    },
-    {
-      id: 'apply',
-      label: 'Apply to Jobs',
-      description: 'Browse and apply to driver positions',
-      status: data.hasAppliedToJobs ? 'complete' : 'pending',
-      action: !data.hasAppliedToJobs ? { label: 'Browse Jobs', target: 'jobs' } : undefined,
-    },
-  ]
-
-  const completedSteps = steps.filter(s => s.status === 'complete').length
-  const totalSteps = steps.filter(s => !s.isOptional).length
-  const overallProgress = Math.round((completedSteps / steps.length) * 100)
-
-  // Find current step (first non-complete step)
-  const currentStep = steps.find(s => s.status !== 'complete') || null
-
-  // Generate next actions based on current state
-  const nextActions: NextAction[] = []
-  
-  if (!data.isWalletConnected) {
-    nextActions.push({
-      label: 'Sign In',
-      description: 'Connect your wallet to start your journey',
-      target: 'signin',
-      priority: 'high',
-    })
-  } else if (!data.hasResume && !data.dotAppInProgress) {
-    nextActions.push({
-      label: 'Create Your Resume',
-      description: 'Build a professional resume to stand out to employers',
-      target: 'resume',
-      priority: 'high',
-    })
-  } else if (!data.dotAppComplete) {
-    nextActions.push({
-      label: data.dotAppInProgress ? 'Finish DOT Application' : 'Start DOT Application',
-      description: 'Complete your DOT compliance application',
-      target: 'dotapp',
-      priority: 'high',
-    })
-  } else if (!data.hasAppliedToJobs) {
-    nextActions.push({
-      label: 'Browse Jobs',
-      description: 'Find driving positions that match your experience',
-      target: 'jobs',
-      priority: 'high',
-    })
-  }
-
-  // Add secondary suggestions
-  if (data.isWalletConnected && !data.hasMvrRecord && data.dotAppComplete) {
-    nextActions.push({
-      label: 'Order MVR',
-      description: 'Add your driving record to boost your profile',
-      target: 'mvr',
-      priority: 'medium',
-    })
-  }
-
-  if (data.profileCompleteness < 80 && data.isWalletConnected) {
-    nextActions.push({
-      label: 'Complete Profile',
-      description: `Your profile is ${data.profileCompleteness}% complete`,
-      target: null, // null = hub
-      priority: 'low',
-    })
-  }
-
-  // Generate greeting based on progress
-  let greeting: string
-  if (!data.isWalletConnected) {
-    greeting = "Welcome! Let's get you started on your driver journey."
-  } else if (overallProgress < 30) {
-    greeting = "Great start! Let's build your driver profile."
-  } else if (overallProgress < 60) {
-    greeting = "You're making progress! Keep going."
-  } else if (overallProgress < 90) {
-    greeting = "Almost there! Just a few more steps."
-  } else {
-    greeting = "Excellent! Your profile is looking great."
-  }
-
-  return {
-    role: 'driver',
-    overallProgress,
-    completedSteps,
-    totalSteps,
-    steps,
-    currentStep,
-    nextActions: nextActions.slice(0, 2), // Max 2 actions
-    greeting,
-  }
-}
-
-// ===== EMPLOYER JOURNEY =====
 
 export function calculateEmployerProgress(data: EmployerProgressData): JourneyProgress {
   const steps: JourneyStep[] = [
@@ -250,9 +373,8 @@ export function calculateEmployerProgress(data: EmployerProgressData): JourneyPr
     {
       id: 'company',
       label: 'Company Profile',
-      description: 'Set up your company profile to attract drivers',
+      description: 'Set up your company profile to attract talent',
       status: data.companyProfileComplete ? 'complete' : data.hasCompanyProfile ? 'in_progress' : 'pending',
-      // Company profile is managed from the hub; null navigates there
       action: !data.companyProfileComplete ? { label: 'Set Up Company', target: null } : undefined,
     },
     {
@@ -272,55 +394,28 @@ export function calculateEmployerProgress(data: EmployerProgressData): JourneyPr
     {
       id: 'verify',
       label: 'Request Verifications',
-      description: 'Verify driver credentials and employment history',
+      description: 'Verify credentials and employment history',
       status: data.hasRequestedVerification ? 'complete' : 'pending',
       isOptional: true,
     },
   ]
 
-  const completedSteps = steps.filter(s => s.status === 'complete').length
-  const totalSteps = steps.filter(s => !s.isOptional).length
+  const completedSteps = steps.filter((s) => s.status === 'complete').length
+  const totalSteps = steps.filter((s) => !s.isOptional).length
   const overallProgress = Math.round((completedSteps / steps.length) * 100)
-
-  const currentStep = steps.find(s => s.status !== 'complete') || null
+  const currentStep = steps.find((s) => s.status !== 'complete') || null
 
   const nextActions: NextAction[] = []
-  
   if (!data.isWalletConnected) {
-    nextActions.push({
-      label: 'Sign In',
-      description: 'Connect your wallet to start hiring',
-      target: 'signin',
-      priority: 'high',
-    })
+    nextActions.push({ label: 'Sign In', description: 'Connect your wallet to start hiring', target: 'signin', priority: 'high' })
   } else if (!data.companyProfileComplete) {
-    nextActions.push({
-      label: 'Complete Company Profile',
-      description: 'Set up your company to attract qualified drivers',
-      target: null, // company profile is in the hub
-      priority: 'high',
-    })
+    nextActions.push({ label: 'Complete Company Profile', description: 'Set up your company to attract talent', target: null, priority: 'high' })
   } else if (!data.hasPostedJob) {
-    nextActions.push({
-      label: 'Post Your First Job',
-      description: 'Start receiving applications from drivers',
-      target: 'post-job',
-      priority: 'high',
-    })
+    nextActions.push({ label: 'Post Your First Job', description: 'Start receiving applications', target: 'post-job', priority: 'high' })
   } else if (data.applicantCount > 0) {
-    nextActions.push({
-      label: `Review ${data.applicantCount} Applicant${data.applicantCount > 1 ? 's' : ''}`,
-      description: 'Check out who has applied to your positions',
-      target: 'applicants',
-      priority: 'high',
-    })
+    nextActions.push({ label: `Review ${data.applicantCount} Applicant${data.applicantCount > 1 ? 's' : ''}`, description: 'Check out who has applied', target: 'applicants', priority: 'high' })
   } else {
-    nextActions.push({
-      label: 'Find Drivers',
-      description: 'Search for qualified drivers in our network',
-      target: 'find-drivers',
-      priority: 'medium',
-    })
+    nextActions.push({ label: 'Find Talent', description: 'Search for qualified candidates in our network', target: 'talent-search', priority: 'medium' })
   }
 
   let greeting: string
@@ -329,7 +424,7 @@ export function calculateEmployerProgress(data: EmployerProgressData): JourneyPr
   } else if (!data.companyProfileComplete) {
     greeting = "Let's complete your company profile."
   } else if (!data.hasPostedJob) {
-    greeting = "Ready to find great drivers? Post a job!"
+    greeting = "Ready to find great talent? Post a job!"
   } else if (data.applicantCount > 0) {
     greeting = `You have ${data.applicantCount} applicant${data.applicantCount > 1 ? 's' : ''} waiting!`
   } else {
@@ -345,181 +440,5 @@ export function calculateEmployerProgress(data: EmployerProgressData): JourneyPr
     currentStep,
     nextActions: nextActions.slice(0, 2),
     greeting,
-  }
-}
-
-// ===== DEVELOPER JOURNEY =====
-
-export function calculateDeveloperProgress(data: DeveloperProgressData): JourneyProgress {
-  const steps: JourneyStep[] = [
-    {
-      id: 'wallet',
-      label: 'Connect Wallet',
-      description: 'Sign in with your wallet to get started',
-      status: data.isWalletConnected ? 'complete' : 'pending',
-      action: !data.isWalletConnected ? { label: 'Sign In', target: 'signin' } : undefined,
-    },
-    {
-      id: 'portfolio',
-      label: 'Add Projects',
-      description: 'Showcase your work with portfolio projects',
-      status: data.hasPortfolioProjects ? 'complete' : 'pending',
-      action: !data.hasPortfolioProjects ? { label: 'Add Project', target: 'portfolio' } : undefined,
-    },
-    {
-      id: 'resume',
-      label: 'Build Resume',
-      description: 'Create your developer resume',
-      status: data.hasResume ? 'complete' : 'pending',
-      action: !data.hasResume ? { label: 'Build Resume', target: 'resume' } : undefined,
-    },
-    {
-      id: 'github',
-      label: 'Connect GitHub',
-      description: 'Link your GitHub to show your contributions',
-      status: data.hasConnectedGithub ? 'complete' : 'pending',
-      // GitHub connection is in the hub; null navigates there
-      action: !data.hasConnectedGithub ? { label: 'Connect GitHub', target: null } : undefined,
-    },
-    {
-      id: 'score',
-      label: 'Career Score',
-      description: 'Calculate your Career Score to see where you stand',
-      status: data.hasCareerScore ? 'complete' : 'pending',
-      progress: data.careerScore > 0 ? data.careerScore : undefined,
-      action: !data.hasCareerScore ? { label: 'Calculate Score', target: null } : undefined,
-    },
-    {
-      id: 'apply',
-      label: 'Apply to Jobs',
-      description: 'Find and apply to developer positions',
-      status: data.hasAppliedToJobs ? 'complete' : 'pending',
-      action: !data.hasAppliedToJobs ? { label: 'Browse Jobs', target: 'jobs' } : undefined,
-    },
-  ]
-
-  const completedSteps = steps.filter(s => s.status === 'complete').length
-  const totalSteps = steps.length
-  const overallProgress = Math.round((completedSteps / totalSteps) * 100)
-
-  const currentStep = steps.find(s => s.status !== 'complete') || null
-
-  const nextActions: NextAction[] = []
-  
-  if (!data.isWalletConnected) {
-    nextActions.push({
-      label: 'Sign In',
-      description: 'Connect your wallet to start',
-      target: 'signin',
-      priority: 'high',
-    })
-  } else if (!data.hasPortfolioProjects) {
-    nextActions.push({
-      label: 'Add Your First Project',
-      description: 'Showcase your best work',
-      target: 'portfolio',
-      priority: 'high',
-    })
-  } else if (!data.hasResume) {
-    nextActions.push({
-      label: 'Build Your Resume',
-      description: 'Create a professional developer resume',
-      target: 'resume',
-      priority: 'high',
-    })
-  } else if (!data.hasConnectedGithub) {
-    nextActions.push({
-      label: 'Connect GitHub',
-      description: 'Boost your Career Score with your contributions',
-      target: null, // github connection lives in the hub
-      priority: 'medium',
-    })
-  } else if (!data.hasAppliedToJobs) {
-    nextActions.push({
-      label: 'Start Applying',
-      description: 'Find positions that match your skills',
-      target: 'jobs',
-      priority: 'high',
-    })
-  }
-
-  let greeting: string
-  if (!data.isWalletConnected) {
-    greeting = "Welcome, developer! Let's build your profile."
-  } else if (overallProgress < 30) {
-    greeting = "Let's showcase your skills to employers."
-  } else if (overallProgress < 60) {
-    greeting = "Your profile is shaping up nicely!"
-  } else if (overallProgress < 90) {
-    greeting = "Almost complete! A few more steps."
-  } else {
-    greeting = "Your developer profile is ready to shine!"
-  }
-
-  return {
-    role: 'developer',
-    overallProgress,
-    completedSteps,
-    totalSteps,
-    steps,
-    currentStep,
-    nextActions: nextActions.slice(0, 2),
-    greeting,
-  }
-}
-
-// ===== HELPER TO GET EMPTY PROGRESS =====
-
-export function getEmptyProgress(role: UserRole): JourneyProgress {
-  if (role === 'driver') {
-    return calculateDriverProgress({
-      isWalletConnected: false,
-      hasResume: false,
-      resumeCount: 0,
-      hasDotApplication: false,
-      dotAppComplete: false,
-      dotAppVerified: false,
-      dotAppInProgress: false,
-      hasMvrRecord: false,
-      mvrRecordCount: 0,
-      profileCompleteness: 0,
-      hasAppliedToJobs: false,
-      jobApplicationCount: 0,
-    })
-  } else if (role === 'employer') {
-    return calculateEmployerProgress({
-      isWalletConnected: false,
-      hasCompanyProfile: false,
-      companyProfileComplete: false,
-      hasPostedJob: false,
-      jobPostCount: 0,
-      hasReviewedApplicants: false,
-      applicantCount: 0,
-      hasRequestedVerification: false,
-    })
-  } else if (role === 'developer') {
-    return calculateDeveloperProgress({
-      isWalletConnected: false,
-      hasPortfolioProjects: false,
-      portfolioProjectCount: 0,
-      hasResume: false,
-      hasConnectedGithub: false,
-      hasCareerScore: false,
-      careerScore: 0,
-      hasAppliedToJobs: false,
-      jobApplicationCount: 0,
-    })
-  }
-  
-  // Default for null role
-  return {
-    role: null,
-    overallProgress: 0,
-    completedSteps: 0,
-    totalSteps: 0,
-    steps: [],
-    currentStep: null,
-    nextActions: [],
-    greeting: "Welcome to StormChain!",
   }
 }

@@ -54,6 +54,8 @@ import {
 } from 'lucide-react'
 import { getDisplayRole } from '@/lib/employer-roles'
 import { cn } from '@/lib/utils'
+import AskAvaButton from '@/components/ui/AskAvaButton'
+import STORMBalance from '@/components/STORMBalance'
 
 // ============================================================
 // TYPES
@@ -545,6 +547,11 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         </button>
       </div>
 
+      {/* Ask AvA — prominent CTA for employer guidance */}
+      <div className='mb-8'>
+        <AskAvaButton label='Ask AvA — What should I do next?' />
+      </div>
+
       {/* Job Postings — kanban by status */}
       <JobPostingsSection
         jobs={data.jobPostings}
@@ -723,6 +730,14 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           onClose={() => setCareerCardApplicantId(null)}
         />
       )}
+
+      {/* ── STORM Token Footer ── */}
+      <div className='pt-4'>
+        <STORMBalance
+          walletAddress={walletAddress}
+          onReadWhitepaper={() => onNavigate('stormchain')}
+        />
+      </div>
 
     </div>
   )

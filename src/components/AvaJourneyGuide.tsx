@@ -1,45 +1,156 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-import { 
-  X, 
-  Check, 
-  Circle, 
+import { useEffect, useRef, useState, useCallback } from 'react'
+import {
+  X,
+  Check,
+  Circle,
   ArrowRight,
   Bot,
   Loader2,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Send,
+  MessageCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useJourneyStore, useJourneyProgress, useUIStore } from '@/stores'
+import {
+  useHubBlocksStore,
+  useInstalledBlocks,
+  useHubOnboarding,
+} from '@/stores/hub-blocks-store'
 import type { JourneyStep, NextAction } from '@/lib/journey-progress'
+import type { HubContext } from '@/lib/ava-context'
 import type { PageType } from '@/stores/types'
 
-/**
- * AvA Journey Guide - Main progress tracking panel
- * 
- * Replaces the old TAssistant chat interface.
- * Shows actual progress, completed steps, and contextual next actions.
- */
+// ===== Types =====
+
+interface ChatMessage {
+  role: 'user' | 'ava'
+  text: string
+}
+
+// ===== Hub context helper =====
+
+function useHubContext(): HubContext {
+  const onboarding = useHubOnboarding()
+  const installedBlocks = useInstalledBlocks()
+
+  return {
+    occupation: onboarding?.occupation,
+    seekingReason: onboarding?.seekingReason,
+    installedBlocks: installedBlocks.map((b) => ({
+      blockType: b.blockType,
+      label: b.definition?.label ?? b.blockType,
+      status: 'empty' as const,
+    })),
+  }
+}
+
+// ===== Chat API helper =====
+
+async function sendToAva(
+  message: string,
+  hubContext: HubContext,
+): Promise<string> {
+  const res = await fetch('/api/ai/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, hubContext }),
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to reach AvA')
+  }
+
+  const data = await res.json()
+  return data.reply
+}
+
+// ===== Main component =====
 
 export default function AvaJourneyGuide() {
   const { isGuideOpen, closeGuide } = useJourneyStore()
   const progress = useJourneyProgress()
   const { setCurrentPage } = useUIStore()
   const panelRef = useRef<HTMLDivElement>(null)
-  
+  const installedBlocks = useInstalledBlocks()
+  const hubContext = useHubContext()
+
+  // Chat state
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [chatError, setChatError] = useState<string | null>(null)
+  const autoWelcomeSent = useRef(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Auto-scroll when new messages arrive
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [messages, isLoading])
+
+  // Auto-welcome: fire once when guide opens with zero blocks and no messages
+  useEffect(() => {
+    if (
+      isGuideOpen &&
+      installedBlocks.length === 0 &&
+      messages.length === 0 &&
+      !autoWelcomeSent.current &&
+      !isLoading
+    ) {
+      autoWelcomeSent.current = true
+      setIsLoading(true)
+      setChatError(null)
+
+      sendToAva(
+        'I just signed up and my hub is empty. What is StormChain, what are blocks, and what should I do first?',
+        hubContext,
+      )
+        .then((reply) => {
+          setMessages([{ role: 'ava', text: reply }])
+        })
+        .catch((err) => {
+          setChatError(err.message)
+        })
+        .finally(() => setIsLoading(false))
+    }
+  }, [isGuideOpen, installedBlocks.length, messages.length, isLoading, hubContext])
+
+  // Send a user message
+  const handleSend = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim()
+      if (!trimmed || isLoading) return
+
+      setMessages((prev) => [...prev, { role: 'user', text: trimmed }])
+      setIsLoading(true)
+      setChatError(null)
+
+      try {
+        const reply = await sendToAva(trimmed, hubContext)
+        setMessages((prev) => [...prev, { role: 'ava', text: reply }])
+      } catch (err) {
+        setChatError(err instanceof Error ? err.message : 'Something went wrong')
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [isLoading, hubContext],
+  )
+
   // Close on escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isGuideOpen) {
-        closeGuide()
-      }
+      if (e.key === 'Escape' && isGuideOpen) closeGuide()
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isGuideOpen, closeGuide])
-  
+
   // Close on click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -48,7 +159,6 @@ export default function AvaJourneyGuide() {
       }
     }
     if (isGuideOpen) {
-      // Delay adding listener to prevent immediate close
       const timer = setTimeout(() => {
         document.addEventListener('mousedown', handleClickOutside)
       }, 100)
@@ -58,24 +168,30 @@ export default function AvaJourneyGuide() {
       }
     }
   }, [isGuideOpen, closeGuide])
-  
+
+  const openPicker = useHubBlocksStore((s) => s.openPicker)
+
   const handleNavigate = (target: PageType) => {
-    // 'hub' and 'signin' are not real page values in the shells —
-    // hubs are rendered when currentPage is null, and 'signin' is
-    // only shown for unauthenticated users. Map both to null (hub).
+    // 'block-store' is a virtual target — open the picker modal instead of navigating
+    if (target === ('block-store' as PageType)) {
+      closeGuide()
+      openPicker()
+      return
+    }
     const normalized: PageType =
       target === 'hub' || target === 'signin' ? null : target
-
     setCurrentPage(normalized)
     closeGuide()
   }
-  
+
   if (!isGuideOpen) return null
-  
+
+  const hasChat = messages.length > 0 || isLoading
+
   return (
     <>
       {/* Backdrop */}
-      <div 
+      <div
         className={cn(
           'fixed inset-0 z-40',
           'bg-black/20 dark:bg-black/40',
@@ -84,7 +200,7 @@ export default function AvaJourneyGuide() {
         )}
         aria-hidden="true"
       />
-      
+
       {/* Panel */}
       <div
         ref={panelRef}
@@ -137,74 +253,197 @@ export default function AvaJourneyGuide() {
               <X className="w-5 h-5" />
             </button>
           </div>
-          
+
           {/* Greeting */}
           <p className="mt-4 text-gray-600 dark:text-gray-300">
             {progress.greeting}
           </p>
         </div>
-        
+
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Progress Overview */}
           <ProgressOverview progress={progress} />
-          
+
           {/* Steps Checklist */}
-          <StepsChecklist 
-            steps={progress.steps} 
-            onNavigate={handleNavigate}
-          />
-          
+          <StepsChecklist steps={progress.steps} onNavigate={handleNavigate} />
+
           {/* Next Actions */}
           {progress.nextActions.length > 0 && (
-            <NextActionsSection 
-              actions={progress.nextActions}
-              onNavigate={handleNavigate}
-            />
+            <NextActionsSection actions={progress.nextActions} onNavigate={handleNavigate} />
+          )}
+
+          {/* Chat Thread */}
+          {hasChat && (
+            <>
+              <div className="flex items-center gap-2 pt-2">
+                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+                <div className="flex items-center gap-1.5 text-xs font-medium text-gray-400 dark:text-gray-500">
+                  <MessageCircle className="w-3 h-3" />
+                  Chat with AvA
+                </div>
+                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+              </div>
+              <AvaChatThread messages={messages} isLoading={isLoading} error={chatError} />
+            </>
           )}
         </div>
-        
-        {/* Footer */}
-        <div className="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-          <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-            Press <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs">?</kbd> anytime to open this guide
-          </p>
-        </div>
+
+        {/* Footer — Chat Input */}
+        <AvaChatInput onSend={handleSend} isLoading={isLoading} />
       </div>
     </>
   )
 }
 
-// ===== Sub-components =====
+// ===== Chat sub-components =====
+
+function AvaChatThread({
+  messages,
+  isLoading,
+  error,
+}: {
+  messages: ChatMessage[]
+  isLoading: boolean
+  error: string | null
+}) {
+  return (
+    <div className="space-y-3">
+      {messages.map((msg, i) => (
+        <div
+          key={i}
+          className={cn(
+            'flex gap-2',
+            msg.role === 'user' ? 'justify-end' : 'justify-start'
+          )}
+        >
+          {msg.role === 'ava' && (
+            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-brand-mint/20 flex items-center justify-center mt-0.5">
+              <Bot className="w-4 h-4 text-brand-mint" />
+            </div>
+          )}
+          <div
+            className={cn(
+              'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap',
+              msg.role === 'ava'
+                ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-sm'
+                : 'bg-brand-mint text-white rounded-tr-sm'
+            )}
+          >
+            {msg.text}
+          </div>
+        </div>
+      ))}
+
+      {/* Typing indicator */}
+      {isLoading && (
+        <div className="flex gap-2 justify-start">
+          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-brand-mint/20 flex items-center justify-center mt-0.5">
+            <Bot className="w-4 h-4 text-brand-mint" />
+          </div>
+          <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3">
+            <div className="flex gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500 animate-bounce [animation-delay:0ms]" />
+              <span className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500 animate-bounce [animation-delay:150ms]" />
+              <span className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500 animate-bounce [animation-delay:300ms]" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <p className="text-xs text-red-500 dark:text-red-400 text-center">
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function AvaChatInput({
+  onSend,
+  isLoading,
+}: {
+  onSend: (text: string) => void
+  isLoading: boolean
+}) {
+  const [input, setInput] = useState('')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (input.trim() && !isLoading) {
+      onSend(input)
+      setInput('')
+    }
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex-shrink-0 p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50"
+    >
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Ask AvA anything..."
+          disabled={isLoading}
+          className={cn(
+            'flex-1 px-4 py-2.5 rounded-xl text-sm border transition-colors',
+            'focus:outline-none focus:ring-2 focus:ring-brand-mint/40',
+            'bg-white dark:bg-gray-800',
+            'border-gray-200 dark:border-gray-600',
+            'text-gray-900 dark:text-white',
+            'placeholder:text-gray-400 dark:placeholder:text-gray-500',
+            isLoading && 'opacity-50'
+          )}
+        />
+        <button
+          type="submit"
+          disabled={!input.trim() || isLoading}
+          className={cn(
+            'p-2.5 rounded-xl transition-all',
+            input.trim() && !isLoading
+              ? 'bg-brand-mint text-white hover:bg-brand-mint/90 shadow-sm'
+              : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+          )}
+          aria-label="Send message"
+        >
+          {isLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Send className="w-4 h-4" />
+          )}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+// ===== Progress sub-components (unchanged) =====
 
 interface ProgressOverviewProps {
   progress: {
     overallProgress: number
     completedSteps: number
     totalSteps: number
-    role: string | null
   }
 }
 
 function ProgressOverview({ progress }: ProgressOverviewProps) {
-  const roleLabels: Record<string, string> = {
-    driver: 'Driver',
-    employer: 'Employer', 
-    developer: 'Developer',
-  }
-  
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          {progress.role ? `${roleLabels[progress.role]} Journey` : 'Your Journey'}
+          Your Journey
         </span>
         <span className="text-sm font-bold text-brand-mint">
           {progress.completedSteps}/{progress.totalSteps} steps
         </span>
       </div>
-      
-      {/* Progress bar */}
+
       <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
         <div
           className={cn(
@@ -214,8 +453,7 @@ function ProgressOverview({ progress }: ProgressOverviewProps) {
           style={{ width: `${progress.overallProgress}%` }}
         />
       </div>
-      
-      {/* Percentage label */}
+
       <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
         <span>Getting started</span>
         <span className="font-semibold text-brand-mint">{progress.overallProgress}% complete</span>
@@ -231,15 +469,30 @@ interface StepsChecklistProps {
 }
 
 function StepsChecklist({ steps, onNavigate }: StepsChecklistProps) {
+  const openPicker = useHubBlocksStore((s) => s.openPicker)
+  const { closeGuide } = useJourneyStore()
+
   if (steps.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500 dark:text-gray-400">
         <Bot className="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p>Select a role to see your journey steps</p>
+        <p className="font-medium text-gray-700 dark:text-gray-300">Add blocks to get started</p>
+        <p className="text-sm mt-1">
+          Install blocks to your hub and AvA will guide you through each one.
+        </p>
+        <button
+          onClick={() => { closeGuide(); openPicker() }}
+          className={cn(
+            'mt-4 px-4 py-2 rounded-lg text-sm font-semibold transition-colors',
+            'bg-brand-mint text-white hover:bg-brand-mint/90'
+          )}
+        >
+          Browse Blocks
+        </button>
       </div>
     )
   }
-  
+
   return (
     <div className="space-y-2">
       <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
@@ -247,12 +500,7 @@ function StepsChecklist({ steps, onNavigate }: StepsChecklistProps) {
       </h3>
       <div className="space-y-1">
         {steps.map((step, index) => (
-          <StepItem 
-            key={step.id} 
-            step={step} 
-            index={index}
-            onNavigate={onNavigate}
-          />
+          <StepItem key={step.id} step={step} index={index} onNavigate={onNavigate} />
         ))}
       </div>
     </div>
@@ -267,13 +515,13 @@ interface StepItemProps {
 
 function StepItem({ step, onNavigate }: StepItemProps) {
   const isClickable = step.status !== 'complete' && step.action
-  
+
   const handleClick = () => {
     if (isClickable && step.action?.target) {
       onNavigate(step.action.target)
     }
   }
-  
+
   return (
     <button
       onClick={handleClick}
@@ -287,7 +535,6 @@ function StepItem({ step, onNavigate }: StepItemProps) {
         !isClickable && 'cursor-default'
       )}
     >
-      {/* Status icon */}
       <div className={cn(
         'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center',
         step.status === 'complete' && 'bg-green-500 text-white',
@@ -298,8 +545,7 @@ function StepItem({ step, onNavigate }: StepItemProps) {
         {step.status === 'in_progress' && <Loader2 className="w-4 h-4 animate-spin" />}
         {step.status === 'pending' && <Circle className="w-4 h-4" />}
       </div>
-      
-      {/* Content */}
+
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className={cn(
@@ -319,11 +565,10 @@ function StepItem({ step, onNavigate }: StepItemProps) {
         <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
           {step.description}
         </p>
-        {/* Progress indicator for partial completion */}
         {step.progress !== undefined && step.status !== 'complete' && (
           <div className="mt-1 flex items-center gap-2">
             <div className="h-1.5 flex-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-brand-mint rounded-full transition-all"
                 style={{ width: `${step.progress}%` }}
               />
@@ -332,8 +577,7 @@ function StepItem({ step, onNavigate }: StepItemProps) {
           </div>
         )}
       </div>
-      
-      {/* Arrow for clickable items */}
+
       {isClickable && (
         <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
       )}
@@ -355,7 +599,7 @@ function NextActionsSection({ actions, onNavigate }: NextActionsSectionProps) {
           Suggested Next Steps
         </h3>
       </div>
-      
+
       <div className="space-y-2">
         {actions.map((action, index) => (
           <button

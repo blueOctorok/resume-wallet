@@ -1,23 +1,20 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { UserRole } from './types'
 import { useAuthStore } from './auth-store'
 import { useDriverHubStore } from './driver-hub-store'
+import { useHubBlocksStore } from './hub-blocks-store'
 import { useDotApplicationStore } from './dot-application-store'
 import {
   type JourneyProgress,
-  type DriverProgressData,
+  type BlockProgressData,
   type EmployerProgressData,
-  type DeveloperProgressData,
-  calculateDriverProgress,
+  calculateBlockJourney,
   calculateEmployerProgress,
-  calculateDeveloperProgress,
-  getEmptyProgress,
 } from '@/lib/journey-progress'
 
 /**
  * Journey Store - Manages AvA Journey Guide state
- * 
+ *
  * Responsible for:
  * - Guide visibility (open/closed)
  * - Aggregating progress from other stores
@@ -37,7 +34,6 @@ interface JourneyActions {
   setHasSeenWelcome: (seen: boolean) => void
 }
 
-// Persisted state - only UI preferences
 const initialState: JourneyState = {
   isGuideOpen: false,
   hasSeenWelcome: false,
@@ -50,13 +46,13 @@ export const useJourneyStore = create<JourneyState & JourneyActions>()(
       ...initialState,
 
       openGuide: () => set({ isGuideOpen: true }),
-      
-      closeGuide: () => set({ 
+
+      closeGuide: () => set({
         isGuideOpen: false,
         lastDismissedAt: new Date().toISOString(),
       }),
-      
-      toggleGuide: () => set((state) => ({ 
+
+      toggleGuide: () => set((state) => ({
         isGuideOpen: !state.isGuideOpen,
         lastDismissedAt: state.isGuideOpen ? new Date().toISOString() : state.lastDismissedAt,
       })),
@@ -74,52 +70,22 @@ export const useJourneyStore = create<JourneyState & JourneyActions>()(
 )
 
 /**
- * Hook to calculate current journey progress
- * Pulls from multiple stores to build a complete picture
+ * Hook to calculate current journey progress.
+ *
+ * For candidates/drivers/developers: block-inferred journey.
+ * For employers: role-based journey (separate hub system).
  */
 export function useJourneyProgress(): JourneyProgress {
-  // Auth state
   const { user, userRole } = useAuthStore()
   const isWalletConnected = !!user
-  
-  // Hub data (for drivers)
-  const hubStore = useDriverHubStore()
-  
-  // DOT application state
-  const { isApplicationCompleted } = useDotApplicationStore()
 
-  // Build progress based on role
-  if (userRole === 'driver') {
-    // Check if any DOT app has blockchain verification
-    const hasVerifiedDotApp = hubStore.dotApplications.some(
-      (app) => app.blockchainTxHash != null
-    )
-    
-    const data: DriverProgressData = {
-      isWalletConnected,
-      hasResume: hubStore.hasResume || hubStore.resumes.length > 0,
-      resumeCount: hubStore.resumes.length,
-      hasDotApplication: hubStore.dotApplications.length > 0,
-      dotAppComplete: isApplicationCompleted || hubStore.stats?.completedDotApps ? hubStore.stats.completedDotApps > 0 : false,
-      dotAppVerified: hasVerifiedDotApp || (hubStore.stats?.verifiedDotApps ? hubStore.stats.verifiedDotApps > 0 : false),
-      dotAppInProgress: hubStore.stats?.inProgressDotApps ? hubStore.stats.inProgressDotApps > 0 : false,
-      hasMvrRecord: hubStore.mvrRecords.length > 0,
-      mvrRecordCount: hubStore.mvrRecords.length,
-      profileCompleteness: hubStore.stats?.profileCompleteness ?? 0,
-      hasAppliedToJobs: hubStore.jobApplications.length > 0,
-      jobApplicationCount: hubStore.jobApplications.length,
-    }
-    return calculateDriverProgress(data)
-  }
-
+  // Employer journey stays role-based (they have EmployerBlockGrid, not the composable hub)
   if (userRole === 'employer') {
-    // For employers, we need different data sources
-    // Using placeholder data for now - can be connected to employer store later
     const data: EmployerProgressData = {
       isWalletConnected,
-      hasCompanyProfile: false, // TODO: connect to employer profile store
+      hasCompanyProfile: false,
       companyProfileComplete: false,
-      hasPostedJob: false, // TODO: connect to job posting store
+      hasPostedJob: false,
       jobPostCount: 0,
       hasReviewedApplicants: false,
       applicantCount: 0,
@@ -128,24 +94,33 @@ export function useJourneyProgress(): JourneyProgress {
     return calculateEmployerProgress(data)
   }
 
-  if (userRole === 'developer') {
-    // For developers, we need different data sources
-    const data: DeveloperProgressData = {
-      isWalletConnected,
-      hasPortfolioProjects: false, // TODO: connect to portfolio store
-      portfolioProjectCount: 0,
-      hasResume: hubStore.hasResume || hubStore.resumes.length > 0,
-      hasConnectedGithub: false, // TODO: connect to github integration
-      hasCareerScore: false,
-      careerScore: 0,
-      hasAppliedToJobs: hubStore.jobApplications.length > 0,
-      jobApplicationCount: hubStore.jobApplications.length,
-    }
-    return calculateDeveloperProgress(data)
+  // Block-inferred journey for all non-employer users
+  const installedBlocks = useHubBlocksStore((s) => s.installedBlocks)
+  const hubStore = useDriverHubStore()
+  const { isApplicationCompleted } = useDotApplicationStore()
+
+  const hasVerifiedDotApp = hubStore.dotApplications.some(
+    (app) => app.blockchainTxHash != null
+  )
+
+  const data: BlockProgressData = {
+    isWalletConnected,
+    profileCompleteness: hubStore.stats?.profileCompleteness ?? 0,
+    hasResume: hubStore.hasResume || hubStore.resumes.length > 0,
+    resumeCount: hubStore.resumes.length,
+    dotAppComplete: isApplicationCompleted || (hubStore.stats?.completedDotApps ? hubStore.stats.completedDotApps > 0 : false),
+    dotAppVerified: hasVerifiedDotApp || (hubStore.stats?.verifiedDotApps ? hubStore.stats.verifiedDotApps > 0 : false),
+    dotAppInProgress: hubStore.stats?.inProgressDotApps ? hubStore.stats.inProgressDotApps > 0 : false,
+    hasMvrRecord: hubStore.mvrRecords.length > 0,
+    hasAppliedToJobs: hubStore.jobApplications.length > 0,
+    jobApplicationCount: hubStore.jobApplications.length,
+    hasPortfolioProjects: false,
+    portfolioProjectCount: 0,
+    hasConnectedGithub: false,
   }
 
-  // No role selected yet
-  return getEmptyProgress(userRole)
+  const blockTypes = installedBlocks.map((b) => b.blockType)
+  return calculateBlockJourney(blockTypes, data)
 }
 
 // Selector hooks

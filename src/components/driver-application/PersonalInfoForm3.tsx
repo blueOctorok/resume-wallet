@@ -6,7 +6,8 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
 import SaveProgressButton from './SaveProgressButton'
 import { PhoneInput } from '@/components/ui/MaskedInputs'
-import { HelpCircle, Briefcase, Clock, GraduationCap, Truck, Shield, X, ChevronDown, Calendar } from 'lucide-react'
+import { Briefcase, Clock, GraduationCap, Truck, Shield, X, ChevronDown, Calendar } from 'lucide-react'
+import AskAvaButton from '@/components/ui/AskAvaButton'
 
 // History entry types
 type HistoryEntryType = 'employment' | 'unemployment' | 'school' | 'drivingSchool' | 'military'
@@ -1107,32 +1108,21 @@ export default function PersonalInfoForm3({
         >
           EMPLOYMENT HISTORY
         </h2>
-        <div className='flex justify-end mb-4 text-left'>
-          <div className='rotating-silver-border'>
-            <button
-              type='button'
-              onClick={() =>
-                requestHelp({
-                  section: 'Form 3 – Employment History',
-                  question:
-                    'What specifically must drivers include to satisfy the 10-year DOT employment history requirement?',
-                  regulation: '49 CFR 391.21(b)(10) & 49 CFR 383.35',
-                  context:
-                    'Driver is reviewing the employment history step in PersonalInfoForm3 and wants to ensure the provided timeline is complete.',
-                  dataSnapshot: formData.employers,
-                })
-              }
-              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-colors cursor-pointer ${
-                theme === 'dark'
-                  ? 'bg-gray-800 text-gray-100 hover:bg-gray-700'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              <HelpCircle className='w-4 h-4' strokeWidth={2} />
-              <span>Ask AvA about 10-year history</span>
-            </button>
-          </div>
-        </div>
+        <AskAvaButton
+          label='Ask AvA about 10-year history'
+          className='justify-end mb-4'
+          onClick={() =>
+            requestHelp({
+              section: 'Form 3 – Employment History',
+              question:
+                'What specifically must drivers include to satisfy the 10-year DOT employment history requirement?',
+              regulation: '49 CFR 391.21(b)(10) & 49 CFR 383.35',
+              context:
+                'Driver is reviewing the employment history step in PersonalInfoForm3 and wants to ensure the provided timeline is complete.',
+              dataSnapshot: formData.employers,
+            })
+          }
+        />
         <div
           className={`p-4 rounded-lg border-2 ${
             theme === 'dark'

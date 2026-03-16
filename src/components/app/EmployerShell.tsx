@@ -63,6 +63,14 @@ const ReportsPage = dynamic(
   }
 )
 
+const StormChainView = dynamic(
+  () => import('@/components/StormChainView').then((mod) => mod.default),
+  {
+    ssr: false,
+    loading: () => <LoadingScreen message='Loading STORM Token...' fullScreen={false} />,
+  }
+)
+
 interface EmployerShellProps {
   walletAddress: string
 }
@@ -77,6 +85,7 @@ const KNOWN_PAGES = new Set([
   'team',
   'company-profile',
   'reports',
+  'stormchain',
   'messages',
 ])
 
@@ -146,6 +155,10 @@ export default function EmployerShell({ walletAddress }: EmployerShellProps) {
 
   if (currentPage === 'reports') {
     return <ReportsPage walletAddress={walletAddress} onBack={goBack} />
+  }
+
+  if (currentPage === 'stormchain') {
+    return <StormChainView onBack={goBack} />
   }
 
   if (currentPage === 'messages') {

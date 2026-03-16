@@ -24,25 +24,21 @@ export default function AvaFloatingButton() {
   const shouldPulse = hasHighPriorityAction && !isGuideOpen
   
   // Auto-open on first visit (after a short delay for page load)
+  const hasSteps = progress.steps.length > 0
   useEffect(() => {
-    if (!hasSeenWelcome && progress.role) {
+    if (!hasSeenWelcome && hasSteps) {
       const timer = setTimeout(() => {
         openGuide()
         setHasSeenWelcome(true)
       }, 1500)
       return () => clearTimeout(timer)
     }
-  }, [hasSeenWelcome, progress.role, openGuide, setHasSeenWelcome])
+  }, [hasSeenWelcome, hasSteps, openGuide, setHasSeenWelcome])
   
-  // Keyboard shortcut: ? or Cmd+/
+  // Keyboard shortcut: Cmd+/ or Ctrl+/ only
+  // The `?` shortcut was removed because it conflicts with typing in the chat input
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // ? key (shift + /)
-      if (e.key === '?' && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault()
-        toggleGuide()
-      }
-      // Cmd+/ or Ctrl+/
       if (e.key === '/' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
         toggleGuide()

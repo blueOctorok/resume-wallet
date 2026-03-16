@@ -16,6 +16,7 @@ import type { PageType } from '@/stores/types'
 import { getBlockColor } from '@/lib/block-registry'
 import { getBlockIllustration } from './BlockIllustrations'
 import Button from '@/components/ui/Button'
+import AskAvaButton from '@/components/ui/AskAvaButton'
 import AvatarUpload from '@/components/ui/AvatarUpload'
 import STORMBalance from '@/components/STORMBalance'
 import HubOnboardingForm from './HubOnboardingForm'
@@ -663,6 +664,7 @@ export default function CandidateHub() {
       <div className='max-w-3xl mx-auto space-y-6'>
         <HubProfileHeader />
         <CareerCardBanner />
+        <AskAvaButton label='Ask AvA — What should I do next?' />
         <VerificationBar />
 
         {/* ── Block Grid (iPhone home screen) ── */}
@@ -748,7 +750,10 @@ export default function CandidateHub() {
         {/* ── STORM Token Footer ── */}
         {walletAddress && (
           <div className='pt-4'>
-            <STORMBalance walletAddress={walletAddress} />
+            <STORMBalance
+              walletAddress={walletAddress}
+              onReadWhitepaper={() => setCurrentPage('stormchain')}
+            />
           </div>
         )}
       </div>

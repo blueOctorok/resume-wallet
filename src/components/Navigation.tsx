@@ -406,8 +406,8 @@ export default function Navigation({
 
               {/* StormChain Token Counter & Theme Toggle - Bottom Right */}
               <div className='w-full md:w-auto flex items-center justify-end gap-3 md:ml-auto'>
-                {/* Show Token counter for drivers and developers - employers don't earn tokens */}
-                {(userRole === 'driver' || userRole === 'developer') && (
+                {/* STORM token counter — all roles earn tokens */}
+                {userRole && (
                   <button
                     onClick={() => handleNavigation('stormchain')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-300 cursor-pointer ${

@@ -7,18 +7,20 @@ import {
   STORM_TOKEN_ADDRESS_SEPOLIA,
 } from '@/lib/alchemy-token-api'
 import { useTheme } from '@/contexts/ThemeContext'
-import { RefreshCw, ExternalLink } from 'lucide-react'
+import { RefreshCw, ExternalLink, FileText } from 'lucide-react'
 
 interface STORMBalanceProps {
   walletAddress: string
   refreshInterval?: number
   compact?: boolean
+  onReadWhitepaper?: () => void
 }
 
 export default function STORMBalance({
   walletAddress,
   refreshInterval = 60000,
   compact = false,
+  onReadWhitepaper,
 }: STORMBalanceProps) {
   const { theme } = useTheme()
   const [balanceSepolia, setBalanceSepolia] = useState<string>('0.00')
@@ -282,9 +284,9 @@ export default function STORMBalance({
         </div>
       </div>
 
-      {/* Token contract link */}
-      {STORM_TOKEN_ADDRESS_SEPOLIA && (
-        <div className='mt-3 pt-3 border-t border-gray-700/50'>
+      {/* Footer row: contract link + whitepaper */}
+      <div className='mt-3 pt-3 border-t border-gray-700/50 flex items-center justify-between'>
+        {STORM_TOKEN_ADDRESS_SEPOLIA && (
           <a
             href={`https://sepolia.basescan.org/address/${STORM_TOKEN_ADDRESS_SEPOLIA}`}
             target='_blank'
@@ -301,8 +303,21 @@ export default function STORMBalance({
             </span>
             <ExternalLink className='w-3 h-3' />
           </a>
-        </div>
-      )}
+        )}
+        {onReadWhitepaper && (
+          <button
+            onClick={onReadWhitepaper}
+            className={`inline-flex items-center gap-1 text-xs font-medium transition-colors ${
+              theme === 'dark'
+                ? 'text-teal-400 hover:text-teal-300'
+                : 'text-teal-600 hover:text-teal-700'
+            }`}
+          >
+            <FileText className='w-3 h-3' />
+            Whitepaper
+          </button>
+        )}
+      </div>
     </div>
   )
 }

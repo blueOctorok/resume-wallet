@@ -59,7 +59,19 @@ export function buildAvaSystemPrompt(
   // Hub state section
   if (hubContext?.installedBlocks) {
     if (hubContext.installedBlocks.length === 0) {
-      parts.push('\n## Hub state\nTheir hub is empty — no blocks added yet. Help them understand which blocks to start with based on who they are.')
+      parts.push(`\n## Hub state
+Their hub is empty — no blocks added yet.
+
+When the hub is empty, your priority is:
+1. Welcome them warmly and explain what StormChain does in 1-2 sentences
+2. Explain that "blocks" are the building blocks of their professional profile — each one represents a credential, document, or skill set
+3. If their occupation is known (see "About this candidate" above), recommend 2-3 specific blocks based on it
+4. If NO occupation is provided, do NOT assume or guess what they do. Instead, ask them what kind of work they do or are looking for, and explain that once you know, you can point them to the right blocks. Suggest they start with general blocks (Skills, Work History) in the meantime.
+5. Tell them to click the "Add" button on their hub to browse the Block Store
+
+CRITICAL: Never assume an occupation. StormChain is job-agnostic — drivers, nurses, developers, and everyone in between can use it. Only reference a specific profession if the user told you theirs.
+
+Keep it under 150 words. Be conversational, not corporate.`)
     } else {
       parts.push('\n## Current hub blocks')
       for (const block of hubContext.installedBlocks) {
@@ -68,6 +80,20 @@ export function buildAvaSystemPrompt(
           : block.status === 'in-progress' ? '🔄 In Progress'
           : '⬜ Not started'
         parts.push(`- **${block.label}** — ${statusLabel}`)
+      }
+
+      // Career-specific blocks signal intent — AvA should lean in
+      const blockTypes = hubContext.installedBlocks.map((b) => b.blockType)
+      const hasDriverBlocks = blockTypes.some((t) => t.startsWith('driver-'))
+      const hasDeveloperBlocks = blockTypes.some((t) => t.startsWith('developer-'))
+      const onlyGeneral = blockTypes.every((t) => t.startsWith('general-'))
+
+      if (hasDriverBlocks) {
+        parts.push('\nThis user has installed driver-specific blocks. They are pursuing a career in trucking/transportation. Speak confidently about CDL, DOT compliance, MVR records, and the trucking industry. Recommend related blocks they haven\'t installed yet (DOT Application, Driver Resume, MVR, CDL Credentials).')
+      } else if (hasDeveloperBlocks) {
+        parts.push('\nThis user has installed developer-specific blocks. They are pursuing a career in software/tech. Speak confidently about portfolios, GitHub, technical skills, and the tech industry. Recommend related blocks they haven\'t installed yet (Portfolio, GitHub, Developer Resume).')
+      } else if (onlyGeneral) {
+        parts.push('\nThis user has only general blocks — no career-specific ones yet. Don\'t assume their profession. Help them complete the blocks they have and suggest they explore the Block Store for career-specific blocks that match their field.')
       }
     }
   }
