@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
-import { Loader2, CheckCircle, AlertCircle, Building2 } from 'lucide-react'
+import { Loader2, CheckCircle, AlertCircle, Building2, Clock } from 'lucide-react'
 
 const EMPLOYER_WHITELIST_WALLETS = [
   '0x9499cD25C6737A8195e74262f3c5eAE6dA607df3',
@@ -54,7 +54,7 @@ export default function RoleSelectionModal({
   const [submittingRequest, setSubmittingRequest] = useState(false)
   const [requestError, setRequestError] = useState<string | null>(null)
   const [requestSubmitted, setRequestSubmitted] = useState(false)
-  const [pendingRequest, setPendingRequest] = useState<{ companyName: string; createdAt: string } | null>(null)
+  const [pendingRequest, setPendingRequest] = useState<{ companyName: string; createdAt: string; message?: string } | null>(null)
 
   const isAdminWhitelisted = walletAddress && EMPLOYER_WHITELIST_WALLETS.includes(walletAddress.toLowerCase())
   const needsEmailForEmployer = !userEmail && !walletAddress && !isAdminWhitelisted
@@ -153,11 +153,12 @@ export default function RoleSelectionModal({
         return
       }
 
-      // Flagged / pending — show "under review" state
+      // Flagged / pending — show "under review" state with the API's explanation
       setRequestSubmitted(true)
       setPendingRequest({
-        companyName: requestCompanyName.trim(),
+        companyName: data.request?.companyName || requestCompanyName.trim(),
         createdAt: new Date().toISOString(),
+        message: data.message,
       })
       setShowRequestForm(false)
     } catch (err) {
@@ -411,13 +412,18 @@ export default function RoleSelectionModal({
               {!checkingAccess && !needsEmailForEmployer && employerAccess && !employerAccess.hasAccess && (
                 <div className='space-y-4'>
                   {(pendingRequest || requestSubmitted) && (
-                    <div className={`p-4 rounded-xl ${isDark ? 'bg-blue-500/10 border border-blue-500/30' : 'bg-blue-50 border border-blue-200'}`}>
+                    <div className={`p-4 rounded-xl ${isDark ? 'bg-amber-500/10 border border-amber-500/30' : 'bg-amber-50 border border-amber-200'}`}>
                       <div className='flex items-start gap-3'>
-                        <Loader2 className='w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0 animate-spin' />
+                        <Clock className={`w-5 h-5 mt-0.5 flex-shrink-0 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
                         <div>
-                          <p className={`font-medium ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>Request pending review</p>
+                          <p className={`font-medium ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>Request submitted</p>
                           <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                            Your request to set up <strong>{pendingRequest?.companyName || requestCompanyName}</strong> is being reviewed.
+                            {pendingRequest?.message || (
+                              <>Your request to set up <strong>{pendingRequest?.companyName || requestCompanyName}</strong> is being reviewed by our team.</>
+                            )}
+                          </p>
+                          <p className={`text-xs mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                            You&apos;ll be notified once your request is processed. You can close this and check back later.
                           </p>
                         </div>
                       </div>
