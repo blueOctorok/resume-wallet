@@ -46,7 +46,9 @@ export default function RoleSelectionModal({
   const [checkingAccess, setCheckingAccess] = useState(false)
 
   const [showRequestForm, setShowRequestForm] = useState(false)
-  const [requestName, setRequestName] = useState('')
+  const [requestFirstName, setRequestFirstName] = useState('')
+  const [requestLastName, setRequestLastName] = useState('')
+  const [requestEmail, setRequestEmail] = useState(userEmail ?? '')
   const [requestCompanyName, setRequestCompanyName] = useState('')
   const [requestDescription, setRequestDescription] = useState('')
   const [submittingRequest, setSubmittingRequest] = useState(false)
@@ -100,8 +102,15 @@ export default function RoleSelectionModal({
     }
   }, [walletAddress])
 
+  const isRequestFormValid =
+    !!requestFirstName.trim() &&
+    !!requestLastName.trim() &&
+    !!requestEmail.trim() && requestEmail.includes('@') &&
+    !!requestCompanyName.trim() &&
+    !!requestDescription.trim()
+
   const handleSubmitRequest = async () => {
-    if (!walletAddress || !requestName.trim() || !requestCompanyName.trim() || !requestDescription.trim()) return
+    if (!walletAddress || !isRequestFormValid) return
 
     setSubmittingRequest(true)
     setRequestError(null)
@@ -114,10 +123,11 @@ export default function RoleSelectionModal({
           'x-wallet-address': walletAddress,
         },
         body: JSON.stringify({
-          name: requestName.trim(),
+          firstName: requestFirstName.trim(),
+          lastName: requestLastName.trim(),
+          email: requestEmail.trim(),
           companyName: requestCompanyName.trim(),
           description: requestDescription.trim(),
-          email: userEmail,
         }),
       })
 
@@ -125,8 +135,14 @@ export default function RoleSelectionModal({
 
       if (!res.ok) throw new Error(data.error || 'Failed to submit request')
 
-      // AvA auto-approved — skip straight to employer role
+      // AvA auto-approved new company — skip straight to employer role + onboarding
       if (data.autoApproved) {
+        onSelectRole('employer', data.company?.name)
+        return
+      }
+
+      // Domain-verified auto-join to existing company — skip onboarding entirely
+      if (data.autoJoined) {
         onSelectRole('employer', data.company?.name)
         return
       }
@@ -418,19 +434,53 @@ export default function RoleSelectionModal({
                       </p>
 
                       <div className='space-y-3'>
-                        <div>
-                          <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Your Name</label>
-                          <input
-                            type='text'
-                            value={requestName}
-                            onChange={(e) => setRequestName(e.target.value)}
-                            placeholder='e.g., John Smith'
-                            className={`w-full px-3 py-2 rounded-lg border transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${inputClass}`}
-                          />
+                        <div className='grid grid-cols-2 gap-3'>
+                          <div>
+                            <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                              First Name <span className='text-red-400'>*</span>
+                            </label>
+                            <input
+                              type='text'
+                              value={requestFirstName}
+                              onChange={(e) => setRequestFirstName(e.target.value)}
+                              placeholder='John'
+                              className={`w-full px-3 py-2 rounded-lg border transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${inputClass}`}
+                            />
+                          </div>
+                          <div>
+                            <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                              Last Name <span className='text-red-400'>*</span>
+                            </label>
+                            <input
+                              type='text'
+                              value={requestLastName}
+                              onChange={(e) => setRequestLastName(e.target.value)}
+                              placeholder='Smith'
+                              className={`w-full px-3 py-2 rounded-lg border transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${inputClass}`}
+                            />
+                          </div>
                         </div>
 
                         <div>
-                          <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Company Name</label>
+                          <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Company Email <span className='text-red-400'>*</span>
+                          </label>
+                          <input
+                            type='email'
+                            value={requestEmail}
+                            onChange={(e) => setRequestEmail(e.target.value)}
+                            placeholder='you@yourcompany.com'
+                            className={`w-full px-3 py-2 rounded-lg border transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${inputClass}`}
+                          />
+                          <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                            Must match your company domain for instant access
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Legal Company Name <span className='text-red-400'>*</span>
+                          </label>
                           <input
                             type='text'
                             value={requestCompanyName}
@@ -454,7 +504,7 @@ export default function RoleSelectionModal({
                         </div>
 
                         <div className={`p-3 rounded-lg text-xs ${isDark ? 'bg-yellow-500/10 border border-yellow-500/30 text-yellow-400' : 'bg-yellow-50 border border-yellow-200 text-yellow-700'}`}>
-                          <strong>Important:</strong> By submitting, you understand you will become the <strong>owner/admin</strong> of this company account.
+                          <strong>Important:</strong> If this company is new to StormChain, you will become its <strong>owner/admin</strong>. If it already exists, you&apos;ll be added to the team.
                         </div>
 
                         {requestError && <p className='text-sm text-red-500'>{requestError}</p>}
@@ -470,7 +520,7 @@ export default function RoleSelectionModal({
                           </button>
                           <button
                             onClick={handleSubmitRequest}
-                            disabled={submittingRequest || !requestName.trim() || !requestCompanyName.trim() || !requestDescription.trim()}
+                            disabled={submittingRequest || !isRequestFormValid}
                             className='flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-teal-600 text-white hover:bg-teal-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
                           >
                             {submittingRequest ? (
@@ -484,7 +534,7 @@ export default function RoleSelectionModal({
                       </div>
 
                       <p className={`text-xs mt-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                        <strong>Team members:</strong> If your company is already on StormChain, ask your admin to send you an invite instead.
+                        <strong>Team members:</strong> If your company is already on StormChain, use your company email and you&apos;ll be added automatically.
                       </p>
                     </div>
                   )}

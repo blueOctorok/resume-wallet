@@ -4,6 +4,51 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 🏢 **Employer Onboarding Rework** (March 2026)
+
+### Problem
+The employer onboarding flow had several issues:
+1. No company name uniqueness — two people could claim "Pace Drivers"
+2. No email domain validation — anyone could claim any company
+3. "What do you hire for?" baked context into onboarding that should come from blocks
+4. No first/last name collected — made team management harder
+5. No path for someone to join an existing company on StormChain
+
+### What changed
+
+**AvA evaluation prompt** (`src/lib/ava-employer-eval.ts`)
+- Enhanced to detect fuzzy company name matches against existing companies (ignoring case, suffixes like LLC/Inc)
+- Returns new `existingMatch` field when a match is detected — NOT grounds for blocking, signals potential team member
+
+**Access request API** (`src/app/api/employer/access-request/route.ts`)
+- Now requires `firstName`, `lastName`, and `email` (with `@` validation)
+- When AvA detects existing company match: checks email domain against company's registered email domain
+  - Domain match: auto-joins user as `recruiter` role member, returns `autoJoined: true`
+  - Domain mismatch: flags for manual admin review with explanation
+- All paths upsert `user_profiles` so hub header shows correct name
+
+**RoleSelectionModal** (`src/components/RoleSelectionModal.tsx`)
+- Replaced single "Your Name" field with First Name + Last Name (both required)
+- Added "Company Email" field (required, with domain match hint)
+- Handles new `autoJoined` response — skips onboarding, goes straight to hub
+- Updated copy: "Team members" hint now says to use company email for auto-join
+
+**CompanyOnboarding** (`src/components/app/CompanyOnboarding.tsx`)
+- Removed "What do you hire for?" section entirely — blocks provide industry context
+- Removed DOT/MC fields — the DOT block handles this
+- Added First Name + Last Name fields (synced to `user_profiles`)
+- Updated header copy
+
+**Company API** (`src/app/api/employer/company/route.ts`)
+- Accepts `firstName`, `lastName`; upserts `user_profiles` + syncs `users.name`
+- Removed `hiring_categories` from company creation payload
+- Added case-insensitive duplicate company name check (returns 409)
+
+**Database** (`supabase/migrations/041_employer_access_name_fields.sql`)
+- Added `first_name` and `last_name` columns to `employer_access_requests`
+
+---
+
 ## 🐛 **Admin User Delete Fix + Profile Setup Fix** (March 2026)
 
 ### Problem

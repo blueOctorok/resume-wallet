@@ -5,23 +5,24 @@ import { evaluateEmployerRequest } from '@/lib/ava-employer-eval'
 /**
  * POST /api/employer/access-request
  *
- * Submit a request to set up a company on StormChain.
+ * Submit a request to set up or join a company on StormChain.
  * AvA evaluates the request in real-time:
- *   - approve  → company + owner created instantly
- *   - flag     → stored for human review
- *   - block    → denied with explanation
+ *   - approve (new company)        -> company + owner created instantly
+ *   - approve (existing company)   -> domain-verified auto-join, or flag if mismatch
+ *   - flag                         -> stored for human review
+ *   - block                        -> denied with explanation
  */
 export async function POST(request: NextRequest) {
   try {
     const walletAddress = request.headers.get('x-wallet-address')
     const body = await request.json()
-    const { name, companyName, description, email } = body
+    const { firstName, lastName, companyName, description, email } = body
 
     if (!walletAddress) {
       return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
     }
-    if (!name?.trim()) {
-      return NextResponse.json({ error: 'Your name is required' }, { status: 400 })
+    if (!firstName?.trim() || !lastName?.trim()) {
+      return NextResponse.json({ error: 'First and last name are required' }, { status: 400 })
     }
     if (!companyName?.trim()) {
       return NextResponse.json({ error: 'Company name is required' }, { status: 400 })
@@ -29,7 +30,11 @@ export async function POST(request: NextRequest) {
     if (!description?.trim()) {
       return NextResponse.json({ error: 'Please describe your role and authorization' }, { status: 400 })
     }
+    if (!email?.trim() || !email.includes('@')) {
+      return NextResponse.json({ error: 'A valid company email is required' }, { status: 400 })
+    }
 
+    const fullName = `${firstName.trim()} ${lastName.trim()}`
     const supabase = await getAdminSupabaseClient()
 
     // ── Conflict checks ─────────────────────────────────────────
@@ -72,7 +77,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Also block if they have any pending/flagged request already
     const { data: existingRequest } = await supabase
       .from('employer_access_requests')
       .select('id, status')
@@ -91,9 +95,8 @@ export async function POST(request: NextRequest) {
     }
 
     // ── AvA evaluation ──────────────────────────────────────────
-    const emailDomain = email ? email.split('@')[1]?.toLowerCase() ?? null : null
+    const emailDomain = email.split('@')[1]?.toLowerCase() ?? null
 
-    // Fetch existing company names so AvA can detect duplicates
     const { data: companies } = await supabase
       .from('companies')
       .select('company_name')
@@ -103,7 +106,7 @@ export async function POST(request: NextRequest) {
 
     const evalResult = await evaluateEmployerRequest(
       {
-        requesterName: name.trim(),
+        requesterName: fullName,
         companyName: companyName.trim(),
         description: description.trim(),
         emailDomain,
@@ -111,20 +114,27 @@ export async function POST(request: NextRequest) {
       existingCompanyNames
     )
 
-    console.log(`[ACCESS REQUEST] AvA verdict for "${companyName}": ${evalResult.decision} (${evalResult.confidence}) — ${evalResult.reason}`)
+    console.log(`[ACCESS REQUEST] AvA verdict for "${companyName}": ${evalResult.decision} (${evalResult.confidence}) — ${evalResult.reason} | existingMatch: ${evalResult.existingMatch ?? 'none'}`)
+
+    // Shared fields for audit trail inserts
+    const auditFields = {
+      wallet_address: walletAddress.toLowerCase(),
+      email: email.toLowerCase(),
+      name: fullName,
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+      company_name: companyName.trim(),
+      description: description.trim(),
+      ai_decision: evalResult.decision,
+      ai_reason: evalResult.reason,
+      ai_confidence: evalResult.confidence,
+    }
 
     // ── Handle: BLOCK ───────────────────────────────────────────
     if (evalResult.decision === 'block') {
       await supabase.from('employer_access_requests').insert({
-        wallet_address: walletAddress.toLowerCase(),
-        email: email?.toLowerCase() || null,
-        name: name.trim(),
-        company_name: companyName.trim(),
-        description: description.trim(),
+        ...auditFields,
         status: 'blocked',
-        ai_decision: evalResult.decision,
-        ai_reason: evalResult.reason,
-        ai_confidence: evalResult.confidence,
       })
 
       return NextResponse.json({
@@ -134,25 +144,118 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // ── Handle: FLAG ────────────────────────────────────────────
+    // ── Handle: EXISTING COMPANY MATCH ──────────────────────────
+    // AvA detected the requested company name matches one already on StormChain.
+    // We verify the email domain before auto-joining.
+    if (evalResult.existingMatch && evalResult.decision !== 'block') {
+      const { data: matchedCompany } = await supabase
+        .from('companies')
+        .select('id, company_name, email')
+        .ilike('company_name', evalResult.existingMatch)
+        .maybeSingle()
+
+      if (matchedCompany) {
+        const companyEmailDomain = matchedCompany.email?.split('@')[1]?.toLowerCase() ?? null
+
+        // Domain match -> auto-join as recruiter
+        if (emailDomain && companyEmailDomain && emailDomain === companyEmailDomain) {
+          // Get or create user
+          let userId: string
+          if (existingUser) {
+            await supabase
+              .from('users')
+              .update({ role: 'employer', name: fullName, email: email.toLowerCase() })
+              .eq('id', existingUser.id)
+            userId = existingUser.id
+          } else {
+            const { data: newUser, error: createErr } = await supabase
+              .from('users')
+              .insert({
+                wallet_address: walletAddress.toLowerCase(),
+                email: email.toLowerCase(),
+                name: fullName,
+                role: 'employer',
+              })
+              .select('id')
+              .single()
+
+            if (createErr || !newUser) {
+              console.error('[ACCESS REQUEST] Create user error:', createErr)
+              return NextResponse.json({ error: 'Failed to create user account' }, { status: 500 })
+            }
+            userId = newUser.id
+          }
+
+          // Upsert user_profiles so hub header shows correct name
+          await supabase.from('user_profiles').upsert(
+            {
+              user_id: userId,
+              first_name: firstName.trim(),
+              last_name: lastName.trim(),
+              email: email.toLowerCase(),
+            },
+            { onConflict: 'user_id' }
+          )
+
+          // Add as team member (recruiter role — owner must promote if needed)
+          await supabase.from('company_members').insert({
+            company_id: matchedCompany.id,
+            user_id: userId,
+            role: 'recruiter',
+            invite_email: email.toLowerCase(),
+            accepted_at: new Date().toISOString(),
+            is_active: true,
+          })
+
+          // Audit trail
+          await supabase.from('employer_access_requests').insert({
+            ...auditFields,
+            status: 'auto_approved',
+            reviewed_at: new Date().toISOString(),
+          })
+
+          console.log(`[ACCESS REQUEST] Auto-joined: ${fullName} -> ${matchedCompany.company_name} (domain match: @${emailDomain})`)
+
+          return NextResponse.json({
+            success: true,
+            autoJoined: true,
+            message: `You've been added to ${matchedCompany.company_name}. Welcome!`,
+            company: { id: matchedCompany.id, name: matchedCompany.company_name },
+          })
+        }
+
+        // Domain mismatch -> flag for human review regardless of AvA decision
+        await supabase.from('employer_access_requests').insert({
+          ...auditFields,
+          status: 'flagged',
+          ai_reason: `Company "${matchedCompany.company_name}" already exists. Requester email domain @${emailDomain ?? 'unknown'} does not match company domain @${companyEmailDomain ?? 'unknown'}.`,
+        })
+
+        console.log(`[ACCESS REQUEST] Flagged (domain mismatch): ${fullName} for ${matchedCompany.company_name}`)
+
+        return NextResponse.json({
+          success: true,
+          message: `${matchedCompany.company_name} already exists on StormChain. Your request to join has been submitted for review. Please ensure you use a @${companyEmailDomain ?? 'company'} email address for instant access.`,
+          request: {
+            companyName: matchedCompany.company_name,
+            status: 'flagged',
+          },
+        })
+      }
+    }
+
+    // ── Handle: FLAG (no existing match) ─────────────────────────
     if (evalResult.decision === 'flag') {
       const { data: flaggedReq } = await supabase
         .from('employer_access_requests')
         .insert({
-          wallet_address: walletAddress.toLowerCase(),
-          email: email?.toLowerCase() || null,
-          name: name.trim(),
-          company_name: companyName.trim(),
-          description: description.trim(),
+          ...auditFields,
           status: 'flagged',
-          ai_decision: evalResult.decision,
-          ai_reason: evalResult.reason,
-          ai_confidence: evalResult.confidence,
         })
         .select()
         .single()
 
-      console.log(`[ACCESS REQUEST] Flagged for review: ${name} for ${companyName}`)
+      console.log(`[ACCESS REQUEST] Flagged for review: ${fullName} for ${companyName}`)
 
       return NextResponse.json({
         success: true,
@@ -165,15 +268,14 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // ── Handle: APPROVE ─────────────────────────────────────────
-    // Same logic as admin approval — create user/company/membership
+    // ── Handle: APPROVE (new company) ────────────────────────────
 
     // 1. Get or create user
     let userId: string
     if (existingUser) {
       await supabase
         .from('users')
-        .update({ role: 'employer', name: name.trim(), email: email?.toLowerCase() || undefined })
+        .update({ role: 'employer', name: fullName, email: email.toLowerCase() })
         .eq('id', existingUser.id)
       userId = existingUser.id
     } else {
@@ -181,8 +283,8 @@ export async function POST(request: NextRequest) {
         .from('users')
         .insert({
           wallet_address: walletAddress.toLowerCase(),
-          email: email?.toLowerCase() || null,
-          name: name.trim(),
+          email: email.toLowerCase(),
+          name: fullName,
           role: 'employer',
         })
         .select('id')
@@ -195,13 +297,24 @@ export async function POST(request: NextRequest) {
       userId = newUser.id
     }
 
-    // 2. Create company
+    // 2. Upsert user_profiles
+    await supabase.from('user_profiles').upsert(
+      {
+        user_id: userId,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        email: email.toLowerCase(),
+      },
+      { onConflict: 'user_id' }
+    )
+
+    // 3. Create company
     const { data: newCompany, error: companyErr } = await supabase
       .from('companies')
       .insert({
         company_name: companyName.trim(),
         employer_user_id: userId,
-        designated_owner_email: email?.toLowerCase() || null,
+        designated_owner_email: email.toLowerCase(),
         status: 'active',
         approved_at: new Date().toISOString(),
         onboarding_completed: false,
@@ -214,28 +327,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create company' }, { status: 500 })
     }
 
-    // 3. Add owner to company_members
+    // 4. Add owner to company_members
     await supabase.from('company_members').insert({
       company_id: newCompany.id,
       user_id: userId,
       role: 'owner',
-      invite_email: email?.toLowerCase() || null,
+      invite_email: email.toLowerCase(),
       accepted_at: new Date().toISOString(),
       is_active: true,
     })
 
-    // 4. Audit trail
+    // 5. Audit trail
     await supabase.from('employer_access_requests').insert({
-      wallet_address: walletAddress.toLowerCase(),
-      email: email?.toLowerCase() || null,
-      name: name.trim(),
-      company_name: companyName.trim(),
-      description: description.trim(),
+      ...auditFields,
       status: 'auto_approved',
       reviewed_at: new Date().toISOString(),
-      ai_decision: evalResult.decision,
-      ai_reason: evalResult.reason,
-      ai_confidence: evalResult.confidence,
     })
 
     console.log(`[ACCESS REQUEST] Auto-approved: ${companyName} -> Company ID: ${newCompany.id}`)
@@ -268,7 +374,6 @@ export async function GET(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Check for pending OR flagged (both mean "waiting for review" from user's perspective)
     const { data: pendingRequest } = await supabase
       .from('employer_access_requests')
       .select('id, company_name, status, created_at')

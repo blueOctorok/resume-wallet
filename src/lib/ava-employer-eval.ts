@@ -11,6 +11,8 @@ export interface EmployerEvalResult {
   decision: 'approve' | 'flag' | 'block'
   reason: string
   confidence: number
+  /** If the requested company name matches an existing company, this is the exact name from the DB */
+  existingMatch: string | null
 }
 
 const MODEL = 'claude-sonnet-4-6'
@@ -29,12 +31,20 @@ function buildEvalPrompt(existingCompanyNames: string[]): string {
 
 StormChain serves all industries — trucking, tech, manufacturing, retail, healthcare, etc. Any legitimate business that hires people is a valid employer.
 
+## Duplicate company detection (CRITICAL)
+
+Before making any decision, compare the requested company name against the existing companies list below. Use fuzzy matching — ignore case, whitespace, punctuation, and common suffixes like "LLC", "Inc", "Corp", "Co", "Ltd". Examples:
+- "Pace Drivers" matches "Pace Drivers LLC"
+- "acme trucking" matches "Acme Trucking Inc."
+- "STARS" matches "Stars"
+
+If you detect a match, you MUST set "existingMatch" to the EXACT name from the existing companies list (copy it character-for-character). A match is NOT grounds for blocking — it means this person likely works for that company and wants to join it. Still evaluate legitimacy normally.
+
 ## Decision criteria
 
 **APPROVE** when ALL of these are true:
 - Company name sounds like a real business (not gibberish, test data, or a person's name)
 - Description demonstrates the requester is authorized (mentions role like owner, HR, recruiter, hiring manager)
-- No obvious duplicate with an existing company
 - Confidence >= 0.7
 
 **FLAG** when any of these are true:
@@ -55,11 +65,12 @@ ${companiesList}
 ## Response format
 
 Return ONLY valid JSON with no markdown formatting:
-{"decision":"approve","reason":"Brief explanation","confidence":0.85}
+{"decision":"approve","reason":"Brief explanation","confidence":0.85,"existingMatch":null}
 
 decision must be exactly one of: approve, flag, block
 reason must be a single sentence explaining why
-confidence must be a number between 0 and 1`
+confidence must be a number between 0 and 1
+existingMatch must be null OR the exact company name string copied from the existing companies list above`
 }
 
 /**
@@ -89,13 +100,13 @@ export async function evaluateEmployerRequest(
 
     const text = response.content[0].type === 'text' ? response.content[0].text : ''
 
-    // Strip any accidental markdown fencing
     const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
 
     const parsed = JSON.parse(cleaned) as {
       decision?: string
       reason?: string
       confidence?: number
+      existingMatch?: string | null
     }
 
     const validDecisions = ['approve', 'flag', 'block'] as const
@@ -107,14 +118,15 @@ export async function evaluateEmployerRequest(
       decision,
       reason: typeof parsed.reason === 'string' ? parsed.reason : 'Unable to determine reason',
       confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
+      existingMatch: typeof parsed.existingMatch === 'string' ? parsed.existingMatch : null,
     }
   } catch (error) {
-    // AI failure = flag for human review (never auto-approve on error)
     console.error('[AvA Employer Eval] Error:', error)
     return {
       decision: 'flag',
       reason: 'AI evaluation unavailable — flagged for manual review',
       confidence: 0,
+      existingMatch: null,
     }
   }
 }
