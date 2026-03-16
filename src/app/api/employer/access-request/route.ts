@@ -130,12 +130,25 @@ export async function POST(request: NextRequest) {
       ai_confidence: evalResult.confidence,
     }
 
+    // Helper: insert audit row, retry without new columns if migration hasn't run yet
+    async function insertAuditRow(extraFields: Record<string, unknown>) {
+      const payload = { ...auditFields, ...extraFields }
+      const { error } = await supabase.from('employer_access_requests').insert(payload)
+      if (error) {
+        // If first_name/last_name columns don't exist yet, retry without them
+        if (error.message?.includes('first_name') || error.message?.includes('last_name') || error.code === '42703') {
+          const { first_name, last_name, ...fallback } = payload
+          const { error: retryErr } = await supabase.from('employer_access_requests').insert(fallback)
+          if (retryErr) console.error('[ACCESS REQUEST] Audit insert retry failed:', retryErr)
+        } else {
+          console.error('[ACCESS REQUEST] Audit insert failed:', error)
+        }
+      }
+    }
+
     // ── Handle: BLOCK ───────────────────────────────────────────
     if (evalResult.decision === 'block') {
-      await supabase.from('employer_access_requests').insert({
-        ...auditFields,
-        status: 'blocked',
-      })
+      await insertAuditRow({ status: 'blocked' })
 
       return NextResponse.json({
         success: false,
@@ -208,11 +221,7 @@ export async function POST(request: NextRequest) {
           })
 
           // Audit trail
-          await supabase.from('employer_access_requests').insert({
-            ...auditFields,
-            status: 'auto_approved',
-            reviewed_at: new Date().toISOString(),
-          })
+          await insertAuditRow({ status: 'auto_approved', reviewed_at: new Date().toISOString() })
 
           console.log(`[ACCESS REQUEST] Auto-joined: ${fullName} -> ${matchedCompany.company_name} (domain match: @${emailDomain})`)
 
@@ -225,8 +234,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Domain mismatch -> flag for human review regardless of AvA decision
-        await supabase.from('employer_access_requests').insert({
-          ...auditFields,
+        await insertAuditRow({
           status: 'flagged',
           ai_reason: `Company "${matchedCompany.company_name}" already exists. Requester email domain @${emailDomain ?? 'unknown'} does not match company domain @${companyEmailDomain ?? 'unknown'}.`,
         })
@@ -246,14 +254,7 @@ export async function POST(request: NextRequest) {
 
     // ── Handle: FLAG (no existing match) ─────────────────────────
     if (evalResult.decision === 'flag') {
-      const { data: flaggedReq } = await supabase
-        .from('employer_access_requests')
-        .insert({
-          ...auditFields,
-          status: 'flagged',
-        })
-        .select()
-        .single()
+      await insertAuditRow({ status: 'flagged' })
 
       console.log(`[ACCESS REQUEST] Flagged for review: ${fullName} for ${companyName}`)
 
@@ -261,7 +262,6 @@ export async function POST(request: NextRequest) {
         success: true,
         message: 'Your request has been submitted and is under review.',
         request: {
-          id: flaggedReq?.id,
           companyName: companyName.trim(),
           status: 'flagged',
         },
@@ -338,11 +338,7 @@ export async function POST(request: NextRequest) {
     })
 
     // 5. Audit trail
-    await supabase.from('employer_access_requests').insert({
-      ...auditFields,
-      status: 'auto_approved',
-      reviewed_at: new Date().toISOString(),
-    })
+    await insertAuditRow({ status: 'auto_approved', reviewed_at: new Date().toISOString() })
 
     console.log(`[ACCESS REQUEST] Auto-approved: ${companyName} -> Company ID: ${newCompany.id}`)
 
