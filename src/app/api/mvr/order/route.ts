@@ -215,10 +215,10 @@ export async function POST(request: NextRequest) {
     console.log('[MVR ORDER] Starting MVR order for wallet:', walletAddress, 'with payment:', paymentTxHash)
 
     // 1. Get or create user (single place — avoids duplicate user rows)
-    let user: { id: string; email?: string | null; name?: string | null }
+    let user: { id: string; email?: string | null }
     try {
       const { user: u } = await getOrCreateUserByWallet(supabaseService, walletAddress)
-      user = { id: u.id, email: u.email, name: u.name }
+      user = { id: u.id, email: u.email }
     } catch (err) {
       console.error('[MVR ORDER] Error get/create user:', err)
       return NextResponse.json(
@@ -226,6 +226,13 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // Resolve name from user_profiles for fallback personal info
+    const { data: userProfile } = await supabaseService
+      .from('user_profiles')
+      .select('first_name, last_name')
+      .eq('user_id', user.id)
+      .maybeSingle()
 
     // Get or create driver profile
     let { data: profile, error: profileError } = await supabaseService
@@ -275,8 +282,8 @@ export async function POST(request: NextRequest) {
     const appData = dotApplication?.application_data || {}
     const form1Data = appData.form1Data || {}
     
-    const firstName = providedFirstName || form1Data.firstName || user.name?.split(' ')[0] || ''
-    const lastName = providedLastName || form1Data.lastName || user.name?.split(' ').slice(1).join(' ') || ''
+    const firstName = providedFirstName || form1Data.firstName || userProfile?.first_name || ''
+    const lastName = providedLastName || form1Data.lastName || userProfile?.last_name || ''
     const middleName = providedMiddleName || form1Data.middleName || ''
     const email = providedEmail || user.email || ''
     const phone = providedPhone || form1Data.phone || ''

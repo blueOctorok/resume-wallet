@@ -56,15 +56,13 @@ export async function POST(request: NextRequest) {
 
     if (existingUser) {
       user = existingUser
-      // Sync name + email to users row
-      await supabase.from('users').update({ name: fullName, email: email || undefined }).eq('id', user.id)
+      await supabase.from('users').update({ email: email || undefined }).eq('id', user.id)
     } else {
       const { data: newUser, error: createErr } = await supabase
         .from('users')
         .insert({
           wallet_address: walletAddress.toLowerCase().trim(),
           email: email || null,
-          name: fullName,
           role: 'employer',
         })
         .select('id, email')
@@ -76,6 +74,13 @@ export async function POST(request: NextRequest) {
       }
       user = newUser
     }
+
+    // Write identity to user_profiles
+    const nameParts = fullName.split(/\s+/)
+    await supabase.from('user_profiles').upsert(
+      { user_id: user.id, first_name: nameParts[0] || null, last_name: nameParts.length > 1 ? nameParts.slice(1).join(' ') : null, display_name: fullName, email: email || undefined },
+      { onConflict: 'user_id' }
+    )
 
     // Upsert user_profiles so the hub header displays the correct name
     await supabase.from('user_profiles').upsert(

@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
   const { data: user } = await supabase
     .from('users')
-    .select('id, email, name')
+    .select('id, email')
     .ilike('wallet_address', walletAddress)
     .single()
 
@@ -47,9 +47,14 @@ export async function GET(request: NextRequest) {
     .eq('user_id', user.id)
     .maybeSingle()
 
-  const nameParts = (user.name || '').split(' ')
-  const firstName = form1.firstName || nameParts[0] || ''
-  const lastName = form1.lastName || nameParts.slice(1).join(' ') || ''
+  const { data: userProfile } = await supabase
+    .from('user_profiles')
+    .select('first_name, last_name')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const firstName = form1.firstName || userProfile?.first_name || ''
+  const lastName = form1.lastName || userProfile?.last_name || ''
 
   // Address is nested under currentMailing in Form 1
   const mailing = form1.currentMailing || {}

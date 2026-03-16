@@ -56,20 +56,27 @@ export async function GET(request: NextRequest) {
     const creatorIds = [...new Set((invites || []).map((i: any) => i.created_by_user_id).filter(Boolean))]
     let creatorsMap: Record<string, any> = {}
     
+    let creatorProfilesMap: Record<string, { first_name: string | null; last_name: string | null }> = {}
+
     if (creatorIds.length > 0) {
-      const { data: creators } = await supabase
-        .from('users')
-        .select('id, wallet_address, email, name')
-        .in('id', creatorIds)
+      const [{ data: creators }, { data: creatorProfiles }] = await Promise.all([
+        supabase.from('users').select('id, wallet_address, email').in('id', creatorIds),
+        supabase.from('user_profiles').select('user_id, first_name, last_name').in('user_id', creatorIds),
+      ])
       
       if (creators) {
         creatorsMap = Object.fromEntries(creators.map(u => [u.id, u]))
+      }
+      if (creatorProfiles) {
+        creatorProfilesMap = Object.fromEntries(creatorProfiles.map(p => [p.user_id, p]))
       }
     }
 
     // Transform for cleaner response
     const transformed = (invites || []).map((invite: any) => {
       const creator = creatorsMap[invite.created_by_user_id]
+      const cp = creatorProfilesMap[invite.created_by_user_id]
+      const creatorName = [cp?.first_name, cp?.last_name].filter(Boolean).join(' ').trim() || null
       return {
         id: invite.id,
         token: invite.token,
@@ -89,7 +96,7 @@ export async function GET(request: NextRequest) {
         jobTitle: invite.job_postings?.title || null,
         // Creator info
         createdByWallet: creator?.wallet_address,
-        createdByEmail: creator?.email || creator?.name,
+        createdByEmail: creator?.email || creatorName,
       }
     })
 

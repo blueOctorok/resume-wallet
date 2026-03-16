@@ -39,11 +39,6 @@ export const DEVELOPER_TEMPLATES: Record<string, AvaResponse> = {
       'Ready to build or update your developer resume! Include your tech stack, projects, and achievements.',
     useAI: false,
   },
-  'nav:career_score': {
-    message:
-      'Your Career Score is AI-generated based on your GitHub activity, portfolio quality, and profile completeness. It helps employers quickly assess your qualifications!',
-    useAI: false,
-  },
 
   // GitHub Connection
   'github:connect_prompt': {
@@ -188,14 +183,9 @@ export const DEVELOPER_TEMPLATES: Record<string, AvaResponse> = {
   },
 
   // Help Topics
-  'help:career_score': {
-    message:
-      "**What is Career Score?**\n\nIt's an AI-generated score (0-100) based on:\n\n• **GitHub Activity** (35%): Contributions, repos, languages\n• **Portfolio Quality** (40%): Projects, live URLs, tech diversity\n• **Profile Completeness** (25%): Bio, skills, experience\n\nHigher scores attract more employer attention!",
-    useAI: false,
-  },
   'help:career_card': {
     message:
-      "**What is a Career Card?**\n\nIt's your public developer profile that includes:\n\n• Personal info & headline\n• GitHub contributions graph\n• Portfolio projects\n• Tech stack & skills\n• AI Career Score\n\nShare it with employers to showcase your full profile!",
+      "**What is a Career Card?**\n\nIt's your public developer profile that includes:\n\n• Personal info & headline\n• GitHub contributions graph\n• Portfolio projects\n• Tech stack & skills\n\nShare it with employers to showcase your full profile!",
     useAI: false,
   },
   'help:portfolio_tips': {
@@ -260,7 +250,6 @@ export function getDeveloperTemplateKey(
       if (page === 'portfolio') return 'nav:portfolio'
       if (page === 'github') return 'nav:github'
       if (page === 'resume') return 'nav:resume'
-      if (page === 'career_score') return 'nav:career_score'
     }
   }
 

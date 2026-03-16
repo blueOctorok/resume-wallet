@@ -129,18 +129,23 @@ export async function DELETE(
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // GUARD: Prevent deleting admin wallets
+    // GUARD: Warn (but allow) deleting admin wallets — useful for dev/test reset
     if (isAdminWallet(user.wallet_address)) {
-      console.warn(
-        `[ADMIN] Blocked attempt to delete admin wallet: ${user.wallet_address} by: ${auth.walletAddress}`
-      )
-      return NextResponse.json(
-        {
-          error:
-            'Cannot delete admin accounts. Remove wallet from ADMIN_WALLETS env to revoke admin access first.',
-        },
-        { status: 403 }
-      )
+      const forceDelete = request.headers.get('x-force-admin-delete') === 'true'
+      if (!forceDelete) {
+        console.warn(
+          `[ADMIN] Attempted to delete admin wallet: ${user.wallet_address} — requires x-force-admin-delete header`
+        )
+        return NextResponse.json(
+          {
+            error:
+              'This is an admin wallet. To confirm deletion, please try again with the force option.',
+            isAdminWallet: true,
+          },
+          { status: 403 }
+        )
+      }
+      console.warn(`[ADMIN] Force-deleting admin wallet: ${user.wallet_address} by: ${auth.walletAddress}`)
     }
 
     // Delete in order (respecting foreign key constraints)

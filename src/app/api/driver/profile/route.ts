@@ -279,7 +279,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Convert to database format
+    // Convert to database format (profileToRow no longer includes identity columns)
     const updateData = profileToRow(profileData, source || 'manual')
 
     // Check if profile exists and get full data for conflict detection

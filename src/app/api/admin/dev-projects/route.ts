@@ -67,31 +67,30 @@ export async function GET(request: NextRequest) {
       .select('id, wallet_address')
       .in('id', userIds)
 
+    const devProfileUserIds = [...new Set(projects?.map(p => p.user_id).filter(Boolean) || [])]
     const { data: profiles } = await supabase
-      .from('developer_profiles')
-      .select('id, full_name, github_username')
-      .in('id', profileIds)
+      .from('user_profiles')
+      .select('user_id, first_name, last_name')
+      .in('user_id', devProfileUserIds)
+
+    const { data: devProfiles } = profileIds.length
+      ? await supabase.from('developer_profiles').select('id, user_id, github_username').in('id', profileIds)
+      : { data: [] }
 
     const userMap = new Map(users?.map((u) => [u.id, u.wallet_address]) || [])
-    const profileMap = new Map(
-      profiles?.map((p) => [
-        p.id,
-        { fullName: p.full_name, github: p.github_username },
-      ]) || []
-    )
+    const userProfileMap = new Map((profiles || []).map(p => [p.user_id, p]))
+    const devProfileIdToUserIdMap = new Map((devProfiles || []).map(p => [p.id, { user_id: p.user_id, github: p.github_username }]))
 
     // Enrich projects
     const enrichedProjects = projects?.map((project) => {
-      const profileData = project.developer_profile_id
-        ? profileMap.get(project.developer_profile_id)
-        : null
+      const devInfo = project.developer_profile_id ? devProfileIdToUserIdMap.get(project.developer_profile_id) : null
+      const up = userProfileMap.get(project.user_id)
+      const ownerName = [up?.first_name, up?.last_name].filter(Boolean).join(' ') || devInfo?.github || 'Unknown'
       return {
         ...project,
         walletAddress: userMap.get(project.user_id) || 'Unknown',
-        ownerName: profileData?.fullName || profileData?.github || 'Unknown',
-        techCount: Array.isArray(project.tech_stack)
-          ? project.tech_stack.length
-          : 0,
+        ownerName,
+        techCount: Array.isArray(project.tech_stack) ? project.tech_stack.length : 0,
       }
     })
 

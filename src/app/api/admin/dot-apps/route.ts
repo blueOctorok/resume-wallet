@@ -49,29 +49,24 @@ export async function GET(request: NextRequest) {
     const userIds = [...new Set(apps?.map(a => a.user_id) || [])]
     const { data: users } = await supabase
       .from('users')
-      .select('id, wallet_address, email, name')
+      .select('id, wallet_address, email')
       .in('id', userIds)
 
-    // Get profile names
-    const { data: profiles } = await supabase
-      .from('driver_profiles')
+    const { data: userProfiles } = await supabase
+      .from('user_profiles')
       .select('user_id, first_name, last_name')
       .in('user_id', userIds)
 
-    // Build lookup maps
     const userMap = new Map(users?.map(u => [u.id, u]) || [])
-    const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || [])
+    const profileMap = new Map(userProfiles?.map(p => [p.user_id, p]) || [])
 
-    // Enrich apps with user info
     const enrichedApps = apps?.map(app => {
       const user = userMap.get(app.user_id)
       const profile = profileMap.get(app.user_id)
       return {
         ...app,
         walletAddress: user?.wallet_address || 'Unknown',
-        applicantName: profile?.first_name && profile?.last_name 
-          ? `${profile.first_name} ${profile.last_name}`
-          : user?.name || 'Unknown',
+        applicantName: [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim() || 'Unknown',
         email: user?.email,
       }
     })

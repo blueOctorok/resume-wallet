@@ -34,7 +34,7 @@ export async function GET(
     // Get user info
     const { data: user } = await supabase
       .from('users')
-      .select('wallet_address, email, name')
+      .select('wallet_address, email')
       .eq('id', profile.user_id)
       .single()
 
@@ -80,10 +80,9 @@ export async function DELETE(
   try {
     const supabase = await getAdminSupabaseClient()
 
-    // Verify profile exists — table uses first_name/last_name, not full_name
     const { data: profile, error: findError } = await supabase
       .from('developer_profiles')
-      .select('id, user_id, first_name, last_name, display_name, github_username')
+      .select('id, user_id, display_name, github_username')
       .eq('id', id)
       .single()
 
@@ -94,8 +93,14 @@ export async function DELETE(
       )
     }
 
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('first_name, last_name')
+      .eq('user_id', profile.user_id)
+      .maybeSingle()
+
     const displayName =
-      [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim() ||
+      [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ').trim() ||
       profile.display_name ||
       profile.github_username ||
       'unnamed'

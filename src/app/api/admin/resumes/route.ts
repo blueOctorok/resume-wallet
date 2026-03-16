@@ -54,38 +54,26 @@ export async function GET(request: NextRequest) {
     const userIds = [...new Set(resumes?.map(r => r.user_id) || [])]
     const { data: users } = await supabase
       .from('users')
-      .select('id, wallet_address, email, name')
+      .select('id, wallet_address, email')
       .in('id', userIds)
 
-    // Get profile names from user_profiles (unified), falling back to driver_profiles
     const { data: userProfiles } = await supabase
       .from('user_profiles')
       .select('user_id, first_name, last_name')
       .in('user_id', userIds)
 
-    const { data: driverProfiles } = await supabase
-      .from('driver_profiles')
-      .select('user_id, first_name, last_name')
-      .in('user_id', userIds)
-
-    // Build lookup maps
     const userMap = new Map(users?.map(u => [u.id, u]) || [])
     const userProfileMap = new Map(userProfiles?.map(p => [p.user_id, p]) || [])
-    const driverProfileMap = new Map(driverProfiles?.map(p => [p.user_id, p]) || [])
 
-    // Enrich resumes — prefer user_profiles for name, fall back to driver_profiles
     const enrichedResumes = resumes?.map(resume => {
       const user = userMap.get(resume.user_id)
       const up = userProfileMap.get(resume.user_id)
-      const dp = driverProfileMap.get(resume.user_id)
-      const profile = up?.first_name ? up : dp
+      const ownerName = [up?.first_name, up?.last_name].filter(Boolean).join(' ').trim() || 'Unknown'
 
       return {
         ...resume,
         walletAddress: user?.wallet_address || 'Unknown',
-        ownerName: profile?.first_name && profile?.last_name
-          ? `${profile.first_name} ${profile.last_name}`
-          : user?.name || 'Unknown',
+        ownerName,
         email: user?.email,
       }
     })

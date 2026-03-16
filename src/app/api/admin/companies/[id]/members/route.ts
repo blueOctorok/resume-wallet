@@ -51,7 +51,6 @@ export async function GET(
         invite_email,
         users!company_members_user_id_fkey (
           id,
-          name,
           email,
           wallet_address
         )
@@ -68,8 +67,17 @@ export async function GET(
       )
     }
 
+    // Resolve names from user_profiles
+    const memberUserIds = (members || []).map((m: any) => (m.users as any)?.id).filter(Boolean)
+    const { data: profiles } = memberUserIds.length > 0
+      ? await supabase.from('user_profiles').select('user_id, first_name, last_name').in('user_id', memberUserIds)
+      : { data: [] }
+    const profileMap = new Map((profiles || []).map(p => [p.user_id, p]))
+
     const processedMembers = (members || []).map(member => {
       const user = member.users as any
+      const up = profileMap.get(user?.id)
+      const profileName = [up?.first_name, up?.last_name].filter(Boolean).join(' ').trim() || null
       return {
         id: member.id,
         userId: member.user_id,
@@ -79,7 +87,7 @@ export async function GET(
         invitedAt: member.invited_at,
         acceptedAt: member.accepted_at,
         inviteEmail: member.invite_email,
-        name: user?.name || null,
+        name: profileName,
         email: user?.email || member.invite_email,
         walletAddress: user?.wallet_address || null,
       }

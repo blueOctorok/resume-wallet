@@ -83,7 +83,6 @@ export async function GET(request: NextRequest) {
         created_at,
         users!company_members_user_id_fkey (
           id,
-          name,
           email,
           wallet_address
         )
@@ -99,6 +98,25 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Batch-fetch names from user_profiles for all members with a user_id
+    const memberUserIds = (members || [])
+      .map(m => m.user_id)
+      .filter((id): id is string => !!id)
+
+    const { data: profiles } = memberUserIds.length > 0
+      ? await supabase
+          .from('user_profiles')
+          .select('user_id, first_name, last_name')
+          .in('user_id', memberUserIds)
+      : { data: [] }
+
+    const profileNameMap = new Map(
+      (profiles || []).map(p => [
+        p.user_id,
+        [p.first_name, p.last_name].filter(Boolean).join(' ').trim() || null,
+      ])
+    )
+
     // Process members
     const processedMembers = (members || []).map(member => {
       const memberUser = member.users as any
@@ -106,7 +124,7 @@ export async function GET(request: NextRequest) {
         id: member.id,
         userId: member.user_id,
         role: member.role,
-        name: memberUser?.name || null,
+        name: (member.user_id ? profileNameMap.get(member.user_id) : null) ?? null,
         email: memberUser?.email || member.invite_email,
         walletAddress: memberUser?.wallet_address || null,
         isActive: member.is_active,
@@ -188,10 +206,9 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user with name for invite email
     const { data: user } = await supabase
       .from('users')
-      .select('id, name, email')
+      .select('id, email')
       .ilike('wallet_address', walletAddress)
       .single()
 
@@ -381,10 +398,19 @@ export async function POST(request: NextRequest) {
     const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/invite/${inviteToken}`
     const inviteExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
+    // Resolve inviter name from user_profiles
+    const { data: inviterProfile } = await supabase
+      .from('user_profiles')
+      .select('first_name, last_name')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    const inviterName = [inviterProfile?.first_name, inviterProfile?.last_name].filter(Boolean).join(' ').trim() || user.email || 'Your team admin'
+
     // Send invite email (non-blocking)
     sendTeamInviteEmail({
       to: email,
-      inviterName: user.name || user.email || 'Your team admin',
+      inviterName,
       companyName: company?.company_name || 'Your company',
       role,
       inviteToken,

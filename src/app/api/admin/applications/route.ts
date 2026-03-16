@@ -58,37 +58,40 @@ export async function GET(request: NextRequest) {
     // Fetch user data separately (FK relationship name varies)
     const userIds = [...new Set((applications || []).map((a: any) => a.applicant_user_id).filter(Boolean))]
     let usersMap: Record<string, any> = {}
+    let profileMap: Record<string, { first_name: string | null; last_name: string | null }> = {}
     
     if (userIds.length > 0) {
-      const { data: users } = await supabase
-        .from('users')
-        .select('id, wallet_address, email, name')
-        .in('id', userIds)
+      const [{ data: users }, { data: userProfiles }] = await Promise.all([
+        supabase.from('users').select('id, wallet_address, email').in('id', userIds),
+        supabase.from('user_profiles').select('user_id, first_name, last_name').in('user_id', userIds),
+      ])
       
-      if (users) {
-        usersMap = Object.fromEntries(users.map(u => [u.id, u]))
+      if (users) usersMap = Object.fromEntries(users.map(u => [u.id, u]))
+      const upMap = new Map(userProfiles?.map(p => [p.user_id, p]) || [])
+      for (const id of userIds) {
+        const up = upMap.get(id)
+        if (up?.first_name) profileMap[id] = up
       }
     }
 
     // Transform for cleaner response
     const transformed = (applications || []).map((app: any) => {
       const user = usersMap[app.applicant_user_id]
+      const profile = profileMap[app.applicant_user_id]
+      const applicantName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim() || null
       return {
         id: app.id,
         status: app.status,
         coverLetter: app.cover_letter,
-        createdAt: app.applied_at, // applications table uses applied_at
+        createdAt: app.applied_at,
         updatedAt: app.updated_at,
-        // Job info
         jobId: app.job_posting_id,
         jobTitle: app.job_postings?.title || 'Unknown Job',
         companyName: app.job_postings?.companies?.company_name || 'Unknown Company',
-        // Applicant info
         applicantId: app.applicant_user_id,
         applicantWallet: user?.wallet_address,
         applicantEmail: user?.email,
-        applicantName: user?.name,
-        // Linked records
+        applicantName,
         resumeId: app.resume_id,
         resumeTitle: app.resumes?.title || app.resumes?.filename || null,
         dotApplicationId: app.driver_application_id,

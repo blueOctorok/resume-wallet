@@ -4,6 +4,166 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## 🗑️ **Drop `users.name` Column — Remove References from Non-Admin APIs** (March 16, 2026)
+
+### Problem
+Continuation of the `users.name` column drop. Thirteen non-admin API routes still referenced `users.name` in `.select()` calls, used it as a fallback for display names, or wrote to it.
+
+### What changed — 13 non-admin API files updated
+
+**Files that removed `name` from select and added `user_profiles` fetch:**
+- `api/candidate/profile-info/route.ts` — firstName/lastName fallback now from `user_profiles` instead of splitting `user.name`
+- `api/candidate/bgcheck-consent/route.ts` — driver name for notification from `user_profiles` instead of `users.name`
+- `api/applications/submit/route.ts` — `applicant_name` in snapshot from `user_profiles` (added `getAdminSupabaseClient` import)
+- `api/employer/team/route.ts` — GET: batch `user_profiles` fetch for member names; POST: inviter name from `user_profiles`
+- `api/employer/talent/[userId]/recruit/route.ts` — candidate name and email notification from `user_profiles`
+- `api/employer/talent/[userId]/request/route.ts` — candidate name for email from `user_profiles`
+- `api/employer/applications/[id]/status/route.ts` — already had partial fallback; now `user_profiles` is sole source
+- `api/employer/applications/[id]/export/route.ts` — removed `candidateUser?.name` fallback; `user_profiles` only
+- `api/employer/mvr/order/route.ts` — removed `name` from candidate select (wasn't used downstream)
+- `api/employer/candidate-data/route.ts` — removed `name` from employer select (wasn't used downstream)
+- `api/mvr/order/route.ts` — firstName/lastName fallback from `user_profiles` instead of splitting `user.name`
+
+**Files that stopped writing to `users.name`:**
+- `api/driver/profile/quick-setup/route.ts` — now upserts `user_profiles` instead of `users.name`
+- `api/developer/profile/quick-setup/route.ts` — now upserts `user_profiles` instead of `users.name`
+
+### Name resolution pattern
+All files use: `[up?.first_name, up?.last_name].filter(Boolean).join(' ').trim() || fallback`
+
+---
+
+## 🗑️ **Drop `users.name` Column — Remove All References from Admin APIs** (March 16, 2026)
+
+### Problem
+The `name` column on the `users` table is being dropped. Twelve admin API routes still referenced `users.name` in `.select()` calls and used it as a fallback for display names.
+
+### What changed — 12 admin API files updated
+
+**Files that already had `user_profiles` — removed `name` from select and updated fallback:**
+- `api/admin/applications/route.ts` — name fallback now purely from `user_profiles`
+- `api/admin/resumes/route.ts` — `ownerName` fallback uses `user_profiles` only
+- `api/admin/users/route.ts` — removed `name` from select and search `.or()` filter; removed `user.name` fallback in `displayName` resolution
+- `api/admin/dot-apps/route.ts` — `applicantName` fallback uses `user_profiles` only
+- `api/admin/dot-apps/[id]/export/route.ts` — removed `name` from select; fallback now `'Applicant'` instead of `user?.name`
+- `api/admin/dev-profiles/[id]/route.ts` — removed `name` from select (GET handler only; DELETE already used `user_profiles`)
+
+**Files that needed new `user_profiles` fetch added:**
+- `api/admin/outreach/route.ts` — added batch `user_profiles` fetch for creator IDs; creator name from profiles
+- `api/admin/dot-apps/[id]/route.ts` — parallel `user_profiles` fetch; `userName` from profile
+- `api/admin/resumes/[id]/route.ts` — parallel `user_profiles` fetch; `userName` from profile
+- `api/admin/profiles/[id]/route.ts` — removed `name` from select (wasn't used in response)
+- `api/admin/dev-projects/[id]/route.ts` — removed `name` from select (wasn't used in response)
+- `api/admin/applications/[id]/route.ts` — parallel `user_profiles` fetch for DELETE handler's `userName`
+
+### Name resolution pattern
+All files use the same approach: `[up?.first_name, up?.last_name].filter(Boolean).join(' ').trim() || fallback`
+
+---
+
+## 🔑 **Unified Identity Migration — user_profiles as Single Source of Truth** (March 2026)
+
+### Problem
+
+Identity data (name, avatar, email, phone, location) was duplicated across three tables: `user_profiles`, `driver_profiles`, and `developer_profiles`. ~30 API files read identity from the wrong tables, causing bugs like the career card showing "Candidate" instead of the user's actual name, and stale data showing up in admin views.
+
+### What changed — 6-phase migration across ~30 files
+
+**Phase 1: Core candidate-facing APIs**
+- `api/career-card` — removed identity reads from `driver_profiles` and `developer_profiles`; uses `user_profiles` only
+- `api/driver/career-card` — added `user_profiles` fetch; stripped identity from `driver_profiles` and `developer_profiles` selects
+- `api/driver/public/[token]` — identity from `user_profiles` instead of `driver_profiles`
+- `api/developer/public/[token]` — identity from `user_profiles` instead of `developer_profiles`
+- `api/driver/hub` — added `user_profiles` fetch; composed profile merges identity + role data
+- `DriverHub.tsx` — no changes needed (API response shape preserved)
+
+**Phase 2: Employer-facing APIs**
+- `api/employer/applicants` — batch `user_profiles` fetch replaces nested `driver_profiles` identity join
+- `api/employer/drivers/search` — `user_profiles` for name/contact; filter changed from `first_name` to `cdl_class`
+- `api/employer/talent/[userId]` — `user_profiles` for all identity; role tables for CDL/skills only
+- `api/employer/applications/[id]/export` — `user_profiles` for candidate name
+- `api/employer/applications/[id]/status` — fixed `driver_profiles.full_name` (doesn't exist) to `user_profiles`
+- `api/employer/reports` — `user_profiles` for candidate names in reports
+
+**Phase 3: Messages and verification APIs**
+- `api/messages` — single `user_profiles` batch fetch replaces separate `driver_profiles` + `developer_profiles` lookups
+- `api/messages/[threadId]` — both GET (other participant) and POST (sender name) use `user_profiles`
+- `api/verification/respond/[token]` — applicant name from `user_profiles` (was branching on driver vs developer)
+- `api/verification/status` — employer summary uses `user_profiles` batch fetch for driver names
+
+**Phase 4: Admin APIs (completed migration started in prior audit)**
+- `api/admin/profiles` — stripped identity from `driver_profiles` select; added `user_profiles` enrichment
+- `api/admin/dev-profiles` — stripped identity from `developer_profiles` select; added `user_profiles` enrichment
+- `api/admin/dev-projects` — fixed broken `full_name` query; uses `user_profiles` for owner name
+- `api/admin/users` — removed identity from role table fetches; simplified display name chain
+- `api/admin/mvr`, `applications`, `resumes`, `bgcheck-requests` — removed role-table fallbacks entirely
+
+**Phase 5: Write paths**
+- `ProfileSetupModal` — removed redundant identity writes to `/api/driver/profile` and `/api/developer/profile`
+- `api/driver/profile` PUT — strips identity fields before writing to `driver_profiles`
+- `api/developer/profile` GET — returns identity from `user_profiles`; PUT strips identity before writing
+- `api/user/existing-profiles` — reads name from `user_profiles`; role tables checked for existence only
+
+**Phase 6: Types, avatars, and cleanup**
+- `api/driver/avatar` and `api/developer/avatar` — now write `avatar_url` to `user_profiles` instead of role tables
+- `types/driver-profile.ts` — added doc comments noting identity fields are stored in `user_profiles` at DB layer
+- `admin-types.ts` — updated `DevProfile` interface to include `first_name`/`last_name` from enrichment
+- Final grep: zero remaining identity reads from `driver_profiles` or `developer_profiles` across the codebase
+
+### Architecture after migration
+
+```
+user_profiles → name, avatar, email, phone, city, state, headline
+driver_profiles → CDL, endorsements, restrictions, employment_history, skills, professional_summary
+developer_profiles → github, portfolio, linkedin, bio, skills, education, employment_history
+```
+
+### Out of scope (future)
+- Dropping the now-unused identity columns from `driver_profiles` / `developer_profiles` (DB migration)
+- Updating the `career_cards` SQL view to source `full_name` from `user_profiles`
+
+---
+
+## 🔧 **Central Admin Audit + Critical Fixes** (March 2026)
+
+### Problems
+1. **Flagged employer access requests not appearing in admin** — The `insertAuditRow` was including `first_name`/`last_name` columns before migration 041 was run, causing silent insert failures. The `companies.email` column was also null for auto-approved companies, breaking domain comparison for join requests.
+2. **"Barry Burton" persisting after admin deletion** — The admin user delete endpoint had a hard guard preventing deletion of admin wallets. Since the test user shared the admin wallet address, deletion was silently blocked.
+3. **Admin API name resolution stale** — 9 admin API endpoints were still using `driver_profiles` or `developer_profiles` as the primary name source instead of the new `user_profiles` table. Candidate-role users would show "Unknown" in admin.
+
+### What changed
+
+**Access request API** (`src/app/api/employer/access-request/route.ts`)
+- `insertAuditRow` helper now retries without `first_name`/`last_name` if those columns don't exist yet
+- Added detailed logging for every audit insert (success and failure)
+- Company creation now sets the `email` column (was only setting `designated_owner_email`)
+- Domain matching falls back to `designated_owner_email` when `email` is null
+
+**Admin user delete** (`src/app/api/admin/users/[id]/route.ts`)
+- Admin wallet guard now allows force-delete via `x-force-admin-delete: true` header
+- Returns `isAdminWallet: true` in error response so the UI can prompt for confirmation
+
+**Admin dashboard shell** (`src/components/admin/AdminDashboardShell.tsx`)
+- `handleDelete` now handles the admin wallet flow: first attempt blocked → browser confirm dialog → retry with force header
+
+**Admin API name resolution — 9 endpoints updated to use `user_profiles` as primary source:**
+- `api/admin/employer-requests` — computes `name` from `first_name`/`last_name` when `name` is empty
+- `api/admin/dot-apps` — user_profiles → driver_profiles → users.name
+- `api/admin/dot-apps/[id]/export` — same chain
+- `api/admin/applications` — added user_profiles + driver_profiles batch fetch with Promise.all
+- `api/admin/resumes` — added developer_profiles as third fallback (for dev-built resumes)
+- `api/admin/mvr` — user_profiles → driver_profiles
+- `api/admin/mvr/[id]` — same chain
+- `api/admin/bgcheck-requests` — user_profiles → driver_profiles with Promise.all
+- `components/admin/modals/UserDetailModal.tsx` — fixed `devProfile.full_name` (undefined) to compute from `first_name`/`last_name`/`display_name`
+
+### Teaching notes
+**Silent failures are the worst bugs.** The access request insert was failing because of a schema mismatch, but the API returned a success response before the insert. The user saw "Your request has been submitted" but nothing was saved. Always check insert/update errors — or at least log them. The `insertAuditRow` helper pattern (try → log error → retry with fallback) is a good defensive pattern for migrations that deploy gradually.
+
+**Name resolution chains.** With multiple profile tables (`user_profiles`, `driver_profiles`, `developer_profiles`), you need a consistent priority chain. The pattern is: `user_profiles` (universal) → role-specific profile → `users.name` (legacy) → fallback string. Every admin API now follows this chain.
+
+---
+
 ## 🏢 **Employer Onboarding Rework** (March 2026)
 
 ### Problem
@@ -11976,6 +12136,82 @@ Employers can now request a resume or DOT application directly from both the car
 | `supabase/migrations/018_cleanup_test_data.sql` | Moved to `supabase/scripts/` |
 | `supabase/scripts/cleanup_test_data.sql` | New home for the test-data cleanup script |
 | `supabase/migrations/028_pg_cron_maintenance.sql` | New — pg_cron scheduled maintenance jobs |
+
+**Status**: ✅ COMPLETE
+
+---
+
+## Full Supabase Database Audit & Cleanup (Mar 2026)
+
+### Overview
+
+Comprehensive audit of all 32+ Supabase tables against actual codebase usage. The database grew organically over 6 months with many adaptations. This cleanup eliminates dead objects, plugs security gaps, completes the identity unification, and drops the legacy `users.name` column.
+
+### What Was Done
+
+**Phase 1 — Removed last admin identity fallbacks:**
+- 4 admin API routes (`dot-apps`, `dot-apps/export`, `mvr/[id]`, `dev-profiles/[id]`) were still falling back to `driver_profiles`/`developer_profiles` for names. Now exclusively use `user_profiles`.
+- Removed dead `career_score` column writes from 3 files (`developer/projects`, `developer/profile`, `github/callback`) and cleaned brain templates.
+
+**Phase 2 — Rewrote `career_cards` view (migration 042):**
+- Old view read identity (name, email, phone, city, state) from `driver_profiles`/`developer_profiles`.
+- New view reads identity exclusively from `user_profiles`, matching the unified identity model.
+
+**Phase 3 — Dropped dead database objects (migration 042):**
+- **Dropped tables:** `t_prefill_cache` (0 code references, 1 stale row)
+- **Dropped views:** `complete_applications`, `complete_mvr_data` (0 code references, used legacy `users.name`)
+- **Dropped columns from `users`:** `cdl_number`, `cdl_state`, `cdl_class`, `name`
+- **Dropped columns from `driver_profiles`:** `first_name`, `last_name`, `middle_name`, `email`, `phone`, `city`, `state`, `address`, `zip_code`, `avatar_url`, `date_of_birth`
+- **Dropped columns from `developer_profiles`:** `first_name`, `last_name`, `email`, `phone`, `avatar_url`, `career_score`
+- **Dropped column from `companies`:** `hiring_categories`
+- **Dropped redundant indexes:** `idx_application_invites_token`, `idx_developer_profiles_career_score`
+
+**Phase 4 — Enabled RLS on 4 unprotected tables (migration 043):**
+- `employer_access_requests` — service-role-only policy
+- `message_threads` — participant-based select/insert/update
+- `messages` — thread-participant read, sender insert
+- `storm_distributions` — service-role-only policy
+
+**Phase 5 — Migrated `users.name` → `user_profiles` and dropped it:**
+- Data migration: `users.name` → `user_profiles.display_name` for any user missing a profile
+- Moved `driver_profiles.date_of_birth` → `user_profiles.date_of_birth`
+- Updated ~30 files that read `users.name` to use `user_profiles` instead
+- Updated ~8 files that wrote to `users.name` to write to `user_profiles`
+- Updated `DriverProfileRow` type and `rowToProfile`/`profileToRow` converters to remove dropped columns
+- Removed `name` from `admin-types.ts` `User` interface
+- `user/update-name` route now writes to `user_profiles` instead of `users`
+
+**Phase 6 — Retroactive migration for `storm_distributions` (migration 044):**
+- Table existed in DB but had no migration. Created `CREATE TABLE IF NOT EXISTS` migration for documentation.
+
+### Migration Files
+
+| Migration | Purpose |
+|-----------|---------|
+| `042_database_audit_cleanup.sql` | Drop dead objects, rewrite `career_cards` view, migrate `users.name` data, add `date_of_birth` to `user_profiles`, drop legacy columns |
+| `043_enable_missing_rls.sql` | Enable RLS + policies on 4 unprotected tables |
+| `044_storm_distributions_retroactive.sql` | Document pre-existing `storm_distributions` table in version control |
+
+### Key Files Changed
+
+| File | Change |
+|------|--------|
+| `src/app/api/admin/dot-apps/route.ts` | Removed `driver_profiles` fallback query |
+| `src/app/api/admin/dot-apps/[id]/export/route.ts` | Removed `driver_profiles` fallback query |
+| `src/app/api/admin/mvr/[id]/route.ts` | Removed `driver_profiles` fallback query |
+| `src/app/api/admin/dev-profiles/[id]/route.ts` | Removed identity read, added `user_profiles` fetch |
+| `src/app/api/user/update-name/route.ts` | Rewrote to write `user_profiles` instead of `users` |
+| `src/app/api/user/profile-setup/route.ts` | Removed `users.name` sync write |
+| `src/app/api/employer/company/route.ts` | Removed `name` from users, added `user_profiles` upsert |
+| `src/app/api/employer/access-request/route.ts` | Removed `name` from 2 users insert/update paths |
+| `src/app/api/employer/team/[memberId]/route.ts` | Display name update → `user_profiles` |
+| `src/app/api/admin/companies/[id]/route.ts` | Removed `name` from joins, added `user_profiles` batch |
+| `src/app/api/admin/companies/[id]/members/route.ts` | Removed `name` from joins, added `user_profiles` batch |
+| `src/app/api/driver/profile/quick-setup/route.ts` | Identity → `user_profiles`, CDL only → `driver_profiles` |
+| `src/app/api/developer/profile/quick-setup/route.ts` | Identity → `user_profiles`, role only → `developer_profiles` |
+| `src/types/driver-profile.ts` | Removed dropped columns from Row type and converters |
+| `src/components/admin/admin-types.ts` | Removed `name` from `User` interface |
+| ~20 additional API routes | Removed `name` from `.select()` on `users` |
 
 **Status**: ✅ COMPLETE
 

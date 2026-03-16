@@ -61,7 +61,7 @@ export async function POST(
     // Verify employer and get company
     const { data: employer } = await supabase
       .from('users')
-      .select('id, name, email')
+      .select('id, email')
       .ilike('wallet_address', walletAddress)
       .single()
 
@@ -160,7 +160,7 @@ export async function POST(
     // Verify candidate exists
     const { data: candidate } = await supabase
       .from('users')
-      .select('id, role, email, name')
+      .select('id, role, email')
       .eq('id', candidateUserId)
       .single()
 
@@ -207,10 +207,19 @@ export async function POST(
       )
     }
 
+    // Resolve candidate name from user_profiles
+    const { data: candidateProfile } = await supabase
+      .from('user_profiles')
+      .select('first_name, last_name')
+      .eq('user_id', candidateUserId)
+      .maybeSingle()
+
+    const candidateName = [candidateProfile?.first_name, candidateProfile?.last_name].filter(Boolean).join(' ').trim() || null
+
     // Gather career card snapshot data
     const careerCardSnapshot: Record<string, unknown> = {
       capturedAt: new Date().toISOString(),
-      candidateName: candidate.name,
+      candidateName,
       candidateEmail: candidate.email,
       candidateRole: effectiveRole,
     }
@@ -339,7 +348,7 @@ export async function POST(
     if (candidate.email) {
       sendCandidateRequestNotification({
         candidateEmail: candidate.email,
-        candidateName: candidate.name || 'Candidate',
+        candidateName: candidateName || 'Candidate',
         companyName: company?.name || 'A company',
         requestType: 'custom',
         message: `${company?.name || 'A company'} is interested in you for the position of ${jobPosting.title}! They've created an application on your behalf.${message ? ` Their message: "${message}"` : ''}`,

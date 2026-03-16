@@ -112,7 +112,8 @@ export async function GET(request: NextRequest) {
 
     // Fetch all data in parallel for performance
     const [
-      profileResult,
+      userProfileResult,
+      driverProfileResult,
       resumesResult,
       dotAppsResult,
       mvrOrdersResult,
@@ -120,14 +121,21 @@ export async function GET(request: NextRequest) {
       jobAppsResult,
       paymentsResult,
     ] = await Promise.all([
-      // 1. Driver profile
+      // 1. User profile (identity: name, avatar, contact)
       supabase
-        .from('driver_profiles')
-        .select('*')
+        .from('user_profiles')
+        .select('first_name, last_name, avatar_url, headline, email, phone, city, state')
         .eq('user_id', user.id)
         .maybeSingle(),
 
-      // 2. Driver resumes only — filtered by source_role so dev resumes never bleed in
+      // 2. Driver profile (role-specific: CDL, employment, skills, etc.)
+      supabase
+        .from('driver_profiles')
+        .select('id, user_id, cdl_class, cdl_state, cdl_number, cdl_expiration, endorsements, cdl_endorsements, restrictions, employment_history, skills, professional_summary, driving_experience, education, references, resume_url, resume_ipfs_hash, resume_id, driver_application_id, dot_application_data, experience_years, total_miles_driven, preferred_job_types, willing_to_relocate, desired_salary_min, desired_salary_max, preferred_states, available_start_date, profile_completion_score, mvr_order_id, mvr_result_id, mvr_expires_at, mvr_license_status, mvr_total_points, mvr_violation_count, share_token, share_settings, share_token_created_at, share_views_count, created_at, updated_at')
+        .eq('user_id', user.id)
+        .maybeSingle(),
+
+      // 3. Driver resumes only
       supabase
         .from('resumes')
         .select('id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, created_at, file_size, resume_type, source_role, is_paid')
@@ -135,28 +143,28 @@ export async function GET(request: NextRequest) {
         .eq('source_role', 'driver')
         .order('created_at', { ascending: false }),
 
-      // 3. All DOT applications (include application_data to extract applicant name)
+      // 4. All DOT applications (include application_data to extract applicant name)
       supabase
         .from('driver_applications')
         .select('id, created_at, verification_status, blockchain_tx_hash, blockchain_application_id, is_complete, current_step, application_data')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
 
-      // 4. All MVR orders (include fee info for transaction history)
+      // 5. All MVR orders (include fee info for transaction history)
       supabase
         .from('mvr_orders')
         .select('id, status, dl_state, created_at, completed_at, fee_amount, fee_currency, payment_id, ordered_at')
         .eq('driver_user_id', user.id)
         .order('created_at', { ascending: false }),
 
-      // 5. All MVR results
+      // 6. All MVR results
       supabase
         .from('mvr_results')
         .select('id, mvr_order_id, license_state, license_status, total_points, violation_count, result_status, received_at')
         .eq('driver_user_id', user.id)
         .order('received_at', { ascending: false }),
 
-      // 6. Job applications
+      // 7. Job applications
       supabase
         .from('applications')
         .select(`
@@ -169,7 +177,7 @@ export async function GET(request: NextRequest) {
         .eq('driver_user_id', user.id)
         .order('applied_at', { ascending: false }),
 
-      // 7. All payments
+      // 8. All payments
       supabase
         .from('payments')
         .select('id, type, amount_usdc, tx_hash, status, created_at')
@@ -177,9 +185,13 @@ export async function GET(request: NextRequest) {
         .order('created_at', { ascending: false }),
     ])
 
-    // Process profile (may not exist yet)
-    const profile = profileResult.data || null
-    
+    const userProfile = userProfileResult.data || null
+    const driverProfile = driverProfileResult.data || null
+    const profile =
+      userProfile || driverProfile
+        ? { ...(userProfile || {}), ...(driverProfile || {}) }
+        : null
+
     // Log raw DOT applications query result for debugging
     console.log('[DRIVER HUB] DOT apps raw result:', {
       count: dotAppsResult.data?.length ?? 0,
@@ -194,7 +206,8 @@ export async function GET(request: NextRequest) {
     
     console.log('[DRIVER HUB] Profile fetch result:', {
       hasProfile: !!profile,
-      profileError: profileResult.error?.message,
+      userProfileError: userProfileResult.error?.message,
+      driverProfileError: driverProfileResult.error?.message,
       profileId: profile?.id,
       userId: user.id,
     })

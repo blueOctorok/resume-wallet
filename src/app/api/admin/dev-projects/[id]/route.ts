@@ -34,7 +34,7 @@ export async function GET(
     // Get user info
     const { data: user } = await supabase
       .from('users')
-      .select('wallet_address, email, name')
+      .select('wallet_address, email')
       .eq('id', project.user_id)
       .single()
 

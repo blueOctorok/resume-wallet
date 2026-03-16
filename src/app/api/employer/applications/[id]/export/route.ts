@@ -120,19 +120,17 @@ export async function GET(
     // Get candidate info
     const { data: candidateUser } = await supabase
       .from('users')
-      .select('name, email')
+      .select('email')
       .eq('id', app.user_id)
       .single()
 
     const { data: profile } = await supabase
-      .from('driver_profiles')
+      .from('user_profiles')
       .select('first_name, last_name')
       .eq('user_id', app.user_id)
-      .single()
+      .maybeSingle()
 
-    const candidateName = profile?.first_name && profile?.last_name
-      ? `${profile.first_name} ${profile.last_name}`
-      : candidateUser?.name || 'Applicant'
+    const candidateName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim() || 'Applicant'
 
     if (format === 'json') {
       return NextResponse.json({

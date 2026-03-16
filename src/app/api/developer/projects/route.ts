@@ -1,22 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
-/**
- * Invalidate career score so it gets recalculated on next request.
- * Called when project data changes.
- */
-async function invalidateCareerScore(userId: string) {
-  try {
-    const supabase = await getAdminSupabaseClient()
-    await supabase
-      .from('developer_profiles')
-      .update({ career_score: null })
-      .eq('user_id', userId)
-  } catch (error) {
-    // Non-critical - score will just use old value until next explicit recalc
-    console.warn('[PROJECTS] Failed to invalidate career score:', error)
-  }
-}
 
 /**
  * GET /api/developer/projects
@@ -210,9 +194,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Invalidate career score - portfolio changed
-    await invalidateCareerScore(user.id)
-
     return NextResponse.json({
       success: true,
       project,
@@ -327,9 +308,6 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Invalidate career score - portfolio changed
-    await invalidateCareerScore(user.id)
-
     return NextResponse.json({
       success: true,
       project,
@@ -395,9 +373,6 @@ export async function DELETE(request: NextRequest) {
         { status: 500 }
       )
     }
-
-    // Invalidate career score - portfolio changed
-    await invalidateCareerScore(user.id)
 
     return NextResponse.json({
       success: true,

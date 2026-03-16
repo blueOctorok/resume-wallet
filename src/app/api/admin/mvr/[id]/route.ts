@@ -87,11 +87,11 @@ export async function GET(
       .eq('id', order.driver_user_id)
       .single()
 
-    const { data: profile } = await supabase
-      .from('driver_profiles')
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
       .select('first_name, last_name')
       .eq('user_id', order.driver_user_id)
-      .single()
+      .maybeSingle()
 
     return NextResponse.json({
       success: true,
@@ -100,8 +100,8 @@ export async function GET(
         driverUserId: order.driver_user_id,
         driverProfileId: order.driver_profile_id,
         walletAddress: user?.wallet_address ?? null,
-        driverName: profile?.first_name && profile?.last_name
-          ? `${profile.first_name} ${profile.last_name}`
+        driverName: userProfile?.first_name && userProfile?.last_name
+          ? `${userProfile.first_name} ${userProfile.last_name}`
           : null,
         accioOrderNumber: order.accio_order_number,
         accioSuborderNumber: order.accio_suborder_number,

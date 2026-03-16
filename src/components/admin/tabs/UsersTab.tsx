@@ -114,7 +114,7 @@ export default function UsersTab({
               >
                 <td className={tableCellClass}>
                   <div className={user.displayName ? '' : 'opacity-50'}>
-                    {user.displayName || user.name || 'No name'}
+                    {user.displayName || 'No name'}
                   </div>
                   <div className='text-xs opacity-60'>
                     {user.displayEmail || user.email || '-'}

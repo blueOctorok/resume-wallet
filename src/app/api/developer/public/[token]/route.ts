@@ -29,12 +29,6 @@ export async function GET(
         `
         id,
         user_id,
-        first_name,
-        last_name,
-        display_name,
-        email,
-        phone,
-        location,
         headline,
         bio,
         years_experience,
@@ -60,6 +54,12 @@ export async function GET(
       )
     }
 
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('first_name, last_name, display_name, email, phone, city, state')
+      .eq('user_id', profile.user_id)
+      .maybeSingle()
+
     const settings = (profile.share_settings as {
       showResume?: boolean
       showPortfolio?: boolean
@@ -84,10 +84,12 @@ export async function GET(
 
     const publicProfile: Record<string, unknown> = {
       id: profile.id,
-      firstName: profile.first_name,
-      lastName: profile.last_name,
-      displayName: profile.display_name,
-      location: profile.location ?? null,
+      firstName: userProfile?.first_name ?? null,
+      lastName: userProfile?.last_name ?? null,
+      displayName: userProfile?.display_name ?? null,
+      location: userProfile?.city && userProfile?.state
+        ? `${userProfile.city}, ${userProfile.state}`
+        : null,
       headline: profile.headline ?? null,
       bio: profile.bio ?? null,
       yearsExperience: profile.years_experience ?? null,
@@ -106,8 +108,8 @@ export async function GET(
 
     if (settings.showContact) {
       publicProfile.contact = {
-        email: profile.email ?? null,
-        phone: profile.phone ?? null,
+        email: userProfile?.email ?? null,
+        phone: userProfile?.phone ?? null,
       }
     }
 

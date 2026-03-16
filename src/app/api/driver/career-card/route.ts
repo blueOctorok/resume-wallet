@@ -34,6 +34,12 @@ export async function GET(request: NextRequest) {
 
     const userId = user.id
 
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('first_name, last_name, avatar_url, headline, email, phone, city, state')
+      .eq('user_id', userId)
+      .maybeSingle()
+
     // Career card view — aggregates profile, resume, DOT app, MVR flags
     const { data: careerCard, error: cardError } = await supabase
       .from('career_cards')
@@ -82,12 +88,10 @@ export async function GET(request: NextRequest) {
       const { data: dp } = await supabase
         .from('driver_profiles')
         .select(
-          `id, first_name, middle_name, last_name, email, phone,
-           address, city, state, zip_code, professional_summary,
-           cdl_class, cdl_state, cdl_number, cdl_expiration,
-           endorsements, cdl_endorsements, restrictions,
+          `id, professional_summary, cdl_class, cdl_state, cdl_number,
+           cdl_expiration, endorsements, cdl_endorsements, restrictions,
            experience_years, employment_history, education, skills,
-           share_token, share_settings, avatar_url, created_at`,
+           share_token, share_settings, created_at`,
         )
         .eq('id', careerCard.driver_profile_id)
         .single()
@@ -100,10 +104,9 @@ export async function GET(request: NextRequest) {
       const { data: devp } = await supabase
         .from('developer_profiles')
         .select(
-          `id, full_name, email, phone, location, professional_summary,
-           title, years_experience, employment_history,
-           github_url, linkedin_url, portfolio_url,
-           skills, education, share_token, share_settings, avatar_url`,
+          `id, professional_summary, title, years_experience, employment_history,
+           github_url, linkedin_url, portfolio_url, skills, education,
+           share_token, share_settings`,
         )
         .eq('user_id', userId)
         .single()
@@ -161,13 +164,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     // Construct response — same shape as /api/employer/talent/[userId]
-    const profile = driverProfile || developerProfile
-    const fullName = driverProfile
-      ? `${driverProfile.first_name || ''} ${driverProfile.middle_name || ''} ${driverProfile.last_name || ''}`
-          .replace(/\s+/g, ' ')
-          .trim()
-      : developerProfile?.full_name || 'Unknown'
-
+    const upName = [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ')
     const effectiveRole = driverProfile ? 'driver' : developerProfile ? 'developer' : user.role
 
     return NextResponse.json({
@@ -175,17 +172,16 @@ export async function GET(request: NextRequest) {
       careerCard: {
         userId: user.id,
         role: effectiveRole,
-        name: fullName || careerCard.full_name || 'Unknown',
-        avatarUrl: (profile as { avatar_url?: string | null } | null)?.avatar_url ?? null,
-        email: profile?.email || user.email,
-        phone: profile?.phone,
-        location:
-          profile?.city && profile?.state
-            ? `${profile.city}, ${profile.state}`
-            : (profile as { location?: string })?.location || careerCard.state,
+        name: upName || careerCard.full_name || 'Unknown',
+        avatarUrl: userProfile?.avatar_url ?? null,
+        email: userProfile?.email || user.email,
+        phone: userProfile?.phone || null,
+        location: userProfile?.city && userProfile?.state
+          ? `${userProfile.city}, ${userProfile.state}`
+          : careerCard.state || null,
         memberSince: user.created_at,
 
-        profile: profile ? { ...profile, fullName } : null,
+        profile: driverProfile || developerProfile ? { ...(driverProfile || developerProfile), fullName: upName || 'Unknown' } : null,
 
         resume: resume
           ? {

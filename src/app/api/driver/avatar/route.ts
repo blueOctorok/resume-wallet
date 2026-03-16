@@ -9,7 +9,7 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
  *
  * Accepts multipart/form-data with a 'file' field.
  * Uploads the image to Supabase Storage (avatars/driver/{userId}),
- * saves the public URL to driver_profiles.avatar_url, and returns
+ * saves the public URL to user_profiles.avatar_url, and returns
  * the new URL.
  */
 export async function POST(request: NextRequest) {
@@ -68,9 +68,10 @@ export async function POST(request: NextRequest) {
     // Append cache-busting timestamp so browsers reload the new image
     const avatarUrl = `${publicUrl}?t=${Date.now()}`
 
+    // Write to user_profiles (single source of truth for identity/avatar)
     const { error: updateError } = await supabase
-      .from('driver_profiles')
-      .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+      .from('user_profiles')
+      .update({ avatar_url: avatarUrl })
       .eq('user_id', user.id)
 
     if (updateError) {

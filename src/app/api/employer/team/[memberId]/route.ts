@@ -132,12 +132,18 @@ export async function PATCH(
       }
     }
 
-    // Handle display name update (updates user record, not company_members)
+    // Handle display name update (writes to user_profiles)
     if (displayName !== undefined && targetMember.user_id) {
+      const nameParts = displayName.trim().split(/\s+/)
+      const firstName = nameParts[0] || null
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : null
+
       const { error: nameError } = await supabase
-        .from('users')
-        .update({ name: displayName.trim() })
-        .eq('id', targetMember.user_id)
+        .from('user_profiles')
+        .upsert(
+          { user_id: targetMember.user_id, first_name: firstName, last_name: lastName, display_name: displayName.trim() },
+          { onConflict: 'user_id' }
+        )
 
       if (nameError) {
         console.error('[TEAM] Error updating display name:', nameError)

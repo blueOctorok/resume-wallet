@@ -29,30 +29,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ driverProfile: null, devProfile: null })
     }
 
-    const [{ data: driverProfile }, { data: devProfile }] = await Promise.all([
-      supabase
-        .from('driver_profiles')
-        .select('first_name, last_name')
-        .eq('user_id', user.id)
-        .single(),
-      supabase
-        .from('developer_profiles')
-        .select('first_name, last_name, display_name')
-        .eq('user_id', user.id)
-        .single(),
+    const [{ data: userProfile }, { data: driverProfile }, { data: devProfile }] = await Promise.all([
+      supabase.from('user_profiles').select('first_name, last_name').eq('user_id', user.id).maybeSingle(),
+      supabase.from('driver_profiles').select('user_id').eq('user_id', user.id).maybeSingle(),
+      supabase.from('developer_profiles').select('user_id').eq('user_id', user.id).maybeSingle(),
     ])
 
-    const driverName = driverProfile?.first_name || driverProfile?.last_name
-      ? `${driverProfile.first_name ?? ''} ${driverProfile.last_name ?? ''}`.trim()
-      : null
-
-    const devName = devProfile?.first_name || devProfile?.last_name
-      ? `${devProfile.first_name ?? ''} ${devProfile.last_name ?? ''}`.trim()
-      : devProfile?.display_name || null
+    const profileName = [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ') || null
 
     return NextResponse.json({
-      driverProfile: driverName ? { name: driverName } : null,
-      devProfile: devName ? { name: devName } : null,
+      driverProfile: driverProfile ? { name: profileName } : null,
+      devProfile: devProfile ? { name: profileName } : null,
     })
   } catch (error) {
     console.error('[EXISTING PROFILES] Error:', error)

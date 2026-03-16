@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     // Verify employer
     const { data: employer } = await supabase
       .from('users')
-      .select('id, name')
+      .select('id')
       .ilike('wallet_address', walletAddress)
       .single()
 

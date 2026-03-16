@@ -120,7 +120,7 @@ export async function POST(
     // Verify candidate exists
     const { data: candidate } = await supabase
       .from('users')
-      .select('id, role, email, name')
+      .select('id, role, email')
       .eq('id', candidateUserId)
       .single()
 
@@ -229,11 +229,20 @@ export async function POST(
       data: { companyName, requestType, requestId: newRequest.id },
     }).catch(err => console.error('[CANDIDATE REQUEST] Notification error:', err))
 
+    // Resolve candidate name from user_profiles
+    const { data: candidateProfile } = await supabase
+      .from('user_profiles')
+      .select('first_name, last_name')
+      .eq('user_id', candidateUserId)
+      .maybeSingle()
+
+    const candidateName = [candidateProfile?.first_name, candidateProfile?.last_name].filter(Boolean).join(' ').trim() || 'Candidate'
+
     // Email notification (non-blocking)
     if (candidateEmail) {
       sendCandidateRequestNotification({
         candidateEmail,
-        candidateName: candidate.name || 'Candidate',
+        candidateName,
         companyName,
         requestType: requestType as 'mvr_order' | 'document_upload' | 'verification' | 'profile_completion' | 'custom',
         documentType: documentType || null,

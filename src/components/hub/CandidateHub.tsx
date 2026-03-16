@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -219,13 +219,65 @@ function HubProfileHeader() {
   const userProfile = useHubBlocksStore((s) => s.userProfile)
   const onboarding = useHubBlocksStore((s) => s.onboarding)
   const updateAvatarUrl = useHubBlocksStore((s) => s.updateAvatarUrl)
+  const updateUserProfile = useHubBlocksStore((s) => s.updateUserProfile)
   const installedBlocks = useInstalledBlocks()
+
+  // Inline edit state
+  const [isEditing, setIsEditing] = useState(false)
+  const [editFirst, setEditFirst] = useState('')
+  const [editLast, setEditLast] = useState('')
+  const [editHeadline, setEditHeadline] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const displayName = [userProfile?.firstName, userProfile?.lastName]
     .filter(Boolean)
     .join(' ') || 'New Candidate'
 
-  const occupation = onboarding?.occupation
+  // Prefer headline from user_profiles, fall back to onboarding occupation
+  const headline = userProfile?.headline || onboarding?.occupation || null
+
+  const startEditing = () => {
+    setEditFirst(userProfile?.firstName || '')
+    setEditLast(userProfile?.lastName || '')
+    setEditHeadline(headline || '')
+    setIsEditing(true)
+  }
+
+  const cancelEditing = () => {
+    setIsEditing(false)
+  }
+
+  const saveProfile = async () => {
+    if (!editFirst.trim() || !editLast.trim()) return
+    setSaving(true)
+    try {
+      // Save name + headline to user_profiles
+      const res = await fetch('/api/user/profile-setup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': walletAddress ?? '',
+        },
+        body: JSON.stringify({
+          firstName: editFirst.trim(),
+          lastName: editLast.trim(),
+          headline: editHeadline.trim() || null,
+        }),
+      })
+      if (res.ok) {
+        updateUserProfile({
+          firstName: editFirst.trim(),
+          lastName: editLast.trim(),
+          headline: editHeadline.trim() || null,
+        })
+        setIsEditing(false)
+      }
+    } catch {
+      // Silently fail — user can retry
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const cardClass = cn(
     'rounded-2xl border p-6',
@@ -234,11 +286,16 @@ function HubProfileHeader() {
 
   const completionChecks = [
     !!userProfile?.firstName,
-    !!occupation,
+    !!headline,
     !!userProfile?.avatarUrl,
     installedBlocks.length > 0,
   ]
   const completeness = Math.round((completionChecks.filter(Boolean).length / completionChecks.length) * 100)
+
+  const inputClass = cn(
+    'w-full rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500',
+    isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+  )
 
   return (
     <div className={cardClass}>
@@ -253,23 +310,82 @@ function HubProfileHeader() {
             walletAddress={walletAddress ?? ''}
             onSuccess={updateAvatarUrl}
           />
-          <div>
-            <h1 className={cn(
-              'text-2xl sm:text-3xl font-bold',
-              isDark ? 'text-white' : 'text-gray-900'
-            )}>
-              {displayName}
-            </h1>
-            {occupation ? (
-              <p className={cn('text-sm mt-1', isDark ? 'text-teal-400' : 'text-teal-600')}>
-                {occupation}
-              </p>
-            ) : (
-              <p className={cn('text-sm mt-1', isDark ? 'text-gray-400' : 'text-gray-500')}>
-                Complete onboarding to set your role
-              </p>
-            )}
-          </div>
+
+          {isEditing ? (
+            <div className='flex flex-col gap-2 min-w-0'>
+              <div className='flex gap-2'>
+                <input
+                  value={editFirst}
+                  onChange={(e) => setEditFirst(e.target.value)}
+                  placeholder='First name'
+                  className={inputClass}
+                  autoFocus
+                />
+                <input
+                  value={editLast}
+                  onChange={(e) => setEditLast(e.target.value)}
+                  placeholder='Last name'
+                  className={inputClass}
+                />
+              </div>
+              <input
+                value={editHeadline}
+                onChange={(e) => setEditHeadline(e.target.value)}
+                placeholder='Headline (e.g. CDL-A Driver, Software Engineer)'
+                className={inputClass}
+              />
+              <div className='flex gap-2'>
+                <button
+                  onClick={saveProfile}
+                  disabled={saving || !editFirst.trim() || !editLast.trim()}
+                  className='flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-teal-500 text-white hover:bg-teal-600 disabled:opacity-50 transition-colors'
+                >
+                  {saving ? <Loader2 className='w-3 h-3 animate-spin' /> : <Check className='w-3 h-3' />}
+                  Save
+                </button>
+                <button
+                  onClick={cancelEditing}
+                  className={cn(
+                    'flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium transition-colors',
+                    isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  )}
+                >
+                  <X className='w-3 h-3' />
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div className='flex items-center gap-2'>
+                <h1 className={cn(
+                  'text-2xl sm:text-3xl font-bold',
+                  isDark ? 'text-white' : 'text-gray-900'
+                )}>
+                  {displayName}
+                </h1>
+                <button
+                  onClick={startEditing}
+                  className={cn(
+                    'p-1 rounded-lg transition-colors',
+                    isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
+                  )}
+                  title='Edit profile'
+                >
+                  <Pencil className='w-4 h-4' />
+                </button>
+              </div>
+              {headline ? (
+                <p className={cn('text-sm mt-1', isDark ? 'text-teal-400' : 'text-teal-600')}>
+                  {headline}
+                </p>
+              ) : (
+                <p className={cn('text-sm mt-1', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                  Complete onboarding to set your role
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <div className='flex-shrink-0 w-full lg:w-72'>

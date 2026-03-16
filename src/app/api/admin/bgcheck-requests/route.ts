@@ -72,16 +72,10 @@ export async function GET(request: NextRequest) {
       .select('id, name')
       .in('id', companyIds)
 
-    // Fetch candidate users + profiles
-    const { data: users } = await supabase
-      .from('users')
-      .select('id, wallet_address, email')
-      .in('id', candidateIds)
-
-    const { data: profiles } = await supabase
-      .from('driver_profiles')
-      .select('user_id, first_name, last_name')
-      .in('user_id', candidateIds)
+    const [{ data: users }, { data: userProfiles }] = await Promise.all([
+      supabase.from('users').select('id, wallet_address, email').in('id', candidateIds),
+      supabase.from('user_profiles').select('user_id, first_name, last_name').in('user_id', candidateIds),
+    ])
 
     // Fetch signed consents for these requests
     const { data: consents } = await supabase
@@ -89,20 +83,18 @@ export async function GET(request: NextRequest) {
       .select('id, request_id, signed_name, signed_at, form_data')
       .in('request_id', requestIds)
 
-    // Build lookup maps
     const companyMap = new Map(companies?.map(c => [c.id, c.name]) || [])
     const userMap = new Map(users?.map(u => [u.id, u]) || [])
-    const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || [])
+    const upMap = new Map(userProfiles?.map(p => [p.user_id, p]) || [])
     const consentMap = new Map(consents?.map(c => [c.request_id, c]) || [])
 
-    // Transform results
     const result = requests.map(req => {
       const user = userMap.get(req.candidate_user_id)
-      const profile = profileMap.get(req.candidate_user_id)
+      const up = upMap.get(req.candidate_user_id)
       const consent = consentMap.get(req.id)
 
-      const driverName = profile
-        ? [profile.first_name, profile.last_name].filter(Boolean).join(' ')
+      const driverName = up
+        ? [up.first_name, up.last_name].filter(Boolean).join(' ')
         : user?.email || 'Unknown'
 
       return {

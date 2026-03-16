@@ -71,15 +71,9 @@ export async function GET(request: NextRequest) {
       .select('id, role')
       .in('id', uniqueOtherIds)
 
-    // Fetch display names from profiles
-    const { data: driverProfiles } = await supabase
-      .from('driver_profiles')
+    const { data: userProfiles } = await supabase
+      .from('user_profiles')
       .select('user_id, first_name, last_name, avatar_url')
-      .in('user_id', uniqueOtherIds)
-
-    const { data: developerProfiles } = await supabase
-      .from('developer_profiles')
-      .select('user_id, display_name, full_name, avatar_url')
       .in('user_id', uniqueOtherIds)
 
     // Also check company names for employer participants
@@ -89,8 +83,7 @@ export async function GET(request: NextRequest) {
       .in('employer_user_id', uniqueOtherIds)
 
     // Build lookup maps
-    const driverMap = new Map((driverProfiles || []).map(p => [p.user_id, p]))
-    const developerMap = new Map((developerProfiles || []).map(p => [p.user_id, p]))
+    const profileMap = new Map((userProfiles || []).map(p => [p.user_id, p]))
     const companyMap = new Map((companies || []).map(c => [c.employer_user_id, c]))
     const userRoleMap = new Map((otherUsers || []).map(u => [u.id, u.role]))
 
@@ -115,8 +108,7 @@ export async function GET(request: NextRequest) {
           : t.participant_a_user_id
 
       const otherRole = userRoleMap.get(otherId)
-      const dp = driverMap.get(otherId)
-      const devp = developerMap.get(otherId)
+      const up = profileMap.get(otherId)
       const company = companyMap.get(otherId)
 
       let otherName = 'Unknown'
@@ -124,12 +116,9 @@ export async function GET(request: NextRequest) {
 
       if (otherRole === 'employer' && company) {
         otherName = company.company_name
-      } else if (dp) {
-        otherName = `${dp.first_name ?? ''} ${dp.last_name ?? ''}`.trim() || 'Unknown'
-        otherAvatarUrl = dp.avatar_url ?? null
-      } else if (devp) {
-        otherName = devp.display_name || devp.full_name || 'Unknown'
-        otherAvatarUrl = devp.avatar_url ?? null
+      } else if (up) {
+        otherName = [up.first_name, up.last_name].filter(Boolean).join(' ') || 'Unknown'
+        otherAvatarUrl = up.avatar_url ?? null
       }
 
       return {

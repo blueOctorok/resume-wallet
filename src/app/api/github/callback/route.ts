@@ -1,20 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
-/**
- * Invalidate career score so it gets recalculated with GitHub data.
- */
-async function invalidateCareerScore(userId: string) {
-  try {
-    const supabase = await getAdminSupabaseClient()
-    await supabase
-      .from('developer_profiles')
-      .update({ career_score: null })
-      .eq('user_id', userId)
-  } catch (error) {
-    console.warn('[GITHUB CALLBACK] Failed to invalidate career score:', error)
-  }
-}
 
 /**
  * Fetch GitHub data and store it in the database.
@@ -291,9 +277,6 @@ export async function GET(request: NextRequest) {
     // Sync GitHub data to database (fire and forget - don't block redirect)
     // This stores repos, stars, languages, etc. in github_data column
     syncGitHubData(user.id, accessToken, githubUsername)
-
-    // Invalidate career score - will be recalculated with fresh data
-    await invalidateCareerScore(user.id)
 
     // Redirect back to app with success
     return NextResponse.redirect(

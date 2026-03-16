@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
       { data: mvrOrders },
       { data: dotApps },
       { data: consents },
-      { data: driverProfiles },
+      { data: userProfiles },
       { data: candidateRequests },
     ] = await Promise.all([
       // FCRA isolation: only self-ordered MVRs OR MVRs this company ordered.
@@ -105,9 +105,8 @@ export async function GET(request: NextRequest) {
         .eq('company_id', companyId)
         .order('signed_at', { ascending: false }),
 
-      // Driver profile names for display
       supabase
-        .from('driver_profiles')
+        .from('user_profiles')
         .select('user_id, first_name, last_name')
         .in('user_id', candidateUserIds),
 
@@ -122,7 +121,7 @@ export async function GET(request: NextRequest) {
 
     // Build name lookup
     const nameMap = new Map<string, string>()
-    for (const p of driverProfiles ?? []) {
+    for (const p of userProfiles ?? []) {
       nameMap.set(p.user_id, `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || 'Unknown')
     }
 

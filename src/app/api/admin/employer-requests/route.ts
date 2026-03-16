@@ -62,9 +62,15 @@ export async function GET(request: NextRequest) {
       total: allRequests?.length || 0,
     }
 
+    // Ensure each request has a computed name (newer rows may have first_name/last_name but no name)
+    const mappedRequests = (requests || []).map((req: Record<string, unknown>) => ({
+      ...req,
+      name: req.name || [req.first_name, req.last_name].filter(Boolean).join(' ') || 'Unknown',
+    }))
+
     return NextResponse.json({
       success: true,
-      requests: requests || [],
+      requests: mappedRequests,
       stats,
     })
 

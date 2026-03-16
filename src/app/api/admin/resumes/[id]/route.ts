@@ -29,11 +29,12 @@ export async function GET(
     }
 
     // Get user info
-    const { data: user } = await supabase
-      .from('users')
-      .select('wallet_address, email, name')
-      .eq('id', resume.user_id)
-      .single()
+    const [{ data: user }, { data: up }] = await Promise.all([
+      supabase.from('users').select('wallet_address, email').eq('id', resume.user_id).single(),
+      supabase.from('user_profiles').select('first_name, last_name').eq('user_id', resume.user_id).maybeSingle(),
+    ])
+
+    const profileName = [up?.first_name, up?.last_name].filter(Boolean).join(' ').trim() || null
 
     return NextResponse.json({
       success: true,
@@ -41,7 +42,7 @@ export async function GET(
         ...resume,
         walletAddress: user?.wallet_address,
         email: user?.email,
-        userName: user?.name,
+        userName: profileName,
       },
     })
 

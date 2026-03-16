@@ -2,22 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getEmploymentFromResumes } from '@/lib/developer-employment-from-resumes'
 
-/**
- * Invalidate career score so it gets recalculated on next request.
- * Called when profile data changes.
- */
-async function invalidateCareerScore(userId: string) {
-  try {
-    const supabase = await getAdminSupabaseClient()
-    await supabase
-      .from('developer_profiles')
-      .update({ career_score: null })
-      .eq('user_id', userId)
-  } catch (error) {
-    // Non-critical - score will just use old value until next explicit recalc
-    console.warn('[PROFILE] Failed to invalidate career score:', error)
-  }
-}
 
 /**
  * GET /api/developer/profile
@@ -47,11 +31,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from('developer_profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
+    const [{ data: profile, error: profileError }, { data: userProfile }] = await Promise.all([
+      supabase.from('developer_profiles').select('*').eq('user_id', user.id).single(),
+      supabase.from('user_profiles').select('first_name, last_name, email, phone, city, state, headline').eq('user_id', user.id).maybeSingle(),
+    ])
 
     if (profileError || !profile) {
       return NextResponse.json({
@@ -86,12 +69,12 @@ export async function GET(request: NextRequest) {
       success: true,
       profile: {
         id: profile.id,
-        firstName: profile.first_name,
-        lastName: profile.last_name,
+        firstName: userProfile?.first_name ?? null,
+        lastName: userProfile?.last_name ?? null,
         displayName: profile.display_name,
-        email: profile.email,
-        phone: profile.phone,
-        location: profile.location,
+        email: userProfile?.email ?? null,
+        phone: userProfile?.phone ?? null,
+        location: userProfile?.city && userProfile?.state ? `${userProfile.city}, ${userProfile.state}` : profile.location,
         headline: profile.headline,
         bio: profile.bio,
         yearsExperience: profile.years_experience,
@@ -149,13 +132,9 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Map camelCase to snake_case
+    // Map camelCase to snake_case (identity fields go to user_profiles, not here)
     const updates: Record<string, unknown> = {}
-    if (body.firstName !== undefined) updates.first_name = body.firstName
-    if (body.lastName !== undefined) updates.last_name = body.lastName
     if (body.displayName !== undefined) updates.display_name = body.displayName
-    if (body.email !== undefined) updates.email = body.email
-    if (body.phone !== undefined) updates.phone = body.phone
     if (body.location !== undefined) updates.location = body.location
     if (body.headline !== undefined) updates.headline = body.headline
     if (body.bio !== undefined) updates.bio = body.bio
@@ -204,15 +183,12 @@ export async function PUT(request: NextRequest) {
         )
       }
 
-      // Invalidate career score so it gets recalculated with new data
-      await invalidateCareerScore(user.id)
     } else {
       // Create new profile
       const { error: insertError } = await supabase
         .from('developer_profiles')
         .insert({
           user_id: user.id,
-          email: user.email,
           ...updates,
         })
 

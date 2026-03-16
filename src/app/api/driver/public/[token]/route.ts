@@ -181,12 +181,6 @@ export async function GET(
       .select(`
         id,
         user_id,
-        first_name,
-        last_name,
-        email,
-        phone,
-        city,
-        state,
         professional_summary,
         cdl_number,
         cdl_class,
@@ -216,6 +210,12 @@ export async function GET(
       )
     }
 
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('first_name, last_name, email, phone, city, state')
+      .eq('user_id', profile.user_id)
+      .maybeSingle()
+
     // Parse share settings
     const settings = profile.share_settings as {
       showResume?: boolean
@@ -241,11 +241,11 @@ export async function GET(
     // Build the public profile based on settings
     const publicProfile: Record<string, any> = {
       id: profile.id,
-      firstName: profile.first_name,
-      lastName: profile.last_name,
-      location: profile.city && profile.state 
-        ? `${profile.city}, ${profile.state}` 
-        : profile.state || null,
+      firstName: userProfile?.first_name ?? null,
+      lastName: userProfile?.last_name ?? null,
+      location: userProfile?.city && userProfile?.state
+        ? `${userProfile.city}, ${userProfile.state}`
+        : null,
       summary: profile.professional_summary,
       experienceYears: profile.experience_years,
       // CDL info is always shown (core to trucking)
@@ -261,8 +261,8 @@ export async function GET(
     // Contact info only if enabled
     if (settings.showContact) {
       publicProfile.contact = {
-        email: profile.email,
-        phone: profile.phone,
+        email: userProfile?.email ?? null,
+        phone: userProfile?.phone ?? null,
       }
     }
 

@@ -89,6 +89,12 @@ export async function GET(
       .eq('id', userId)
       .single()
 
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('first_name, last_name, avatar_url, headline, email, phone, city, state')
+      .eq('user_id', userId)
+      .maybeSingle()
+
     // 2. Driver profile details (if driver)
     let driverProfile = null
     if (careerCard.driver_profile_id) {
@@ -96,12 +102,11 @@ export async function GET(
         .from('driver_profiles')
         .select(
           `
-          id, first_name, middle_name, last_name, email, phone,
-          address, city, state, zip_code, professional_summary,
+          id, professional_summary,
           cdl_class, cdl_state, cdl_number, cdl_expiration,
           endorsements, cdl_endorsements, restrictions,
           experience_years, employment_history, education, skills,
-          share_token, share_settings, avatar_url, created_at
+          share_token, share_settings, created_at
         `,
         )
         .eq('id', careerCard.driver_profile_id)
@@ -115,18 +120,16 @@ export async function GET(
     let developerProfile = null
     if (!driverProfile) {
       const devpId = careerCard.developer_profile_id
-      const devpQuery =         devpId
+      const devpQuery = devpId
         ? supabase.from('developer_profiles').select(
-            `id, first_name, last_name, display_name, email, phone,
-             location, bio, headline, years_experience, employment_history,
+            `id, bio, headline, years_experience, employment_history,
              github_username, linkedin_url, portfolio_url, twitter_url,
-             skills, education, share_token, avatar_url`
+             skills, education, share_token`,
           ).eq('id', devpId)
         : supabase.from('developer_profiles').select(
-            `id, first_name, last_name, display_name, email, phone,
-             location, bio, headline, years_experience, employment_history,
+            `id, bio, headline, years_experience, employment_history,
              github_username, linkedin_url, portfolio_url, twitter_url,
-             skills, education, share_token, avatar_url`
+             skills, education, share_token`,
           ).eq('user_id', userId)
 
       const { data: devp } = await devpQuery.single()
@@ -135,7 +138,6 @@ export async function GET(
         // Normalise into the shape the rest of this route + CareerCard component expects
         developerProfile = {
           ...devp,
-          full_name: [devp.first_name, devp.last_name].filter(Boolean).join(' ').trim() || devp.display_name || null,
           title: devp.headline,
           github_url: devp.github_username ? `https://github.com/${devp.github_username}` : null,
           professional_summary: devp.bio,
@@ -279,39 +281,28 @@ export async function GET(
       existingApplication = app
     }
 
-    // Build the response
-    const profile = driverProfile || developerProfile
-    const fullName = driverProfile
-      ? `${driverProfile.first_name || ''} ${driverProfile.middle_name || ''} ${driverProfile.last_name || ''}`
-          .replace(/\s+/g, ' ')
-          .trim()
-      : (developerProfile as { full_name?: string | null } | null)?.full_name || careerCard.full_name || 'Unknown'
-
-    // Determine effective candidate type based on DATA, not current role
-    // (user might be logged in as employer but still have driver data to show)
+    // Build the response — identity comes from user_profiles, not role-specific profiles
+    const upName = [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ')
     const effectiveRole = driverProfile ? 'driver' : developerProfile ? 'developer' : candidate?.role
 
     return NextResponse.json({
       success: true,
       careerCard: {
-        // Basic info
         userId: candidate?.id,
         role: effectiveRole,
-        name: fullName || careerCard.full_name || 'Unknown',
-        avatarUrl: (profile as { avatar_url?: string | null } | null)?.avatar_url ?? null,
-        email: profile?.email || candidate?.email,
-        phone: profile?.phone,
-        location:
-          profile?.city && profile?.state
-            ? `${profile.city}, ${profile.state}`
-            : profile?.location || careerCard.state,
+        name: upName || careerCard.full_name || 'Unknown',
+        avatarUrl: userProfile?.avatar_url ?? null,
+        email: userProfile?.email || candidate?.email,
+        phone: userProfile?.phone || null,
+        location: userProfile?.city && userProfile?.state
+          ? `${userProfile.city}, ${userProfile.state}`
+          : careerCard.state || null,
         memberSince: candidate?.created_at,
 
-        // Profile
-        profile: profile
+        profile: (driverProfile || developerProfile)
           ? {
-              ...profile,
-              fullName,
+              ...(driverProfile || developerProfile),
+              fullName: upName || 'Unknown',
             }
           : null,
 

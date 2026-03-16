@@ -130,14 +130,12 @@ export async function DELETE(
     // Get user info separately
     let userName = 'Unknown'
     if (application.applicant_user_id) {
-      const { data: user } = await supabase
-        .from('users')
-        .select('name, email')
-        .eq('id', application.applicant_user_id)
-        .single()
-      if (user) {
-        userName = user.name || user.email || 'Unknown'
-      }
+      const [{ data: user }, { data: up }] = await Promise.all([
+        supabase.from('users').select('email').eq('id', application.applicant_user_id).single(),
+        supabase.from('user_profiles').select('first_name, last_name').eq('user_id', application.applicant_user_id).maybeSingle(),
+      ])
+      const profileName = [up?.first_name, up?.last_name].filter(Boolean).join(' ').trim() || null
+      userName = profileName || user?.email || 'Unknown'
     }
 
     // Delete the application

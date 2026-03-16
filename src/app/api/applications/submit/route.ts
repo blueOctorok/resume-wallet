@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { nanoid } from 'nanoid'
 
 export async function POST(request: NextRequest) {
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     // Get user
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, name, email')
+      .select('id, email')
       .ilike('wallet_address', walletAddress)
       .single()
 
@@ -147,9 +148,19 @@ export async function POST(request: NextRequest) {
     // Generate unique share token
     const shareToken = nanoid(16)
 
+    // Fetch name from user_profiles for the application snapshot
+    const adminSupabase = await getAdminSupabaseClient()
+    const { data: userProfile } = await adminSupabase
+      .from('user_profiles')
+      .select('first_name, last_name')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    const applicantName = [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ').trim() || null
+
     // Prepare application data snapshot
     const applicationData = {
-      applicant_name: user.name,
+      applicant_name: applicantName,
       applicant_email: user.email,
       // Driver-specific fields (will be null for non-drivers)
       cdl_class: profile.cdl_class,

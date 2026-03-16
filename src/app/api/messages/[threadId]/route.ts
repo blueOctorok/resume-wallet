@@ -101,24 +101,14 @@ export async function GET(
         .maybeSingle()
       if (company) otherName = company.company_name
     } else {
-      const { data: dp } = await supabase
-        .from('driver_profiles')
+      const { data: up } = await supabase
+        .from('user_profiles')
         .select('first_name, last_name, avatar_url')
         .eq('user_id', otherId)
         .maybeSingle()
-      if (dp) {
-        otherName = `${dp.first_name ?? ''} ${dp.last_name ?? ''}`.trim() || 'Unknown'
-        otherAvatarUrl = dp.avatar_url ?? null
-      } else {
-        const { data: devp } = await supabase
-          .from('developer_profiles')
-          .select('display_name, full_name, avatar_url')
-          .eq('user_id', otherId)
-          .maybeSingle()
-        if (devp) {
-          otherName = devp.display_name || devp.full_name || 'Unknown'
-          otherAvatarUrl = devp.avatar_url ?? null
-        }
+      if (up) {
+        otherName = [up.first_name, up.last_name].filter(Boolean).join(' ') || 'Unknown'
+        otherAvatarUrl = up.avatar_url ?? null
       }
     }
 
@@ -239,20 +229,13 @@ export async function POST(
         .maybeSingle()
       if (company) senderName = company.company_name
     } else {
-      const { data: dp } = await supabase
-        .from('driver_profiles')
+      const { data: up } = await supabase
+        .from('user_profiles')
         .select('first_name, last_name')
         .eq('user_id', user.id)
         .maybeSingle()
-      if (dp) {
-        senderName = `${dp.first_name ?? ''} ${dp.last_name ?? ''}`.trim() || senderName
-      } else {
-        const { data: devp } = await supabase
-          .from('developer_profiles')
-          .select('display_name, full_name')
-          .eq('user_id', user.id)
-          .maybeSingle()
-        if (devp) senderName = devp.display_name || devp.full_name || senderName
+      if (up) {
+        senderName = [up.first_name, up.last_name].filter(Boolean).join(' ') || senderName
       }
     }
 

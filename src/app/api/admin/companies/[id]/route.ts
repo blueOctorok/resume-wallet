@@ -29,7 +29,6 @@ export async function GET(
         *,
         users!companies_employer_user_id_fkey (
           id,
-          name,
           email,
           wallet_address,
           created_at
@@ -57,7 +56,6 @@ export async function GET(
         invite_email,
         users (
           id,
-          name,
           email
         )
       `)
@@ -95,6 +93,23 @@ export async function GET(
 
     const owner = company.users as any
 
+    // Resolve names from user_profiles for owner + all members
+    const allUserIds = [
+      owner?.id,
+      ...(members || []).map((m: any) => (m.users as any)?.id)
+    ].filter(Boolean)
+
+    const { data: profiles } = allUserIds.length > 0
+      ? await supabase.from('user_profiles').select('user_id, first_name, last_name').in('user_id', allUserIds)
+      : { data: [] }
+    const profileMap = new Map((profiles || []).map(p => [p.user_id, p]))
+
+    const resolveName = (userId: string | undefined) => {
+      if (!userId) return null
+      const p = profileMap.get(userId)
+      return [p?.first_name, p?.last_name].filter(Boolean).join(' ').trim() || null
+    }
+
     return NextResponse.json({
       success: true,
       company: {
@@ -120,25 +135,21 @@ export async function GET(
         designatedOwnerEmail: company.designated_owner_email,
         onboardingCompleted: company.onboarding_completed,
         adminNotes: company.admin_notes,
-        // Owner
         owner: owner ? {
           id: owner.id,
-          name: owner.name,
+          name: resolveName(owner.id) || owner.email || 'Unknown',
           email: owner.email,
           walletAddress: owner.wallet_address,
           joinedAt: owner.created_at,
         } : null,
-        // Approval info
         approvedBy: company.approved_by,
         approvedAt: company.approved_at,
         suspendedBy: company.suspended_by,
         suspendedAt: company.suspended_at,
         suspensionReason: company.suspension_reason,
-        // Stats
         teamMemberCount: members?.length || 0,
         jobPostingCount: jobCount || 0,
         applicationCount: appCount || 0,
-        // Timestamps
         createdAt: company.created_at,
         updatedAt: company.updated_at,
       },
@@ -147,7 +158,7 @@ export async function GET(
         return {
           id: m.id,
           userId: user?.id,
-          name: user?.name || 'Pending',
+          name: resolveName(user?.id) || 'Pending',
           email: user?.email || m.invite_email,
           role: m.role,
           isActive: m.is_active,

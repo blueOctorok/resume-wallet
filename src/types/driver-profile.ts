@@ -113,11 +113,14 @@ export interface MvrAccident {
 }
 
 // ===== MAIN UNIFIED PROFILE =====
+// NOTE: Identity fields (name, email, phone, address) are stored in the DB
+// in user_profiles, NOT driver_profiles. They appear here for app-layer
+// compatibility — the GET endpoint merges them from user_profiles.
 export interface UnifiedDriverProfile {
   id: string
   userId: string
   
-  // Personal Information
+  // Personal Information (sourced from user_profiles at DB layer)
   firstName: string
   middleName: string              // DOT has this
   lastName: string
@@ -126,7 +129,7 @@ export interface UnifiedDriverProfile {
   dateOfBirth: string             // DOT required
   ssnLastFour?: string            // DOT only, display only
   
-  // Address
+  // Address (sourced from user_profiles at DB layer)
   address: string
   city: string
   state: string
@@ -168,20 +171,12 @@ export interface UnifiedDriverProfile {
 
 // ===== DATABASE ROW TYPE =====
 // What we get back from Supabase (snake_case)
+// Matches the driver_profiles table after migration 042 (identity columns dropped).
+// Identity (name, email, phone, address) now lives in user_profiles.
 export interface DriverProfileRow {
   id: string
   user_id: string
-  first_name: string | null
-  middle_name: string | null
-  last_name: string | null
-  email: string | null
-  phone: string | null
-  date_of_birth: string | null
   ssn_last_four: string | null
-  address: string | null
-  city: string | null
-  state: string | null
-  zip_code: string | null
   professional_summary: string | null
   cdl_number: string | null
   cdl_state: string | null
@@ -245,21 +240,22 @@ export const EMPTY_DRIVER_PROFILE: Omit<UnifiedDriverProfile, 'id' | 'userId' | 
 /**
  * Convert database row (snake_case) to app type (camelCase)
  */
+// Identity fields default to empty — the API layer merges them from user_profiles.
 export function rowToProfile(row: DriverProfileRow): UnifiedDriverProfile {
   return {
     id: row.id,
     userId: row.user_id,
-    firstName: row.first_name || '',
-    middleName: row.middle_name || '',
-    lastName: row.last_name || '',
-    email: row.email || '',
-    phone: row.phone || '',
-    dateOfBirth: row.date_of_birth || '',
+    firstName: '',
+    middleName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    dateOfBirth: '',
     ssnLastFour: row.ssn_last_four || undefined,
-    address: row.address || '',
-    city: row.city || '',
-    state: row.state || '',
-    zipCode: row.zip_code || '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
     professionalSummary: row.professional_summary || '',
     cdlNumber: row.cdl_number || '',
     cdlState: row.cdl_state || '',
@@ -306,19 +302,9 @@ export function profileToRow(
     last_updated_from: source,
   }
   
-  // Only include non-empty values
-  if (profile.firstName !== undefined) row.first_name = profile.firstName || null
-  if (profile.middleName !== undefined) row.middle_name = profile.middleName || null
-  if (profile.lastName !== undefined) row.last_name = profile.lastName || null
-  if (profile.email !== undefined) row.email = profile.email || null
-  if (profile.phone !== undefined) row.phone = profile.phone || null
-  if (profile.dateOfBirth !== undefined) row.date_of_birth = profile.dateOfBirth || null
+  // Identity fields (name, email, phone, address) are NOT written here — they go to user_profiles.
+  // Only role-specific driver_profiles columns below.
   if (profile.ssnLastFour !== undefined) row.ssn_last_four = profile.ssnLastFour || null
-  if (profile.address !== undefined) row.address = profile.address || null
-  if (profile.city !== undefined) row.city = profile.city || null
-  // State fields are VARCHAR(2) - must truncate to prevent DB errors
-  if (profile.state !== undefined) row.state = truncateState(profile.state)
-  if (profile.zipCode !== undefined) row.zip_code = profile.zipCode || null
   if (profile.professionalSummary !== undefined) row.professional_summary = profile.professionalSummary || null
   if (profile.cdlNumber !== undefined) row.cdl_number = profile.cdlNumber || null
   if (profile.cdlState !== undefined) row.cdl_state = truncateState(profile.cdlState)

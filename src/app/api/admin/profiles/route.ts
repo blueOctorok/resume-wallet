@@ -26,11 +26,11 @@ export async function GET(request: NextRequest) {
     // Build query
     let query = supabase
       .from('driver_profiles')
-      .select('id, user_id, first_name, last_name, email, phone, cdl_number, cdl_state, last_updated_from, created_at, updated_at', { count: 'exact' })
+      .select('id, user_id, cdl_number, cdl_state, last_updated_from, created_at, updated_at', { count: 'exact' })
 
     // Apply search filter
     if (search) {
-      query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%,cdl_number.ilike.%${search}%`)
+      query = query.or(`cdl_number.ilike.%${search}%`)
     }
 
     // Apply pagination and ordering
@@ -52,14 +52,26 @@ export async function GET(request: NextRequest) {
 
     const userMap = new Map(users?.map(u => [u.id, u.wallet_address]) || [])
 
+    const { data: userProfiles } = await supabase
+      .from('user_profiles')
+      .select('user_id, first_name, last_name, email, phone')
+      .in('user_id', userIds)
+
+    const upMap = new Map((userProfiles || []).map(p => [p.user_id, p]))
+
     // Enrich profiles
-    const enrichedProfiles = profiles?.map(profile => ({
-      ...profile,
-      walletAddress: userMap.get(profile.user_id) || 'Unknown',
-      fullName: profile.first_name && profile.last_name 
-        ? `${profile.first_name} ${profile.last_name}`
-        : 'Unnamed',
-    }))
+    const enrichedProfiles = profiles?.map(profile => {
+      const up = upMap.get(profile.user_id)
+      return {
+        ...profile,
+        first_name: up?.first_name ?? null,
+        last_name: up?.last_name ?? null,
+        email: up?.email ?? null,
+        phone: up?.phone ?? null,
+        walletAddress: userMap.get(profile.user_id) || 'Unknown',
+        fullName: [up?.first_name, up?.last_name].filter(Boolean).join(' ') || 'Unnamed',
+      }
+    })
 
     return NextResponse.json({
       success: true,

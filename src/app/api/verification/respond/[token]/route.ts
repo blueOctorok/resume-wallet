@@ -74,29 +74,14 @@ export async function GET(
       (request_data.companies as { company_name?: string } | null)?.company_name ||
       (request_data.initiated_by === 'applicant' ? 'The applicant (self-requested)' : 'Unknown Company')
 
-    // Get applicant name: driver_profiles for driver, developer_profiles for developer
     let applicantName = 'Unknown Applicant'
-    if (applicantType === 'developer') {
-      const { data: dev } = await supabase
-        .from('developer_profiles')
-        .select('first_name, last_name, display_name')
-        .eq('user_id', request_data.driver_id)
-        .single()
-      if (dev) {
-        applicantName =
-          dev.display_name?.trim() ||
-          [dev.first_name, dev.last_name].filter(Boolean).join(' ') ||
-          'Unknown Applicant'
-      }
-    } else {
-      const { data: driver } = await supabase
-        .from('driver_profiles')
-        .select('first_name, last_name')
-        .eq('user_id', request_data.driver_id)
-        .single()
-      if (driver) {
-        applicantName = [driver.first_name, driver.last_name].filter(Boolean).join(' ') || 'Unknown Applicant'
-      }
+    const { data: applicantProfile } = await supabase
+      .from('user_profiles')
+      .select('first_name, last_name')
+      .eq('user_id', request_data.driver_id)
+      .maybeSingle()
+    if (applicantProfile) {
+      applicantName = [applicantProfile.first_name, applicantProfile.last_name].filter(Boolean).join(' ') || 'Unknown Applicant'
     }
 
     const verificationRequest = rowToVerificationRequest(

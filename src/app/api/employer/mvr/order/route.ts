@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     // Verify the candidate exists and has signed the disclosure
     const { data: candidate } = await supabase
       .from('users')
-      .select('id, email, name')
+      .select('id, email')
       .eq('id', candidateUserId)
       .single()
 

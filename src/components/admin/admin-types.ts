@@ -49,7 +49,6 @@ export interface User {
   id: string
   wallet_address: string
   email: string | null
-  name: string | null
   displayName: string | null
   displayEmail: string | null
   role: string | null
@@ -66,6 +65,8 @@ export interface User {
 export interface DevProfile {
   id: string
   user_id: string
+  first_name: string | null
+  last_name: string | null
   email: string | null
   full_name: string | null
   headline: string | null

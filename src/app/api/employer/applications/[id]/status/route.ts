@@ -169,19 +169,17 @@ export async function PATCH(
     if (NOTIFICATION_STATUSES.includes(newStatus as typeof NOTIFICATION_STATUSES[number])) {
       const { data: candidate } = await supabase
         .from('users')
-        .select('email, name')
+        .select('email')
         .eq('id', application.applicant_user_id)
         .single()
 
-      let candidateName = candidate?.name
-      if (!candidateName) {
-        const { data: driverProfile } = await supabase
-          .from('driver_profiles')
-          .select('full_name')
-          .eq('user_id', application.applicant_user_id)
-          .single()
-        candidateName = driverProfile?.full_name || 'Candidate'
-      }
+      const { data: candidateProfile } = await supabase
+        .from('user_profiles')
+        .select('first_name, last_name')
+        .eq('user_id', application.applicant_user_id)
+        .maybeSingle()
+
+      const candidateName = [candidateProfile?.first_name, candidateProfile?.last_name].filter(Boolean).join(' ') || 'Candidate'
 
       const statusTitles: Record<string, string> = {
         under_review: 'Your application is under review',

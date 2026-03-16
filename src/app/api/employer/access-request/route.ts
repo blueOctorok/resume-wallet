@@ -133,16 +133,19 @@ export async function POST(request: NextRequest) {
     // Helper: insert audit row, retry without new columns if migration hasn't run yet
     async function insertAuditRow(extraFields: Record<string, unknown>) {
       const payload = { ...auditFields, ...extraFields }
+      console.log('[ACCESS REQUEST] Inserting audit row:', JSON.stringify({ status: payload.status, company: payload.company_name, email: payload.email }))
       const { error } = await supabase.from('employer_access_requests').insert(payload)
       if (error) {
+        console.error('[ACCESS REQUEST] Audit insert failed:', error.code, error.message)
         // If first_name/last_name columns don't exist yet, retry without them
         if (error.message?.includes('first_name') || error.message?.includes('last_name') || error.code === '42703') {
           const { first_name, last_name, ...fallback } = payload
           const { error: retryErr } = await supabase.from('employer_access_requests').insert(fallback)
           if (retryErr) console.error('[ACCESS REQUEST] Audit insert retry failed:', retryErr)
-        } else {
-          console.error('[ACCESS REQUEST] Audit insert failed:', error)
+          else console.log('[ACCESS REQUEST] Audit insert succeeded on retry (without name columns)')
         }
+      } else {
+        console.log('[ACCESS REQUEST] Audit row inserted successfully')
       }
     }
 
@@ -163,12 +166,14 @@ export async function POST(request: NextRequest) {
     if (evalResult.existingMatch && evalResult.decision !== 'block') {
       const { data: matchedCompany } = await supabase
         .from('companies')
-        .select('id, company_name, email')
+        .select('id, company_name, email, designated_owner_email')
         .ilike('company_name', evalResult.existingMatch)
         .maybeSingle()
 
       if (matchedCompany) {
-        const companyEmailDomain = matchedCompany.email?.split('@')[1]?.toLowerCase() ?? null
+        // Fall back to designated_owner_email if email column wasn't set
+        const companyEmail = matchedCompany.email || matchedCompany.designated_owner_email
+        const companyEmailDomain = companyEmail?.split('@')[1]?.toLowerCase() ?? null
 
         // Domain match -> auto-join as recruiter
         if (emailDomain && companyEmailDomain && emailDomain === companyEmailDomain) {
@@ -177,7 +182,7 @@ export async function POST(request: NextRequest) {
           if (existingUser) {
             await supabase
               .from('users')
-              .update({ role: 'employer', name: fullName, email: email.toLowerCase() })
+              .update({ role: 'employer', email: email.toLowerCase() })
               .eq('id', existingUser.id)
             userId = existingUser.id
           } else {
@@ -186,7 +191,6 @@ export async function POST(request: NextRequest) {
               .insert({
                 wallet_address: walletAddress.toLowerCase(),
                 email: email.toLowerCase(),
-                name: fullName,
                 role: 'employer',
               })
               .select('id')
@@ -275,7 +279,7 @@ export async function POST(request: NextRequest) {
     if (existingUser) {
       await supabase
         .from('users')
-        .update({ role: 'employer', name: fullName, email: email.toLowerCase() })
+        .update({ role: 'employer', email: email.toLowerCase() })
         .eq('id', existingUser.id)
       userId = existingUser.id
     } else {
@@ -284,7 +288,6 @@ export async function POST(request: NextRequest) {
         .insert({
           wallet_address: walletAddress.toLowerCase(),
           email: email.toLowerCase(),
-          name: fullName,
           role: 'employer',
         })
         .select('id')
@@ -308,12 +311,13 @@ export async function POST(request: NextRequest) {
       { onConflict: 'user_id' }
     )
 
-    // 3. Create company
+    // 3. Create company (email is set so domain matching works for future join requests)
     const { data: newCompany, error: companyErr } = await supabase
       .from('companies')
       .insert({
         company_name: companyName.trim(),
         employer_user_id: userId,
+        email: email.toLowerCase(),
         designated_owner_email: email.toLowerCase(),
         status: 'active',
         approved_at: new Date().toISOString(),

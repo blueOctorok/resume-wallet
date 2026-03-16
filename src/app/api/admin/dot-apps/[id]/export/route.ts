@@ -38,20 +38,19 @@ export async function GET(
     // Get user info for the application
     const { data: user } = await supabase
       .from('users')
-      .select('name, email')
+      .select('email')
       .eq('id', app.user_id)
       .single()
 
-    // Get profile for additional info
-    const { data: profile } = await supabase
-      .from('driver_profiles')
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
       .select('first_name, last_name')
       .eq('user_id', app.user_id)
-      .single()
+      .maybeSingle()
 
-    const candidateName = profile?.first_name && profile?.last_name
-      ? `${profile.first_name} ${profile.last_name}`
-      : user?.name || 'Applicant'
+    const candidateName = userProfile?.first_name && userProfile?.last_name
+      ? `${userProfile.first_name} ${userProfile.last_name}`
+      : 'Applicant'
 
     // Check if this came from an invite (to get company name)
     let companyName: string | undefined

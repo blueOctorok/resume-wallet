@@ -29,6 +29,7 @@ export interface HubUserProfile {
   firstName: string
   lastName: string
   avatarUrl: string | null
+  headline: string | null
 }
 
 interface HubBlocksState {
@@ -67,6 +68,7 @@ interface HubBlocksActions {
 
   // Profile
   updateAvatarUrl: (url: string) => void
+  updateUserProfile: (patch: Partial<HubUserProfile>) => void
 
   // Edit mode (jiggle / rearrange)
   setEditMode: (on: boolean) => void
@@ -115,6 +117,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
             firstName: rawProfile.first_name ?? '',
             lastName: rawProfile.last_name ?? '',
             avatarUrl: rawProfile.avatar_url ?? null,
+            headline: rawProfile.headline ?? null,
           }
         : null
 
@@ -263,7 +266,14 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
     set((s) => ({
       userProfile: s.userProfile
         ? { ...s.userProfile, avatarUrl: url }
-        : { firstName: '', lastName: '', avatarUrl: url },
+        : { firstName: '', lastName: '', avatarUrl: url, headline: null },
+    })),
+
+  updateUserProfile: (patch) =>
+    set((s) => ({
+      userProfile: s.userProfile
+        ? { ...s.userProfile, ...patch }
+        : { firstName: '', lastName: '', avatarUrl: null, headline: null, ...patch },
     })),
 
   // ── Edit mode ──────────────────────────────────────────────────────────────

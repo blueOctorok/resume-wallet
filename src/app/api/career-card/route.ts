@@ -85,16 +85,23 @@ export async function GET(request: NextRequest) {
     }
 
     // ── Fetch user's profile name + avatar + onboarding context ──
-    const [driverProfile, devProfile, onboarding] = await Promise.all([
+    // user_profiles is the universal source of truth; role-specific profiles are fallbacks.
+    const [userProfile, driverProfile, devProfile, onboarding] = await Promise.all([
+      supabase
+        .from('user_profiles')
+        .select('first_name, last_name, avatar_url, headline, email, phone, city, state')
+        .eq('user_id', userId)
+        .maybeSingle()
+        .then(r => r.data),
       supabase
         .from('driver_profiles')
-        .select('first_name, last_name, avatar_url, professional_summary, city, state, email, phone')
+        .select('professional_summary')
         .eq('user_id', userId)
         .maybeSingle()
         .then(r => r.data),
       supabase
         .from('developer_profiles')
-        .select('full_name, avatar_url, professional_summary, location, email, phone')
+        .select('professional_summary')
         .eq('user_id', userId)
         .maybeSingle()
         .then(r => r.data),
@@ -106,24 +113,21 @@ export async function GET(request: NextRequest) {
         .then(r => r.data),
     ])
 
-    if (driverProfile) {
-      userName = [driverProfile.first_name, driverProfile.last_name].filter(Boolean).join(' ') || 'Candidate'
-      avatarUrl = driverProfile.avatar_url
-    } else if (devProfile) {
-      userName = devProfile.full_name || 'Candidate'
-      avatarUrl = devProfile.avatar_url
-    } else {
-      userName = 'Candidate'
-    }
+    const upName = [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ')
+    userName = upName || 'Candidate'
+    avatarUrl = userProfile?.avatar_url ?? null
 
-    const location = driverProfile?.city && driverProfile?.state
-      ? `${driverProfile.city}, ${driverProfile.state}`
-      : devProfile?.location ?? null
+    const location = userProfile?.city && userProfile?.state
+      ? `${userProfile.city}, ${userProfile.state}`
+      : null
 
     const summary = driverProfile?.professional_summary ?? devProfile?.professional_summary ?? null
 
     const contact = (shareSettings.showContact || !isPublicView)
-      ? { email: driverProfile?.email ?? devProfile?.email ?? null, phone: driverProfile?.phone ?? devProfile?.phone ?? null }
+      ? {
+          email: userProfile?.email ?? null,
+          phone: userProfile?.phone ?? null,
+        }
       : undefined
 
     // ── Fetch installed hub blocks ──
@@ -157,7 +161,7 @@ export async function GET(request: NextRequest) {
       userId,
       name: userName,
       avatarUrl,
-      occupation: onboarding?.occupation ?? null,
+      occupation: userProfile?.headline ?? onboarding?.occupation ?? null,
       professionalSummary: summary,
       location,
       memberSince,

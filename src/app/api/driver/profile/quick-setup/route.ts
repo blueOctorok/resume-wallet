@@ -10,7 +10,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
  *
  * Writes to both:
  *   - driver_profiles (upsert by user_id)
- *   - users.name (so the hub header and career card display the right name)
+ *   - user_profiles (first_name, last_name)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     // Resolve wallet → user
     const { data: user } = await supabase
       .from('users')
-      .select('id, name')
+      .select('id')
       .ilike('wallet_address', walletAddress)
       .single()
 
@@ -41,15 +41,8 @@ export async function POST(request: NextRequest) {
 
     const fullName = `${firstName.trim()} ${lastName.trim()}`
 
-    // Upsert driver_profiles — create on first setup, update on repeat
-    const profileData: Record<string, string | null> = {
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
-    }
-    if (email?.trim()) profileData.email = email.trim()
-    if (phone?.trim()) profileData.phone = phone.trim()
-    if (city?.trim()) profileData.city = city.trim()
-    if (state?.trim()) profileData.state = state.trim()
+    // Upsert driver_profiles with role-specific data only
+    const profileData: Record<string, string | null> = {}
     if (cdlClass?.trim()) profileData.cdl_class = cdlClass.trim()
     if (cdlState?.trim()) profileData.cdl_state = cdlState.trim()
 
@@ -62,11 +55,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to save profile' }, { status: 500 })
     }
 
-    // Sync name to users table so the hub header reflects it immediately
+    // Write all identity data to user_profiles
+    const identityData: Record<string, string | null> = {
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+    }
+    if (email?.trim()) identityData.email = email.trim()
+    if (phone?.trim()) identityData.phone = phone.trim()
+    if (city?.trim()) identityData.city = city.trim()
+    if (state?.trim()) identityData.state = state.trim()
+
     await supabase
-      .from('users')
-      .update({ name: fullName })
-      .eq('id', user.id)
+      .from('user_profiles')
+      .upsert(
+        { user_id: user.id, ...identityData },
+        { onConflict: 'user_id' }
+      )
 
     return NextResponse.json({ success: true, name: fullName })
   } catch (error) {

@@ -108,7 +108,6 @@ export async function PATCH(
         .insert({
           wallet_address: accessRequest.wallet_address.toLowerCase(),
           email: accessRequest.email,
-          name: accessRequest.name,
           role: 'employer',
         })
         .select('id')
@@ -123,15 +122,22 @@ export async function PATCH(
       }
       user = newUser
     } else {
-      // Update existing user to employer role and set name/email if missing
       await supabase
         .from('users')
         .update({
           role: 'employer',
-          name: accessRequest.name,
           email: accessRequest.email || undefined,
         })
         .eq('id', user.id)
+    }
+
+    // Write identity to user_profiles
+    if (accessRequest.name) {
+      const nameParts = accessRequest.name.trim().split(/\s+/)
+      await supabase.from('user_profiles').upsert(
+        { user_id: user.id, first_name: nameParts[0] || null, last_name: nameParts.length > 1 ? nameParts.slice(1).join(' ') : null, display_name: accessRequest.name },
+        { onConflict: 'user_id' }
+      )
     }
 
     // 2. Create the company

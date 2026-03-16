@@ -100,13 +100,13 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (requestingUser?.requested_by_user_id) {
-    const { data: driver } = await supabase
-      .from('users')
-      .select('name')
-      .eq('id', requestingUser.candidate_user_id)
-      .single()
+    const { data: driverProfile } = await supabase
+      .from('user_profiles')
+      .select('first_name, last_name')
+      .eq('user_id', requestingUser.candidate_user_id)
+      .maybeSingle()
 
-    const driverName = driver?.name || 'A candidate'
+    const driverName = [driverProfile?.first_name, driverProfile?.last_name].filter(Boolean).join(' ').trim() || 'A candidate'
 
     createNotification({
       userId: requestingUser.requested_by_user_id,

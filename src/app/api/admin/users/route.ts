@@ -26,14 +26,14 @@ export async function GET(request: NextRequest) {
     // Build query
     let query = supabase
       .from('users')
-      .select('id, wallet_address, email, name, role, is_active, created_at', {
+      .select('id, wallet_address, email, role, is_active, created_at', {
         count: 'exact',
       })
 
     // Apply search filter
     if (search) {
       query = query.or(
-        `wallet_address.ilike.%${search}%,email.ilike.%${search}%,name.ilike.%${search}%`
+        `wallet_address.ilike.%${search}%,email.ilike.%${search}%`
       )
     }
 
@@ -66,13 +66,13 @@ export async function GET(request: NextRequest) {
     // Driver profile data (fallback + hasProfile indicator)
     const { data: driverProfiles } = await supabase
       .from('driver_profiles')
-      .select('user_id, first_name, last_name, email')
+      .select('user_id')
       .in('user_id', userIds)
 
     // Developer profile data (fallback + hasDevProfile indicator)
     const { data: devProfiles } = await supabase
       .from('developer_profiles')
-      .select('user_id, full_name, email, github_username')
+      .select('user_id, github_username')
       .in('user_id', userIds)
 
     // Get resume counts
@@ -97,11 +97,11 @@ export async function GET(request: NextRequest) {
     const userProfileMap = new Map<string, { first_name: string | null; last_name: string | null; email: string | null }>()
     userProfiles?.forEach((p) => userProfileMap.set(p.user_id, p))
 
-    const driverProfileMap = new Map<string, { first_name: string | null; last_name: string | null; email: string | null }>()
-    driverProfiles?.forEach((p) => driverProfileMap.set(p.user_id, p))
+    const driverProfileSet = new Set<string>()
+    driverProfiles?.forEach((p) => driverProfileSet.add(p.user_id))
 
-    const devProfileMap = new Map<string, { full_name: string | null; email: string | null; github_username: string | null }>()
-    devProfiles?.forEach((p) => devProfileMap.set(p.user_id, p))
+    const devProfileMap = new Map<string, { github_username: string | null }>()
+    devProfiles?.forEach((p) => devProfileMap.set(p.user_id, { github_username: p.github_username }))
 
     const resumeCountMap = new Map<string, number>()
     resumes?.forEach((r) => {
@@ -124,35 +124,21 @@ export async function GET(request: NextRequest) {
     // Enrich users with counts, profile data, and admin status
     const enrichedUsers = users?.map((user) => {
       const userProfile = userProfileMap.get(user.id)
-      const driverProfile = driverProfileMap.get(user.id)
       const devProfile = devProfileMap.get(user.id)
 
-      // Build display name: prefer user_profiles, then driver, then dev, then users.name
-      let displayName: string | null = null
-      if (userProfile?.first_name && userProfile?.last_name) {
-        displayName = `${userProfile.first_name} ${userProfile.last_name}`
-      } else if (userProfile?.first_name) {
-        displayName = userProfile.first_name
-      } else if (driverProfile?.first_name && driverProfile?.last_name) {
-        displayName = `${driverProfile.first_name} ${driverProfile.last_name}`
-      } else if (driverProfile?.first_name) {
-        displayName = driverProfile.first_name
-      } else if (devProfile?.full_name) {
-        displayName = devProfile.full_name
-      } else if (devProfile?.github_username) {
+      let displayName: string | null = [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ') || null
+      if (!displayName && devProfile?.github_username) {
         displayName = `@${devProfile.github_username}`
-      } else {
-        displayName = user.name || null
       }
+      
 
-      const displayEmail =
-        userProfile?.email || driverProfile?.email || devProfile?.email || user.email || null
+      const displayEmail = userProfile?.email || user.email || null
 
       return {
         ...user,
         displayName,
         displayEmail,
-        hasProfile: driverProfileMap.has(user.id),
+        hasProfile: driverProfileSet.has(user.id),
         hasDevProfile: devProfileMap.has(user.id),
         resumeCount: resumeCountMap.get(user.id) || 0,
         dotAppCount: dotAppCountMap.get(user.id) || 0,

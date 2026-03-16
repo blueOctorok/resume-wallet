@@ -100,12 +100,6 @@ export async function GET(request: NextRequest) {
       .select(`
         id,
         user_id,
-        first_name,
-        last_name,
-        email,
-        phone,
-        city,
-        state,
         professional_summary,
         cdl_class,
         cdl_state,
@@ -120,7 +114,7 @@ export async function GET(request: NextRequest) {
         created_at,
         updated_at
       `)
-      .not('first_name', 'is', null) // Only drivers with profiles
+      .not('cdl_class', 'is', null) // Only drivers with actual CDL data
       .limit(limit)
 
     // Apply filters (use job criteria if available, otherwise use query params)
@@ -142,13 +136,8 @@ export async function GET(request: NextRequest) {
       query = query.gte('experience_years', parseInt(filterMinExp))
     }
 
-    if (filterLocationState) {
-      query = query.eq('state', filterLocationState)
-    }
-
-    if (filterLocationCity) {
-      query = query.eq('city', filterLocationCity)
-    }
+    // Location filtering removed: state/city live in user_profiles, not driver_profiles.
+    // Apply client-side or via user_profiles join if needed.
 
     // MVR filter (clean record)
     if (hasCleanMvr || jobCriteria) {
@@ -166,8 +155,22 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const driverUserIds = (profiles || []).map(p => p.user_id)
+
+    const { data: userProfiles } = driverUserIds.length
+      ? await supabase
+          .from('user_profiles')
+          .select('user_id, first_name, last_name, email, phone, city, state')
+          .in('user_id', driverUserIds)
+      : { data: [] }
+
+    const profileMap = new Map<string, { first_name: string | null; last_name: string | null; email: string | null; phone: string | null; city: string | null; state: string | null }>()
+    for (const p of userProfiles ?? []) {
+      profileMap.set(p.user_id, p)
+    }
+
     // Get additional data for each driver
-    const driverIds = (profiles || []).map(p => p.user_id)
+    const driverIds = driverUserIds
     
     // Get resumes
     const { data: resumes } = await supabase
@@ -202,6 +205,7 @@ export async function GET(request: NextRequest) {
 
     // Process results
     const drivers = (profiles || []).map(profile => {
+      const up = profileMap.get(profile.user_id)
       // Get driver's latest verified resume
       const driverResumes = (resumes || []).filter(r => r.user_id === profile.user_id)
       const verifiedResume = driverResumes.find(r => r.verification_status === 'VERIFIED')
@@ -226,12 +230,10 @@ export async function GET(request: NextRequest) {
       return {
         driverId: profile.user_id,
         profileId: profile.id,
-        name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown',
-        email: profile.email,
-        phone: profile.phone,
-        location: profile.city && profile.state 
-          ? `${profile.city}, ${profile.state}` 
-          : profile.state || null,
+        name: [up?.first_name, up?.last_name].filter(Boolean).join(' ') || 'Unknown',
+        email: up?.email || null,
+        phone: up?.phone || null,
+        location: up?.city && up?.state ? `${up.city}, ${up.state}` : null,
         professionalSummary: profile.professional_summary,
         // CDL info
         cdlClass: profile.cdl_class,

@@ -27,6 +27,10 @@ The career card becomes a pure read-only projection of the hub.
 | Role-Agnostic Hub Refactor | ✅ Done | Unified `user_profiles` table, stripped all driver/dev assumptions from permanent hub UI, block-conditional data enrichment API |
 | AI-Gated Employer Access | ✅ Done | AvA evaluates employer signup requests in real-time: auto-approve, flag for review, or block. Renamed MotorCarrierOnboarding → CompanyOnboarding. Fixed driver_profiles → user_profiles in team invite. |
 | Admin Dashboard Audit Refactor | ✅ Done | Split ~4000-line monolith into ~20 focused components (shell + 15 tabs + 3 modals). Updated sidebar labels ("Driver Blocks" / "Developer Blocks"), role badges, resume labels, column headers. Added `user_profiles` to admin users & resumes APIs. |
+| Employer Onboarding Rework | ✅ Done | AI-powered company name matching, domain-verified auto-join, first/last name collection, removed hiring categories. Pending review UI shows specific reasons. |
+| Central Admin Full Audit | ✅ Done | Fixed: silent audit insert failures (migration timing), admin wallet delete guard (now allows force-delete), 9 admin APIs updated to use `user_profiles` as primary name source, `devProfile.full_name` → computed from first/last/display_name. |
+| **Unified Identity Migration** | **✅ Done** | **~30 files migrated across 6 phases. All identity reads (name, avatar, email, phone, location) now exclusively use `user_profiles`. Role-specific tables retain only role data (CDL, GitHub, skills, etc.). Write paths stripped of identity. Avatar uploads write to `user_profiles`. Zero remaining role-table identity reads in codebase.** |
+| **Full Database Audit & Cleanup** | **✅ Done** | **Audited all 32+ tables via Supabase MCP. Dropped 1 dead table (`t_prefill_cache`), 2 dead views, 20+ dead identity columns from `users`/`driver_profiles`/`developer_profiles`/`companies`, 2 redundant indexes. Rewrote `career_cards` view for `user_profiles`. Enabled RLS on 4 unprotected tables. Dropped `users.name` (data migrated to `user_profiles.display_name`). Moved `date_of_birth` to `user_profiles`. Created retroactive `storm_distributions` migration. Updated ~30 code files.** |
 
 ---
 
@@ -495,14 +499,15 @@ developer_profiles
 developer_projects
 
 -- Shared Tables
+user_profiles
 employment_verification_requests
 verification_attempts
-t_prefill_cache
 
--- Future Enhancements
-messages           -- Employer-candidate communication
-saved_searches     -- Employer saved talent searches
-notifications      -- Application status updates
+-- Messaging & Notifications (implemented)
+messages
+message_threads
+notifications
+storm_distributions
 ```
 
 ### Security & Access Control

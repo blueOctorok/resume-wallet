@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { firstName, lastName, email, phone, city, state } = body
+    const { firstName, lastName, email, phone, city, state, headline } = body
 
     if (!firstName?.trim() || !lastName?.trim()) {
       return NextResponse.json({ error: 'First and last name are required' }, { status: 400 })
@@ -39,6 +39,8 @@ export async function POST(request: NextRequest) {
     if (phone?.trim()) profileData.phone = phone.trim()
     if (city?.trim()) profileData.city = city.trim()
     if (state?.trim()) profileData.state = state.trim()
+    // headline can be explicitly set to null (to clear it) or a string
+    if (headline !== undefined) profileData.headline = headline?.trim() || null
 
     const { error: upsertError } = await supabase
       .from('user_profiles')
@@ -48,9 +50,6 @@ export async function POST(request: NextRequest) {
       console.error('[PROFILE SETUP] Upsert error:', upsertError)
       return NextResponse.json({ error: 'Failed to save profile' }, { status: 500 })
     }
-
-    // Keep users.name in sync so legacy queries (career_cards view, etc.) still work
-    await supabase.from('users').update({ name: fullName }).eq('id', user.id)
 
     return NextResponse.json({ success: true, name: fullName })
   } catch (err) {

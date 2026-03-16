@@ -339,7 +339,7 @@ export default function UserDetailModal({
                     <div className='grid grid-cols-2 md:grid-cols-4 gap-4 text-sm'>
                       <div>
                         <span className='opacity-60'>Name:</span>{' '}
-                        {user.devProfile.full_name || '-'}
+                        {[user.devProfile.first_name, user.devProfile.last_name].filter(Boolean).join(' ') || user.devProfile.display_name || '-'}
                       </div>
                       <div>
                         <span className='opacity-60'>GitHub:</span>{' '}

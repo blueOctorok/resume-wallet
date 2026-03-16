@@ -197,13 +197,7 @@ async function getEmployerVerificationSummary(
   // Note: This table may not exist if migration hasn't run yet
   const { data: requests, error: requestsError } = await supabase
     .from('employment_verification_requests')
-    .select(`
-      *,
-      driver_profiles:driver_id (
-        first_name,
-        last_name
-      )
-    `)
+    .select('*')
     .eq('requesting_company_id', companyId)
     .order('created_at', { ascending: false })
 
@@ -233,6 +227,16 @@ async function getEmployerVerificationSummary(
     )
   }
 
+  // Batch-fetch names from user_profiles
+  const driverIds = [...new Set((requests || []).map(r => r.driver_id).filter(Boolean))]
+  const { data: userProfiles } = driverIds.length
+    ? await supabase.from('user_profiles').select('user_id, first_name, last_name').in('user_id', driverIds)
+    : { data: [] }
+  const nameMap = new Map<string, string>()
+  for (const p of userProfiles ?? []) {
+    nameMap.set(p.user_id, [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Unknown')
+  }
+
   // Count statuses
   const statusCounts = {
     totalRequested: requests?.length || 0,
@@ -257,11 +261,7 @@ async function getEmployerVerificationSummary(
 
   const formattedRequests = (requests || []).map(r => {
     const req = rowToVerificationRequest(r as VerificationRequestRow, companyName)
-    // Add driver name
-    const driverProfile = r.driver_profiles as any
-    ;(req as any).driverName = driverProfile 
-      ? `${driverProfile.first_name || ''} ${driverProfile.last_name || ''}`.trim() || 'Unknown'
-      : 'Unknown'
+    ;(req as any).driverName = nameMap.get(r.driver_id) ?? 'Unknown'
     // Don't expose token
     delete req.verificationToken
     return req

@@ -38,8 +38,8 @@ export async function GET(request: NextRequest) {
       .select('id, wallet_address')
       .in('id', fixedUserIds)
 
-    const { data: profiles } = await supabase
-      .from('driver_profiles')
+    const { data: userProfiles } = await supabase
+      .from('user_profiles')
       .select('user_id, first_name, last_name')
       .in('user_id', fixedUserIds)
 
@@ -52,11 +52,12 @@ export async function GET(request: NextRequest) {
       : { data: [] }
 
     const userMap = new Map((users || []).map((u: { id: string; wallet_address: string }) => [u.id, u.wallet_address]))
+    const upMap = new Map((userProfiles || []).map(p => [p.user_id, p]))
     const profileMap = new Map(
-      (profiles || []).map((p: { user_id: string; first_name: string | null; last_name: string | null }) => [
-        p.user_id,
-        [p.first_name, p.last_name].filter(Boolean).join(' ') || null,
-      ])
+      fixedUserIds.map(id => {
+        const p = upMap.get(id)
+        return [id, p ? [p.first_name, p.last_name].filter(Boolean).join(' ') || null : null]
+      })
     )
     const resultByOrderId = new Map(
       (results || []).map((r: { mvr_order_id: string }) => [r.mvr_order_id, r])
