@@ -300,8 +300,10 @@ function HoneycombGrid({
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  const isMobile = sizeClass === 'xs'
-  const slotsPerPage = isMobile ? SLOTS_PER_PAGE_MOBILE : SLOTS_PER_PAGE_DESKTOP
+  // 5-slot layout for anything under 640px (all phones including Plus/Max models).
+  // Hex SIZE still uses three tiers (xs/sm/lg), but SLOT COUNT is a separate concern.
+  const useCompactLayout = sizeClass === 'xs' || sizeClass === 'sm'
+  const slotsPerPage = useCompactLayout ? SLOTS_PER_PAGE_MOBILE : SLOTS_PER_PAGE_DESKTOP
 
   const metrics: HiveMetrics = sizeClass === 'xs'
     ? { centerW: CENTER_W_XS, centerH: CENTER_H_XS, ringW: RING_W_XS, ringH: RING_H_XS }
@@ -309,7 +311,7 @@ function HoneycombGrid({
       ? { centerW: CENTER_W_SM, centerH: CENTER_H_SM, ringW: RING_W_SM, ringH: RING_H_SM }
       : { centerW: CENTER_W_LG, centerH: CENTER_H_LG, ringW: RING_W_LG, ringH: RING_H_LG }
 
-  const slots = hiveSlotOffsets(metrics, isMobile)
+  const slots = hiveSlotOffsets(metrics, useCompactLayout)
 
   const totalPages = Math.max(1, Math.ceil(blocks.length / slotsPerPage))
 
@@ -323,7 +325,7 @@ function HoneycombGrid({
   // On desktop, need to fit the full middle-left/right (dx).
   const dx = metrics.centerW / 2 + HIVE_GAP + metrics.ringW / 2
   const halfDx = dx * 0.52
-  const containerW = isMobile
+  const containerW = useCompactLayout
     ? 2 * (halfDx + metrics.ringW / 2) + 16
     : 2 * (dx + metrics.ringW / 2) + 16
   const dy = (metrics.centerH / 2 + HIVE_GAP + metrics.ringH / 2) * 0.92
