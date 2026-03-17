@@ -41,7 +41,11 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
-// ── Block Tile (glassmorphic + 3D tilt) ──────────────────────────────────────
+// ── Hex clip-path for flat-top hexagon ────────────────────────────────────────
+// Pointy-left/right hex: vertices at 0%/50%, 25%/0%, 75%/0%, 100%/50%, 75%/100%, 25%/100%
+const HEX_CLIP = 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'
+
+// ── Block Tile (glassmorphic hex + 3D tilt) ──────────────────────────────────
 
 interface BlockTileProps {
   block: InstalledBlock
@@ -72,17 +76,10 @@ function BlockTile({ block, index, isEditing, onRemove, onOpen }: BlockTileProps
     onOpen()
   }
 
-  // The inner card content — shared between Atropos-wrapped and plain modes
   const tileContent = (
     <div
       className={cn(
-        'relative h-full rounded-2xl border flex flex-col p-4 select-none transition-all duration-300 overflow-hidden',
-        // Glass effect
-        isDark
-          ? 'bg-white/[0.04] border-white/[0.08] backdrop-blur-md'
-          : 'bg-white/60 border-white/40 backdrop-blur-md',
-        // Hover glow (non-edit mode only)
-        !isEditing && hasRoute && (isDark ? colors.borderHover.dark : colors.borderHover.light),
+        'relative w-full h-full select-none transition-all duration-300',
         isDragging && 'opacity-60 scale-105 z-20',
         isEditing && !isDragging && 'cursor-grab active:cursor-grabbing',
         isEditing && !isDragging && (index % 2 === 0
@@ -91,47 +88,59 @@ function BlockTile({ block, index, isEditing, onRemove, onOpen }: BlockTileProps
         ),
       )}
       style={{
-        // Per-block accent glow on hover via box-shadow
-        ...((!isEditing && hasRoute) ? {
-          boxShadow: `0 0 0 0 ${colors.glowColor}`,
-        } : {}),
+        clipPath: HEX_CLIP,
+        filter: (!isEditing && hasRoute)
+          ? `drop-shadow(0 0 0px ${colors.glowColor})`
+          : undefined,
       }}
       onMouseEnter={(e) => {
         if (!isEditing && hasRoute) {
-          (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 32px ${colors.glowColor}, 0 0 0 1px ${colors.glowColor}`
+          (e.currentTarget as HTMLElement).style.filter = `drop-shadow(0 4px 16px ${colors.glowColor})`
         }
       }}
       onMouseLeave={(e) => {
         if (!isEditing && hasRoute) {
-          (e.currentTarget as HTMLElement).style.boxShadow = `0 0 0 0 ${colors.glowColor}`
+          (e.currentTarget as HTMLElement).style.filter = `drop-shadow(0 0 0px ${colors.glowColor})`
         }
       }}
     >
-      {/* Remove badge (edit mode only) */}
+      {/* Hex border layer */}
+      <div
+        className={cn(
+          'absolute inset-0',
+          isDark ? 'bg-white/[0.08]' : 'bg-white/40',
+          !isEditing && hasRoute && (isDark ? colors.borderHover.dark : colors.borderHover.light),
+        )}
+        style={{ clipPath: HEX_CLIP }}
+      />
+      {/* Inner hex fill (2px inset = visible border) */}
+      <div
+        className={cn(
+          'absolute inset-[2px]',
+          isDark ? 'bg-gray-900/80 backdrop-blur-md' : 'bg-white/70 backdrop-blur-md',
+        )}
+        style={{ clipPath: HEX_CLIP }}
+      />
+
+      {/* Remove badge (edit mode) */}
       {isEditing && (
         <button
           onClick={(e) => { e.stopPropagation(); onRemove() }}
-          className='absolute -top-1.5 -left-1.5 z-10 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors'
+          className='absolute top-2 left-1/2 -translate-x-1/2 z-10 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors'
           aria-label={`Remove ${block.definition?.label ?? block.blockType}`}
         >
           <X className='w-3.5 h-3.5 text-white' />
         </button>
       )}
 
-      {/* Header: label + status badge */}
-      <div className='flex items-center justify-between mb-auto'>
-        <p className={cn(
-          'text-xs font-bold tracking-wide uppercase truncate',
-          isDark ? colors.iconText.dark : colors.iconText.light,
-        )}>
-          {block.definition?.label ?? block.blockType}
-        </p>
-
+      {/* Content — absolutely positioned + centered so it never affects hex size */}
+      <div className='absolute inset-0 z-[1] flex flex-col items-center justify-center text-center overflow-hidden px-[20%] py-[18%]'>
+        {/* Status badge */}
         {!isEditing && (
-          <div className='flex-shrink-0 ml-1.5'>
+          <div className='flex-shrink-0'>
             {!hasRoute ? (
               <span className={cn(
-                'text-[8px] font-semibold px-1.5 py-0.5 rounded-full',
+                'text-[7px] font-semibold px-1.5 py-0.5 rounded-full',
                 isDark ? 'bg-white/10 text-gray-500' : 'bg-gray-100 text-gray-400'
               )}>
                 SOON
@@ -139,64 +148,59 @@ function BlockTile({ block, index, isEditing, onRemove, onOpen }: BlockTileProps
             ) : (
               <div
                 className={cn(
-                  'w-2.5 h-2.5 rounded-full [animation:status-pulse_2s_ease-in-out_infinite]',
+                  'w-2 h-2 rounded-full mx-auto [animation:status-pulse_2s_ease-in-out_infinite]',
                   colors.badgeColor,
                 )}
-                style={{ color: colors.glowColor }}
               />
             )}
           </div>
         )}
-      </div>
 
-      {/* Center: styled placeholder illustration */}
-      <div className='flex-1 flex items-center justify-center'>
-        <div data-atropos-offset='3'>
+        {/* Illustration — fixed size, never grows */}
+        <div className='flex-shrink-0 my-1 [&_svg]:w-10 [&_svg]:h-10' data-atropos-offset='3'>
           <Illustration
             accentText={isDark ? colors.iconText.dark : colors.iconText.light}
             isDark={isDark}
           />
         </div>
-      </div>
 
-      {/* Bottom: description teaser */}
-      {block.definition?.description && (
+        {/* Label — single line, truncate if long */}
         <p className={cn(
-          'text-[10px] leading-snug line-clamp-2 mt-auto',
-          isDark ? 'text-gray-500' : 'text-gray-400',
+          'flex-shrink-0 text-[9px] font-bold tracking-wide uppercase leading-tight truncate w-full',
+          isDark ? colors.iconText.dark : colors.iconText.light,
         )}>
-          {block.definition.description}
+          {block.definition?.label ?? block.blockType}
         </p>
-      )}
 
-      {/* Subtle gradient overlay at bottom for depth */}
-      <div className={cn(
-        'absolute inset-x-0 bottom-0 h-12 rounded-b-2xl pointer-events-none',
-        isDark
-          ? 'bg-gradient-to-t from-black/20 to-transparent'
-          : 'bg-gradient-to-t from-white/30 to-transparent',
-      )} />
+        {/* Description — clamp to 2 lines max */}
+        {block.definition?.description && (
+          <p className={cn(
+            'flex-shrink-0 text-[7px] leading-tight line-clamp-2 mt-0.5 w-full',
+            isDark ? 'text-gray-500' : 'text-gray-400',
+          )}>
+            {block.definition.description}
+          </p>
+        )}
+      </div>
     </div>
   )
 
-  // Sortable wrapper (always needed for dnd-kit)
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
-        'aspect-square',
+        'w-full h-full',
         !isEditing && hasRoute && 'cursor-pointer',
       )}
       onClick={handleClick}
       {...attributes}
       {...listeners}
     >
-      {/* Atropos 3D tilt — only in normal mode, not during edit/drag */}
       {!isEditing && !isDragging ? (
         <Atropos
-          className='h-full'
-          innerClassName='h-full'
+          className='w-full h-full'
+          innerClassName='w-full h-full'
           rotateXMax={8}
           rotateYMax={8}
           shadow={false}
@@ -208,6 +212,76 @@ function BlockTile({ block, index, isEditing, onRemove, onOpen }: BlockTileProps
       ) : (
         tileContent
       )}
+    </div>
+  )
+}
+
+// ── Honeycomb Grid Layout ─────────────────────────────────────────────────────
+// Splits blocks into alternating rows of 3 (odd) and 2 (even), offset to
+// interlock like a real honeycomb. Negative margin-top creates the overlap.
+
+const COLS_ODD = 3
+const COLS_EVEN = 2
+
+function HoneycombGrid({
+  blocks,
+  isEditing,
+  walletAddress,
+  removeBlock,
+  setCurrentPage,
+}: {
+  blocks: InstalledBlock[]
+  isEditing: boolean
+  walletAddress: string | null
+  removeBlock: (id: string, wallet: string) => void
+  setCurrentPage: (page: PageType) => void
+}) {
+  // Distribute blocks into honeycomb rows: 3, 2, 3, 2, ...
+  const rows: InstalledBlock[][] = []
+  let cursor = 0
+  let isOddRow = true
+  while (cursor < blocks.length) {
+    const cols = isOddRow ? COLS_ODD : COLS_EVEN
+    rows.push(blocks.slice(cursor, cursor + cols))
+    cursor += cols
+    isOddRow = !isOddRow
+  }
+
+  // Track absolute index across all rows for the jiggle animation alternation
+  let globalIndex = 0
+
+  return (
+    <div className='flex flex-col items-center'>
+      {rows.map((row, rowIdx) => {
+        return (
+          <div
+            key={rowIdx}
+            className='flex justify-center'
+            style={{
+              gap: '6px',
+              marginTop: rowIdx === 0 ? 0 : '-12px',
+            }}
+          >
+            {row.map((block) => {
+              const idx = globalIndex++
+              return (
+                <div key={block.id} className='w-[170px] h-[195px] sm:w-[190px] sm:h-[218px] flex-shrink-0'>
+                  <BlockTile
+                    block={block}
+                    index={idx}
+                    isEditing={isEditing}
+                    onRemove={() => walletAddress && removeBlock(block.id, walletAddress)}
+                    onOpen={block.definition?.pageRoute
+                      ? () => setCurrentPage(block.definition!.pageRoute as PageType)
+                      : null
+                    }
+                  />
+                </div>
+              )
+            })}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -728,21 +802,13 @@ export default function CandidateHub() {
                 items={installedBlocks.map((b) => b.id)}
                 strategy={rectSortingStrategy}
               >
-                <div className='grid grid-cols-2 gap-4'>
-                  {installedBlocks.map((block, idx) => (
-                    <BlockTile
-                      key={block.id}
-                      block={block}
-                      index={idx}
-                      isEditing={isEditing}
-                      onRemove={() => walletAddress && removeBlock(block.id, walletAddress)}
-                      onOpen={block.definition?.pageRoute
-                        ? () => setCurrentPage(block.definition!.pageRoute as PageType)
-                        : null
-                      }
-                    />
-                  ))}
-                </div>
+                <HoneycombGrid
+                  blocks={installedBlocks}
+                  isEditing={isEditing}
+                  walletAddress={walletAddress}
+                  removeBlock={removeBlock}
+                  setCurrentPage={setCurrentPage}
+                />
               </SortableContext>
             </DndContext>
           )}

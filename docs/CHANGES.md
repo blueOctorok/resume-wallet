@@ -4,6 +4,21 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Honeycomb Block Grid** (March 13, 2026)
+
+### What changed
+Replaced the 2-column CSS Grid "My Blocks" layout with a honeycomb/hex layout. Blocks are now hexagon-shaped using `clip-path: polygon(...)` and arranged in alternating rows of 3 and 2 that interlock with negative vertical margins, just like a real honeycomb.
+
+### Files modified
+- `src/components/hub/CandidateHub.tsx` — `BlockTile` now renders as a hex via clip-path instead of a rounded rectangle. New `HoneycombGrid` component distributes blocks into alternating 3/2 rows with overlap. Hover glow uses `drop-shadow` (respects clip-path) instead of `box-shadow`. All existing functionality preserved: Atropos 3D tilt, drag-and-drop reorder, jiggle edit mode, remove button, status badges, illustrations, block colors.
+
+### Technical notes
+- CSS `clip-path` is used instead of the old SCSS triple-rotation hex technique — cleaner, no overflow hacks needed
+- `box-shadow` doesn't respect clip-path, so hover glow was migrated to CSS `filter: drop-shadow()`
+- Hex border is achieved via two nested clip-path layers with a 2px inset gap
+
+---
+
 ## **Block Development Cursor Rule** (March 13, 2026)
 
 ### What changed
