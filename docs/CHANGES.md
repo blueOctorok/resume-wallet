@@ -4,6 +4,51 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Block Hive — Radial Honeycomb Layout** (March 13, 2026)
+
+### What changed
+Renamed "My Blocks" to "Block Hive" and replaced the linear row-based honeycomb grid with a radial hive pattern. First block sits at center, subsequent blocks spiral outward in pairs: top-left/top-right, middle-left/middle-right, bottom-left/bottom-right. Max 7 blocks per page; 8+ blocks are paginated with chevron navigation and page dots.
+
+### Files modified
+- `src/components/hub/CandidateHub.tsx` — Rewrote `HoneycombGrid` to use absolute positioning with pre-calculated slot offsets from center. Slot positions computed from hex tile dimensions (`hiveSlotOffsets()`). Added `page` state with pagination UI (chevrons + dots). Section title changed to "Block Hive". Page auto-clamps when blocks are removed.
+
+### Technical notes
+- Slot offsets use `colStride` (hexW + 6px gap) and `rowStride` (hexH × 0.78 for hex interlock) to produce a natural honeycomb spiral
+- Container is sized to exactly fit 3 columns × 3 rows, preventing overflow or extra whitespace
+- `SLOTS_PER_PAGE = 7` — one full hive ring around a center hex
+- Viewport-responsive: listens to resize events to switch between 170×195 (mobile) and 190×218 (sm+) hex dimensions
+- Drag-and-drop reordering (dnd-kit) still works — reordering changes array position which maps to slot position
+
+---
+
+## **Landing Page Redesign** (March 13, 2026)
+
+### What changed
+Complete rewrite of `HomePage.tsx` — replaced the generic indigo-themed template with a cinematic, scroll-driven landing page that showcases StormChain's composable block architecture. Headline updated from placeholder to "Fill it once. Prove it forever." — captures the core value of one-and-done credentialing. Hero now features a glassmorphic Career Card mockup showing profile completeness, verified badges, contact, work history, and QR code, flanked by floating hex block tiles. STORM token section added with whitepaper link (renders `StormChainView` inline with "Back to Home" — no login required). Problem section retargeted to credential/paperwork pain rather than generic hiring complaints.
+
+### Sections (6 total, single-scroll)
+1. **Hero** — "We Make Hard-to-Get Jobs Easy" headline, teal gradient accent, two CTAs (Get Started + See How It Works), floating hex block tiles using real block colors from `block-registry.ts`, trust bar
+2. **The Problem** — "Hiring is broken" with three punchy pain-point statements, scroll-reveal fade-in
+3. **The Solution** — "Your career, assembled from blocks" with showcase hex grid (6 blocks), profession callouts for Drivers / Developers / Everyone in glass cards
+4. **How It Works** — Three numbered glass cards: sign up, install blocks, share Career Card
+5. **For Employers & Companies** — Glass card with feature pills, note about company-specific blocks
+6. **Bottom CTA** — "Ready to build your career?" with Get Started button and Whitepaper link
+
+### Files modified
+- `src/components/HomePage.tsx` — Full rewrite. Same interface (`isAuthenticated`, `onGetStarted`), new visual design
+
+### Technical notes
+- Hex tiles reuse `getBlockColor()` from `block-registry.ts` for authentic block accent colors — no color duplication
+- Scroll-reveal powered by Intersection Observer + CSS transitions (no new dependencies)
+- Glassmorphic cards with `backdrop-blur-md` + `bg-white/[0.04]` matching the hub aesthetic
+- Hero hex tiles use `@keyframes hex-float` for gentle bob animation with staggered delays
+- `styled-jsx` for scoped CSS animations (built into Next.js)
+- Full dark/light theme support via `useTheme()`
+- Responsive: hex tiles and grid collapse gracefully on mobile
+- Zero new npm dependencies
+
+---
+
 ## **Honeycomb Block Grid** (March 13, 2026)
 
 ### What changed

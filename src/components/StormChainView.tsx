@@ -19,16 +19,17 @@ import BackToHubButton from '@/components/ui/BackToHubButton'
 
 interface StormChainViewProps {
   onBack: () => void
+  backLabel?: string
 }
 
-export default function StormChainView({ onBack }: StormChainViewProps) {
+export default function StormChainView({ onBack, backLabel }: StormChainViewProps) {
   const { isDark } = useTheme()
 
   return (
     <div className='max-w-4xl mx-auto'>
       {/* Back Button */}
       <div className='mb-6'>
-        <BackToHubButton onClick={onBack} />
+        <BackToHubButton onClick={onBack} label={backLabel} />
       </div>
 
       {/* Hero Header */}

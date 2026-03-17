@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useCallback, useState } from 'react'
-import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink } from 'lucide-react'
+import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore } from '@/stores'
@@ -217,11 +217,55 @@ function BlockTile({ block, index, isEditing, onRemove, onOpen }: BlockTileProps
 }
 
 // ── Honeycomb Grid Layout ─────────────────────────────────────────────────────
-// Splits blocks into alternating rows of 3 (odd) and 2 (even), offset to
-// interlock like a real honeycomb. Negative margin-top creates the overlap.
+// ── Block Hive layout ────────────────────────────────────────────────────────
+// Radial honeycomb: slot 0 = center (larger), slots 1–6 spiral around it.
+// Max 7 per page; 8+ blocks get paginated.
+//
+// Two hex sizes: the center hex is bigger to create visual hierarchy.
+// Ring hexes are spaced so edges never overlap — positions are calculated
+// from the midpoint between center and ring hex radii plus a gap.
 
-const COLS_ODD = 3
-const COLS_EVEN = 2
+const SLOTS_PER_PAGE = 7
+const HIVE_GAP = 10 // px between hex edges
+
+// Hex tile dimensions — three tiers: phone (<400), tablet (400–639), desktop (640+)
+// Center hex is always larger than ring hexes to create visual hierarchy.
+const CENTER_W_XS = 120; const CENTER_H_XS = 138
+const CENTER_W_SM = 190; const CENTER_H_SM = 218
+const CENTER_W_LG = 220; const CENTER_H_LG = 253
+const RING_W_XS   = 90;  const RING_H_XS   = 104
+const RING_W_SM   = 150; const RING_H_SM   = 172
+const RING_W_LG   = 170; const RING_H_LG   = 195
+
+interface HiveMetrics {
+  centerW: number; centerH: number
+  ringW: number;   ringH: number
+}
+
+// Returns [left, top] offset from container center for each of the 7 slots.
+// Offsets point to the CENTER of each hex — the render loop subtracts half-size.
+//
+// Ring distance is measured edge-to-edge: half the center hex + gap + half the
+// ring hex, in both horizontal and vertical directions. The vertical axis uses
+// the pointy-top hex ratio (≈ 0.865 of height = tip-to-center).
+function hiveSlotOffsets(m: HiveMetrics): [number, number][] {
+  // Horizontal distance from center of center-hex to center of a ring-hex
+  const dx = m.centerW / 2 + HIVE_GAP + m.ringW / 2
+  // Vertical distance (hex pointy-top geometry: center-to-tip ≈ h/2)
+  const dy = m.centerH / 2 + HIVE_GAP + m.ringH / 2
+  // Half-horizontal for the staggered top/bottom pairs
+  const halfDx = dx * 0.52
+
+  return [
+    [0, 0],                         // 0: center
+    [-halfDx, -dy * 0.92],         // 1: top-left
+    [halfDx,  -dy * 0.92],         // 2: top-right
+    [-dx,      0],                  // 3: middle-left
+    [dx,       0],                  // 4: middle-right
+    [-halfDx,  dy * 0.92],         // 5: bottom-left
+    [halfDx,   dy * 0.92],         // 6: bottom-right
+  ]
+}
 
 function HoneycombGrid({
   blocks,
@@ -236,52 +280,140 @@ function HoneycombGrid({
   removeBlock: (id: string, wallet: string) => void
   setCurrentPage: (page: PageType) => void
 }) {
-  // Distribute blocks into honeycomb rows: 3, 2, 3, 2, ...
-  const rows: InstalledBlock[][] = []
-  let cursor = 0
-  let isOddRow = true
-  while (cursor < blocks.length) {
-    const cols = isOddRow ? COLS_ODD : COLS_EVEN
-    rows.push(blocks.slice(cursor, cursor + cols))
-    cursor += cols
-    isOddRow = !isOddRow
-  }
+  const [page, setPage] = useState(0)
+  // 'xs' = phone (<400px), 'sm' = tablet (400–639), 'lg' = desktop (640+)
+  const [sizeClass, setSizeClass] = useState<'xs' | 'sm' | 'lg'>('lg')
 
-  // Track absolute index across all rows for the jiggle animation alternation
-  let globalIndex = 0
+  useEffect(() => {
+    const check = () => {
+      const w = window.innerWidth
+      setSizeClass(w < 400 ? 'xs' : w < 640 ? 'sm' : 'lg')
+    }
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  const metrics: HiveMetrics = sizeClass === 'xs'
+    ? { centerW: CENTER_W_XS, centerH: CENTER_H_XS, ringW: RING_W_XS, ringH: RING_H_XS }
+    : sizeClass === 'sm'
+      ? { centerW: CENTER_W_SM, centerH: CENTER_H_SM, ringW: RING_W_SM, ringH: RING_H_SM }
+      : { centerW: CENTER_W_LG, centerH: CENTER_H_LG, ringW: RING_W_LG, ringH: RING_H_LG }
+
+  const slots = hiveSlotOffsets(metrics)
+
+  const totalPages = Math.max(1, Math.ceil(blocks.length / SLOTS_PER_PAGE))
+
+  useEffect(() => {
+    if (page >= totalPages) setPage(Math.max(0, totalPages - 1))
+  }, [totalPages, page])
+
+  const pageBlocks = blocks.slice(page * SLOTS_PER_PAGE, (page + 1) * SLOTS_PER_PAGE)
+
+  // Container sized to fit the outermost hex edges.
+  // Horizontal: middle-left/right extend dx from center, plus half a ring hex on each side.
+  const dx = metrics.centerW / 2 + HIVE_GAP + metrics.ringW / 2
+  const containerW = 2 * (dx + metrics.ringW / 2) + 16 // 16px breathing room
+  // Vertical: top/bottom extend dy*0.92 from center, plus half a ring hex on each side.
+  const dy = (metrics.centerH / 2 + HIVE_GAP + metrics.ringH / 2) * 0.92
+  const containerH = 2 * (dy + metrics.ringH / 2) + 16
 
   return (
     <div className='flex flex-col items-center'>
-      {rows.map((row, rowIdx) => {
-        return (
-          <div
-            key={rowIdx}
-            className='flex justify-center'
-            style={{
-              gap: '6px',
-              marginTop: rowIdx === 0 ? 0 : '-12px',
-            }}
+      <div className='relative' style={{ width: containerW, height: containerH }}>
+        {pageBlocks.map((block, slotIdx) => {
+          const isCenter = slotIdx === 0
+          const w = isCenter ? metrics.centerW : metrics.ringW
+          const h = isCenter ? metrics.centerH : metrics.ringH
+          const [dx, dy] = slots[slotIdx]
+          const left = containerW / 2 - w / 2 + dx
+          const top = containerH / 2 - h / 2 + dy
+
+          // On XS screens, hexes are smaller than the content was designed for.
+          // Scale the tile visually to fit, keeping layout position unchanged.
+          const scaleRatio = sizeClass === 'xs'
+            ? (isCenter ? metrics.centerW / CENTER_W_SM : metrics.ringW / RING_W_SM)
+            : 1
+
+          return (
+            <div
+              key={block.id}
+              className='absolute'
+              style={{
+                width: w,
+                height: h,
+                left,
+                top,
+                transition: 'left 0.3s ease, top 0.3s ease',
+                zIndex: isCenter ? 2 : 1,
+              }}
+            >
+              <div className='w-full h-full' style={scaleRatio < 1 ? {
+                width: isCenter ? CENTER_W_SM : RING_W_SM,
+                height: isCenter ? CENTER_H_SM : RING_H_SM,
+                transform: `scale(${scaleRatio})`,
+                transformOrigin: 'top left',
+              } : undefined}>
+                <BlockTile
+                  block={block}
+                  index={page * SLOTS_PER_PAGE + slotIdx}
+                  isEditing={isEditing}
+                  onRemove={() => walletAddress && removeBlock(block.id, walletAddress)}
+                  onOpen={block.definition?.pageRoute
+                    ? () => setCurrentPage(block.definition!.pageRoute as PageType)
+                    : null
+                  }
+                />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className='flex items-center gap-3 mt-4'>
+          <button
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+            className={cn(
+              'p-1.5 rounded-lg transition-colors',
+              page === 0
+                ? 'text-gray-600 cursor-not-allowed'
+                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+            )}
           >
-            {row.map((block) => {
-              const idx = globalIndex++
-              return (
-                <div key={block.id} className='w-[170px] h-[195px] sm:w-[190px] sm:h-[218px] flex-shrink-0'>
-                  <BlockTile
-                    block={block}
-                    index={idx}
-                    isEditing={isEditing}
-                    onRemove={() => walletAddress && removeBlock(block.id, walletAddress)}
-                    onOpen={block.definition?.pageRoute
-                      ? () => setCurrentPage(block.definition!.pageRoute as PageType)
-                      : null
-                    }
-                  />
-                </div>
-              )
-            })}
+            <ChevronLeft className='w-5 h-5' />
+          </button>
+
+          {/* Page dots */}
+          <div className='flex gap-1.5'>
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setPage(i)}
+                className={cn(
+                  'w-2 h-2 rounded-full transition-colors',
+                  i === page ? 'bg-teal-400' : 'bg-gray-600 hover:bg-gray-500'
+                )}
+              />
+            ))}
           </div>
-        )
-      })}
+
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={page === totalPages - 1}
+            className={cn(
+              'p-1.5 rounded-lg transition-colors',
+              page === totalPages - 1
+                ? 'text-gray-600 cursor-not-allowed'
+                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+            )}
+          >
+            <ChevronRight className='w-5 h-5' />
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -742,11 +874,11 @@ export default function CandidateHub() {
         <AskAvaButton label='Ask AvA — What should I do next?' />
         <VerificationBar />
 
-        {/* ── Block Grid (iPhone home screen) ── */}
+        {/* ── Block Hive ── */}
         <div>
           <div className='flex items-center justify-between mb-4'>
             <h2 className={cn('text-lg font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
-              My Blocks
+              Block Hive
             </h2>
             <div className='flex items-center gap-2'>
               {/* Edit / Done toggle — desktop entry point for jiggle mode */}

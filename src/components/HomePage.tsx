@@ -1,669 +1,700 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
-  Shield,
-  FileCheck,
-  Sparkles,
   ArrowRight,
-  Zap,
-  Briefcase,
   CreditCard,
-  Code,
+  Shield,
+  Zap,
+  Sparkles,
   Truck,
+  Code2,
+  Wrench,
+  FileText,
+  ClipboardList,
+  Car,
+  Globe,
+  Github,
   Users,
-  Star,
+  Search,
+  FileCheck,
+  Building2,
+  Coins,
+  BookOpen,
+  TrendingUp,
+  Gift,
+  Briefcase,
+  QrCode,
+  CheckCircle,
+  Mail,
+  MapPin,
 } from 'lucide-react'
+import { getBlockColor } from '@/lib/block-registry'
+import StormChainView from '@/components/StormChainView'
 
 interface HomePageProps {
   isAuthenticated: boolean
   onGetStarted: () => void
 }
 
-export default function HomePage({
-  isAuthenticated,
-  onGetStarted,
-}: HomePageProps) {
-  const { theme } = useTheme()
+// ── Hex clip-path (same constant used in the hub) ────────────────────────────
+const HEX_CLIP = 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'
+
+// ── Hive showcase blocks — used in hero and section 3 ────────────────────────
+const HIVE_BLOCKS = [
+  { id: 'driver-dot-application', icon: ClipboardList, label: 'DOT App' },      // center (hero)
+  { id: 'driver-resume',          icon: FileText,      label: 'Resume' },
+  { id: 'driver-mvr',            icon: Car,            label: 'MVR' },
+  { id: 'general-skills',        icon: Wrench,         label: 'Skills' },
+  { id: 'developer-portfolio',   icon: Globe,          label: 'Portfolio' },
+  { id: 'developer-github',      icon: Github,         label: 'GitHub' },
+  { id: 'general-work-history',  icon: Briefcase,      label: 'Work History' },
+]
+
+// ── Scroll-reveal hook ───────────────────────────────────────────────────────
+// Elements with data-reveal fade+slide in when they enter the viewport.
+// Accepts a `reattachKey` — when it changes (e.g. returning from whitepaper),
+// the effect re-runs and observes the fresh DOM nodes.
+function useScrollReveal(reattachKey: unknown) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('revealed')
+            observer.unobserve(entry.target)
+          }
+        })
+      },
+      { threshold: 0.15 }
+    )
+
+    container.querySelectorAll('[data-reveal]').forEach((el) => observer.observe(el))
+    return () => observer.disconnect()
+  }, [reattachKey])
+
+  return containerRef
+}
+
+// ── Decorative hive showcase ─────────────────────────────────────────────────
+// Same radial layout as the in-app Block Hive: center hex is larger, 6 ring
+// hexes spiral around it. Used in the hero and section 3 of the landing page.
+
+const HIVE_GAP = 8
+
+interface ShowcaseHiveProps {
+  blocks: typeof HIVE_BLOCKS
+  isDark: boolean
+  centerW: number; centerH: number
+  ringW: number;   ringH: number
+}
+
+function hiveShowcaseOffsets(centerW: number, centerH: number, ringW: number, ringH: number): [number, number][] {
+  const dx = centerW / 2 + HIVE_GAP + ringW / 2
+  const dy = (centerH / 2 + HIVE_GAP + ringH / 2) * 0.92
+  const halfDx = dx * 0.52
+  return [
+    [0, 0],
+    [-halfDx, -dy],
+    [halfDx,  -dy],
+    [-dx,      0],
+    [dx,       0],
+    [-halfDx,  dy],
+    [halfDx,   dy],
+  ]
+}
+
+function HiveShowcase({ blocks, isDark, centerW, centerH, ringW, ringH }: ShowcaseHiveProps) {
+  const slots = hiveShowcaseOffsets(centerW, centerH, ringW, ringH)
+  const dx = centerW / 2 + HIVE_GAP + ringW / 2
+  const dy = (centerH / 2 + HIVE_GAP + ringH / 2) * 0.92
+  const containerW = 2 * (dx + ringW / 2) + 16
+  const containerH = 2 * (dy + ringH / 2) + 16
 
   return (
-    <div className='max-w-6xl mx-auto px-4 sm:px-6 lg:px-8'>
-      {/* Hero Section */}
-      <div className='text-center py-12 sm:py-16 md:py-20'>
-        <div className='mb-8'>
-          <div className='inline-block'>
-            <div
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6 ${
-                theme === 'dark'
-                  ? 'bg-indigo-600/10 text-indigo-500 border border-indigo-600/30'
-                  : 'bg-indigo-600/10 text-indigo-700 border border-indigo-600/30'
-              }`}
-            >
+    <div className='relative mx-auto' style={{ width: containerW, height: containerH }}>
+      {blocks.slice(0, 7).map((block, i) => {
+        const isCenter = i === 0
+        const w = isCenter ? centerW : ringW
+        const h = isCenter ? centerH : ringH
+        const [offX, offY] = slots[i]
+        const left = containerW / 2 - w / 2 + offX
+        const top = containerH / 2 - h / 2 + offY
+        const colors = getBlockColor(block.id)
+        const delay = i * 0.3
+
+        return (
+          <div
+            key={block.id}
+            className='absolute'
+            style={{
+              width: w, height: h, left, top,
+              animation: `hex-float 4s ease-in-out ${delay}s infinite alternate`,
+              zIndex: isCenter ? 2 : 1,
+            }}
+          >
+            <div className='w-full h-full relative' style={{ clipPath: HEX_CLIP }}>
+              <div
+                className={`absolute inset-0 ${isDark ? 'bg-white/[0.06]' : 'bg-white/40'}`}
+                style={{ clipPath: HEX_CLIP }}
+              />
+              <div
+                className={`absolute inset-[2px] backdrop-blur-md ${isDark ? 'bg-gray-900/70' : 'bg-white/70'}`}
+                style={{ clipPath: HEX_CLIP }}
+              />
+              <div className='absolute inset-0 flex flex-col items-center justify-center z-[1] px-[15%]'>
+                <block.icon className={`mb-1 ${isCenter ? 'w-9 h-9 sm:w-11 sm:h-11' : 'w-6 h-6 sm:w-8 sm:h-8'} ${
+                  isDark ? colors.iconText.dark : colors.iconText.light
+                }`} />
+                <span className={`font-bold uppercase tracking-wide text-center leading-tight ${
+                  isCenter ? 'text-[10px] sm:text-xs' : 'text-[8px] sm:text-[10px]'
+                } ${isDark ? colors.iconText.dark : colors.iconText.light}`}>
+                  {block.label}
+                </span>
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Glass card wrapper ───────────────────────────────────────────────────────
+function GlassCard({ children, className = '', isDark }: {
+  children: React.ReactNode
+  className?: string
+  isDark: boolean
+}) {
+  return (
+    <div className={`rounded-2xl border backdrop-blur-md transition-all duration-300 ${
+      isDark
+        ? 'bg-white/[0.04] border-white/[0.08]'
+        : 'bg-white/60 border-white/40'
+    } ${className}`}>
+      {children}
+    </div>
+  )
+}
+
+// ── Career Card mockup ───────────────────────────────────────────────────────
+// Pure visual showing what a completed Career Card looks like.
+function CareerCardMockup({ isDark }: { isDark: boolean }) {
+  const cardBg = isDark ? 'bg-gray-900/80 border-white/[0.08]' : 'bg-white/80 border-gray-200'
+  const subtleBg = isDark ? 'bg-gray-800/60' : 'bg-gray-100/80'
+  const textPrimary = isDark ? 'text-white' : 'text-gray-900'
+  const textMuted = isDark ? 'text-gray-400' : 'text-gray-500'
+
+  return (
+    <div
+      className={`relative w-[300px] sm:w-[360px] rounded-2xl border backdrop-blur-md p-5 sm:p-6 shadow-2xl ${cardBg}`}
+      style={{ animation: 'card-float 6s ease-in-out infinite alternate' }}
+    >
+      <div className='absolute -inset-[1px] rounded-2xl bg-gradient-to-br from-teal-400/20 via-transparent to-cyan-400/20 -z-10 blur-sm' />
+
+      {/* Header */}
+      <div className='flex items-center gap-3 mb-4'>
+        <div className='w-12 h-12 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white font-bold text-lg'>
+          JD
+        </div>
+        <div>
+          <p className={`font-bold text-sm ${textPrimary}`}>Jane Doe</p>
+          <p className={`text-xs ${textMuted}`}>CDL-A Driver · 8 years exp.</p>
+        </div>
+        <div className='ml-auto'>
+          <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${subtleBg}`}>
+            <QrCode className={`w-5 h-5 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
+          </div>
+        </div>
+      </div>
+
+      {/* Score bar */}
+      <div className={`rounded-lg p-2.5 mb-4 ${subtleBg}`}>
+        <div className='flex items-center justify-between mb-1.5'>
+          <span className={`text-xs font-medium ${textPrimary}`}>Profile Completeness</span>
+          <span className='text-xs font-bold text-green-400'>92%</span>
+        </div>
+        <div className={`h-1.5 rounded-full overflow-hidden ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+          <div className='h-full w-[92%] rounded-full bg-gradient-to-r from-teal-400 to-green-400' />
+        </div>
+      </div>
+
+      {/* Credential badges */}
+      <div className='flex flex-wrap gap-1.5 mb-4'>
+        {['Resume', 'DOT App', 'MVR', 'Skills'].map((label) => (
+          <span key={label} className='flex items-center gap-1 px-2 py-0.5 rounded-full'>
+            <CheckCircle className='w-3 h-3 text-green-400' />
+            <span className={`text-[10px] font-semibold ${textPrimary}`}>{label}</span>
+          </span>
+        ))}
+      </div>
+
+      {/* Mock sections */}
+      <div className='space-y-2.5'>
+        <div className={`rounded-lg p-2.5 ${subtleBg}`}>
+          <div className='flex items-center gap-4'>
+            <div className='flex items-center gap-1.5'>
+              <Mail className={`w-3 h-3 ${textMuted}`} />
+              <span className={`text-[10px] ${textMuted}`}>jane@email.com</span>
+            </div>
+            <div className='flex items-center gap-1.5'>
+              <MapPin className={`w-3 h-3 ${textMuted}`} />
+              <span className={`text-[10px] ${textMuted}`}>Dallas, TX</span>
+            </div>
+          </div>
+        </div>
+
+        <div className={`rounded-lg p-2.5 ${subtleBg}`}>
+          <p className={`text-[10px] font-semibold mb-1 ${textPrimary}`}>Work History</p>
+          <div className='flex items-center gap-2'>
+            <Briefcase className={`w-3 h-3 ${textMuted}`} />
+            <span className={`text-[10px] ${textMuted}`}>Werner Enterprises · 2019 – Present</span>
+            <CheckCircle className='w-3 h-3 text-green-400 ml-auto' />
+          </div>
+        </div>
+
+        <div className='flex items-center justify-center gap-1.5 pt-1'>
+          <Shield className={`w-3 h-3 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
+          <span className={`text-[10px] font-medium ${isDark ? 'text-teal-400' : 'text-teal-600'}`}>
+            Verified on StormChain
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── HomePage ─────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProps) {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  const [showWhitepaper, setShowWhitepaper] = useState(false)
+  const revealRef = useScrollReveal(showWhitepaper)
+
+  const openWhitepaper = () => {
+    setShowWhitepaper(true)
+    window.scrollTo({ top: 0 })
+  }
+  const closeWhitepaper = () => {
+    setShowWhitepaper(false)
+    window.scrollTo({ top: 0 })
+  }
+
+  if (showWhitepaper) {
+    return <StormChainView onBack={closeWhitepaper} backLabel='Back to Home' />
+  }
+
+  return (
+    <div ref={revealRef} className='max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 overflow-hidden'>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          SECTION 1 — Hero
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <section className='pt-12 sm:pt-20 pb-16 sm:pb-24'>
+        <div className='text-center'>
+          {/* Badge */}
+          <div className='mb-6'>
+            <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border ${
+              isDark
+                ? 'bg-teal-500/10 text-teal-400 border-teal-500/30'
+                : 'bg-teal-50 text-teal-700 border-teal-300/50'
+            }`}>
               <Sparkles className='w-4 h-4' />
-              <span>Blockchain-Verified Career Platform</span>
+              Composable Career Platform
+            </span>
+          </div>
+
+          {/* Headline */}
+          <h1 className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight ${
+            isDark ? 'text-white' : 'text-gray-900'
+          }`}>
+            Fill it once.
+            <br />
+            <span className='bg-gradient-to-r from-teal-400 via-cyan-400 to-teal-500 bg-clip-text text-transparent'>
+              Prove it forever.
+            </span>
+          </h1>
+
+          {/* Subhead */}
+          <p className={`text-lg sm:text-xl md:text-2xl mb-10 max-w-3xl mx-auto leading-relaxed ${
+            isDark ? 'text-gray-300' : 'text-gray-600'
+          }`}>
+            Complex credentials, compliance paperwork, professional records — done once, verified on-chain,
+            <br className='hidden sm:block' />
+            and packaged into one beautiful Career Card you can share with a QR code.
+          </p>
+
+          {/* CTAs */}
+          <div className='flex flex-col sm:flex-row gap-4 justify-center items-center mb-14'>
+            <button
+              onClick={onGetStarted}
+              className='group px-8 py-4 text-lg font-semibold rounded-xl transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 flex items-center gap-2 bg-teal-500 text-white hover:bg-teal-400'
+            >
+              <span>{isAuthenticated ? 'Go to Dashboard' : 'Get Started'}</span>
+              <ArrowRight className='w-5 h-5 group-hover:translate-x-1 transition-transform' />
+            </button>
+
+            <a
+              href='#how-it-works'
+              className={`px-8 py-4 text-lg font-semibold rounded-xl border-2 transition-all duration-300 hover:scale-105 backdrop-blur-sm ${
+                isDark
+                  ? 'border-white/20 text-gray-200 hover:bg-white/[0.06]'
+                  : 'border-gray-300 text-gray-700 hover:bg-white/50'
+              }`}
+            >
+              See How It Works
+            </a>
+          </div>
+        </div>
+
+        {/* Hero visual — Career Card mockup */}
+        <div className='flex justify-center mb-12'>
+          <CareerCardMockup isDark={isDark} />
+        </div>
+
+        {/* Trust bar */}
+        <div className='flex flex-wrap justify-center gap-6 sm:gap-10'>
+          {[
+            { icon: CreditCard, text: 'Career Card' },
+            { icon: Shield,     text: 'On-Chain Verified' },
+            { icon: Zap,        text: 'STORM Rewards' },
+            { icon: Sparkles,   text: 'AI-Powered' },
+          ].map((item) => (
+            <div key={item.text} className='flex items-center gap-2'>
+              <item.icon className={`w-4 h-4 ${isDark ? 'text-teal-400/70' : 'text-teal-600/70'}`} />
+              <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {item.text}
+              </span>
             </div>
-          </div>
+          ))}
         </div>
+      </section>
 
-        <h1
-          className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 ${
-            theme === 'dark'
-              ? 'text-white'
-              : 'bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 bg-clip-text text-transparent'
-          }`}
-        >
-          Your Career,
-          <br />
-          <span
-            className={
-              theme === 'dark'
-                ? 'bg-gradient-to-r from-indigo-400 via-indigo-500 to-indigo-700 bg-clip-text text-transparent'
-                : 'bg-gradient-to-r from-indigo-400 via-indigo-600 to-indigo-800 bg-clip-text text-transparent'
-            }
-          >
-            One Verified Card
-          </span>
-        </h1>
-
-        <p
-          className={`text-lg sm:text-xl md:text-2xl mb-8 max-w-3xl mx-auto ${
-            theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-          }`}
-        >
-          Build your Career Card. Apply to jobs instantly. Get verified
-          on-chain.
-          <br className='hidden sm:block' />
-          <span className='font-semibold'>
-            For drivers, developers, and beyond.
-          </span>
-        </p>
-
-        <div className='flex flex-col sm:flex-row gap-4 justify-center items-center mb-12'>
-          <button
-            onClick={onGetStarted}
-            className={`group px-8 py-4 text-lg font-semibold rounded-xl transition-all duration-300 shadow-2xl hover:shadow-3xl hover:scale-105 flex items-center gap-2 ${
-              theme === 'dark'
-                ? 'bg-indigo-600 text-white hover:bg-indigo-600/90'
-                : 'bg-indigo-700 text-white hover:bg-indigo-800'
-            }`}
-          >
-            <span>{isAuthenticated ? 'Go to Dashboard' : 'Get Started'}</span>
-            <ArrowRight className='w-5 h-5 group-hover:translate-x-1 transition-transform' />
-          </button>
-
-          <a
-            href='#how-it-works'
-            className={`px-8 py-4 text-lg font-semibold rounded-xl border-2 transition-all duration-300 hover:scale-105 ${
-              theme === 'dark'
-                ? 'border-indigo-600 text-indigo-500 hover:bg-indigo-600/10'
-                : 'border-indigo-700 text-indigo-700 hover:bg-indigo-600/10'
-            }`}
-          >
-            Learn More
-          </a>
-        </div>
-
-        {/* Trust Indicators */}
-        <div className='flex flex-wrap justify-center gap-6 sm:gap-8 text-sm'>
-          <div className='flex items-center gap-2'>
-            <CreditCard
-              className={`w-5 h-5 ${
-                theme === 'dark' ? 'text-indigo-500' : 'text-indigo-700'
-              }`}
-            />
-            <span
-              className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}
-            >
-              Career Card
-            </span>
-          </div>
-          <div className='flex items-center gap-2'>
-            <Shield
-              className={`w-5 h-5 ${
-                theme === 'dark' ? 'text-indigo-500' : 'text-indigo-700'
-              }`}
-            />
-            <span
-              className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}
-            >
-              Blockchain Verified
-            </span>
-          </div>
-          <div className='flex items-center gap-2'>
-            <Zap
-              className={`w-5 h-5 ${
-                theme === 'dark' ? 'text-indigo-500' : 'text-indigo-700'
-              }`}
-            />
-            <span
-              className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}
-            >
-              StormChain Rewards
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Who It's For Section */}
-      <div className='py-12 sm:py-16'>
+      {/* ═══════════════════════════════════════════════════════════════════════
+          SECTION 2 — The Problem
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <section className='py-16 sm:py-24 max-w-4xl mx-auto'>
         <h2
-          className={`text-3xl sm:text-4xl font-bold text-center mb-4 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          data-reveal
+          className={`reveal-item text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-12 ${
+            isDark ? 'text-white' : 'text-gray-900'
           }`}
         >
-          Built for Professionals
+          Credentials shouldn&apos;t be this hard
         </h2>
-        <p
-          className={`text-center mb-12 max-w-2xl mx-auto ${
-            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-          }`}
-        >
-          Whether you drive trucks or write code, StormChain helps you stand
-          out.
-        </p>
 
-        <div className='grid md:grid-cols-2 gap-8 max-w-4xl mx-auto'>
-          {/* Drivers */}
-          <div
-            className={`p-6 sm:p-8 rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-xl ${
-              theme === 'dark'
-                ? 'bg-gray-800/50 border-indigo-600/30 hover:border-indigo-600/50'
-                : 'bg-white border-indigo-600/30 hover:border-indigo-600/50'
-            }`}
-          >
-            <div
-              className={`w-14 h-14 rounded-xl flex items-center justify-center mb-4 ${
-                theme === 'dark'
-                  ? 'bg-blue-500/20 text-blue-400'
-                  : 'bg-blue-100 text-blue-600'
+        <div className='space-y-8'>
+          {[
+            'The same complex forms, filled out again and again. Every new job, start from scratch.',
+            'Verified records scattered across systems. Employers can\'t find proof, even when it exists.',
+            'Compliance paperwork that nobody wants to digitize — so you\'re stuck with paper and fax machines.',
+          ].map((line, i) => (
+            <p
+              key={i}
+              data-reveal
+              className={`reveal-item text-xl sm:text-2xl md:text-3xl font-light text-center leading-relaxed ${
+                isDark ? 'text-gray-400' : 'text-gray-500'
               }`}
+              style={{ transitionDelay: `${i * 150}ms` }}
             >
-              <Truck className='w-7 h-7' />
-            </div>
-            <h3
-              className={`text-xl font-bold mb-3 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}
-            >
-              Drivers
-            </h3>
-            <ul
-              className={`space-y-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}
-            >
-              <li className='flex items-center gap-2'>
-                <FileCheck className='w-4 h-4 text-green-500' />
-                DOT-compliant applications
-              </li>
-              <li className='flex items-center gap-2'>
-                <FileCheck className='w-4 h-4 text-green-500' />
-                MVR integration
-              </li>
-              <li className='flex items-center gap-2'>
-                <FileCheck className='w-4 h-4 text-green-500' />
-                AI-powered form auto-fill
-              </li>
-              <li className='flex items-center gap-2'>
-                <FileCheck className='w-4 h-4 text-green-500' />
-                Shareable Career Card
-              </li>
-            </ul>
-          </div>
-
-          {/* Developers */}
-          <div
-            className={`p-6 sm:p-8 rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-xl ${
-              theme === 'dark'
-                ? 'bg-gray-800/50 border-indigo-600/30 hover:border-indigo-600/50'
-                : 'bg-white border-indigo-600/30 hover:border-indigo-600/50'
-            }`}
-          >
-            <div
-              className={`w-14 h-14 rounded-xl flex items-center justify-center mb-4 ${
-                theme === 'dark'
-                  ? 'bg-purple-500/20 text-purple-400'
-                  : 'bg-purple-100 text-purple-600'
-              }`}
-            >
-              <Code className='w-7 h-7' />
-            </div>
-            <h3
-              className={`text-xl font-bold mb-3 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}
-            >
-              Software Engineers
-            </h3>
-            <ul
-              className={`space-y-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}
-            >
-              <li className='flex items-center gap-2'>
-                <FileCheck className='w-4 h-4 text-green-500' />
-                GitHub integration
-              </li>
-              <li className='flex items-center gap-2'>
-                <FileCheck className='w-4 h-4 text-green-500' />
-                Portfolio showcase
-              </li>
-              <li className='flex items-center gap-2'>
-                <FileCheck className='w-4 h-4 text-green-500' />
-                Verified work history
-              </li>
-              <li className='flex items-center gap-2'>
-                <FileCheck className='w-4 h-4 text-green-500' />
-                Shareable Career Card
-              </li>
-            </ul>
-          </div>
+              {line}
+            </p>
+          ))}
         </div>
-      </div>
+      </section>
 
-      {/* Features Grid */}
-      <div id='how-it-works' className='py-12 sm:py-16'>
+      {/* ═══════════════════════════════════════════════════════════════════════
+          SECTION 3 — The Solution: Composable Blocks
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <section className='py-16 sm:py-24'>
+        <div data-reveal className='reveal-item text-center mb-12'>
+          <h2 className={`text-3xl sm:text-4xl md:text-5xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            Your career, assembled
+            <br />
+            <span className='bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent'>
+              from blocks
+            </span>
+          </h2>
+          <p className={`text-lg sm:text-xl max-w-2xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            Pick the blocks that fit your profession. Each one adds verified capabilities to your Career Card.
+          </p>
+        </div>
+
+        {/* Hive showcase grid */}
+        <div data-reveal className='reveal-item mb-14'>
+          <HiveShowcase
+            blocks={HIVE_BLOCKS}
+            isDark={isDark}
+            centerW={170} centerH={195}
+            ringW={130}   ringH={150}
+          />
+        </div>
+
+        {/* Profession callouts */}
+        <div className='grid sm:grid-cols-3 gap-4 max-w-4xl mx-auto'>
+          {[
+            {
+              icon: Truck,
+              title: 'Drivers',
+              desc: 'DOT applications, MVR records, CDL credentials',
+              accent: isDark ? 'text-blue-400' : 'text-blue-600',
+            },
+            {
+              icon: Code2,
+              title: 'Developers',
+              desc: 'Portfolio, GitHub activity, project showcase',
+              accent: isDark ? 'text-cyan-400' : 'text-cyan-600',
+            },
+            {
+              icon: Wrench,
+              title: 'Everyone',
+              desc: 'Skills, work history — and more blocks coming',
+              accent: isDark ? 'text-teal-400' : 'text-teal-600',
+            },
+          ].map((item) => (
+            <GlassCard key={item.title} isDark={isDark} className='p-5 text-center'>
+              <item.icon className={`w-6 h-6 mx-auto mb-2 ${item.accent}`} />
+              <h3 className={`text-sm font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {item.title}
+              </h3>
+              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {item.desc}
+              </p>
+            </GlassCard>
+          ))}
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          SECTION 4 — How It Works
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <section id='how-it-works' className='py-16 sm:py-24'>
         <h2
-          className={`text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-12 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          data-reveal
+          className={`reveal-item text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-14 ${
+            isDark ? 'text-white' : 'text-gray-900'
           }`}
         >
           How It Works
         </h2>
 
-        <div className='grid md:grid-cols-3 gap-8'>
-          {/* Step 1 */}
-          <div
-            className={`p-6 sm:p-8 rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-xl ${
-              theme === 'dark'
-                ? 'bg-gray-800/50 border-indigo-600/30 hover:border-indigo-600/50'
-                : 'bg-white border-indigo-600/30 hover:border-indigo-600/50'
-            }`}
-          >
-            <div
-              className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${
-                theme === 'dark'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-indigo-700 text-white'
-              }`}
-            >
-              <span className='text-2xl font-bold'>1</span>
-            </div>
-            <h3
-              className={`text-xl font-bold mb-3 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}
-            >
-              Build Your Profile
-            </h3>
-            <p
-              className={`${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-              }`}
-            >
-              Upload your resume or connect GitHub. Our AI extracts your
-              experience and builds your profile automatically.
-            </p>
-          </div>
-
-          {/* Step 2 */}
-          <div
-            className={`p-6 sm:p-8 rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-xl ${
-              theme === 'dark'
-                ? 'bg-gray-800/50 border-indigo-600/30 hover:border-indigo-600/50'
-                : 'bg-white border-indigo-600/30 hover:border-indigo-600/50'
-            }`}
-          >
-            <div
-              className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${
-                theme === 'dark'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-indigo-700 text-white'
-              }`}
-            >
-              <span className='text-2xl font-bold'>2</span>
-            </div>
-            <h3
-              className={`text-xl font-bold mb-3 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}
-            >
-              Get Your Career Card
-            </h3>
-            <p
-              className={`${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-              }`}
-            >
-              Your credentials become a shareable Career Card with a QR code.
-              Employers can instantly verify your qualifications.
-            </p>
-          </div>
-
-          {/* Step 3 */}
-          <div
-            className={`p-6 sm:p-8 rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-xl ${
-              theme === 'dark'
-                ? 'bg-gray-800/50 border-indigo-600/30 hover:border-indigo-600/50'
-                : 'bg-white border-indigo-600/30 hover:border-indigo-600/50'
-            }`}
-          >
-            <div
-              className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${
-                theme === 'dark'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-indigo-700 text-white'
-              }`}
-            >
-              <span className='text-2xl font-bold'>3</span>
-            </div>
-            <h3
-              className={`text-xl font-bold mb-3 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}
-            >
-              Apply & Earn
-            </h3>
-            <p
-              className={`${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-              }`}
-            >
-              Apply to jobs with one click. Earn StormChain tokens for
-              completing your profile and getting verified.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Career Card Highlight */}
-      <div className='py-12 sm:py-16'>
-        <div
-          className={`rounded-3xl p-8 sm:p-12 ${
-            theme === 'dark'
-              ? 'bg-gradient-to-br from-gray-800/50 to-indigo-600/10 border-2 border-indigo-600/30'
-              : 'bg-gradient-to-br from-indigo-600/10 to-indigo-500/10 border-2 border-indigo-600/30'
-          }`}
-        >
-          <div className='grid md:grid-cols-2 gap-8 items-center'>
-            <div>
-              <div
-                className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium mb-4 ${
-                  theme === 'dark'
-                    ? 'bg-indigo-600/20 text-indigo-500'
-                    : 'bg-indigo-600/20 text-indigo-700'
-                }`}
-              >
-                <Star className='w-4 h-4' />
-                Featured
-              </div>
-              <h2
-                className={`text-3xl sm:text-4xl font-bold mb-4 ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}
-              >
-                Your Career Card
-              </h2>
-              <p
-                className={`text-lg mb-6 ${
-                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                }`}
-              >
-                A single, shareable link that showcases your verified
-                credentials, work history, and skills. Share it anywhere, verify
-                it on-chain.
-              </p>
-              <ul
-                className={`space-y-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}
-              >
-                <li className='flex items-center gap-3'>
-                  <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
-                      theme === 'dark'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-indigo-700 text-white'
-                    }`}
-                  >
-                    ✓
-                  </div>
-                  Scannable QR code for instant access
-                </li>
-                <li className='flex items-center gap-3'>
-                  <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
-                      theme === 'dark'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-indigo-700 text-white'
-                    }`}
-                  >
-                    ✓
-                  </div>
-                  Blockchain verification badge
-                </li>
-                <li className='flex items-center gap-3'>
-                  <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
-                      theme === 'dark'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-indigo-700 text-white'
-                    }`}
-                  >
-                    ✓
-                  </div>
-                  Privacy controls for what you share
-                </li>
-              </ul>
-            </div>
-            <div className='flex justify-center'>
-              <div
-                className={`relative w-64 h-40 sm:w-80 sm:h-48 rounded-2xl shadow-2xl ${
-                  theme === 'dark'
-                    ? 'bg-gradient-to-br from-gray-800 to-gray-900 border border-indigo-600/30'
-                    : 'bg-gradient-to-br from-white to-gray-100 border border-indigo-600/30'
-                }`}
-              >
-                {/* Card mockup */}
-                <div className='absolute top-4 left-4'>
-                  <div
-                    className={`text-xs font-medium ${theme === 'dark' ? 'text-indigo-500' : 'text-indigo-700'}`}
-                  >
-                    CAREER CARD
-                  </div>
-                  <div
-                    className={`text-lg font-bold mt-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
-                  >
-                    Your Name
-                  </div>
-                  <div
-                    className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}
-                  >
-                    Your Title
-                  </div>
-                </div>
-                <div className='absolute bottom-4 right-4 flex items-center gap-2'>
-                  <Shield
-                    className={`w-5 h-5 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`}
-                  />
-                  <span
-                    className={`text-xs ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`}
-                  >
-                    Verified
+        <div className='grid md:grid-cols-3 gap-6 max-w-5xl mx-auto'>
+          {[
+            {
+              step: '1',
+              title: 'Sign up in seconds',
+              desc: 'Email or wallet. No passwords to remember.',
+              icon: Users,
+            },
+            {
+              step: '2',
+              title: 'Install your blocks',
+              desc: 'Browse the Block Store. Add what fits your career.',
+              icon: Sparkles,
+            },
+            {
+              step: '3',
+              title: 'Share your Career Card',
+              desc: 'One link. QR code. Employers see verified proof, not promises.',
+              icon: CreditCard,
+            },
+          ].map((item, i) => (
+            <div key={item.step} data-reveal className='reveal-item' style={{ transitionDelay: `${i * 120}ms` }}>
+              <GlassCard isDark={isDark} className='p-6 sm:p-8 text-center h-full hover:scale-[1.03] transition-transform duration-300'>
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${
+                  isDark ? 'bg-teal-500/20' : 'bg-teal-100'
+                }`}>
+                  <span className={`text-xl font-bold ${isDark ? 'text-teal-400' : 'text-teal-700'}`}>
+                    {item.step}
                   </span>
                 </div>
-                <div
-                  className={`absolute bottom-4 left-4 w-12 h-12 rounded-lg ${
-                    theme === 'dark' ? 'bg-white/10' : 'bg-gray-200'
-                  } flex items-center justify-center`}
-                >
-                  <span className='text-2xl'>📱</span>
-                </div>
+                <item.icon className={`w-8 h-8 mx-auto mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {item.title}
+                </h3>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {item.desc}
+                </p>
+              </GlassCard>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          SECTION 5 — For Employers & Companies
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <section className='py-16 sm:py-24'>
+        <div data-reveal className='reveal-item'>
+          <GlassCard isDark={isDark} className='p-8 sm:p-12 max-w-4xl mx-auto'>
+            <div className='text-center'>
+              <Building2 className={`w-10 h-10 mx-auto mb-4 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
+              <h2 className={`text-3xl sm:text-4xl font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                For those who hire
+              </h2>
+              <p className={`text-lg mb-8 max-w-2xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                Find verified talent. Request credentials. Order background checks. All from one platform.
+              </p>
+
+              {/* Feature pills */}
+              <div className='flex flex-wrap justify-center gap-3 mb-8'>
+                {[
+                  { icon: FileCheck, text: 'Verified Career Cards' },
+                  { icon: Search,    text: 'MVR & Background Checks' },
+                  { icon: Sparkles,  text: 'Composable for your industry' },
+                ].map((pill) => (
+                  <div
+                    key={pill.text}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border ${
+                      isDark
+                        ? 'bg-white/[0.04] border-white/[0.08] text-gray-300'
+                        : 'bg-white/60 border-white/40 text-gray-700'
+                    }`}
+                  >
+                    <pill.icon className='w-4 h-4' />
+                    {pill.text}
+                  </div>
+                ))}
               </div>
+
+              <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                Large organizations can build company-specific blocks for their workflows.
+              </p>
             </div>
+          </GlassCard>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          SECTION 6 — STORM Token
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <section className='py-16 sm:py-24'>
+        <div data-reveal className='reveal-item'>
+          <GlassCard isDark={isDark} className='p-8 sm:p-12 max-w-4xl mx-auto overflow-hidden relative'>
+            {/* Subtle glow accent */}
+            <div className='absolute -top-16 -right-16 w-64 h-64 rounded-full bg-teal-500/10 blur-3xl pointer-events-none' />
+
+            <div className='text-center relative z-[1]'>
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${
+                isDark ? 'bg-teal-500/20' : 'bg-teal-100'
+              }`}>
+                <Coins className={`w-7 h-7 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
+              </div>
+
+              <h2 className={`text-3xl sm:text-4xl font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Powered by{' '}
+                <span className='bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent'>
+                  STORM
+                </span>
+              </h2>
+
+              <p className={`text-lg mb-8 max-w-2xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                StormChain runs on its own token economy. Earn STORM for completing your profile,
+                installing blocks, and contributing verified credentials. Spend it on premium features.
+              </p>
+
+              {/* Token utility pills */}
+              <div className='flex flex-wrap justify-center gap-3 mb-10'>
+                {[
+                  { icon: Gift,       text: 'Earn for contributions' },
+                  { icon: TrendingUp, text: 'Unlock premium blocks' },
+                  { icon: Shield,     text: 'On-chain transparency' },
+                ].map((item) => (
+                  <div
+                    key={item.text}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border ${
+                      isDark
+                        ? 'bg-teal-500/10 text-teal-300 border-teal-500/20'
+                        : 'bg-teal-50 text-teal-700 border-teal-300/50'
+                    }`}
+                  >
+                    <item.icon className='w-4 h-4' />
+                    {item.text}
+                  </div>
+                ))}
+              </div>
+
+              {/* Whitepaper CTA */}
+              <button
+                onClick={openWhitepaper}
+                className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl border-2 font-semibold transition-all duration-300 hover:scale-105 ${
+                  isDark
+                    ? 'border-teal-500/40 text-teal-300 hover:bg-teal-500/10'
+                    : 'border-teal-500/60 text-teal-700 hover:bg-teal-50'
+                }`}
+              >
+                <BookOpen className='w-5 h-5' />
+                Read the STORM Whitepaper
+              </button>
+            </div>
+          </GlassCard>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          SECTION 7 — Bottom CTA
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <section className='text-center py-16 sm:py-24 pb-20 sm:pb-32'>
+        <div data-reveal className='reveal-item'>
+          <h2 className={`text-3xl sm:text-4xl md:text-5xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            Ready to build your career?
+          </h2>
+          <p className={`text-lg mb-8 max-w-xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            It&apos;s free to start. No credit card. No catch.
+          </p>
+
+          <button
+            onClick={onGetStarted}
+            className='group px-10 py-5 text-xl font-semibold rounded-xl transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 inline-flex items-center gap-3 bg-teal-500 text-white hover:bg-teal-400'
+          >
+            <span>{isAuthenticated ? 'Go to Dashboard' : 'Get Started Free'}</span>
+            <ArrowRight className='w-6 h-6 group-hover:translate-x-1 transition-transform' />
+          </button>
+
+          <div className='mt-6'>
+            <button
+              onClick={openWhitepaper}
+              className={`text-sm underline underline-offset-4 transition-colors ${
+                isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              Read the Whitepaper
+            </button>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Benefits Section */}
-      <div className='py-12 sm:py-16'>
-        <h2
-          className={`text-3xl sm:text-4xl font-bold text-center mb-12 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}
-        >
-          Why StormChain?
-        </h2>
-
-        <div className='grid sm:grid-cols-2 lg:grid-cols-4 gap-6'>
-          <div
-            className={`p-6 rounded-xl text-center ${
-              theme === 'dark' ? 'bg-gray-800/50' : 'bg-white shadow-lg'
-            }`}
-          >
-            <div
-              className={`w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center ${
-                theme === 'dark'
-                  ? 'bg-indigo-600/20 text-indigo-500'
-                  : 'bg-indigo-600/20 text-indigo-700'
-              }`}
-            >
-              <Shield className='w-6 h-6' />
-            </div>
-            <h4
-              className={`font-semibold mb-2 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}
-            >
-              Permanent Records
-            </h4>
-            <p
-              className={`text-sm ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              }`}
-            >
-              Blockchain ensures your credentials can never be lost or altered.
-            </p>
-          </div>
-
-          <div
-            className={`p-6 rounded-xl text-center ${
-              theme === 'dark' ? 'bg-gray-800/50' : 'bg-white shadow-lg'
-            }`}
-          >
-            <div
-              className={`w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center ${
-                theme === 'dark'
-                  ? 'bg-indigo-600/20 text-indigo-500'
-                  : 'bg-indigo-600/20 text-indigo-700'
-              }`}
-            >
-              <Zap className='w-6 h-6' />
-            </div>
-            <h4
-              className={`font-semibold mb-2 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}
-            >
-              AI-Powered
-            </h4>
-            <p
-              className={`text-sm ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              }`}
-            >
-              Auto-fill forms and build profiles from your resume or GitHub.
-            </p>
-          </div>
-
-          <div
-            className={`p-6 rounded-xl text-center ${
-              theme === 'dark' ? 'bg-gray-800/50' : 'bg-white shadow-lg'
-            }`}
-          >
-            <div
-              className={`w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center ${
-                theme === 'dark'
-                  ? 'bg-indigo-600/20 text-indigo-500'
-                  : 'bg-indigo-600/20 text-indigo-700'
-              }`}
-            >
-              <Briefcase className='w-6 h-6' />
-            </div>
-            <h4
-              className={`font-semibold mb-2 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}
-            >
-              One-Click Apply
-            </h4>
-            <p
-              className={`text-sm ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              }`}
-            >
-              Apply to jobs instantly with your verified Career Card.
-            </p>
-          </div>
-
-          <div
-            className={`p-6 rounded-xl text-center ${
-              theme === 'dark' ? 'bg-gray-800/50' : 'bg-white shadow-lg'
-            }`}
-          >
-            <div
-              className={`w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center ${
-                theme === 'dark'
-                  ? 'bg-indigo-600/20 text-indigo-500'
-                  : 'bg-indigo-600/20 text-indigo-700'
-              }`}
-            >
-              <Star className='w-6 h-6' />
-            </div>
-            <h4
-              className={`font-semibold mb-2 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}
-            >
-              Earn Rewards
-            </h4>
-            <p
-              className={`text-sm ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              }`}
-            >
-              Earn StormChain tokens for building your verified profile.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* CTA Section */}
-      <div className='text-center py-12 sm:py-16'>
-        <h2
-          className={`text-3xl sm:text-4xl font-bold mb-6 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}
-        >
-          Ready to Build Your Career Card?
-        </h2>
-        <p
-          className={`text-lg mb-8 max-w-2xl mx-auto ${
-            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-          }`}
-        >
-          {isAuthenticated
-            ? 'Head to your dashboard to complete your profile and start applying.'
-            : 'Join thousands of professionals who trust StormChain for verified credentials.'}
-        </p>
-        <button
-          onClick={onGetStarted}
-          className={`group px-10 py-5 text-xl font-semibold rounded-xl transition-all duration-300 shadow-2xl hover:shadow-3xl hover:scale-105 inline-flex items-center gap-3 ${
-            theme === 'dark'
-              ? 'bg-indigo-600 text-white hover:bg-indigo-600/90'
-              : 'bg-indigo-700 text-white hover:bg-indigo-800'
-          }`}
-        >
-          <span>
-            {isAuthenticated ? 'Go to Dashboard' : 'Get Started Free'}
-          </span>
-          <ArrowRight className='w-6 h-6 group-hover:translate-x-1 transition-transform' />
-        </button>
-      </div>
+      {/* ── Scroll reveal + animation CSS ─────────────────────────────────── */}
+      <style jsx>{`
+        .reveal-item {
+          opacity: 0;
+          transform: translateY(24px);
+          transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+        .revealed .reveal-item,
+        .reveal-item.revealed {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        @keyframes hex-float {
+          0%   { transform: translateY(0); }
+          100% { transform: translateY(-8px); }
+        }
+        @keyframes card-float {
+          0%   { transform: translateY(0) rotate(0deg); }
+          50%  { transform: translateY(-6px) rotate(0.5deg); }
+          100% { transform: translateY(0) rotate(-0.5deg); }
+        }
+      `}</style>
     </div>
   )
 }
