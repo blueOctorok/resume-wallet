@@ -91,9 +91,13 @@ const HIVE_GAP = 8
 interface ShowcaseHiveProps {
   blocks: typeof HIVE_BLOCKS
   isDark: boolean
-  centerW: number; centerH: number
-  ringW: number;   ringH: number
 }
+
+// Responsive hive sizes: phone (<400px) vs tablet/desktop
+const SHOWCASE_CENTER_XS = { w: 100, h: 115 }
+const SHOWCASE_RING_XS   = { w: 75,  h: 86 }
+const SHOWCASE_CENTER_LG = { w: 170, h: 195 }
+const SHOWCASE_RING_LG   = { w: 130, h: 150 }
 
 function hiveShowcaseOffsets(centerW: number, centerH: number, ringW: number, ringH: number): [number, number][] {
   const dx = centerW / 2 + HIVE_GAP + ringW / 2
@@ -110,7 +114,21 @@ function hiveShowcaseOffsets(centerW: number, centerH: number, ringW: number, ri
   ]
 }
 
-function HiveShowcase({ blocks, isDark, centerW, centerH, ringW, ringH }: ShowcaseHiveProps) {
+function HiveShowcase({ blocks, isDark }: ShowcaseHiveProps) {
+  const [isSmall, setIsSmall] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsSmall(window.innerWidth < 500)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  const centerW = isSmall ? SHOWCASE_CENTER_XS.w : SHOWCASE_CENTER_LG.w
+  const centerH = isSmall ? SHOWCASE_CENTER_XS.h : SHOWCASE_CENTER_LG.h
+  const ringW   = isSmall ? SHOWCASE_RING_XS.w   : SHOWCASE_RING_LG.w
+  const ringH   = isSmall ? SHOWCASE_RING_XS.h   : SHOWCASE_RING_LG.h
+
   const slots = hiveShowcaseOffsets(centerW, centerH, ringW, ringH)
   const dx = centerW / 2 + HIVE_GAP + ringW / 2
   const dy = (centerH / 2 + HIVE_GAP + ringH / 2) * 0.92
@@ -148,12 +166,12 @@ function HiveShowcase({ blocks, isDark, centerW, centerH, ringW, ringH }: Showca
                 className={`absolute inset-[2px] backdrop-blur-md ${isDark ? 'bg-gray-900/70' : 'bg-white/70'}`}
                 style={{ clipPath: HEX_CLIP }}
               />
-              <div className='absolute inset-0 flex flex-col items-center justify-center z-[1] px-[15%]'>
-                <block.icon className={`mb-1 ${isCenter ? 'w-9 h-9 sm:w-11 sm:h-11' : 'w-6 h-6 sm:w-8 sm:h-8'} ${
+              <div className='absolute inset-0 flex flex-col items-center justify-center z-[1] px-[12%]'>
+                <block.icon className={`mb-1 ${isCenter ? 'w-7 h-7 sm:w-11 sm:h-11' : 'w-5 h-5 sm:w-8 sm:h-8'} ${
                   isDark ? colors.iconText.dark : colors.iconText.light
                 }`} />
                 <span className={`font-bold uppercase tracking-wide text-center leading-tight ${
-                  isCenter ? 'text-[10px] sm:text-xs' : 'text-[8px] sm:text-[10px]'
+                  isCenter ? 'text-[8px] sm:text-xs' : 'text-[6px] sm:text-[10px]'
                 } ${isDark ? colors.iconText.dark : colors.iconText.light}`}>
                   {block.label}
                 </span>
@@ -431,12 +449,7 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
 
         {/* Hive showcase grid */}
         <div data-reveal className='reveal-item mb-14'>
-          <HiveShowcase
-            blocks={HIVE_BLOCKS}
-            isDark={isDark}
-            centerW={170} centerH={195}
-            ringW={130}   ringH={150}
-          />
+          <HiveShowcase blocks={HIVE_BLOCKS} isDark={isDark} />
         </div>
 
         {/* Profession callouts */}
