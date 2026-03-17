@@ -218,18 +218,19 @@ function BlockTile({ block, index, isEditing, onRemove, onOpen }: BlockTileProps
 
 // ── Honeycomb Grid Layout ─────────────────────────────────────────────────────
 // ── Block Hive layout ────────────────────────────────────────────────────────
-// Radial honeycomb: slot 0 = center (larger), slots 1–6 spiral around it.
-// Max 7 per page; 8+ blocks get paginated.
+// Radial honeycomb: slot 0 = center (larger), slots 1+ spiral around it.
+//
+// On mobile: 5 slots per page (no middle-left/right to avoid horizontal cutoff)
+// On tablet/desktop: 7 slots per page (full ring)
 //
 // Two hex sizes: the center hex is bigger to create visual hierarchy.
-// Ring hexes are spaced so edges never overlap — positions are calculated
-// from the midpoint between center and ring hex radii plus a gap.
+// Ring hexes are spaced so edges never overlap.
 
-const SLOTS_PER_PAGE = 7
+const SLOTS_PER_PAGE_MOBILE = 5  // center + top pair + bottom pair
+const SLOTS_PER_PAGE_DESKTOP = 7 // full ring
 const HIVE_GAP = 10 // px between hex edges
 
 // Hex tile dimensions — three tiers: phone (<400), tablet (400–639), desktop (640+)
-// Center hex is always larger than ring hexes to create visual hierarchy.
 const CENTER_W_XS = 120; const CENTER_H_XS = 138
 const CENTER_W_SM = 190; const CENTER_H_SM = 218
 const CENTER_W_LG = 220; const CENTER_H_LG = 253
@@ -242,20 +243,25 @@ interface HiveMetrics {
   ringW: number;   ringH: number
 }
 
-// Returns [left, top] offset from container center for each of the 7 slots.
-// Offsets point to the CENTER of each hex — the render loop subtracts half-size.
-//
-// Ring distance is measured edge-to-edge: half the center hex + gap + half the
-// ring hex, in both horizontal and vertical directions. The vertical axis uses
-// the pointy-top hex ratio (≈ 0.865 of height = tip-to-center).
-function hiveSlotOffsets(m: HiveMetrics): [number, number][] {
-  // Horizontal distance from center of center-hex to center of a ring-hex
+// Returns slot offsets for all 7 positions (desktop) or 5 positions (mobile).
+// Mobile layout omits middle-left/right (indices 3,4) to fit narrow screens.
+function hiveSlotOffsets(m: HiveMetrics, isMobile: boolean): [number, number][] {
   const dx = m.centerW / 2 + HIVE_GAP + m.ringW / 2
-  // Vertical distance (hex pointy-top geometry: center-to-tip ≈ h/2)
   const dy = m.centerH / 2 + HIVE_GAP + m.ringH / 2
-  // Half-horizontal for the staggered top/bottom pairs
   const halfDx = dx * 0.52
 
+  if (isMobile) {
+    // 5 slots: center, top-left, top-right, bottom-left, bottom-right
+    return [
+      [0, 0],                         // 0: center
+      [-halfDx, -dy * 0.92],         // 1: top-left
+      [halfDx,  -dy * 0.92],         // 2: top-right
+      [-halfDx,  dy * 0.92],         // 3: bottom-left
+      [halfDx,   dy * 0.92],         // 4: bottom-right
+    ]
+  }
+
+  // 7 slots: full ring including middle-left/right
   return [
     [0, 0],                         // 0: center
     [-halfDx, -dy * 0.92],         // 1: top-left
@@ -294,27 +300,32 @@ function HoneycombGrid({
     return () => window.removeEventListener('resize', check)
   }, [])
 
+  const isMobile = sizeClass === 'xs'
+  const slotsPerPage = isMobile ? SLOTS_PER_PAGE_MOBILE : SLOTS_PER_PAGE_DESKTOP
+
   const metrics: HiveMetrics = sizeClass === 'xs'
     ? { centerW: CENTER_W_XS, centerH: CENTER_H_XS, ringW: RING_W_XS, ringH: RING_H_XS }
     : sizeClass === 'sm'
       ? { centerW: CENTER_W_SM, centerH: CENTER_H_SM, ringW: RING_W_SM, ringH: RING_H_SM }
       : { centerW: CENTER_W_LG, centerH: CENTER_H_LG, ringW: RING_W_LG, ringH: RING_H_LG }
 
-  const slots = hiveSlotOffsets(metrics)
+  const slots = hiveSlotOffsets(metrics, isMobile)
 
-  const totalPages = Math.max(1, Math.ceil(blocks.length / SLOTS_PER_PAGE))
+  const totalPages = Math.max(1, Math.ceil(blocks.length / slotsPerPage))
 
   useEffect(() => {
     if (page >= totalPages) setPage(Math.max(0, totalPages - 1))
   }, [totalPages, page])
 
-  const pageBlocks = blocks.slice(page * SLOTS_PER_PAGE, (page + 1) * SLOTS_PER_PAGE)
+  const pageBlocks = blocks.slice(page * slotsPerPage, (page + 1) * slotsPerPage)
 
-  // Container sized to fit the outermost hex edges.
-  // Horizontal: middle-left/right extend dx from center, plus half a ring hex on each side.
+  // Container width: on mobile, only need to fit the top/bottom stagger (halfDx).
+  // On desktop, need to fit the full middle-left/right (dx).
   const dx = metrics.centerW / 2 + HIVE_GAP + metrics.ringW / 2
-  const containerW = 2 * (dx + metrics.ringW / 2) + 16 // 16px breathing room
-  // Vertical: top/bottom extend dy*0.92 from center, plus half a ring hex on each side.
+  const halfDx = dx * 0.52
+  const containerW = isMobile
+    ? 2 * (halfDx + metrics.ringW / 2) + 16
+    : 2 * (dx + metrics.ringW / 2) + 16
   const dy = (metrics.centerH / 2 + HIVE_GAP + metrics.ringH / 2) * 0.92
   const containerH = 2 * (dy + metrics.ringH / 2) + 16
 
@@ -356,7 +367,7 @@ function HoneycombGrid({
               } : undefined}>
                 <BlockTile
                   block={block}
-                  index={page * SLOTS_PER_PAGE + slotIdx}
+                  index={page * slotsPerPage + slotIdx}
                   isEditing={isEditing}
                   onRemove={() => walletAddress && removeBlock(block.id, walletAddress)}
                   onOpen={block.definition?.pageRoute

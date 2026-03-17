@@ -7,16 +7,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 ## **Block Hive — Radial Honeycomb Layout** (March 13, 2026)
 
 ### What changed
-Renamed "My Blocks" to "Block Hive" and replaced the linear row-based honeycomb grid with a radial hive pattern. First block sits at center, subsequent blocks spiral outward in pairs: top-left/top-right, middle-left/middle-right, bottom-left/bottom-right. Max 7 blocks per page; 8+ blocks are paginated with chevron navigation and page dots.
+Renamed "My Blocks" to "Block Hive" and replaced the linear row-based honeycomb grid with a radial hive pattern. First block sits at center, subsequent blocks spiral outward in pairs: top-left/top-right, middle-left/middle-right, bottom-left/bottom-right. Max 7 blocks per page on desktop; 8+ blocks are paginated with chevron navigation and page dots.
+
+**Mobile Layout (iPhone fix)**: On phones (<400px), the hive uses only 5 slots per page — center + top pair + bottom pair. The middle-left/right hexes are omitted because they extend beyond the viewport edge, even in Chrome responsive mode (real iOS differs from emulation). These extra blocks push to page 2+.
 
 ### Files modified
-- `src/components/hub/CandidateHub.tsx` — Rewrote `HoneycombGrid` to use absolute positioning with pre-calculated slot offsets from center. Slot positions computed from hex tile dimensions (`hiveSlotOffsets()`). Added `page` state with pagination UI (chevrons + dots). Section title changed to "Block Hive". Page auto-clamps when blocks are removed.
+- `src/components/hub/CandidateHub.tsx` — Rewrote `HoneycombGrid` to use absolute positioning with pre-calculated slot offsets from center. Slot positions computed from hex tile dimensions (`hiveSlotOffsets()`). Added `page` state with pagination UI (chevrons + dots). Section title changed to "Block Hive". Page auto-clamps when blocks are removed. Added `isMobile` flag to switch between 5-slot and 7-slot layouts; container width adapts accordingly.
 
 ### Technical notes
 - Slot offsets use `colStride` (hexW + 6px gap) and `rowStride` (hexH × 0.78 for hex interlock) to produce a natural honeycomb spiral
-- Container is sized to exactly fit 3 columns × 3 rows, preventing overflow or extra whitespace
-- `SLOTS_PER_PAGE = 7` — one full hive ring around a center hex
-- Viewport-responsive: listens to resize events to switch between 170×195 (mobile) and 190×218 (sm+) hex dimensions
+- Container is sized to exactly fit the outermost hexes — narrower on mobile (no middle slots)
+- `SLOTS_PER_PAGE_MOBILE = 5` / `SLOTS_PER_PAGE_DESKTOP = 7`
+- Viewport-responsive: three tiers (xs <400, sm 400-639, lg 640+)
 - Drag-and-drop reordering (dnd-kit) still works — reordering changes array position which maps to slot position
 
 ---
