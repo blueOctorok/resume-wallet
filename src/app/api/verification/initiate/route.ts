@@ -4,6 +4,7 @@ import {
   VerificationRequestRow, 
   rowToVerificationRequest 
 } from '@/types/employment-verification'
+import { getDriverEmployment } from '@/lib/block-data'
 
 /**
  * POST /api/verification/initiate
@@ -75,15 +76,11 @@ export async function POST(request: NextRequest) {
     const companyId = company.id
     const companyName = company.company_name
 
-    // 2. Get the driver's profile and employment history
-    const { data: driverProfile, error: driverError } = await supabase
-      .from('driver_profiles')
-      .select('employment_history')
-      .eq('user_id', driverId)
-      .single()
+    // 2. Get the driver's employment history from block tables
+    const employmentHistory = await getDriverEmployment(supabase, driverId)
 
-    if (driverError || !driverProfile) {
-      console.error('Driver profile not found:', driverError)
+    if (employmentHistory.length === 0) {
+      console.error('Driver employment history not found for:', driverId)
       return NextResponse.json(
         { error: 'Driver profile not found' },
         { status: 404 }
@@ -91,8 +88,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Find the specific employment entry
-    const employmentHistory = driverProfile.employment_history || []
-    const employment = employmentHistory.find((e: any) => e.id === employmentId)
+    const employment = employmentHistory.find((e) => e.id === employmentId)
 
     if (!employment) {
       return NextResponse.json(

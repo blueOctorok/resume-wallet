@@ -381,57 +381,21 @@ export default function ResumeBuilder({
     skills.length > 0 ||
     references.length > 0
 
-  // Load data from unified profile first, then fall back to existing resume
+  // Load data on mount.
+  // Priority: existing resume's structured_data > unified profile > empty form.
+  // When editing (existingResumeId is set), we ALWAYS load from that specific
+  // resume — the profile is a derived copy and may be incomplete or stale.
+  // Profile prefill only runs when creating a brand new resume.
   useEffect(() => {
     const loadData = async () => {
       if (!user?.address) return
 
       try {
-        // First, try to load from unified profile
-        console.log('📦 [RESUME BUILDER] Fetching unified profile...')
-        const profileResponse = await fetch('/api/driver/profile', {
-          headers: {
-            'x-wallet-address': user.address,
-          },
-        })
-
-        if (profileResponse.ok) {
-          const { profile } = await profileResponse.json()
-          
-          if (profile) {
-            // Check if profile has meaningful data
-            const hasProfileData = profile.firstName || profile.lastName || 
-              profile.cdlNumber || profile.employmentHistory?.length > 0
-
-            if (hasProfileData) {
-              console.log('✅ [RESUME BUILDER] Profile found, prefilling form...')
-              console.log('   Source:', profile.lastUpdatedFrom || 'unknown')
-              
-              // Convert profile to resume builder format
-              const resumeData = profileToResumeBuilder(profile as UnifiedDriverProfile)
-              
-              setPersonalInfo(resumeData.personalInfo)
-              setCDLInfo(resumeData.cdlInfo)
-              setEmployments(resumeData.employments)
-              setEducations(resumeData.educations)
-              setSkills(resumeData.skills)
-              setReferences(resumeData.references)
-              setProfileLoaded(true)
-              setProfileSource(profile.lastUpdatedFrom || 'profile')
-              
-              console.log('✅ [RESUME BUILDER] Form prefilled from unified profile')
-              return // Don't load from existing resume if profile has data
-            }
-          }
-        }
-
-        // Fall back to loading from existing resume if editing
+        // ── Editing an existing resume ──────────────────────────────────────
         if (existingResumeId) {
-          console.log('📄 [RESUME BUILDER] Loading from existing resume...')
+          console.log('📄 [RESUME BUILDER] Loading existing resume:', existingResumeId)
           const response = await fetch(`/api/resumes/${existingResumeId}`, {
-            headers: {
-              'x-wallet-address': user.address,
-            },
+            headers: { 'x-wallet-address': user.address },
           })
 
           if (response.ok) {
@@ -444,8 +408,38 @@ export default function ResumeBuilder({
               if (sd.educations) setEducations(sd.educations)
               if (sd.skills) setSkills(sd.skills)
               if (sd.references) setReferences(sd.references)
+              setProfileLoaded(true)
+              setProfileSource('resume')
               console.log('✅ [RESUME BUILDER] Loaded from existing resume')
             }
+          }
+          return // Never overwrite existing resume data with profile data
+        }
+
+        // ── New resume — prefill from unified profile if available ──────────
+        console.log('📦 [RESUME BUILDER] New resume — fetching profile for prefill...')
+        const profileResponse = await fetch('/api/driver/profile', {
+          headers: { 'x-wallet-address': user.address },
+        })
+
+        if (profileResponse.ok) {
+          const { profile } = await profileResponse.json()
+          const hasProfileData = profile && (
+            profile.firstName || profile.lastName ||
+            profile.cdlNumber || profile.employmentHistory?.length > 0
+          )
+
+          if (hasProfileData) {
+            const resumeData = profileToResumeBuilder(profile as UnifiedDriverProfile)
+            setPersonalInfo(resumeData.personalInfo)
+            setCDLInfo(resumeData.cdlInfo)
+            setEmployments(resumeData.employments)
+            setEducations(resumeData.educations)
+            setSkills(resumeData.skills)
+            setReferences(resumeData.references)
+            setProfileLoaded(true)
+            setProfileSource(profile.lastUpdatedFrom || 'profile')
+            console.log('✅ [RESUME BUILDER] New resume prefilled from profile')
           }
         }
       } catch (error) {

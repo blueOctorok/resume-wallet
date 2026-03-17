@@ -129,14 +129,14 @@ export async function POST(request: NextRequest) {
       if (existingUser) {
         candidateUserId = existingUser.id
         
-        // Get their profile if exists
-        const { data: profile } = await supabase
-          .from('driver_profiles')
+        // Check for CDL block data as a proxy for driver profile existence
+        const { data: cdlBlock } = await supabase
+          .from('block_driver_cdl')
           .select('id')
           .eq('user_id', existingUser.id)
-          .single()
+          .maybeSingle()
         
-        candidateProfileId = profile?.id || null
+        candidateProfileId = cdlBlock?.id || null
       }
     }
 

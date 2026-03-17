@@ -131,24 +131,15 @@ export async function POST(
       )
     }
 
-    // Check if user has driver or developer DATA (not just role column)
-    // This handles the case where someone is testing with role='employer' but has driver data
-    const { data: driverProfile } = await supabase
-      .from('driver_profiles')
-      .select('id, email')
+    // Get email from user_profiles (identity data) as fallback for wallet-only signups
+    const { data: candidateIdentity } = await supabase
+      .from('user_profiles')
+      .select('email')
       .eq('user_id', candidateUserId)
-      .single()
+      .maybeSingle()
 
-    const { data: developerProfile } = await supabase
-      .from('developer_profiles')
-      .select('id, email')
-      .eq('user_id', candidateUserId)
-      .single()
-
-    // Prefer users.email but fall back to profile-level email if wallet-only signup
     const candidateEmail = candidate.email
-      || driverProfile?.email
-      || developerProfile?.email
+      || candidateIdentity?.email
       || null
 
     // Block employers; all other roles (driver, developer, candidate, null) are valid

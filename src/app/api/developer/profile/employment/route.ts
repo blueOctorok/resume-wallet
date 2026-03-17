@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getDevProfile, saveDevProfile } from '@/lib/block-data'
 
 /**
  * DELETE /api/developer/profile/employment
- * Remove one employment entry from developer_profiles.employment_history by id.
+ * Remove one employment entry from block_dev_profile.employment_history by id.
  * Body: { employmentId: string }
  */
 export async function DELETE(request: NextRequest) {
@@ -34,17 +35,13 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from('developer_profiles')
-      .select('employment_history')
-      .eq('user_id', user.id)
-      .single()
+    const devProfile = await getDevProfile(supabase, user.id)
 
-    if (profileError || !profile) {
+    if (!devProfile) {
       return NextResponse.json({ error: 'Developer profile not found' }, { status: 404 })
     }
 
-    const current = (profile.employment_history as Array<{ id?: string }>) || []
+    const current = (devProfile.employment_history as Array<{ id?: string }>) || []
     const updated = current.filter((e) => e.id !== employmentId)
     if (updated.length === current.length) {
       return NextResponse.json(
@@ -53,16 +50,10 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    const { error: updateError } = await supabase
-      .from('developer_profiles')
-      .update({
-        employment_history: updated,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', user.id)
-
-    if (updateError) {
-      console.error('[DEVELOPER PROFILE] Remove employment error:', updateError)
+    try {
+      await saveDevProfile(supabase, user.id, { employment_history: updated })
+    } catch (err) {
+      console.error('[DEVELOPER PROFILE] Remove employment error:', err)
       return NextResponse.json(
         { error: 'Failed to remove employment' },
         { status: 500 }

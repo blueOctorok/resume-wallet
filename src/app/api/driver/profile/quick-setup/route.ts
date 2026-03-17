@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { saveCdlData } from '@/lib/block-data'
 
 /**
  * POST /api/driver/profile/quick-setup
@@ -8,9 +9,9 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
  * has no name set. Establishes the minimum identity fields so the hub
  * shows the correct person and they appear in talent searches.
  *
- * Writes to both:
- *   - driver_profiles (upsert by user_id)
- *   - user_profiles (first_name, last_name)
+ * Writes to:
+ *   - block_driver_cdl (CDL class/state)
+ *   - user_profiles (first_name, last_name, etc.)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -41,17 +42,15 @@ export async function POST(request: NextRequest) {
 
     const fullName = `${firstName.trim()} ${lastName.trim()}`
 
-    // Upsert driver_profiles with role-specific data only
-    const profileData: Record<string, string | null> = {}
-    if (cdlClass?.trim()) profileData.cdl_class = cdlClass.trim()
-    if (cdlState?.trim()) profileData.cdl_state = cdlState.trim()
+    // Write CDL data to block table
+    const cdlData: Record<string, string | null> = {}
+    if (cdlClass?.trim()) cdlData.cdl_class = cdlClass.trim()
+    if (cdlState?.trim()) cdlData.cdl_state = cdlState.trim()
 
-    const { error: profileError } = await supabase
-      .from('driver_profiles')
-      .upsert({ user_id: user.id, ...profileData }, { onConflict: 'user_id' })
-
-    if (profileError) {
-      console.error('[DRIVER QUICK SETUP] Profile upsert error:', profileError)
+    try {
+      await saveCdlData(supabase, user.id, cdlData)
+    } catch (err) {
+      console.error('[DRIVER QUICK SETUP] CDL block save error:', err)
       return NextResponse.json({ error: 'Failed to save profile' }, { status: 500 })
     }
 

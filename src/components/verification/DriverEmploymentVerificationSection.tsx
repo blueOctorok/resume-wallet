@@ -23,7 +23,7 @@ import {
   VerificationStatus,
 } from '@/types/employment-verification'
 
-/** Employment entry from driver_profiles (DOT forms / resume prefill only) */
+/** Employment entry from block_driver_employment (DOT forms / resume prefill only) */
 interface EmploymentEntry {
   id: string
   companyName: string
@@ -43,7 +43,7 @@ interface DriverEmploymentVerificationSectionProps {
 
 /**
  * Driver-only employment verification section.
- * Data: driver_profiles.employment_history (DOT forms / resume prefill). No developer data.
+ * Data: block_driver_employment (DOT forms / resume prefill). No developer data.
  * Verify: /api/driver/verification/initiate-self and /api/driver/verification/status only.
  */
 export default function DriverEmploymentVerificationSection({

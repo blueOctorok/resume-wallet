@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
         .eq('company_id', company.id)
         .order('created_at', { ascending: false }),
 
-      // JOIN user_profiles instead of driver_profiles for role-agnostic identity
+      // JOIN user_profiles for role-agnostic identity
       supabase
         .from('applications')
         .select(`

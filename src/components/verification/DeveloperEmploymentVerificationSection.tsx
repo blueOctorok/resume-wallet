@@ -23,7 +23,7 @@ import {
   VerificationStatus,
 } from '@/types/employment-verification'
 
-/** Employment entry from developer_profiles (resume work experience only) */
+/** Employment entry from block_dev_profile (resume work experience only) */
 interface EmploymentEntry {
   id: string
   companyName: string
@@ -44,7 +44,7 @@ interface DeveloperEmploymentVerificationSectionProps {
 
 /**
  * Developer-only employment verification section.
- * Uses only developer_profiles (resume work experience). No driver or DOT data.
+ * Uses only block_dev_profile (resume work experience). No driver or DOT data.
  */
 export default function DeveloperEmploymentVerificationSection({
   userAddress,

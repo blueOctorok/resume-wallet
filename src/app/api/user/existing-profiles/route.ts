@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getCdlData, getDevProfile } from '@/lib/block-data'
 
 /**
  * GET /api/user/existing-profiles
@@ -29,17 +30,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ driverProfile: null, devProfile: null })
     }
 
-    const [{ data: userProfile }, { data: driverProfile }, { data: devProfile }] = await Promise.all([
+    // Check block tables for profile existence instead of legacy profile tables
+    const [{ data: userProfile }, driverBlock, devBlock] = await Promise.all([
       supabase.from('user_profiles').select('first_name, last_name').eq('user_id', user.id).maybeSingle(),
-      supabase.from('driver_profiles').select('user_id').eq('user_id', user.id).maybeSingle(),
-      supabase.from('developer_profiles').select('user_id').eq('user_id', user.id).maybeSingle(),
+      getCdlData(supabase, user.id),
+      getDevProfile(supabase, user.id),
     ])
 
     const profileName = [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ') || null
 
     return NextResponse.json({
-      driverProfile: driverProfile ? { name: profileName } : null,
-      devProfile: devProfile ? { name: profileName } : null,
+      driverProfile: driverBlock ? { name: profileName } : null,
+      devProfile: devBlock ? { name: profileName } : null,
     })
   } catch (error) {
     console.error('[EXISTING PROFILES] Error:', error)

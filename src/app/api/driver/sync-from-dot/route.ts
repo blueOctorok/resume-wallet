@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { calculateProfileScore } from '@/lib/profile-completeness'
 import { form1ToProfile, form2ToProfile, form3ToProfile } from '@/lib/dot-form-mapper'
+import {
+  getFullDriverProfile,
+  saveCdlData,
+  saveDriverEmployment,
+  saveEducation,
+  saveEmergencyContact,
+  saveDrivingExperience,
+} from '@/lib/block-data'
 
 /**
  * API Route: Sync DOT Application → Driver Profile
@@ -66,16 +73,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 3. Get latest resume
-    const { data: latestResume } = await supabase
-      .from('resumes')
-      .select('id, ipfs_url, ipfs_hash')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    // 4. Extract data from DOT application
+    // 3. Extract data from DOT application
     // Data is stored as { form1, form2, form3 } by the save-progress route
     const appData = dotApplication.application_data || {}
     const form1Data = appData.form1 || {}
@@ -92,7 +90,6 @@ export async function POST(request: NextRequest) {
     // Calculate total driving experience from form2 directly
     // form2ToProfile doesn't extract experience_years/miles, so we do it here
     let totalYears = 0
-    let totalMiles = 0
     const drivingExpArr = form2Data.drivingExperience || []
     if (Array.isArray(drivingExpArr)) {
       drivingExpArr.forEach((exp: { yearsOfExperience?: string }) => {
@@ -110,111 +107,77 @@ export async function POST(request: NextRequest) {
       education_count: profileFromForms.education?.length ?? 0,
     })
 
-    // 5. Get or create driver profile
-    let { data: profile, error: profileError } = await supabase
-      .from('driver_profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
+    // 5. Write extracted data to block tables
+    // saveCdlData upserts, so it also handles first-time creation
+    const blockWrites: Promise<void>[] = []
 
-    if (profileError && profileError.code === 'PGRST116') {
-      console.log('[DOT SYNC] Creating new profile')
-      const { data: newProfile, error: createError } = await supabase
-        .from('driver_profiles')
-        .insert({
-          user_id: user.id,
-          profile_completion_score: 0
+    // CDL data (Form 1)
+    blockWrites.push(
+      saveCdlData(supabase, user.id, {
+        cdl_number: profileFromForms.cdlNumber || null,
+        cdl_state: profileFromForms.cdlState || null,
+        cdl_class: profileFromForms.cdlClass || null,
+        cdl_expiration: profileFromForms.cdlExpiration || null,
+        endorsements: profileFromForms.endorsements || [],
+      })
+    )
+
+    // Employment history (Form 2 AI-prefill + Form 3)
+    if (profileFromForms.employmentHistory?.length) {
+      blockWrites.push(
+        saveDriverEmployment(supabase, user.id, profileFromForms.employmentHistory)
+      )
+    }
+
+    // Education (Form 3)
+    if (profileFromForms.education?.length) {
+      blockWrites.push(
+        saveEducation(supabase, user.id, profileFromForms.education)
+      )
+    }
+
+    // Emergency contact (not currently in DOT forms, but keep the call so
+    // future form additions land in the right place)
+    if (profileFromForms.emergencyContactName) {
+      blockWrites.push(
+        saveEmergencyContact(supabase, user.id, {
+          contact_name: profileFromForms.emergencyContactName || null,
+          contact_relationship: profileFromForms.emergencyContactRelationship || null,
+          contact_phone: profileFromForms.emergencyContactPhone || null,
         })
-        .select()
-        .single()
-
-      if (createError) {
-        console.error('[DOT SYNC] Error creating profile:', createError)
-        return NextResponse.json(
-          { error: 'Failed to create driver profile' },
-          { status: 500 }
-        )
-      }
-
-      profile = newProfile
-    } else if (profileError) {
-      console.error('[DOT SYNC] Error fetching profile:', profileError)
-      return NextResponse.json(
-        { error: 'Failed to fetch driver profile' },
-        { status: 500 }
       )
     }
 
-    // 6. Build update payload from mapped profile fields → DB column names
-    const updateData: Record<string, unknown> = {
-      driver_application_id: dotApplication.id,
-      dot_application_data: appData,
-      // Personal info (Form 1)
-      first_name: profileFromForms.firstName || null,
-      middle_name: profileFromForms.middleName || null,
-      last_name: profileFromForms.lastName || null,
-      email: profileFromForms.email || null,
-      phone: profileFromForms.phone || null,
-      date_of_birth: profileFromForms.dateOfBirth || null,
-      address: profileFromForms.address || null,
-      city: profileFromForms.city || null,
-      state: profileFromForms.state || null,
-      zip_code: profileFromForms.zipCode || null,
-      // CDL info (Form 1 currentLicenses[0])
-      cdl_class: profileFromForms.cdlClass || null,
-      cdl_endorsements: profileFromForms.endorsements || [],
-      cdl_state: profileFromForms.cdlState || null,
-      cdl_number: profileFromForms.cdlNumber || null,
-      cdl_expiration: profileFromForms.cdlExpiration || null,
-      // Driving experience (Form 2)
-      experience_years: totalYears > 0 ? totalYears : null,
-      // Employment history & education (Form 3)
-      employment_history: profileFromForms.employmentHistory ?? [],
-      education: profileFromForms.education ?? [],
-      updated_at: new Date().toISOString(),
-    }
-
-    // Add resume data if available
-    if (latestResume) {
-      updateData.resume_id = latestResume.id
-      updateData.resume_url = latestResume.ipfs_url
-      updateData.resume_ipfs_hash = latestResume.ipfs_hash
-    }
-
-    // Calculate profile completion score
-    const scoreResult = calculateProfileScore({
-      ...profile,
-      ...updateData
-    })
-
-    updateData.profile_completion_score = scoreResult.score
-
-    console.log('[DOT SYNC] Updating profile with score:', scoreResult.score)
-
-    const { data: updatedProfile, error: updateError } = await supabase
-      .from('driver_profiles')
-      .update(updateData)
-      .eq('user_id', user.id)
-      .select()
-      .single()
-
-    if (updateError) {
-      console.error('[DOT SYNC] Error updating profile:', updateError)
-      return NextResponse.json(
-        { error: 'Failed to update driver profile' },
-        { status: 500 }
+    // Driving experience (Form 2 — totalYears we already computed above)
+    if (totalYears > 0) {
+      blockWrites.push(
+        saveDrivingExperience(supabase, user.id, {
+          equipmentTypes: {
+            straightTruck: { years: 0, miles: 0 },
+            tractorTrailer: { years: 0, miles: 0 },
+            tractorTwoTrailers: { years: 0, miles: 0 },
+            specializedEquipment: [],
+          },
+          specialSkills: {
+            moffettForklift: false,
+            craneOperations: false,
+            hazmatHandling: false,
+            borderCrossing: false,
+          },
+        })
       )
     }
 
-    console.log('[DOT SYNC] ✅ Profile updated successfully:', {
-      score: scoreResult.score,
-      status: scoreResult.status
-    })
+    await Promise.all(blockWrites)
+
+    // Re-read the full block profile so the response shape stays the same
+    const updatedProfile = await getFullDriverProfile(supabase, user.id)
+
+    console.log('[DOT SYNC] Block tables updated successfully')
 
     return NextResponse.json({
       success: true,
       profile: updatedProfile,
-      completeness: scoreResult
     })
 
   } catch (error) {

@@ -13,7 +13,7 @@ import {
  *
  * Employer-only for summary. Drivers use GET /api/driver/verification/status.
  * Developers use GET /api/developer/verification/status.
- * DOT forms 1–3 and driver_profiles are driver-only; developer_profiles are developer-only.
+ * DOT forms 1–3 and driver block data are driver-only; developer block data are developer-only.
  *
  * Query params:
  * - role: 'employer' (driver/developer should use their role-specific endpoints)

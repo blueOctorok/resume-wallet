@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getCdlData, getDriverEmployment, getMvrData, getSkills, getEducation } from '@/lib/block-data'
 
 /**
  * Normalizes resume structured_data from different formats (old uploaded vs new builder)
@@ -175,49 +176,24 @@ export async function GET(
 
     const supabase = await getAdminSupabaseClient()
 
-    // Find the driver profile by share token
-    const { data: profile, error: profileError } = await supabase
-      .from('driver_profiles')
-      .select(`
-        id,
-        user_id,
-        professional_summary,
-        cdl_number,
-        cdl_class,
-        cdl_state,
-        cdl_expiration,
-        endorsements,
-        experience_years,
-        employment_history,
-        education,
-        skills,
-        share_settings,
-        share_views_count,
-        mvr_license_status,
-        mvr_total_points,
-        mvr_violation_count,
-        mvr_last_ordered_at,
-        created_at,
-        updated_at
-      `)
+    // share_token lives on `users` (migrated in 036)
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, share_settings, share_views_count')
       .eq('share_token', token)
       .single()
 
-    if (profileError || !profile) {
+    if (userError || !user) {
       return NextResponse.json(
         { error: 'Profile not found or sharing is disabled' },
         { status: 404 }
       )
     }
 
-    const { data: userProfile } = await supabase
-      .from('user_profiles')
-      .select('first_name, last_name, email, phone, city, state')
-      .eq('user_id', profile.user_id)
-      .maybeSingle()
+    const userId = user.id
 
     // Parse share settings
-    const settings = profile.share_settings as {
+    const settings = user.share_settings as {
       showResume?: boolean
       showDotApp?: boolean
       showMvr?: boolean
@@ -231,30 +207,45 @@ export async function GET(
       allowConnect: true,
     }
 
-    // Increment view count (fire and forget)
+    // Increment view count on `users` (fire and forget)
     void supabase
-      .from('driver_profiles')
-      .update({ share_views_count: (profile.share_views_count || 0) + 1 })
-      .eq('id', profile.id)
+      .from('users')
+      .update({ share_views_count: (user.share_views_count || 0) + 1 })
+      .eq('id', userId)
       .then(() => {}, () => {})
 
+    // Parallel reads: user_profiles + block tables
+    const [userProfileResult, cdl, employment, mvrData, skills, education] = await Promise.all([
+      supabase
+        .from('user_profiles')
+        .select('first_name, last_name, email, phone, city, state, professional_summary')
+        .eq('user_id', userId)
+        .maybeSingle(),
+      getCdlData(supabase, userId),
+      getDriverEmployment(supabase, userId),
+      getMvrData(supabase, userId),
+      getSkills(supabase, userId),
+      getEducation(supabase, userId),
+    ])
+
+    const userProfile = userProfileResult.data
+
     // Build the public profile based on settings
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const publicProfile: Record<string, any> = {
-      id: profile.id,
+      id: userId,
       firstName: userProfile?.first_name ?? null,
       lastName: userProfile?.last_name ?? null,
       location: userProfile?.city && userProfile?.state
         ? `${userProfile.city}, ${userProfile.state}`
         : null,
-      summary: profile.professional_summary,
-      experienceYears: profile.experience_years,
-      // CDL info is always shown (core to trucking)
+      summary: userProfile?.professional_summary ?? null,
+      experienceYears: null,
       cdl: {
-        class: profile.cdl_class,
-        state: profile.cdl_state,
-        expiration: profile.cdl_expiration,
-        endorsements: profile.endorsements || [],
-        // Don't show CDL number for privacy
+        class: cdl?.cdl_class ?? null,
+        state: cdl?.cdl_state ?? null,
+        expiration: cdl?.cdl_expiration ?? null,
+        endorsements: cdl?.endorsements ?? [],
       },
     }
 
@@ -272,14 +263,13 @@ export async function GET(
       const { data: resumeData } = await supabase
         .from('resumes')
         .select('id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, created_at, resume_type, structured_data')
-        .eq('user_id', profile.user_id)
-        .or('resume_type.neq.developer_built,resume_type.is.null') // Exclude developer resumes
+        .eq('user_id', userId)
+        .or('resume_type.neq.developer_built,resume_type.is.null')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
 
       if (resumeData) {
-        // Normalize structured_data to a consistent format (handles old uploaded vs new builder format)
         const normalizedData = normalizeResumeStructuredData(resumeData.structured_data)
         
         resume = {
@@ -302,13 +292,12 @@ export async function GET(
       const { data: dotAppData } = await supabase
         .from('driver_applications')
         .select('id, verification_status, blockchain_tx_hash, is_complete, current_step, created_at')
-        .eq('user_id', profile.user_id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
 
       if (dotAppData) {
-        // Calculate completion percentage (6 total steps)
         const totalSteps = 6
         const completionPct = dotAppData.is_complete 
           ? 100 
@@ -325,48 +314,38 @@ export async function GET(
       }
     }
 
-    // MVR summary if enabled
+    // MVR summary from block table
     let mvr = null
-    if (settings.showMvr && profile.mvr_license_status) {
+    if (settings.showMvr && mvrData?.license_status) {
       mvr = {
-        licenseStatus: profile.mvr_license_status,
-        totalPoints: profile.mvr_total_points,
-        violationCount: profile.mvr_violation_count,
-        lastOrdered: profile.mvr_last_ordered_at,
-        // Summary status for quick view
-        status: profile.mvr_license_status === 'Valid' && (profile.mvr_violation_count || 0) === 0
+        licenseStatus: mvrData.license_status,
+        totalPoints: mvrData.total_points,
+        violationCount: mvrData.violation_count,
+        lastOrdered: mvrData.last_ordered_at,
+        status: mvrData.license_status === 'Valid' && mvrData.violation_count === 0
           ? 'clean'
-          : profile.mvr_license_status === 'Valid'
+          : mvrData.license_status === 'Valid'
             ? 'valid_with_violations'
             : 'review_needed',
       }
     }
 
-    // Employment history from profile (unverified — for resume/display only, not "Verified Employment")
+    // Employment history from block table
     let employmentSummary = null
-    if (settings.showResume && profile.employment_history) {
-      const history = profile.employment_history as Array<{
-        companyName?: string
-        position?: string
-        startDate?: string
-        endDate?: string
-        isCurrent?: boolean
-      }>
-      if (Array.isArray(history) && history.length > 0) {
-        employmentSummary = history.slice(0, 3).map(emp => ({
-          company: emp.companyName,
-          position: emp.position,
-          startDate: emp.startDate,
-          endDate: emp.isCurrent ? 'Present' : emp.endDate,
-        }))
-      }
+    if (settings.showResume && employment.length > 0) {
+      employmentSummary = employment.slice(0, 3).map(emp => ({
+        company: emp.companyName,
+        position: emp.position,
+        startDate: emp.startDate,
+        endDate: emp.isCurrent ? 'Present' : emp.endDate,
+      }))
     }
 
     // Verified employment only from verification flow (employer responded via email)
     const { data: verifiedRows } = await supabase
       .from('employment_verification_requests')
       .select('previous_employer_name, claimed_position, claimed_start_date, claimed_end_date, status')
-      .eq('driver_id', profile.user_id)
+      .eq('driver_id', userId)
       .eq('applicant_type', 'driver')
       .in('status', ['VERIFIED', 'PARTIALLY_VERIFIED'])
       .order('verified_at', { ascending: false })
@@ -379,7 +358,6 @@ export async function GET(
       status: r.status,
     }))
 
-    // Prevent caching so career card always shows current state (e.g. after resume delete)
     return NextResponse.json(
       {
         success: true,
@@ -392,7 +370,7 @@ export async function GET(
         settings: {
           allowConnect: settings.allowConnect,
         },
-        viewCount: (profile.share_views_count || 0) + 1,
+        viewCount: (user.share_views_count || 0) + 1,
       },
       { headers: { 'Cache-Control': 'no-store' } }
     )
@@ -448,22 +426,24 @@ export async function POST(
 
     const supabase = await getAdminSupabaseClient()
 
-    // Find the driver profile
-    const { data: profile, error: profileError } = await supabase
-      .from('driver_profiles')
-      .select('id, user_id, share_settings')
+    // share_token lives on `users` (migrated in 036)
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, share_settings')
       .eq('share_token', token)
       .single()
 
-    if (profileError || !profile) {
+    if (userError || !user) {
       return NextResponse.json(
         { error: 'Profile not found' },
         { status: 404 }
       )
     }
 
+    const driverUserId = user.id
+
     // Check if connections are allowed
-    const settings = profile.share_settings as { allowConnect?: boolean } || {}
+    const settings = user.share_settings as { allowConnect?: boolean } || {}
     if (settings.allowConnect === false) {
       return NextResponse.json(
         { error: 'This driver has disabled connection requests' },
@@ -485,7 +465,6 @@ export async function POST(
       if (employerUser) {
         employerUserId = employerUser.id
 
-        // Check if employer has a company
         const { data: company } = await supabase
           .from('companies')
           .select('id')
@@ -503,7 +482,7 @@ export async function POST(
       const { data: existingLead } = await supabase
         .from('driver_leads')
         .select('id')
-        .eq('driver_user_id', profile.user_id)
+        .eq('driver_user_id', driverUserId)
         .eq('employer_user_id', employerUserId)
         .single()
 
@@ -517,12 +496,12 @@ export async function POST(
       }
     }
 
-    // Create the lead
+    // Create the lead (driver_profile_id kept for backward compat — nullable)
     const { data: lead, error: leadError } = await supabase
       .from('driver_leads')
       .insert({
-        driver_user_id: profile.user_id,
-        driver_profile_id: profile.id,
+        driver_user_id: driverUserId,
+        driver_profile_id: null,
         employer_user_id: employerUserId,
         company_id: companyId,
         employer_name: employerName,

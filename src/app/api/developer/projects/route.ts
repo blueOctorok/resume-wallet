@@ -140,13 +140,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Get developer profile ID (optional - for linking)
-    const { data: profile } = await supabase
-      .from('developer_profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
     // Get next display order
     const { data: existingProjects } = await supabase
       .from('developer_projects')
@@ -164,7 +157,7 @@ export async function POST(request: NextRequest) {
       .from('developer_projects')
       .insert({
         user_id: user.id,
-        developer_profile_id: profile?.id || null,
+        developer_profile_id: null,
         title,
         description: description || null,
         long_description: longDescription || null,

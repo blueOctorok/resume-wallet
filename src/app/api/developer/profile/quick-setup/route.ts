@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { saveDevGithub, saveDevProfile } from '@/lib/block-data'
 
 /**
  * POST /api/developer/profile/quick-setup
@@ -8,9 +9,9 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
  * equivalent: establishes the minimum fields to make this hub "belong" to
  * a real person and appear in employer talent searches.
  *
- * Writes to both:
- *   - developer_profiles (upsert by user_id)
- *   - user_profiles (first_name, last_name)
+ * Writes to:
+ *   - block_dev_profile / block_dev_github (role-specific data)
+ *   - user_profiles (first_name, last_name, etc.)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -41,27 +42,30 @@ export async function POST(request: NextRequest) {
 
     const fullName = `${firstName.trim()} ${lastName.trim()}`
 
-    // Upsert developer_profiles with role-specific data only
-    const profileData: Record<string, string | null> = {}
-    if (headline?.trim()) profileData.headline = headline.trim()
-    if (githubUsername?.trim()) profileData.github_username = githubUsername.trim().replace(/^@/, '')
-    if (location?.trim()) profileData.location = location.trim()
+    const cleanGithub = githubUsername?.trim()?.replace(/^@/, '') || null
 
-    const { error: profileError } = await supabase
-      .from('developer_profiles')
-      .upsert({ user_id: user.id, ...profileData }, { onConflict: 'user_id' })
+    // Write to block tables
+    const writes: Promise<void>[] = []
+    if (cleanGithub) {
+      writes.push(saveDevGithub(supabase, user.id, { username: cleanGithub }))
+    }
+    // Ensure dev profile row exists
+    writes.push(saveDevProfile(supabase, user.id, {}))
 
-    if (profileError) {
-      console.error('[DEV QUICK SETUP] Profile upsert error:', profileError)
+    try {
+      await Promise.all(writes)
+    } catch (err) {
+      console.error('[DEV QUICK SETUP] Block save error:', err)
       return NextResponse.json({ error: 'Failed to save profile' }, { status: 500 })
     }
 
-    // Write all identity data to user_profiles
+    // Write identity data to user_profiles
     const identityData: Record<string, string | null> = {
       first_name: firstName.trim(),
       last_name: lastName.trim(),
     }
     if (email?.trim()) identityData.email = email.trim()
+    if (headline?.trim()) identityData.headline = headline.trim()
 
     await supabase
       .from('user_profiles')

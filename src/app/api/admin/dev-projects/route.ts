@@ -54,38 +54,22 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get wallet addresses and developer names
+    // Enrich with wallet addresses, names, and github usernames from block tables
     const userIds = [...new Set(projects?.map((p) => p.user_id) || [])]
-    const profileIds = [
-      ...new Set(
-        projects?.map((p) => p.developer_profile_id).filter(Boolean) || []
-      ),
-    ]
 
-    const { data: users } = await supabase
-      .from('users')
-      .select('id, wallet_address')
-      .in('id', userIds)
+    const [{ data: users }, { data: userProfiles }, { data: githubRows }] = await Promise.all([
+      supabase.from('users').select('id, wallet_address').in('id', userIds),
+      supabase.from('user_profiles').select('user_id, first_name, last_name').in('user_id', userIds),
+      supabase.from('block_dev_github').select('user_id, username').in('user_id', userIds),
+    ])
 
-    const devProfileUserIds = [...new Set(projects?.map(p => p.user_id).filter(Boolean) || [])]
-    const { data: profiles } = await supabase
-      .from('user_profiles')
-      .select('user_id, first_name, last_name')
-      .in('user_id', devProfileUserIds)
+    const userMap = new Map(users?.map(u => [u.id, u.wallet_address]) || [])
+    const userProfileMap = new Map((userProfiles || []).map(p => [p.user_id, p]))
+    const githubMap = new Map((githubRows || []).map(g => [g.user_id, g.username]))
 
-    const { data: devProfiles } = profileIds.length
-      ? await supabase.from('developer_profiles').select('id, user_id, github_username').in('id', profileIds)
-      : { data: [] }
-
-    const userMap = new Map(users?.map((u) => [u.id, u.wallet_address]) || [])
-    const userProfileMap = new Map((profiles || []).map(p => [p.user_id, p]))
-    const devProfileIdToUserIdMap = new Map((devProfiles || []).map(p => [p.id, { user_id: p.user_id, github: p.github_username }]))
-
-    // Enrich projects
     const enrichedProjects = projects?.map((project) => {
-      const devInfo = project.developer_profile_id ? devProfileIdToUserIdMap.get(project.developer_profile_id) : null
       const up = userProfileMap.get(project.user_id)
-      const ownerName = [up?.first_name, up?.last_name].filter(Boolean).join(' ') || devInfo?.github || 'Unknown'
+      const ownerName = [up?.first_name, up?.last_name].filter(Boolean).join(' ') || githubMap.get(project.user_id) || 'Unknown'
       return {
         ...project,
         walletAddress: userMap.get(project.user_id) || 'Unknown',

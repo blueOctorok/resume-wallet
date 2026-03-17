@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getDevGithub } from '@/lib/block-data'
 
 /**
  * GET /api/github/contributions
@@ -73,18 +74,21 @@ export async function GET(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Fetch the developer profile by share token
-    const { data: profile, error: profileError } = await supabase
-      .from('developer_profiles')
-      .select('github_username, github_access_token')
+    // share_token lives on users table (036_unified_share_token)
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id')
       .eq('share_token', shareToken)
       .single()
 
-    if (profileError || !profile) {
+    if (userError || !user) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    if (!profile.github_username) {
+    // GitHub credentials from block_dev_github
+    const github = await getDevGithub(supabase, user.id)
+
+    if (!github?.username) {
       return NextResponse.json(
         { error: 'GitHub not connected' },
         { status: 400 }
@@ -104,9 +108,9 @@ export async function GET(request: NextRequest) {
     }
 
     // GraphQL API requires authentication
-    if (profile.github_access_token) {
+    if (github.access_token) {
       // Use user's OAuth token (includes private contributions)
-      headers.Authorization = `Bearer ${profile.github_access_token}`
+      headers.Authorization = `Bearer ${github.access_token}`
     } else if (process.env.GITHUB_TOKEN) {
       // Fallback to app token (public contributions only)
       headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
@@ -124,7 +128,7 @@ export async function GET(request: NextRequest) {
       body: JSON.stringify({
         query: CONTRIBUTIONS_QUERY,
         variables: {
-          username: profile.github_username,
+          username: github.username,
           from,
           to,
         },
@@ -174,7 +178,7 @@ export async function GET(request: NextRequest) {
       total: calendar.totalContributions,
       contributions,
       // Flag if this includes private contributions
-      includesPrivate: !!profile.github_access_token,
+      includesPrivate: !!github.access_token,
     })
   } catch (error) {
     console.error('[GITHUB CONTRIBUTIONS] Error:', error)

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { parseAccioMvrResult, mvrResultToJsonb } from '@/lib/accio-xml-parser'
-import { calculateProfileScore } from '@/lib/profile-completeness'
+import { saveMvrData } from '@/lib/block-data'
 
 /**
  * Convert YYYYMMDD date format to ISO date string for database storage
@@ -375,40 +374,22 @@ export async function POST(request: NextRequest) {
       // Don't fail - result is stored, order update is secondary
     }
 
-    // 6. Update driver profile (trigger should handle this, but we'll do it explicitly)
-    if (mvrOrder.driver_profile_id) {
-      const { error: profileUpdateError } = await supabaseService
-        .from('driver_profiles')
-        .update({
-          mvr_order_id: mvrOrder.id,
-          mvr_result_id: mvrResult.id,
-          mvr_expires_at: mvrOrder.expires_at,
-          mvr_license_status: parsedResult.licenseStatus,
-          mvr_total_points: parsedResult.totalPoints || 0,
-          mvr_violation_count: parsedResult.violationCount || 0,
-          mvr_last_ordered_at: mvrOrder.ordered_at
-        })
-        .eq('id', mvrOrder.driver_profile_id)
-
-      if (profileUpdateError) {
-        console.error('[MVR WEBHOOK] Error updating profile:', profileUpdateError)
-        // Don't fail - result is stored
-      }
-
-      // 7. Recalculate profile completeness score
-      const { data: updatedProfile } = await supabaseService
-        .from('driver_profiles')
-        .select('*')
-        .eq('id', mvrOrder.driver_profile_id)
-        .single()
-
-      if (updatedProfile) {
-        const scoreResult = calculateProfileScore(updatedProfile)
-        await supabaseService
-          .from('driver_profiles')
-          .update({ profile_completion_score: scoreResult.score })
-          .eq('id', mvrOrder.driver_profile_id)
-      }
+    // 6. Write MVR data to block table
+    if (mvrOrder.driver_user_id) {
+      saveMvrData(supabaseService, mvrOrder.driver_user_id, {
+        order_id: mvrOrder.id,
+        result_id: mvrResult.id,
+        expires_at: mvrOrder.expires_at,
+        license_status: parsedResult.licenseStatus,
+        total_points: parsedResult.totalPoints || 0,
+        violation_count: parsedResult.violationCount || 0,
+        violations: parsedResult.violations || [],
+        accidents: parsedResult.accidents || [],
+        last_ordered_at: mvrOrder.ordered_at,
+        last_updated: new Date().toISOString(),
+      }).catch((err) =>
+        console.warn('[MVR WEBHOOK] Block table sync failed (non-fatal):', err)
+      )
     }
 
     console.log('[MVR WEBHOOK] MVR result processed successfully:', mvrResult.id)

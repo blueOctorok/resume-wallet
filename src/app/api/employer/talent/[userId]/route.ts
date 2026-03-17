@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import {
+  getCdlData,
+  getDriverEmployment,
+  getSkills,
+  getEducation,
+  getDevGithub,
+  getDevPortfolio,
+  getDevProfile,
+} from '@/lib/block-data'
 
 /**
  * GET /api/employer/talent/[userId]
@@ -82,66 +91,73 @@ export async function GET(
 
     // Get additional details not in the view
 
-    // 1. User basic info
+    // 1. User basic info (share_token/share_settings live on users since migration 036)
     const { data: candidate } = await supabase
       .from('users')
-      .select('id, email, role, created_at')
+      .select('id, email, role, created_at, share_token, share_settings')
       .eq('id', userId)
       .single()
 
     const { data: userProfile } = await supabase
       .from('user_profiles')
-      .select('first_name, last_name, avatar_url, headline, email, phone, city, state')
+      .select('first_name, last_name, avatar_url, headline, email, phone, city, state, professional_summary')
       .eq('user_id', userId)
       .maybeSingle()
 
-    // 2. Driver profile details (if driver)
-    let driverProfile = null
-    if (careerCard.driver_profile_id) {
-      const { data: dp } = await supabase
-        .from('driver_profiles')
-        .select(
-          `
-          id, professional_summary,
-          cdl_class, cdl_state, cdl_number, cdl_expiration,
-          endorsements, cdl_endorsements, restrictions,
-          experience_years, employment_history, education, skills,
-          share_token, share_settings, created_at
-        `,
-        )
-        .eq('id', careerCard.driver_profile_id)
-        .single()
+    // 2. Determine candidate type from installed blocks, then read block data
+    const isDriver = !!careerCard.driver_profile_id
+    const isDeveloper = !isDriver && !!careerCard.developer_profile_id
 
-      driverProfile = dp
+    // Parallel block reads — only fetch the blocks relevant to this candidate type
+    const [cdlData, driverEmployment, skills, education, devProfileData, devGithub, devPortfolio] =
+      await Promise.all([
+        isDriver ? getCdlData(supabase, userId) : Promise.resolve(null),
+        isDriver ? getDriverEmployment(supabase, userId) : Promise.resolve([]),
+        getSkills(supabase, userId),
+        getEducation(supabase, userId),
+        isDeveloper ? getDevProfile(supabase, userId) : Promise.resolve(null),
+        isDeveloper ? getDevGithub(supabase, userId) : Promise.resolve(null),
+        isDeveloper ? getDevPortfolio(supabase, userId) : Promise.resolve(null),
+      ])
+
+    // 3. Reconstruct the profile shapes the CareerCard component expects
+    let driverProfile = null
+    if (isDriver) {
+      driverProfile = {
+        id: careerCard.driver_profile_id,
+        professional_summary: userProfile?.professional_summary ?? null,
+        cdl_class: cdlData?.cdl_class ?? null,
+        cdl_state: cdlData?.cdl_state ?? null,
+        cdl_number: cdlData?.cdl_number ?? null,
+        cdl_expiration: cdlData?.cdl_expiration ?? null,
+        endorsements: cdlData?.endorsements ?? [],
+        restrictions: cdlData?.restrictions ?? [],
+        employment_history: driverEmployment,
+        education,
+        skills,
+        share_token: candidate?.share_token ?? null,
+        share_settings: candidate?.share_settings ?? null,
+      }
     }
 
-    // 3. Developer profile — use developer_profile_id from view if available,
-    //    otherwise fall back to user_id lookup for non-driver users
     let developerProfile = null
-    if (!driverProfile) {
-      const devpId = careerCard.developer_profile_id
-      const devpQuery = devpId
-        ? supabase.from('developer_profiles').select(
-            `id, bio, headline, years_experience, employment_history,
-             github_username, linkedin_url, portfolio_url, twitter_url,
-             skills, education, share_token`,
-          ).eq('id', devpId)
-        : supabase.from('developer_profiles').select(
-            `id, bio, headline, years_experience, employment_history,
-             github_username, linkedin_url, portfolio_url, twitter_url,
-             skills, education, share_token`,
-          ).eq('user_id', userId)
-
-      const { data: devp } = await devpQuery.single()
-
-      if (devp) {
-        // Normalise into the shape the rest of this route + CareerCard component expects
-        developerProfile = {
-          ...devp,
-          title: devp.headline,
-          github_url: devp.github_username ? `https://github.com/${devp.github_username}` : null,
-          professional_summary: devp.bio,
-        }
+    if (isDeveloper) {
+      developerProfile = {
+        id: careerCard.developer_profile_id,
+        bio: devProfileData?.bio ?? null,
+        headline: userProfile?.headline ?? null,
+        title: userProfile?.headline ?? null,
+        years_experience: devProfileData?.years_experience ?? null,
+        employment_history: devProfileData?.employment_history ?? [],
+        github_username: devGithub?.username ?? null,
+        github_url: devGithub?.username ? `https://github.com/${devGithub.username}` : null,
+        linkedin_url: devPortfolio?.linkedin_url ?? null,
+        portfolio_url: devPortfolio?.portfolio_url ?? null,
+        twitter_url: devPortfolio?.twitter_url ?? null,
+        professional_summary: devProfileData?.bio ?? null,
+        skills,
+        education,
+        share_token: candidate?.share_token ?? null,
       }
     }
 

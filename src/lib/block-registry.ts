@@ -47,6 +47,13 @@ export interface BlockDefinition {
    * null means the block has no full-page view yet (future work).
    */
   pageRoute: string | null
+  /**
+   * The database table(s) this block owns. Each block is responsible for
+   * its own data via src/lib/block-data.ts. Blocks that need data from
+   * another block query that block's table directly (block-to-block).
+   * null means the block doesn't own persistent data (yet).
+   */
+  dataTables: string[] | null
 }
 
 export interface BlockCategory {
@@ -104,6 +111,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     complexity: 'simple',
     appearsOnCareerCard: true,
     pageRoute: null,
+    dataTables: ['block_skills'],
   },
   {
     id: 'general-work-history',
@@ -115,6 +123,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     complexity: 'moderate',
     appearsOnCareerCard: true,
     pageRoute: null,
+    dataTables: ['block_driver_employment'],
   },
 
   // ── Drivers ────────────────────────────────────────────────────────────────
@@ -128,6 +137,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     complexity: 'moderate',
     appearsOnCareerCard: true,
     pageRoute: 'resume',
+    dataTables: ['block_driver_cdl', 'block_driver_employment', 'block_education', 'block_skills', 'block_references'],
   },
   {
     id: 'driver-dot-application',
@@ -139,6 +149,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     complexity: 'complex',
     appearsOnCareerCard: true,
     pageRoute: 'dotapp',
+    dataTables: ['block_driver_cdl', 'block_driver_employment', 'block_driver_emergency', 'block_driver_experience', 'block_education', 'block_references'],
   },
   {
     id: 'driver-mvr',
@@ -150,6 +161,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     complexity: 'moderate',
     appearsOnCareerCard: true,
     pageRoute: 'mvr',
+    dataTables: ['block_driver_mvr'],
   },
   {
     id: 'driver-cdl-credentials',
@@ -161,6 +173,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     complexity: 'simple',
     appearsOnCareerCard: true,
     pageRoute: null,
+    dataTables: ['block_driver_cdl'],
   },
 
   // ── Developers ─────────────────────────────────────────────────────────────
@@ -174,6 +187,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     complexity: 'moderate',
     appearsOnCareerCard: true,
     pageRoute: 'resume',
+    dataTables: ['block_skills', 'block_education', 'block_references'],
   },
   {
     id: 'developer-portfolio',
@@ -185,6 +199,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     complexity: 'moderate',
     appearsOnCareerCard: true,
     pageRoute: 'portfolio',
+    dataTables: ['block_dev_portfolio'],
   },
   {
     id: 'developer-projects',
@@ -196,6 +211,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     complexity: 'simple',
     appearsOnCareerCard: true,
     pageRoute: null,
+    dataTables: null,
   },
   {
     id: 'developer-github',
@@ -207,6 +223,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     complexity: 'simple',
     appearsOnCareerCard: true,
     pageRoute: null,
+    dataTables: ['block_dev_github'],
   },
 ]
 

@@ -46,9 +46,12 @@ const PortfolioPage = dynamic(
  */
 export default function CandidateShell() {
   const { user, walletAddress } = useAuthStore()
-  const { currentPage, setCurrentPage, initialThreadId } = useUIStore()
+  const { currentPage, setCurrentPage, initialThreadId, editingResumeId, setEditingResumeId } = useUIStore()
 
-  const goBack = useCallback(() => setCurrentPage(null), [setCurrentPage])
+  const goBack = useCallback(() => {
+    setEditingResumeId(undefined)
+    setCurrentPage(null)
+  }, [setCurrentPage, setEditingResumeId])
 
   if (currentPage === 'profile-setup') {
     return (
@@ -77,6 +80,7 @@ export default function CandidateShell() {
         <ResumeBuilder
           user={user}
           onBack={goBack}
+          existingResumeId={editingResumeId}
           onSave={() => goBack()}
         />
       </div>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { nanoid } from 'nanoid'
+import { getCdlData } from '@/lib/block-data'
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,42 +51,27 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get or create driver profile
-    let { data: profile, error: profileError } = await supabase
-      .from('driver_profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
+    // Read block data and source tables directly
+    const adminSupabaseForBlocks = await getAdminSupabaseClient()
 
-    // If profile doesn't exist, create a basic one
-    if (profileError && profileError.code === 'PGRST116') {
-      console.log('[APPLICATION SUBMIT] Creating new profile for user:', user.id)
-      
-      const { data: newProfile, error: createError } = await supabase
-        .from('driver_profiles')
-        .insert({
-          user_id: user.id,
-          profile_completion_score: 0
-        })
-        .select()
-        .single()
-
-      if (createError) {
-        console.error('[APPLICATION SUBMIT] Error creating profile:', createError)
-        return NextResponse.json(
-          { error: 'Failed to create driver profile' },
-          { status: 500 }
-        )
-      }
-
-      profile = newProfile
-    } else if (profileError) {
-      console.error('[APPLICATION SUBMIT] Error fetching profile:', profileError)
-      return NextResponse.json(
-        { error: 'Failed to fetch driver profile' },
-        { status: 500 }
-      )
-    }
+    const [cdlData, { data: latestResume }, { data: latestDotApp }] = await Promise.all([
+      getCdlData(adminSupabaseForBlocks, user.id),
+      adminSupabaseForBlocks
+        .from('resumes')
+        .select('id, ipfs_url')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      adminSupabaseForBlocks
+        .from('driver_applications')
+        .select('id, application_data')
+        .eq('user_id', user.id)
+        .eq('is_complete', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ])
 
     // Check if job_posting exists for this external job, create if not
     let jobPostingId = null
@@ -149,8 +135,7 @@ export async function POST(request: NextRequest) {
     const shareToken = nanoid(16)
 
     // Fetch name from user_profiles for the application snapshot
-    const adminSupabase = await getAdminSupabaseClient()
-    const { data: userProfile } = await adminSupabase
+    const { data: userProfile } = await adminSupabaseForBlocks
       .from('user_profiles')
       .select('first_name, last_name')
       .eq('user_id', user.id)
@@ -158,29 +143,26 @@ export async function POST(request: NextRequest) {
 
     const applicantName = [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ').trim() || null
 
-    // Prepare application data snapshot
+    // Prepare application data snapshot — CDL from block tables, rest from source tables
     const applicationData = {
       applicant_name: applicantName,
       applicant_email: user.email,
-      // Driver-specific fields (will be null for non-drivers)
-      cdl_class: profile.cdl_class,
-      cdl_endorsements: profile.cdl_endorsements,
-      cdl_state: profile.cdl_state,
-      experience_years: profile.experience_years,
-      resume_url: profile.resume_url,
-      dot_application: profile.dot_application_data,
+      cdl_class: cdlData?.cdl_class ?? null,
+      cdl_endorsements: cdlData?.endorsements ?? null,
+      cdl_state: cdlData?.cdl_state ?? null,
+      resume_url: latestResume?.ipfs_url ?? null,
+      dot_application: latestDotApp?.application_data ?? null,
       submitted_at: new Date().toISOString()
     }
 
     // Create application record
-    // Note: Column renamed from driver_user_id to applicant_user_id in migration 016
     const { data: application, error: appError } = await supabase
       .from('applications')
       .insert({
         applicant_user_id: user.id,
         job_posting_id: jobPostingId,
-        driver_application_id: profile.driver_application_id,
-        resume_id: profile.resume_id,
+        driver_application_id: latestDotApp?.id ?? null,
+        resume_id: latestResume?.id ?? null,
         cover_letter: coverLetter,
         application_data: applicationData,
         share_token: shareToken,

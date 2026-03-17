@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getDevGithub, getDevPortfolio, getDevProfile, getSkills, getEducation } from '@/lib/block-data'
 
 /**
  * GET /api/developer/hub
@@ -55,41 +56,35 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Fetch all data in parallel for performance
-    const [profileResult, projectsResult, jobAppsResult] = await Promise.all([
-      // 1. Developer profile
-      supabase
-        .from('developer_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle(),
-
-      // 2. All portfolio projects
+    // Fetch all data in parallel — reads from block tables
+    const [userProfileResult, devProfileResult, devGithubResult, devPortfolioResult, skillsResult, educationResult, projectsResult, jobAppsResult] = await Promise.all([
+      supabase.from('user_profiles').select('first_name, last_name, avatar_url, headline, email, phone, city, state, display_name, professional_summary').eq('user_id', user.id).maybeSingle(),
+      getDevProfile(supabase, user.id),
+      getDevGithub(supabase, user.id),
+      getDevPortfolio(supabase, user.id),
+      getSkills(supabase, user.id),
+      getEducation(supabase, user.id),
       supabase
         .from('developer_projects')
         .select('*')
         .eq('user_id', user.id)
         .order('display_order', { ascending: true })
         .order('created_at', { ascending: false }),
-
-      // 3. Job applications (shared table with drivers)
       supabase
         .from('applications')
-        .select(
-          `
-          id, status, applied_at, view_count,
-          job_postings (
-            title,
-            companies (company_name)
-          )
-        `
-        )
-        .eq('driver_user_id', user.id) // TODO: Add developer_user_id column or rename to user_id
+        .select(`id, status, applied_at, view_count, job_postings (title, companies (company_name))`)
+        .eq('driver_user_id', user.id)
         .order('applied_at', { ascending: false }),
     ])
 
-    // Process profile
-    const profile = profileResult.data || null
+    // Unpack block data
+    const userProfile = userProfileResult.data
+    const devProfile = devProfileResult
+    const devGithub = devGithubResult
+    const devPortfolio = devPortfolioResult
+    const skills = skillsResult
+    const education = educationResult
+    const hasAnyProfile = userProfile || devProfile || devGithub || devPortfolio
 
     // Process projects
     const projects = (projectsResult.data || []).map((project) => ({
@@ -134,8 +129,7 @@ export async function GET(request: NextRequest) {
     // Calculate statistics
     const totalProjects = projects.length
     const featuredProjects = projects.filter((p) => p.isFeatured).length
-    // GitHub is "connected" only if we have an OAuth token (not just a username)
-    const githubConnected = !!profile?.github_access_token
+    const githubConnected = !!devGithub?.access_token
     const totalJobApplications = jobApplications.length
     const pendingApplications = jobApplications.filter(
       (a) => a.status === 'pending'
@@ -144,11 +138,11 @@ export async function GET(request: NextRequest) {
     // Calculate profile completeness (weighted)
     // Basic profile: 15%, Headline/Bio: 15%, Projects: 25%, Skills: 15%, GitHub: 20%, Job prefs: 10%
     let profileCompleteness = 15 // Base for having an account
-    if (profile) {
-      if (profile.headline || profile.bio) profileCompleteness += 15
-      if ((profile.skills as unknown[])?.length > 0) profileCompleteness += 15
-      if (profile.github_username) profileCompleteness += 20
-      if (profile.job_types?.length > 0 || profile.work_styles?.length > 0)
+    if (hasAnyProfile) {
+      if (userProfile?.headline || devProfile?.bio) profileCompleteness += 15
+      if (skills.length > 0) profileCompleteness += 15
+      if (devGithub?.username) profileCompleteness += 20
+      if (devProfile?.job_types?.length > 0 || devProfile?.work_styles?.length > 0)
         profileCompleteness += 10
     }
     if (totalProjects > 0) profileCompleteness += 25
@@ -157,41 +151,39 @@ export async function GET(request: NextRequest) {
       success: true,
       isNewUser: false,
       userId: user.id, // The users table ID - needed for career score API
-      profile: profile
-        ? {
-            id: profile.id,
-            firstName: profile.first_name,
-            lastName: profile.last_name,
-            displayName: profile.display_name,
-            email: profile.email || user.email,
-            phone: profile.phone,
-            location: profile.location,
-            headline: profile.headline,
-            bio: profile.bio,
-            yearsExperience: profile.years_experience,
-            githubUsername: profile.github_username,
-            githubConnected: !!profile.github_access_token, // True if OAuth connected
-            githubConnectedAt: profile.github_connected_at,
-            githubData: profile.github_data,
-            portfolioUrl: profile.portfolio_url,
-            linkedinUrl: profile.linkedin_url,
-            twitterUrl: profile.twitter_url,
-            personalWebsite: profile.personal_website,
-            avatarUrl: profile.avatar_url ?? null,
-            skills: profile.skills || [],
-            jobTypes: profile.job_types || [],
-            workStyles: profile.work_styles || [],
-            willingToRelocate: profile.willing_to_relocate,
-            desiredSalaryMin: profile.desired_salary_min,
-            desiredSalaryMax: profile.desired_salary_max,
-            availableForWork: profile.available_for_work,
-            availableFrom: profile.available_from,
-            education: profile.education || [],
-            certifications: profile.certifications || [],
-            createdAt: profile.created_at,
-            updatedAt: profile.updated_at,
-          }
-        : null,
+      profile: hasAnyProfile ? {
+        id: null,
+        firstName: userProfile?.first_name ?? null,
+        lastName: userProfile?.last_name ?? null,
+        displayName: userProfile?.display_name ?? null,
+        email: userProfile?.email || user.email,
+        phone: userProfile?.phone ?? null,
+        location: userProfile?.city && userProfile?.state ? `${userProfile.city}, ${userProfile.state}` : null,
+        headline: userProfile?.headline ?? null,
+        bio: devProfile?.bio ?? userProfile?.professional_summary ?? null,
+        yearsExperience: devProfile?.years_experience ?? null,
+        githubUsername: devGithub?.username ?? null,
+        githubConnected: !!devGithub?.access_token,
+        githubConnectedAt: devGithub?.connected_at ?? null,
+        githubData: devGithub?.data ?? null,
+        portfolioUrl: devPortfolio?.portfolio_url ?? null,
+        linkedinUrl: devPortfolio?.linkedin_url ?? null,
+        twitterUrl: devPortfolio?.twitter_url ?? null,
+        personalWebsite: devPortfolio?.personal_website ?? null,
+        avatarUrl: userProfile?.avatar_url ?? null,
+        skills: skills,
+        jobTypes: devProfile?.job_types ?? [],
+        workStyles: devProfile?.work_styles ?? [],
+        willingToRelocate: devProfile?.willing_to_relocate ?? false,
+        desiredSalaryMin: null,
+        desiredSalaryMax: null,
+        availableForWork: devProfile?.available_for_work ?? false,
+        availableFrom: null,
+        education: education,
+        certifications: devProfile?.certifications ?? [],
+        createdAt: null,
+        updatedAt: null,
+      } : null,
       projects,
       jobApplications,
       stats: {

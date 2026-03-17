@@ -6,7 +6,7 @@
  * - The `users` table row is created lazily the first time any backend action
  *   needs it (DOT form save, resume upload, role selection, MVR order, etc.).
  * - One wallet address = exactly one user record. Identity is the wallet.
- * - Names and other profile data live in driver_profiles, employer profiles,
+ * - Names and other profile data live in user_profiles, block_* tables,
  *   application_data, etc. — not in the initial user row.
  *
  * To avoid duplicate user rows, all code that might create a user must use

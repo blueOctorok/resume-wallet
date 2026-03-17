@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getCdlData, getDriverEmployment, getSkills, getEducation, getDevGithub, getDevPortfolio, getDevProfile } from '@/lib/block-data'
 
 /**
  * GET /api/driver/career-card
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     const { data: userProfile } = await supabase
       .from('user_profiles')
-      .select('first_name, last_name, avatar_url, headline, email, phone, city, state')
+      .select('first_name, last_name, avatar_url, headline, email, phone, city, state, professional_summary')
       .eq('user_id', userId)
       .maybeSingle()
 
@@ -82,35 +83,51 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Driver profile
-    let driverProfile = null
-    if (careerCard.driver_profile_id) {
-      const { data: dp } = await supabase
-        .from('driver_profiles')
-        .select(
-          `id, professional_summary, cdl_class, cdl_state, cdl_number,
-           cdl_expiration, endorsements, cdl_endorsements, restrictions,
-           experience_years, employment_history, education, skills,
-           share_token, share_settings, created_at`,
-        )
-        .eq('id', careerCard.driver_profile_id)
-        .single()
-      driverProfile = dp
-    }
+    // Build driver profile from block tables
+    const [cdl, employment, skills, education] = await Promise.all([
+      getCdlData(supabase, userId),
+      getDriverEmployment(supabase, userId),
+      getSkills(supabase, userId),
+      getEducation(supabase, userId),
+    ])
 
-    // Developer profile (if no driver profile)
+    const driverProfile = (cdl || employment.length > 0) ? {
+      professional_summary: userProfile?.professional_summary ?? null,
+      cdl_class: cdl?.cdl_class ?? null,
+      cdl_state: cdl?.cdl_state ?? null,
+      cdl_number: cdl?.cdl_number ?? null,
+      cdl_expiration: cdl?.cdl_expiration ?? null,
+      endorsements: cdl?.endorsements ?? [],
+      restrictions: cdl?.restrictions ?? [],
+      employment_history: employment,
+      education,
+      skills,
+      share_token: null,
+      share_settings: null,
+    } : null
+
+    // Developer profile from block tables (if no driver profile)
     let developerProfile = null
     if (!driverProfile) {
-      const { data: devp } = await supabase
-        .from('developer_profiles')
-        .select(
-          `id, professional_summary, title, years_experience, employment_history,
-           github_url, linkedin_url, portfolio_url, skills, education,
-           share_token, share_settings`,
-        )
-        .eq('user_id', userId)
-        .single()
-      developerProfile = devp
+      const [devProfile, devGithub, devPortfolio] = await Promise.all([
+        getDevProfile(supabase, userId),
+        getDevGithub(supabase, userId),
+        getDevPortfolio(supabase, userId),
+      ])
+      if (devProfile || devGithub || devPortfolio) {
+        developerProfile = {
+          professional_summary: userProfile?.professional_summary ?? devProfile?.bio ?? null,
+          years_experience: devProfile?.years_experience ?? null,
+          employment_history: devProfile?.employment_history ?? [],
+          github_url: devGithub?.username ? `https://github.com/${devGithub.username}` : null,
+          linkedin_url: devPortfolio?.linkedin_url ?? null,
+          portfolio_url: devPortfolio?.portfolio_url ?? null,
+          skills: [],
+          education: [],
+          share_token: null,
+          share_settings: null,
+        }
+      }
     }
 
     // Resume

@@ -64,10 +64,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
-    // Build query
-    // applications has applicant_user_id → users (renamed from driver_user_id in migration 016)
-    // driver_profiles has user_id → users
-    // So we get driver_profiles via users (no direct FK from applications to driver_profiles)
+    // Build query — CDL data now fetched separately from block_driver_cdl
     let query = supabase
       .from('applications')
       .select(
@@ -92,15 +89,7 @@ export async function GET(request: NextRequest) {
           id,
           wallet_address,
           email,
-          role,
-          driver_profiles (
-            cdl_number,
-            cdl_class,
-            cdl_state,
-            cdl_expiration,
-            experience_years,
-            professional_summary
-          )
+          role
         ),
         resumes (
           id,
@@ -137,38 +126,42 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Batch fetch identity from user_profiles (not driver_profiles)
+    // Batch fetch identity + CDL data for all applicants
     const applicantUserIds = [...new Set((applications || []).map(a => a.applicant_user_id).filter(Boolean))]
-    const { data: userProfiles } = applicantUserIds.length
-      ? await supabase
-          .from('user_profiles')
-          .select('user_id, first_name, last_name, email, phone, city, state')
-          .in('user_id', applicantUserIds)
-      : { data: [] }
 
-    const profileMap = new Map<string, { first_name: string | null; last_name: string | null; email: string | null; phone: string | null; city: string | null; state: string | null }>()
-    for (const p of userProfiles ?? []) {
-      profileMap.set(p.user_id, p)
-    }
+    const [{ data: userProfiles }, { data: cdlRows }] = await Promise.all([
+      applicantUserIds.length
+        ? supabase
+            .from('user_profiles')
+            .select('user_id, first_name, last_name, email, phone, city, state, headline')
+            .in('user_id', applicantUserIds)
+        : Promise.resolve({ data: [] }),
+      applicantUserIds.length
+        ? supabase
+            .from('block_driver_cdl')
+            .select('user_id, cdl_class, cdl_state, cdl_expiration')
+            .in('user_id', applicantUserIds)
+        : Promise.resolve({ data: [] }),
+    ])
 
-    // Process applicants (driver_profiles has role-specific fields; identity from user_profiles)
-    // Generic naming with backward compatibility
+    const upMap = new Map<string, { first_name: string | null; last_name: string | null; email: string | null; phone: string | null; city: string | null; state: string | null; headline: string | null }>()
+    for (const p of userProfiles ?? []) upMap.set(p.user_id, p)
+
+    const cdlMap = new Map<string, { cdl_class: string | null; cdl_state: string | null; cdl_expiration: string | null }>()
+    for (const c of cdlRows ?? []) cdlMap.set(c.user_id, c)
+
     const applicants = (applications || []).map((app) => {
       const applicantUser = app.users as {
         id: string
         wallet_address?: string
         email?: string
         role?: string
-        driver_profiles?: unknown
       } | null
-      const driverProfiles = applicantUser?.driver_profiles
-      const driverProfile = Array.isArray(driverProfiles)
-        ? driverProfiles[0]
-        : driverProfiles
       const resume = Array.isArray(app.resumes) ? app.resumes[0] : app.resumes
-      const jobPosting = app.job_postings as any
+      const jobPosting = app.job_postings as Record<string, unknown>
+      const cdl = cdlMap.get(app.applicant_user_id)
 
-      const up = profileMap.get(app.applicant_user_id)
+      const up = upMap.get(app.applicant_user_id)
       const name = [up?.first_name, up?.last_name].filter(Boolean).join(' ') || 'Unknown'
       const email = up?.email || applicantUser?.email || null
       const phone = up?.phone || null
@@ -182,7 +175,6 @@ export async function GET(request: NextRequest) {
         coverLetter: app.cover_letter,
         reviewerNotes: app.reviewer_notes,
         shareToken: app.share_token,
-        // Applicant info (generic) — identity from user_profiles
         applicantUserId: app.applicant_user_id,
         applicantRole: applicantUser?.role || 'driver',
         applicantName: name,
@@ -192,17 +184,14 @@ export async function GET(request: NextRequest) {
           up?.city && up?.state
             ? `${up.city}, ${up.state}`
             : null,
-        // CDL info (driver-specific)
-        cdlClass: driverProfile?.cdl_class || null,
-        cdlState: driverProfile?.cdl_state || null,
-        cdlExpiration: driverProfile?.cdl_expiration || null,
-        experienceYears: driverProfile?.experience_years || null,
-        professionalSummary: driverProfile?.professional_summary || null,
-        // Job info
+        cdlClass: cdl?.cdl_class ?? null,
+        cdlState: cdl?.cdl_state ?? null,
+        cdlExpiration: cdl?.cdl_expiration ?? null,
+        experienceYears: null as number | null,
+        professionalSummary: up?.headline ?? null,
         jobPostingId: app.job_posting_id,
-        jobTitle: jobPosting?.title || 'Unknown Position',
-        jobTargetRole: jobPosting?.target_role || 'driver',
-        // Resume info
+        jobTitle: (jobPosting?.title as string) || 'Unknown Position',
+        jobTargetRole: (jobPosting?.target_role as string) || 'driver',
         hasResume: !!resume,
         resumeId: resume?.id || null,
         resumeTitle: resume?.title || resume?.filename || null,
@@ -220,7 +209,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Sort by name client-side if requested (driver_profiles is nested, not in DB order)
+    // Sort by name client-side if requested (block data is nested, not in DB order)
     if (sortBy === 'name' && applicants.length > 0) {
       applicants.sort((a, b) => {
         const nameA = (a.driverName || '').toLowerCase()

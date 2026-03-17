@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getEmergencyContact, getDrivingExperience, saveEmergencyContact, saveDrivingExperience } from '@/lib/block-data'
 
 function isNetworkError(msg: string | undefined): boolean {
   const m = (msg ?? '').toLowerCase()
@@ -75,39 +76,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to clear progress' }, { status: 500 })
     }
 
-    const { data: profile, error: findError } = await supabase
-      .from('driver_profiles')
-      .select('id, last_updated_from')
-      .eq('user_id', user.id)
-      .maybeSingle()
+    // Check block tables for DOT-specific data to confirm profile exists
+    const [emergency, experience] = await Promise.all([
+      getEmergencyContact(supabase, user.id),
+      getDrivingExperience(supabase, user.id),
+    ])
 
-    if (findError) {
-      console.error('[CLEAR DOT PROGRESS] Error fetching profile:', findError)
-      if (isNetworkError(findError.message)) {
-        return NextResponse.json({ error: 'Could not reach database' }, { status: 503 })
-      }
-      return NextResponse.json({ error: 'Failed to clear progress' }, { status: 500 })
-    }
-
-    if (!profile) {
+    if (!emergency && !experience) {
       return NextResponse.json({ success: true, message: 'In-progress application discarded' })
     }
 
-    const { error: updateError } = await supabase
-      .from('driver_profiles')
-      .update({
-        emergency_contact_name: null,
-        emergency_contact_relationship: null,
-        emergency_contact_phone: null,
-        driving_experience: null,
-        ...(profile.last_updated_from === 'dot_application' ? { last_updated_from: null } : {}),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', profile.id)
-
-    if (updateError) {
-      console.error('[CLEAR DOT PROGRESS] Update error:', updateError)
-      if (isNetworkError(updateError.message)) {
+    // Clear DOT-specific block data
+    try {
+      await Promise.all([
+        saveEmergencyContact(supabase, user.id, {
+          contact_name: null,
+          contact_relationship: null,
+          contact_phone: null,
+        }),
+        saveDrivingExperience(supabase, user.id, null),
+      ])
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : ''
+      console.error('[CLEAR DOT PROGRESS] Block table clear error:', err)
+      if (isNetworkError(msg)) {
         return NextResponse.json({ error: 'Could not reach database' }, { status: 503 })
       }
       return NextResponse.json({ error: 'Failed to clear progress' }, { status: 500 })

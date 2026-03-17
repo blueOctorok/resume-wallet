@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getUserByWallet } from '@/lib/user-by-wallet'
 import { getBlockDefinition } from '@/lib/block-registry'
+import {
+  getCdlData,
+  getDevPortfolio,
+  getDevGithub,
+  getSkills,
+  getDriverEmployment,
+  getDevProfile,
+} from '@/lib/block-data'
 import type {
   ProjectedCareerCard,
   CareerCardSection,
@@ -84,24 +92,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Wallet address or share token required' }, { status: 401 })
     }
 
-    // ── Fetch user's profile name + avatar + onboarding context ──
-    // user_profiles is the universal source of truth; role-specific profiles are fallbacks.
-    const [userProfile, driverProfile, devProfile, onboarding] = await Promise.all([
+    // ── Fetch user's profile + onboarding context ──
+    const [userProfile, onboarding] = await Promise.all([
       supabase
         .from('user_profiles')
-        .select('first_name, last_name, avatar_url, headline, email, phone, city, state')
-        .eq('user_id', userId)
-        .maybeSingle()
-        .then(r => r.data),
-      supabase
-        .from('driver_profiles')
-        .select('professional_summary')
-        .eq('user_id', userId)
-        .maybeSingle()
-        .then(r => r.data),
-      supabase
-        .from('developer_profiles')
-        .select('professional_summary')
+        .select('first_name, last_name, avatar_url, headline, email, phone, city, state, professional_summary')
         .eq('user_id', userId)
         .maybeSingle()
         .then(r => r.data),
@@ -121,7 +116,7 @@ export async function GET(request: NextRequest) {
       ? `${userProfile.city}, ${userProfile.state}`
       : null
 
-    const summary = driverProfile?.professional_summary ?? devProfile?.professional_summary ?? null
+    const summary = userProfile?.professional_summary ?? null
 
     const contact = (shareSettings.showContact || !isPublicView)
       ? {
@@ -146,7 +141,7 @@ export async function GET(request: NextRequest) {
       const def = getBlockDefinition(blockType)
       if (!def || !def.appearsOnCareerCard) continue
 
-      const sectionData = await fetchSectionData(supabase, userId, blockType as SectionBlockType)
+      const sectionData = await fetchSectionData(supabase, userId, blockType as SectionBlockType, avatarUrl)
       if (!sectionData) continue
 
       sections.push({
@@ -185,6 +180,7 @@ async function fetchSectionData(
   supabase: SupabaseClient,
   userId: string,
   blockType: SectionBlockType,
+  userAvatarUrl: string | null,
 ): Promise<
   ResumeData | DotAppData | MvrData | CdlData | PortfolioData |
   GitHubData | ProjectsData | SkillsData | WorkHistoryData | null
@@ -202,7 +198,7 @@ async function fetchSectionData(
     case 'developer-portfolio':
       return fetchPortfolioData(supabase, userId)
     case 'developer-github':
-      return fetchGitHubData(supabase, userId)
+      return fetchGitHubData(supabase, userId, userAvatarUrl)
     case 'developer-projects':
       return fetchProjectsData(supabase, userId)
     case 'general-skills':
@@ -294,45 +290,30 @@ async function fetchMvrData(supabase: SupabaseClient, userId: string): Promise<M
 }
 
 async function fetchCdlData(supabase: SupabaseClient, userId: string): Promise<CdlData | null> {
-  const { data } = await supabase
-    .from('driver_profiles')
-    .select('cdl_class, cdl_state, cdl_number, cdl_expiration, endorsements, restrictions')
-    .eq('user_id', userId)
-    .maybeSingle()
-
-  if (!data) return null
+  const row = await getCdlData(supabase, userId)
+  if (!row) return null
   return {
-    cdlClass: data.cdl_class,
-    cdlState: data.cdl_state,
-    cdlNumber: data.cdl_number,
-    cdlExpiration: data.cdl_expiration,
-    endorsements: data.endorsements ?? [],
-    restrictions: data.restrictions ?? [],
+    cdlClass: row.cdl_class,
+    cdlState: row.cdl_state,
+    cdlNumber: row.cdl_number,
+    cdlExpiration: row.cdl_expiration,
+    endorsements: row.endorsements ?? [],
+    restrictions: row.restrictions ?? [],
   }
 }
 
 async function fetchPortfolioData(supabase: SupabaseClient, userId: string): Promise<PortfolioData | null> {
-  const { data } = await supabase
-    .from('developer_profiles')
-    .select('portfolio_url')
-    .eq('user_id', userId)
-    .maybeSingle()
-
-  return { portfolioUrl: data?.portfolio_url ?? null }
+  const row = await getDevPortfolio(supabase, userId)
+  return { portfolioUrl: row?.portfolio_url ?? null }
 }
 
-async function fetchGitHubData(supabase: SupabaseClient, userId: string): Promise<GitHubData | null> {
-  const { data } = await supabase
-    .from('developer_profiles')
-    .select('github_username, avatar_url')
-    .eq('user_id', userId)
-    .maybeSingle()
-
-  if (!data?.github_username) return null
+async function fetchGitHubData(supabase: SupabaseClient, userId: string, userAvatarUrl: string | null): Promise<GitHubData | null> {
+  const row = await getDevGithub(supabase, userId)
+  if (!row?.username) return null
 
   return {
-    username: data.github_username,
-    avatarUrl: data.avatar_url,
+    username: row.username,
+    avatarUrl: userAvatarUrl,
     bio: null,
     publicRepos: 0,
     followers: 0,
@@ -363,43 +344,39 @@ async function fetchProjectsData(supabase: SupabaseClient, userId: string): Prom
 }
 
 async function fetchSkillsData(supabase: SupabaseClient, userId: string): Promise<SkillsData | null> {
-  // Skills can live on either profile type
-  const { data: dp } = await supabase
-    .from('driver_profiles')
-    .select('skills')
-    .eq('user_id', userId)
-    .maybeSingle()
-
-  const { data: devp } = await supabase
-    .from('developer_profiles')
-    .select('skills')
-    .eq('user_id', userId)
-    .maybeSingle()
-
-  const raw = dp?.skills ?? devp?.skills
-  if (!raw || !Array.isArray(raw) || raw.length === 0) return null
-
-  const skills = raw.map((s: unknown) =>
-    typeof s === 'string' ? { name: s } : (s as { name: string; category?: string })
-  )
-  return { skills }
+  const entries = await getSkills(supabase, userId)
+  if (entries.length === 0) return null
+  return { skills: entries.map(s => ({ name: s.name, category: s.category })) }
 }
 
 async function fetchWorkHistoryData(supabase: SupabaseClient, userId: string): Promise<WorkHistoryData | null> {
-  const { data: dp } = await supabase
-    .from('driver_profiles')
-    .select('employment_history')
-    .eq('user_id', userId)
-    .maybeSingle()
+  // Check both driver and developer employment block tables
+  const [driverHistory, devProfile] = await Promise.all([
+    getDriverEmployment(supabase, userId),
+    getDevProfile(supabase, userId),
+  ])
 
-  const { data: devp } = await supabase
-    .from('developer_profiles')
-    .select('employment_history')
-    .eq('user_id', userId)
-    .maybeSingle()
+  const devHistory = (devProfile?.employment_history ?? []) as Record<string, unknown>[]
 
-  const history = dp?.employment_history ?? devp?.employment_history
-  if (!history || !Array.isArray(history) || history.length === 0) return null
+  // Prefer driver employment (structured UnifiedEmployment[]), fall back to dev profile
+  const useDriverHistory = driverHistory.length > 0
+  const entries = useDriverHistory
+    ? driverHistory.map(e => ({
+        companyName: e.companyName ?? '',
+        position: e.position ?? '',
+        startDate: e.startDate ?? '',
+        endDate: e.endDate || null,
+        isCurrent: e.isCurrent ?? false,
+      }))
+    : devHistory.map(e => ({
+        companyName: (e.companyName as string) ?? '',
+        position: (e.position as string) ?? '',
+        startDate: (e.startDate as string) ?? '',
+        endDate: (e.endDate as string | null) ?? null,
+        isCurrent: (e.isCurrent as boolean) ?? false,
+      }))
+
+  if (entries.length === 0) return null
 
   const { count } = await supabase
     .from('employment_verification_requests')
@@ -407,14 +384,5 @@ async function fetchWorkHistoryData(supabase: SupabaseClient, userId: string): P
     .eq('driver_id', userId)
     .eq('status', 'verified')
 
-  return {
-    entries: history.map((e: Record<string, unknown>) => ({
-      companyName: (e.companyName as string) ?? '',
-      position: (e.position as string) ?? '',
-      startDate: (e.startDate as string) ?? '',
-      endDate: (e.endDate as string | null) ?? null,
-      isCurrent: (e.isCurrent as boolean) ?? false,
-    })),
-    verifiedCount: count ?? 0,
-  }
+  return { entries, verifiedCount: count ?? 0 }
 }

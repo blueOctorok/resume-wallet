@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from 'next/server'
  * POST /api/verification/initiate-self
  *
  * Deprecated: Use role-specific endpoints so driver and developer data are not mixed.
- * - Drivers: POST /api/driver/verification/initiate-self (uses driver_profiles / DOT only)
- * - Developers: POST /api/developer/verification/initiate-self (uses developer_profiles only)
+ * - Drivers: POST /api/driver/verification/initiate-self (uses driver block tables / DOT only)
+ * - Developers: POST /api/developer/verification/initiate-self (uses block_dev_profile only)
  */
 export async function POST(_request: NextRequest) {
   return NextResponse.json(

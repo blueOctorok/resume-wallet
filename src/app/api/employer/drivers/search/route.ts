@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import type { CdlRow, MvrRow } from '@/lib/block-data'
 
 /**
  * GET /api/employer/drivers/search
@@ -11,7 +12,6 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
  *   - jobId: Match drivers to a specific job's criteria
  *   - cdlClass: Filter by CDL class (A, B, C)
  *   - cdlState: Filter by CDL state
- *   - minExperience: Minimum years of experience
  *   - locationState: Filter by driver's state
  *   - locationCity: Filter by driver's city
  *   - hasVerifiedResume: Only show drivers with verified resumes
@@ -24,11 +24,9 @@ export async function GET(request: NextRequest) {
     const walletAddress = request.headers.get('x-wallet-address')
     const { searchParams } = new URL(request.url)
     
-    // Query params
     const jobId = searchParams.get('jobId')
     const cdlClass = searchParams.get('cdlClass')
     const cdlState = searchParams.get('cdlState')
-    const minExperience = searchParams.get('minExperience')
     const locationState = searchParams.get('locationState')
     const locationCity = searchParams.get('locationCity')
     const hasVerifiedResume = searchParams.get('hasVerifiedResume') === 'true'
@@ -45,7 +43,6 @@ export async function GET(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user and company
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id')
@@ -73,7 +70,7 @@ export async function GET(request: NextRequest) {
     }
 
     // If jobId provided, get job criteria
-    let jobCriteria: any = null
+    let jobCriteria: Record<string, string | null> | null = null
     if (jobId) {
       const { data: job } = await supabase
         .from('job_postings')
@@ -94,154 +91,148 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Build driver search query
-    let query = supabase
-      .from('driver_profiles')
-      .select(`
-        id,
-        user_id,
-        professional_summary,
-        cdl_class,
-        cdl_state,
-        cdl_expiration,
-        endorsements,
-        experience_years,
-        mvr_license_status,
-        mvr_violation_count,
-        mvr_total_points,
-        share_token,
-        share_settings,
-        created_at,
-        updated_at
-      `)
-      .not('cdl_class', 'is', null) // Only drivers with actual CDL data
-      .limit(limit)
-
-    // Apply filters (use job criteria if available, otherwise use query params)
+    // Resolve final filter values (job criteria takes precedence over query params)
     const filterCdlClass = jobCriteria?.cdlClass || cdlClass
     const filterCdlState = jobCriteria?.cdlState || cdlState
-    const filterMinExp = jobCriteria?.minExperience || minExperience
     const filterLocationState = jobCriteria?.locationState || locationState
     const filterLocationCity = jobCriteria?.locationCity || locationCity
 
+    // CDL data lives in block_driver_cdl — filter there
+    let cdlQuery = supabase
+      .from('block_driver_cdl')
+      .select('user_id, cdl_class, cdl_state, cdl_expiration, endorsements')
+      .not('cdl_class', 'is', null)
+      .limit(limit)
+
     if (filterCdlClass) {
-      query = query.eq('cdl_class', filterCdlClass)
+      cdlQuery = cdlQuery.eq('cdl_class', filterCdlClass)
     }
-
     if (filterCdlState) {
-      query = query.eq('cdl_state', filterCdlState)
+      cdlQuery = cdlQuery.eq('cdl_state', filterCdlState)
     }
 
-    if (filterMinExp) {
-      query = query.gte('experience_years', parseInt(filterMinExp))
-    }
+    const { data: cdlRows, error: cdlError } = await cdlQuery
 
-    // Location filtering removed: state/city live in user_profiles, not driver_profiles.
-    // Apply client-side or via user_profiles join if needed.
-
-    // MVR filter (clean record)
-    if (hasCleanMvr || jobCriteria) {
-      query = query.eq('mvr_license_status', 'Valid')
-      query = query.eq('mvr_violation_count', 0)
-    }
-
-    const { data: profiles, error: profilesError } = await query
-
-    if (profilesError) {
-      console.error('[DRIVER SEARCH] Error:', profilesError)
+    if (cdlError) {
+      console.error('[DRIVER SEARCH] CDL query error:', cdlError)
       return NextResponse.json(
         { error: 'Failed to search drivers' },
         { status: 500 }
       )
     }
 
-    const driverUserIds = (profiles || []).map(p => p.user_id)
-
-    const { data: userProfiles } = driverUserIds.length
-      ? await supabase
-          .from('user_profiles')
-          .select('user_id, first_name, last_name, email, phone, city, state')
-          .in('user_id', driverUserIds)
-      : { data: [] }
-
-    const profileMap = new Map<string, { first_name: string | null; last_name: string | null; email: string | null; phone: string | null; city: string | null; state: string | null }>()
-    for (const p of userProfiles ?? []) {
-      profileMap.set(p.user_id, p)
+    const driverUserIds = (cdlRows || []).map(r => r.user_id)
+    if (driverUserIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        drivers: [],
+        jobs: [],
+        criteria: jobCriteria || { cdlClass: filterCdlClass, cdlState: filterCdlState, locationState: filterLocationState, locationCity: filterLocationCity },
+        total: 0,
+      })
     }
 
-    // Get additional data for each driver
-    const driverIds = driverUserIds
-    
-    // Get resumes
-    const { data: resumes } = await supabase
-      .from('resumes')
-      .select('user_id, id, title, filename, ipfs_hash, verification_status')
-      .in('user_id', driverIds)
-      .order('created_at', { ascending: false })
+    // Build a CDL lookup keyed by user_id
+    const cdlMap = new Map<string, Pick<CdlRow, 'cdl_class' | 'cdl_state' | 'cdl_expiration' | 'endorsements'>>()
+    for (const row of cdlRows ?? []) cdlMap.set(row.user_id, row)
 
-    // Get DOT applications
-    const { data: dotApps } = await supabase
-      .from('driver_applications')
-      .select('user_id, id, verification_status, is_complete')
-      .in('user_id', driverIds)
-      .order('created_at', { ascending: false })
+    // Batch-fetch MVR, share, user profiles, resumes, DOT apps, existing applications
+    const [
+      { data: mvrRows },
+      { data: shareRows },
+      { data: userProfiles },
+      { data: resumes },
+      { data: dotApps },
+      { data: companyJobs },
+    ] = await Promise.all([
+      supabase
+        .from('block_driver_mvr')
+        .select('user_id, license_status, violation_count, total_points')
+        .in('user_id', driverUserIds),
+      supabase
+        .from('users')
+        .select('id, share_token, share_settings, created_at')
+        .in('id', driverUserIds),
+      supabase
+        .from('user_profiles')
+        .select('user_id, first_name, last_name, email, phone, city, state, headline')
+        .in('user_id', driverUserIds),
+      supabase
+        .from('resumes')
+        .select('user_id, id, title, filename, ipfs_hash, verification_status')
+        .in('user_id', driverUserIds)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('driver_applications')
+        .select('user_id, id, verification_status, is_complete')
+        .in('user_id', driverUserIds)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('job_postings')
+        .select('id')
+        .eq('company_id', company.id),
+    ])
 
-    // Get existing applications to this company's jobs (to exclude them or mark them)
-    // First get company's job IDs
-    const { data: companyJobs } = await supabase
-      .from('job_postings')
-      .select('id')
-      .eq('company_id', company.id)
+    // MVR filter: if caller wants clean MVR, filter user IDs down now
+    const mvrMap = new Map<string, Pick<MvrRow, 'license_status' | 'violation_count' | 'total_points'>>()
+    for (const row of mvrRows ?? []) mvrMap.set(row.user_id, row)
 
+    let filteredUserIds = driverUserIds
+    if (hasCleanMvr || jobCriteria) {
+      filteredUserIds = driverUserIds.filter(uid => {
+        const mvr = mvrMap.get(uid)
+        return mvr && mvr.license_status === 'Valid' && mvr.violation_count === 0
+      })
+    }
+
+    const shareMap = new Map<string, { share_token: string | null; share_settings: unknown; created_at: string }>()
+    for (const row of shareRows ?? []) shareMap.set(row.id, row)
+
+    const upMap = new Map<string, { first_name: string | null; last_name: string | null; email: string | null; phone: string | null; city: string | null; state: string | null; headline: string | null }>()
+    for (const p of userProfiles ?? []) upMap.set(p.user_id, p)
+
+    // Existing applications to this company's jobs
     const jobIds = (companyJobs || []).map(j => j.id)
-    
-    const { data: existingApps } = jobIds.length > 0 && driverIds.length > 0
+    const { data: existingApps } = jobIds.length > 0 && filteredUserIds.length > 0
       ? await supabase
           .from('applications')
           .select('driver_user_id, job_posting_id, status')
-          .in('driver_user_id', driverIds)
+          .in('driver_user_id', filteredUserIds)
           .in('job_posting_id', jobIds)
       : { data: null }
 
-    // Process results
-    const drivers = (profiles || []).map(profile => {
-      const up = profileMap.get(profile.user_id)
-      // Get driver's latest verified resume
-      const driverResumes = (resumes || []).filter(r => r.user_id === profile.user_id)
+    // Assemble response — same shape as before
+    const drivers = filteredUserIds.map(userId => {
+      const cdl = cdlMap.get(userId)
+      const mvr = mvrMap.get(userId)
+      const share = shareMap.get(userId)
+      const up = upMap.get(userId)
+
+      const driverResumes = (resumes || []).filter(r => r.user_id === userId)
       const verifiedResume = driverResumes.find(r => r.verification_status === 'VERIFIED')
       const latestResume = driverResumes[0]
 
-      // Get driver's DOT app
-      const driverDotApps = (dotApps || []).filter(a => a.user_id === profile.user_id)
+      const driverDotApps = (dotApps || []).filter(a => a.user_id === userId)
       const completeDotApp = driverDotApps.find(a => a.is_complete)
 
-      // Check if already applied
-      const hasApplied = (existingApps || []).some(a => a.driver_user_id === profile.user_id)
+      const hasApplied = (existingApps || []).some(a => a.driver_user_id === userId)
 
-      // Apply additional filters
-      if (hasVerifiedResume && !verifiedResume) {
-        return null // Filter out if no verified resume
-      }
-
-      if (hasCompleteDotApp && !completeDotApp) {
-        return null // Filter out if no complete DOT app
-      }
+      if (hasVerifiedResume && !verifiedResume) return null
+      if (hasCompleteDotApp && !completeDotApp) return null
 
       return {
-        driverId: profile.user_id,
-        profileId: profile.id,
+        driverId: userId,
+        profileId: userId,
         name: [up?.first_name, up?.last_name].filter(Boolean).join(' ') || 'Unknown',
         email: up?.email || null,
         phone: up?.phone || null,
         location: up?.city && up?.state ? `${up.city}, ${up.state}` : null,
-        professionalSummary: profile.professional_summary,
-        // CDL info
-        cdlClass: profile.cdl_class,
-        cdlState: profile.cdl_state,
-        cdlExpiration: profile.cdl_expiration,
-        endorsements: profile.endorsements || [],
-        experienceYears: profile.experience_years,
-        // Credentials
+        professionalSummary: up?.headline ?? null,
+        cdlClass: cdl?.cdl_class ?? null,
+        cdlState: cdl?.cdl_state ?? null,
+        cdlExpiration: cdl?.cdl_expiration ?? null,
+        endorsements: cdl?.endorsements || [],
+        experienceYears: null as number | null,
         hasResume: !!latestResume,
         hasVerifiedResume: !!verifiedResume,
         resumeId: verifiedResume?.id || latestResume?.id || null,
@@ -249,21 +240,17 @@ export async function GET(request: NextRequest) {
         resumeIpfsHash: verifiedResume?.ipfs_hash || latestResume?.ipfs_hash || null,
         hasCompleteDotApp: !!completeDotApp,
         dotAppVerified: completeDotApp?.verification_status === 'VERIFIED',
-        // MVR
-        mvrStatus: profile.mvr_license_status,
-        mvrViolations: profile.mvr_violation_count || 0,
-        mvrPoints: profile.mvr_total_points || 0,
-        hasCleanMvr: profile.mvr_license_status === 'Valid' && (profile.mvr_violation_count || 0) === 0,
-        // Share
-        shareToken: profile.share_token,
-        shareEnabled: !!profile.share_token && (profile.share_settings as any)?.allowConnect !== false,
-        // Status
+        mvrStatus: mvr?.license_status ?? null,
+        mvrViolations: mvr?.violation_count ?? 0,
+        mvrPoints: mvr?.total_points ?? 0,
+        hasCleanMvr: mvr?.license_status === 'Valid' && (mvr?.violation_count ?? 0) === 0,
+        shareToken: share?.share_token ?? null,
+        shareEnabled: !!share?.share_token && (share?.share_settings as Record<string, unknown>)?.allowConnect !== false,
         hasApplied,
-        profileCreatedAt: profile.created_at,
+        profileCreatedAt: share?.created_at ?? null,
       }
-    }).filter(d => d !== null) // Remove filtered out drivers
+    }).filter(d => d !== null)
 
-    // Get job postings for reference
     const { data: jobs } = await supabase
       .from('job_postings')
       .select('id, title, is_active')
@@ -278,7 +265,6 @@ export async function GET(request: NextRequest) {
       criteria: jobCriteria || {
         cdlClass: filterCdlClass,
         cdlState: filterCdlState,
-        minExperience: filterMinExp,
         locationState: filterLocationState,
         locationCity: filterLocationCity,
       },

@@ -6,12 +6,13 @@ import {
   rowToVerificationRequest,
   rowToVerificationAttempt,
 } from '@/types/employment-verification'
+import { getDevProfile } from '@/lib/block-data'
 
 /**
  * GET /api/developer/verification/status
  *
  * Developer-only: returns employment verification status for the authenticated developer.
- * Reads only developer_profiles (resume work experience). No driver or DOT data.
+ * Reads only block_dev_profile (resume work experience). No driver or DOT data.
  *
  * Query params:
  * - initiatedBy: 'applicant' | 'employer' (optional)
@@ -47,14 +48,9 @@ export async function GET(request: NextRequest) {
       return getDeveloperVerificationDetails(supabase, user.id, requestId)
     }
 
-    // Employment history from developer_profiles only (resume / profile)
-    const { data: profile } = await supabase
-      .from('developer_profiles')
-      .select('employment_history')
-      .eq('user_id', user.id)
-      .single()
-
-    const employmentHistory = profile?.employment_history || []
+    // Employment history from block_dev_profile
+    const devProfile = await getDevProfile(supabase, user.id)
+    const employmentHistory = devProfile?.employment_history || []
     const totalEmployments = employmentHistory.length
 
     let query = supabase

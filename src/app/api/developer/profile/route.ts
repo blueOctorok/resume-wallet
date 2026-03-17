@@ -1,12 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getEmploymentFromResumes } from '@/lib/developer-employment-from-resumes'
+import {
+  getDevProfile,
+  getDevGithub,
+  getDevPortfolio,
+  getSkills,
+  getEducation,
+  saveDevProfile,
+  saveDevGithub,
+  saveDevPortfolio,
+  saveSkills,
+  saveEducation,
+} from '@/lib/block-data'
 
 
 /**
  * GET /api/developer/profile
  *
  * Gets the developer profile for the authenticated user.
+ * Reads from block tables (block_dev_profile, block_dev_github, etc.).
  */
 export async function GET(request: NextRequest) {
   try {
@@ -31,12 +44,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const [{ data: profile, error: profileError }, { data: userProfile }] = await Promise.all([
-      supabase.from('developer_profiles').select('*').eq('user_id', user.id).single(),
-      supabase.from('user_profiles').select('first_name, last_name, email, phone, city, state, headline').eq('user_id', user.id).maybeSingle(),
+    const [devProfile, github, portfolio, skills, education, userProfile] = await Promise.all([
+      getDevProfile(supabase, user.id),
+      getDevGithub(supabase, user.id),
+      getDevPortfolio(supabase, user.id),
+      getSkills(supabase, user.id),
+      getEducation(supabase, user.id),
+      supabase.from('user_profiles').select('first_name, last_name, email, phone, city, state, headline').eq('user_id', user.id).maybeSingle().then(r => r.data),
     ])
 
-    if (profileError || !profile) {
+    // No block data at all means no profile yet
+    if (!devProfile && !github && !portfolio) {
       return NextResponse.json({
         success: true,
         profile: null,
@@ -46,50 +64,43 @@ export async function GET(request: NextRequest) {
     // Use profile employment_history if present. When empty, only backfill from resume if
     // explicitly requested (?syncFromResume=1). Otherwise return [] so that after the user
     // deletes employments they stay gone (instead of being repopulated from resume on next fetch).
-    let employmentHistory = (profile.employment_history as Array<Record<string, unknown>>) || []
+    let employmentHistory = (devProfile?.employment_history as Array<Record<string, unknown>>) || []
     const syncFromResume = request.nextUrl.searchParams.get('syncFromResume') === '1'
     if (employmentHistory.length === 0) {
       if (syncFromResume) {
         const fromResume = await getEmploymentFromResumes(supabase, user.id)
         if (fromResume.length > 0) {
           employmentHistory = fromResume
-          await supabase
-            .from('developer_profiles')
-            .update({
-              employment_history: fromResume,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('user_id', user.id)
+          await saveDevProfile(supabase, user.id, { employment_history: fromResume })
         }
       }
-      // If not syncing, employmentHistory stays [] (deleted entries stay deleted)
     }
 
     return NextResponse.json({
       success: true,
       profile: {
-        id: profile.id,
+        id: devProfile?.id ?? user.id,
         firstName: userProfile?.first_name ?? null,
         lastName: userProfile?.last_name ?? null,
-        displayName: profile.display_name,
+        displayName: null,
         email: userProfile?.email ?? null,
         phone: userProfile?.phone ?? null,
-        location: userProfile?.city && userProfile?.state ? `${userProfile.city}, ${userProfile.state}` : profile.location,
-        headline: profile.headline,
-        bio: profile.bio,
-        yearsExperience: profile.years_experience,
-        githubUsername: profile.github_username,
-        portfolioUrl: profile.portfolio_url,
-        linkedinUrl: profile.linkedin_url,
-        twitterUrl: profile.twitter_url,
-        personalWebsite: profile.personal_website,
-        skills: profile.skills || [],
-        jobTypes: profile.job_types || [],
-        workStyles: profile.work_styles || [],
-        willingToRelocate: profile.willing_to_relocate,
-        availableForWork: profile.available_for_work,
-        education: profile.education || [],
-        certifications: profile.certifications || [],
+        location: userProfile?.city && userProfile?.state ? `${userProfile.city}, ${userProfile.state}` : null,
+        headline: userProfile?.headline ?? null,
+        bio: devProfile?.bio ?? null,
+        yearsExperience: devProfile?.years_experience ?? null,
+        githubUsername: github?.username ?? null,
+        portfolioUrl: portfolio?.portfolio_url ?? null,
+        linkedinUrl: portfolio?.linkedin_url ?? null,
+        twitterUrl: portfolio?.twitter_url ?? null,
+        personalWebsite: portfolio?.personal_website ?? null,
+        skills: skills ?? [],
+        jobTypes: devProfile?.job_types ?? [],
+        workStyles: devProfile?.work_styles ?? [],
+        willingToRelocate: devProfile?.willing_to_relocate ?? false,
+        availableForWork: devProfile?.available_for_work ?? false,
+        education: education ?? [],
+        certifications: devProfile?.certifications ?? [],
         employmentHistory,
       },
     })
@@ -132,74 +143,68 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Map camelCase to snake_case (identity fields go to user_profiles, not here)
-    const updates: Record<string, unknown> = {}
-    if (body.displayName !== undefined) updates.display_name = body.displayName
-    if (body.location !== undefined) updates.location = body.location
-    if (body.headline !== undefined) updates.headline = body.headline
-    if (body.bio !== undefined) updates.bio = body.bio
-    if (body.yearsExperience !== undefined)
-      updates.years_experience = body.yearsExperience
-    if (body.githubUsername !== undefined)
-      updates.github_username = body.githubUsername
-    if (body.portfolioUrl !== undefined)
-      updates.portfolio_url = body.portfolioUrl
-    if (body.linkedinUrl !== undefined) updates.linkedin_url = body.linkedinUrl
-    if (body.twitterUrl !== undefined) updates.twitter_url = body.twitterUrl
-    if (body.personalWebsite !== undefined)
-      updates.personal_website = body.personalWebsite
-    if (body.skills !== undefined) updates.skills = body.skills
-    if (body.jobTypes !== undefined) updates.job_types = body.jobTypes
-    if (body.workStyles !== undefined) updates.work_styles = body.workStyles
-    if (body.willingToRelocate !== undefined)
-      updates.willing_to_relocate = body.willingToRelocate
-    if (body.availableForWork !== undefined)
-      updates.available_for_work = body.availableForWork
-    if (body.education !== undefined) updates.education = body.education
-    if (body.certifications !== undefined)
-      updates.certifications = body.certifications
-    if (body.employmentHistory !== undefined)
-      updates.employment_history = body.employmentHistory
+    // Write to block tables directly
+    const writes: Promise<void>[] = []
 
-    // Check if profile exists
-    const { data: existingProfile } = await supabase
-      .from('developer_profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (existingProfile) {
-      // Update existing profile
-      const { error: updateError } = await supabase
-        .from('developer_profiles')
-        .update(updates)
-        .eq('user_id', user.id)
-
-      if (updateError) {
-        console.error('[DEVELOPER PROFILE PUT] Update error:', updateError)
-        return NextResponse.json(
-          { error: 'Failed to update profile' },
-          { status: 500 }
-        )
-      }
-
-    } else {
-      // Create new profile
-      const { error: insertError } = await supabase
-        .from('developer_profiles')
-        .insert({
-          user_id: user.id,
-          ...updates,
-        })
-
-      if (insertError) {
-        console.error('[DEVELOPER PROFILE PUT] Insert error:', insertError)
-        return NextResponse.json(
-          { error: 'Failed to create profile' },
-          { status: 500 }
-        )
-      }
+    // Dev profile fields
+    const devProfileFields: Record<string, unknown> = {}
+    if (body.bio !== undefined) devProfileFields.bio = body.bio
+    if (body.yearsExperience !== undefined) devProfileFields.years_experience = body.yearsExperience
+    if (body.employmentHistory !== undefined) devProfileFields.employment_history = body.employmentHistory
+    if (body.jobTypes !== undefined) devProfileFields.job_types = body.jobTypes
+    if (body.workStyles !== undefined) devProfileFields.work_styles = body.workStyles
+    if (body.willingToRelocate !== undefined) devProfileFields.willing_to_relocate = body.willingToRelocate
+    if (body.availableForWork !== undefined) devProfileFields.available_for_work = body.availableForWork
+    if (body.certifications !== undefined) devProfileFields.certifications = body.certifications
+    if (Object.keys(devProfileFields).length > 0) {
+      writes.push(saveDevProfile(supabase, user.id, devProfileFields))
     }
+
+    // GitHub
+    if (body.githubUsername !== undefined) {
+      writes.push(saveDevGithub(supabase, user.id, { username: body.githubUsername }))
+    }
+
+    // Portfolio links
+    if (body.portfolioUrl !== undefined || body.linkedinUrl !== undefined ||
+        body.twitterUrl !== undefined || body.personalWebsite !== undefined) {
+      writes.push(saveDevPortfolio(supabase, user.id, {
+        portfolio_url: body.portfolioUrl ?? undefined,
+        linkedin_url: body.linkedinUrl ?? undefined,
+        twitter_url: body.twitterUrl ?? undefined,
+        personal_website: body.personalWebsite ?? undefined,
+      }))
+    }
+
+    // Skills
+    if (body.skills !== undefined) {
+      writes.push(saveSkills(supabase, user.id, body.skills))
+    }
+
+    // Education
+    if (body.education !== undefined) {
+      writes.push(saveEducation(supabase, user.id, body.education))
+    }
+
+    // Identity fields → user_profiles
+    const identityFields: Record<string, string | null> = {}
+    if (body.headline !== undefined) identityFields.headline = body.headline
+    if (body.location !== undefined) {
+      const parts = body.location.split(',').map((s: string) => s.trim())
+      if (parts[0]) identityFields.city = parts[0]
+      if (parts[1]) identityFields.state = parts[1]
+    }
+    if (Object.keys(identityFields).length > 0) {
+      writes.push(
+        supabase.from('user_profiles')
+          .upsert({ user_id: user.id, ...identityFields }, { onConflict: 'user_id' })
+          .then(({ error }) => {
+            if (error) console.warn('[DEV PROFILE PUT] user_profiles upsert error:', error.message)
+          })
+      )
+    }
+
+    await Promise.all(writes)
 
     return NextResponse.json({
       success: true,

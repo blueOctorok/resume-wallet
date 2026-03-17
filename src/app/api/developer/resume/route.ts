@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { saveDevProfile } from '@/lib/block-data'
 
 /**
- * Map developer resume "experience" to developer_profiles.employment_history
+ * Map developer resume "experience" to block_dev_profile.employment_history
  * so the Employment Verification section can show and verify these jobs.
  */
 async function syncResumeExperienceToProfile(
@@ -24,13 +25,10 @@ async function syncResumeExperienceToProfile(
     description: exp.description || undefined,
   }))
 
-  const { error } = await supabase
-    .from('developer_profiles')
-    .update({ employment_history: employmentHistory, updated_at: new Date().toISOString() })
-    .eq('user_id', userId)
-
-  if (error) {
-    console.warn('[DEVELOPER RESUME] Failed to sync experience to profile:', error.message)
+  try {
+    await saveDevProfile(supabase, userId, { employment_history: employmentHistory })
+  } catch (err) {
+    console.warn('[DEVELOPER RESUME] Failed to sync experience to block table:', err)
   }
 }
 
@@ -100,8 +98,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Sync work experience from resume to developer_profiles.employment_history
-    // so Employment Verification section can show and verify these jobs
     await syncResumeExperienceToProfile(supabase, user.id, structuredData)
 
     return NextResponse.json({
@@ -190,7 +186,6 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Sync work experience from resume to developer_profiles.employment_history
     await syncResumeExperienceToProfile(supabase, user.id, structuredData)
 
     return NextResponse.json({

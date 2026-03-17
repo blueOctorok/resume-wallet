@@ -7,12 +7,13 @@ import {
   rowToVerificationAttempt,
   DriverVerificationSummary,
 } from '@/types/employment-verification'
+import { getDriverEmployment } from '@/lib/block-data'
 
 /**
  * GET /api/driver/verification/status
  *
  * Driver-only: returns employment verification status for the authenticated driver.
- * Reads only driver_profiles (DOT forms / resume prefill). No developer data.
+ * Reads from block_driver_employment (DOT forms / resume prefill). No developer data.
  *
  * Query params:
  * - initiatedBy: 'applicant' | 'employer' (optional)
@@ -48,14 +49,8 @@ export async function GET(request: NextRequest) {
       return getDriverVerificationDetails(supabase, user.id, requestId)
     }
 
-    // Employment history from driver_profiles only (DOT / resume)
-    const { data: profile } = await supabase
-      .from('driver_profiles')
-      .select('employment_history')
-      .eq('user_id', user.id)
-      .single()
-
-    const employmentHistory = profile?.employment_history || []
+    // Employment history from block table
+    const employmentHistory = await getDriverEmployment(supabase, user.id)
     const totalEmployments = employmentHistory.length
 
     let query = supabase

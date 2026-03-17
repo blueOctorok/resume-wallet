@@ -160,7 +160,7 @@ export async function GET(
 
 /**
  * DELETE /api/admin/mvr/[id]
- * Remove an MVR order. Cascades to mvr_results. driver_profiles refs get SET NULL.
+ * Remove an MVR order. Cascades to mvr_results. Block table refs get SET NULL.
  */
 export async function DELETE(
   request: NextRequest,

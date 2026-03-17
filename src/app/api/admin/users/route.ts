@@ -107,19 +107,17 @@ export async function GET(request: NextRequest) {
 
     const userIds = users?.map((u) => u.id) || []
 
-    // Parallel enrichment queries
+    // Parallel enrichment queries — block tables
     const [
       { data: userProfiles },
-      { data: driverProfiles },
-      { data: devProfiles },
+      { data: devGithubRows },
       { data: resumes },
       { data: dotApps },
       { data: devProjects },
       { data: hubBlocks },
     ] = await Promise.all([
       supabase.from('user_profiles').select('user_id, first_name, last_name, email').in('user_id', userIds),
-      supabase.from('driver_profiles').select('user_id').in('user_id', userIds),
-      supabase.from('developer_profiles').select('user_id, github_username').in('user_id', userIds),
+      supabase.from('block_dev_github').select('user_id, username').in('user_id', userIds),
       supabase.from('resumes').select('user_id').in('user_id', userIds),
       supabase.from('driver_applications').select('user_id').in('user_id', userIds),
       supabase.from('developer_projects').select('user_id').in('user_id', userIds),
@@ -130,11 +128,8 @@ export async function GET(request: NextRequest) {
     const userProfileMap = new Map<string, { first_name: string | null; last_name: string | null; email: string | null }>()
     userProfiles?.forEach((p) => userProfileMap.set(p.user_id, p))
 
-    const driverProfileSet = new Set<string>()
-    driverProfiles?.forEach((p) => driverProfileSet.add(p.user_id))
-
-    const devProfileMap = new Map<string, { github_username: string | null }>()
-    devProfiles?.forEach((p) => devProfileMap.set(p.user_id, { github_username: p.github_username }))
+    const devGithubMap = new Map<string, string | null>()
+    devGithubRows?.forEach((g) => devGithubMap.set(g.user_id, g.username))
 
     const resumeCountMap = new Map<string, number>()
     resumes?.forEach((r) => {
@@ -160,11 +155,11 @@ export async function GET(request: NextRequest) {
 
     const enrichedUsers = users?.map((user) => {
       const userProfile = userProfileMap.get(user.id)
-      const devProfile = devProfileMap.get(user.id)
+      const githubUsername = devGithubMap.get(user.id)
 
       let displayName: string | null = [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ') || null
-      if (!displayName && devProfile?.github_username) {
-        displayName = `@${devProfile.github_username}`
+      if (!displayName && githubUsername) {
+        displayName = `@${githubUsername}`
       }
 
       const displayEmail = userProfile?.email || user.email || null
@@ -173,12 +168,16 @@ export async function GET(request: NextRequest) {
       // Derive block categories for quick badge rendering
       const blockCategories = [...new Set(installedBlocks.map(blockCategory))].filter(c => c !== 'unknown')
 
+      // hasProfile / hasDevProfile now derived from installed block types
+      const hasDriverBlocks = installedBlocks.some(b => b.startsWith('driver-'))
+      const hasDevBlocks = installedBlocks.some(b => b.startsWith('developer-'))
+
       return {
         ...user,
         displayName,
         displayEmail,
-        hasProfile: driverProfileSet.has(user.id),
-        hasDevProfile: devProfileMap.has(user.id),
+        hasProfile: hasDriverBlocks,
+        hasDevProfile: hasDevBlocks,
         resumeCount: resumeCountMap.get(user.id) || 0,
         dotAppCount: dotAppCountMap.get(user.id) || 0,
         devProjectCount: devProjectCountMap.get(user.id) || 0,

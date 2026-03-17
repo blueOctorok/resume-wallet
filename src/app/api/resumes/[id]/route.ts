@@ -101,13 +101,8 @@ export async function DELETE(
     // so Employment Verification section no longer shows jobs from the deleted resume
     if (wasDeveloperBuilt) {
       const employmentHistory = await getEmploymentFromResumes(supabase, user.id)
-      await supabase
-        .from('developer_profiles')
-        .update({
-          employment_history: employmentHistory,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', user.id)
+      const { saveDevProfile } = await import('@/lib/block-data')
+      await saveDevProfile(supabase, user.id, { employment_history: employmentHistory })
     }
 
     return NextResponse.json({ success: true, message: 'Resume deleted successfully' })

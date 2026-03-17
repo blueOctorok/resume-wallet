@@ -31,22 +31,19 @@ export async function GET(
       )
     }
 
-    // Get user info
-    const { data: user } = await supabase
-      .from('users')
-      .select('wallet_address, email')
-      .eq('id', project.user_id)
-      .single()
+    // Parallel reads — user info + block tables
+    const [user, userProfile, github] = await Promise.all([
+      supabase.from('users').select('wallet_address, email').eq('id', project.user_id).single().then(r => r.data),
+      supabase.from('user_profiles').select('first_name, last_name').eq('user_id', project.user_id).maybeSingle().then(r => r.data),
+      supabase.from('block_dev_github').select('username').eq('user_id', project.user_id).maybeSingle().then(r => r.data),
+    ])
 
-    // Get developer profile info if linked
-    let profileInfo = null
-    if (project.developer_profile_id) {
-      const { data: profile } = await supabase
-        .from('developer_profiles')
-        .select('id, full_name, github_username, headline')
-        .eq('id', project.developer_profile_id)
-        .single()
-      profileInfo = profile
+    const fullName = [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ') || null
+    const profileInfo = {
+      id: project.developer_profile_id,
+      full_name: fullName,
+      github_username: github?.username ?? null,
+      headline: null,
     }
 
     return NextResponse.json({

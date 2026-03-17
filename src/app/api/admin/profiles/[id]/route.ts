@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { requireAdmin } from '@/lib/admin-auth'
+import {
+  getCdlData, getDriverEmployment, getMvrData, getSkills, getEducation,
+  getEmergencyContact, getDrivingExperience, getReferences,
+  saveCdlData, saveDriverEmployment, saveEmergencyContact, saveDrivingExperience,
+  saveSkills, saveEducation, saveReferences,
+} from '@/lib/block-data'
 
 /**
  * GET /api/admin/profiles/[id]
@@ -18,30 +24,62 @@ export async function GET(
   try {
     const supabase = await getAdminSupabaseClient()
 
-    const { data: profile, error } = await supabase
-      .from('driver_profiles')
+    // id is a block_driver_cdl row id — look up user_id from it
+    const { data: cdlRow, error } = await supabase
+      .from('block_driver_cdl')
       .select('*')
       .eq('id', id)
       .single()
 
-    if (error || !profile) {
+    if (error || !cdlRow) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    // Get user info
-    const { data: user } = await supabase
-      .from('users')
-      .select('wallet_address, email')
-      .eq('id', profile.user_id)
-      .single()
+    const userId = cdlRow.user_id
 
-    return NextResponse.json({
-      success: true,
-      profile: {
-        ...profile,
-        walletAddress: user?.wallet_address,
-      },
-    })
+    // Parallel block reads + user info
+    const [user, userProfile, employment, mvr, skills, education, emergency, experience, refs] =
+      await Promise.all([
+        supabase.from('users').select('wallet_address, email').eq('id', userId).single().then(r => r.data),
+        supabase.from('user_profiles').select('*').eq('user_id', userId).maybeSingle().then(r => r.data),
+        getDriverEmployment(supabase, userId),
+        getMvrData(supabase, userId),
+        getSkills(supabase, userId),
+        getEducation(supabase, userId),
+        getEmergencyContact(supabase, userId),
+        getDrivingExperience(supabase, userId),
+        getReferences(supabase, userId),
+      ])
+
+    const profile = {
+      id: cdlRow.id,
+      user_id: userId,
+      first_name: userProfile?.first_name ?? null,
+      last_name: userProfile?.last_name ?? null,
+      email: userProfile?.email ?? null,
+      phone: userProfile?.phone ?? null,
+      cdl_number: cdlRow.cdl_number,
+      cdl_state: cdlRow.cdl_state,
+      cdl_class: cdlRow.cdl_class,
+      cdl_expiration: cdlRow.cdl_expiration,
+      endorsements: cdlRow.endorsements,
+      restrictions: cdlRow.restrictions,
+      employment_history: employment,
+      skills,
+      education,
+      references: refs,
+      emergency_contact_name: emergency?.contact_name ?? null,
+      emergency_contact_relationship: emergency?.contact_relationship ?? null,
+      emergency_contact_phone: emergency?.contact_phone ?? null,
+      driving_experience: experience,
+      mvr,
+      last_updated_from: null,
+      created_at: cdlRow.created_at,
+      updated_at: cdlRow.updated_at,
+      walletAddress: user?.wallet_address,
+    }
+
+    return NextResponse.json({ success: true, profile })
 
   } catch (error) {
     console.error('[ADMIN PROFILE DETAIL] Unexpected error:', error)
@@ -70,55 +108,45 @@ export async function DELETE(
   try {
     const supabase = await getAdminSupabaseClient()
 
-    // Verify profile exists
-    const { data: profile, error: findError } = await supabase
-      .from('driver_profiles')
-      .select('id, user_id, first_name, last_name')
+    // id is a block_driver_cdl row id — look up user_id from it
+    const { data: cdlRow, error: findError } = await supabase
+      .from('block_driver_cdl')
+      .select('id, user_id')
       .eq('id', id)
       .single()
 
-    if (findError || !profile) {
+    if (findError || !cdlRow) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    if (mode === 'clear') {
-      // Clear form data fields but keep the profile record
-      const { error: updateError } = await supabase
-        .from('driver_profiles')
-        .update({
-          first_name: null,
-          middle_name: null,
-          last_name: null,
-          email: null,
-          phone: null,
-          date_of_birth: null,
-          ssn_last_four: null,
-          address: null,
-          city: null,
-          state: null,
-          zip_code: null,
-          professional_summary: null,
-          cdl_number: null,
-          cdl_state: null,
-          cdl_class: null,
-          cdl_expiration: null,
-          endorsements: [],
-          restrictions: [],
-          emergency_contact_name: null,
-          emergency_contact_relationship: null,
-          emergency_contact_phone: null,
-          employment_history: [],
-          references: [],
-          education: [],
-          skills: [],
-          driving_experience: null,
-          last_updated_from: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id)
+    const userId = cdlRow.user_id
 
-      if (updateError) {
-        console.error('[ADMIN PROFILE CLEAR] Error:', updateError)
+    // Get display name from user_profiles
+    const { data: up } = await supabase
+      .from('user_profiles')
+      .select('first_name, last_name')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (mode === 'clear') {
+      // Clear all block table data but keep the rows
+      try {
+        await Promise.all([
+          saveCdlData(supabase, userId, {
+            cdl_number: null, cdl_state: null, cdl_class: null,
+            cdl_expiration: null, endorsements: [], restrictions: [],
+          }),
+          saveDriverEmployment(supabase, userId, []),
+          saveEmergencyContact(supabase, userId, {
+            contact_name: null, contact_relationship: null, contact_phone: null,
+          }),
+          saveDrivingExperience(supabase, userId, null),
+          saveEducation(supabase, userId, []),
+          saveSkills(supabase, userId, []),
+          saveReferences(supabase, userId, []),
+        ])
+      } catch (err) {
+        console.error('[ADMIN PROFILE CLEAR] Error:', err)
         return NextResponse.json({ error: 'Failed to clear profile' }, { status: 500 })
       }
 
@@ -126,18 +154,25 @@ export async function DELETE(
 
       return NextResponse.json({
         success: true,
-        message: `Profile for ${profile.first_name || 'user'} ${profile.last_name || ''} cleared`,
+        message: `Profile for ${up?.first_name || 'user'} ${up?.last_name || ''} cleared`,
       })
 
     } else {
-      // Full delete
-      const { error: deleteError } = await supabase
-        .from('driver_profiles')
-        .delete()
-        .eq('id', id)
+      // Full delete — remove block table rows by user_id
+      const blockTables = [
+        'block_driver_cdl', 'block_driver_employment', 'block_driver_mvr',
+        'block_driver_emergency', 'block_driver_experience',
+        'block_education', 'block_skills', 'block_references',
+      ] as const
 
-      if (deleteError) {
-        console.error('[ADMIN PROFILE DELETE] Error:', deleteError)
+      try {
+        await Promise.all(
+          blockTables.map((table) =>
+            supabase.from(table).delete().eq('user_id', userId)
+          )
+        )
+      } catch (err) {
+        console.error('[ADMIN PROFILE DELETE] Error:', err)
         return NextResponse.json({ error: 'Failed to delete profile' }, { status: 500 })
       }
 

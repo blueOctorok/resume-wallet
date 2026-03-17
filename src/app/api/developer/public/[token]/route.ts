@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import {
+  getDevProfile,
+  getDevGithub,
+  getDevPortfolio,
+  getSkills,
+  getEducation,
+} from '@/lib/block-data'
 
 /**
  * GET /api/developer/public/[token]
  *
  * Fetches a developer's public Career Card by share token.
  * No auth required. Respects share_settings (showPortfolio, showGitHub, showResume, showContact, allowConnect).
+ *
+ * share_token lookup uses the `users` table (migrated in 036).
+ * Profile data comes from block tables + user_profiles.
  */
 export async function GET(
   _request: NextRequest,
@@ -23,44 +33,35 @@ export async function GET(
 
     const supabase = await getAdminSupabaseClient()
 
-    const { data: profile, error: profileError } = await supabase
-      .from('developer_profiles')
-      .select(
-        `
-        id,
-        user_id,
-        headline,
-        bio,
-        years_experience,
-        github_username,
-        github_access_token,
-        portfolio_url,
-        linkedin_url,
-        personal_website,
-        skills,
-        education,
-        certifications,
-        share_settings,
-        share_views_count
-      `
-      )
+    // share_token lives on users table (036_unified_share_token)
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, share_settings, share_views_count')
       .eq('share_token', token)
       .single()
 
-    if (profileError || !profile) {
+    if (userError || !user) {
       return NextResponse.json(
         { error: 'Profile not found or sharing is disabled' },
         { status: 404 }
       )
     }
 
-    const { data: userProfile } = await supabase
-      .from('user_profiles')
-      .select('first_name, last_name, display_name, email, phone, city, state')
-      .eq('user_id', profile.user_id)
-      .maybeSingle()
+    const userId = user.id
 
-    const settings = (profile.share_settings as {
+    // Parallel reads from block tables + user_profiles
+    const [devProfile, github, portfolio, skills, education, userProfileResult] = await Promise.all([
+      getDevProfile(supabase, userId),
+      getDevGithub(supabase, userId),
+      getDevPortfolio(supabase, userId),
+      getSkills(supabase, userId),
+      getEducation(supabase, userId),
+      supabase.from('user_profiles').select('first_name, last_name, display_name, email, phone, city, state, headline').eq('user_id', userId).maybeSingle(),
+    ])
+
+    const userProfile = userProfileResult.data
+
+    const settings = (user.share_settings as {
       showResume?: boolean
       showPortfolio?: boolean
       showGitHub?: boolean
@@ -74,36 +75,36 @@ export async function GET(
       allowConnect: true,
     }
 
-    // Increment view count (fire and forget)
+    // Increment view count on users table (fire and forget)
     supabase
-      .from('developer_profiles')
-      .update({ share_views_count: (profile.share_views_count || 0) + 1 })
-      .eq('id', profile.id)
+      .from('users')
+      .update({ share_views_count: (user.share_views_count || 0) + 1 })
+      .eq('id', userId)
       .then(() => {})
       .catch(() => {})
 
     const publicProfile: Record<string, unknown> = {
-      id: profile.id,
+      id: devProfile?.id ?? userId,
       firstName: userProfile?.first_name ?? null,
       lastName: userProfile?.last_name ?? null,
       displayName: userProfile?.display_name ?? null,
       location: userProfile?.city && userProfile?.state
         ? `${userProfile.city}, ${userProfile.state}`
         : null,
-      headline: profile.headline ?? null,
-      bio: profile.bio ?? null,
-      yearsExperience: profile.years_experience ?? null,
-      skills: profile.skills ?? [],
-      education: profile.education ?? [],
-      certifications: profile.certifications ?? [],
+      headline: userProfile?.headline ?? null,
+      bio: devProfile?.bio ?? null,
+      yearsExperience: devProfile?.years_experience ?? null,
+      skills: skills ?? [],
+      education: education ?? [],
+      certifications: devProfile?.certifications ?? [],
       portfolioUrl: settings.showPortfolio
-        ? (profile.portfolio_url ?? null)
+        ? (portfolio?.portfolio_url ?? null)
         : null,
       githubUsername: settings.showGitHub
-        ? (profile.github_username ?? null)
+        ? (github?.username ?? null)
         : null,
-      linkedinUrl: profile.linkedin_url ?? null,
-      personalWebsite: profile.personal_website ?? null,
+      linkedinUrl: portfolio?.linkedin_url ?? null,
+      personalWebsite: portfolio?.personal_website ?? null,
     }
 
     if (settings.showContact) {
@@ -129,7 +130,7 @@ export async function GET(
         .select(
           'id, title, description, tech_stack, live_url, repo_url, demo_video_url, is_featured'
         )
-        .eq('user_id', profile.user_id)
+        .eq('user_id', userId)
         .eq('is_public', true)
         .order('display_order', { ascending: true })
         .order('created_at', { ascending: false })
@@ -155,16 +156,15 @@ export async function GET(
       type: string
       createdAt: string
       ipfsHash: string | null
-      structuredData?: unknown // Developer resume structured data for preview
+      structuredData?: unknown
     } | null = null
     if (settings.showResume) {
-      // First try to get a developer-built resume (preferred for preview)
       const { data: devResumeData } = await supabase
         .from('resumes')
         .select(
           'id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, created_at, resume_type, structured_data'
         )
-        .eq('user_id', profile.user_id)
+        .eq('user_id', userId)
         .eq('resume_type', 'developer_built')
         .order('created_at', { ascending: false })
         .limit(1)
@@ -183,13 +183,12 @@ export async function GET(
           structuredData: devResumeData.structured_data,
         }
       } else {
-        // Fall back to any verified resume
         const { data: resumeData } = await supabase
           .from('resumes')
           .select(
             'id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, created_at, resume_type'
           )
-          .eq('user_id', profile.user_id)
+          .eq('user_id', userId)
           .eq('verification_status', 'VERIFIED')
           .order('created_at', { ascending: false })
           .limit(1)
@@ -233,30 +232,28 @@ export async function GET(
       languages: Array<{ language: string; count: number; percentage: number }>
     } | null = null
 
-    if (settings.showGitHub && profile.github_username) {
-      const hasToken = !!profile.github_access_token
+    const githubUsername = github?.username
+    if (settings.showGitHub && githubUsername) {
+      const hasToken = !!github?.access_token
       const headers: Record<string, string> = {
         Accept: 'application/vnd.github.v3+json',
         'User-Agent': 'StormChain-CareerCard',
       }
 
-      // Use OAuth token if available for private data
-      if (hasToken && profile.github_access_token) {
-        headers.Authorization = `Bearer ${profile.github_access_token}`
+      if (hasToken && github?.access_token) {
+        headers.Authorization = `Bearer ${github.access_token}`
       }
 
       try {
-        // Fetch user profile
         const userRes = await fetch(
-          `https://api.github.com/user${hasToken ? '' : 's/' + profile.github_username}`,
+          `https://api.github.com/user${hasToken ? '' : 's/' + githubUsername}`,
           { headers }
         )
         const userData = await userRes.json()
 
         if (userData && !userData.message) {
-          // Fetch repos (with token, includes private)
           const reposRes = await fetch(
-            `https://api.github.com/${hasToken ? 'user/repos?per_page=100&sort=updated' : `users/${profile.github_username}/repos?per_page=100&sort=updated`}`,
+            `https://api.github.com/${hasToken ? 'user/repos?per_page=100&sort=updated' : `users/${githubUsername}/repos?per_page=100&sort=updated`}`,
             { headers }
           )
           const reposData = await reposRes.json()
@@ -281,7 +278,6 @@ export async function GET(
                 )
             : []
 
-          // Calculate language stats
           const langCount: Record<string, number> = {}
           repos.forEach((r) => {
             if (r.language) {
@@ -312,13 +308,12 @@ export async function GET(
             publicGists: userData.public_gists ?? 0,
             avatarUrl: userData.avatar_url ?? '',
             bio: userData.bio ?? null,
-            repos: repos.slice(0, 6), // Top 6 repos
+            repos: repos.slice(0, 6),
             languages,
           }
         }
       } catch (err) {
         console.error('[DEVELOPER PUBLIC] GitHub fetch error:', err)
-        // Continue without GitHub data
       }
     }
 
@@ -326,7 +321,7 @@ export async function GET(
     const { data: verifiedRows } = await supabase
       .from('employment_verification_requests')
       .select('previous_employer_name, claimed_position, claimed_start_date, claimed_end_date, status')
-      .eq('driver_id', profile.user_id)
+      .eq('driver_id', userId)
       .eq('applicant_type', 'developer')
       .in('status', ['VERIFIED', 'PARTIALLY_VERIFIED'])
       .order('verified_at', { ascending: false })
@@ -349,7 +344,7 @@ export async function GET(
       settings: {
         allowConnect: settings.allowConnect ?? true,
       },
-      viewCount: (profile.share_views_count || 0) + 1,
+      viewCount: (user.share_views_count || 0) + 1,
     })
   } catch (error) {
     console.error('[DEVELOPER PUBLIC] Error:', error)

@@ -23,17 +23,15 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await getAdminSupabaseClient()
 
-    // Build query
+    // Read from block_driver_cdl (block table)
     let query = supabase
-      .from('driver_profiles')
-      .select('id, user_id, cdl_number, cdl_state, last_updated_from, created_at, updated_at', { count: 'exact' })
+      .from('block_driver_cdl')
+      .select('id, user_id, cdl_number, cdl_state, created_at, updated_at', { count: 'exact' })
 
-    // Apply search filter
     if (search) {
       query = query.or(`cdl_number.ilike.%${search}%`)
     }
 
-    // Apply pagination and ordering
     const { data: profiles, error, count } = await query
       .order('updated_at', { ascending: false })
       .range(offset, offset + limit - 1)
@@ -43,27 +41,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch profiles' }, { status: 500 })
     }
 
-    // Get wallet addresses for each profile
     const userIds = [...new Set(profiles?.map(p => p.user_id) || [])]
-    const { data: users } = await supabase
-      .from('users')
-      .select('id, wallet_address')
-      .in('id', userIds)
+
+    const [{ data: users }, { data: userProfiles }] = await Promise.all([
+      supabase.from('users').select('id, wallet_address').in('id', userIds),
+      supabase.from('user_profiles').select('user_id, first_name, last_name, email, phone').in('user_id', userIds),
+    ])
 
     const userMap = new Map(users?.map(u => [u.id, u.wallet_address]) || [])
-
-    const { data: userProfiles } = await supabase
-      .from('user_profiles')
-      .select('user_id, first_name, last_name, email, phone')
-      .in('user_id', userIds)
-
     const upMap = new Map((userProfiles || []).map(p => [p.user_id, p]))
 
-    // Enrich profiles
     const enrichedProfiles = profiles?.map(profile => {
       const up = upMap.get(profile.user_id)
       return {
         ...profile,
+        last_updated_from: null,
         first_name: up?.first_name ?? null,
         last_name: up?.last_name ?? null,
         email: up?.email ?? null,

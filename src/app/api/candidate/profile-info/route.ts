@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getCdlData } from '@/lib/block-data'
 
 /**
  * GET /api/candidate/profile-info
@@ -40,12 +41,8 @@ export async function GET(request: NextRequest) {
   // Data is stored as { form1, form2, form3 } by save-progress route
   const form1 = dotApp?.application_data?.form1 || {}
 
-  // Get DL info from driver profile
-  const { data: driverProfile } = await supabase
-    .from('driver_profiles')
-    .select('cdl_number, cdl_state')
-    .eq('user_id', user.id)
-    .maybeSingle()
+  // Get DL info from block tables
+  const cdlData = await getCdlData(supabase, user.id)
 
   const { data: userProfile } = await supabase
     .from('user_profiles')
@@ -71,8 +68,8 @@ export async function GET(request: NextRequest) {
       city: mailing.city || '',
       state: mailing.state || '',
       zip: mailing.zipCode || '',
-      dlNumber: driverProfile?.cdl_number || license.licenseNumber || '',
-      dlState: driverProfile?.cdl_state || license.state || '',
+      dlNumber: cdlData?.cdl_number || license.licenseNumber || '',
+      dlState: cdlData?.cdl_state || license.state || '',
       email: user.email || form1.email || '',
     },
   })

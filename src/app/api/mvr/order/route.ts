@@ -234,40 +234,6 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    // Get or create driver profile
-    let { data: profile, error: profileError } = await supabaseService
-      .from('driver_profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-
-    if (profileError && profileError.code === 'PGRST116') {
-      // Create profile if it doesn't exist
-      const { data: newProfile, error: createError } = await supabaseService
-        .from('driver_profiles')
-        .insert({
-          user_id: user.id,
-          profile_completion_score: 0
-        })
-        .select()
-        .single()
-
-      if (createError) {
-        console.error('[MVR ORDER] Error creating profile:', createError)
-        return NextResponse.json(
-          { error: 'Failed to create driver profile' },
-          { status: 500 }
-        )
-      }
-      profile = newProfile
-    } else if (profileError) {
-      console.error('[MVR ORDER] Error fetching profile:', profileError)
-      return NextResponse.json(
-        { error: 'Failed to fetch driver profile' },
-        { status: 500 }
-      )
-    }
-
     // 2. Get driver application data for personal info
     const { data: dotApplication } = await supabaseService
       .from('driver_applications')
@@ -462,7 +428,7 @@ export async function POST(request: NextRequest) {
       .from('mvr_orders')
       .insert({
         driver_user_id: user.id,
-        driver_profile_id: profile.id,
+        driver_profile_id: null,
         driver_application_id: dotApplication?.id || null,
         payment_id: payment.id, // Link to the payment
         payment_tx_hash: truncatedHash, // Store tx hash for reference

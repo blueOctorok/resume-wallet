@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useCallback, useState } from 'react'
-import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink, ChevronLeft, ChevronRight, FileText, ClipboardCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore } from '@/stores'
@@ -714,69 +714,324 @@ function CareerCardBanner() {
   )
 }
 
-// ── On-chain verification bar ────────────────────────────────────────────────
+// ── My Files ──────────────────────────────────────────────────────────────────
+// A document vault for all completed files. Click to re-open/edit, delete, or
+// verify on-chain. Appears automatically once any file-producing block is used.
 
-function VerificationBar() {
+interface HubDocument {
+  id: string
+  type: 'resume' | 'dotapp'
+  title: string
+  // "complete" = usable, "in-progress" = still being filled out
+  status: 'complete' | 'in-progress'
+  verified: boolean
+  txHash: string | null
+  // Verify is enabled for uploaded resumes (real IPFS) or completed DOT apps
+  canVerify: boolean
+  // DOT apps that are on-chain cannot be deleted
+  canDelete: boolean
+  // Page to navigate to when the user wants to open/edit the document
+  editPage: PageType
+}
+
+function MyFilesSection() {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
+  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const setCurrentPage = useUIStore((s) => s.setCurrentPage)
+  const setEditingResumeId = useUIStore((s) => s.setEditingResumeId)
   const installedBlocks = useInstalledBlocks()
 
-  // Dynamically determine which installed blocks can be verified on-chain
-  const verifiableItems = installedBlocks
-    .filter((b) => VERIFIABLE_BLOCKS[b.blockType])
-    .map((b) => ({
-      id: b.blockType,
-      label: VERIFIABLE_BLOCKS[b.blockType],
-      verified: false, // TODO: wire to actual on-chain verification status
-    }))
+  const [documents, setDocuments] = useState<HubDocument[]>([])
+  const [loading, setLoading] = useState(true)
+  const [verifying, setVerifying] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  if (verifiableItems.length === 0) return null
+  const hasResumeBlock = installedBlocks.some((b) =>
+    b.blockType === 'driver-resume' || b.blockType === 'developer-resume'
+  )
+  const hasDotAppBlock = installedBlocks.some((b) => b.blockType === 'driver-dot-application')
+
+  const fetchDocuments = useCallback(async () => {
+    if (!walletAddress || (!hasResumeBlock && !hasDotAppBlock)) {
+      setLoading(false)
+      return
+    }
+
+    try {
+      const response = await fetch('/api/driver/hub', {
+        headers: { 'x-wallet-address': walletAddress },
+      })
+      if (!response.ok) { setLoading(false); return }
+
+      const data = await response.json()
+      const docs: HubDocument[] = []
+
+      if (hasResumeBlock && data.resumes) {
+        for (const resume of data.resumes) {
+          const hasRealIpfs = resume.ipfsHash && !resume.ipfsHash.startsWith('built_')
+          docs.push({
+            id: resume.id,
+            type: 'resume',
+            title: resume.title || 'Resume',
+            status: 'complete',
+            verified: !!resume.blockchainTxHash,
+            txHash: resume.blockchainTxHash,
+            canVerify: !!hasRealIpfs && !resume.blockchainTxHash,
+            canDelete: true,
+            editPage: 'resume',
+          })
+        }
+      }
+
+      if (hasDotAppBlock && data.dotApplications) {
+        for (const app of data.dotApplications) {
+          docs.push({
+            id: app.id,
+            type: 'dotapp',
+            title: 'DOT Application',
+            status: app.isComplete ? 'complete' : 'in-progress',
+            verified: !!app.blockchainTxHash,
+            txHash: app.blockchainTxHash,
+            canVerify: !!app.isComplete && !app.blockchainTxHash,
+            canDelete: !app.blockchainTxHash,
+            editPage: 'dotapp',
+          })
+        }
+      }
+
+      setDocuments(docs)
+    } catch (err) {
+      console.error('MyFilesSection fetch error:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [walletAddress, hasResumeBlock, hasDotAppBlock])
+
+  useEffect(() => { fetchDocuments() }, [fetchDocuments])
+
+  const handleVerify = async (doc: HubDocument) => {
+    if (!walletAddress || !doc.canVerify) return
+    setVerifying(doc.id)
+    setMessage({ type: 'success', text: 'Submitting to blockchain...' })
+
+    try {
+      const endpoint = doc.type === 'resume'
+        ? `/api/resumes/${doc.id}/verify`
+        : `/api/driver-applications/${doc.id}/verify`
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+      })
+      const data = await response.json()
+
+      if (!response.ok && response.status !== 409) {
+        throw new Error(data.error || 'Verification failed')
+      }
+
+      const txHash = data.txHash || data.transactionHash
+      setMessage({ type: 'success', text: txHash ? `Verified! Tx: ${txHash.slice(0, 10)}...` : 'Already verified on blockchain' })
+      setDocuments((prev) => prev.map((d) =>
+        d.id === doc.id ? { ...d, verified: true, canVerify: false, txHash: txHash || d.txHash } : d
+      ))
+      setTimeout(() => setMessage(null), 5000)
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Verification failed' })
+    } finally {
+      setVerifying(null)
+    }
+  }
+
+  const handleDelete = async (doc: HubDocument) => {
+    if (!walletAddress) return
+    setDeleting(doc.id)
+    setConfirmDelete(null)
+
+    try {
+      const endpoint = doc.type === 'resume'
+        ? `/api/resumes/${doc.id}`
+        : `/api/driver-applications/${doc.id}`
+
+      const response = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: { 'x-wallet-address': walletAddress },
+      })
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to delete')
+      }
+      setDocuments((prev) => prev.filter((d) => d.id !== doc.id))
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to delete' })
+    } finally {
+      setDeleting(null)
+    }
+  }
+
+  if (!hasResumeBlock && !hasDotAppBlock) return null
+  if (loading) return null
+  if (documents.length === 0) return null
 
   return (
     <div className={cn(
       'rounded-2xl border p-4',
       isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white/70 border-gray-200',
     )}>
-      <div className='flex items-center gap-2 mb-3'>
-        <ShieldCheck className={cn('w-4 h-4', isDark ? 'text-teal-400' : 'text-teal-600')} />
-        <p className={cn('text-xs font-bold uppercase tracking-wide', isDark ? 'text-gray-300' : 'text-gray-600')}>
-          On-Chain Verification
-        </p>
+      {/* Header */}
+      <div className='flex items-center justify-between mb-3'>
+        <div className='flex items-center gap-2'>
+          <FileText className={cn('w-4 h-4', isDark ? 'text-teal-400' : 'text-teal-600')} />
+          <p className={cn('text-xs font-bold uppercase tracking-wide', isDark ? 'text-gray-300' : 'text-gray-600')}>
+            My Files
+          </p>
+        </div>
+        <span className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
+          {documents.length} {documents.length === 1 ? 'file' : 'files'}
+        </span>
       </div>
 
-      <div className='flex flex-wrap gap-2'>
-        {verifiableItems.map((item) => (
-          <button
-            key={item.id}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
-              item.verified
-                ? isDark
-                  ? 'bg-green-500/15 text-green-400 border border-green-500/30'
-                  : 'bg-green-50 text-green-700 border border-green-200'
-                : isDark
-                  ? 'bg-gray-700/80 text-gray-400 hover:bg-gray-600 border border-gray-600'
-                  : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200',
-            )}
-          >
-            <ShieldCheck className={cn(
-              'w-3 h-3',
-              item.verified
-                ? 'text-green-500'
-                : isDark ? 'text-gray-500' : 'text-gray-400',
-            )} />
-            {item.label}
-            {item.verified ? (
-              <Check className='w-3 h-3 text-green-500' />
-            ) : (
-              <span className={cn(
-                'text-[9px] px-1 py-0.5 rounded',
-                isDark ? 'bg-gray-600 text-gray-400' : 'bg-gray-200 text-gray-500',
+      {/* Status message */}
+      {message && (
+        <div className={cn(
+          'mb-3 px-3 py-2 rounded-lg text-xs',
+          message.type === 'success'
+            ? isDark ? 'bg-green-500/15 text-green-400' : 'bg-green-50 text-green-700'
+            : isDark ? 'bg-red-500/15 text-red-400' : 'bg-red-50 text-red-700',
+        )}>
+          {message.text}
+        </div>
+      )}
+
+      <div className='space-y-2'>
+        {documents.map((doc) => (
+          <div key={doc.id}>
+            <div className={cn(
+              'flex items-center gap-3 p-3 rounded-xl transition-colors',
+              isDark ? 'bg-gray-800/50' : 'bg-gray-50',
+            )}>
+              {/* Icon + info */}
+              <div className={cn(
+                'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
+                doc.verified ? 'bg-green-500/20' : isDark ? 'bg-gray-700' : 'bg-gray-200',
               )}>
-                Verify
-              </span>
+                {doc.type === 'resume' ? (
+                  <FileText className={cn('w-4 h-4', doc.verified ? 'text-green-400' : isDark ? 'text-gray-400' : 'text-gray-500')} />
+                ) : (
+                  <ClipboardCheck className={cn('w-4 h-4', doc.verified ? 'text-green-400' : isDark ? 'text-gray-400' : 'text-gray-500')} />
+                )}
+              </div>
+
+              <div className='flex-1 min-w-0'>
+                <div className='flex items-center gap-2 flex-wrap'>
+                  <p className={cn('text-sm font-medium truncate', isDark ? 'text-white' : 'text-gray-900')}>
+                    {doc.title}
+                  </p>
+                  {doc.status === 'in-progress' && (
+                    <span className={cn('text-[10px] px-1.5 py-0.5 rounded font-medium', isDark ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-50 text-yellow-700')}>
+                      In Progress
+                    </span>
+                  )}
+                  {doc.verified && (
+                    <span className='flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium bg-green-500/15 text-green-500'>
+                      <Check className='w-2.5 h-2.5' /> On-Chain
+                    </span>
+                  )}
+                </div>
+                {doc.verified && doc.txHash && (
+                  <a
+                    href={`https://sepolia.basescan.org/tx/${doc.txHash}`}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className={cn('text-[11px] hover:underline', isDark ? 'text-teal-400' : 'text-teal-600')}
+                  >
+                    View transaction →
+                  </a>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className='flex items-center gap-1.5 flex-shrink-0'>
+                {/* Open / Edit */}
+                <button
+                  onClick={() => {
+                    // Pass the specific resume ID so ResumeBuilder loads the right one
+                    if (doc.type === 'resume') setEditingResumeId(doc.id)
+                    setCurrentPage(doc.editPage)
+                  }}
+                  title='Open / Edit'
+                  className={cn(
+                    'p-1.5 rounded-lg transition-colors text-xs',
+                    isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300',
+                  )}
+                >
+                  <Pencil className='w-3.5 h-3.5' />
+                </button>
+
+                {/* Verify on-chain */}
+                {doc.canVerify && (
+                  <button
+                    onClick={() => handleVerify(doc)}
+                    disabled={verifying === doc.id}
+                    title='Verify on blockchain'
+                    className='p-1.5 rounded-lg transition-colors bg-teal-500 text-white hover:bg-teal-400 disabled:opacity-50 disabled:cursor-not-allowed'
+                  >
+                    {verifying === doc.id
+                      ? <Loader2 className='w-3.5 h-3.5 animate-spin' />
+                      : <ShieldCheck className='w-3.5 h-3.5' />
+                    }
+                  </button>
+                )}
+
+                {/* Delete */}
+                {doc.canDelete && (
+                  <button
+                    onClick={() => setConfirmDelete(doc.id)}
+                    disabled={deleting === doc.id}
+                    title='Delete'
+                    className={cn(
+                      'p-1.5 rounded-lg transition-colors',
+                      isDark ? 'bg-gray-700 text-red-400 hover:bg-red-500/20' : 'bg-gray-200 text-red-500 hover:bg-red-50',
+                      'disabled:opacity-50 disabled:cursor-not-allowed',
+                    )}
+                  >
+                    {deleting === doc.id
+                      ? <Loader2 className='w-3.5 h-3.5 animate-spin' />
+                      : <X className='w-3.5 h-3.5' />
+                    }
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Inline delete confirmation */}
+            {confirmDelete === doc.id && (
+              <div className={cn(
+                'flex items-center justify-between px-3 py-2 rounded-xl mt-1 text-xs',
+                isDark ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-50 border border-red-200',
+              )}>
+                <span className={isDark ? 'text-red-400' : 'text-red-600'}>
+                  Delete this file? This cannot be undone.
+                </span>
+                <div className='flex items-center gap-2'>
+                  <button
+                    onClick={() => setConfirmDelete(null)}
+                    className={cn('px-2 py-1 rounded', isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700')}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleDelete(doc)}
+                    className='px-2 py-1 rounded bg-red-500 text-white hover:bg-red-600'
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
             )}
-          </button>
+          </div>
         ))}
       </div>
     </div>
@@ -885,7 +1140,7 @@ export default function CandidateHub() {
         <HubProfileHeader />
         <CareerCardBanner />
         <AskAvaButton label='Ask AvA — What should I do next?' />
-        <VerificationBar />
+        <MyFilesSection />
 
         {/* ── Block Hive ── */}
         <div>

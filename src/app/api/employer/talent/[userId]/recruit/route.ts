@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { nanoid } from 'nanoid'
 import { sendCandidateRequestNotification } from '@/lib/send-admin-notification'
+import {
+  getCdlData,
+  getDriverEmployment,
+  getSkills,
+  getDevProfile,
+  getDevGithub,
+  getDevPortfolio,
+} from '@/lib/block-data'
 
 // Special title used to identify the auto-created talent pool job
 const TALENT_POOL_TITLE = '— Talent Pool —'
@@ -168,17 +176,19 @@ export async function POST(
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
     }
 
-    // Derive effective role from profile tables when possible, otherwise
-    // fall back to users.role. Composable hub users may be 'candidate' with
-    // only a user_profiles row and no driver/developer profile.
-    const [{ data: driverProfile }, { data: devProfile }] = await Promise.all([
-      supabase.from('driver_profiles').select('id').eq('user_id', candidateUserId).single(),
-      supabase.from('developer_profiles').select('id').eq('user_id', candidateUserId).single(),
-    ])
+    // Derive effective role from installed hub blocks rather than legacy profile tables
+    const { data: hubBlocks } = await supabase
+      .from('hub_blocks')
+      .select('block_type')
+      .eq('user_id', candidateUserId)
 
-    const effectiveRole: string | null = driverProfile
+    const blockTypes = (hubBlocks || []).map((b) => b.block_type)
+    const hasDriverBlocks = blockTypes.some((t) => t.startsWith('driver_'))
+    const hasDevBlocks = blockTypes.some((t) => t.startsWith('dev_'))
+
+    const effectiveRole: string | null = hasDriverBlocks
       ? 'driver'
-      : devProfile
+      : hasDevBlocks
         ? 'developer'
         : candidate.role === 'employer'
           ? null
@@ -230,67 +240,64 @@ export async function POST(
       candidateRole: effectiveRole,
     }
 
-    // Get driver profile if applicable
+    // Snapshot driver data from block tables
     if (effectiveRole === 'driver') {
-      const { data: driverProfile } = await supabase
-        .from('driver_profiles')
-        .select('*')
-        .eq('user_id', candidateUserId)
-        .single()
+      const [cdlData, employment, driverApp, mvr] = await Promise.all([
+        getCdlData(supabase, candidateUserId),
+        getDriverEmployment(supabase, candidateUserId),
+        supabase
+          .from('driver_applications')
+          .select('id, verification_status')
+          .eq('user_id', candidateUserId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('mvr_orders')
+          .select('id, status')
+          .eq('driver_user_id', candidateUserId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ])
 
-      if (driverProfile) {
+      if (cdlData) {
         careerCardSnapshot.driverProfile = {
-          cdlClass: driverProfile.cdl_class,
-          cdlState: driverProfile.cdl_state,
-          yearsExperience: driverProfile.years_experience,
-          endorsements: driverProfile.endorsements,
+          cdlClass: cdlData.cdl_class,
+          cdlState: cdlData.cdl_state,
+          endorsements: cdlData.endorsements,
         }
       }
 
-      // Get driver application data
-      const { data: driverApp } = await supabase
-        .from('driver_applications')
-        .select('id, verification_status')
-        .eq('user_id', candidateUserId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
-
-      if (driverApp) {
-        careerCardSnapshot.driverApplicationId = driverApp.id
-        careerCardSnapshot.driverApplicationStatus = driverApp.verification_status
+      if (employment.length > 0) {
+        careerCardSnapshot.workHistoryCount = employment.length
       }
 
-      // Get latest MVR
-      const { data: mvr } = await supabase
-        .from('mvr_orders')
-        .select('id, status')
-        .eq('driver_user_id', candidateUserId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
+      if (driverApp.data) {
+        careerCardSnapshot.driverApplicationId = driverApp.data.id
+        careerCardSnapshot.driverApplicationStatus = driverApp.data.verification_status
+      }
 
-      if (mvr) {
+      if (mvr.data) {
         careerCardSnapshot.hasMvr = true
-        careerCardSnapshot.mvrStatus = mvr.status
+        careerCardSnapshot.mvrStatus = mvr.data.status
       }
     }
 
-    // Get developer profile if applicable
+    // Snapshot developer data from block tables
     if (effectiveRole === 'developer') {
-      const { data: devProfile } = await supabase
-        .from('developer_profiles')
-        .select('*')
-        .eq('user_id', candidateUserId)
-        .single()
+      const [devProfileData, devGithubData, devPortfolioData, devSkills] = await Promise.all([
+        getDevProfile(supabase, candidateUserId),
+        getDevGithub(supabase, candidateUserId),
+        getDevPortfolio(supabase, candidateUserId),
+        getSkills(supabase, candidateUserId),
+      ])
 
-      if (devProfile) {
-        careerCardSnapshot.developerProfile = {
-          skills: devProfile.skills,
-          yearsExperience: devProfile.years_experience,
-          githubUrl: devProfile.github_url,
-          portfolioUrl: devProfile.portfolio_url,
-        }
+      careerCardSnapshot.developerProfile = {
+        skills: devSkills,
+        yearsExperience: devProfileData?.years_experience ?? null,
+        githubUrl: devGithubData?.username ? `https://github.com/${devGithubData.username}` : null,
+        portfolioUrl: devPortfolioData?.portfolio_url ?? null,
       }
     }
 

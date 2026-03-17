@@ -4,6 +4,489 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Block-Owned Data Architecture — Phase 4: Drop Legacy Profile Tables** (March 2026)
+
+### Summary
+Phase 4 completes the Block-Owned Data migration by dropping the now-inert `driver_profiles` and `developer_profiles` tables from the database. All code references cleaned up.
+
+### What was done
+1. **SQL Migration 049** — Drops `driver_profiles` and `developer_profiles` tables with CASCADE. Drops all associated RLS policies first.
+2. **Admin Delete Cleanup** — Removed the two `.from('driver_profiles').delete()` and `.from('developer_profiles').delete()` calls from `admin/users/[id]` DELETE handler. Block tables cascade via `users` FK.
+3. **Dead Type Code Removed** — Deleted `DriverProfileRow` interface, `rowToProfile()`, `profileToRow()`, and `truncateState()` from `types/driver-profile.ts`. These mapped to/from the dropped table and had zero imports.
+4. **Stale Comments Swept** — Updated ~20 files that still referenced `driver_profiles` or `developer_profiles` in comments. Replaced with correct block table names.
+5. **Cursor Rule Updated** — `.cursor/rules/block-development.mdc` updated to reflect tables are dropped, not "pending removal".
+
+### Architecture state
+- `driver_profiles`: **DROPPED** (migration 049)
+- `developer_profiles`: **DROPPED** (migration 049)
+- All data flows through `block_*` tables exclusively via `src/lib/block-data.ts`
+- `types/driver-profile.ts` retains `UnifiedDriverProfile` and friends as app-layer types (not DB-coupled)
+- `profile-mapper.ts` retains bidirectional mapping functions for Resume Builder ↔ DOT Application prefill
+
+---
+
+## **Block-Owned Data Architecture — Phase 3: Complete Legacy Table Decoupling** (March 2026)
+
+### Summary
+Phase 3 fully decouples the application from the legacy `driver_profiles` and `developer_profiles` tables. After Phase 2 switched all reads, Phase 3 switches all writes. Both tables are now **completely inert** — no code reads from or writes to them. They can be safely dropped in a future Phase 4 migration.
+
+### What was done
+1. **SQL Migration 048** — Rewrote `career_cards` view and `search_talent()` to use block tables instead of `driver_profiles`/`developer_profiles`. Dropped FK constraints from `mvr_orders`, `mvr_results`, `driver_leads`, `developer_projects`. Dropped the `update_driver_profile_mvr` trigger.
+2. **Share Token Bug Fix** — Both `driver/share` and `developer/share` POST/PATCH routes now write to `users` table (matching reads). Previously tokens were written to profile tables but read from `users`, causing them to silently break.
+3. **All Driver Route Writes Redirected** — 11 route files now write to block tables via `block-data.ts` instead of `driver_profiles`. Key routes: `driver/profile` POST/PUT, `sync-from-dot`, `mvr/webhook`, `mvr/order`, `applications/submit`, `admin/profiles/[id]`.
+4. **All Developer Route Writes Redirected** — 9 route files now write to block tables. Key routes: `developer/profile` PUT, `developer/resume`, `github/callback`, `developer/projects`, `admin/dev-profiles/[id]`.
+5. **Identity Prefill Fixed** — `GET /api/driver/profile` now merges identity fields (name, email, phone, etc.) from `user_profiles` into the block-composed profile. This fixes blank identity when prefilling new resumes.
+6. **Dual-Write Code Removed** — `syncProfileToBlockTables` and `syncDeveloperProfileToBlockTables` deleted from `block-data.ts`. All imports removed.
+7. **Stale Comments Cleaned** — Updated JSDoc comments referencing old table names across ~15 files.
+8. **Missed Phase 2 Reads Fixed** — `employer/drivers/search` and `employer/applicants` routes still read from `driver_profiles` for `professional_summary` and `share_token`. Redirected to `users` and `user_profiles`.
+
+### Architecture state
+- `driver_profiles`: Zero readers, zero writers. Safe to drop.
+- `developer_profiles`: Zero readers, zero writers. Safe to drop.
+- `admin/users/[id]` DELETE still cleans up both tables as a safety measure for pre-existing rows.
+- All data now flows through `block_*` tables exclusively.
+
+---
+
+## **Block-Owned Data Architecture — Phase 3: Remove `developer_profiles` Writes** (March 17, 2026)
+
+### What changed
+Removed ALL writes to the legacy `developer_profiles` table from developer-related API routes. Block tables (`block_dev_profile`, `block_dev_github`, `block_dev_portfolio`, `block_skills`, `block_education`) are now the sole write destination. The `syncDeveloperProfileToBlockTables` dual-write helper is no longer imported by any route.
+
+### Routes updated
+
+| Route | Change |
+|-------|--------|
+| `api/developer/profile` GET | Backfill write redirected from `developer_profiles` → `saveDevProfile` |
+| `api/developer/profile` PUT | Replaced `developer_profiles.upsert` + `syncDeveloperProfileToBlockTables` with direct block table writes (`saveDevProfile`, `saveDevGithub`, `saveDevPortfolio`, `saveSkills`, `saveEducation`) and `user_profiles` upsert for identity fields |
+| `api/developer/profile/quick-setup` POST | Replaced `developer_profiles.upsert` with `saveDevProfile` + `saveDevGithub`; headline now written to `user_profiles` |
+| `api/developer/profile/employment` DELETE | Replaced `developer_profiles.update` with `saveDevProfile` |
+| `api/developer/resume` POST/PUT | `syncResumeExperienceToProfile` now calls `saveDevProfile` instead of `developer_profiles.update` |
+| `api/github/callback` GET + `syncGitHubData` | Removed all `developer_profiles` writes; `saveDevGithub` is the sole write target |
+| `api/admin/dev-profiles/[id]` DELETE | Now looks up `block_dev_profile` by id and deletes all block rows for the user |
+| `api/admin/resumes/[id]` DELETE | Employment recompute writes to `saveDevProfile` instead of `developer_profiles` |
+| `api/resumes/[id]` DELETE | Employment recompute writes to `saveDevProfile` instead of `developer_profiles` |
+
+### Imports removed
+- `syncDeveloperProfileToBlockTables` no longer imported in `developer/profile/route.ts`
+- `getDevGithub` no longer imported in `github/callback/route.ts` (was only used for existence check before legacy write)
+
+---
+
+## **Block-Owned Data Architecture — Phase 3b: Remove Remaining Driver Profile Writes** (March 17, 2026)
+
+### What changed
+Removed all remaining writes to the `driver_profiles` table from 4 more driver-related API routes. This continues Phase 3 — no API route now writes to `driver_profiles`.
+
+### Files modified
+
+1. **`src/app/api/driver/sync-from-dot/route.ts`** — Replaced `driver_profiles.insert` + `driver_profiles.update` with individual block table saves: `saveCdlData`, `saveDriverEmployment`, `saveEducation`, `saveEmergencyContact`, `saveDrivingExperience`. Removed `calculateProfileScore` import (score lived on `driver_profiles`). Response now returns the block-composed profile via `getFullDriverProfile`.
+
+2. **`src/app/api/mvr/webhook/route.ts`** — Removed section 6 `driver_profiles.update` (mvr fields). The `saveMvrData` block-table write is now the sole write instead of dual-write. Removed section 7 `profile_completion_score` update. Changed condition from `if (mvrOrder.driver_profile_id)` to `if (mvrOrder.driver_user_id)`. Removed `calculateProfileScore` and `getCdlData` imports.
+
+3. **`src/app/api/mvr/order/route.ts`** — Removed the "Get or create driver profile" block that queried/inserted `driver_profiles` just for the FK. Now passes `driver_profile_id: null` in the `mvr_orders` insert (FK dropped in migration 048).
+
+4. **`src/app/api/applications/submit/route.ts`** — Removed `driver_profiles` SELECT for `resume_id`, `driver_application_id`, `resume_url`, `experience_years`. Replaced with direct reads from `resumes` and `driver_applications` tables. Removed the "create basic driver_profiles row" fallback. Application data snapshot now uses source tables directly.
+
+### Migration status
+- **Phase 1** (complete): Dual-write — block tables mirrored from `driver_profiles`
+- **Phase 2** (complete): All reads switched to block tables
+- **Phase 3** (complete): All writes switched to block tables (3a: profile routes, 3b: this change)
+- **Next**: Drop `driver_profiles` table entirely
+
+---
+
+## **Block-Owned Data Architecture — Phase 3a: Remove Driver Profile Writes** (March 17, 2026)
+
+### What changed
+Removed all writes to the `driver_profiles` table from 5 driver-related API routes. Block tables are now the **sole write target** for driver profile data. The `driver_profiles` table is no longer written to by any driver route — it becomes read-only legacy data until fully dropped.
+
+### Files modified
+
+1. **`src/app/api/driver/profile/route.ts`** — Complete rewrite. POST creates an empty `block_driver_cdl` row instead of inserting into `driver_profiles`. PUT writes directly to individual block tables (CDL, employment, emergency, experience, education, skills, references) instead of `driver_profiles`. Removed `profileToRow`, `rowToProfile`, `mergeIntoProfile`, and `syncProfileToBlockTables` imports. GET now merges identity fields from `user_profiles`.
+
+2. **`src/app/api/driver/profile/employment/route.ts`** — DELETE handler now uses `saveDriverEmployment()` instead of `driver_profiles.update()`.
+
+3. **`src/app/api/driver/profile/quick-setup/route.ts`** — POST handler uses `saveCdlData()` instead of `driver_profiles.upsert()`.
+
+4. **`src/app/api/driver/profile/clear-dot-progress/route.ts`** — POST handler uses `saveEmergencyContact()` + `saveDrivingExperience()` to clear DOT fields instead of `driver_profiles.update()`.
+
+5. **`src/app/api/admin/profiles/[id]/route.ts`** — DELETE handler now looks up `block_driver_cdl` by id (not `driver_profiles`). Clear mode resets all block tables via save functions. Delete mode removes rows from all 8 block tables by `user_id`.
+
+### Migration status
+- **Phase 1** (complete): Dual-write — block tables mirrored from `driver_profiles`
+- **Phase 2** (complete): All reads switched to block tables
+- **Phase 3** (this change): All driver writes switched to block tables
+- **Next**: Remove `driver_profiles` table entirely
+
+---
+
+## **Block-Owned Data Architecture — Phase 2: Switch Reads** (March 17, 2026)
+
+### What changed
+Migrated ALL reads (~40 API routes) from `driver_profiles` and `developer_profiles` to block-owned tables. This is Phase 2 of the Block-Owned Data Architecture migration. Old profile tables are now write-only (dual-write still active from Phase 1). Created migration 047 for orphaned developer columns, added dual-writes for MVR webhook and developer profile routes, and standardized share data reads on the `users` table.
+
+### New migration (047)
+- `block_dev_profile` table: `bio`, `years_experience`, `employment_history`, `job_types`, `work_styles`, `willing_to_relocate`, `available_for_work`, `certifications` — backfilled from `developer_profiles`
+
+### New in block-data.ts
+- `getDevProfile()` / `saveDevProfile()` for `block_dev_profile`
+- `getFullDriverProfile()` composite reader (8 parallel block reads)
+- `syncDeveloperProfileToBlockTables()` for developer dual-write
+
+### Dual-writes added
+- `src/app/api/mvr/webhook/route.ts` — writes to `block_driver_mvr` after MVR result
+- `src/app/api/developer/profile/route.ts` PUT — calls `syncDeveloperProfileToBlockTables()`
+- `src/app/api/github/callback/route.ts` — writes to `block_dev_github`
+- `src/app/api/developer/profile/quick-setup/route.ts` — writes github username to `block_dev_github`
+
+### Routes migrated (6 groups, ~40 files)
+
+**Group 1 — Career Card + Prefill:** `career-card/route.ts`, `driver/career-card/route.ts`, `driver/hub/route.ts`, `developer/hub/route.ts`
+
+**Group 2 — Employer:** `employer/talent/[userId]/route.ts`, `employer/talent/[userId]/request/route.ts`, `employer/talent/[userId]/recruit/route.ts`, `employer/drivers/search/route.ts`, `employer/hub/driver-data/route.ts`, `employer/applicants/route.ts`, `employer/mvr/order/route.ts`
+
+**Group 3 — Driver:** `driver/profile/route.ts`, `driver/profile/clear-dot-progress/route.ts`, `driver/profile/employment/route.ts`, `driver/sync-from-dot/route.ts`, `driver/public/[token]/route.ts`, `driver/share/route.ts`, `driver/verification/initiate-self/route.ts`, `driver/verification/status/route.ts`, `mvr/order/route.ts`, `mvr/webhook/route.ts`
+
+**Group 4 — Developer:** `developer/profile/route.ts`, `developer/public/[token]/route.ts`, `developer/share/route.ts`, `developer/profile/employment/route.ts`, `developer/verification/status/route.ts`, `developer/verification/initiate-self/route.ts`, `github/callback/route.ts`, `github/contributions/route.ts`
+
+**Group 5 — Admin:** `admin/users/route.ts`, `admin/users/[id]/route.ts`, `admin/profiles/route.ts`, `admin/profiles/[id]/route.ts`, `admin/dev-profiles/route.ts`, `admin/dev-profiles/[id]/route.ts`, `admin/dev-projects/route.ts`, `admin/dev-projects/[id]/route.ts`, `admin/mvr/order/route.ts`
+
+**Group 6 — Misc:** `applications/submit/route.ts`, `candidate/profile-info/route.ts`, `user/existing-profiles/route.ts`, `verification/initiate/route.ts`
+
+### Share data standardization
+Routes that read share data (`share_token`, `share_settings`, `share_views_count`) now read from `users` table (where migration 036 already copied the data): `driver/share`, `developer/share`, `driver/public/[token]`, `developer/public/[token]`, `driver/hub`
+
+### Technical notes
+- All response shapes preserved — no frontend changes needed
+- Write operations to `driver_profiles` and `developer_profiles` left unchanged (dual-write keeps them in sync)
+- `experience_years` has no block table equivalent — returns null in affected routes
+- `last_updated_from` has no block table equivalent — returns null in admin routes
+- Phase 3 will remove dual-writes and drop old profile tables
+
+---
+
+## **Admin API Routes: Migrate Reads to Block Tables** (March 17, 2026) [SUPERSEDED by Phase 2 above]
+
+### Files modified
+
+**1. `src/app/api/admin/users/route.ts`**
+- Removed `driver_profiles` and `developer_profiles` enrichment queries
+- `hasProfile` / `hasDevProfile` now derived from `hub_blocks` block_type prefixes (`driver-*` / `developer-*`)
+- GitHub username for display name fallback now comes from `block_dev_github`
+
+**2. `src/app/api/admin/users/[id]/route.ts`**
+- Replaced `driver_profiles.select('*')` and `developer_profiles.select('*')` with parallel block reads
+- Driver profile composed from: `getCdlData`, `getDriverEmployment`, `getMvrData`, `getSkills`, `getEducation`
+- Dev profile composed from: `getDevGithub`, `getDevPortfolio`, `getDevProfile`
+- All reads parallelized via `Promise.all` for performance
+
+**3. `src/app/api/admin/profiles/route.ts`**
+- Primary listing query changed from `driver_profiles` to `block_driver_cdl`
+- `last_updated_from` set to `null` (not tracked in block tables)
+- Enrichment queries for `users` and `user_profiles` parallelized
+
+**4. `src/app/api/admin/profiles/[id]/route.ts`**
+- `id` param now references `block_driver_cdl.id` instead of `driver_profiles.id`
+- Full profile detail composed from 8 parallel block reads
+- Identity fields (name, email, phone) read from `user_profiles`
+- DELETE handler still writes to `driver_profiles` (unchanged)
+
+**5. `src/app/api/admin/dev-profiles/route.ts`**
+- Primary listing query changed from `developer_profiles` to `block_dev_profile`
+- `headline` mapped from `block_dev_profile.bio`
+- `github_username` from `block_dev_github`, skills from `block_skills`
+- Project counts now keyed by `user_id` instead of `developer_profile_id`
+
+**6. `src/app/api/admin/dev-profiles/[id]/route.ts`**
+- `id` param now references `block_dev_profile.id`
+- Full detail composed from `getDevGithub`, `getDevPortfolio`, `getSkills`, `getEducation`
+- Projects queried by `user_id` instead of `developer_profile_id`
+- DELETE handler still writes to `developer_profiles` (unchanged)
+
+**7. `src/app/api/admin/dev-projects/route.ts`**
+- Replaced `developer_profiles` lookup (by profile IDs) with `block_dev_github` (by user IDs)
+- Owner name fallback uses `block_dev_github.username` instead of `developer_profiles.github_username`
+
+**8. `src/app/api/admin/dev-projects/[id]/route.ts`**
+- Replaced `developer_profiles` read for `full_name, github_username, headline` with `user_profiles` + `block_dev_github`
+
+**9. `src/app/api/admin/mvr/order/route.ts`**
+- Candidate profile existence check changed from `driver_profiles` to `block_driver_cdl`
+
+### Response shape preservation
+All endpoints maintain the same JSON response shapes. Fields like `last_updated_from` that don't exist in block tables are set to `null`.
+
+---
+
+## **Misc API Routes: Migrate Reads to Block Tables** (March 17, 2026)
+
+### What changed
+Migrated 4 miscellaneous API routes from reading `driver_profiles` / `developer_profiles` to reading block-owned tables via helpers in `@/lib/block-data`. All write operations left unchanged.
+
+### Files modified
+
+**1. `src/app/api/applications/submit/route.ts`**
+- Existence check: uses `getCdlData` from block tables instead of `driver_profiles.select('*')`
+- CDL snapshot fields (`cdl_class`, `cdl_state`, endorsements) now read from `block_driver_cdl`
+- Non-block fields (`resume_id`, `driver_application_id`, `resume_url`, `dot_application_data`, `experience_years`) still read from `driver_profiles`
+- Write path (creating `driver_profiles` row) unchanged
+
+**2. `src/app/api/candidate/profile-info/route.ts`**
+- Replaced `driver_profiles.select('cdl_number, cdl_state')` with `getCdlData` from `block_driver_cdl`
+- Response shape unchanged — `dlNumber` / `dlState` fallback chain preserved
+
+**3. `src/app/api/user/existing-profiles/route.ts`**
+- Driver existence: replaced `driver_profiles.select('user_id')` with `getCdlData` (returns null if no block data)
+- Developer existence: replaced `developer_profiles.select('user_id')` with `getDevProfile` (returns null if no block data)
+- Response shape unchanged — `{ driverProfile, devProfile }` with `name` field
+
+**4. `src/app/api/verification/initiate/route.ts`**
+- Replaced `driver_profiles.select('employment_history')` with `getDriverEmployment` from `block_driver_employment`
+- Employment entries now typed as `UnifiedEmployment[]` — removed `(e: any)` cast
+- Error message kept as "Driver profile not found" for backward compatibility
+
+---
+
+## **Developer API Endpoints: Migrate Reads to Block Tables** (March 17, 2026)
+
+### What changed
+Migrated 8 developer-facing and GitHub API routes from reading `developer_profiles` to reading block-owned tables (`block_dev_profile`, `block_dev_github`, `block_dev_portfolio`, `block_skills`, `block_education`) and the `users` table (for share columns).
+
+### Files modified
+
+**1. `src/app/api/developer/profile/route.ts`**
+- GET: Replaced `developer_profiles.select('*')` with parallel block reads: `getDevProfile`, `getDevGithub`, `getDevPortfolio`, `getSkills`, `getEducation`
+- Profile fields (`bio`, `years_experience`, `job_types`, `work_styles`, etc.) → `block_dev_profile`
+- GitHub fields (`github_username`) → `block_dev_github.username`
+- Portfolio links → `block_dev_portfolio`
+- `headline`, `location` now read from `user_profiles` (were on `developer_profiles`)
+- `displayName` returns `null` (no block table equivalent)
+- `syncFromResume` backfill write still goes to `developer_profiles` (writes unchanged)
+- PUT: Replaced existence check + insert/update with `upsert` on `developer_profiles`
+
+**2. `src/app/api/developer/public/[token]/route.ts`**
+- `share_token` lookup moved from `developer_profiles` to `users` table (uses 036 migration)
+- Profile data now assembled from block tables: `getDevProfile`, `getDevGithub`, `getDevPortfolio`, `getSkills`, `getEducation`
+- `share_settings`, `share_views_count` read from `users` table
+- View count increment writes to `users` table instead of `developer_profiles`
+- GitHub API calls now use `github.username` and `github.access_token` from `block_dev_github`
+
+**3. `src/app/api/developer/share/route.ts`**
+- GET: Replaced `developer_profiles` read of share columns with `users` table read (same pattern as driver/share)
+- POST/PATCH: Writes still go to `developer_profiles` (unchanged)
+
+**4. `src/app/api/developer/profile/employment/route.ts`**
+- DELETE: Replaced `developer_profiles.select('employment_history')` with `getDevProfile` from `block_dev_profile`
+- Write (updating filtered employment_history) still goes to `developer_profiles`
+
+**5. `src/app/api/developer/verification/status/route.ts`**
+- Replaced `developer_profiles.select('employment_history')` with `getDevProfile` for employment count
+
+**6. `src/app/api/developer/verification/initiate-self/route.ts`**
+- Replaced `developer_profiles.select('employment_history')` with `getDevProfile` for employment lookup
+
+**7. `src/app/api/developer/projects/route.ts`**
+- No migration needed. POST reads `developer_profiles.id` for FK (`developer_profile_id`), which is a write concern. GET reads from `developer_projects` directly.
+
+**8. `src/app/api/github/callback/route.ts`**
+- Existence check changed from `developer_profiles.select('id')` to `getDevGithub` (block table)
+- When no existing GitHub data, uses `upsert` on `developer_profiles` instead of `insert`
+- Dual-write to `block_dev_github` unchanged
+
+**9. `src/app/api/github/contributions/route.ts`**
+- `share_token` lookup moved from `developer_profiles` to `users` table
+- GitHub credentials (`username`, `access_token`) now read from `getDevGithub` (block table)
+
+### Pattern
+All writes to `developer_profiles` are preserved (dual-write still active). Only reads migrated to block tables. Response shapes unchanged.
+
+---
+
+## **Employer API Endpoints: Migrate Reads to Block Tables** (March 17, 2026)
+
+### What changed
+Migrated 4 employer-facing API routes from reading `driver_profiles` to reading block-owned tables (`block_driver_cdl`, `block_driver_mvr`).
+
+### Files modified
+
+**1. `src/app/api/employer/drivers/search/route.ts`**
+- Replaced `driver_profiles` query (with CDL/MVR filters) with `block_driver_cdl` as the primary search table
+- MVR data now fetched from `block_driver_mvr` in a batch query
+- CDL filters (`cdl_class`, `cdl_state`) applied against `block_driver_cdl`
+- MVR filters (`license_status`, `violation_count`) applied client-side from `block_driver_mvr` data
+- Share data (`share_token`, `share_settings`, `professional_summary`) still read from `driver_profiles` (no block table yet)
+- `experience_years` returns `null` (no direct block table equivalent)
+- `minExperience` filter param removed (can't filter server-side without the column)
+- Imported `CdlRow` and `MvrRow` types from `@/lib/block-data`
+
+**2. `src/app/api/employer/hub/driver-data/route.ts`**
+- Replaced `driver_profiles` query with `block_driver_cdl` for CDL columns
+- `experienceYears` now returns `null` with comment explaining it has no block table equivalent yet
+- Variable renamed: `driverProfiles` → `cdlRows`, `profileMap` → `cdlMap`
+
+**3. `src/app/api/employer/applicants/route.ts`**
+- Removed `driver_profiles` nested join from the Supabase applications query
+- Added parallel batch fetch of `block_driver_cdl` + `driver_profiles` (for `professional_summary`) for all applicant user IDs
+- CDL fields (`cdlClass`, `cdlState`, `cdlExpiration`) now sourced from `cdlMap`
+- `experienceYears` now returns `null`
+- `professionalSummary` falls back: `driver_profiles` → `user_profiles`
+
+**4. `src/app/api/employer/mvr/order/route.ts`**
+- Replaced `driver_profiles` existence check with `block_driver_cdl` check
+- `driver_profile_id` on `mvr_orders` insert now uses the CDL block row ID
+- Changed `.single()` to `.maybeSingle()` (order shouldn't fail if no CDL block exists)
+
+### Technical notes
+- Response shapes are unchanged across all 4 endpoints
+- `experience_years` has no block table equivalent — returns `null` in all endpoints until a block table is created or it's computed from `block_driver_employment`
+- `share_token`, `share_settings`, and `professional_summary` still read from `driver_profiles` in the search endpoint (these haven't been migrated to block tables)
+- The `driver_profile_id` FK on `mvr_orders` is legacy — using CDL block ID as a reasonable stand-in
+
+---
+
+## **Career Card API: Migrate Reads to Block Tables** (March 17, 2026)
+
+### What changed
+Migrated `src/app/api/career-card/route.ts` from reading `driver_profiles` and `developer_profiles` tables to reading block-owned tables via `block-data.ts` helpers.
+
+### Files modified
+- `src/app/api/career-card/route.ts`
+  - Added imports: `getCdlData`, `getDevPortfolio`, `getDevGithub`, `getSkills`, `getDriverEmployment`, `getDevProfile` from `@/lib/block-data`
+  - **Main handler (lines 89-113):** Removed separate `driver_profiles` and `developer_profiles` queries for `professional_summary`. Added `professional_summary` to the existing `user_profiles` SELECT. Summary now reads from `userProfile?.professional_summary`.
+  - **`fetchCdlData`:** Replaced `driver_profiles` query with `getCdlData()` (reads `block_driver_cdl`)
+  - **`fetchPortfolioData`:** Replaced `developer_profiles` query with `getDevPortfolio()` (reads `block_dev_portfolio`)
+  - **`fetchGitHubData`:** Replaced `developer_profiles` query with `getDevGithub()` (reads `block_dev_github`). `avatar_url` now sourced from `user_profiles` instead of `developer_profiles` (dropped in migration 042). Added `userAvatarUrl` parameter threaded through `fetchSectionData`.
+  - **`fetchSkillsData`:** Replaced dual `driver_profiles` + `developer_profiles` queries with `getSkills()` (reads `block_skills`)
+  - **`fetchWorkHistoryData`:** Replaced dual `driver_profiles` + `developer_profiles` queries with `getDriverEmployment()` + `getDevProfile()` (reads `block_driver_employment` and `block_dev_profile`). Prefers driver employment, falls back to dev profile employment_history.
+
+### Technical notes
+- Response shape is unchanged — all `CareerCardSection` data types preserved
+- `fetchSectionData` dispatcher now accepts `userAvatarUrl` param so GitHub section can use `user_profiles` avatar
+- Zero reads from `driver_profiles` or `developer_profiles` remain in this file
+
+---
+
+## **Driver Hub API: Migrate Reads to Block Tables** (March 17, 2026)
+
+### What changed
+Migrated `src/app/api/driver/hub/route.ts` from reading the monolithic `driver_profiles` table to reading individual block-owned tables via `block-data.ts` helpers. This is Phase 2 — switching reads from legacy tables to block tables.
+
+### Files modified
+- `src/app/api/driver/hub/route.ts`
+  - Added import of `getCdlData`, `getDriverEmployment`, `getMvrData`, `getEmergencyContact`, `getDrivingExperience`, `getEducation`, `getSkills`, `getReferences` from `@/lib/block-data`
+  - Replaced the single `driver_profiles` SELECT (massive column list) with 8 parallel block table reads inside the existing `Promise.all`
+  - Reconstructed the `driverProfile` object from block results to preserve the same shape the frontend expects
+  - Share data (`share_token`, `share_settings`, `share_token_created_at`, `share_views_count`) now sourced from `users` table instead of `driver_profiles`
+  - Updated `users` SELECT to include share columns
+  - Updated debug logging to reference block data presence instead of `driverProfileResult`
+
+### Technical notes
+- The merged `profile` object (`userProfile` + `driverProfile`) preserves the same shape — `profile.cdl_number`, `profile.first_name`, etc. all still work downstream
+- `calculateProfileCompleteness` function unchanged since it reads the same merged profile shape
+- 8 parallel block reads replace 1 wide SELECT — more granular but same latency since they run concurrently in `Promise.all`
+
+---
+
+## **Developer Hub: Migrate Reads to Block Tables** (March 17, 2026)
+
+### What changed
+Migrated `src/app/api/developer/hub/route.ts` from reading `developer_profiles` to reading block-owned tables via `block-data.ts` helpers. This is part of Phase 2 — switching reads to block tables.
+
+### Files modified
+- `src/app/api/developer/hub/route.ts`
+  - Added import of `getDevGithub`, `getDevPortfolio`, `getDevProfile`, `getSkills`, `getEducation` from `@/lib/block-data`
+  - Replaced single `developer_profiles` `select('*')` with parallel block reads + `user_profiles` read via `Promise.all`
+  - Profile response is now composed from `user_profiles` (name, avatar, headline, contact) + `block_dev_profile` (bio, years_experience, job prefs) + `block_dev_github` + `block_dev_portfolio` + `block_skills` + `block_education`
+  - Stats calculation updated to use block data variables instead of `profile.xxx`
+  - `hasAnyProfile` determines profile presence from any block data existing, not from a single row
+
+### Technical notes
+- No schema changes — purely a read-path migration
+- The composed profile object preserves the same shape consumed by the frontend Developer Hub
+- Fields like `desiredSalaryMin/Max`, `availableFrom`, `createdAt`, `updatedAt`, and `id` return `null` since they're not stored in block tables
+
+---
+
+## **Career Card: Migrate Reads to Block Tables** (March 17, 2026)
+
+### What changed
+Migrated `src/app/api/driver/career-card/route.ts` from reading `driver_profiles` and `developer_profiles` to reading block-owned tables via `block-data.ts` helpers. This is part of Phase 2 — switching reads to block tables.
+
+### Files modified
+- `src/app/api/driver/career-card/route.ts`
+  - Added import of `getCdlData`, `getDriverEmployment`, `getSkills`, `getEducation`, `getDevGithub`, `getDevPortfolio`, `getDevProfile` from `@/lib/block-data`
+  - Replaced `driver_profiles` read (gated on `careerCard.driver_profile_id`) with parallel block reads via `Promise.all` — CDL, employment, skills, education. Driver profile is now composed from block data rather than a monolithic row
+  - Replaced `developer_profiles` read with parallel block reads — dev profile, GitHub, portfolio. Developer profile is assembled from these individual block tables
+  - Added `professional_summary` to `user_profiles` select since it was previously sourced from role-specific profile tables
+  - Removed dependency on `careerCard.driver_profile_id` — presence check is now based on whether block data exists (CDL or employment)
+
+### Technical notes
+- No schema changes — purely a read-path migration
+- The composed profile objects preserve the same shape consumed by the frontend `CareerCard` component
+- `share_token` and `share_settings` are set to `null` since block tables don't carry those fields (they'll be handled separately if needed)
+
+---
+
+## **Block-Owned Data Architecture — Phase 1** (March 13, 2026)
+
+### What changed
+Migrated from monolithic role-specific profile tables (`driver_profiles`, `developer_profiles`) to per-block data tables. Each block now owns its own data, and blocks share data directly with each other through typed composite reads. This is Phase 1 (dual-write) — old tables remain the read source while new tables are populated in parallel.
+
+### New database tables (migration 046)
+| Table | Purpose |
+|---|---|
+| `block_driver_cdl` | CDL license info |
+| `block_driver_employment` | Employment history (JSONB) |
+| `block_driver_mvr` | MVR order/result data |
+| `block_driver_emergency` | Emergency contact |
+| `block_driver_experience` | Driving experience / equipment (JSONB) |
+| `block_education` | Education entries — shared across all roles |
+| `block_skills` | Skills entries — shared across all roles |
+| `block_references` | Professional references |
+| `block_dev_github` | GitHub integration data |
+| `block_dev_portfolio` | Developer links (portfolio, LinkedIn, etc.) |
+
+### Files created
+- `supabase/migrations/046_block_owned_tables.sql` — Creates all tables with RLS, backfills existing data from `driver_profiles` and `developer_profiles`, adds indexes
+- `src/lib/block-data.ts` — Typed read/write access layer with per-table functions and composite cross-block readers (`getDotAppPrefillData`, `getResumePrefillData`, `getCareerCardData`)
+
+### Files modified
+- `src/app/api/driver/profile/route.ts` — Added `syncProfileToBlockTables()` dual-write on PUT (non-blocking, non-fatal)
+- `src/lib/block-registry.ts` — Added `dataTables` field to `BlockDefinition` interface; every block now declares which tables it owns
+- `.cursor/rules/block-development.mdc` — Added Section 9 documenting block-owned data conventions, table ownership matrix, access layer usage, and the rule that new code must use `block-data.ts` instead of old profile tables
+
+### Technical notes
+- Backfill uses `ON CONFLICT (user_id) DO NOTHING` so it's safe to re-run
+- Dual-write is fire-and-forget (`.catch()` logs warning) — old tables remain source of truth
+- All block tables have `UNIQUE(user_id)` constraint for one-row-per-user semantics
+- `syncProfileToBlockTables()` only writes fields present in the incoming profile data (sparse writes)
+- Phase 2 will switch reads to block tables; Phase 3 will drop old profile tables
+
+---
+
+## **My Files — Document Vault in Candidate Hub** (March 13, 2026)
+
+### What changed
+Replaced the placeholder `VerificationBar` with a fully functional `MyFilesSection` — a document vault that appears automatically once file-producing blocks are used. It's job-agnostic: it works for resumes, DOT apps, or any future document type.
+
+### Each document row shows
+- Title and status badge (In Progress / On-Chain)
+- **Edit button (pencil)** — navigates back into the document (resume builder, DOT app flow)
+- **Verify button (shield)** — submits to blockchain; appears only when document is ready but not yet verified
+- **Delete button (X)** — removes the file with an inline confirmation prompt; greyed out for blockchain-locked documents
+
+### Files modified
+- `src/components/hub/CandidateHub.tsx` — Replaced `VerificationBar` / `VerificationSection` with `MyFilesSection`. Adds `handleVerify` and `handleDelete` functions, inline delete confirmation, and per-document action buttons.
+
+### Technical notes
+- Resumes can be verified if they have a real IPFS hash (not a `built_` placeholder) and no existing tx
+- DOT apps can be verified if complete and no existing tx; cannot be deleted after verification
+- Verification status updates locally on success for immediate feedback with BaseScan link
+- Section only renders when file-producing blocks are installed and files exist
+
+---
+
 ## **Block Hive — Radial Honeycomb Layout** (March 13, 2026)
 
 ### What changed
@@ -12545,6 +13028,133 @@ Comprehensive audit of all 32+ Supabase tables against actual codebase usage. Th
 | `src/types/driver-profile.ts` | Removed dropped columns from Row type and converters |
 | `src/components/admin/admin-types.ts` | Removed `name` from `User` interface |
 | ~20 additional API routes | Removed `name` from `.select()` on `users` |
+
+**Status**: ✅ COMPLETE
+
+---
+
+## Employer Talent Routes — Migrate Reads to Block Tables
+
+Migrated the three employer talent API routes from reading `driver_profiles` / `developer_profiles` to the new block-owned tables (`block_driver_cdl`, `block_driver_employment`, `block_skills`, `block_education`, `block_dev_profile`, `block_dev_github`, `block_dev_portfolio`) and `user_profiles`.
+
+### Changes
+
+**1. `src/app/api/employer/talent/[userId]/route.ts` (talent view)**
+- Replaced `driver_profiles` SELECT with parallel block reads via `getCdlData`, `getDriverEmployment`, `getSkills`, `getEducation` from `@/lib/block-data`
+- Replaced `developer_profiles` SELECT with parallel block reads via `getDevProfile`, `getDevGithub`, `getDevPortfolio` from `@/lib/block-data`
+- `share_token` / `share_settings` now read from `users` table (migrated in 036)
+- `professional_summary` now read from `user_profiles` table (migrated in 039)
+- Same response shape preserved — profile objects reconstructed from block data
+
+**2. `src/app/api/employer/talent/[userId]/request/route.ts` (candidate requests)**
+- Removed `driver_profiles` and `developer_profiles` reads (were only used for email fallback)
+- Email fallback now comes from `user_profiles.email` instead
+- No `driver_profile_id` / `dev_profile_id` was needed — `candidate_requests` only uses `candidate_user_id`
+
+**3. `src/app/api/employer/talent/[userId]/recruit/route.ts` (employer-initiated applications)**
+- Role detection: replaced `driver_profiles.id` / `developer_profiles.id` existence check with `hub_blocks` block_type inspection
+- Career card snapshot: replaced `driver_profiles.*` read with `getCdlData` + `getDriverEmployment` block reads
+- Career card snapshot: replaced `developer_profiles.*` read with `getDevProfile` + `getDevGithub` + `getDevPortfolio` + `getSkills` block reads
+- Driver application and MVR queries unchanged (they read their own tables, not profile tables)
+
+| File | Change |
+|------|--------|
+| `src/app/api/employer/talent/[userId]/route.ts` | Block reads for CDL, employment, skills, education, dev profile/github/portfolio |
+| `src/app/api/employer/talent/[userId]/request/route.ts` | Email from `user_profiles` instead of profile tables |
+| `src/app/api/employer/talent/[userId]/recruit/route.ts` | Role from `hub_blocks`, snapshot from block tables |
+
+**Status**: ✅ COMPLETE
+
+---
+
+## Driver Profile Routes — Migrate Reads to Block Tables
+
+Migrated the four driver profile API routes from reading `driver_profiles` to the new block-owned tables. Added `getFullDriverProfile()` composite reader to `block-data.ts` that runs 8 parallel block reads and composes a `UnifiedDriverProfile`.
+
+All WRITE operations to `driver_profiles` remain unchanged (dual-write handles sync).
+
+### Changes
+
+**1. `src/lib/block-data.ts`**
+- Added `getFullDriverProfile()` — parallel reads from all 8 block tables, returns `UnifiedDriverProfile | null`
+- Added `UnifiedDriverProfile` to type imports
+
+**2. `src/app/api/driver/profile/route.ts`**
+- **GET**: Replaced `driver_profiles.select('*')` with `getFullDriverProfile()` block read
+- **POST**: Replaced `driver_profiles.select('*')` existence check with `getFullDriverProfile()`, still creates `driver_profiles` row if nothing exists
+- **PUT**: Replaced `driver_profiles.select('*')` conflict detection read with `getFullDriverProfile()`, write path (update/insert + dual-write sync) unchanged
+
+**3. `src/app/api/driver/sync-from-dot/route.ts`**
+- Replaced `driver_profiles.select('*')` existence check with `getFullDriverProfile()`
+- Score calculation now builds baseline from block data instead of spreading raw DB row
+- Write path (update to `driver_profiles`) unchanged
+
+**4. `src/app/api/driver/profile/clear-dot-progress/route.ts`**
+- Replaced `driver_profiles.select('id, last_updated_from')` with parallel `getEmergencyContact()` + `getDrivingExperience()` block reads
+- Skipped `last_updated_from` conditional (not in block tables) — always clears it when DOT data exists
+- Write path uses `user_id` instead of `id` for the update filter
+
+**5. `src/app/api/driver/profile/employment/route.ts`**
+- Replaced `driver_profiles.select('employment_history')` with `getDriverEmployment()` block read
+- Write path (update `driver_profiles.employment_history`) unchanged
+
+| File | Change |
+|------|--------|
+| `src/lib/block-data.ts` | Added `getFullDriverProfile()` composite reader |
+| `src/app/api/driver/profile/route.ts` | GET/POST/PUT reads from block tables |
+| `src/app/api/driver/sync-from-dot/route.ts` | Existence check + score baseline from block tables |
+| `src/app/api/driver/profile/clear-dot-progress/route.ts` | DOT data existence check from block tables |
+| `src/app/api/driver/profile/employment/route.ts` | Employment read from `block_driver_employment` |
+
+**Status**: ✅ COMPLETE
+
+---
+
+## Driver & MVR Routes — Migrate Reads to Block Tables / Users
+
+Migrated 6 API routes from reading `driver_profiles` to reading from block tables (`block_driver_cdl`, `block_driver_employment`, `block_driver_mvr`) and the `users` table (for share token columns migrated in 036). All WRITE operations to `driver_profiles` left unchanged.
+
+### Changes
+
+**1. `src/app/api/driver/share/route.ts` (GET)**
+- Replaced `driver_profiles` read of `share_token, share_settings, share_token_created_at, share_views_count` with reading those columns directly from `users` table (migrated in 036)
+- Eliminated one database query — share columns now fetched in the same `users` lookup
+
+**2. `src/app/api/driver/public/[token]/route.ts` (GET + POST)**
+- GET: Replaced `driver_profiles` lookup by `share_token` → `users` table lookup
+- GET: CDL data from `getCdlData`, employment from `getDriverEmployment`, MVR from `getMvrData`, skills from `getSkills`, education from `getEducation`
+- GET: `professional_summary` from `user_profiles` (migrated in 039)
+- GET: View count increment now updates `users` table instead of `driver_profiles`
+- GET: All block reads run in parallel via `Promise.all` for performance
+- POST: `share_token` lookup moved from `driver_profiles` to `users`; `driver_profile_id` set to `null` in lead insert (column is nullable)
+
+**3. `src/app/api/driver/verification/initiate-self/route.ts`**
+- Replaced `driver_profiles.employment_history` read with `getDriverEmployment` from `@/lib/block-data`
+- Empty history check preserved with same error message
+
+**4. `src/app/api/driver/verification/status/route.ts`**
+- Replaced `driver_profiles.employment_history` read with `getDriverEmployment` from `@/lib/block-data`
+- `totalEmployments` count now derived from block data
+
+**5. `src/app/api/mvr/order/route.ts`**
+- Narrowed `driver_profiles` read from `select('*')` to `select('id')` — only the FK is needed for `mvr_orders`
+- CREATE logic (insert if not exists) left unchanged for dual-write compatibility
+
+**6. `src/app/api/mvr/webhook/route.ts`**
+- Replaced `driver_profiles` `select('*')` for profile completeness with block data reads
+- Score now composed from `getCdlData` + latest resume/DOT app queries + MVR result data
+- Imported `ProfileData` type from `profile-completeness` for type-safe composition
+
+### Key Files Changed
+
+| File | Change |
+|------|--------|
+| `src/app/api/driver/share/route.ts` | Share columns from `users` instead of `driver_profiles` |
+| `src/app/api/driver/public/[token]/route.ts` | Token lookup from `users`, profile data from block tables |
+| `src/app/api/driver/verification/initiate-self/route.ts` | Employment from `getDriverEmployment` |
+| `src/app/api/driver/verification/status/route.ts` | Employment from `getDriverEmployment` |
+| `src/app/api/mvr/order/route.ts` | Narrowed profile read to `select('id')` |
+| `src/app/api/mvr/webhook/route.ts` | Profile completeness from block data + supporting queries |
 
 **Status**: ✅ COMPLETE
 

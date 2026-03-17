@@ -6,6 +6,7 @@ import {
 } from '@/types/employment-verification'
 import { sendVerificationEmail } from '@/lib/send-verification-email'
 import { getAppBaseUrl } from '@/lib/app-url'
+import { getDevProfile } from '@/lib/block-data'
 
 /** Normalize resume date string to PostgreSQL DATE (YYYY-MM-DD). Returns null for empty/unparseable. */
 function toDateOnly(value: string | null | undefined): string | null {
@@ -27,7 +28,7 @@ function toDateOnly(value: string | null | undefined): string | null {
  * POST /api/developer/verification/initiate-self
  *
  * Developer-only: developer initiates employment verification from their own
- * employment history (from developer_profiles, e.g. resume work experience).
+ * employment history (from block_dev_profile, e.g. resume work experience).
  * No driver or DOT form data is used in this route.
  */
 export async function POST(request: NextRequest) {
@@ -62,13 +63,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const { data: devProfile, error: devError } = await supabase
-      .from('developer_profiles')
-      .select('employment_history')
-      .eq('user_id', user.id)
-      .single()
+    const devProfile = await getDevProfile(supabase, user.id)
 
-    if (devError || !devProfile) {
+    if (!devProfile) {
       return NextResponse.json(
         { error: 'Developer profile not found. Add work experience to your resume or profile first.' },
         { status: 404 }
@@ -76,7 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     const employmentHistory = devProfile.employment_history || []
-    const employment = employmentHistory.find((e: { id: string }) => e.id === employmentId)
+    const employment = employmentHistory.find((e: { id?: string }) => e.id === employmentId)
 
     if (!employment) {
       return NextResponse.json(

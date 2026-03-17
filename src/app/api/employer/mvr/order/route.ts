@@ -151,12 +151,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Resolve driver profile ID for linking
-    const { data: driverProfile } = await supabase
-      .from('driver_profiles')
+    // Resolve driver CDL block for existence check (driver_profile_id is legacy)
+    const { data: cdlBlock } = await supabase
+      .from('block_driver_cdl')
       .select('id')
       .eq('user_id', candidateUserId)
-      .single()
+      .maybeSingle()
 
     // Check Accio credentials
     const accioAccount  = process.env.ACCIO_ACCOUNT
@@ -234,7 +234,7 @@ export async function POST(request: NextRequest) {
       .from('mvr_orders')
       .insert({
         driver_user_id:             candidateUserId,
-        driver_profile_id:          driverProfile?.id || null,
+        driver_profile_id:          cdlBlock?.id || null,
         accio_order_number:         orderNumber,
         accio_suborder_number:      subOrderId,
         accio_remote_order_number:  accioOrderId,

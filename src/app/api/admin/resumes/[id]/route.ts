@@ -128,13 +128,8 @@ export async function DELETE(
     if (wasDeveloperBuilt && resumeUserId) {
       const { getEmploymentFromResumes } = await import('@/lib/developer-employment-from-resumes')
       const employmentHistory = await getEmploymentFromResumes(supabase, resumeUserId)
-      await supabase
-        .from('developer_profiles')
-        .update({
-          employment_history: employmentHistory,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', resumeUserId)
+      const { saveDevProfile } = await import('@/lib/block-data')
+      await saveDevProfile(supabase, resumeUserId, { employment_history: employmentHistory })
     }
 
     console.log(`[ADMIN] Resume deleted: ${id} (${resume.title || resume.filename}) by admin: ${auth.walletAddress}`)

@@ -68,16 +68,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No company found' }, { status: 403 })
     }
 
-    // Parallel fetch: CDL profiles, DOT app completions, MVR + consent
+    // Parallel fetch: CDL from block table, DOT app completions, MVR + consent
     const [
-      { data: driverProfiles },
+      { data: cdlRows },
       { data: completedApps },
       { data: allMvrOrders },
       { data: consents },
     ] = await Promise.all([
       supabase
-        .from('driver_profiles')
-        .select('user_id, cdl_class, cdl_state, cdl_expiration, experience_years')
+        .from('block_driver_cdl')
+        .select('user_id, cdl_class, cdl_state, cdl_expiration')
         .in('user_id', applicantIds),
       supabase
         .from('driver_applications')
@@ -98,8 +98,8 @@ export async function GET(request: NextRequest) {
     ])
 
     // Build lookup maps
-    const profileMap = new Map(
-      (driverProfiles ?? []).map(p => [p.user_id, p])
+    const cdlMap = new Map(
+      (cdlRows ?? []).map(p => [p.user_id, p])
     )
     const dotSet = new Set(
       (completedApps ?? []).map(d => d.user_id)
@@ -131,13 +131,14 @@ export async function GET(request: NextRequest) {
     }> = {}
 
     for (const id of applicantIds) {
-      const dp = profileMap.get(id)
+      const cdl = cdlMap.get(id)
       const mvr = mvrByUser.get(id)
       driverData[id] = {
-        cdlClass: dp?.cdl_class ?? null,
-        cdlState: dp?.cdl_state ?? null,
-        cdlExpiration: dp?.cdl_expiration ?? null,
-        experienceYears: dp?.experience_years ?? null,
+        cdlClass: cdl?.cdl_class ?? null,
+        cdlState: cdl?.cdl_state ?? null,
+        cdlExpiration: cdl?.cdl_expiration ?? null,
+        // experience_years has no block table equivalent yet — null until computed
+        experienceYears: null,
         hasDriverApp: dotSet.has(id),
         hasMvr: mvrByUser.has(id),
         mvrStatus: mvr?.status ?? null,

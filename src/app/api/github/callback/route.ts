@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { saveDevGithub } from '@/lib/block-data'
 
 
 /**
@@ -83,21 +84,17 @@ async function syncGitHubData(
       syncedAt: new Date().toISOString(),
     }
 
-    // Store in database
+    // Store in block table
     const supabase = await getAdminSupabaseClient()
-    const { error } = await supabase
-      .from('developer_profiles')
-      .update({ github_data: githubData })
-      .eq('user_id', userId)
-
-    if (error) {
-      console.error('[GITHUB SYNC] Failed to store data:', error)
-    } else {
+    try {
+      await saveDevGithub(supabase, userId, { data: githubData })
       console.log('[GITHUB SYNC] Successfully synced GitHub data:', {
         repos: repos.length,
         stars: totalStars,
         languages: topLanguages.length,
       })
+    } catch (err) {
+      console.error('[GITHUB SYNC] Failed to store data:', err)
     }
   } catch (error) {
     console.error('[GITHUB SYNC] Error syncing data:', error)
@@ -227,47 +224,15 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Update or create developer profile with GitHub token
-    const { data: existingProfile } = await supabase
-      .from('developer_profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (existingProfile) {
-      // Update existing profile
-      const { error: updateError } = await supabase
-        .from('developer_profiles')
-        .update({
-          github_username: githubUsername,
-          github_access_token: accessToken,
-          github_connected_at: new Date().toISOString(),
-        })
-        .eq('id', existingProfile.id)
-
-      if (updateError) {
-        console.error(
-          '[GITHUB CALLBACK] Failed to update profile:',
-          updateError
-        )
-      }
-    } else {
-      // Create new profile
-      const { error: insertError } = await supabase
-        .from('developer_profiles')
-        .insert({
-          user_id: user.id,
-          github_username: githubUsername,
-          github_access_token: accessToken,
-          github_connected_at: new Date().toISOString(),
-        })
-
-      if (insertError) {
-        console.error(
-          '[GITHUB CALLBACK] Failed to create profile:',
-          insertError
-        )
-      }
+    // Write to block_dev_github (primary store)
+    try {
+      await saveDevGithub(supabase, user.id, {
+        username: githubUsername,
+        access_token: accessToken,
+        connected_at: new Date().toISOString(),
+      })
+    } catch (err) {
+      console.error('[GITHUB CALLBACK] Failed to save github data:', err)
     }
 
     console.log(
@@ -275,7 +240,6 @@ export async function GET(request: NextRequest) {
     )
 
     // Sync GitHub data to database (fire and forget - don't block redirect)
-    // This stores repos, stars, languages, etc. in github_data column
     syncGitHubData(user.id, accessToken, githubUsername)
 
     // Redirect back to app with success

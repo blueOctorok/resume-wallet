@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getDriverEmployment, saveDriverEmployment } from '@/lib/block-data'
 
 /**
  * DELETE /api/driver/profile/employment
- * Remove one employment entry from driver_profiles.employment_history by id.
+ * Remove one employment entry from block_driver_employment by id.
  * Body: { employmentId: string }
  */
 export async function DELETE(request: NextRequest) {
@@ -34,17 +35,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from('driver_profiles')
-      .select('employment_history')
-      .eq('user_id', user.id)
-      .single()
-
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'Driver profile not found' }, { status: 404 })
-    }
-
-    const current = (profile.employment_history as Array<{ id?: string }>) || []
+    const current = await getDriverEmployment(supabase, user.id)
     const updated = current.filter((e) => e.id !== employmentId)
     if (updated.length === current.length) {
       return NextResponse.json(
@@ -53,20 +44,11 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    const { error: updateError } = await supabase
-      .from('driver_profiles')
-      .update({
-        employment_history: updated,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', user.id)
-
-    if (updateError) {
-      console.error('[DRIVER PROFILE] Remove employment error:', updateError)
-      return NextResponse.json(
-        { error: 'Failed to remove employment' },
-        { status: 500 }
-      )
+    try {
+      await saveDriverEmployment(supabase, user.id, updated)
+    } catch (err) {
+      console.error('[DRIVER PROFILE] Remove employment error:', err)
+      return NextResponse.json({ error: 'Failed to remove employment' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true, message: 'Employment removed' })

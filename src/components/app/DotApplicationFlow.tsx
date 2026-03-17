@@ -381,7 +381,7 @@ export default function DotApplicationFlow({
         return
       }
 
-      // Sync DOT data to driver_profiles (for career cards / talent search)
+      // Sync DOT data to block tables (for career cards / talent search)
       // This is critical for the name to appear correctly in employer talent search
       try {
         const syncResponse = await fetch('/api/driver/sync-from-dot', {
