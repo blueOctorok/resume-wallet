@@ -163,6 +163,21 @@ export interface CareerCardData {
   } | null
   hasBgcheckConsent: boolean
   bgcheckConsentSignedAt: string | null
+  /** Driver personal info from the signed disclosure — used to auto-fill MVR order */
+  bgcheckConsentFormData?: {
+    firstName: string
+    lastName: string
+    dateOfBirth: string
+    address: string
+    city: string
+    state: string
+    zip: string
+    dlNumber: string
+    dlState: string
+    email: string
+  } | null
+  /** Block types the candidate has installed — used by employers to gate request actions */
+  installedBlockTypes?: string[]
 }
 
 // ─── Props ───────────────────────────────────────────────────────────────────
@@ -191,8 +206,13 @@ export default function CareerCard({
   footerActions,
 }: CareerCardProps) {
   const { theme } = useTheme()
-  const isDriver = data.role === 'driver'
   const profile = data.profile
+
+  // Block-aware section visibility: installed blocks take priority over role.
+  // A 'candidate' with driver-mvr block should see MVR sections just like a 'driver'.
+  const blocks = data.installedBlockTypes || []
+  const hasDriverBlocks = blocks.some(b => b.startsWith('driver-'))
+  const isDriver = data.role === 'driver' || hasDriverBlocks
 
   const [showResumePreview, setShowResumePreview] = useState(false)
   const [showDotPreview, setShowDotPreview] = useState(false)

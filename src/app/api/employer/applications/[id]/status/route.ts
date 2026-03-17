@@ -98,7 +98,7 @@ export async function PATCH(
     // Fetch company name for notifications (optional — won't block update if missing)
     const { data: company } = await supabase
       .from('companies')
-      .select('id, name')
+      .select('id, company_name')
       .eq('id', jobPosting.company_id)
       .single()
 
@@ -188,7 +188,7 @@ export async function PATCH(
         hired:        "You're hired! 🎉",
         rejected:     'Application status update',
       }
-      const companyName = company?.name ?? 'The company'
+      const companyName = company?.company_name ?? 'The company'
 
       const statusBodies: Record<string, string> = {
         under_review: `${companyName} is reviewing your application for ${jobPosting.title}.`,

@@ -12,10 +12,12 @@ import {
   CheckCircle,
   Clock,
   RefreshCw,
+  CreditCard,
 } from 'lucide-react'
 import CareerCard, { type CareerCardData } from '@/components/CareerCard'
 import Avatar from '@/components/ui/Avatar'
 import MessagingButton from '@/components/messaging/MessagingButton'
+import MvrPaymentButton from '@/components/MvrPaymentButton'
 import { useUIStore } from '@/stores'
 
 // Re-export for consumers that imported from here previously
@@ -55,6 +57,11 @@ export default function CareerCardModal({
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
   const [recruitMessage, setRecruitMessage] = useState('')
   const [recruitLoading, setRecruitLoading] = useState(false)
+
+  const [showMvrOrderModal, setShowMvrOrderModal] = useState(false)
+  const [mvrOrderLoading, setMvrOrderLoading] = useState(false)
+  const [mvrOrderError, setMvrOrderError] = useState<string | null>(null)
+  const [mvrOrderSuccess, setMvrOrderSuccess] = useState(false)
 
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
@@ -196,6 +203,37 @@ export default function CareerCardModal({
     }
   }
 
+  // ── MVR order (payment → API call) ─────────────────────────────────────────
+
+  const handleMvrOrder = async (txHash: string, fields: MvrOrderFields) => {
+    setMvrOrderLoading(true)
+    setMvrOrderError(null)
+
+    try {
+      const response = await fetch('/api/employer/mvr/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        body: JSON.stringify({
+          candidateUserId,
+          paymentTxHash: txHash,
+          ...fields,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to place MVR order')
+      }
+
+      setMvrOrderSuccess(true)
+      await fetchCareerCard()
+    } catch (err) {
+      setMvrOrderError(err instanceof Error ? err.message : 'Failed to place MVR order')
+    } finally {
+      setMvrOrderLoading(false)
+    }
+  }
+
   if (!mounted) return null
 
   // ── Action slots passed into CareerCard ───────────────────────────────────
@@ -208,6 +246,59 @@ export default function CareerCardModal({
       isPending={!!getPendingRequest('document_upload', 'resume')}
       onClick={() => createRequest('document_upload', 'resume')}
       onResend={() => resendRequest('document_upload', 'resume')}
+      theme={theme}
+    />
+  ) : null
+
+  // MVR actions — only if candidate has the driver-mvr block and no MVR exists yet
+  const hasDriverMvrBlock = careerCard?.installedBlockTypes?.includes('driver-mvr')
+  const consentReady = careerCard?.hasBgcheckConsent === true
+  const mvrAction = hasDriverMvrBlock && !careerCard?.hasMvr && !careerCard?.companyMvr ? (
+    <div className="flex items-center gap-2">
+      <ActionButton
+        label="Request MVR"
+        loading={requestLoading === 'mvr_order'}
+        resendLoading={resendLoading === 'mvr_order'}
+        isPending={!!getPendingRequest('mvr_order')}
+        onClick={() => createRequest('mvr_order')}
+        onResend={() => resendRequest('mvr_order')}
+        theme={theme}
+      />
+      <button
+        onClick={() => setShowMvrOrderModal(true)}
+        disabled={!consentReady || mvrOrderSuccess}
+        title={consentReady ? 'Order MVR' : 'Waiting for candidate to sign disclosure'}
+        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+          mvrOrderSuccess
+            ? theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-700'
+            : consentReady
+              ? theme === 'dark'
+                ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 cursor-pointer'
+                : 'bg-teal-50 text-teal-700 hover:bg-teal-100 cursor-pointer'
+              : theme === 'dark'
+                ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+        }`}
+      >
+        {mvrOrderSuccess ? (
+          <><CheckCircle className="w-3 h-3" /> Ordered</>
+        ) : (
+          <><CreditCard className="w-3 h-3" /> Order MVR</>
+        )}
+      </button>
+    </div>
+  ) : null
+
+  // DOT app request — only if candidate has the driver-dot-application block and no app yet
+  const hasDotBlock = careerCard?.installedBlockTypes?.includes('driver-dot-application')
+  const dotAppAction = hasDotBlock && !careerCard?.hasDriverApp ? (
+    <ActionButton
+      label="Request DOT App"
+      loading={requestLoading === 'profile_completion'}
+      resendLoading={resendLoading === 'profile_completion'}
+      isPending={!!getPendingRequest('profile_completion')}
+      onClick={() => createRequest('profile_completion')}
+      onResend={() => resendRequest('profile_completion')}
       theme={theme}
     />
   ) : null
@@ -328,6 +419,8 @@ export default function CareerCardModal({
               data={careerCard}
               walletAddress={walletAddress}
               resumeAction={resumeAction}
+              mvrAction={mvrAction}
+              dotAppAction={dotAppAction}
               footerActions={footerActions}
             />
           )}
@@ -453,11 +546,304 @@ export default function CareerCardModal({
     </div>
   ) : null
 
+  // ── MVR order sub-modal ──────────────────────────────────────────────────
+
+  const mvrOrderModalContent = showMvrOrderModal ? (
+    <MvrOrderModal
+      candidateUserId={candidateUserId}
+      walletAddress={walletAddress}
+      careerCard={careerCard}
+      loading={mvrOrderLoading}
+      error={mvrOrderError}
+      success={mvrOrderSuccess}
+      onOrder={handleMvrOrder}
+      onClose={() => { setShowMvrOrderModal(false); setMvrOrderError(null) }}
+      theme={theme}
+    />
+  ) : null
+
   return (
     <>
       {createPortal(modalContent, document.body)}
       {recruitModalContent && createPortal(recruitModalContent, document.body)}
+      {mvrOrderModalContent && createPortal(mvrOrderModalContent, document.body)}
     </>
+  )
+}
+
+// ── Types for MVR order form ─────────────────────────────────────────────────
+
+interface MvrOrderFields {
+  firstName: string
+  lastName: string
+  dob: string
+  ssn: string
+  email: string
+  dlNumber: string
+  dlState: string
+  address: string
+  city: string
+  state: string
+  zip: string
+}
+
+// ── MvrOrderModal ────────────────────────────────────────────────────────────
+// Full editable form pre-filled from the signed disclosure. Matches the
+// candidate's MvrOrderForm layout so employers see the same fields.
+
+function MvrOrderModal({
+  walletAddress,
+  careerCard,
+  loading,
+  error,
+  success,
+  onOrder,
+  onClose,
+  theme,
+}: {
+  candidateUserId: string
+  walletAddress: string
+  careerCard: CareerCardData | null
+  loading: boolean
+  error: string | null
+  success: boolean
+  onOrder: (txHash: string, fields: MvrOrderFields) => void
+  onClose: () => void
+  theme: string
+}) {
+  const fd = careerCard?.bgcheckConsentFormData
+
+  const [firstName, setFirstName] = useState(fd?.firstName || '')
+  const [lastName, setLastName] = useState(fd?.lastName || '')
+  const [email, setEmail] = useState(fd?.email || '')
+  const [dob, setDob] = useState(fd?.dateOfBirth || '')
+  const [ssn, setSsn] = useState('')
+  const [dlNumber, setDlNumber] = useState(fd?.dlNumber || '')
+  const [dlState, setDlState] = useState(fd?.dlState || '')
+  const [address, setAddress] = useState(fd?.address || '')
+  const [city, setCity] = useState(fd?.city || '')
+  const [state, setState] = useState(fd?.state || '')
+  const [zip, setZip] = useState(fd?.zip || '')
+
+  const [paymentTxHash, setPaymentTxHash] = useState<string | null>(null)
+  const isPaymentComplete = !!paymentTxHash
+
+  const isFormValid = Boolean(
+    firstName.trim() && lastName.trim() && email.trim() && dob.trim() &&
+    ssn.trim() && dlNumber.trim() && dlState.trim() &&
+    address.trim() && city.trim() && state.trim() && zip.trim()
+  )
+
+  const handlePaymentSuccess = (txHash: string) => {
+    setPaymentTxHash(txHash)
+    onOrder(txHash, {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      dob: dob.trim(),
+      ssn: ssn.trim(),
+      email: email.trim(),
+      dlNumber: dlNumber.trim(),
+      dlState: dlState.trim().toUpperCase(),
+      address: address.trim(),
+      city: city.trim(),
+      state: state.trim().toUpperCase(),
+      zip: zip.trim(),
+    })
+  }
+
+  const inputClass = `w-full px-3 py-2 rounded-lg border text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${
+    theme === 'dark'
+      ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
+      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
+  }`
+
+  const labelClass = `block text-xs font-medium mb-1 ${
+    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+  }`
+
+  return (
+    <div
+      className="fixed inset-0 z-[10001] flex items-center justify-center p-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="absolute inset-0 bg-black/70 pointer-events-none" />
+      <div
+        className={`relative z-[10002] w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+          theme === 'dark' ? 'bg-gray-900' : 'bg-white'
+        }`}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className={`sticky top-0 z-10 p-5 border-b ${theme === 'dark' ? 'border-gray-800 bg-gray-900' : 'border-gray-100 bg-white'}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl ${theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'}`}>
+                <CreditCard className="w-5 h-5 text-teal-500" />
+              </div>
+              <div>
+                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                  Order MVR
+                </h3>
+                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {careerCard?.name || 'Candidate'}
+                </p>
+              </div>
+            </div>
+            <button onClick={onClose} className={`p-2 rounded-lg ${theme === 'dark' ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Success */}
+        {success ? (
+          <div className="p-8 text-center">
+            <CheckCircle className={`w-12 h-12 mx-auto mb-3 ${theme === 'dark' ? 'text-green-400' : 'text-green-500'}`} />
+            <h4 className={`text-lg font-semibold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              MVR Order Submitted
+            </h4>
+            <p className={`text-sm mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+              Results will appear on the candidate&apos;s career card once processed.
+            </p>
+            <button
+              onClick={onClose}
+              className="px-6 py-2.5 rounded-xl font-medium bg-teal-600 text-white hover:bg-teal-700 transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        ) : (
+          <div className="p-5 space-y-4">
+            {/* Pre-fill notice */}
+            {fd && (
+              <p className={`text-xs ${theme === 'dark' ? 'text-teal-400/70' : 'text-teal-600'}`}>
+                Pre-filled from signed disclosure — edit if needed
+              </p>
+            )}
+
+            {/* Personal Information */}
+            <div className={`rounded-xl border p-4 space-y-3 ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
+              <p className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+                Personal Information
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelClass}>First Name *</label>
+                  <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="John" disabled={success} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>Last Name *</label>
+                  <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Doe" disabled={success} className={inputClass} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelClass}>Email *</label>
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="john@example.com" disabled={success} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>Date of Birth *</label>
+                  <input type="date" value={dob} onChange={e => setDob(e.target.value)} disabled={success} className={inputClass} />
+                </div>
+              </div>
+              <div className="w-32">
+                <label className={labelClass}>SSN (last 4) *</label>
+                <input
+                  type="text" inputMode="numeric" maxLength={4}
+                  value={ssn} onChange={e => setSsn(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  placeholder="0000" disabled={success}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            {/* Driver License */}
+            <div className={`rounded-xl border p-4 space-y-3 ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
+              <p className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+                Driver License
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelClass}>License Number *</label>
+                  <input value={dlNumber} onChange={e => setDlNumber(e.target.value)} placeholder="12345678" disabled={success} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>State *</label>
+                  <input value={dlState} onChange={e => setDlState(e.target.value.toUpperCase())} placeholder="TX" maxLength={2} disabled={success} className={inputClass} />
+                </div>
+              </div>
+            </div>
+
+            {/* Address */}
+            <div className={`rounded-xl border p-4 space-y-3 ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
+              <p className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+                Address
+              </p>
+              <div>
+                <label className={labelClass}>Street *</label>
+                <input value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main St" disabled={success} className={inputClass} />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className={labelClass}>City *</label>
+                  <input value={city} onChange={e => setCity(e.target.value)} placeholder="Houston" disabled={success} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>State *</label>
+                  <input value={state} onChange={e => setState(e.target.value.toUpperCase())} placeholder="TX" maxLength={2} disabled={success} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>ZIP *</label>
+                  <input value={zip} onChange={e => setZip(e.target.value)} placeholder="77001" maxLength={10} disabled={success} className={inputClass} />
+                </div>
+              </div>
+            </div>
+
+            {/* Status messages */}
+            {error && (
+              <div className={`flex items-start gap-2 p-3 rounded-lg text-sm ${theme === 'dark' ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+            {loading && (
+              <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${theme === 'dark' ? 'bg-blue-900/20 text-blue-400' : 'bg-blue-50 text-blue-700'}`}>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Submitting MVR order...
+              </div>
+            )}
+
+            {/* Payment */}
+            <div className={`rounded-xl border p-4 ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
+              <p className={`text-sm font-medium mb-3 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+                Payment
+              </p>
+              {isPaymentComplete ? (
+                <div className={`flex items-center gap-2 p-3 rounded-lg ${theme === 'dark' ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'}`}>
+                  <CheckCircle className={`w-4 h-4 ${theme === 'dark' ? 'text-green-400' : 'text-green-500'}`} />
+                  <span className={`text-sm font-medium ${theme === 'dark' ? 'text-green-300' : 'text-green-700'}`}>Payment confirmed</span>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {!isFormValid && (
+                    <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                      Fill out all required fields to enable payment
+                    </p>
+                  )}
+                  <MvrPaymentButton
+                    userAddress={walletAddress}
+                    onPaymentSuccess={handlePaymentSuccess}
+                    onPaymentError={(msg) => console.error('[MVR PAYMENT]', msg)}
+                    disabled={!isFormValid || loading}
+                    userType="employer"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 

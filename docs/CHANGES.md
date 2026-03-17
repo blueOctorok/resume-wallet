@@ -4,6 +4,133 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Block Development Cursor Rule** (March 13, 2026)
+
+### What changed
+Added `.cursor/rules/block-development.mdc` — a persistent rule that fires when working on block-related files. It codifies the full wiring checklist for building a new block: registry, component, career card gating, employer request gating, admin visibility, AvA journey, and the critical conventions (block ID prefix = category, never use `users.role` as source of truth, no auto-role-setting from blocks). Updated the quick-reference comment in `src/lib/block-registry.ts` to match.
+
+---
+
+## **Block-Centric Central Admin** (March 13, 2026)
+
+### What changed
+Central Admin used to categorize users by role-specific profile tables (`driver_profiles`, `developer_profiles`). Composable hub users who installed driver blocks (like Barry with `driver-mvr`) were invisible because they had no `driver_profiles` row. The admin sidebar had separate "Driver Blocks" and "Developer Blocks" sections tied to these tables.
+
+Now the admin uses a unified **Candidates** section. Every non-employer user appears in the "All Candidates" tab, with their installed hub blocks shown as colored pills. Block-based filtering lets admins slice by category: Driver Blocks, Developer Blocks, General Only, or No Blocks.
+
+### Architecture decision
+- `users.role` stays as-is — only meaningful for `employer` gating. All non-employer users are candidates.
+- `driver_profiles` and `developer_profiles` tables are NOT deleted (other features still write to them). Admin just stops depending on them as its source of truth.
+- Admin enrichment joins `hub_blocks` instead — installed block types are the new admin-visible "tags."
+
+### Files modified
+- `src/app/api/admin/users/route.ts` — Fetches `hub_blocks` per user, adds `installedBlocks` and `blockCategories` to response. New `?blockFilter` query param (drivers/developers/general/none).
+- `src/components/admin/admin-types.ts` — Added `'candidates'` TabId, `installedBlocks` and `blockCategories` to `User` interface. Removed `'profiles'` and `'devProfiles'` TabIds.
+- `src/components/admin/tabs/CandidatesTab.tsx` — New unified candidate list with block tag pills, category filter buttons, and click-to-detail.
+- `src/components/admin/AdminDashboardShell.tsx` — Merged "Driver Blocks" and "Developer Blocks" sidebar sections into single "Candidates" section. Removed ProfilesTab/DevProfilesTab, added CandidatesTab.
+
+---
+
+## **Employer MVR Order Form — Editable Fields** (March 13, 2026)
+
+### What changed
+The employer-side "Order MVR" modal was a minimal read-only display of candidate disclosure data + SSN input. It now mirrors the candidate's own `MvrOrderForm` — a full editable form pre-filled from the signed disclosure. Every field (name, email, DOB, DL info, address, SSN) is editable in case the data needs correcting before the background check provider receives it.
+
+### Files modified
+- `src/components/employer/CareerCardModal.tsx` — Rewrote `MvrOrderModal` with grouped editable sections (Personal, License, Address, Payment). Added `MvrOrderFields` type. Parent handler now receives the full form payload on payment success instead of just SSN.
+
+### How it works
+1. Candidate signs disclosure → data stored in `bgcheck_consents.form_data`
+2. Employer opens Order MVR → fields pre-filled from disclosure, with "edit if needed" note
+3. Employer reviews/edits, enters SSN last-4, pays via USDC
+4. On payment success, all form fields are sent to `/api/employer/mvr/order`
+
+---
+
+## **Fix Employer Hub 500s + Recruit Pipeline** (March 13, 2026)
+
+### What changed
+After migration 042 dropped `users.name` and rewrote `career_cards`, several API routes still referenced the old column. Also, `career_cards` no longer filtered out employers, causing them to appear in talent search. The recruit endpoint failed for composable hub users without `driver_profiles`/`developer_profiles` rows.
+
+### Fixes
+1. **`career_cards` view** now excludes employers via `AND u.role IS DISTINCT FROM 'employer'` (migration 045)
+2. **`search_talent()` function** return type fixed — `role VARCHAR` instead of `role TEXT` to match view (migration 045)
+3. **Recruit endpoint** (`/api/employer/talent/[userId]/recruit`) accepts composable hub candidates (`candidate` role) without requiring a `driver_profiles` or `developer_profiles` row. Only employers are rejected.
+4. **Stale column references** fixed across 7 API files:
+   - `users.name` → `users.email` (column dropped in 042)
+   - `companies.name` → `companies.company_name` (column never existed as `name`)
+   - `mvr_orders.order_status` → `mvr_orders.status` (correct column name)
+
+### Files changed
+| File | Change |
+|------|--------|
+| `supabase/migrations/045_fix_search_talent_return_type.sql` | Recreates career_cards view + search_talent function |
+| `src/app/api/employer/talent/[userId]/recruit/route.ts` | Composable hub support + mvr column fix |
+| `src/app/api/employer/invites/route.ts` | `users.name` → `email` |
+| `src/app/api/admin/mvr/order/route.ts` | `users.name` + `companies.name` fixes |
+| `src/app/api/employer/candidate-data/[candidateId]/route.ts` | `users.name` → `email` |
+| `src/app/api/admin/dot-apps/[id]/export/route.ts` | `companies.name` → `company_name` |
+| `src/app/api/employer/talent/[userId]/request/route.ts` | `companies.name` → `company_name` |
+| `src/app/api/employer/talent/[userId]/recruit/route.ts` | `companies.name` → `company_name` |
+| `src/app/api/employer/applications/[id]/export/route.ts` | `companies.name` → `company_name` |
+
+---
+
+## **Restore Employer MVR Order Button** (March 13, 2026)
+
+### What changed
+The employer's "Order MVR" button was missing from the `CareerCardModal`. Previously, employers could see two buttons side by side: "Request MVR" (sends FCRA disclosure to candidate) and "Order MVR" (pays USDC + places the background check order). The Order button was grayed out until the candidate signed the disclosure.
+
+### Fixes
+1. **Talent API** now returns `bgcheckConsentFormData` (the `form_data` JSON from the signed disclosure) so the employer has all driver details needed to auto-fill the order
+2. **CareerCardData** type gets `bgcheckConsentFormData` field with typed driver info
+3. **CareerCardModal** now shows "Request MVR" and "Order MVR" buttons side by side:
+   - "Order MVR" is grayed out with tooltip "Waiting for candidate to sign disclosure" until `hasBgcheckConsent` is true
+   - When active, it opens a confirmation modal showing driver details from the disclosure
+   - Employer enters SSN last-4 (required by background check provider, not stored in consent for security)
+   - `MvrPaymentButton` handles USDC payment; on success the MVR order auto-submits to `/api/employer/mvr/order`
+4. **MvrOrderModal** sub-component added to `CareerCardModal` — shows driver details, SSN input, payment button, and order status
+
+### Flow
+`Request MVR` → candidate signs FCRA disclosure → `Order MVR` activates → employer enters SSN last-4 → USDC payment → order auto-submits to Accio → career card refreshes with pending MVR
+
+### Files changed
+| File | Change |
+|------|--------|
+| `src/app/api/employer/talent/[userId]/route.ts` | Returns `bgcheckConsentFormData` from `bgcheck_consents.form_data` |
+| `src/components/CareerCard.tsx` | Added `bgcheckConsentFormData` to `CareerCardData` interface |
+| `src/components/employer/CareerCardModal.tsx` | Added side-by-side Request/Order MVR buttons + `MvrOrderModal` sub-component |
+
+---
+
+## **Restore Employer Requests in CandidateHub** (March 13, 2026)
+
+### What changed
+The Employer Requests section was lost when users moved from the old `DriverHub`/`DeveloperHub` to the composable `CandidateHub`. All backend infrastructure was intact — the section just wasn't rendered, and the API blocked `candidate` role users.
+
+### Fixes
+1. **CandidateHub** now renders `CandidateRequestsSection` above the STORM balance footer, with navigation callbacks for resume and DOT app requests
+2. **API role gate** (`/api/candidate/requests`) changed from whitelisting `driver`/`developer` to blocking `employer` — any non-employer can now see their incoming requests
+3. **Talent API** (`/api/employer/talent/[userId]`) now returns `installedBlockTypes` from `hub_blocks` so employers know which request actions are valid
+4. **CareerCardModal** restores MVR and DOT App request buttons, gated by the candidate's installed blocks:
+   - "Request MVR" only appears if the candidate has the `driver-mvr` block installed
+   - "Request DOT App" only appears if the candidate has the `driver-dot-application` block installed
+5. **CareerCardData** type gets `installedBlockTypes?: string[]` field
+
+### Architecture
+Blocks act as the **permission layer** — they determine what an employer *can* request. The `CandidateRequestsSection` is the **UI layer** — a single place where all incoming requests appear regardless of type.
+
+### Files changed
+| File | Change |
+|------|--------|
+| `src/components/hub/CandidateHub.tsx` | Added `CandidateRequestsSection` with navigation callbacks |
+| `src/app/api/candidate/requests/route.ts` | Role gate: whitelist -> block employers only |
+| `src/app/api/employer/talent/[userId]/route.ts` | Returns `installedBlockTypes` from `hub_blocks` |
+| `src/components/CareerCard.tsx` | Added `installedBlockTypes` to `CareerCardData` interface |
+| `src/components/employer/CareerCardModal.tsx` | Restored `mvrAction` + `dotAppAction`, gated by installed blocks |
+
+---
+
 ## **Whitepaper Button in STORM Balance + Employer Access** (March 13, 2026)
 
 ### What changed

@@ -111,11 +111,11 @@ export async function POST(
     // Get company name for email notification
     const { data: company } = await supabase
       .from('companies')
-      .select('name')
+      .select('company_name')
       .eq('id', companyId)
       .single()
 
-    const companyName = company?.name || 'A company'
+    const companyName = company?.company_name || 'A company'
 
     // Verify candidate exists
     const { data: candidate } = await supabase
@@ -151,14 +151,10 @@ export async function POST(
       || developerProfile?.email
       || null
 
-    const isCandidate = 
-      ['driver', 'developer'].includes(candidate.role || '') ||
-      !!driverProfile ||
-      !!developerProfile
-
-    if (!isCandidate) {
+    // Block employers; all other roles (driver, developer, candidate, null) are valid
+    if (candidate.role === 'employer') {
       return NextResponse.json(
-        { error: 'User is not a candidate (driver or developer)' },
+        { error: 'Cannot send requests to an employer account' },
         { status: 400 }
       )
     }

@@ -16,7 +16,6 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
-  Code,
   FolderGit2,
   Car,
   Building2,
@@ -33,12 +32,11 @@ import JobsTab from './tabs/JobsTab'
 import ApplicationsTab from './tabs/ApplicationsTab'
 import OutreachTab from './tabs/OutreachTab'
 import BgcheckRequestsTab from './tabs/BgcheckRequestsTab'
-import ProfilesTab from './tabs/ProfilesTab'
+import CandidatesTab from './tabs/CandidatesTab'
 import DotAppsTab from './tabs/DotAppsTab'
 import ResumesTab from './tabs/ResumesTab'
 import MvrTab from './tabs/MvrTab'
 import VerificationsTab from './tabs/VerificationsTab'
-import DevProfilesTab from './tabs/DevProfilesTab'
 import DevProjectsTab from './tabs/DevProjectsTab'
 import UsersTab from './tabs/UsersTab'
 import ToolsTab from './tabs/ToolsTab'
@@ -204,21 +202,14 @@ function AdminDashboardContent() {
       ],
     },
     {
-      id: 'drivers',
-      label: 'Driver Blocks',
+      id: 'candidates',
+      label: 'Candidates',
       tabs: [
-        { id: 'profiles', label: 'Profiles', icon: <UserCircle className='w-4 h-4' /> },
+        { id: 'candidates', label: 'All Candidates', icon: <UserCircle className='w-4 h-4' /> },
         { id: 'dotApps', label: 'DOT Apps', icon: <ClipboardList className='w-4 h-4' /> },
         { id: 'resumes', label: 'Resumes', icon: <FileText className='w-4 h-4' /> },
         { id: 'mvr', label: 'MVR Orders', icon: <Car className='w-4 h-4' /> },
         { id: 'verifications', label: 'Verifications', icon: <ClipboardCheck className='w-4 h-4' /> },
-      ],
-    },
-    {
-      id: 'developers',
-      label: 'Developer Blocks',
-      tabs: [
-        { id: 'devProfiles', label: 'Profiles', icon: <Code className='w-4 h-4' /> },
         { id: 'devProjects', label: 'Projects', icon: <FolderGit2 className='w-4 h-4' /> },
       ],
     },
@@ -300,8 +291,8 @@ function AdminDashboardContent() {
         return <OutreachTab key={refreshKey} {...tabProps} />
       case 'bgcheckRequests':
         return <BgcheckRequestsTab key={refreshKey} {...tabProps} />
-      case 'profiles':
-        return <ProfilesTab key={refreshKey} {...tabProps} />
+      case 'candidates':
+        return <CandidatesTab key={refreshKey} {...tabProps} />
       case 'dotApps':
         return <DotAppsTab key={refreshKey} {...tabProps} />
       case 'resumes':
@@ -310,8 +301,6 @@ function AdminDashboardContent() {
         return <MvrTab key={refreshKey} {...tabProps} />
       case 'verifications':
         return <VerificationsTab key={refreshKey} {...tabProps} />
-      case 'devProfiles':
-        return <DevProfilesTab key={refreshKey} {...tabProps} />
       case 'devProjects':
         return <DevProjectsTab key={refreshKey} {...tabProps} />
       case 'users':

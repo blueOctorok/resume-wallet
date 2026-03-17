@@ -78,7 +78,7 @@ export async function GET(
         created_at,
         updated_at,
         created_by,
-        creator:users!employer_candidate_data_created_by_fkey(name)
+        creator:users!employer_candidate_data_created_by_fkey(email)
       `)
       .eq('company_id', companyId)
       .eq('candidate_user_id', candidateId)
@@ -99,7 +99,7 @@ export async function GET(
         applicationId: item.application_id,
         createdAt: item.created_at,
         updatedAt: item.updated_at,
-        createdByName: (item.creator as { name: string } | null)?.name || null,
+        createdByName: (item.creator as { email: string } | null)?.email || null,
       })),
     })
 

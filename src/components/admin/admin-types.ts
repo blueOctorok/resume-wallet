@@ -7,12 +7,11 @@ export type TabId =
   | 'applications'
   | 'outreach'
   | 'users'
+  | 'candidates'
   | 'dotApps'
-  | 'profiles'
   | 'resumes'
   | 'mvr'
   | 'bgcheckRequests'
-  | 'devProfiles'
   | 'devProjects'
   | 'verifications'
   | 'tools'
@@ -60,6 +59,8 @@ export interface User {
   dotAppCount: number
   devProjectCount: number
   isAdmin: boolean
+  installedBlocks: string[]
+  blockCategories: string[]
 }
 
 export interface DevProfile {

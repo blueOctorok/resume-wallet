@@ -4,8 +4,8 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 /**
  * GET /api/candidate/requests
  * 
- * Gets all requests sent to the current candidate (driver/developer).
- * Includes company info and request details.
+ * Gets all requests sent to the current candidate.
+ * Any non-employer user can view their incoming requests.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -31,9 +31,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    if (!['driver', 'developer'].includes(user.role || '')) {
+    if (user.role === 'employer') {
       return NextResponse.json(
-        { error: 'Only drivers and developers can view candidate requests' },
+        { error: 'Employers cannot view candidate requests' },
         { status: 403 }
       )
     }

@@ -168,19 +168,25 @@ export async function POST(
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
     }
 
-    // Derive effective role from profile tables — not users.role.
-    // A test wallet that is also an employer will have role='employer' in users,
-    // but may still have a valid driver or developer profile.
+    // Derive effective role from profile tables when possible, otherwise
+    // fall back to users.role. Composable hub users may be 'candidate' with
+    // only a user_profiles row and no driver/developer profile.
     const [{ data: driverProfile }, { data: devProfile }] = await Promise.all([
       supabase.from('driver_profiles').select('id').eq('user_id', candidateUserId).single(),
       supabase.from('developer_profiles').select('id').eq('user_id', candidateUserId).single(),
     ])
 
-    const effectiveRole = driverProfile ? 'driver' : devProfile ? 'developer' : null
+    const effectiveRole: string | null = driverProfile
+      ? 'driver'
+      : devProfile
+        ? 'developer'
+        : candidate.role === 'employer'
+          ? null
+          : candidate.role || 'candidate'
 
     if (!effectiveRole) {
       return NextResponse.json(
-        { error: 'User is not a candidate (no driver or developer profile found)' },
+        { error: 'User is an employer and cannot be recruited as a candidate' },
         { status: 400 }
       )
     }
@@ -258,7 +264,7 @@ export async function POST(
       // Get latest MVR
       const { data: mvr } = await supabase
         .from('mvr_orders')
-        .select('id, order_status')
+        .select('id, status')
         .eq('driver_user_id', candidateUserId)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -266,7 +272,7 @@ export async function POST(
 
       if (mvr) {
         careerCardSnapshot.hasMvr = true
-        careerCardSnapshot.mvrStatus = mvr.order_status
+        careerCardSnapshot.mvrStatus = mvr.status
       }
     }
 
@@ -305,7 +311,7 @@ export async function POST(
     // Get company name for notification
     const { data: company } = await supabase
       .from('companies')
-      .select('name')
+      .select('company_name')
       .eq('id', companyId)
       .single()
 
@@ -328,7 +334,7 @@ export async function POST(
         application_data: {
           recruiterMessage: message || null,
           jobTitle: jobPosting.title,
-          companyName: company?.name,
+          companyName: company?.company_name,
         },
       })
       .select()
@@ -349,9 +355,9 @@ export async function POST(
       sendCandidateRequestNotification({
         candidateEmail: candidate.email,
         candidateName: candidateName || 'Candidate',
-        companyName: company?.name || 'A company',
+        companyName: company?.company_name || 'A company',
         requestType: 'custom',
-        message: `${company?.name || 'A company'} is interested in you for the position of ${jobPosting.title}! They've created an application on your behalf.${message ? ` Their message: "${message}"` : ''}`,
+        message: `${company?.company_name || 'A company'} is interested in you for the position of ${jobPosting.title}! They've created an application on your behalf.${message ? ` Their message: "${message}"` : ''}`,
       }).then(result => {
         if (result.ok) {
           console.log(`[RECRUIT] Email sent to ${candidate.email}`)

@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     // Fetch companies
     const { data: companies } = await supabase
       .from('companies')
-      .select('id, name')
+      .select('id, company_name')
       .in('id', companyIds)
 
     const [{ data: users }, { data: userProfiles }] = await Promise.all([
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
       .select('id, request_id, signed_name, signed_at, form_data')
       .in('request_id', requestIds)
 
-    const companyMap = new Map(companies?.map(c => [c.id, c.name]) || [])
+    const companyMap = new Map(companies?.map(c => [c.id, c.company_name]) || [])
     const userMap = new Map(users?.map(u => [u.id, u]) || [])
     const upMap = new Map(userProfiles?.map(p => [p.user_id, p]) || [])
     const consentMap = new Map(consents?.map(c => [c.request_id, c]) || [])

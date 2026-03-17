@@ -79,6 +79,12 @@ export function useJourneyProgress(): JourneyProgress {
   const { user, userRole } = useAuthStore()
   const isWalletConnected = !!user
 
+  // All hooks must be called unconditionally (Rules of Hooks) even if
+  // the employer branch doesn't use them.
+  const installedBlocks = useHubBlocksStore((s) => s.installedBlocks)
+  const hubStore = useDriverHubStore()
+  const { isApplicationCompleted } = useDotApplicationStore()
+
   // Employer journey stays role-based (they have EmployerBlockGrid, not the composable hub)
   if (userRole === 'employer') {
     const data: EmployerProgressData = {
@@ -93,11 +99,6 @@ export function useJourneyProgress(): JourneyProgress {
     }
     return calculateEmployerProgress(data)
   }
-
-  // Block-inferred journey for all non-employer users
-  const installedBlocks = useHubBlocksStore((s) => s.installedBlocks)
-  const hubStore = useDriverHubStore()
-  const { isApplicationCompleted } = useDotApplicationStore()
 
   const hasVerifiedDotApp = hubStore.dotApplications.some(
     (app) => app.blockchainTxHash != null

@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
         job_posting_id, view_count, expires_at, created_at, updated_at,
         used_at, driver_application_id, email_sent_at,
         job_postings(title),
-        users!application_invites_used_by_user_id_fkey(name, email)
+        users!application_invites_used_by_user_id_fkey(email)
       `)
       .eq('company_id', ctx.companyId)
       .order('created_at', { ascending: false })
@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
         expiresAt: invite.expires_at,
         createdAt: invite.created_at,
         usedAt: invite.used_at,
-        usedByName: (invite.users as any)?.name || (invite.users as any)?.email || null,
+        usedByName: (invite.users as any)?.email || null,
         driverApplicationId: invite.driver_application_id,
         emailSentAt: (invite as any).email_sent_at || null,
       })),

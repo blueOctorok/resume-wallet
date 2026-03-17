@@ -1,0 +1,72 @@
+---
+description: Checklist and conventions for building new hub blocks — wiring to career card, employer requests, admin, AvA, and journey progress
+alwaysApply: false
+globs: src/lib/block-registry.ts, src/components/blocks/**, src/components/CareerCard.tsx, src/components/employer/CareerCardModal.tsx, src/components/admin/**
+---
+
+# Building a New Block
+
+Blocks are the atomic unit of the composable hub. A block defines a candidate's capabilities and determines what employers see, what admin can filter, and what AvA recommends. Follow every step below when adding a new block.
+
+## 1. Block Registry
+
+Add a `BlockDefinition` entry in `src/lib/block-registry.ts`. This is the single source of truth.
+
+- `id`: Convention is `{category}-{name}` (e.g. `driver-mvr`, `developer-portfolio`, `general-skills`)
+- `categoryId`: Must match an existing `BLOCK_CATEGORIES` entry (`general`, `drivers`, `developers`)
+- `appearsOnCareerCard`: Set `true` if employers should see data from this block
+- `pageRoute`: The `PageType` string if the block has a full-page view, else `null`
+- Add a `BlockColorSet` entry in `BLOCK_COLORS` for the hub grid tile accent
+
+## 2. Block Component
+
+Create `src/components/blocks/[BlockName]Block.tsx`. If complex, create a subfolder.
+
+## 3. Candidate Shell Wiring
+
+Register the block in `CandidateShell`'s lazy block map so the hub renders it. If `pageRoute` is set, add a route case in the shell.
+
+## 4. Career Card Visibility
+
+Blocks signal what sections appear on a candidate's career card.
+
+- **`src/components/CareerCard.tsx`**: Section visibility is derived from `data.installedBlockTypes`. Pattern:
+  ```tsx
+  const blocks = data.installedBlockTypes || []
+  const hasDriverBlocks = blocks.some(b => b.startsWith('driver-'))
+  ```
+  If your block adds a new career card section, gate it on the block type being present.
+
+- **`src/app/api/employer/talent/[userId]/route.ts`**: Already returns `installedBlockTypes` from `hub_blocks`. No changes needed unless the block stores data in a new table that the career card needs.
+
+## 5. Employer Request Gating
+
+Employers can only request things a candidate has a block for.
+
+- **`src/components/employer/CareerCardModal.tsx`**: Request/order buttons are gated by `careerCard?.installedBlockTypes?.includes('your-block-id')`. Add a gated action if the block supports employer requests.
+- Employer MVR purchases must NOT update candidate career cards (CRA compliance).
+
+## 6. Central Admin
+
+Admin is block-centric — no profile tables as source of truth.
+
+- **`/api/admin/users`** already returns `installedBlocks` and `blockCategories` per user by reading `hub_blocks`. No changes needed for new blocks — they appear automatically.
+- **`CandidatesTab.tsx`** renders block pills using `BLOCK_DEFINITIONS` labels. New blocks show up automatically.
+- The `blockFilter` query param uses the `{category}-` prefix convention to filter. As long as your block ID follows the naming convention, filtering works.
+- If the block has admin-manageable data (like DOT apps, MVR orders), add a dedicated admin tab under the "Candidates" sidebar section.
+
+## 7. AvA Journey Integration
+
+- **`src/lib/journey-progress.ts`**: Add a `BLOCK_JOURNEY_MAP` entry so AvA can track progress for this block.
+- **`src/lib/ava-context.ts`**: The system prompt auto-detects block categories via prefix (`driver-*`, `developer-*`). No changes needed unless the block requires specialized AvA guidance.
+
+## 8. Stores
+
+Register the block's page in `src/stores/types.ts` → `PageType` if it has a full-page route.
+
+## Critical Rules
+
+- **Blocks define capabilities.** Never use `users.role` or `driver_profiles`/`developer_profiles` as the source of truth for what a candidate can do. Read `hub_blocks` instead.
+- **`users.role` is only meaningful for `employer`** (gates employer features). All non-employer users are candidates regardless of installed blocks.
+- **No auto-role-setting from blocks.** Installing a driver block does not change `users.role`. Admin categorizes by block tags, not role.
+- **Block ID prefix = category.** `driver-*` = drivers, `developer-*` = developers, `general-*` = general. This convention is load-bearing — admin filtering, career card visibility, and AvA context all rely on it.

@@ -145,17 +145,17 @@ export async function POST(request: NextRequest) {
     if (companyId) {
       const { data: company } = await supabase
         .from('companies')
-        .select('name')
+        .select('company_name')
         .eq('id', companyId)
         .single()
-      
+
       if (!company) {
         return NextResponse.json(
           { error: 'Company not found' },
           { status: 404 }
         )
       }
-      orderingCompanyName = company.name
+      orderingCompanyName = company.company_name
     }
 
     // Generate order identifiers
@@ -331,8 +331,8 @@ export async function GET(request: NextRequest) {
         dl_number, dl_state, mvr_search_type,
         ordered_at, expires_at, applicant_portal_url,
         driver_user_id, ordered_by_company_id,
-        companies(name),
-        users(name, email)
+        companies(company_name),
+        users(email)
       `)
       .eq('ordered_by_employer', true) // Only admin/employer orders
       .order('ordered_at', { ascending: false })
@@ -361,8 +361,8 @@ export async function GET(request: NextRequest) {
         orderedAt: order.ordered_at,
         expiresAt: order.expires_at,
         applicantPortalUrl: order.applicant_portal_url,
-        candidateName: (order.users as any)?.name || (order.users as any)?.email || null,
-        companyName: (order.companies as any)?.name || null,
+        candidateName: (order.users as any)?.email || null,
+        companyName: (order.companies as any)?.company_name || null,
       })),
     })
 

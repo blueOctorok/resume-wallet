@@ -19,6 +19,7 @@ import Button from '@/components/ui/Button'
 import AskAvaButton from '@/components/ui/AskAvaButton'
 import AvatarUpload from '@/components/ui/AvatarUpload'
 import STORMBalance from '@/components/STORMBalance'
+import CandidateRequestsSection from '@/components/CandidateRequestsSection'
 import HubOnboardingForm from './HubOnboardingForm'
 import BlockPickerModal from './BlockPickerModal'
 import Atropos from 'atropos/react'
@@ -746,6 +747,17 @@ export default function CandidateHub() {
             </DndContext>
           )}
         </div>
+
+        {/* ── Employer Requests ── */}
+        {walletAddress && (
+          <div className='pt-4'>
+            <CandidateRequestsSection
+              userAddress={walletAddress}
+              onNavigateToResume={() => setCurrentPage('resume')}
+              onNavigateToDotApp={() => setCurrentPage('dotapp')}
+            />
+          </div>
+        )}
 
         {/* ── STORM Token Footer ── */}
         {walletAddress && (

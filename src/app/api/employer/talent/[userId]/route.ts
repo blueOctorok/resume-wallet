@@ -252,14 +252,22 @@ export async function GET(
     // 9. Background check consent — has this driver signed the disclosure for this company?
     const { data: bgcheckConsent } = await supabase
       .from('bgcheck_consents')
-      .select('id, signed_at')
+      .select('id, signed_at, form_data')
       .eq('company_id', companyId)
       .eq('driver_user_id', userId)
       .order('signed_at', { ascending: false })
       .limit(1)
       .maybeSingle()
 
-    // 10. Existing applications to company's jobs
+    // 10. Candidate's installed block types — gates which request actions employers see
+    const { data: hubBlocks } = await supabase
+      .from('hub_blocks')
+      .select('block_type')
+      .eq('user_id', userId)
+
+    const installedBlockTypes = (hubBlocks || []).map((b) => b.block_type)
+
+    // 11. Existing applications to company's jobs
     const { data: companyJobs } = await supabase
       .from('job_postings')
       .select('id')
@@ -400,6 +408,8 @@ export async function GET(
         existingApplication,
         hasBgcheckConsent: !!bgcheckConsent,
         bgcheckConsentSignedAt: bgcheckConsent?.signed_at || null,
+        bgcheckConsentFormData: bgcheckConsent?.form_data || null,
+        installedBlockTypes,
       },
     })
   } catch (error) {

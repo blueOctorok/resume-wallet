@@ -47,7 +47,6 @@ export async function GET(request: NextRequest) {
         updated_at,
         users!companies_employer_user_id_fkey (
           id,
-          name,
           email,
           wallet_address
         )
@@ -111,7 +110,6 @@ export async function GET(request: NextRequest) {
         // Owner info
         owner: owner ? {
           id: owner.id,
-          name: owner.name,
           email: owner.email,
         } : null,
         ownerEmail: owner?.email || company.designated_owner_email,

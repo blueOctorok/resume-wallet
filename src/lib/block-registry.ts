@@ -5,12 +5,17 @@
  * Each block owns its own component, its own Zustand store, and its own data.
  * The hub itself is stateless — it just reads this registry and renders blocks.
  *
- * Adding a new block type in the future:
- *   1. Add a BlockDefinition entry here
+ * Full checklist for adding a new block: see .cursor/rules/block-development.mdc
+ *
+ * Quick reference:
+ *   1. Add a BlockDefinition + BlockColorSet entry here
  *   2. Create the block component in src/components/blocks/
- *   3. Create the block's Zustand store in src/stores/
- *   4. Register it in the lazy block map in CandidateShell
- *   5. No schema changes needed — hub_blocks.block_type is open text
+ *   3. Register it in CandidateShell's lazy block map
+ *   4. Gate career card section on installedBlockTypes (CareerCard.tsx)
+ *   5. Gate employer request buttons on installedBlockTypes (CareerCardModal.tsx)
+ *   6. Add BLOCK_JOURNEY_MAP entry (journey-progress.ts)
+ *   7. Register PageType if block has a full-page route (stores/types.ts)
+ *   8. Admin: add a tab if block has admin-manageable data
  */
 
 // ── Types ────────────────────────────────────────────────────────────────────

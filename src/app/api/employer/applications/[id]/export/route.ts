@@ -64,7 +64,7 @@ export async function GET(
     // Get company name
     const { data: company } = await supabase
       .from('companies')
-      .select('name')
+      .select('company_name')
       .eq('id', companyId)
       .single()
 
@@ -138,7 +138,7 @@ export async function GET(
         application: {
           id: app.id,
           candidateName,
-          companyName: company?.name,
+          companyName: company?.company_name,
           applicationData: app.application_data,
           isComplete: app.is_complete,
           verificationStatus: app.verification_status,
@@ -162,7 +162,7 @@ export async function GET(
       },
       {
         includeBlockchainInfo: true,
-        companyName: company?.name,
+        companyName: company?.company_name,
         candidateName,
       }
     )

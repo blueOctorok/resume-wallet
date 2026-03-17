@@ -56,12 +56,12 @@ export async function GET(
     let companyName: string | undefined
     const { data: invite } = await supabase
       .from('application_invites')
-      .select('companies(name)')
+      .select('companies(company_name)')
       .eq('driver_application_id', id)
       .single()
     
     if (invite?.companies) {
-      companyName = (invite.companies as any).name
+      companyName = (invite.companies as any).company_name
     }
 
     if (format === 'json') {
