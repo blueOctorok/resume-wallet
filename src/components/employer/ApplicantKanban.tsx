@@ -10,6 +10,7 @@ import {
   CheckCircle,
   Send,
   User,
+  Trash2,
 } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
 
@@ -45,7 +46,10 @@ interface ApplicantKanbanProps {
   walletAddress: string
   onStatusChange: (applicationId: string, newStatus: string) => Promise<void>
   onSelectApplicant: (applicant: KanbanApplicant) => void
+  /** Remove candidate from pipeline (deletes application); confirm in parent */
+  onRemoveFromPipeline?: (applicant: KanbanApplicant) => void
   isUpdating?: string | null
+  isRemoving?: string | null
 }
 
 type RequestState = 'loading' | 'sent' | 'pending'
@@ -90,7 +94,9 @@ export default function ApplicantKanban({
   walletAddress,
   onStatusChange,
   onSelectApplicant,
+  onRemoveFromPipeline,
   isUpdating,
+  isRemoving,
 }: ApplicantKanbanProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
@@ -248,7 +254,8 @@ export default function ApplicantKanban({
               ) : (
                 column.applicants.map(applicant => {
                   const isDragging    = draggedId === applicant.applicationId
-                  const isUpdatingNow = isUpdating === applicant.applicationId
+                  const isUpdatingNow =
+                    isUpdating === applicant.applicationId || isRemoving === applicant.applicationId
                   const { label: timeLabel, urgency } = getDaysInStage(applicant.appliedAt)
                   const initials   = getInitials(applicant.applicantName)
                   const colIndex   = PIPELINE_COLUMNS.findIndex(c => c.status === column.status)
@@ -285,6 +292,24 @@ export default function ApplicantKanban({
                             {applicant.applicantName}
                           </p>
                         </div>
+                        {onRemoveFromPipeline && (
+                          <button
+                            type='button'
+                            title='Remove from pipeline'
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onRemoveFromPipeline(applicant)
+                            }}
+                            disabled={isUpdatingNow}
+                            className={`shrink-0 p-1.5 rounded-lg opacity-70 hover:opacity-100 transition-opacity ${
+                              isDark
+                                ? 'text-gray-500 hover:text-red-400 hover:bg-red-500/10'
+                                : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                            }`}
+                          >
+                            <Trash2 className='w-4 h-4' />
+                          </button>
+                        )}
                       </div>
 
                       {/* Job title or Talent Pool badge */}

@@ -4,8 +4,6 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import { BLOCK_DEFINITIONS, BLOCK_CATEGORIES, getBlockDefinition } from '@/lib/block-registry'
-import { EMPLOYER_BLOCK_DEFINITIONS } from '@/lib/employer-block-registry'
-import { useEmployerInstalledBlocks } from '@/stores/employer-blocks-store'
 import QRCode from 'qrcode'
 import {
   Link2,
@@ -186,32 +184,10 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const profileSearchRef = useRef<HTMLDivElement>(null)
 
-  // Employer installed blocks — used to filter candidate blocks by relevant categories
-  const employerInstalledBlocks = useEmployerInstalledBlocks()
-
-  /**
-   * Filter candidate blocks to only categories the employer has installed blocks for.
-   * e.g. employer has DOT Compliance (drivers category) → show driver candidate blocks.
-   * If no employer blocks are installed, show ALL candidate blocks (no filtering).
-   */
-  const relevantCandidateBlocks = useMemo(() => {
-    if (employerInstalledBlocks.length === 0) return BLOCK_DEFINITIONS
-
-    const employerCategories = new Set<string>()
-    for (const installedBlock of employerInstalledBlocks) {
-      const def = EMPLOYER_BLOCK_DEFINITIONS.find(b => b.id === installedBlock.blockType)
-      if (def) employerCategories.add(def.categoryId)
-    }
-    // Always include general candidate blocks
-    employerCategories.add('general')
-
-    return BLOCK_DEFINITIONS.filter(b => employerCategories.has(b.categoryId))
-  }, [employerInstalledBlocks])
-
-  // Group relevant candidate blocks by category for the picker UI
+  // Group all candidate blocks by category for the picker UI
   const blocksByCategory = useMemo(() => {
     const map = new Map<string, typeof BLOCK_DEFINITIONS>()
-    for (const block of relevantCandidateBlocks) {
+    for (const block of BLOCK_DEFINITIONS) {
       const existing = map.get(block.categoryId) ?? []
       existing.push(block)
       map.set(block.categoryId, existing)
@@ -219,7 +195,7 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
     return BLOCK_CATEGORIES
       .filter(cat => map.has(cat.id))
       .map(cat => ({ category: cat, blocks: map.get(cat.id)! }))
-  }, [relevantCandidateBlocks])
+  }, [])
 
   // ── Data fetching ──────────────────────────────────────────────────────────
 

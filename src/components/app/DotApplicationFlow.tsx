@@ -13,6 +13,7 @@ import {
   profileToResumeBuilder,
 } from '@/lib/profile-mapper'
 import type { UnifiedDriverProfile } from '@/types/driver-profile'
+import { normalizeForm3Data } from '@/lib/dot-application-hydrate'
 
 // Dynamic imports for code-splitting
 const PersonalInfoForm1 = dynamic(
@@ -88,12 +89,20 @@ export default function DotApplicationFlow({
   >('idle')
   const hubStore = useDriverHubStore()
 
+  /** False until we merge server application_data (form3 / employment live in DB, not only localStorage). */
+  const [dotBootstrapReady, setDotBootstrapReady] = useState(() => !walletAddress?.trim())
+
   // Track save reference to detect unsaved changes
   const lastSavedDataRef = useRef<{ form1: unknown; form2: unknown; form3: unknown }>({
     form1: null, form2: null, form3: null,
   })
-  // Prevent re-loading profile after first load attempt  
+  // Prevent re-loading profile after first load attempt (reset when wallet changes)
   const profileLoadAttemptedRef = useRef(false)
+  const profileWalletRef = useRef<string | null>(null)
+  if (profileWalletRef.current !== (walletAddress ?? null)) {
+    profileWalletRef.current = walletAddress ?? null
+    profileLoadAttemptedRef.current = false
+  }
   // When true, loads from profile even if forms have data (navigating from Resume Builder)
   const forceProfileLoadRef = useRef(false)
   const resetInProgressRef = useRef(false)
@@ -104,18 +113,79 @@ export default function DotApplicationFlow({
   ]
 
   // -------------------------------------------------------
+  // Server-first hydrate — DB is source of truth for all three forms (esp. form3 / employers)
+  // -------------------------------------------------------
+  useEffect(() => {
+    const w = walletAddress?.trim()
+    if (!w) {
+      setDotBootstrapReady(true)
+      return
+    }
+    let cancelled = false
+    setDotBootstrapReady(false)
+    ;(async () => {
+      try {
+        await new Promise((r) => setTimeout(r, 80))
+        if (cancelled) return
+        const res = await fetch('/api/driver-applications/save-progress', {
+          headers: { 'x-wallet-address': w },
+        })
+        if (!res.ok || cancelled) return
+        const json = (await res.json()) as {
+          application?: {
+            id: string
+            application_data?: { form1?: unknown; form2?: unknown; form3?: unknown }
+            current_step?: number
+            is_complete?: boolean
+          } | null
+        }
+        const app = json.application
+        const ad = app?.application_data
+        if (!app || !ad || (!ad.form1 && !ad.form2 && !ad.form3)) return
+
+        const f3 = normalizeForm3Data(ad.form3)
+        const step = Number(app.current_step) || 1
+        const formStep = step >= 1 && step <= 3 ? step : 3
+
+        useDotApplicationStore.getState().loadFromDatabase({
+          applicationId: app.id,
+          form1: (ad.form1 as object) ?? null,
+          form2: (ad.form2 as object) ?? null,
+          form3: (f3 ?? (ad.form3 as object)) ?? null,
+          currentStep: formStep,
+          isComplete: Boolean(app.is_complete),
+        })
+        lastSavedDataRef.current = {
+          form1: ad.form1 ?? null,
+          form2: ad.form2 ?? null,
+          form3: f3 ?? ad.form3 ?? null,
+        }
+        useDotApplicationStore.getState().incrementFormResetKey()
+      } catch (e) {
+        console.warn('[DOT] Server bootstrap failed', e)
+      } finally {
+        if (!cancelled) setDotBootstrapReady(true)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [walletAddress])
+
+  // -------------------------------------------------------
   // Profile prefill — load from unified profile into forms
   // Runs when user enters DOT app without existing form data
   // -------------------------------------------------------
   useEffect(() => {
     const loadFromProfile = async () => {
+      if (!dotBootstrapReady) return
       if (profileLoadAttemptedRef.current) return
       if (!walletAddress) return
 
       profileLoadAttemptedRef.current = true
 
-      // Wait for localStorage hydration
-      await new Promise((r) => setTimeout(r, 100))
+      // Brief delay so Zustand + server hydrate settle
+      await new Promise((r) => setTimeout(r, 50))
 
       if (!forceProfileLoadRef.current) {
         const hasMeaningfulForm1 =
@@ -237,7 +307,7 @@ export default function DotApplicationFlow({
 
     loadFromProfile()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [walletAddress])
+  }, [walletAddress, dotBootstrapReady])
 
   // -------------------------------------------------------
   // Dirty state tracking for unsaved-changes warning
@@ -735,6 +805,17 @@ export default function DotApplicationFlow({
   // -------------------------------------------------------
   // Render
   // -------------------------------------------------------
+  if (!dotBootstrapReady) {
+    return (
+      <>
+        <div className='max-w-4xl mx-auto mb-4'>
+          <BackToHubButton onClick={handleNavigateBack} />
+        </div>
+        <LoadingScreen message='Loading your application…' fullScreen={false} />
+      </>
+    )
+  }
+
   return (
     <>
       {/* Sync status indicator */}

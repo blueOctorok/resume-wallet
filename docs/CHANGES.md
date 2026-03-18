@@ -4,6 +4,37 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Employer: remove composable blocks (simplify hub)** (March 2026)
+
+- **Rationale:** Employer blocks were decorative — all core features (pipeline, jobs, talent search, outreach, verification) rendered unconditionally. The Career Card is the employer's action surface; gating tools behind blocks was an unnecessary extra step.
+- **Deleted:** `employer-block-registry.ts`, `employer-blocks-store.ts`, `EmployerBlockPickerModal.tsx`, `GET/POST /api/employer/blocks`, `DELETE /api/employer/blocks/[id]`.
+- **EmployerHub** — removed Industry Tools grid, block picker, and all block store usage. Reports quick-action button is now always visible.
+- **CandidateOutreach** — removed employer-block-based category filtering; shows all candidate blocks.
+
+---
+
+## **Employer pipeline: remove candidate** (March 2026)
+
+- **DELETE `/api/employer/applications/[id]`** — same company access as status updates; deletes the `applications` row so the person leaves the kanban (re-add via Find Talent).
+- **ApplicantKanban** — trash control on each card (does not open the detail modal). **EmployerHub** confirms then refreshes hub data.
+
+---
+
+## **upsertUser: align with users table after migration 042** (March 2026)
+
+- **`users.name`** and **CDL columns** were dropped (identity → **`user_profiles`**). **`upsertUser`** in `supabase-db.ts` now get-or-creates **`users`** (`wallet_address`, `is_active` only) and sets **`user_profiles.display_name`** only when missing — fixes **`GET /api/resumes`** / resume flows that still called `upsertUser({ name })`.
+
+---
+
+## **DOT edit: form3 + employment from DB** (March 2026)
+
+- **Cause:** Forms 1–2 often matched localStorage; **form3 / employers** were saved mainly via autosave to **`driver_applications.application_data`** — reopening the flow did not reload that row, so form3 looked empty.
+- **`GET /api/driver-applications/save-progress`** — returns saved `application_data` + step + `is_complete` for the wallet (no user creation).
+- **`DotApplicationFlow`** — short **bootstrap** loads server data, **`loadFromDatabase`**, **`incrementFormResetKey`** (remount forms), then profile prefill. **`normalizeForm3Data`** maps legacy **`employmentHistory`** → **`employers`** when needed.
+- **Console noise:** `bootstrap-autofill-overlay.js` / Bitwarden-style extensions and **`oklch`** in minified bundles are **not from this app**.
+
+---
+
 ## **Hub AvA section: journey at a glance** (March 2026)
 
 - Candidate hub **AvA** card explains what the journey is, why it matters (Career Card), shows **live step list + progress bar**, and **Ask AvA** opens the chat modal. **AvA mascot:** `public/ava-robot.png` (line robot); light theme uses CSS **invert** so white-on-black art reads on white tile.

@@ -86,7 +86,7 @@ export function useJourneyProgress(): JourneyProgress {
   const hubStore = useDriverHubStore()
   const { isApplicationCompleted, currentForm } = useDotApplicationStore()
 
-  // Employer journey stays role-based (they have EmployerBlockGrid, not the composable hub)
+  // Employer journey — all features are permanent (no composable blocks)
   if (userRole === 'employer') {
     const data: EmployerProgressData = {
       isWalletConnected,

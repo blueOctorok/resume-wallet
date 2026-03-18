@@ -1,5 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { saveDriverApplicationClient } from '@/lib/supabase-client-db'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getUserByWallet } from '@/lib/user-by-wallet'
+
+/**
+ * GET — load saved application (form1–3) for edit / resume. Source of truth over localStorage.
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const walletAddress = request.headers.get('x-wallet-address')
+    if (!walletAddress) {
+      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    }
+
+    const supabase = await getAdminSupabaseClient()
+    const user = await getUserByWallet(supabase, walletAddress)
+    if (!user) {
+      return NextResponse.json({ application: null })
+    }
+
+    const { data, error } = await supabase
+      .from('driver_applications')
+      .select('id, application_data, current_step, is_complete, updated_at')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (error) {
+      console.error('[SAVE PROGRESS GET]', error)
+      return NextResponse.json({ error: 'Failed to load application' }, { status: 500 })
+    }
+
+    return NextResponse.json({ application: data ?? null })
+  } catch (e) {
+    console.error('[SAVE PROGRESS GET]', e)
+    return NextResponse.json({ error: 'Failed to load application' }, { status: 500 })
+  }
+}
 
 /**
  * POST /api/driver-applications/save-progress

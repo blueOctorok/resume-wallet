@@ -1,4 +1,5 @@
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getUserByWallet, normalizeWalletAddress } from '@/lib/user-by-wallet'
 
 // Database operations using Supabase
 export async function createResume(data: {
@@ -92,6 +93,11 @@ export async function getUserProfile(walletAddress: string) {
   return user
 }
 
+/**
+ * Ensure a users row exists for this wallet. Identity display name lives on
+ * user_profiles.display_name (migration 042 dropped users.name and CDL cols).
+ * cdl* args are ignored here — use block_driver_cdl / block-data APIs instead.
+ */
 export async function upsertUser(data: {
   walletAddress: string
   name?: string
@@ -100,71 +106,86 @@ export async function upsertUser(data: {
   cdlClass?: string
 }) {
   console.log('👤 Supabase DB: Starting user upsert...')
-  console.log('👤 Supabase DB: Input data:', data)
+  console.log('👤 Supabase DB: Input data:', {
+    walletAddress: data.walletAddress,
+    hasName: !!data.name,
+  })
 
   try {
     const supabase = await getAdminSupabaseClient()
-    console.log('👤 Supabase DB: Client created successfully')
+    const normalized = normalizeWalletAddress(data.walletAddress)
 
-    // Check if user exists (case-insensitive) — the unique constraint is on lower(wallet_address)
-    // so we can't use onConflict with the raw column, we need to check manually
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('*')
-      .ilike('wallet_address', data.walletAddress)
-      .single()
+    let user = await getUserByWallet(supabase, data.walletAddress)
 
-    if (existingUser) {
-      // User exists — update if we have new data to set
-      const updateData: Record<string, string | undefined> = {}
-      if (data.name) updateData.name = data.name
-      if (data.cdlNumber) updateData.cdl_number = data.cdlNumber
-      if (data.cdlState) updateData.cdl_state = data.cdlState
-      if (data.cdlClass) updateData.cdl_class = data.cdlClass
+    if (!user) {
+      const { data: inserted, error: insertError } = await supabase
+        .from('users')
+        .insert({
+          wallet_address: normalized,
+          is_active: true,
+        })
+        .select('*')
+        .single()
 
-      // Only update if there's something to update
-      if (Object.keys(updateData).length > 0) {
-        const { data: updated, error: updateError } = await supabase
-          .from('users')
-          .update(updateData)
-          .eq('id', existingUser.id)
-          .select()
-          .single()
-
-        if (updateError) {
-          console.error('❌ Supabase DB: User update error:', updateError)
-          throw new Error(`Failed to update user: ${updateError.message}`)
+      if (insertError) {
+        if (insertError.code === '23505') {
+          user = await getUserByWallet(supabase, data.walletAddress)
+        } else {
+          console.error('❌ Supabase DB: User insert error:', insertError)
+          throw new Error(`Failed to insert user: ${insertError.message}`)
         }
-        console.log('✅ Supabase DB: User updated successfully:', updated)
-        return updated
+      } else {
+        user = inserted
       }
-
-      console.log('✅ Supabase DB: User already exists, no update needed:', existingUser)
-      return existingUser
     }
 
-    // User doesn't exist — insert new
-    const dbData = {
-      wallet_address: data.walletAddress,
-      name: data.name,
-      cdl_number: data.cdlNumber,
-      cdl_state: data.cdlState,
-      cdl_class: data.cdlClass,
-    }
-    console.log('👤 Supabase DB: Inserting new user:', dbData)
-
-    const { data: user, error } = await supabase
-      .from('users')
-      .insert([dbData])
-      .select()
-      .single()
-
-    if (error) {
-      console.error('❌ Supabase DB: User insert error:', error)
-      throw new Error(`Failed to insert user: ${error.message}`)
+    if (!user) {
+      throw new Error('Failed to resolve user after insert')
     }
 
-    console.log('✅ Supabase DB: User inserted successfully:', user)
+    // Placeholder / fallback display name only when profile has none yet
+    if (data.name?.trim()) {
+      const { data: prof } = await supabase
+        .from('user_profiles')
+        .select('display_name')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (!prof) {
+        const { error: pErr } = await supabase.from('user_profiles').insert({
+          user_id: user.id,
+          display_name: data.name.trim(),
+        })
+        if (pErr?.code === '23505') {
+          const { data: row } = await supabase
+            .from('user_profiles')
+            .select('display_name')
+            .eq('user_id', user.id)
+            .maybeSingle()
+          if (!row?.display_name?.trim()) {
+            await supabase
+              .from('user_profiles')
+              .update({
+                display_name: data.name.trim(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq('user_id', user.id)
+          }
+        } else if (pErr) {
+          console.warn('👤 Supabase DB: user_profiles insert (non-fatal):', pErr.message)
+        }
+      } else if (!prof.display_name?.trim()) {
+        await supabase
+          .from('user_profiles')
+          .update({
+            display_name: data.name.trim(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id)
+      }
+    }
+
+    console.log('✅ Supabase DB: User upsert OK:', user.id)
     return user
   } catch (error) {
     console.error('❌ Supabase DB: User upsert failed:', error)
