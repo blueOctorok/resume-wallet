@@ -161,8 +161,53 @@ export async function POST(request: NextRequest) {
         })
       }
     } catch (dbError) {
-      // Non-fatal - distribution succeeded, just logging failed
       console.warn('[STORM] Failed to record distribution in DB:', dbError)
+    }
+
+    // Check if this user was referred and hasn't been rewarded yet.
+    // Fires on their FIRST paid action only (status = 'signed_up').
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      if (supabaseUrl && supabaseServiceKey) {
+        const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+        // Find pending referral where this user is the referred party
+        const { data: user } = await supabase
+          .from('users')
+          .select('id')
+          .ilike('wallet_address', walletAddress.toLowerCase())
+          .maybeSingle()
+
+        if (user) {
+          const { data: pendingRef } = await supabase
+            .from('referrals')
+            .select('id, referrer_id')
+            .eq('referred_user_id', user.id)
+            .eq('status', 'signed_up')
+            .maybeSingle()
+
+          if (pendingRef) {
+            // Look up referrer's wallet to distribute treasury reward
+            const { data: referrer } = await supabase
+              .from('users')
+              .select('wallet_address')
+              .eq('id', pendingRef.referrer_id)
+              .single()
+
+            if (referrer?.wallet_address) {
+              const { triggerReferralReward } = await import('@/lib/storm-rewards')
+              await triggerReferralReward(
+                referrer.wallet_address,
+                walletAddress,
+                pendingRef.id
+              )
+            }
+          }
+        }
+      }
+    } catch (refErr) {
+      console.warn('[STORM] Referral reward check failed (non-fatal):', refErr)
     }
 
     return NextResponse.json({

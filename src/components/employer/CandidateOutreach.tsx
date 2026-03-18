@@ -163,8 +163,6 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
   const [emailInput, setEmailInput] = useState('')
   const [showAll, setShowAll] = useState(false)
 
-  // Two-step type picker: "general" | "block" (then pick which block)
-  const [outreachKind, setOutreachKind] = useState<'general' | 'block'>('general')
   const [selectedBlockType, setSelectedBlockType] = useState<string | null>(null)
 
   const [form, setForm] = useState({
@@ -319,7 +317,6 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
 
   const resetForm = () => {
     setForm({ candidateEmail: '', candidateName: '', candidateUserId: '', jobPostingId: '', welcomeMessage: '' })
-    setOutreachKind('general')
     setSelectedBlockType(null)
     setSelectedProfile(null)
     setProfileQuery('')
@@ -330,7 +327,7 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
     setCreating(true)
     setError(null)
     try {
-      const targetBlockType = outreachKind === 'block' ? selectedBlockType : null
+      const targetBlockType = selectedBlockType
 
       const res = await fetch('/api/employer/invites', {
         method: 'POST',
@@ -417,7 +414,7 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
 
   const activeInvites = invites.filter(i => !['cancelled', 'completed'].includes(i.status))
   const displayed = showAll ? invites : invites.slice(0, 6)
-  const canSubmit = outreachKind === 'general' || selectedBlockType !== null
+  const canSubmit = selectedBlockType !== null
 
   // ── Shared styling shortcuts ───────────────────────────────────────────────
   const card = theme === 'dark'
@@ -484,48 +481,9 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
               </button>
             </div>
 
-            {/* Step 1: Choose outreach kind */}
+            {/* Block picker — employer outreach is always block-specific */}
             <div className="mb-4">
-              <p className={label}>What kind of outreach? *</p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => { setOutreachKind('general'); setSelectedBlockType(null) }}
-                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center text-xs font-medium transition-all ${
-                    outreachKind === 'general'
-                      ? 'border-slate-500 bg-slate-500/10 text-slate-300'
-                      : theme === 'dark'
-                        ? 'border-gray-600 text-gray-400 hover:border-gray-500'
-                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                  }`}
-                >
-                  <Users className="w-4 h-4" />
-                  <span>General Onboarding</span>
-                </button>
-                <button
-                  onClick={() => setOutreachKind('block')}
-                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center text-xs font-medium transition-all ${
-                    outreachKind === 'block'
-                      ? 'border-teal-500 bg-teal-500/10 text-teal-400'
-                      : theme === 'dark'
-                        ? 'border-gray-600 text-gray-400 hover:border-gray-500'
-                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                  }`}
-                >
-                  <Package className="w-4 h-4" />
-                  <span>Request Specific Block</span>
-                </button>
-              </div>
-              <p className={`text-xs mt-1.5 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                {outreachKind === 'general'
-                  ? 'Invite anyone to join StormChain and set up their profile'
-                  : 'Invite a candidate to complete a specific block (DOT App, Resume, etc.)'}
-              </p>
-            </div>
-
-            {/* Step 2: Block picker (only when outreachKind === 'block') */}
-            {outreachKind === 'block' && (
-              <div className="mb-4">
-                <p className={label}>Which block should they complete? *</p>
+              <p className={label}>Which block should they complete? *</p>
                 {selectedBlockType ? (
                   // Show selected block with a "change" button
                   <SelectedBlockPill
@@ -575,8 +533,7 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
                     </div>
                   </div>
                 )}
-              </div>
-            )}
+            </div>
 
             {/* Profile search */}
             <div className="mb-3" ref={profileSearchRef}>

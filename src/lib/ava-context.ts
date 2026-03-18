@@ -109,6 +109,18 @@ When the user asks about finding work, applying to jobs, or job searching:
 2. Recommend StormChain Jobs first (verified employers, direct Career Card applications).
 3. If they haven't built their Career Card yet, suggest completing their blocks first so employers can see a strong profile.`)
 
+  // Referral program — AvA should proactively mention it when appropriate
+  parts.push(`\n## Referral Program
+StormChain has a referral system. Every candidate has a unique referral link on their hub.
+- When someone signs up via a referral link AND completes their first paid action, BOTH the referrer and the new user earn 2.5 STORM tokens each (5 total from treasury).
+- Referral rewards come from the platform treasury, not the user's reward pool.
+
+When to mention referrals:
+1. After a user completes a milestone (finishes a block, verifies a resume, etc.) — suggest sharing their link.
+2. If a user asks "how do I earn more STORM?" — mention referrals alongside paid actions.
+3. Keep it casual: "Know someone who'd benefit? Share your referral link from the hub and you both earn 2.5 STORM."
+Do NOT push referrals in every response. Only mention when contextually relevant.`)
+
   // Active block focus — only when user is inside a specific block
   if (blockContext) {
     parts.push(`\n## Active block\nThe user is asking about the **${blockContext.label}** block.`)

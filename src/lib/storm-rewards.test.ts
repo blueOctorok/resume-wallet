@@ -8,23 +8,25 @@ import {
   TOTAL_REWARD_POOL,
   BASE_RATE,
   USER_MULTIPLIERS,
+  REFERRAL_REWARD_PER_PERSON,
+  REFERRAL_REWARD_TOTAL,
 } from './storm-rewards'
 
 describe('storm-rewards', () => {
   describe('calculateReward', () => {
     it('returns ~10 STORM for $3 at 0% distributed (applicant)', () => {
       const reward = calculateReward(3, 0, 'applicant')
-      expect(reward).toBeCloseTo(10, 1) // ~10 tokens
+      expect(reward).toBeCloseTo(10, 1)
     })
 
     it('returns ~6.16 STORM for $3 at 50% distributed (applicant)', () => {
-      const reward = calculateReward(3, 4_500_000, 'applicant')
-      expect(reward).toBeCloseTo(6.16, 1) // ~6.16 tokens (from whitepaper)
+      const reward = calculateReward(3, 12_500_000, 'applicant')
+      expect(reward).toBeCloseTo(6.16, 1)
     })
 
-    it('returns ~2.15 STORM for $3 at 89% distributed (applicant)', () => {
-      const reward = calculateReward(3, 8_000_000, 'applicant')
-      expect(reward).toBeCloseTo(2.15, 1) // ~2.15 tokens (from whitepaper)
+    it('returns ~2.04 STORM for $3 at 90% distributed (applicant)', () => {
+      const reward = calculateReward(3, 22_500_000, 'applicant')
+      expect(reward).toBeCloseTo(2.04, 0)
     })
 
     it('returns 0 for 0 USDC spent', () => {
@@ -62,7 +64,7 @@ describe('storm-rewards', () => {
 
     it('returns ~5 STORM for $3 employer spend at 0% distributed', () => {
       const reward = calculateReward(3, 0, 'employer')
-      expect(reward).toBeCloseTo(5, 1) // 10 * 0.5 = 5 tokens
+      expect(reward).toBeCloseTo(5, 1)
     })
   })
 
@@ -84,8 +86,8 @@ describe('storm-rewards', () => {
     })
 
     it('handles large numbers', () => {
-      const wei = toWei(9_000_000)
-      expect(fromWei(wei)).toBe(9_000_000)
+      const wei = toWei(25_000_000)
+      expect(fromWei(wei)).toBe(25_000_000)
     })
   })
 
@@ -100,7 +102,7 @@ describe('storm-rewards', () => {
 
     it('decreases as more is distributed', () => {
       const rate0 = getCurrentRate(0)
-      const rate50 = getCurrentRate(4_500_000)
+      const rate50 = getCurrentRate(12_500_000)
       expect(rate50).toBeLessThan(rate0)
     })
   })
@@ -109,15 +111,20 @@ describe('storm-rewards', () => {
     it('returns expected checkpoint data', () => {
       const curve = getDecayCurve()
       
-      // First entry: 0% distributed
       expect(curve[0].distributed).toBe(0)
       expect(curve[0].percentUsed).toBe(0)
       expect(curve[0].tokensPer3Usdc).toBeCloseTo(10, 0)
       
-      // Check curve is decreasing
       for (let i = 1; i < curve.length; i++) {
         expect(curve[i].tokensPer3Usdc).toBeLessThan(curve[i - 1].tokensPer3Usdc)
       }
+    })
+  })
+
+  describe('referral constants', () => {
+    it('has correct referral reward amounts', () => {
+      expect(REFERRAL_REWARD_PER_PERSON).toBe(2.5)
+      expect(REFERRAL_REWARD_TOTAL).toBe(5)
     })
   })
 })

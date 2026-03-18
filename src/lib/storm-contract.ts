@@ -2,29 +2,28 @@
  * STORM Token Contract Configuration and Interaction
  *
  * Handles interaction with:
- * - StormToken (ERC20)
- * - RewardDistributor (holds 9M pool, distributes rewards)
+ * - StormToken (ERC20, 50M fixed supply)
+ * - RewardDistributor (holds 25M pool, distributes USDC-backed user rewards)
+ * - TreasuryDistributor (holds 17M pool, distributes referral/community rewards)
  */
 
 import { createPublicClient, createWalletClient, http, parseAbi } from 'viem'
 import { baseSepolia, base } from 'viem/chains'
 import { privateKeyToAccount } from 'viem/accounts'
 
-// Contract addresses - set via environment variables after deployment
 export const STORM_CONTRACTS = {
-  // Base Sepolia (testnet)
   baseSepolia: {
     token: process.env.STORM_TOKEN_ADDRESS || '',
     distributor: process.env.REWARD_DISTRIBUTOR_ADDRESS || '',
+    treasuryDistributor: process.env.TREASURY_DISTRIBUTOR_ADDRESS || '',
   },
-  // Base Mainnet (production) - will be set after mainnet deploy
   base: {
     token: process.env.STORM_TOKEN_ADDRESS_MAINNET || '',
     distributor: process.env.REWARD_DISTRIBUTOR_ADDRESS_MAINNET || '',
+    treasuryDistributor: process.env.TREASURY_DISTRIBUTOR_ADDRESS_MAINNET || '',
   },
 } as const
 
-// StormToken ABI (minimal for reading balances)
 export const STORM_TOKEN_ABI = parseAbi([
   'function balanceOf(address account) view returns (uint256)',
   'function totalSupply() view returns (uint256)',
@@ -33,8 +32,8 @@ export const STORM_TOKEN_ABI = parseAbi([
   'function decimals() view returns (uint8)',
 ])
 
-// RewardDistributor ABI (for distributing rewards)
-export const REWARD_DISTRIBUTOR_ABI = parseAbi([
+// Shared ABI shape — both RewardDistributor and TreasuryDistributor use the same interface
+const DISTRIBUTOR_ABI = parseAbi([
   'function distribute(address to, uint256 amount)',
   'function distributeBatch(address[] recipients, uint256[] amounts)',
   'function remainingPool() view returns (uint256)',
@@ -44,33 +43,29 @@ export const REWARD_DISTRIBUTOR_ABI = parseAbi([
   'function hasRole(bytes32 role, address account) view returns (bool)',
 ])
 
-/**
- * Get the chain config based on environment
- */
+export const REWARD_DISTRIBUTOR_ABI = DISTRIBUTOR_ABI
+export const TREASURY_DISTRIBUTOR_ABI = DISTRIBUTOR_ABI
+
 function getChain() {
   const isMainnet = process.env.NEXT_PUBLIC_CHAIN_ENV === 'mainnet'
   return isMainnet ? base : baseSepolia
 }
 
-/**
- * Get contract addresses for current environment
- */
 export function getStormContracts() {
   const isMainnet = process.env.NEXT_PUBLIC_CHAIN_ENV === 'mainnet'
   return isMainnet ? STORM_CONTRACTS.base : STORM_CONTRACTS.baseSepolia
 }
 
-/**
- * Check if STORM contracts are configured
- */
 export function isStormConfigured(): boolean {
   const contracts = getStormContracts()
   return !!(contracts.token && contracts.distributor)
 }
 
-/**
- * Create a public client for reading contract state
- */
+export function isTreasuryConfigured(): boolean {
+  const contracts = getStormContracts()
+  return !!(contracts.token && contracts.treasuryDistributor)
+}
+
 function getPublicClient() {
   const chain = getChain()
   const rpcUrl =
@@ -84,10 +79,6 @@ function getPublicClient() {
   })
 }
 
-/**
- * Create a wallet client for sending transactions
- * Uses the deployer/distributor private key
- */
 function getWalletClient() {
   const privateKey = process.env.PRIVATE_KEY
   if (!privateKey) {
@@ -112,10 +103,8 @@ function getWalletClient() {
   })
 }
 
-/**
- * Get total STORM distributed from the reward pool.
- * Used to calculate decay for new rewards.
- */
+// ── Reward Pool (25M, decay-based user rewards) ─────────────────────────────
+
 export async function getTotalDistributed(): Promise<bigint> {
   const contracts = getStormContracts()
   if (!contracts.distributor) {
@@ -123,18 +112,13 @@ export async function getTotalDistributed(): Promise<bigint> {
   }
 
   const client = getPublicClient()
-  const totalDistributed = await client.readContract({
+  return client.readContract({
     address: contracts.distributor as `0x${string}`,
     abi: REWARD_DISTRIBUTOR_ABI,
     functionName: 'totalDistributed',
   })
-
-  return totalDistributed
 }
 
-/**
- * Get remaining STORM in the reward pool
- */
 export async function getRemainingPool(): Promise<bigint> {
   const contracts = getStormContracts()
   if (!contracts.distributor) {
@@ -142,18 +126,13 @@ export async function getRemainingPool(): Promise<bigint> {
   }
 
   const client = getPublicClient()
-  const remaining = await client.readContract({
+  return client.readContract({
     address: contracts.distributor as `0x${string}`,
     abi: REWARD_DISTRIBUTOR_ABI,
     functionName: 'remainingPool',
   })
-
-  return remaining
 }
 
-/**
- * Get STORM balance for an address
- */
 export async function getStormBalance(address: string): Promise<bigint> {
   const contracts = getStormContracts()
   if (!contracts.token) {
@@ -161,24 +140,14 @@ export async function getStormBalance(address: string): Promise<bigint> {
   }
 
   const client = getPublicClient()
-  const balance = await client.readContract({
+  return client.readContract({
     address: contracts.token as `0x${string}`,
     abi: STORM_TOKEN_ABI,
     functionName: 'balanceOf',
     args: [address as `0x${string}`],
   })
-
-  return balance
 }
 
-/**
- * Distribute STORM tokens to a user.
- * Called after a successful USDC payment.
- *
- * @param toAddress - User's wallet address
- * @param amountWei - Amount in wei (use toWei() from storm-rewards.ts)
- * @returns Transaction hash
- */
 export async function distributeReward(
   toAddress: string,
   amountWei: bigint
@@ -191,7 +160,6 @@ export async function distributeReward(
   const walletClient = getWalletClient()
   const publicClient = getPublicClient()
 
-  // Send the distribute transaction
   const hash = await walletClient.writeContract({
     address: contracts.distributor as `0x${string}`,
     abi: REWARD_DISTRIBUTOR_ABI,
@@ -199,9 +167,7 @@ export async function distributeReward(
     args: [toAddress as `0x${string}`, amountWei],
   })
 
-  // Wait for confirmation
   const receipt = await publicClient.waitForTransactionReceipt({ hash })
-
   if (receipt.status !== 'success') {
     throw new Error(`STORM distribution failed: ${hash}`)
   }
@@ -209,14 +175,6 @@ export async function distributeReward(
   return hash
 }
 
-/**
- * Batch distribute STORM tokens to multiple users.
- * More gas-efficient for airdrops or multiple rewards.
- *
- * @param recipients - Array of wallet addresses
- * @param amountsWei - Array of amounts in wei (must match recipients length)
- * @returns Transaction hash
- */
 export async function distributeBatch(
   recipients: string[],
   amountsWei: bigint[]
@@ -237,16 +195,108 @@ export async function distributeBatch(
     address: contracts.distributor as `0x${string}`,
     abi: REWARD_DISTRIBUTOR_ABI,
     functionName: 'distributeBatch',
-    args: [
-      recipients as `0x${string}`[],
-      amountsWei,
-    ],
+    args: [recipients as `0x${string}`[], amountsWei],
   })
 
   const receipt = await publicClient.waitForTransactionReceipt({ hash })
-
   if (receipt.status !== 'success') {
     throw new Error(`STORM batch distribution failed: ${hash}`)
+  }
+
+  return hash
+}
+
+// ── Treasury Pool (15M, fixed-amount referral/community rewards) ─────────────
+
+export async function getTreasuryRemaining(): Promise<bigint> {
+  const contracts = getStormContracts()
+  if (!contracts.treasuryDistributor) {
+    throw new Error('TreasuryDistributor address not configured')
+  }
+
+  const client = getPublicClient()
+  return client.readContract({
+    address: contracts.treasuryDistributor as `0x${string}`,
+    abi: TREASURY_DISTRIBUTOR_ABI,
+    functionName: 'remainingPool',
+  })
+}
+
+export async function getTreasuryTotalDistributed(): Promise<bigint> {
+  const contracts = getStormContracts()
+  if (!contracts.treasuryDistributor) {
+    throw new Error('TreasuryDistributor address not configured')
+  }
+
+  const client = getPublicClient()
+  return client.readContract({
+    address: contracts.treasuryDistributor as `0x${string}`,
+    abi: TREASURY_DISTRIBUTOR_ABI,
+    functionName: 'totalDistributed',
+  })
+}
+
+/**
+ * Distribute STORM from the treasury to a recipient.
+ * Used for referral rewards, community bonuses, etc.
+ */
+export async function distributeTreasuryReward(
+  toAddress: string,
+  amountWei: bigint
+): Promise<string> {
+  const contracts = getStormContracts()
+  if (!contracts.treasuryDistributor) {
+    throw new Error('TreasuryDistributor address not configured')
+  }
+
+  const walletClient = getWalletClient()
+  const publicClient = getPublicClient()
+
+  const hash = await walletClient.writeContract({
+    address: contracts.treasuryDistributor as `0x${string}`,
+    abi: TREASURY_DISTRIBUTOR_ABI,
+    functionName: 'distribute',
+    args: [toAddress as `0x${string}`, amountWei],
+  })
+
+  const receipt = await publicClient.waitForTransactionReceipt({ hash })
+  if (receipt.status !== 'success') {
+    throw new Error(`Treasury distribution failed: ${hash}`)
+  }
+
+  return hash
+}
+
+/**
+ * Batch distribute from treasury to multiple recipients.
+ * Useful for distributing to both referrer and referred in one tx.
+ */
+export async function distributeTreasuryBatch(
+  recipients: string[],
+  amountsWei: bigint[]
+): Promise<string> {
+  if (recipients.length !== amountsWei.length) {
+    throw new Error('Recipients and amounts arrays must have same length')
+  }
+
+  const contracts = getStormContracts()
+  if (!contracts.treasuryDistributor) {
+    throw new Error('TreasuryDistributor address not configured')
+  }
+
+  const walletClient = getWalletClient()
+  const publicClient = getPublicClient()
+
+  const hash = await walletClient.writeContract({
+    address: contracts.treasuryDistributor as `0x${string}`,
+    abi: TREASURY_DISTRIBUTOR_ABI,
+    functionName: 'distributeBatch',
+    args: [recipients as `0x${string}`[], amountsWei],
+  })
+
+  const receipt = await publicClient.waitForTransactionReceipt({ hash })
+  if (receipt.status !== 'success') {
+    throw new Error(`Treasury batch distribution failed: ${hash}`)
   }
 
   return hash

@@ -7,23 +7,23 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title StormToken
- * @dev StormChain ERC20 token with fixed 15M supply.
+ * @dev StormChain ERC20 token with fixed 50M supply.
  * 
  * - Name: "StormChain"
  * - Symbol: "STORM"
  * - Decimals: 18 (standard, supports fractional distribution like BTC satoshis)
- * - Total Supply: 15,000,000 STORM (minted once at deploy, no further minting)
+ * - Total Supply: 50,000,000 STORM (minted once at deploy, no further minting)
  * - Network: Base only
  * 
- * All 15M tokens are minted to the deployer at construction. The deploy script
- * then distributes them to: RewardDistributor (9M), Treasury (3M), DEX Liquidity (1M),
- * and two FounderVesting contracts (1M each).
+ * All 50M tokens are minted to the deployer at construction. The deploy script
+ * then distributes them to: RewardDistributor (25M), TreasuryDistributor (15M),
+ * DEX Liquidity (5M), and two FounderVesting contracts (1.5M each).
  * 
  * Optional Pausable for emergency freeze (only owner can pause/unpause).
  */
 contract StormToken is ERC20, Ownable, Pausable {
-    // Fixed total supply: 15 million tokens (with 18 decimals)
-    uint256 public constant TOTAL_SUPPLY = 15_000_000 * 10**18;
+    // Fixed total supply: 50 million tokens (with 18 decimals)
+    uint256 public constant TOTAL_SUPPLY = 50_000_000 * 10**18;
 
     /**
      * @dev Constructor mints the entire fixed supply to the deployer.

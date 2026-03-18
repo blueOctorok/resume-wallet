@@ -28,6 +28,7 @@ import ResumeFilePreviewModal from '@/components/hub/ResumeFilePreviewModal'
 import { downloadDriverResumePdfFromStructured } from '@/lib/driver-resume-pdf-download'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 import ResumePreviewModal from '@/components/ResumePreviewModal'
+import ReferralBanner from './ReferralBanner'
 import DeveloperResumePreviewModal from '@/components/DeveloperResumePreviewModal'
 import type { DeveloperResumeData } from '@/components/DeveloperResumeBuilder'
 import Atropos from 'atropos/react'
@@ -1593,6 +1594,7 @@ export default function CandidateHub() {
         <HubProfileHeader />
         <CareerCardBanner />
         <FindJobsBanner />
+        <ReferralBanner />
         <AvaBanner />
         <MyFilesSection refreshKey={refreshKey} />
 

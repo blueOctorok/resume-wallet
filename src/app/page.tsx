@@ -79,6 +79,7 @@ const HomeContent = () => {
     companyName,
     setCompanyName,
     isCheckingSession, setIsCheckingSession,
+    referralCode, setReferralCode,
   } = authStore
 
   const uiStore = useUIStore()
@@ -99,6 +100,17 @@ const HomeContent = () => {
     setShowProfileSetup,
     checkAndShowProfileSetup,
   } = authStore
+
+  // -------------------------------------------------------
+  // Capture ?ref=CODE from URL for the referral system
+  // -------------------------------------------------------
+  useEffect(() => {
+    const ref = searchParams.get('ref')
+    if (ref && !referralCode) {
+      setReferralCode(ref)
+      router.replace('/', { scroll: false })
+    }
+  }, [searchParams, referralCode, setReferralCode, router])
 
   // -------------------------------------------------------
   // Sync Alchemy session to Auth store (existing sessions + OAuth redirects)
@@ -288,9 +300,11 @@ const HomeContent = () => {
             role,
             walletAddress,
             ...(role === 'employer' && companyName && { companyName, dotNumber }),
+            ...(referralCode && { referralCode }),
           }),
         })
         if (res.ok) {
+          setReferralCode(null) // consumed
           setUserRole(role)
           setShowRoleSelection(false)
           setCurrentPage(null)

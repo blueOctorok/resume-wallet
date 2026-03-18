@@ -1,5 +1,39 @@
 # StormChain - Complete Project Roadmap
 
+## 🛡️ **Referral Anti-Sybil Hardening** (March 2026 — Complete)
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| Internal-only claim endpoint | ✅ Done | `/api/referrals/claim` protected by `INTERNAL_API_SECRET` header — external callers get 403 |
+| DB-resolved wallets | ✅ Done | Wallet addresses always looked up from `users` table, never trusted from request body |
+| Atomic claim transitions | ✅ Done | Update-where on `status = 'signed_up'` prevents race condition double payouts |
+| Self-referral DB constraint | ✅ Done | `CHECK (referrer_id != referred_user_id)` in migration 050 |
+| One-referral-per-user constraint | ✅ Done | `UNIQUE (referred_user_id)` prevents double-dipping |
+| Same-wallet guard | ✅ Done | Blocks payouts when two user IDs share the same wallet address |
+| Per-user referral cap | ✅ Done | Max 500 completed referrals per user, returns 429 when exceeded |
+| Rollback on failure | ✅ Done | Distribution failures revert status to `signed_up` for retry |
+| Whitepaper referral section | ✅ Done | `StormChainView.tsx` — dedicated Referral Program section with how-it-works and protections |
+| Standalone whitepaper rewrite | ✅ Done | `STORMCHAIN_WHITEPAPER.md` — full rewrite for 50M supply, referral program, smart contract architecture |
+
+## ⛈️ **50M Tokenomics + Referral System** (March 2026 — Complete)
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| 50M Token Supply | ✅ Done | StormToken.sol updated from 15M to 50M fixed supply |
+| TreasuryDistributor contract | ✅ Done | New smart contract for treasury distributions (referrals, community) |
+| Deploy script rewrite | ✅ Done | 5-contract deploy: Token, RewardDist (25M), TreasuryDist (15M), 2x Vesting (1.5M each), DEX (5M) |
+| Backend contract layer | ✅ Done | storm-contract.ts + storm-rewards.ts updated for 50M/25M/15M pools |
+| Referral system DB | ✅ Done | Migration 050: referrals table with code, status, RLS |
+| Referral API | ✅ Done | GET /api/referrals (code + stats), POST /api/referrals/claim (treasury payout) |
+| Referral signup hook | ✅ Done | ?ref=CODE captured in page.tsx → auth store → set-role links referral |
+| Referral reward trigger | ✅ Done | First paid action by referred user triggers 2.5 + 2.5 STORM from treasury |
+| ReferralBanner | ✅ Done | Hub component with copy link + stats |
+| Employer outreach cleanup | ✅ Done | Removed "General Onboarding" — employer outreach is block-specific only |
+| AvA referral intelligence | ✅ Done | System prompt updated with referral knowledge and contextual prompts |
+| Journey referral step | ✅ Done | Optional "Share Referral Link" step after first block installed |
+| StormChainView UI | ✅ Done | All distribution bars, table, stat cards, decay curve updated for 50M |
+| TOKEN_STRATEGY.md | ✅ Done | Full rewrite for 50M supply, referral program, TreasuryDistributor |
+
 ## 🧱 **Composable Hub Refactor** (March 2026 — In Progress)
 
 The platform is transitioning from role-specific hubs (DriverHub, DeveloperHub)

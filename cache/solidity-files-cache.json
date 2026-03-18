@@ -743,8 +743,8 @@
       ]
     },
     "C:\\Users\\blaha\\Desktop\\resume-wallet\\contracts\\RewardDistributor.sol": {
-      "lastModificationDate": 1770904701189,
-      "contentHash": "bc54166106eb72852b38008be9963722",
+      "lastModificationDate": 1773862246618,
+      "contentHash": "d4ec7ec0139739b4eee8194ccf0c3514",
       "sourceName": "contracts/RewardDistributor.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -785,8 +785,8 @@
       ]
     },
     "C:\\Users\\blaha\\Desktop\\resume-wallet\\contracts\\StormToken.sol": {
-      "lastModificationDate": 1770904701189,
-      "contentHash": "07c7867109c64b305e082b717bea876b",
+      "lastModificationDate": 1773861614415,
+      "contentHash": "6421aa57605dee5c54b953420f62f737",
       "sourceName": "contracts/StormToken.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -823,6 +823,48 @@
       ],
       "artifacts": [
         "StormToken"
+      ]
+    },
+    "C:\\Users\\blaha\\Desktop\\resume-wallet\\contracts\\TreasuryDistributor.sol": {
+      "lastModificationDate": 1773861625374,
+      "contentHash": "ef66feef6676d8c44716d81fbb038a27",
+      "sourceName": "contracts/TreasuryDistributor.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol",
+        "@openzeppelin/contracts/access/AccessControl.sol",
+        "@openzeppelin/contracts/utils/ReentrancyGuard.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "TreasuryDistributor"
       ]
     }
   }

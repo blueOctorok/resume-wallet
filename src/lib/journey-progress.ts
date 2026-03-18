@@ -276,7 +276,18 @@ export function calculateBlockJourney(
     action: !data.hasAppliedToJobs ? { label: 'Find Jobs', target: 'jobs' } : undefined,
   }
 
-  const steps = [walletStep, ...blockSteps, profileStep, jobStep]
+  // Referral step — appears once the user has at least one block installed
+  const referralStep: JourneyStep | null = installedBlockTypes.length > 0
+    ? {
+        id: 'referral',
+        label: 'Share Your Referral Link',
+        description: 'Invite a friend — you both earn 2.5 STORM when they take a paid action',
+        status: 'pending', // stays pending — it's a perpetual nudge, not a gate
+        isOptional: true,
+      }
+    : null
+
+  const steps = [walletStep, ...blockSteps, profileStep, jobStep, ...(referralStep ? [referralStep] : [])]
 
   // 4. Calculate progress
   const requiredSteps = steps.filter((s) => !s.isOptional)

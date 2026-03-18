@@ -10,7 +10,7 @@ const EMPLOYER_WHITELIST_WALLETS = [
 
 export async function POST(request: Request) {
   try {
-    const { role, walletAddress, companyName, dotNumber } = await request.json()
+    const { role, walletAddress, companyName, dotNumber, referralCode } = await request.json()
 
     // Validate role - allow null/empty to clear role (for testing)
     if (
@@ -242,6 +242,33 @@ export async function POST(request: Request) {
           })
           console.log(`[SET ROLE] Created "StormChain Dev" company for admin`)
         }
+      }
+    }
+
+    // Link referral if a code was provided (new user arrived via ?ref=CODE)
+    if (referralCode && typeof referralCode === 'string') {
+      try {
+        const { data: referralRow } = await supabase
+          .from('referrals')
+          .select('id, referrer_id, referred_user_id')
+          .eq('referral_code', referralCode)
+          .is('referred_user_id', null)
+          .maybeSingle()
+
+        if (referralRow && referralRow.referrer_id !== userToUpdate.id) {
+          await supabase
+            .from('referrals')
+            .update({
+              referred_user_id: userToUpdate.id,
+              status: 'signed_up',
+            })
+            .eq('id', referralRow.id)
+
+          console.log(`[SET ROLE] Linked referral ${referralCode} to user ${userToUpdate.id}`)
+        }
+      } catch (refErr) {
+        // Non-blocking — referral linking failure shouldn't break role selection
+        console.error('[SET ROLE] Referral linking error:', refErr)
       }
     }
 

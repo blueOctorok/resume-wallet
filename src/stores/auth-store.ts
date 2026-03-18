@@ -34,6 +34,9 @@ interface AuthState {
   // Profile setup — shown once for first-time users who have no name set
   showProfileSetup: boolean
 
+  // Referral — captured from ?ref=CODE on first visit, consumed on role selection
+  referralCode: string | null
+
   // Session state
   isCheckingSession: boolean
   isInitialized: boolean
@@ -60,6 +63,9 @@ interface AuthActions {
    */
   checkAndShowProfileSetup: (walletAddress: string, userRole: UserRole) => Promise<void>
 
+  // Referral actions
+  setReferralCode: (code: string | null) => void
+
   // Session actions
   setIsCheckingSession: (checking: boolean) => void
   setIsInitialized: (initialized: boolean) => void
@@ -79,6 +85,7 @@ const initialState: AuthState = {
   isSettingRole: false,
   companyName: null,
   showProfileSetup: false,
+  referralCode: null,
   isCheckingSession: true,
   isInitialized: false,
 }
@@ -135,6 +142,9 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           // Non-blocking — if the check fails, don't interrupt the user's session
         }
       },
+
+      // Referral actions
+      setReferralCode: (code) => set({ referralCode: code }),
 
       // Session actions
       setIsCheckingSession: (checking) => set({ isCheckingSession: checking }),

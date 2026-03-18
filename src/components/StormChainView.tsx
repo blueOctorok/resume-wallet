@@ -14,6 +14,7 @@ import {
   Zap,
   Lock,
   TrendingDown,
+  UserPlus,
 } from 'lucide-react'
 import BackToHubButton from '@/components/ui/BackToHubButton'
 
@@ -61,14 +62,14 @@ export default function StormChainView({ onBack, backLabel }: StormChainViewProp
             : 'bg-teal-100 text-teal-700 border border-teal-200'
         }`}>
           <Lock className='w-4 h-4' />
-          Total Supply: 15,000,000 STORM
+          Total Supply: 50,000,000 STORM
         </div>
       </div>
 
       {/* Key Stats Row */}
       <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-8'>
-        <StatCard isDark={isDark} label='Total Supply' value='15M' />
-        <StatCard isDark={isDark} label='User Rewards' value='60%' />
+        <StatCard isDark={isDark} label='Total Supply' value='50M' />
+        <StatCard isDark={isDark} label='User Rewards' value='50%' />
         <StatCard isDark={isDark} label='Per $3 (Applicant)' value='~10' />
         <StatCard isDark={isDark} label='Decay Model' value='Smooth' />
       </div>
@@ -114,12 +115,30 @@ export default function StormChainView({ onBack, backLabel }: StormChainViewProp
           As more tokens are distributed, the rate decreases (smooth decay).
           Early spenders earn more tokens per dollar.
         </p>
+
+        <div className={`mt-4 p-4 rounded-lg ${
+          isDark
+            ? 'bg-gray-700/50 border border-gray-600'
+            : 'bg-gray-100 border border-gray-200'
+        }`}>
+          <p className={`font-medium mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            Why 10 tokens per $3 with a 50M supply?
+          </p>
+          <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+            Reward rates are based on the <strong>25M user reward pool</strong>,
+            not the full 50M supply. The remaining 25M serves other purposes:
+            17M for treasury (referrals, community programs), 5M for DEX trading
+            liquidity, and 3M for founder vesting. Keeping the earn rate tied to
+            the reward pool means every token you earn represents real, meaningful
+            value — not inflated numbers.
+          </p>
+        </div>
       </Section>
 
       {/* Token Distribution */}
       <Section isDark={isDark} title='Token Distribution' icon={<PieChart className='w-5 h-5' />}>
         <p className='mb-4'>
-          There will only ever be <strong>15 million STORM tokens</strong>. No
+          There will only ever be <strong>50 million STORM tokens</strong>. No
           more can be created. Here's how they're allocated:
         </p>
 
@@ -128,34 +147,34 @@ export default function StormChainView({ onBack, backLabel }: StormChainViewProp
           <DistributionBar
             isDark={isDark}
             label='User Rewards'
-            amount='9M'
-            percentage={60}
+            amount='25M'
+            percentage={50}
             color='green'
             description='Earned by users through platform usage'
           />
           <DistributionBar
             isDark={isDark}
             label='Platform Treasury'
-            amount='3M'
-            percentage={20}
+            amount='17M'
+            percentage={34}
             color='blue'
             description='Referral rewards, community programs, buybacks, partnerships'
           />
           <DistributionBar
             isDark={isDark}
-            label='Founders'
-            amount='2M'
-            percentage={13.3}
-            color='purple'
-            description='Team that built the platform (vested)'
+            label='DEX Liquidity'
+            amount='5M'
+            percentage={10}
+            color='orange'
+            description='Trading liquidity (funded by platform revenue)'
           />
           <DistributionBar
             isDark={isDark}
-            label='DEX Liquidity'
-            amount='1M'
-            percentage={6.7}
-            color='orange'
-            description='Initial trading liquidity'
+            label='Founders (Vested)'
+            amount='3M'
+            percentage={6}
+            color='purple'
+            description='1.5M each, 1-year lock + 2-year vesting'
           />
         </div>
 
@@ -172,23 +191,28 @@ export default function StormChainView({ onBack, backLabel }: StormChainViewProp
             <tbody>
               <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
                 <td className='py-2'>User Rewards</td>
-                <td className='py-2 text-right font-mono'>9,000,000</td>
-                <td className='py-2 text-right'>60%</td>
+                <td className='py-2 text-right font-mono'>25,000,000</td>
+                <td className='py-2 text-right'>50%</td>
               </tr>
               <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
                 <td className='py-2'>Platform Treasury</td>
-                <td className='py-2 text-right font-mono'>3,000,000</td>
-                <td className='py-2 text-right'>20%</td>
+                <td className='py-2 text-right font-mono'>17,000,000</td>
+                <td className='py-2 text-right'>34%</td>
               </tr>
               <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                <td className='py-2'>Founders (Vested)</td>
-                <td className='py-2 text-right font-mono'>2,000,000</td>
-                <td className='py-2 text-right'>~13%</td>
+                <td className='py-2'>DEX Liquidity</td>
+                <td className='py-2 text-right font-mono'>5,000,000</td>
+                <td className='py-2 text-right'>10%</td>
+              </tr>
+              <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                <td className='py-2'>Founder A (Vested)</td>
+                <td className='py-2 text-right font-mono'>1,500,000</td>
+                <td className='py-2 text-right'>3%</td>
               </tr>
               <tr>
-                <td className='py-2'>DEX Liquidity</td>
-                <td className='py-2 text-right font-mono'>1,000,000</td>
-                <td className='py-2 text-right'>~7%</td>
+                <td className='py-2'>Founder B (Vested)</td>
+                <td className='py-2 text-right font-mono'>1,500,000</td>
+                <td className='py-2 text-right'>3%</td>
               </tr>
             </tbody>
           </table>
@@ -204,11 +228,12 @@ export default function StormChainView({ onBack, backLabel }: StormChainViewProp
             About the Treasury
           </p>
           <p className={`text-sm ${isDark ? 'text-blue-400/80' : 'text-blue-600'}`}>
-            The 3M treasury is pre-allocated at launch, not generated from USDC
-            spend. It's reserved for referral rewards (e.g. tokens when a
-            referred user completes their first paid action), community bonuses,
-            buybacks, and partnerships. Treasury tokens are released for
-            specific events—not sold arbitrarily.
+            The 17M treasury (15M original allocation + 2M reserve) is held in a
+            dedicated TreasuryDistributor smart contract. It funds referral
+            rewards (2.5 STORM to each party when a referred user completes
+            their first paid action), community bonuses, buybacks, and
+            partnerships. Treasury tokens are released for specific
+            events—not sold arbitrarily.
           </p>
         </div>
       </Section>
@@ -262,34 +287,34 @@ export default function StormChainView({ onBack, backLabel }: StormChainViewProp
                 <td className='py-2 text-right font-mono font-bold'>10.00</td>
               </tr>
               <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                <td className='py-2'>1,000,000</td>
-                <td className='py-2 text-right'>11%</td>
-                <td className='py-2 text-right font-mono'>9.21</td>
+                <td className='py-2'>2,500,000</td>
+                <td className='py-2 text-right'>10%</td>
+                <td className='py-2 text-right font-mono'>9.28</td>
               </tr>
               <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                <td className='py-2'>3,000,000</td>
-                <td className='py-2 text-right'>33%</td>
-                <td className='py-2 text-right font-mono'>7.52</td>
+                <td className='py-2'>7,500,000</td>
+                <td className='py-2 text-right'>30%</td>
+                <td className='py-2 text-right font-mono'>7.76</td>
               </tr>
               <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                <td className='py-2'>4,500,000</td>
+                <td className='py-2'>12,500,000</td>
                 <td className='py-2 text-right'>50%</td>
                 <td className='py-2 text-right font-mono'>6.16</td>
               </tr>
               <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                <td className='py-2'>6,000,000</td>
-                <td className='py-2 text-right'>67%</td>
-                <td className='py-2 text-right font-mono'>4.63</td>
+                <td className='py-2'>17,500,000</td>
+                <td className='py-2 text-right'>70%</td>
+                <td className='py-2 text-right font-mono'>4.36</td>
               </tr>
               <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                <td className='py-2'>8,000,000</td>
-                <td className='py-2 text-right'>89%</td>
-                <td className='py-2 text-right font-mono'>2.15</td>
+                <td className='py-2'>22,500,000</td>
+                <td className='py-2 text-right'>90%</td>
+                <td className='py-2 text-right font-mono'>2.04</td>
               </tr>
               <tr>
-                <td className='py-2'>8,900,000</td>
+                <td className='py-2'>24,750,000</td>
                 <td className='py-2 text-right'>99%</td>
-                <td className='py-2 text-right font-mono'>0.44</td>
+                <td className='py-2 text-right font-mono'>0.36</td>
               </tr>
             </tbody>
           </table>
@@ -348,7 +373,7 @@ export default function StormChainView({ onBack, backLabel }: StormChainViewProp
             What "backed" means
           </p>
           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            Every token <strong>earned by users</strong> (the 9M reward pool)
+            Every token <strong>earned by users</strong> (the 25M reward pool)
             is tied to real USDC spent on the platform—no spend, no tokens.
             Treasury, founder, and DEX allocations are pre-minted at launch
             for operations, referral programs, and trading liquidity. DEX
@@ -438,10 +463,84 @@ export default function StormChainView({ onBack, backLabel }: StormChainViewProp
         </div>
       </Section>
 
+      {/* Referral Program */}
+      <Section isDark={isDark} title='Referral Program' icon={<UserPlus className='w-5 h-5' />}>
+        <p>
+          Invite friends to StormChain and <strong>both of you earn STORM tokens</strong> from
+          the treasury. Referral rewards are separate from the decay-based user rewards — they
+          come from the 17M treasury allocation.
+        </p>
+
+        <div className={`mt-4 p-4 rounded-lg ${
+          isDark
+            ? 'bg-teal-900/20 border border-teal-500/30'
+            : 'bg-teal-50 border border-teal-200'
+        }`}>
+          <p className={`font-semibold mb-3 ${isDark ? 'text-teal-400' : 'text-teal-700'}`}>
+            How It Works
+          </p>
+          <ol className={`text-sm space-y-2 list-decimal list-inside ${isDark ? 'text-teal-400/80' : 'text-teal-600'}`}>
+            <li>Share your unique referral link from your hub</li>
+            <li>Your friend signs up using that link</li>
+            <li>When they complete their first paid action (e.g., resume verification), <strong>both of you receive 2.5 STORM</strong></li>
+          </ol>
+        </div>
+
+        <div className='overflow-x-auto mt-4'>
+          <table className={`w-full text-sm ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+            <thead>
+              <tr className={`border-b ${isDark ? 'border-gray-600' : 'border-gray-300'}`}>
+                <th className='text-left py-2 font-semibold'>Detail</th>
+                <th className='text-right py-2 font-semibold'>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                <td className='py-2'>Reward to referrer</td>
+                <td className='py-2 text-right font-mono'>2.5 STORM</td>
+              </tr>
+              <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                <td className='py-2'>Reward to referred user</td>
+                <td className='py-2 text-right font-mono'>2.5 STORM</td>
+              </tr>
+              <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                <td className='py-2'>Total per referral</td>
+                <td className='py-2 text-right font-mono font-bold'>5.0 STORM</td>
+              </tr>
+              <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                <td className='py-2'>Source</td>
+                <td className='py-2 text-right'>Treasury (17M pool)</td>
+              </tr>
+              <tr>
+                <td className='py-2'>Trigger</td>
+                <td className='py-2 text-right'>Referred user&apos;s first paid action</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className={`mt-4 p-4 rounded-lg ${
+          isDark
+            ? 'bg-gray-700/50 border border-gray-600'
+            : 'bg-gray-100 border border-gray-200'
+        }`}>
+          <p className={`font-medium mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            Anti-Sybil Protections
+          </p>
+          <ul className={`text-sm space-y-1 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+            <li>• You cannot refer yourself (same wallet or same user ID)</li>
+            <li>• Each person can only be referred once</li>
+            <li>• Rewards require a real paid action — no free claiming</li>
+            <li>• Per-user referral cap prevents mass farming</li>
+            <li>• Wallet addresses are verified from the database, not user input</li>
+          </ul>
+        </div>
+      </Section>
+
       {/* Founder Commitment */}
       <Section isDark={isDark} title='Founder Commitment' icon={<Clock className='w-5 h-5' />}>
         <p>
-          The two founders each receive 1 million STORM tokens. To show
+          The two founders each receive 1.5 million STORM tokens. To show
           commitment, these tokens are locked and vest over time:
         </p>
 
@@ -523,7 +622,7 @@ export default function StormChainView({ onBack, backLabel }: StormChainViewProp
       {/* Anti-Gaming & Security */}
       <Section isDark={isDark} title='Anti-Gaming Protection' icon={<Shield className='w-5 h-5' />}>
         <p className='mb-3'>
-          Every STORM token represents real economic activity. Our anti-spam
+          Every STORM token represents real economic activity. Our anti-abuse
           mechanisms ensure fair distribution:
         </p>
         <ul className={`space-y-2 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
@@ -546,6 +645,20 @@ export default function StormChainView({ onBack, backLabel }: StormChainViewProp
             <span>
               <strong>Revenue-backed value</strong> — Liquidity funded by actual
               platform revenue
+            </span>
+          </li>
+          <li className='flex items-start gap-2'>
+            <span className={`mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0 ${isDark ? 'bg-teal-400' : 'bg-teal-600'}`} />
+            <span>
+              <strong>Referral sybil protection</strong> — Self-referral blocked at DB level,
+              one referral per user, per-user caps, wallet-verified payouts
+            </span>
+          </li>
+          <li className='flex items-start gap-2'>
+            <span className={`mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0 ${isDark ? 'bg-teal-400' : 'bg-teal-600'}`} />
+            <span>
+              <strong>Server-side validation</strong> — Reward endpoints are
+              internal-only with cryptographic verification
             </span>
           </li>
         </ul>

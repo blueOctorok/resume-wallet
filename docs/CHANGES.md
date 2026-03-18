@@ -4,6 +4,75 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Treasury Consolidation — 17M** (March 2026)
+
+- **Transferred 2M unallocated reserve** from deployer wallet to TreasuryDistributor contract. Deployer now holds 0 STORM. Every token is in a smart contract.
+- **Treasury now holds 17M STORM** (15M original + 2M reserve). Updated all references across whitepaper, TOKEN_STRATEGY.md, StormChainView.tsx, storm-rewards.ts, storm-contract.ts.
+- **Cleaned up `.env.local`**: removed duplicate/stale `TREASURY_ADDRESS` entries, organized STORM section into beneficiary wallets (deploy-only) and contract addresses.
+- **Referral cap bumped to 500** (from 100) — allows genuine community advocates room to grow.
+- TX: `0x15b07c08e31b130d19ae8a32b9ebaaeee0003d0064e143f506861f88d0dbda9b`
+
+---
+
+## **Referral Anti-Sybil Hardening** (March 2026)
+
+- **`POST /api/referrals/claim`** — completely rewritten with multiple security layers:
+  - **Internal-only**: Protected by `INTERNAL_API_SECRET` header. External callers get 403.
+  - **DB-resolved wallets**: Wallet addresses are always looked up from the `users` table, never trusted from the request body. Eliminates address spoofing.
+  - **Atomic claim**: Uses Supabase update-where (`eq('status', 'signed_up')`) to atomically transition referral status, preventing race condition double payouts.
+  - **Self-referral guard**: Blocks same user ID at claim time (defense-in-depth).
+  - **Same-wallet guard**: Blocks different user IDs sharing the same wallet address.
+  - **Rollback on failure**: If distribution fails, status reverts to `signed_up` so it can retry.
+- **`triggerReferralReward()`** (`storm-rewards.ts`) — now sends `x-internal-secret` header and only passes `referralId` (no wallet addresses in body).
+- **`050_referral_system.sql`** — added two DB constraints:
+  - `no_self_referral CHECK (referrer_id != referred_user_id)` — blocks self-referral at DB level
+  - `one_referral_per_user UNIQUE (referred_user_id)` — each person can only be referred once
+- **`GET /api/referrals`** — added per-user referral cap (`MAX_REFERRALS_PER_USER = 500`). Returns 429 when limit reached.
+- **`StormChainView.tsx`** — added dedicated "Referral Program" section (how it works, reward table, anti-sybil protections). Updated "Anti-Gaming Protection" section with referral-specific items. Fixed founder allocation from 1M to 1.5M.
+- **`STORMCHAIN_WHITEPAPER.md`** — full rewrite for 50M supply: updated all allocations, added Referral Program section with anti-sybil details, added Smart Contract Architecture table, updated founder vesting to 1.5M each.
+
+### Env requirement
+
+- Add `INTERNAL_API_SECRET` to `.env.local` — any strong random string. Used to protect server-to-server referral claim calls.
+
+---
+
+## **50M Tokenomics Rewrite + Candidate Referral System** (March 2026)
+
+### Tokenomics
+
+- **Total STORM supply increased from 15M to 50M.** New allocation: 25M user rewards (50%), 15M treasury (30%), 5M DEX (10%), 1.5M Founder A (3%), 1.5M Founder B (3%).
+- **New `TreasuryDistributor.sol`** — dedicated smart contract for treasury distributions (referrals, community, partnerships). Same security model as `RewardDistributor` (role-based access, reentrancy guard, batch support).
+- **`StormToken.sol`** — `TOTAL_SUPPLY` updated to `50_000_000 * 10**18`.
+- **`RewardDistributor.sol`** — doc comment updated (holds 25M, not 9M).
+- **`deploy-storm-token.js`** — deploys TreasuryDistributor, updated all allocation constants, 4-step deploy (Token, RewardDist, TreasuryDist, Vesting x2).
+- **`storm-contract.ts`** — added `treasuryDistributor` address config, `TREASURY_DISTRIBUTOR_ABI`, `distributeTreasuryReward()`, `distributeTreasuryBatch()`, `getTreasuryRemaining()`, `isTreasuryConfigured()`.
+- **`storm-rewards.ts`** — `TOTAL_REWARD_POOL` now 25M, added `TOTAL_TREASURY_POOL` (15M), `REFERRAL_REWARD_PER_PERSON` (2.5), `REFERRAL_REWARD_TOTAL` (5), `triggerReferralReward()`. Decay checkpoints recalculated for 25M pool.
+- **`StormChainView.tsx`** — all distribution bars, table rows, stat cards, decay curve, and treasury note updated for 50M supply.
+- **`TOKEN_STRATEGY.md`** — full rewrite reflecting 50M supply, new allocations, TreasuryDistributor, DEX-only strategy, and referral program.
+- **`storm-rewards.test.ts`** — all test values updated for 25M pool, added referral constant tests.
+
+### Referral System
+
+- **DB migration `050_referral_system.sql`** — `referrals` table with `referrer_id`, `referral_code`, `referred_user_id`, `status` (pending/signed_up/rewarded), `storm_tx_hash`, `rewarded_at`. RLS policies for referrer/referred read access.
+- **`GET /api/referrals`** — returns user's referral code + stats (creates code on first call).
+- **`POST /api/referrals/claim`** — distributes 2.5 STORM to referrer + 2.5 to referred via `distributeTreasuryBatch()`, marks referral as rewarded.
+- **`?ref=CODE` capture** — `page.tsx` captures `ref` query param on load, stores in `useAuthStore.referralCode`. Passed to `/api/user/set-role` which links the referral row (`status: signed_up`).
+- **Reward trigger** — `api/storm/distribute/route.ts` now checks for pending referrals after each successful STORM distribution. If the user is a referred party with `status: signed_up`, triggers `triggerReferralReward()`.
+- **`ReferralBanner`** — new component (`src/components/hub/ReferralBanner.tsx`) rendered in `CandidateHub` between Find Jobs and AvA. Shows copy-link button + stats (referred count, rewarded count, STORM earned).
+- **`useAuthStore`** — added `referralCode` field + `setReferralCode` action.
+
+### Employer Outreach Cleanup
+
+- **`CandidateOutreach.tsx`** — removed "General Onboarding" invite type. Employer outreach is now exclusively block-specific (block picker opens directly). Removed `outreachKind` state and two-step picker UI.
+
+### AvA & Journey
+
+- **`ava-context.ts`** — added referral program section to system prompt. AvA contextually suggests sharing referral link after milestones, when users ask about STORM.
+- **`journey-progress.ts`** — added optional "Share Your Referral Link" step that appears once user has at least one installed block.
+
+---
+
 ## **Find Jobs: permanent hub feature with StormChain + External tabs** (March 2026)
 
 - **Not a block** — Find Jobs is a permanent hub feature (like Career Card / Messages). Every candidate sees a **FindJobsBanner** on their hub. No block installation needed.
