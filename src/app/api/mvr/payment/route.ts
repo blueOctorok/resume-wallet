@@ -95,23 +95,15 @@ export async function POST(request: NextRequest) {
       
       console.log('[MVR PAYMENT] ✅ Payment already exists, returning existing:', existingPayment.id)
       
-      // Check if STORM was ever distributed for this payment
-      // If not, distribute now (handles case where original distribution failed)
-      const { data: existingDistribution } = await supabase
-        .from('storm_distributions')
-        .select('id')
-        .eq('payment_id', existingPayment.id)
-        .maybeSingle()
-      
-      if (!existingDistribution) {
-        console.log('[MVR PAYMENT] ⛈️ STORM not yet distributed for existing payment, distributing now...')
-        try {
-          await triggerStormReward(walletAddress, existingPayment.amount_usdc, existingPayment.id, 'MVR_ORDER', userType)
-        } catch (stormError) {
-          console.error('[MVR PAYMENT] STORM reward failed for existing payment (non-fatal):', stormError)
-        }
-      } else {
-        console.log('[MVR PAYMENT] ⛈️ STORM already distributed for this payment, skipping')
+      // Always distribute STORM for every successful payment call.
+      // The user paid real money — they deserve tokens. Previous logic skipped
+      // distribution if the payment_id had a prior distribution, but that
+      // unfairly penalized users when tx_hash was reused across purchases.
+      console.log('[MVR PAYMENT] ⛈️ Distributing STORM for existing payment (user paid, user gets rewarded)')
+      try {
+        await triggerStormReward(walletAddress, existingPayment.amount_usdc, existingPayment.id, 'MVR_ORDER', userType)
+      } catch (stormError) {
+        console.error('[MVR PAYMENT] STORM reward failed for existing payment (non-fatal):', stormError)
       }
       
       return NextResponse.json({

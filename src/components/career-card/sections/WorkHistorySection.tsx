@@ -15,8 +15,8 @@ export default function WorkHistorySection({ data, isDark }: WorkHistorySectionP
 
   return (
     <div className={cn(
-      'rounded-xl border p-4',
-      isDark ? 'bg-gray-800/40 border-gray-700' : 'bg-white border-gray-200'
+      'rounded-xl p-4',
+      isDark ? 'bg-gray-700/50' : 'bg-white/60'
     )}>
       <div className='flex items-center justify-between mb-3'>
         <div className='flex items-center gap-2'>

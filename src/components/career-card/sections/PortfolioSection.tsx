@@ -17,7 +17,7 @@ export default function PortfolioSection({ data, mode, isDark, onAction }: Portf
     return (
       <div className={cn(
         'rounded-xl border border-dashed p-4',
-        isDark ? 'bg-gray-800/40 border-gray-700' : 'bg-white border-gray-200'
+        isDark ? 'bg-gray-700/30 border-gray-600' : 'bg-white/40 border-gray-400/50'
       )}>
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-2'>
@@ -44,8 +44,8 @@ export default function PortfolioSection({ data, mode, isDark, onAction }: Portf
 
   return (
     <div className={cn(
-      'rounded-xl border p-4',
-      isDark ? 'bg-gray-800/40 border-gray-700' : 'bg-white border-gray-200'
+      'rounded-xl p-4',
+      isDark ? 'bg-gray-700/50' : 'bg-white/60'
     )}>
       <div className='flex items-center justify-between mb-3'>
         <div className='flex items-center gap-2'>
@@ -58,12 +58,12 @@ export default function PortfolioSection({ data, mode, isDark, onAction }: Portf
           href={data.portfolioUrl}
           target='_blank'
           rel='noopener noreferrer'
-          className={cn('p-1.5 rounded-lg', isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500')}
+          className={cn('p-1.5 rounded-lg', isDark ? 'hover:bg-gray-600 text-gray-400' : 'hover:bg-gray-200 text-gray-500')}
         >
           <ExternalLink className='w-4 h-4' />
         </a>
       </div>
-      <p className={cn('text-xs truncate', isDark ? 'text-gray-400' : 'text-gray-500')}>
+      <p className={cn('text-xs truncate', isDark ? 'text-gray-400' : 'text-gray-600')}>
         {data.portfolioUrl}
       </p>
     </div>

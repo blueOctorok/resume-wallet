@@ -4,6 +4,67 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **MVR Status Tracking in My Files** (March 2026)
+
+### Summary
+Added MVR order status tracking to the "My Files" section in the CandidateHub. Users can now see their MVR orders with visual status indicators (Processing → Complete).
+
+### What was done
+1. Extended `HubDocument` interface to support `'mvr'` type and `'processing'` status
+2. Added MVR records fetching from `/api/driver/hub` endpoint (already returned `mvrRecords`)
+3. Added visual status badges: blue "Processing" with spinner, teal "Complete" with checkmark
+4. Added Car icon for MVR documents
+5. MVR orders display the license state as subtitle
+
+### Files changed
+- `src/components/hub/CandidateHub.tsx`
+
+---
+
+## **STORM Token Distribution Fix** (March 2026)
+
+### Summary
+Fixed STORM token distribution to reward users on every successful payment API call, not just the first time for a given `tx_hash`.
+
+### What was changed
+The MVR payment route previously checked if STORM had already been distributed for a given `payment_id` and skipped if so. This unfairly penalized users when the same `tx_hash` was reused across separate purchases (e.g., due to frontend call ID reuse).
+
+**Old behavior:** If payment existed and STORM was already distributed → skip
+**New behavior:** If payment exists → still distribute STORM (user paid, user gets rewarded)
+
+### Files changed
+- `src/app/api/mvr/payment/route.ts`
+
+---
+
+## **Career Card Neumorphic Redesign + Inline Previews** (March 2026)
+
+### Summary
+Redesigned the ProjectedCareerCard component to display all sections within a single unified neumorphic card instead of separate bordered boxes. Also added inline preview modals for DOT Application and Resume sections.
+
+### What was done
+1. **Single Neumorphic Container** — `ProjectedCareerCard.tsx` now wraps all content in one `rounded-[2.5rem]` card with neumorphic box-shadow (dual shadows creating a raised 3D effect).
+2. **Section Inner Styling** — All 8 section components updated to use subtle inner backgrounds (`bg-white/60` light / `bg-gray-700/50` dark) without borders, so they blend into the outer card.
+3. **Dark Mode Support** — Neumorphic shadow values adjusted for dark mode (`#0d1117` / `#374151`) to maintain the depth illusion against darker backgrounds.
+4. **DOT App Preview** — Clicking "View" on a completed DOT application now opens an inline preview modal instead of navigating back to the form. Shared `DotAppPreviewContent` component extracted from `CareerCard.tsx`.
+5. **Resume Preview** — Clicking "Preview" on a resume opens the appropriate viewer (IPFS link for uploaded resumes, inline modal for built resumes). Changed button label from "Update" to "Preview".
+
+### Files changed
+- `src/components/career-card/ProjectedCareerCard.tsx`
+- `src/components/career-card/DotAppPreviewContent.tsx` (new)
+- `src/components/career-card/sections/ResumeSection.tsx`
+- `src/components/career-card/sections/DotAppSection.tsx`
+- `src/components/career-card/sections/MvrSection.tsx`
+- `src/components/career-card/sections/CdlSection.tsx`
+- `src/components/career-card/sections/SkillsSection.tsx`
+- `src/components/career-card/sections/WorkHistorySection.tsx`
+- `src/components/career-card/sections/PortfolioSection.tsx`
+- `src/components/career-card/sections/GitHubSection.tsx`
+- `src/components/career-card/sections/ProjectsSection.tsx`
+- `src/components/app/CareerCardView.tsx`
+
+---
+
 ## **Block-Owned Data Architecture — Phase 4: Drop Legacy Profile Tables** (March 2026)
 
 ### Summary

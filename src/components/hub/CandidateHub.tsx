@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useCallback, useState } from 'react'
-import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink, ChevronLeft, ChevronRight, FileText, ClipboardCheck } from 'lucide-react'
+import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink, ChevronLeft, ChevronRight, FileText, ClipboardCheck, Sparkles, Car } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useAuthStore, useUIStore } from '@/stores'
+import { useAuthStore, useUIStore, useJourneyStore } from '@/stores'
 import {
   useHubBlocksStore,
   useInstalledBlocks,
@@ -16,7 +16,6 @@ import type { PageType } from '@/stores/types'
 import { getBlockColor } from '@/lib/block-registry'
 import { getBlockIllustration } from './BlockIllustrations'
 import Button from '@/components/ui/Button'
-import AskAvaButton from '@/components/ui/AskAvaButton'
 import AvatarUpload from '@/components/ui/AvatarUpload'
 import STORMBalance from '@/components/STORMBalance'
 import CandidateRequestsSection from '@/components/CandidateRequestsSection'
@@ -640,6 +639,54 @@ function HubProfileHeader() {
   )
 }
 
+// ── AvA Banner ───────────────────────────────────────────────────────────────
+
+function AvaBanner() {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  const openGuide = useJourneyStore((s) => s.openGuide)
+
+  return (
+    <div className='ava-glow-border'>
+    <div className={cn(
+      'rounded-[14px] p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4',
+      isDark ? 'bg-gray-900' : 'bg-white',
+    )}>
+      <div className='flex items-center gap-3'>
+        <div className={cn(
+          'w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0',
+          isDark ? 'bg-violet-500/20' : 'bg-violet-100'
+        )}>
+          <Sparkles className={cn('w-5 h-5', isDark ? 'text-violet-400' : 'text-violet-600')} />
+        </div>
+        <div>
+          <p className={cn('text-sm font-bold', isDark ? 'text-white' : 'text-gray-900')}>
+            Ask AvA
+          </p>
+          <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+            Your AI career guide — get advice on which blocks to build, what employers look for, and your next best move
+          </p>
+        </div>
+      </div>
+      <div className='flex-shrink-0'>
+        <button
+          onClick={openGuide}
+          className={cn(
+            'flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap',
+            isDark
+              ? 'bg-violet-500 text-white hover:bg-violet-400'
+              : 'bg-violet-600 text-white hover:bg-violet-500',
+          )}
+        >
+          <Sparkles className='w-3.5 h-3.5' />
+          Ask AvA
+        </button>
+      </div>
+    </div>
+    </div>
+  )
+}
+
 // ── Career Card banner ───────────────────────────────────────────────────────
 
 /**
@@ -720,10 +767,11 @@ function CareerCardBanner() {
 
 interface HubDocument {
   id: string
-  type: 'resume' | 'dotapp'
+  type: 'resume' | 'dotapp' | 'mvr'
   title: string
-  // "complete" = usable, "in-progress" = still being filled out
-  status: 'complete' | 'in-progress'
+  subtitle?: string
+  // "complete" = usable, "in-progress" = still being filled out, "processing" = waiting on external service
+  status: 'complete' | 'in-progress' | 'processing'
   verified: boolean
   txHash: string | null
   // Verify is enabled for uploaded resumes (real IPFS) or completed DOT apps
@@ -731,7 +779,7 @@ interface HubDocument {
   // DOT apps that are on-chain cannot be deleted
   canDelete: boolean
   // Page to navigate to when the user wants to open/edit the document
-  editPage: PageType
+  editPage: PageType | null
 }
 
 function MyFilesSection() {
@@ -753,9 +801,10 @@ function MyFilesSection() {
     b.blockType === 'driver-resume' || b.blockType === 'developer-resume'
   )
   const hasDotAppBlock = installedBlocks.some((b) => b.blockType === 'driver-dot-application')
+  const hasMvrBlock = installedBlocks.some((b) => b.blockType === 'driver-mvr')
 
   const fetchDocuments = useCallback(async () => {
-    if (!walletAddress || (!hasResumeBlock && !hasDotAppBlock)) {
+    if (!walletAddress || (!hasResumeBlock && !hasDotAppBlock && !hasMvrBlock)) {
       setLoading(false)
       return
     }
@@ -771,7 +820,6 @@ function MyFilesSection() {
 
       if (hasResumeBlock && data.resumes) {
         for (const resume of data.resumes) {
-          const hasRealIpfs = resume.ipfsHash && !resume.ipfsHash.startsWith('built_')
           docs.push({
             id: resume.id,
             type: 'resume',
@@ -779,7 +827,8 @@ function MyFilesSection() {
             status: 'complete',
             verified: !!resume.blockchainTxHash,
             txHash: resume.blockchainTxHash,
-            canVerify: !!hasRealIpfs && !resume.blockchainTxHash,
+            // All unverified resumes can be sent to chain; endpoint handles IPFS if needed
+            canVerify: !resume.blockchainTxHash,
             canDelete: true,
             editPage: 'resume',
           })
@@ -802,13 +851,32 @@ function MyFilesSection() {
         }
       }
 
+      // MVR orders — processing until completed
+      if (hasMvrBlock && data.mvrRecords) {
+        for (const mvr of data.mvrRecords) {
+          const isComplete = mvr.orderStatus === 'completed' || mvr.orderStatus === 'needs_review'
+          docs.push({
+            id: mvr.id,
+            type: 'mvr',
+            title: 'Motor Vehicle Record',
+            subtitle: mvr.licenseState,
+            status: isComplete ? 'complete' : 'processing',
+            verified: false,
+            txHash: null,
+            canVerify: false,
+            canDelete: false,
+            editPage: 'mvr',
+          })
+        }
+      }
+
       setDocuments(docs)
     } catch (err) {
       console.error('MyFilesSection fetch error:', err)
     } finally {
       setLoading(false)
     }
-  }, [walletAddress, hasResumeBlock, hasDotAppBlock])
+  }, [walletAddress, hasResumeBlock, hasDotAppBlock, hasMvrBlock])
 
   useEffect(() => { fetchDocuments() }, [fetchDocuments])
 
@@ -871,7 +939,7 @@ function MyFilesSection() {
     }
   }
 
-  if (!hasResumeBlock && !hasDotAppBlock) return null
+  if (!hasResumeBlock && !hasDotAppBlock && !hasMvrBlock) return null
   if (loading) return null
   if (documents.length === 0) return null
 
@@ -915,10 +983,20 @@ function MyFilesSection() {
               {/* Icon + info */}
               <div className={cn(
                 'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
-                doc.verified ? 'bg-green-500/20' : isDark ? 'bg-gray-700' : 'bg-gray-200',
+                doc.verified ? 'bg-green-500/20'
+                  : doc.status === 'complete' ? (isDark ? 'bg-teal-500/20' : 'bg-teal-100')
+                  : doc.status === 'processing' ? (isDark ? 'bg-blue-500/20' : 'bg-blue-100')
+                  : isDark ? 'bg-gray-700' : 'bg-gray-200',
               )}>
                 {doc.type === 'resume' ? (
                   <FileText className={cn('w-4 h-4', doc.verified ? 'text-green-400' : isDark ? 'text-gray-400' : 'text-gray-500')} />
+                ) : doc.type === 'mvr' ? (
+                  <Car className={cn(
+                    'w-4 h-4',
+                    doc.status === 'complete' ? (isDark ? 'text-teal-400' : 'text-teal-600')
+                      : doc.status === 'processing' ? (isDark ? 'text-blue-400' : 'text-blue-600')
+                      : isDark ? 'text-gray-400' : 'text-gray-500'
+                  )} />
                 ) : (
                   <ClipboardCheck className={cn('w-4 h-4', doc.verified ? 'text-green-400' : isDark ? 'text-gray-400' : 'text-gray-500')} />
                 )}
@@ -928,10 +1006,21 @@ function MyFilesSection() {
                 <div className='flex items-center gap-2 flex-wrap'>
                   <p className={cn('text-sm font-medium truncate', isDark ? 'text-white' : 'text-gray-900')}>
                     {doc.title}
+                    {doc.subtitle && <span className={cn('ml-1 font-normal', isDark ? 'text-gray-500' : 'text-gray-400')}>({doc.subtitle})</span>}
                   </p>
                   {doc.status === 'in-progress' && (
                     <span className={cn('text-[10px] px-1.5 py-0.5 rounded font-medium', isDark ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-50 text-yellow-700')}>
                       In Progress
+                    </span>
+                  )}
+                  {doc.status === 'processing' && (
+                    <span className={cn('flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-medium', isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-700')}>
+                      <Loader2 className='w-2.5 h-2.5 animate-spin' /> Processing
+                    </span>
+                  )}
+                  {doc.status === 'complete' && doc.type === 'mvr' && (
+                    <span className={cn('flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium', isDark ? 'bg-teal-500/15 text-teal-400' : 'bg-teal-50 text-teal-700')}>
+                      <Check className='w-2.5 h-2.5' /> Complete
                     </span>
                   )}
                   {doc.verified && (
@@ -954,21 +1043,25 @@ function MyFilesSection() {
 
               {/* Actions */}
               <div className='flex items-center gap-1.5 flex-shrink-0'>
-                {/* Open / Edit */}
+                {/* Open/view (complete) or continue (in-progress) — hidden while processing */}
+                {doc.editPage && doc.status !== 'processing' && (
                 <button
                   onClick={() => {
-                    // Pass the specific resume ID so ResumeBuilder loads the right one
                     if (doc.type === 'resume') setEditingResumeId(doc.id)
-                    setCurrentPage(doc.editPage)
+                    setCurrentPage(doc.editPage!)
                   }}
-                  title='Open / Edit'
+                  title={doc.status === 'complete' ? 'View' : 'Continue'}
                   className={cn(
                     'p-1.5 rounded-lg transition-colors text-xs',
                     isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300',
                   )}
                 >
-                  <Pencil className='w-3.5 h-3.5' />
+                  {doc.status === 'complete'
+                    ? <Eye className='w-3.5 h-3.5' />
+                    : <Pencil className='w-3.5 h-3.5' />
+                  }
                 </button>
+                )}
 
                 {/* Verify on-chain */}
                 {doc.canVerify && (
@@ -976,12 +1069,13 @@ function MyFilesSection() {
                     onClick={() => handleVerify(doc)}
                     disabled={verifying === doc.id}
                     title='Verify on blockchain'
-                    className='p-1.5 rounded-lg transition-colors bg-teal-500 text-white hover:bg-teal-400 disabled:opacity-50 disabled:cursor-not-allowed'
+                    className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors bg-teal-500 text-white hover:bg-teal-400 disabled:opacity-50 disabled:cursor-not-allowed'
                   >
                     {verifying === doc.id
                       ? <Loader2 className='w-3.5 h-3.5 animate-spin' />
                       : <ShieldCheck className='w-3.5 h-3.5' />
                     }
+                    {verifying === doc.id ? 'Verifying...' : 'Verify'}
                   </button>
                 )}
 
@@ -1139,7 +1233,7 @@ export default function CandidateHub() {
       <div className='max-w-3xl mx-auto space-y-6'>
         <HubProfileHeader />
         <CareerCardBanner />
-        <AskAvaButton label='Ask AvA — What should I do next?' />
+        <AvaBanner />
         <MyFilesSection />
 
         {/* ── Block Hive ── */}

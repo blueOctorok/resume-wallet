@@ -16,8 +16,8 @@ export default function CdlSection({ data, isDark }: CdlSectionProps) {
 
   return (
     <div className={cn(
-      'rounded-xl border p-4',
-      isDark ? 'bg-gray-800/40 border-gray-700' : 'bg-white border-gray-200'
+      'rounded-xl p-4',
+      isDark ? 'bg-gray-700/50' : 'bg-white/60'
     )}>
       <div className='flex items-center gap-2 mb-3'>
         <IdCard className={cn('w-4 h-4', isDark ? 'text-teal-400' : 'text-teal-600')} />

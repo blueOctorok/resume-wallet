@@ -33,57 +33,13 @@ export async function GET(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // Get user by wallet address (case-insensitive)
     const normalizedWallet = walletAddress.toLowerCase()
-    console.log('[DRIVER HUB] Looking up user with wallet:', {
-      original: walletAddress,
-      normalized: normalizedWallet,
-    })
-    
-    // First, check for ALL users matching this wallet (detect duplicates)
-    const { data: allMatchingUsers } = await supabase
-      .from('users')
-      .select('id, wallet_address, created_at')
-      .ilike('wallet_address', normalizedWallet)
-    
-    console.log('[DRIVER HUB] All matching users:', {
-      count: allMatchingUsers?.length ?? 0,
-      users: allMatchingUsers?.map(u => ({
-        id: u.id,
-        wallet: u.wallet_address,
-        created: u.created_at,
-      })),
-    })
-    
-    // Also check for ANY driver_applications in the entire table (debug)
-    const { data: allApps } = await supabase
-      .from('driver_applications')
-      .select('id, user_id, is_complete, current_step, created_at')
-      .order('created_at', { ascending: false })
-      .limit(10)
-    
-    console.log('[DRIVER HUB] Recent driver_applications in DB:', {
-      count: allApps?.length ?? 0,
-      apps: allApps?.map(a => ({
-        id: a.id,
-        user_id: a.user_id,
-        is_complete: a.is_complete,
-        step: a.current_step,
-      })),
-    })
-    
+
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id, created_at, wallet_address, share_token, share_settings, share_token_created_at, share_views_count')
       .ilike('wallet_address', normalizedWallet)
       .single()
-
-    console.log('[DRIVER HUB] User lookup result:', {
-      found: !!user,
-      userId: user?.id,
-      storedWallet: user?.wallet_address,
-      error: userError?.message,
-    })
 
     if (userError || !user) {
       // User not found - return empty hub (new user state)
@@ -231,26 +187,9 @@ export async function GET(request: NextRequest) {
         ? { ...userProfile, ...driverProfile }
         : driverProfile
 
-    // Log raw DOT applications query result for debugging
-    console.log('[DRIVER HUB] DOT apps raw result:', {
-      count: dotAppsResult.data?.length ?? 0,
-      error: dotAppsResult.error?.message,
-      apps: (dotAppsResult.data || []).map((a: Record<string, unknown>) => ({
-        id: a.id,
-        is_complete: a.is_complete,
-        current_step: a.current_step,
-        created_at: a.created_at,
-      })),
-    })
-    
-    console.log('[DRIVER HUB] Profile fetch result:', {
-      hasProfile: !!profile,
-      userProfileError: userProfileResult.error?.message,
-      hasCdl: !!cdl,
-      hasEmployment: employment.length > 0,
-      hasMvr: !!mvrBlock,
-      userId: user.id,
-    })
+    if (dotAppsResult.error) {
+      console.error('[DRIVER HUB] DOT apps query error:', dotAppsResult.error.message)
+    }
 
     // Process resumes
     const resumes = (resumesResult.data || []).map(resume => ({
@@ -295,19 +234,6 @@ export async function GET(request: NextRequest) {
         // If not complete, it's in-progress (user can continue it)
         isInProgress: !isComplete,
       }
-    })
-    
-    // Check if there's already an in-progress app in the database
-    // If so, we don't need to create a synthetic one from profile data
-    const hasInProgressDbApp = submittedDotApplications.some(app => app.isInProgress)
-    
-    console.log('[DRIVER HUB] In-progress detection:', {
-      hasProfile: !!profile,
-      firstName: profile?.first_name,
-      lastName: profile?.last_name,
-      dbAppsCount: submittedDotApplications.length,
-      hasInProgressDbApp,
-      inProgressDbApps: submittedDotApplications.filter(app => app.isInProgress).map(app => app.id),
     })
     
     // DOT applications list comes directly from database

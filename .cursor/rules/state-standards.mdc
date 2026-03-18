@@ -1,7 +1,6 @@
 ---
 description: State management standards — when to use useState vs Zustand stores
-globs: src/**/*.tsx,src/**/*.ts
-alwaysApply: false
+alwaysApply: true
 ---
 
 # State Management Standards

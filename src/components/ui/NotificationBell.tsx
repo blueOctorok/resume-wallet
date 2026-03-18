@@ -48,12 +48,30 @@ export default function NotificationBell({ walletAddress }: NotificationBellProp
   const { notifications, unreadCount, loading, fetchNotifications, markRead, markAllRead } =
     useNotificationStore()
 
-  // Fetch on mount, then poll every 60 seconds
+  // Fetch on mount, then poll every 60 seconds.
+  // Pauses when the tab is hidden so it doesn't hammer the server in the background.
   useEffect(() => {
     fetchNotifications(walletAddress)
-    // Poll every 15s so new requests (MVR, resume, DOT app) appear promptly
-    const interval = setInterval(() => fetchNotifications(walletAddress), 15_000)
-    return () => clearInterval(interval)
+
+    let interval: ReturnType<typeof setInterval> | null = null
+
+    const start = () => {
+      if (!interval) {
+        interval = setInterval(() => fetchNotifications(walletAddress), 60_000)
+      }
+    }
+    const stop = () => {
+      if (interval) { clearInterval(interval); interval = null }
+    }
+
+    start()
+    document.addEventListener('visibilitychange', () =>
+      document.hidden ? stop() : start()
+    )
+    return () => {
+      stop()
+      document.removeEventListener('visibilitychange', stop)
+    }
   }, [walletAddress, fetchNotifications])
 
   // Close dropdown on outside click

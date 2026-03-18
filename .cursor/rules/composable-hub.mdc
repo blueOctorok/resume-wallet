@@ -1,12 +1,11 @@
 ---
 description: Composable hub standards — how blocks are built, registered, and rendered
-globs: src/components/blocks/**,src/stores/**,src/lib/block-registry.ts
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Composable Hub Standards
 
-## Every Hub Feature Is a Block
+## Every Candidate Feature Is a Block
 
 The candidate hub is a blank slate. Every feature (DOT app, MVR, resume, portfolio, etc.)
 is a self-contained block with its own component, its own Zustand store, and its own data.
@@ -19,17 +18,18 @@ The hub itself is stateless — it only reads `useHubBlocksStore` and renders.
 3. Create the block's store in `src/stores/[block-name]-block-store.ts`
 4. Lazy-import the component in `CandidateShell`
 5. No schema changes needed — `hub_blocks.block_type` is open text
+6. Add data tables in `block-data.ts` if the block stores data (see `block-development.mdc`)
 
 ## Every Block MUST Use `BlockCard` as Its Outer Wrapper
 
 ```tsx
-// ❌ BAD — custom card shell
+// BAD — custom card shell
 <div className="bg-white rounded-2xl border ...">
   <h3>DOT Application</h3>
   ...
 </div>
 
-// ✅ GOOD
+// GOOD
 import BlockCard from '@/components/ui/BlockCard'
 import { ClipboardList } from 'lucide-react'
 
@@ -49,7 +49,7 @@ import { ClipboardList } from 'lucide-react'
 Derive `status` from the block's own store — never from the hub:
 
 ```tsx
-// ✅ GOOD — block owns its completion status
+// GOOD — block owns its completion status
 const { isComplete, hasStarted } = useDotBlockStore()
 const status = isComplete ? 'complete' : hasStarted ? 'in-progress' : 'empty'
 ```
@@ -67,11 +67,17 @@ lives in `src/lib/block-registry.ts`. Never hardcode block labels or categories
 in UI components — always read from the registry.
 
 ```tsx
-// ❌ BAD
+// BAD
 <h3>DOT Application</h3>
 
-// ✅ GOOD
+// GOOD
 import { getBlockDefinition } from '@/lib/block-registry'
 const def = getBlockDefinition(block.blockType)
 <BlockCard icon={...} title={def.label} description={def.description} ...>
 ```
+
+## Do NOT Add Features to Legacy Shells
+
+`DriverShell` and `DeveloperShell` are frozen. All new candidate features are blocks
+wired through `CandidateShell`. If you are tempted to add a new `if (currentPage === '...')`
+case to `DriverShell` or `DeveloperShell`, STOP — create a block instead.

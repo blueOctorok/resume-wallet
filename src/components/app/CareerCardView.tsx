@@ -133,6 +133,7 @@ export default function CareerCardView({ onBack }: CareerCardViewProps) {
         mode='self'
         onNavigateToBlock={handleNavigateToBlock}
         onAddBlock={openPicker}
+        walletAddress={walletAddress ?? undefined}
       />
     </div>
   )

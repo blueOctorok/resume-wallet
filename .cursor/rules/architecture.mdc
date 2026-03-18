@@ -1,36 +1,54 @@
 ---
-description: Core architecture standards for StormChain — component structure, state management, and routing
+description: Core architecture standards for StormChain — component structure, state management, routing, and data layer
 alwaysApply: true
 ---
 
 # StormChain Architecture Rules
 
+## Shell Routing (page.tsx)
+
+`page.tsx` is routing only — no business logic, no inline UI. It maps `userRole` to a shell component:
+
+| Role | Shell | Notes |
+|---|---|---|
+| `candidate` | `CandidateShell` | **Primary.** All new features go here. Uses composable blocks. |
+| `employer` | `EmployerShell` | Employer-specific features (job posting, talent search, etc.) |
+| `driver` | `DriverShell` | **Legacy only.** Existing users who haven't migrated. Do NOT add new features here. |
+| `developer` | `DeveloperShell` | **Legacy only.** Same as above. |
+
+### Rules
+
+- **All new candidate features go in `CandidateShell` via blocks.** Never add features to `DriverShell` or `DeveloperShell`.
+- **`DriverShell` and `DeveloperShell` are frozen.** They exist for backward compatibility. Do not extend them.
+- **Shells route; they don't build UI.** A shell switches on `currentPage` and returns the right component. It does not contain JSX for those features.
+- **When `CandidateShell` exceeds ~200 lines (~14 routes):** Refactor the `if/if/if` chain into a route map object (`Record<PageType, ComponentType>`). Standardize block page components to accept a common `{ onBack }` prop so they can be rendered from the map without per-route wrappers.
+
 ## Component Structure
 
-Every feature must live in its own component. `page.tsx` is routing only — no business logic, no inline UI.
+Every feature must live in its own component.
 
 ```
 src/
   app/page.tsx              ← routing + auth + global layout ONLY (~300 lines max)
   components/
-    app/                    ← role shells and feature flows
-      DriverShell.tsx       ← driver routing
+    app/                    ← shells and feature flows
+      CandidateShell.tsx    ← primary candidate routing (composable blocks)
       EmployerShell.tsx     ← employer routing
-      DeveloperShell.tsx    ← developer routing
-      DotApplicationFlow.tsx ← DOT feature (self-contained)
+      DriverShell.tsx       ← LEGACY — do not extend
+      DeveloperShell.tsx    ← LEGACY — do not extend
       ErrorBoundary.tsx
-    ui/                     ← reusable primitives (Button, Card, etc.)
-    [Feature].tsx           ← all feature components go here
+    blocks/                 ← block components for the composable hub
+    ui/                     ← reusable primitives (Button, Card, BlockCard, etc.)
+    [Feature].tsx           ← standalone feature components
 ```
 
 ### Rules
 
 - **No inline feature rendering in shells.** If a page block exceeds ~30 lines, extract it to a component.
 - **One concern per file.** A component renders one feature — not multiple unrelated sections.
-- **Shells route; they don't build UI.** `DriverShell` switches on `currentPage` and returns the right component. It does not contain JSX for those features.
 
 ```tsx
-// ❌ BAD — feature logic inline in shell
+// BAD — feature logic inline in shell
 if (currentPage === 'resume') {
   return (
     <div>
@@ -41,10 +59,36 @@ if (currentPage === 'resume') {
   )
 }
 
-// ✅ GOOD — delegate to a dedicated component
+// GOOD — delegate to a dedicated component
 if (currentPage === 'resume') {
   return <DriverResumeSection onBack={handleNavigateToHub} />
 }
+```
+
+---
+
+## Data Layer
+
+### Identity data
+
+Name, email, phone, address, avatar, headline live in `user_profiles`. This table is shared across ALL roles. Never duplicate identity in role-specific or block tables.
+
+### Block data
+
+All role-specific data (CDL, employment, MVR, GitHub, etc.) lives in `block_*` tables. Reads and writes go through `src/lib/block-data.ts`.
+
+See `.cursor/rules/block-development.mdc` for the full data architecture, including banned tables and the block data cheat sheet.
+
+### API route pattern
+
+```typescript
+// GOOD — use block-data.ts helpers
+import { getCdlData, saveCdlData } from '@/lib/block-data'
+const cdl = await getCdlData(supabase, userId)
+await saveCdlData(supabase, userId, { cdl_number: '...' })
+
+// BAD — direct table queries from routes
+const { data } = await supabase.from('block_driver_cdl').select('*')...
 ```
 
 ---
@@ -56,11 +100,11 @@ All state lives in Zustand stores. No `useState` for shared or feature-level dat
 ### Stores
 
 | Store | Owns |
-|-------|------|
+|---|---|
 | `useAuthStore` | user, walletAddress, userRole, session |
-| `useDotApplicationStore` | DOT form data, submission state, prefill |
-| `useDriverHubStore` | hub data, resumes, DOT apps, MVR records |
 | `useUIStore` | currentPage, modals, tabs, journey state |
+| `useHubBlocksStore` | installed blocks, block picker state |
+| `useDotApplicationStore` | DOT form data, submission state, prefill |
 
 ### Rules
 
@@ -69,20 +113,12 @@ All state lives in Zustand stores. No `useState` for shared or feature-level dat
 - **`useState` is OK for:** local UI toggles, animation state, uncontrolled input refs.
 - **Stores own their own loading/error state.** Don't pass `isLoading` as props.
 
-```tsx
-// ❌ BAD — local state for shared data
-const [userRole, setUserRole] = useState(null)
-
-// ✅ GOOD — from store
-const { userRole } = useAuthStore()
-```
-
 ---
 
 ## File Size Limits
 
 | File type | Soft limit | Hard limit |
-|-----------|-----------|------------|
+|---|---|---|
 | `page.tsx` | 300 lines | 500 lines |
 | Feature component | 300 lines | 600 lines |
 | Shell component | 150 lines | 300 lines |
@@ -94,8 +130,15 @@ If a file approaches its hard limit, split it.
 
 ## Adding a New Feature
 
-1. Create `src/components/app/[FeatureName]Flow.tsx` (or `src/components/[FeatureName].tsx`)
-2. Feature reads/writes its own Zustand store (or an existing one if appropriate)
-3. Shell (`DriverShell`, `EmployerShell`, etc.) adds one `if (currentPage === 'x') return <Feature />`
-4. Register the new page in `src/stores/types.ts` → `PageType`
-5. Wrap the new feature in `<ErrorBoundary section="Feature Name">` inside the shell
+### Candidate feature (most common)
+
+1. Follow the block development checklist in `.cursor/rules/block-development.mdc`
+2. Create block component in `src/components/blocks/[BlockName]Block.tsx`
+3. Register in block registry, wire in `CandidateShell`, add data tables if needed
+
+### Employer feature
+
+1. Create `src/components/employer/[FeatureName].tsx`
+2. Add routing case in `EmployerShell`
+3. Register page in `src/stores/types.ts` → `PageType`
+4. Wrap in `<ErrorBoundary section="Feature Name">`

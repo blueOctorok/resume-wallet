@@ -247,10 +247,21 @@ export default function CareerCard({
     }
   }
 
+  // Neumorphic shadow works by having both a dark shadow (bottom-right)
+  // and a light shadow (top-left), creating the illusion of depth.
+  // Dark mode flips to near-black / mid-gray to match the darker base color.
+  const cardShadow =
+    theme === 'dark'
+      ? '20px 20px 60px #0d1117, -20px -20px 60px #374151'
+      : '20px 20px 60px #bebebe, -20px -20px 60px #ffffff'
+
   return (
-    <div className="space-y-6">
+    <div
+      className={`rounded-[2.5rem] p-6 space-y-6 ${theme === 'dark' ? 'bg-gray-800' : 'bg-[#e0e0e0]'}`}
+      style={{ boxShadow: cardShadow }}
+    >
       {/* Profile Score Banner */}
-      <div className={`p-4 rounded-xl ${theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
+      <div className={`p-4 rounded-xl ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-white/40'}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <TrendingUp className={`w-5 h-5 ${
@@ -669,7 +680,7 @@ export default function CareerCard({
 
       {/* Footer */}
       {(footerActions || profile?.share_token) && (
-        <div className={`pt-6 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+        <div className={`pt-6 border-t ${theme === 'dark' ? 'border-gray-600' : 'border-gray-300/60'}`}>
           <div className="flex flex-wrap gap-3">
             {profile?.share_token && (
               <a

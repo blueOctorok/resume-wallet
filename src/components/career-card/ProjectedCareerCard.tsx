@@ -28,6 +28,8 @@ interface ProjectedCareerCardProps {
   onAddBlock?: () => void
   /** Connect action (public mode) */
   onConnect?: () => void
+  /** Used by DotAppSection to fetch the full DOT preview (self mode only) */
+  walletAddress?: string
 }
 
 /**
@@ -43,24 +45,32 @@ export default function ProjectedCareerCard({
   onNavigateToBlock,
   onAddBlock,
   onConnect,
+  walletAddress,
 }: ProjectedCareerCardProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
 
-  const cardClass = cn(
-    'rounded-2xl border overflow-hidden',
-    isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white/70 border-gray-200'
-  )
+  // Neumorphic shadow: dark shadow (bottom-right) + light shadow (top-left)
+  // creates a "raised from the surface" 3D illusion via pure CSS.
+  const cardShadow = isDark
+    ? '20px 20px 60px #0d1117, -20px -20px 60px #374151'
+    : '20px 20px 60px #bebebe, -20px -20px 60px #ffffff'
 
   return (
-    <div className='max-w-2xl mx-auto space-y-4'>
+    <div
+      className={cn(
+        'max-w-2xl mx-auto rounded-[2.5rem] overflow-hidden',
+        isDark ? 'bg-gray-800' : 'bg-[#e0e0e0]'
+      )}
+      style={{ boxShadow: cardShadow }}
+    >
       {/* ── Profile Header ── */}
-      <div className={cardClass}>
+      <div>
         <div className={cn(
           'h-20',
           isDark
-            ? 'bg-gradient-to-r from-teal-900/40 to-gray-800'
-            : 'bg-gradient-to-r from-teal-50 to-gray-50'
+            ? 'bg-gradient-to-r from-teal-900/40 to-gray-700'
+            : 'bg-gradient-to-r from-teal-100 to-gray-200'
         )} />
         <div className='px-6 pb-5 -mt-10'>
           <div className='flex items-end gap-4'>
@@ -124,7 +134,7 @@ export default function ProjectedCareerCard({
 
           {/* Professional summary */}
           {data.professionalSummary && (
-            <p className={cn('text-sm mt-4 leading-relaxed', isDark ? 'text-gray-300' : 'text-gray-600')}>
+            <p className={cn('text-sm mt-4 leading-relaxed', isDark ? 'text-gray-300' : 'text-gray-700')}>
               {data.professionalSummary}
             </p>
           )}
@@ -132,58 +142,62 @@ export default function ProjectedCareerCard({
       </div>
 
       {/* ── Dynamic Sections ── */}
-      {data.sections.map((section) => (
-        <SectionRenderer
-          key={section.blockType}
-          section={section}
-          mode={mode}
-          isDark={isDark}
-          onAction={mode === 'self' && onNavigateToBlock
-            ? () => onNavigateToBlock(section.blockType)
-            : undefined
-          }
-        />
-      ))}
+      <div className='px-6 pb-6 space-y-5'>
+        {data.sections.map((section) => (
+          <SectionRenderer
+            key={section.blockType}
+            section={section}
+            mode={mode}
+            isDark={isDark}
+            userId={data.userId}
+            walletAddress={walletAddress}
+            onAction={mode === 'self' && onNavigateToBlock
+              ? () => onNavigateToBlock(section.blockType)
+              : undefined
+            }
+          />
+        ))}
 
-      {/* ── Empty state for self mode ── */}
-      {mode === 'self' && data.sections.length === 0 && (
-        <div className={cn(
-          'rounded-2xl border-2 border-dashed p-8 text-center',
-          isDark ? 'border-gray-700' : 'border-gray-300'
-        )}>
-          <p className={cn('text-sm mb-2', isDark ? 'text-gray-400' : 'text-gray-500')}>
-            Your career card is empty
-          </p>
-          <p className={cn('text-xs mb-4', isDark ? 'text-gray-500' : 'text-gray-400')}>
-            Add blocks to your hub to build your professional profile
-          </p>
-          {onAddBlock && (
+        {/* ── Empty state for self mode ── */}
+        {mode === 'self' && data.sections.length === 0 && (
+          <div className={cn(
+            'rounded-xl border-2 border-dashed p-8 text-center',
+            isDark ? 'border-gray-600' : 'border-gray-400/50'
+          )}>
+            <p className={cn('text-sm mb-2', isDark ? 'text-gray-400' : 'text-gray-600')}>
+              Your career card is empty
+            </p>
+            <p className={cn('text-xs mb-4', isDark ? 'text-gray-500' : 'text-gray-500')}>
+              Add blocks to your hub to build your professional profile
+            </p>
+            {onAddBlock && (
+              <button
+                onClick={onAddBlock}
+                className={cn(
+                  'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                  isDark
+                    ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30'
+                    : 'bg-teal-100 text-teal-700 hover:bg-teal-200'
+                )}
+              >
+                <Plus className='w-4 h-4' /> Add Blocks
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ── Connect CTA (public mode) ── */}
+        {mode === 'public' && data.settings.allowConnect && onConnect && (
+          <div className='pt-4 text-center'>
             <button
-              onClick={onAddBlock}
-              className={cn(
-                'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                isDark
-                  ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30'
-                  : 'bg-teal-50 text-teal-600 hover:bg-teal-100'
-              )}
+              onClick={onConnect}
+              className='px-6 py-2.5 rounded-xl bg-teal-500 text-white text-sm font-semibold hover:bg-teal-600 transition-colors'
             >
-              <Plus className='w-4 h-4' /> Add Blocks
+              Connect with {data.name.split(' ')[0]}
             </button>
-          )}
-        </div>
-      )}
-
-      {/* ── Connect CTA (public mode) ── */}
-      {mode === 'public' && data.settings.allowConnect && onConnect && (
-        <div className={cn(cardClass, 'p-5 text-center')}>
-          <button
-            onClick={onConnect}
-            className='px-6 py-2.5 rounded-xl bg-teal-500 text-white text-sm font-semibold hover:bg-teal-600 transition-colors'
-          >
-            Connect with {data.name.split(' ')[0]}
-          </button>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -195,18 +209,31 @@ function SectionRenderer({
   mode,
   isDark,
   onAction,
+  userId,
+  walletAddress,
 }: {
   section: CareerCardSection
   mode: CareerCardMode
   isDark: boolean
   onAction?: () => void
+  userId?: string
+  walletAddress?: string
 }) {
   switch (section.blockType as SectionBlockType) {
     case 'driver-resume':
     case 'developer-resume':
       return <ResumeSection data={section.data as ResumeData} mode={mode} isDark={isDark} onAction={onAction} />
     case 'driver-dot-application':
-      return <DotAppSection data={section.data as DotAppData} mode={mode} isDark={isDark} onAction={onAction} />
+      return (
+        <DotAppSection
+          data={section.data as DotAppData}
+          mode={mode}
+          isDark={isDark}
+          onAction={onAction}
+          userId={userId}
+          walletAddress={walletAddress}
+        />
+      )
     case 'driver-mvr':
       return <MvrSection data={section.data as MvrData} mode={mode} isDark={isDark} onAction={onAction} />
     case 'driver-cdl-credentials':
