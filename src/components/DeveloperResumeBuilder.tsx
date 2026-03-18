@@ -23,6 +23,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import BackToHubButton from '@/components/ui/BackToHubButton'
+import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 
 // ============================================================
 // TYPES
@@ -386,6 +387,7 @@ export default function DeveloperResumeBuilder({
         if (onSave && result.resumeId) {
           onSave(result.resumeId)
         }
+        void syncDriverHubFromApi(userAddress)
       } else {
         setSaveMessage({
           type: 'error',

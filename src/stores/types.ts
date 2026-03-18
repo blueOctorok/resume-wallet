@@ -71,6 +71,7 @@ export interface ResumeData {
   fileSize: number | null
   resumeType: string
   isPaid: boolean
+  sourceRole?: 'driver' | 'developer'
 }
 
 export interface DotApplicationRecord {
@@ -96,6 +97,8 @@ export interface MvrRecord {
   licenseStatus: string | null
   totalPoints: number | null
   violationCount: number | null
+  /** Present when hub API merged an MVR result row */
+  hasResult?: boolean
 }
 
 export interface JobApplication {

@@ -105,9 +105,9 @@ export async function GET(request: NextRequest) {
       // 10. Driver resumes only
       supabase
         .from('resumes')
-        .select('id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, created_at, file_size, resume_type, source_role, is_paid')
+        .select('id, title, filename, ipfs_hash, structured_data, verification_status, blockchain_tx_hash, created_at, file_size, resume_type, source_role, is_paid')
         .eq('user_id', user.id)
-        .eq('source_role', 'driver')
+        .in('source_role', ['driver', 'developer'])
         .order('created_at', { ascending: false }),
 
       // 11. All DOT applications (include application_data to extract applicant name)
@@ -197,6 +197,8 @@ export async function GET(request: NextRequest) {
       title: resume.title,
       filename: resume.filename,
       ipfsHash: resume.ipfs_hash,
+      structuredData: resume.structured_data ?? null,
+      sourceRole: resume.source_role as 'driver' | 'developer',
       verificationStatus: resume.verification_status || 'PENDING',
       blockchainTxHash: resume.blockchain_tx_hash,
       createdAt: resume.created_at,
@@ -364,6 +366,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       isNewUser: false,
+      /** Supabase user id — needed for My Files DOT preview (self dot-app API path). */
+      userId: user.id,
       profile,
       displayNameFallback, // Use when profile first/last missing (e.g. from submitted app)
       resumes,

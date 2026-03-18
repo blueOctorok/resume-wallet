@@ -4,6 +4,7 @@ import { useAuthStore } from './auth-store'
 import { useDriverHubStore } from './driver-hub-store'
 import { useHubBlocksStore } from './hub-blocks-store'
 import { useDotApplicationStore } from './dot-application-store'
+import type { MvrRecord, ResumeData } from './types'
 import {
   type JourneyProgress,
   type BlockProgressData,
@@ -83,7 +84,7 @@ export function useJourneyProgress(): JourneyProgress {
   // the employer branch doesn't use them.
   const installedBlocks = useHubBlocksStore((s) => s.installedBlocks)
   const hubStore = useDriverHubStore()
-  const { isApplicationCompleted } = useDotApplicationStore()
+  const { isApplicationCompleted, currentForm } = useDotApplicationStore()
 
   // Employer journey stays role-based (they have EmployerBlockGrid, not the composable hub)
   if (userRole === 'employer') {
@@ -104,15 +105,36 @@ export function useJourneyProgress(): JourneyProgress {
     (app) => app.blockchainTxHash != null
   )
 
+  const dotCompleteFromHub =
+    hubStore.dotApplications.some((app) => app.isComplete) ||
+    (hubStore.stats?.completedDotApps ?? 0) > 0
+  const dotDone = dotCompleteFromHub || isApplicationCompleted
+
+  const mvrTerminal = (m: MvrRecord) =>
+    m.orderStatus === 'completed' ||
+    m.orderStatus === 'needs_review' ||
+    Boolean(m.hasResult)
+
+  const resumes = hubStore.resumes as ResumeData[]
+  const hasDriverResume = resumes.some((r) => r.sourceRole !== 'developer')
+  const hasDeveloperResume = resumes.some((r) => r.sourceRole === 'developer')
+
   const data: BlockProgressData = {
     isWalletConnected,
     profileCompleteness: hubStore.stats?.profileCompleteness ?? 0,
-    hasResume: hubStore.hasResume || hubStore.resumes.length > 0,
-    resumeCount: hubStore.resumes.length,
-    dotAppComplete: isApplicationCompleted || (hubStore.stats?.completedDotApps ? hubStore.stats.completedDotApps > 0 : false),
+    hasResume: resumes.length > 0,
+    hasDriverResume,
+    hasDeveloperResume,
+    resumeCount: resumes.length,
+    dotAppComplete: dotDone,
     dotAppVerified: hasVerifiedDotApp || (hubStore.stats?.verifiedDotApps ? hubStore.stats.verifiedDotApps > 0 : false),
-    dotAppInProgress: hubStore.stats?.inProgressDotApps ? hubStore.stats.inProgressDotApps > 0 : false,
-    hasMvrRecord: hubStore.mvrRecords.length > 0,
+    dotAppInProgress:
+      !dotDone &&
+      (hubStore.dotApplications.some((app) => app.isInProgress) ||
+        (hubStore.stats?.inProgressDotApps ?? 0) > 0 ||
+        currentForm > 1),
+    mvrComplete: hubStore.mvrRecords.some(mvrTerminal),
+    hasMvrOrder: hubStore.mvrRecords.length > 0,
     hasAppliedToJobs: hubStore.jobApplications.length > 0,
     jobApplicationCount: hubStore.jobApplications.length,
     hasPortfolioProjects: false,

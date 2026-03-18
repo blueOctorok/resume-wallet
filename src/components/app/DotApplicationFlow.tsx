@@ -406,6 +406,8 @@ export default function DotApplicationFlow({
 
       dotApp.completeApplication()
       setShowEmploymentVerification(false)
+      const { syncDriverHubFromApi } = await import('@/lib/sync-driver-hub-store')
+      void syncDriverHubFromApi(walletAddress)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to submit application'
       console.error('❌ [DOT] Submission failed:', err)

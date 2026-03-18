@@ -39,14 +39,20 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
-    // Fetch the candidate's most recent completed DOT app
-    const { data: app, error } = await supabase
+    const applicationId = request.nextUrl.searchParams.get('applicationId')
+
+    let appQuery = supabase
       .from('driver_applications')
       .select('id, is_complete, current_step, application_data, created_at, updated_at')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+
+    if (applicationId) {
+      appQuery = appQuery.eq('id', applicationId)
+    } else {
+      appQuery = appQuery.order('created_at', { ascending: false }).limit(1)
+    }
+
+    const { data: app, error } = await appQuery.maybeSingle()
 
     if (error) {
       console.error('[DOT APP PREVIEW] Query error:', error)

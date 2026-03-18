@@ -30,13 +30,8 @@ import EmployerShell from '@/components/app/EmployerShell'
 import DeveloperShell from '@/components/app/DeveloperShell'
 import CandidateShell from '@/components/app/CandidateShell'
 import ErrorBoundary from '@/components/app/ErrorBoundary'
-import { JourneyModal, AvaFloatingButton } from '@/components/ui'
+import { JourneyModal } from '@/components/ui'
 import AvaJourneyGuide from '@/components/AvaJourneyGuide'
-
-const WalletInfo = dynamic(
-  () => import('@/components/WalletInfo').then((mod) => mod.default),
-  { ssr: false }
-)
 
 const WalletCard = dynamic(
   () => import('@/components/WalletCard').then((mod) => mod.default),
@@ -329,15 +324,6 @@ const HomeContent = () => {
       <div className='min-h-screen overflow-x-hidden relative'>
         <StormBackground />
 
-        {/* Wallet info — top-left corner (desktop only) */}
-        {walletAddress && user && (
-          <div className='fixed top-4 left-4 z-[60] pointer-events-none'>
-            <div className='pointer-events-auto'>
-              <WalletInfo walletAddress={user.address} onClick={openModal} />
-            </div>
-          </div>
-        )}
-
         {/* Global Navigation */}
         <Navigation
           isAuthenticated={!!user}
@@ -395,13 +381,8 @@ const HomeContent = () => {
           />
         )}
 
-        {/* AvA Journey Guide — global progress tracker (logged-in only) */}
-        {user && (
-          <>
-            <AvaFloatingButton />
-            <AvaJourneyGuide />
-          </>
-        )}
+        {/* AvA Journey Guide — open from hub / nav; no floating launcher (keeps canvas clear) */}
+        {user && <AvaJourneyGuide />}
 
         {/* Journey Modal — guided "what's next" prompts after key actions */}
         <JourneyModal />

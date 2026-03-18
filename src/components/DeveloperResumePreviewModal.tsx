@@ -23,6 +23,7 @@ import {
 import Modal from '@/components/ui/Modal'
 import type { DeveloperResumeData } from './DeveloperResumeBuilder'
 import { generateDeveloperResumePDF } from '@/lib/developer-resume-pdf'
+import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 
 interface DeveloperResumePreviewModalProps {
   resume: {
@@ -39,6 +40,8 @@ interface DeveloperResumePreviewModalProps {
   onVerify: () => void
   onDelete: () => void
   userAddress: string
+  /** My Files / career card: preview only — row has Edit, Verify, Delete */
+  viewOnly?: boolean
 }
 
 export default function DeveloperResumePreviewModal({
@@ -48,6 +51,7 @@ export default function DeveloperResumePreviewModal({
   onVerify,
   onDelete,
   userAddress,
+  viewOnly = false,
 }: DeveloperResumePreviewModalProps) {
   const { theme } = useTheme()
   const [isDownloading, setIsDownloading] = useState(false)
@@ -91,6 +95,7 @@ export default function DeveloperResumePreviewModal({
 
       if (res.ok) {
         onVerify()
+        void syncDriverHubFromApi(userAddress)
       }
     } catch (error) {
       console.error('Verify error:', error)
@@ -109,6 +114,7 @@ export default function DeveloperResumePreviewModal({
 
       if (res.ok) {
         onDelete()
+        void syncDriverHubFromApi(userAddress)
       }
     } catch (error) {
       console.error('Delete error:', error)
@@ -158,7 +164,7 @@ export default function DeveloperResumePreviewModal({
           </button>
         </div>
 
-        {/* Actions */}
+        {/* Actions — full toolbar unless viewOnly (My Files row owns Edit / Verify / Delete) */}
         <div
           className={`flex flex-wrap gap-2 p-4 border-b ${
             theme === 'dark' ? 'border-gray-800' : 'border-gray-200'
@@ -177,40 +183,44 @@ export default function DeveloperResumePreviewModal({
             Download PDF
           </button>
 
-          <button
-            onClick={onEdit}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${
-              theme === 'dark'
-                ? 'bg-gray-800 text-white hover:bg-gray-700'
-                : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
-            }`}
-          >
-            <Edit className='w-4 h-4' />
-            Edit
-          </button>
+          {!viewOnly && (
+            <>
+              <button
+                onClick={onEdit}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${
+                  theme === 'dark'
+                    ? 'bg-gray-800 text-white hover:bg-gray-700'
+                    : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+                }`}
+              >
+                <Edit className='w-4 h-4' />
+                Edit
+              </button>
 
-          {!isVerified && (
-            <button
-              onClick={handleVerify}
-              disabled={isVerifying}
-              className='flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-500 disabled:opacity-50'
-            >
-              {isVerifying ? (
-                <Loader2 className='w-4 h-4 animate-spin' />
-              ) : (
-                <Shield className='w-4 h-4' />
+              {!isVerified && (
+                <button
+                  onClick={handleVerify}
+                  disabled={isVerifying}
+                  className='flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-500 disabled:opacity-50'
+                >
+                  {isVerifying ? (
+                    <Loader2 className='w-4 h-4 animate-spin' />
+                  ) : (
+                    <Shield className='w-4 h-4' />
+                  )}
+                  Verify on Blockchain
+                </button>
               )}
-              Verify on Blockchain
-            </button>
-          )}
 
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className='flex items-center gap-2 px-4 py-2 bg-red-600/20 text-red-400 rounded-lg font-medium hover:bg-red-600/30 ml-auto'
-          >
-            <Trash2 className='w-4 h-4' />
-            Delete
-          </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className='flex items-center gap-2 px-4 py-2 bg-red-600/20 text-red-400 rounded-lg font-medium hover:bg-red-600/30 ml-auto'
+              >
+                <Trash2 className='w-4 h-4' />
+                Delete
+              </button>
+            </>
+          )}
         </div>
 
         {/* Content */}

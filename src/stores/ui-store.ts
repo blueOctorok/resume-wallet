@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import type { PageType } from './types'
 import type { DriverJourneyState, JourneyStatus, ResumeUploadEvent } from '@/types/assistant'
+import { useAuthStore } from './auth-store'
+import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 
 /**
  * UI Store - Manages UI state and navigation
@@ -233,6 +235,11 @@ export const useUIStore = create<UIState & UIActions>()(
       set({ resumeUploadEvent: event })
       if (event.type === 'analysis_ready' && event.data?.ipfsHash) {
         set({ latestResumeIpfsHash: event.data.ipfsHash })
+      }
+      // AvA journey reads driver-hub-store — refresh after upload pipeline milestones
+      if (event.type === 'upload_complete' || event.type === 'blockchain_complete') {
+        const wa = useAuthStore.getState().walletAddress
+        if (wa) void syncDriverHubFromApi(wa)
       }
       // Auto-clear event after brief delay (for event-driven consumers)
       setTimeout(() => set({ resumeUploadEvent: null }), 100)

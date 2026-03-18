@@ -10,6 +10,8 @@ import {
 } from 'lucide-react'
 import { uploadToIPFS } from '@/lib/ipfs'
 import { createAuthToken } from '@/lib/base-auth-middleware'
+import { useAuthStore } from '@/stores'
+import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 
 interface ResumeUploadProps {
   user?: {
@@ -21,6 +23,7 @@ interface ResumeUploadProps {
 }
 
 export default function ResumeUpload({ user }: ResumeUploadProps) {
+  const walletAddress = useAuthStore((s) => s.walletAddress)
   const [file, setFile] = useState<File | null>(null)
   const [title, setTitle] = useState('')
   const [isPublic, setIsPublic] = useState(false)
@@ -112,6 +115,8 @@ export default function ResumeUpload({ user }: ResumeUploadProps) {
 
       const savedResume = await response.json()
       console.log('Resume saved to database:', savedResume)
+      const wa = walletAddress || user.address
+      if (wa) void syncDriverHubFromApi(wa)
       return savedResume
     } catch (error) {
       console.error('Error saving to database:', error)

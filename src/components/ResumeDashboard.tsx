@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useAuthStore } from '@/stores'
+import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 import Modal from './ui/Modal'
 import { 
   Trash2, 
@@ -93,6 +95,7 @@ export default function ResumeDashboard({
   onVerifyResume,
 }: ResumeDashboardProps) {
   const { theme } = useTheme()
+  const walletAddress = useAuthStore((s) => s.walletAddress)
   const [resumes, setResumes] = useState<ResumeRecord[]>([])
   const [selectedResume, setSelectedResume] = useState<ResumeRecord | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -219,6 +222,8 @@ export default function ResumeDashboard({
       
       // Refresh the list
       fetchResumes(user.address)
+      const wa = walletAddress || user.address
+      if (wa) void syncDriverHubFromApi(wa)
     } catch (err) {
       setActionMessage({ 
         type: 'error', 
@@ -427,6 +432,8 @@ export default function ResumeDashboard({
         
         // Refresh the list to show updated status
         fetchResumes(user.address)
+        const wa = walletAddress || user.address
+        if (wa) void syncDriverHubFromApi(wa)
       } catch (err) {
         setActionMessage({ 
           type: 'error', 

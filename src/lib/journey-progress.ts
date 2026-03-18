@@ -56,12 +56,18 @@ export interface JourneyProgress {
 export interface BlockProgressData {
   isWalletConnected: boolean
   profileCompleteness: number
+  /** Any resume (driver or developer) */
   hasResume: boolean
+  hasDriverResume: boolean
+  hasDeveloperResume: boolean
   resumeCount: number
   dotAppComplete: boolean
   dotAppVerified: boolean
   dotAppInProgress: boolean
-  hasMvrRecord: boolean
+  /** MVR order finished (result ready / review) */
+  mvrComplete: boolean
+  /** User placed an MVR order (may still be processing) */
+  hasMvrOrder: boolean
   hasAppliedToJobs: boolean
   jobApplicationCount: number
   hasPortfolioProjects: boolean
@@ -88,10 +94,10 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
       id: 'driver-resume',
       label: 'Upload Your Resume',
       description: 'Build or upload a professional resume',
-      status: d.hasResume ? 'complete' : 'pending',
-      action: !d.hasResume ? { label: 'Create Resume', target: 'resume' } : undefined,
+      status: d.hasDriverResume ? 'complete' : 'pending',
+      action: !d.hasDriverResume ? { label: 'Create Resume', target: 'resume' } : undefined,
     }],
-    nextAction: (d) => !d.hasResume ? {
+    nextAction: (d) => !d.hasDriverResume ? {
       label: 'Create Your Resume',
       description: 'Stand out to employers with a professional resume',
       target: 'resume',
@@ -104,10 +110,10 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
       id: 'developer-resume',
       label: 'Build Your Resume',
       description: 'Create a developer-focused resume',
-      status: d.hasResume ? 'complete' : 'pending',
-      action: !d.hasResume ? { label: 'Build Resume', target: 'resume' } : undefined,
+      status: d.hasDeveloperResume ? 'complete' : 'pending',
+      action: !d.hasDeveloperResume ? { label: 'Build Resume', target: 'resume' } : undefined,
     }],
-    nextAction: (d) => !d.hasResume ? {
+    nextAction: (d) => !d.hasDeveloperResume ? {
       label: 'Build Your Resume',
       description: 'Showcase your experience to hiring managers',
       target: 'resume',
@@ -116,28 +122,33 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
   },
 
   'driver-dot-application': {
-    resolve: (d) => [{
-      id: 'driver-dot-application',
-      label: 'DOT Application',
-      description: 'Complete and verify your DOT compliance application',
-      status: d.dotAppVerified
-        ? 'complete'
-        : (d.dotAppComplete || d.dotAppInProgress) ? 'in_progress' : 'pending',
-      action: !d.dotAppVerified
-        ? {
-            label: d.dotAppComplete
-              ? 'Verify on Blockchain'
-              : d.dotAppInProgress ? 'Continue Application' : 'Start Application',
-            target: 'dotapp',
-          }
-        : undefined,
-    }],
-    nextAction: (d) => !d.dotAppVerified ? {
-      label: d.dotAppInProgress ? 'Finish DOT Application' : 'Start DOT Application',
-      description: 'Complete your DOT compliance application',
-      target: 'dotapp',
-      priority: 'high',
-    } : null,
+    resolve: (d) => {
+      // Form submitted (DB is_complete) counts as done; on-chain verify is optional follow-up
+      const done = d.dotAppComplete || d.dotAppVerified
+      return [{
+        id: 'driver-dot-application',
+        label: 'DOT Application',
+        description: 'Complete your DOT compliance application',
+        status: done ? 'complete' : d.dotAppInProgress ? 'in_progress' : 'pending',
+        action: !done
+          ? {
+              label: d.dotAppInProgress ? 'Continue Application' : 'Start Application',
+              target: 'dotapp',
+            }
+          : d.dotAppComplete && !d.dotAppVerified
+            ? { label: 'Verify on Blockchain (optional)', target: 'dotapp' }
+            : undefined,
+      }]
+    },
+    nextAction: (d) => {
+      if (d.dotAppComplete || d.dotAppVerified) return null
+      return {
+        label: d.dotAppInProgress ? 'Finish DOT Application' : 'Start DOT Application',
+        description: 'Complete your DOT compliance application',
+        target: 'dotapp',
+        priority: 'high',
+      }
+    },
   },
 
   'driver-mvr': {
@@ -145,16 +156,21 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
       id: 'driver-mvr',
       label: 'Motor Vehicle Record',
       description: 'Order your MVR for employer verification',
-      status: d.hasMvrRecord ? 'complete' : 'pending',
-      action: !d.hasMvrRecord ? { label: 'Order MVR', target: 'mvr' } : undefined,
+      status: d.mvrComplete ? 'complete' : d.hasMvrOrder ? 'in_progress' : 'pending',
+      action: !d.mvrComplete
+        ? { label: d.hasMvrOrder ? 'View MVR status' : 'Order MVR', target: 'mvr' }
+        : undefined,
       isOptional: true,
     }],
-    nextAction: (d) => !d.hasMvrRecord ? {
-      label: 'Order MVR',
-      description: 'Add your driving record to boost your profile',
-      target: 'mvr',
-      priority: 'medium',
-    } : null,
+    nextAction: (d) => {
+      if (d.mvrComplete || d.hasMvrOrder) return null
+      return {
+        label: 'Order MVR',
+        description: 'Add your driving record to boost your profile',
+        target: 'mvr',
+        priority: 'medium',
+      }
+    },
   },
 
   'driver-cdl-credentials': {

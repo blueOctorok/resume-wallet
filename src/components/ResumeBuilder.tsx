@@ -22,6 +22,8 @@ import {
   Loader2
 } from 'lucide-react'
 import BackToHubButton from '@/components/ui/BackToHubButton'
+import { useAuthStore } from '@/stores'
+import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 import { profileToResumeBuilder, resumeBuilderToProfile } from '@/lib/profile-mapper'
 import { PhoneInput } from '@/components/ui/MaskedInputs'
 import type { UnifiedDriverProfile } from '@/types/driver-profile'
@@ -132,6 +134,7 @@ export default function ResumeBuilder({
   existingResumeId,
 }: ResumeBuilderProps) {
   const { theme } = useTheme()
+  const walletAddress = useAuthStore((s) => s.walletAddress)
   const [currentStep, setCurrentStep] = useState(0)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -140,6 +143,12 @@ export default function ResumeBuilder({
   // Track resume ID internally - starts with prop value, updated after first save
   // This prevents duplicate resumes when exporting/saving multiple times
   const [internalResumeId, setInternalResumeId] = useState<string | undefined>(existingResumeId)
+  /** True when user opened Edit on a PDF upload — form was prefilled from profile, not from file text */
+  const [isUploadedResumeFallback, setIsUploadedResumeFallback] = useState(false)
+
+  useEffect(() => {
+    setInternalResumeId(existingResumeId)
+  }, [existingResumeId])
 
   // Form state
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
@@ -388,38 +397,84 @@ export default function ResumeBuilder({
   // Profile prefill only runs when creating a brand new resume.
   useEffect(() => {
     const loadData = async () => {
-      if (!user?.address) return
+      // Alchemy `user.address` is sometimes unset before wallet store is ready — header must match session
+      const wallet = (user?.address || walletAddress || '').trim()
+      if (!wallet) return
 
       try {
         // ── Editing an existing resume ──────────────────────────────────────
         if (existingResumeId) {
-          console.log('📄 [RESUME BUILDER] Loading existing resume:', existingResumeId)
           const response = await fetch(`/api/resumes/${existingResumeId}`, {
-            headers: { 'x-wallet-address': user.address },
+            headers: { 'x-wallet-address': wallet },
           })
 
           if (response.ok) {
             const data = await response.json()
-            if (data.structured_data) {
-              const sd = data.structured_data
-              if (sd.personalInfo) setPersonalInfo(sd.personalInfo)
-              if (sd.cdlInfo) setCDLInfo(sd.cdlInfo)
-              if (sd.employments) setEmployments(sd.employments)
-              if (sd.educations) setEducations(sd.educations)
-              if (sd.skills) setSkills(sd.skills)
-              if (sd.references) setReferences(sd.references)
+            const sd = data.structured_data as Record<string, unknown> | null | undefined
+            const hasBuiltData =
+              sd &&
+              typeof sd === 'object' &&
+              Boolean(
+                (sd.personalInfo as PersonalInfo | undefined)?.firstName ||
+                  (sd.personalInfo as PersonalInfo | undefined)?.lastName ||
+                  (sd.personalInfo as PersonalInfo | undefined)?.email ||
+                  (sd.cdlInfo as CDLInfo | undefined)?.cdlNumber ||
+                  ((sd.employments as Employment[] | undefined)?.length ?? 0) > 0 ||
+                  ((sd.educations as Education[] | undefined)?.length ?? 0) > 0 ||
+                  ((sd.skills as Skill[] | undefined)?.length ?? 0) > 0 ||
+                  ((sd.references as Reference[] | undefined)?.length ?? 0) > 0,
+              )
+
+            if (hasBuiltData && sd) {
+              if (sd.personalInfo) setPersonalInfo((p) => ({ ...p, ...(sd.personalInfo as PersonalInfo) }))
+              if (sd.cdlInfo) setCDLInfo((c) => ({ ...c, ...(sd.cdlInfo as CDLInfo) }))
+              if (sd.employments) setEmployments(sd.employments as Employment[])
+              if (sd.educations) setEducations(sd.educations as Education[])
+              if (sd.skills) setSkills(sd.skills as Skill[])
+              if (sd.references) setReferences(sd.references as Reference[])
+              setInternalResumeId(existingResumeId)
+              setIsUploadedResumeFallback(false)
               setProfileLoaded(true)
               setProfileSource('resume')
-              console.log('✅ [RESUME BUILDER] Loaded from existing resume')
+              return
             }
+
+            // PDF/upload resume: no structured_data — prefill from hub profile/CDL so Edit isn’t a blank form
+            setIsUploadedResumeFallback(
+              data.resume_type === 'uploaded' || data.resume_type === 'UPLOADED' || !hasBuiltData,
+            )
+            const profileResponse = await fetch('/api/driver/profile', {
+              headers: { 'x-wallet-address': wallet },
+            })
+            if (profileResponse.ok) {
+              const { profile } = await profileResponse.json()
+              const prof = profile as UnifiedDriverProfile
+              const hasProfileData =
+                prof &&
+                (prof.firstName ||
+                  prof.lastName ||
+                  prof.cdlNumber ||
+                  (prof.employmentHistory?.length ?? 0) > 0)
+              if (hasProfileData) {
+                const resumeData = profileToResumeBuilder(prof)
+                setPersonalInfo(resumeData.personalInfo)
+                setCDLInfo(resumeData.cdlInfo)
+                setEmployments(resumeData.employments)
+                setEducations(resumeData.educations)
+                setSkills(resumeData.skills)
+                setReferences(resumeData.references)
+              }
+            }
+            setInternalResumeId(existingResumeId)
+            setProfileLoaded(true)
+            setProfileSource('profile')
           }
-          return // Never overwrite existing resume data with profile data
+          return
         }
 
         // ── New resume — prefill from unified profile if available ──────────
-        console.log('📦 [RESUME BUILDER] New resume — fetching profile for prefill...')
         const profileResponse = await fetch('/api/driver/profile', {
-          headers: { 'x-wallet-address': user.address },
+          headers: { 'x-wallet-address': wallet },
         })
 
         if (profileResponse.ok) {
@@ -448,7 +503,7 @@ export default function ResumeBuilder({
     }
 
     loadData()
-  }, [existingResumeId, user?.address])
+  }, [existingResumeId, user?.address, walletAddress])
 
   const handleSave = async () => {
     if (!user?.address) {
@@ -533,7 +588,9 @@ export default function ResumeBuilder({
 
       setSaveSuccess(true)
       onSave?.(result.resumeId)
-      
+      const wa = (walletAddress || user?.address || '').trim()
+      if (wa) void syncDriverHubFromApi(wa)
+
       // Mark data as saved (no longer dirty)
       lastSavedRef.current = JSON.stringify({ personalInfo, cdlInfo, employments, educations, skills, references })
       setHasUnsavedChanges(false)
@@ -614,6 +671,21 @@ export default function ResumeBuilder({
               onClick={handleBack}
               label={onBack ? 'Back to Hub' : 'Back'}
             />
+
+            {isUploadedResumeFallback && (
+              <p
+                className={`w-full mt-2 text-xs rounded-lg px-3 py-2 ${
+                  theme === 'dark'
+                    ? 'bg-amber-500/10 text-amber-100 border border-amber-500/25'
+                    : 'bg-amber-50 text-amber-950 border border-amber-200'
+                }`}
+              >
+                <strong>Uploaded file resume:</strong> View shows your PDF. This form is filled from your{' '}
+                <strong>profile & hub blocks</strong>, not from the file. Saving stores a <strong>built</strong>{' '}
+                version on this same resume — your PDF link in View stays available until you replace the file
+                from the Resume block.
+              </p>
+            )}
 
             <div className='flex items-center gap-2 flex-wrap'>
               {profileLoaded && profileSource && (

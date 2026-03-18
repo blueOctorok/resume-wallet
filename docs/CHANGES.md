@@ -4,6 +4,63 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Hub AvA section: journey at a glance** (March 2026)
+
+- Candidate hub **AvA** card explains what the journey is, why it matters (Career Card), shows **live step list + progress bar**, and **Ask AvA** opens the chat modal. **AvA mascot:** `public/ava-robot.png` (line robot); light theme uses CSS **invert** so white-on-black art reads on white tile.
+
+---
+
+## **AvA: immediate resume sync + UI cleanup** (March 2026)
+
+- **Journey refresh:** After resume upload (`upload_complete` / `blockchain_complete` via AssistantBridge), simple **ResumeUpload** save, **ResumeBuilder** / **DeveloperResumeBuilder** save, **ResumeDashboard** verify/delete, **CandidateHub** My Files verify/delete, **DeveloperResumePreviewModal** verify/delete — all call **`syncDriverHubFromApi`** so AvA steps update without reloading.
+- **Removed:** Top-left **WalletInfo** chip and bottom-right **AvA floating button** (still open AvA from hub / nav; **Cmd+/** or **Ctrl+/** toggles the guide). Deleted unused **`AvaFloatingButton.tsx`**.
+
+---
+
+## **AvA journey: sync driver hub data for candidates** (March 2026)
+
+- **Cause:** Journey read `useDriverHubStore`, which was only populated from legacy **DriverHub** — candidates using **CandidateShell** had an empty store, so DOT / resume / MVR always looked incomplete.
+- **`syncDriverHubFromApi`** (`src/lib/sync-driver-hub-store.ts`) — `GET /api/driver/hub` → `loadHubData`. Called after **`fetchHubData`** (hub blocks), after **DOT submit**, and after **MVR order** success.
+- **Journey rules:** DOT step **complete** when the application is submitted (`is_complete`), not only on-chain verified; MVR **complete** when order is `completed` / `needs_review` or a result exists (otherwise **in progress** if an order exists); **driver-resume** vs **developer-resume** use `sourceRole` on resume rows (non-developer rows count for driver).
+
+---
+
+## **Resume in-app preview + PDF; DOT PDF; MVR vs chain (docs)** (March 2026)
+
+- **My Files + career card resume (uploaded):** `ResumeFilePreviewModal` — in-app iframe preview + **Open in new tab** / **Download PDF** (same as DOT-style flow).
+- **Built driver resume:** `ResumePreviewModal` **Download PDF** wired via shared `downloadDriverResumePdfFromStructured`.
+- **DOT preview modal:** **Download PDF** — `GET /api/driver-applications/[id]/export-pdf` (owner + wallet), reuses `generateDotApplicationPDF` with `form1|form1Data` etc.
+- **Docs:** `docs/MVR_CHAIN_NOTE.md` — MVR on-chain is a **design/legal nuance** (hash attestation vs full payload), not a blanket “not allowed.”
+
+---
+
+## **My Files + resume edit: driver resume blank form, DOT delete, MVR verify note** (March 2026)
+
+- **Resume Edit blank:** Uploaded PDF resumes have no `structured_data`, so the builder had nothing to load. Now we use **`walletAddress` from auth** if `user.address` is missing (fixes failed fetch), and **prefill from `/api/driver/profile`** when editing a resume without built JSON. Amber banner explains PDF vs built data.
+- **DOT Delete:** Delete stays **disabled** once the app is **on-chain** (API already forbids). My Files now shows a **visible disabled Delete** with tooltip instead of hiding the control.
+- **MVR on-chain verify:** Not implemented (provider-certified MVR). Copy under completed MVR rows explains the difference vs resume/DOT.
+
+---
+
+## **My Files: View | Edit | Verify | Delete** (March 2026)
+
+- **Resume** (driver + developer, filtered by installed resume block): **View** (IPFS tab, driver built → `ResumePreviewModal`, dev built → `DeveloperResumePreviewModal` with `viewOnly` + Download PDF), **Edit** (resume flow), **Verify** only until on-chain (`canVerify`), **Delete**.
+- **DOT**: **View** (preview modal for that application id), **Edit** / **Continue** (form), **Verify** / **Delete** same rules as before.
+- **MVR** (complete): **View** only.
+- **Driver hub** resumes query includes `developer` role + `structured_data`; My Files filters rows by `driver-resume` / `developer-resume` block install.
+- **DOT preview API** — optional `?applicationId=` so My Files matches the correct row when multiple apps exist.
+- **DeveloperResumePreviewModal** — `viewOnly` hides inline Edit/Verify/Delete (My Files row owns those actions).
+
+---
+
+## **My Files: completed DOT app opens preview, not form** (March 2026)
+
+- **`GET /api/driver/hub`** — includes `userId` so the client can call the self-view dot-app preview API.
+- **`DotAppPreviewModal`** — shared modal (fetch + `DotAppPreviewContent`); used by career card `DotAppSection` and My Files.
+- **My Files** — completed DOT rows use `editPage: null` and **View** opens the modal; in-progress still goes to `dotapp`.
+
+---
+
 ## **Career card MVR: View opens report modal** (March 2026)
 
 Same bug class as My Files: **View** called `onNavigateToBlock('driver-mvr')` → `MvrOrderForm`. **View** now opens **`MvrViewModal`** with `data.orderId` (and wallet), matching My Files.

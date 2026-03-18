@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useCallback, useState } from 'react'
-import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink, ChevronLeft, ChevronRight, FileText, ClipboardCheck, Sparkles, Car, RefreshCw } from 'lucide-react'
+import Image from 'next/image'
+import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink, ChevronLeft, ChevronRight, FileText, ClipboardCheck, MessageCircle, Car, RefreshCw, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useAuthStore, useUIStore, useJourneyStore } from '@/stores'
+import { useAuthStore, useUIStore, useJourneyStore, useJourneyProgress } from '@/stores'
 import {
   useHubBlocksStore,
   useInstalledBlocks,
@@ -22,6 +23,13 @@ import CandidateRequestsSection from '@/components/CandidateRequestsSection'
 import HubOnboardingForm from './HubOnboardingForm'
 import BlockPickerModal from './BlockPickerModal'
 import MvrViewModal from '@/components/MvrViewModal'
+import DotAppPreviewModal from '@/components/career-card/DotAppPreviewModal'
+import ResumeFilePreviewModal from '@/components/hub/ResumeFilePreviewModal'
+import { downloadDriverResumePdfFromStructured } from '@/lib/driver-resume-pdf-download'
+import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
+import ResumePreviewModal from '@/components/ResumePreviewModal'
+import DeveloperResumePreviewModal from '@/components/DeveloperResumePreviewModal'
+import type { DeveloperResumeData } from '@/components/DeveloperResumeBuilder'
 import Atropos from 'atropos/react'
 import 'atropos/css'
 
@@ -640,50 +648,162 @@ function HubProfileHeader() {
   )
 }
 
-// ── AvA Banner ───────────────────────────────────────────────────────────────
+// ── AvA + journey (hub) ─────────────────────────────────────────────────────
+// Journey list mirrors AvA modal logic so candidates see status before opening chat.
 
 function AvaBanner() {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const openGuide = useJourneyStore((s) => s.openGuide)
+  const progress = useJourneyProgress()
+  const steps = progress.steps.filter((s) => s.status !== 'skipped')
+  const doneCount = steps.filter((s) => s.status === 'complete').length
 
   return (
     <div className='ava-glow-border'>
-    <div className={cn(
-      'rounded-[14px] p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4',
-      isDark ? 'bg-gray-900' : 'bg-white',
-    )}>
-      <div className='flex items-center gap-3'>
-        <div className={cn(
-          'w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0',
-          isDark ? 'bg-violet-500/20' : 'bg-violet-100'
-        )}>
-          <Sparkles className={cn('w-5 h-5', isDark ? 'text-violet-400' : 'text-violet-600')} />
-        </div>
-        <div>
-          <p className={cn('text-sm font-bold', isDark ? 'text-white' : 'text-gray-900')}>
+      <div
+        className={cn(
+          'rounded-[14px] p-5 flex flex-col gap-4',
+          isDark ? 'bg-gray-900' : 'bg-white',
+        )}
+      >
+        <div className='flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4'>
+          <div className='flex gap-3 min-w-0'>
+            <div
+              className={cn(
+                'w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden',
+                // Asset is white-on-black: dark tile shows it raw; light tile inverts to dark-on-white
+                isDark ? 'bg-zinc-950' : 'bg-white ring-1 ring-gray-200/80',
+              )}
+            >
+              <Image
+                src='/ava-robot.png'
+                alt='AvA'
+                width={40}
+                height={40}
+                className={cn('object-contain size-9', !isDark && 'invert')}
+              />
+            </div>
+            <div className='min-w-0 space-y-2'>
+              <p
+                className={cn('text-sm font-bold', isDark ? 'text-white' : 'text-gray-900')}
+              >
+                AvA &amp; your journey
+              </p>
+              <p
+                className={cn(
+                  'text-xs leading-relaxed',
+                  isDark ? 'text-gray-400' : 'text-gray-600',
+                )}
+              >
+                <span className='font-medium text-gray-500 dark:text-gray-300'>
+                  What it is:
+                </span>{' '}
+                A checklist tied to your blocks and what&apos;s already on file (resume, DOT,
+                MVR, profile). It updates as you complete work.
+              </p>
+              <p
+                className={cn(
+                  'text-xs leading-relaxed',
+                  isDark ? 'text-gray-400' : 'text-gray-600',
+                )}
+              >
+                <span className='font-medium text-gray-500 dark:text-gray-300'>
+                  Why it matters:
+                </span>{' '}
+                A finished journey usually means a stronger{' '}
+                <span className='font-medium'>Career Card</span> for employers. AvA helps you
+                decide what to tackle next—open the chat when you want coaching, not guesswork.
+              </p>
+            </div>
+          </div>
+          <button
+            type='button'
+            onClick={openGuide}
+            className={cn(
+              'flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shrink-0 sm:self-start',
+              isDark
+                ? 'bg-violet-500 text-white hover:bg-violet-400'
+                : 'bg-violet-600 text-white hover:bg-violet-500',
+            )}
+          >
+            <MessageCircle className='w-4 h-4 shrink-0' aria-hidden />
             Ask AvA
-          </p>
-          <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
-            Your AI career guide — get advice on which blocks to build, what employers look for, and your next best move
-          </p>
+          </button>
         </div>
-      </div>
-      <div className='flex-shrink-0'>
-        <button
-          onClick={openGuide}
+
+        <div
           className={cn(
-            'flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap',
-            isDark
-              ? 'bg-violet-500 text-white hover:bg-violet-400'
-              : 'bg-violet-600 text-white hover:bg-violet-500',
+            'rounded-xl border p-4',
+            isDark ? 'border-gray-700/80 bg-gray-800/50' : 'border-gray-200 bg-gray-50',
           )}
         >
-          <Sparkles className='w-3.5 h-3.5' />
-          Ask AvA
-        </button>
+          <div className='flex items-center justify-between gap-2 mb-2'>
+            <span
+              className={cn(
+                'text-[11px] font-semibold uppercase tracking-wide',
+                isDark ? 'text-gray-500' : 'text-gray-500',
+              )}
+            >
+              Journey at a glance
+            </span>
+            <span
+              className={cn('text-xs font-semibold tabular-nums', isDark ? 'text-gray-300' : 'text-gray-700')}
+            >
+              {progress.overallProgress}% · {doneCount}/{steps.length} steps
+            </span>
+          </div>
+          <div
+            className={cn('h-1.5 rounded-full overflow-hidden mb-3', isDark ? 'bg-gray-700' : 'bg-gray-200')}
+          >
+            <div
+              className='h-full rounded-full bg-violet-500 transition-all duration-500'
+              style={{ width: `${progress.overallProgress}%` }}
+            />
+          </div>
+          <ul className='space-y-2 max-h-44 overflow-y-auto pr-1 text-left' aria-label='Journey steps'>
+            {steps.map((step) => (
+              <li key={step.id} className='flex items-start gap-2.5 text-xs'>
+                <span className='mt-0.5 shrink-0' aria-hidden>
+                  {step.status === 'complete' ? (
+                    <Check className='w-3.5 h-3.5 text-green-500' strokeWidth={2.5} />
+                  ) : step.status === 'in_progress' ? (
+                    <span className='flex h-3.5 w-3.5 items-center justify-center'>
+                      <span className='h-2 w-2 rounded-full bg-amber-500' />
+                    </span>
+                  ) : (
+                    <span className='flex h-3.5 w-3.5 items-center justify-center'>
+                      <span
+                        className={cn(
+                          'h-2 w-2 rounded-full border-2',
+                          isDark ? 'border-gray-500' : 'border-gray-400',
+                        )}
+                      />
+                    </span>
+                  )}
+                </span>
+                <span
+                  className={cn(
+                    'leading-snug',
+                    step.status === 'complete' && (isDark ? 'text-gray-500' : 'text-gray-500'),
+                    step.status === 'in_progress' &&
+                      (isDark ? 'text-amber-200 font-medium' : 'text-amber-800 font-medium'),
+                    step.status === 'pending' && (isDark ? 'text-gray-300' : 'text-gray-800'),
+                  )}
+                >
+                  {step.label}
+                  {step.isOptional ? (
+                    <span className={cn('font-normal', isDark ? 'text-gray-500' : 'text-gray-500')}>
+                      {' '}
+                      (optional)
+                    </span>
+                  ) : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
-    </div>
     </div>
   )
 }
@@ -763,24 +883,36 @@ function CareerCardBanner() {
 }
 
 // ── My Files ──────────────────────────────────────────────────────────────────
-// A document vault for all completed files. Click to re-open/edit, delete, or
-// verify on-chain. Appears automatically once any file-producing block is used.
+// Started or completed files: View (read-only), Edit, Verify (until on-chain), Delete.
+
+function myFilesResumeCanView(doc: {
+  type: string
+  ipfsHash?: string | null
+  structuredData?: unknown | null
+}) {
+  if (doc.type !== 'resume') return false
+  const h = doc.ipfsHash
+  const ipfs = Boolean(h && !String(h).startsWith('built_'))
+  const sd = doc.structuredData
+  const built = sd != null && typeof sd === 'object' && Object.keys(sd as object).length > 0
+  return ipfs || built
+}
 
 interface HubDocument {
   id: string
   type: 'resume' | 'dotapp' | 'mvr'
   title: string
   subtitle?: string
-  // "complete" = usable, "in-progress" = still being filled out, "processing" = waiting on external service
+  createdAt?: string
   status: 'complete' | 'in-progress' | 'processing'
   verified: boolean
   txHash: string | null
-  // Verify is enabled for uploaded resumes (real IPFS) or completed DOT apps
   canVerify: boolean
-  // DOT apps that are on-chain cannot be deleted
   canDelete: boolean
-  // Page to navigate to when the user wants to open/edit the document
   editPage: PageType | null
+  ipfsHash?: string | null
+  structuredData?: unknown | null
+  resumeSourceRole?: 'driver' | 'developer'
 }
 
 function MyFilesSection({ refreshKey }: { refreshKey: number }) {
@@ -797,8 +929,19 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
   const [deleting, setDeleting] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  /** Completed MVR: open viewer modal instead of the order form (same pattern as DOT/resume preview). */
+  /** Completed MVR: open viewer modal instead of the order form. */
   const [mvrViewOrderId, setMvrViewOrderId] = useState<string | null>(null)
+  /** Completed DOT app: preview modal (hub returns userId for dot-app API). */
+  const [hubUserId, setHubUserId] = useState<string | null>(null)
+  /** Specific DOT application row for My Files preview (multi-app safe) */
+  const [dotAppPreviewApplicationId, setDotAppPreviewApplicationId] = useState<string | null>(null)
+  const [driverResumePreview, setDriverResumePreview] = useState<{
+    title: string
+    structuredData: Record<string, unknown>
+  } | null>(null)
+  const [devResumePreview, setDevResumePreview] = useState<HubDocument | null>(null)
+  const [resumeFilePreview, setResumeFilePreview] = useState<{ title: string; url: string } | null>(null)
+  const [resumePdfLoading, setResumePdfLoading] = useState(false)
 
   const hasResumeBlock = installedBlocks.some((b) =>
     b.blockType === 'driver-resume' || b.blockType === 'developer-resume'
@@ -819,36 +962,49 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
       if (!response.ok) { setLoading(false); return }
 
       const data = await response.json()
+      if (typeof data.userId === 'string') setHubUserId(data.userId)
       const docs: HubDocument[] = []
+
+      const hasDriverResumeBlock = installedBlocks.some((b) => b.blockType === 'driver-resume')
+      const hasDeveloperResumeBlock = installedBlocks.some((b) => b.blockType === 'developer-resume')
 
       if (hasResumeBlock && data.resumes) {
         for (const resume of data.resumes) {
+          const role = resume.sourceRole as 'driver' | 'developer' | undefined
+          if (role === 'driver' && !hasDriverResumeBlock) continue
+          if (role === 'developer' && !hasDeveloperResumeBlock) continue
+          if (role !== 'driver' && role !== 'developer') continue
           docs.push({
             id: resume.id,
             type: 'resume',
             title: resume.title || 'Resume',
             status: 'complete',
+            createdAt: resume.createdAt,
             verified: !!resume.blockchainTxHash,
             txHash: resume.blockchainTxHash,
-            // All unverified resumes can be sent to chain; endpoint handles IPFS if needed
             canVerify: !resume.blockchainTxHash,
             canDelete: true,
             editPage: 'resume',
+            ipfsHash: resume.ipfsHash ?? null,
+            structuredData: resume.structuredData ?? null,
+            resumeSourceRole: role,
           })
         }
       }
 
       if (hasDotAppBlock && data.dotApplications) {
         for (const app of data.dotApplications) {
+          const complete = !!app.isComplete
           docs.push({
             id: app.id,
             type: 'dotapp',
             title: 'DOT Application',
-            status: app.isComplete ? 'complete' : 'in-progress',
+            status: complete ? 'complete' : 'in-progress',
             verified: !!app.blockchainTxHash,
             txHash: app.blockchainTxHash,
-            canVerify: !!app.isComplete && !app.blockchainTxHash,
+            canVerify: !!complete && !app.blockchainTxHash,
             canDelete: !app.blockchainTxHash,
+            // View = preview modal; Edit = form (same page for completed + in-progress)
             editPage: 'dotapp',
           })
         }
@@ -880,7 +1036,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
     } finally {
       setLoading(false)
     }
-  }, [walletAddress, hasResumeBlock, hasDotAppBlock, hasMvrBlock])
+  }, [walletAddress, hasResumeBlock, hasDotAppBlock, hasMvrBlock, installedBlocks])
 
   // `refreshKey` is incremented externally to trigger a manual re-fetch
   useEffect(() => { fetchDocuments() }, [fetchDocuments, refreshKey])
@@ -911,6 +1067,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
         d.id === doc.id ? { ...d, verified: true, canVerify: false, txHash: txHash || d.txHash } : d
       ))
       setTimeout(() => setMessage(null), 5000)
+      void syncDriverHubFromApi(walletAddress)
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Verification failed' })
     } finally {
@@ -937,6 +1094,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
         throw new Error(data.error || 'Failed to delete')
       }
       setDocuments((prev) => prev.filter((d) => d.id !== doc.id))
+      void syncDriverHubFromApi(walletAddress)
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to delete' })
     } finally {
@@ -1045,68 +1203,142 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                     View transaction →
                   </a>
                 )}
+                {doc.type === 'mvr' && doc.status === 'complete' && (
+                  <p className={cn('text-[10px] mt-1.5 leading-snug', isDark ? 'text-gray-500' : 'text-gray-500')}>
+                    MVR is provider-certified. On-chain options (e.g. hash attestation) are possible later; we avoid
+                    putting full MVR payloads on a public chain for privacy/FCRA reasons.
+                  </p>
+                )}
               </div>
 
-              {/* Actions */}
-              <div className='flex items-center gap-1.5 flex-shrink-0'>
-                {/* Open/view (complete) or continue (in-progress) — hidden while processing */}
-                {(doc.editPage || (doc.type === 'mvr' && doc.status === 'complete')) && doc.status !== 'processing' && (
-                <button
-                  onClick={() => {
-                    if (doc.type === 'mvr' && doc.status === 'complete') {
-                      setMvrViewOrderId(doc.id)
-                      return
-                    }
-                    if (doc.type === 'resume') setEditingResumeId(doc.id)
-                    setCurrentPage(doc.editPage!)
-                  }}
-                  title={doc.status === 'complete' ? 'View' : 'Continue'}
-                  className={cn(
-                    'p-1.5 rounded-lg transition-colors text-xs',
-                    isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300',
-                  )}
-                >
-                  {doc.status === 'complete'
-                    ? <Eye className='w-3.5 h-3.5' />
-                    : <Pencil className='w-3.5 h-3.5' />
-                  }
-                </button>
-                )}
-
-                {/* Verify on-chain */}
-                {doc.canVerify && (
+              {/* Actions: View | Edit | Verify (until on-chain) | Delete */}
+              <div className='flex flex-wrap items-center justify-end gap-1 flex-shrink-0 max-w-[min(100%,14rem)] sm:max-w-none'>
+                {doc.status !== 'processing' && doc.type === 'resume' && myFilesResumeCanView(doc) && (
                   <button
-                    onClick={() => handleVerify(doc)}
-                    disabled={verifying === doc.id}
-                    title='Verify on blockchain'
-                    className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors bg-teal-500 text-white hover:bg-teal-400 disabled:opacity-50 disabled:cursor-not-allowed'
+                    type='button'
+                    onClick={() => {
+                      const ipfs = doc.ipfsHash && !String(doc.ipfsHash).startsWith('built_')
+                      if (ipfs) {
+                        setResumeFilePreview({
+                          title: doc.title,
+                          url: `https://gateway.pinata.cloud/ipfs/${doc.ipfsHash}`,
+                        })
+                        return
+                      }
+                      if (doc.resumeSourceRole === 'developer' && doc.structuredData) {
+                        setDevResumePreview(doc)
+                        return
+                      }
+                      if (doc.structuredData) {
+                        setDriverResumePreview({
+                          title: doc.title,
+                          structuredData: doc.structuredData as Record<string, unknown>,
+                        })
+                      }
+                    }}
+                    className={cn(
+                      'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
+                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50',
+                    )}
                   >
-                    {verifying === doc.id
-                      ? <Loader2 className='w-3.5 h-3.5 animate-spin' />
-                      : <ShieldCheck className='w-3.5 h-3.5' />
-                    }
-                    {verifying === doc.id ? 'Verifying...' : 'Verify'}
+                    <Eye className='w-3 h-3' /> View
                   </button>
                 )}
 
-                {/* Delete */}
-                {doc.canDelete && (
+                {doc.status !== 'processing' && doc.type === 'resume' && doc.editPage && (
                   <button
+                    type='button'
+                    onClick={() => {
+                      setEditingResumeId(doc.id)
+                      setCurrentPage(doc.editPage)
+                    }}
+                    className={cn(
+                      'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
+                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50',
+                    )}
+                  >
+                    <Pencil className='w-3 h-3' /> Edit
+                  </button>
+                )}
+
+                {doc.status !== 'processing' && doc.type === 'dotapp' && doc.status === 'complete' && hubUserId && (
+                  <button
+                    type='button'
+                    onClick={() => setDotAppPreviewApplicationId(doc.id)}
+                    className={cn(
+                      'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
+                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50',
+                    )}
+                  >
+                    <Eye className='w-3 h-3' /> View
+                  </button>
+                )}
+
+                {doc.status !== 'processing' && doc.type === 'dotapp' && doc.editPage && (
+                  <button
+                    type='button'
+                    onClick={() => setCurrentPage(doc.editPage)}
+                    className={cn(
+                      'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
+                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50',
+                    )}
+                  >
+                    <Pencil className='w-3 h-3' /> {doc.status === 'complete' ? 'Edit' : 'Continue'}
+                  </button>
+                )}
+
+                {doc.status !== 'processing' && doc.type === 'mvr' && doc.status === 'complete' && (
+                  <button
+                    type='button'
+                    onClick={() => setMvrViewOrderId(doc.id)}
+                    className={cn(
+                      'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
+                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50',
+                    )}
+                  >
+                    <Eye className='w-3 h-3' /> View
+                  </button>
+                )}
+
+                {doc.canVerify && (
+                  <button
+                    type='button'
+                    onClick={() => handleVerify(doc)}
+                    disabled={verifying === doc.id}
+                    className='inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold bg-teal-500 text-white hover:bg-teal-400 disabled:opacity-50 disabled:cursor-not-allowed'
+                  >
+                    {verifying === doc.id ? <Loader2 className='w-3 h-3 animate-spin' /> : <ShieldCheck className='w-3 h-3' />}
+                    Verify
+                  </button>
+                )}
+
+                {doc.canDelete ? (
+                  <button
+                    type='button'
                     onClick={() => setConfirmDelete(doc.id)}
                     disabled={deleting === doc.id}
-                    title='Delete'
                     className={cn(
-                      'p-1.5 rounded-lg transition-colors',
-                      isDark ? 'bg-gray-700 text-red-400 hover:bg-red-500/20' : 'bg-gray-200 text-red-500 hover:bg-red-50',
+                      'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
+                      isDark ? 'bg-red-500/15 text-red-400 hover:bg-red-500/25' : 'bg-red-50 text-red-600 hover:bg-red-100',
                       'disabled:opacity-50 disabled:cursor-not-allowed',
                     )}
                   >
-                    {deleting === doc.id
-                      ? <Loader2 className='w-3.5 h-3.5 animate-spin' />
-                      : <X className='w-3.5 h-3.5' />
-                    }
+                    {deleting === doc.id ? <Loader2 className='w-3 h-3 animate-spin' /> : <Trash2 className='w-3 h-3' />}
+                    Delete
                   </button>
-                )}
+                ) : doc.type === 'dotapp' ? (
+                  <button
+                    type='button'
+                    disabled
+                    title='This DOT application is verified on-chain. It cannot be deleted (audit / FMCSA trail).'
+                    className={cn(
+                      'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold cursor-not-allowed opacity-45',
+                      isDark ? 'text-gray-500' : 'text-gray-400',
+                    )}
+                  >
+                    <Trash2 className='w-3 h-3' /> Delete
+                  </button>
+                ) : null}
               </div>
             </div>
 
@@ -1140,11 +1372,74 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
       </div>
     </div>
     <MvrViewModal
-      isOpen={mvrViewOrderId !== null}
-      onClose={() => setMvrViewOrderId(null)}
+               isOpen={mvrViewOrderId !== null}
+               onClose={() => setMvrViewOrderId(null)}
+               walletAddress={walletAddress}
+               orderId={mvrViewOrderId}
+             />
+    <DotAppPreviewModal
+      isOpen={dotAppPreviewApplicationId !== null}
+      onClose={() => setDotAppPreviewApplicationId(null)}
+      userId={hubUserId}
       walletAddress={walletAddress}
-      orderId={mvrViewOrderId}
+      isDark={isDark}
+      applicationId={dotAppPreviewApplicationId}
     />
+    {resumeFilePreview && (
+      <ResumeFilePreviewModal
+        isOpen
+        onClose={() => setResumeFilePreview(null)}
+        title={resumeFilePreview.title}
+        ipfsUrl={resumeFilePreview.url}
+        isDark={isDark}
+      />
+    )}
+    {driverResumePreview && (
+      <ResumePreviewModal
+        title={driverResumePreview.title}
+        structuredData={
+          driverResumePreview.structuredData as Parameters<
+            typeof ResumePreviewModal
+          >[0]['structuredData']
+        }
+        onClose={() => setDriverResumePreview(null)}
+        onDownload={async () => {
+          setResumePdfLoading(true)
+          try {
+            await downloadDriverResumePdfFromStructured(
+              driverResumePreview.structuredData,
+              driverResumePreview.title || 'Resume',
+            )
+          } catch (e) {
+            console.error(e)
+          } finally {
+            setResumePdfLoading(false)
+          }
+        }}
+        isDownloading={resumePdfLoading}
+        theme={isDark ? 'dark' : 'light'}
+        zIndex={10100}
+      />
+    )}
+    {devResumePreview && walletAddress && (
+      <DeveloperResumePreviewModal
+        viewOnly
+        resume={{
+          id: devResumePreview.id,
+          title: devResumePreview.title,
+          structured_data: devResumePreview.structuredData as DeveloperResumeData,
+          verification_status: devResumePreview.verified ? 'VERIFIED' : 'PENDING',
+          blockchain_tx_hash: devResumePreview.txHash ?? undefined,
+          ipfs_hash: devResumePreview.ipfsHash ?? undefined,
+          created_at: devResumePreview.createdAt ?? new Date().toISOString(),
+        }}
+        onClose={() => setDevResumePreview(null)}
+        onEdit={() => {}}
+        onVerify={() => {}}
+        onDelete={() => {}}
+        userAddress={walletAddress}
+      />
+    )}
     </>
   )
 }

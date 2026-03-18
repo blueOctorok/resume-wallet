@@ -72,7 +72,19 @@ async function sendToAva(
 // ===== Main component =====
 
 export default function AvaJourneyGuide() {
-  const { isGuideOpen, closeGuide } = useJourneyStore()
+  const { isGuideOpen, closeGuide, toggleGuide } = useJourneyStore()
+
+  // Cmd+/ (Ctrl+/) toggles AvA — previously on the removed floating button
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+        e.preventDefault()
+        toggleGuide()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [toggleGuide])
   const progress = useJourneyProgress()
   const { setCurrentPage } = useUIStore()
   const panelRef = useRef<HTMLDivElement>(null)

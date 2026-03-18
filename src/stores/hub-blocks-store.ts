@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { shallow } from 'zustand/shallow'
 import { BLOCK_DEFINITIONS, getBlockDefinition } from '@/lib/block-registry'
 import type { BlockDefinition } from '@/lib/block-registry'
+import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -128,6 +129,9 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
         needsOnboarding: !data.onboarding,
         isLoading: false,
       })
+
+      // AvA journey reads driver-hub-store (resume / DOT / MVR) — candidates never hit legacy DriverHub
+      await syncDriverHubFromApi(walletAddress)
     } catch (err) {
       set({
         fetchError: err instanceof Error ? err.message : 'Unknown error',

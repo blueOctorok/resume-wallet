@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { FileText, CheckCircle, Eye, ExternalLink } from 'lucide-react'
+import { FileText, CheckCircle, Eye } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import ResumePreviewModal from '@/components/ResumePreviewModal'
+import ResumeFilePreviewModal from '@/components/hub/ResumeFilePreviewModal'
+import { downloadDriverResumePdfFromStructured } from '@/lib/driver-resume-pdf-download'
 import type { ResumeData } from '@/types/career-card'
 import type { CareerCardMode } from '@/types/career-card'
 
@@ -17,6 +19,8 @@ interface ResumeSectionProps {
 export default function ResumeSection({ data, mode, isDark }: ResumeSectionProps) {
   const isVerified = data.verificationStatus === 'verified'
   const [showPreview, setShowPreview] = useState(false)
+  const [showIpfsPreview, setShowIpfsPreview] = useState(false)
+  const [pdfLoading, setPdfLoading] = useState(false)
 
   // Resumes uploaded to IPFS have a real hash; built resumes use a 'built_' prefix sentinel.
   const isIpfsResume = data.ipfsHash && !data.ipfsHash.startsWith('built_')
@@ -40,17 +44,16 @@ export default function ResumeSection({ data, mode, isDark }: ResumeSectionProps
 
           {/* Preview action — IPFS resumes open in a new tab; built resumes open the inline modal */}
           {isIpfsResume ? (
-            <a
-              href={`https://gateway.pinata.cloud/ipfs/${data.ipfsHash}`}
-              target='_blank'
-              rel='noopener noreferrer'
+            <button
+              type='button'
+              onClick={() => setShowIpfsPreview(true)}
               className={cn(
                 'flex items-center gap-1 text-xs px-3 py-1 rounded-lg transition-colors',
                 isDark ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30' : 'bg-teal-50 text-teal-600 hover:bg-teal-100'
               )}
             >
-              <ExternalLink className='w-3 h-3' /> Preview
-            </a>
+              <Eye className='w-3 h-3' /> Preview
+            </button>
           ) : isBuiltResume ? (
             <button
               onClick={() => setShowPreview(true)}
@@ -80,12 +83,34 @@ export default function ResumeSection({ data, mode, isDark }: ResumeSectionProps
         </div>
       </div>
 
+      {showIpfsPreview && data.ipfsHash && (
+        <ResumeFilePreviewModal
+          isOpen={showIpfsPreview}
+          onClose={() => setShowIpfsPreview(false)}
+          title={data.title || data.filename || 'Resume'}
+          ipfsUrl={`https://gateway.pinata.cloud/ipfs/${data.ipfsHash}`}
+          isDark={isDark}
+        />
+      )}
+
       {showPreview && isBuiltResume && (
         <ResumePreviewModal
           title={data.title || 'Resume'}
           structuredData={data.structuredData as Parameters<typeof ResumePreviewModal>[0]['structuredData']}
           onClose={() => setShowPreview(false)}
-          onDownload={() => {}}
+          onDownload={async () => {
+            if (!data.structuredData) return
+            setPdfLoading(true)
+            try {
+              await downloadDriverResumePdfFromStructured(
+                data.structuredData as Record<string, unknown>,
+                data.title || 'Resume',
+              )
+            } finally {
+              setPdfLoading(false)
+            }
+          }}
+          isDownloading={pdfLoading}
           theme={isDark ? 'dark' : 'light'}
           zIndex={10100}
         />

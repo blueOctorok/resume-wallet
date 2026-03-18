@@ -121,6 +121,8 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
 
       setSuccess(true)
       setOrderResult(data.order)
+      const { syncDriverHubFromApi } = await import('@/lib/sync-driver-hub-store')
+      void syncDriverHubFromApi(userAddress)
     } catch (err: any) {
       setError(err.message || 'Failed to order MVR')
     } finally {
