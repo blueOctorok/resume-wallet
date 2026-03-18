@@ -4,6 +4,22 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Manual Refresh Buttons** (March 2026)
+
+### Summary
+Added manual refresh buttons to the Career Card view and the Candidate Hub. The Employer Hub already had one.
+
+### What was done
+1. **`CareerCardView`** — added a `RefreshCw` icon button in the header row (next to Back). Uses a `silent` flag on `fetchCard` so re-fetching doesn't flash the full loading spinner; tab-focus refetch also uses `silent` mode.
+2. **`CandidateHub`** — added a small `RefreshCw` button inline with the "Block Hive" heading. Clicking it calls `fetchHubData` (refreshes blocks from store) **and** increments a `refreshKey` counter.
+3. **`MyFilesSection`** — now accepts a `refreshKey: number` prop. The `useEffect` that calls `fetchDocuments` includes `refreshKey` in its dependency array, so incrementing it from the parent triggers a fresh fetch of resumes/DOT apps/MVR orders.
+
+### Files changed
+- `src/components/app/CareerCardView.tsx`
+- `src/components/hub/CandidateHub.tsx`
+
+---
+
 ## **MVR Status Tracking in My Files** (March 2026)
 
 ### Summary

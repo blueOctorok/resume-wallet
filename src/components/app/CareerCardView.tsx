@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { Loader2, AlertCircle, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore } from '@/stores'
@@ -33,11 +33,14 @@ export default function CareerCardView({ onBack }: CareerCardViewProps) {
 
   const [data, setData] = useState<CardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchCard = useCallback(async () => {
+  const fetchCard = useCallback(async (silent = false) => {
     if (!walletAddress) return
-    setLoading(true)
+    // `silent` keeps existing data visible while re-fetching (used by manual refresh)
+    if (silent) setIsRefreshing(true)
+    else setLoading(true)
     setError(null)
     try {
       const res = await fetch('/api/career-card', {
@@ -50,6 +53,7 @@ export default function CareerCardView({ onBack }: CareerCardViewProps) {
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setLoading(false)
+      setIsRefreshing(false)
     }
   }, [walletAddress])
 
@@ -57,9 +61,9 @@ export default function CareerCardView({ onBack }: CareerCardViewProps) {
     fetchCard()
   }, [fetchCard])
 
-  // Refetch when tab regains focus
+  // Refetch when tab regains focus (silent — don't flash spinner)
   useEffect(() => {
-    const handleFocus = () => fetchCard()
+    const handleFocus = () => fetchCard(true)
     window.addEventListener('focus', handleFocus)
     return () => window.removeEventListener('focus', handleFocus)
   }, [fetchCard])
@@ -111,8 +115,20 @@ export default function CareerCardView({ onBack }: CareerCardViewProps) {
 
   return (
     <div className='max-w-2xl mx-auto'>
-      <div className='mb-6'>
+      <div className='flex items-center justify-between mb-6'>
         <BackToHubButton onClick={onBack} />
+        <button
+          onClick={() => fetchCard(true)}
+          disabled={isRefreshing}
+          title='Refresh career card'
+          className={cn(
+            'p-1.5 rounded-lg transition-all',
+            isRefreshing ? 'opacity-50 cursor-not-allowed' : '',
+            isDark ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+          )}
+        >
+          <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
+        </button>
       </div>
 
       {/* Explanation banner */}

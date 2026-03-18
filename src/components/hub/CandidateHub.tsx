@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useCallback, useState } from 'react'
-import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink, ChevronLeft, ChevronRight, FileText, ClipboardCheck, Sparkles, Car } from 'lucide-react'
+import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink, ChevronLeft, ChevronRight, FileText, ClipboardCheck, Sparkles, Car, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore, useJourneyStore } from '@/stores'
@@ -782,7 +782,7 @@ interface HubDocument {
   editPage: PageType | null
 }
 
-function MyFilesSection() {
+function MyFilesSection({ refreshKey }: { refreshKey: number }) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const walletAddress = useAuthStore((s) => s.walletAddress)
@@ -878,7 +878,8 @@ function MyFilesSection() {
     }
   }, [walletAddress, hasResumeBlock, hasDotAppBlock, hasMvrBlock])
 
-  useEffect(() => { fetchDocuments() }, [fetchDocuments])
+  // `refreshKey` is incremented externally to trigger a manual re-fetch
+  useEffect(() => { fetchDocuments() }, [fetchDocuments, refreshKey])
 
   const handleVerify = async (doc: HubDocument) => {
     if (!walletAddress || !doc.canVerify) return
@@ -1140,6 +1141,8 @@ export default function CandidateHub() {
   const walletAddress = useAuthStore((s) => s.walletAddress)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
 
+  const [refreshKey, setRefreshKey] = useState(0)
+
   const isLoading = useHubBlocksStore((s) => s.isLoading)
   const fetchError = useHubBlocksStore((s) => s.fetchError)
   const fetchHubData = useHubBlocksStore((s) => s.fetchHubData)
@@ -1234,14 +1237,31 @@ export default function CandidateHub() {
         <HubProfileHeader />
         <CareerCardBanner />
         <AvaBanner />
-        <MyFilesSection />
+        <MyFilesSection refreshKey={refreshKey} />
 
         {/* ── Block Hive ── */}
         <div>
           <div className='flex items-center justify-between mb-4'>
-            <h2 className={cn('text-lg font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
-              Block Hive
-            </h2>
+            <div className='flex items-center gap-2'>
+              <h2 className={cn('text-lg font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+                Block Hive
+              </h2>
+              <button
+                onClick={() => {
+                  if (walletAddress) fetchHubData(walletAddress)
+                  setRefreshKey((k) => k + 1)
+                }}
+                disabled={isLoading}
+                title='Refresh hub'
+                className={cn(
+                  'p-1 rounded-lg transition-all',
+                  isLoading ? 'opacity-50 cursor-not-allowed' : '',
+                  isDark ? 'hover:bg-gray-700 text-gray-500 hover:text-gray-300' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-600'
+                )}
+              >
+                <RefreshCw className={cn('w-3.5 h-3.5', isLoading && 'animate-spin')} />
+              </button>
+            </div>
             <div className='flex items-center gap-2'>
               {/* Edit / Done toggle — desktop entry point for jiggle mode */}
               {installedBlocks.length > 0 && (
