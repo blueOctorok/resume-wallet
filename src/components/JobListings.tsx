@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   Search,
   MapPin,
@@ -9,9 +9,12 @@ import {
   Briefcase,
   Filter,
   FileText,
+  Zap,
+  Globe,
+  Building2,
+  Loader2,
 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
-import LoadingScreen from './LoadingScreen'
 import BackToHubButton from './ui/BackToHubButton'
 import dynamic from 'next/dynamic'
 
@@ -19,21 +22,60 @@ const ApplyWithStormChainModal = dynamic(() => import('./ApplyWithStormChainModa
   ssr: false,
 })
 
-interface Job {
+// ── Shared job shape (both sources normalize to this) ─────────────────────────
+
+interface JobListing {
   id: string
   title: string
   company: string
+  companyLogoUrl?: string | null
   location: string
-  description: string
+  description: string | null
   salary: string | null
-  salary_min: number | null
-  salary_max: number | null
+  salaryMin: number | null
+  salaryMax: number | null
   created: string
-  redirect_url: string
-  category: string
-  contract_type: string | null
-  is_external: boolean
+  redirectUrl: string | null
+  category: string | null
+  contractType: string | null
+  isStormChain: boolean
+  jobType: string | null
+  targetRole: string | null
+  remoteAllowed: boolean | null
 }
+
+type TabId = 'stormchain' | 'external'
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function formatSalary(min: number | null | undefined, max: number | null | undefined): string | null {
+  if (min && max) return `$${min.toLocaleString()} – $${max.toLocaleString()}`
+  if (min) return `$${min.toLocaleString()}+`
+  if (max) return `Up to $${max.toLocaleString()}`
+  return null
+}
+
+function stripHtml(html: string): string {
+  const tmp = document.createElement('DIV')
+  tmp.innerHTML = html
+  return tmp.textContent || tmp.innerText || ''
+}
+
+function truncateText(text: string, max = 200): string {
+  const clean = stripHtml(text)
+  return clean.length <= max ? clean : clean.substring(0, max) + '...'
+}
+
+function formatDate(dateString: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateString).getTime()) / 86400000)
+  if (diff === 0) return 'Today'
+  if (diff === 1) return 'Yesterday'
+  if (diff < 7) return `${diff} days ago`
+  if (diff < 30) return `${Math.floor(diff / 7)} weeks ago`
+  return new Date(dateString).toLocaleDateString()
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
 
 interface JobListingsProps {
   onClose?: () => void
@@ -41,119 +83,198 @@ interface JobListingsProps {
   userAddress: string | null
 }
 
-export default function JobListings({
-  onClose,
-  onBack,
-  userAddress,
-}: JobListingsProps) {
+export default function JobListings({ onBack, userAddress }: JobListingsProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
-  const [jobs, setJobs] = useState<Job[]>([])
+
+  const [activeTab, setActiveTab] = useState<TabId>('stormchain')
+  const [jobs, setJobs] = useState<JobListing[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [totalCount, setTotalCount] = useState(0)
-  const [applyModalOpen, setApplyModalOpen] = useState(false)
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null)
 
-  const [keywords, setKeywords] = useState('truck driver CDL')
+  const [keywords, setKeywords] = useState('')
   const [location, setLocation] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
-  const [sortBy, setSortBy] = useState<'date' | 'salary' | 'relevance'>('date')
+  const [sortBy, setSortBy] = useState<'date' | 'salary'>('date')
   const [showFilters, setShowFilters] = useState(false)
 
-  const fetchJobs = async (page = 1) => {
+  const [applyModalOpen, setApplyModalOpen] = useState(false)
+  const [selectedJob, setSelectedJob] = useState<JobListing | null>(null)
+
+  // ── Fetchers ──────────────────────────────────────────────────────────────
+
+  const fetchStormChainJobs = useCallback(async (page: number) => {
+    setIsLoading(true)
+    setError(null)
     try {
-      setIsLoading(true)
-      setError(null)
-
       const params = new URLSearchParams({
-        keywords,
-        location,
         page: page.toString(),
-        results_per_page: '20',
-        sort_by: sortBy,
+        limit: '20',
+        sort: sortBy,
       })
+      if (keywords) params.set('keywords', keywords)
+      if (location) params.set('location', location)
 
-      const response = await fetch(`/api/jobs/external/search?${params}`)
+      const res = await fetch(`/api/jobs/search?${params}`)
+      if (!res.ok) throw new Error('Failed to fetch StormChain jobs')
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error || 'Failed to load jobs')
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch jobs')
-      }
+      const mapped: JobListing[] = (data.results || []).map((j: Record<string, unknown>) => ({
+        id: j.id as string,
+        title: j.title as string,
+        company: j.company as string,
+        companyLogoUrl: j.companyLogoUrl ?? null,
+        location: [j.locationCity, j.locationState].filter(Boolean).join(', ') || 'Remote',
+        description: j.description as string | null,
+        salary: formatSalary(j.salaryMin as number | null, j.salaryMax as number | null),
+        salaryMin: j.salaryMin as number | null,
+        salaryMax: j.salaryMax as number | null,
+        created: j.createdAt as string,
+        redirectUrl: null,
+        category: j.targetRole as string | null,
+        contractType: j.jobType as string | null,
+        isStormChain: true,
+        jobType: j.jobType as string | null,
+        targetRole: j.targetRole as string | null,
+        remoteAllowed: j.remoteAllowed as boolean | null,
+      }))
 
-      const data = await response.json()
-
-      if (data.success) {
-        setJobs(data.results)
-        setTotalCount(data.count)
-        setCurrentPage(page)
-      } else {
-        throw new Error(data.error || 'Failed to load jobs')
-      }
+      setJobs(mapped)
+      setTotalCount(data.count ?? mapped.length)
+      setCurrentPage(page)
     } catch (err) {
-      console.error('Error fetching jobs:', err)
       setError(err instanceof Error ? err.message : 'Failed to load jobs')
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [keywords, location, sortBy])
 
+  const fetchExternalJobs = useCallback(async (page: number) => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const params = new URLSearchParams({
+        keywords: keywords || 'jobs',
+        location,
+        page: page.toString(),
+        results_per_page: '20',
+        sort_by: sortBy === 'salary' ? 'salary' : 'date',
+      })
+
+      const res = await fetch(`/api/jobs/external/search?${params}`)
+      if (!res.ok) throw new Error('Failed to fetch external jobs')
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error || 'Failed to load jobs')
+
+      const mapped: JobListing[] = (data.results || []).map((j: Record<string, unknown>) => ({
+        id: j.id as string,
+        title: j.title as string,
+        company: j.company as string,
+        companyLogoUrl: null,
+        location: j.location as string,
+        description: j.description as string | null,
+        salary: j.salary as string | null,
+        salaryMin: j.salary_min as number | null,
+        salaryMax: j.salary_max as number | null,
+        created: j.created as string,
+        redirectUrl: j.redirect_url as string | null,
+        category: j.category as string | null,
+        contractType: j.contract_type as string | null,
+        isStormChain: false,
+        jobType: j.contract_type as string | null,
+        targetRole: null,
+        remoteAllowed: null,
+      }))
+
+      setJobs(mapped)
+      setTotalCount(data.count ?? mapped.length)
+      setCurrentPage(page)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load jobs')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [keywords, location, sortBy])
+
+  const fetchJobs = useCallback((page = 1) => {
+    if (activeTab === 'stormchain') return fetchStormChainJobs(page)
+    return fetchExternalJobs(page)
+  }, [activeTab, fetchStormChainJobs, fetchExternalJobs])
+
+  // Fetch on mount and when tab changes
   useEffect(() => {
     fetchJobs(1)
-  }, [])
+  }, [activeTab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     fetchJobs(1)
   }
 
-  const stripHtml = (html: string) => {
-    const tmp = document.createElement('DIV')
-    tmp.innerHTML = html
-    return tmp.textContent || tmp.innerText || ''
-  }
-
-  const truncateDescription = (text: string, maxLength = 200) => {
-    const clean = stripHtml(text)
-    if (clean.length <= maxLength) return clean
-    return clean.substring(0, maxLength) + '...'
-  }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffDays = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
-    )
-
-    if (diffDays === 0) return 'Today'
-    if (diffDays === 1) return 'Yesterday'
-    if (diffDays < 7) return `${diffDays} days ago`
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
-    return date.toLocaleDateString()
+  const handleTabChange = (tab: TabId) => {
+    if (tab === activeTab) return
+    setActiveTab(tab)
+    setJobs([])
+    setTotalCount(0)
+    setCurrentPage(1)
+    setError(null)
   }
 
   const cardClass = isDark
     ? 'bg-gray-800/50 border border-gray-700'
     : 'bg-white border border-gray-200'
 
+  const TABS: { id: TabId; label: string; icon: React.ReactNode; description: string }[] = [
+    { id: 'stormchain', label: 'StormChain', icon: <Zap className='w-4 h-4' />, description: 'Jobs from verified employers on StormChain' },
+    { id: 'external', label: 'External', icon: <Globe className='w-4 h-4' />, description: 'Aggregated listings from job boards' },
+  ]
+
   return (
     <div className='w-full p-4 sm:p-6 lg:p-8'>
       <div className='max-w-7xl mx-auto'>
         {/* Header */}
-        <div className='mb-8'>
-          <BackToHubButton onClick={onBack} className="mb-4" />
-          <h1 className={`text-3xl md:text-4xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Browse Jobs
+        <div className='mb-6'>
+          <BackToHubButton onClick={onBack} className='mb-4' />
+          <h1 className={`text-3xl md:text-4xl font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            Find Jobs
           </h1>
-          <p className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            {totalCount > 0 && `${totalCount.toLocaleString()} trucking jobs available`}
+          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            {totalCount > 0 ? `${totalCount.toLocaleString()} jobs found` : 'Search for your next opportunity'}
           </p>
         </div>
+
+        {/* Tab Switcher */}
+        <div className={`flex gap-2 p-1 rounded-xl mb-6 ${isDark ? 'bg-gray-800/60' : 'bg-gray-100'}`}>
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id)}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                activeTab === tab.id
+                  ? isDark
+                    ? 'bg-gray-700 text-white shadow-sm'
+                    : 'bg-white text-gray-900 shadow-sm'
+                  : isDark
+                    ? 'text-gray-400 hover:text-gray-200'
+                    : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab description */}
+        <p className={`text-xs mb-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+          {TABS.find(t => t.id === activeTab)?.description}
+        </p>
 
         {/* Search Form */}
         <form onSubmit={handleSearch} className='mb-6'>
           <div className={`rounded-2xl p-6 ${cardClass}`}>
-            {/* Main search inputs */}
             <div className='flex flex-col md:flex-row gap-3 mb-3'>
               <div className='flex-1 relative'>
                 <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
@@ -169,7 +290,6 @@ export default function JobListings({
                   }`}
                 />
               </div>
-
               <div className='flex-1 relative'>
                 <MapPin className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
                 <input
@@ -184,21 +304,15 @@ export default function JobListings({
                   }`}
                 />
               </div>
-
               <button
                 type='submit'
                 disabled={isLoading}
-                className={`px-6 py-3 font-semibold rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap ${
-                  isDark
-                    ? 'bg-teal-600 hover:bg-teal-500 text-white'
-                    : 'bg-teal-600 hover:bg-teal-700 text-white'
-                }`}
+                className='px-6 py-3 font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap bg-teal-600 hover:bg-teal-500 text-white'
               >
-                {isLoading ? 'Searching...' : 'Search Jobs'}
+                {isLoading ? 'Searching...' : 'Search'}
               </button>
             </div>
 
-            {/* Filters toggle */}
             <button
               type='button'
               onClick={() => setShowFilters(!showFilters)}
@@ -208,14 +322,13 @@ export default function JobListings({
               {showFilters ? 'Hide' : 'Show'} filters
             </button>
 
-            {/* Filter options */}
             {showFilters && (
               <div className={`mt-3 pt-3 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
                 <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   Sort by
                 </label>
                 <div className='flex gap-2 flex-wrap'>
-                  {(['date', 'salary', 'relevance'] as const).map((sort) => (
+                  {(['date', 'salary'] as const).map((sort) => (
                     <button
                       key={sort}
                       type='button'
@@ -228,7 +341,7 @@ export default function JobListings({
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      {sort === 'date' ? 'Most Recent' : sort === 'salary' ? 'Highest Salary' : 'Most Relevant'}
+                      {sort === 'date' ? 'Most Recent' : 'Highest Salary'}
                     </button>
                   ))}
                 </div>
@@ -237,37 +350,47 @@ export default function JobListings({
           </div>
         </form>
 
-        {/* Error state */}
+        {/* Error */}
         {error && (
           <div className='mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg'>
             <p className='text-red-800 dark:text-red-200'>{error}</p>
           </div>
         )}
 
-        {/* Loading state */}
+        {/* Loading */}
         {isLoading && (
-          <LoadingScreen message='Searching for jobs...' fullScreen={false} />
+          <div className='flex items-center justify-center py-16'>
+            <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+          </div>
         )}
 
-        {/* Jobs list */}
+        {/* Job Cards */}
         {!isLoading && jobs.length > 0 && (
           <div className='space-y-4'>
             {jobs.map((job) => (
-              <div
-                key={job.id}
-                className={`rounded-2xl p-6 transition-all hover:shadow-lg ${cardClass}`}
-              >
+              <div key={job.id} className={`rounded-2xl p-6 transition-all hover:shadow-lg ${cardClass}`}>
                 <div className='flex flex-col md:flex-row md:items-start md:justify-between gap-4'>
-                  <div className='flex-1'>
-                    {/* Job title */}
+                  <div className='flex-1 min-w-0'>
+                    <div className='flex items-center gap-2 mb-1'>
+                      {job.isStormChain && (
+                        <span className='inline-flex items-center gap-1 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-teal-500/15 text-teal-500'>
+                          <Zap className='w-3 h-3' /> StormChain
+                        </span>
+                      )}
+                      {job.remoteAllowed && (
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${isDark ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-100 text-blue-700'}`}>
+                          Remote OK
+                        </span>
+                      )}
+                    </div>
+
                     <h3 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                       {job.title}
                     </h3>
 
-                    {/* Company and location */}
                     <div className={`flex flex-wrap items-center gap-4 text-sm mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                       <div className='flex items-center gap-1'>
-                        <Briefcase className='w-4 h-4' />
+                        <Building2 className='w-4 h-4' />
                         <span>{job.company}</span>
                       </div>
                       <div className='flex items-center gap-1'>
@@ -282,56 +405,61 @@ export default function JobListings({
                       )}
                     </div>
 
-                    {/* Description */}
-                    <p className={`mb-4 line-clamp-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                      {truncateDescription(job.description)}
-                    </p>
+                    {job.description && (
+                      <p className={`mb-3 line-clamp-3 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {truncateText(job.description)}
+                      </p>
+                    )}
 
-                    {/* Meta info */}
-                    <div className={`flex items-center gap-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                      <span className={`px-2 py-1 rounded ${isDark ? 'bg-teal-500/20 text-teal-400' : 'bg-teal-100 text-teal-700'}`}>
-                        {job.category}
-                      </span>
-                      {job.contract_type && (
-                        <span className={`px-2 py-1 rounded ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>
-                          {job.contract_type}
+                    <div className={`flex items-center gap-3 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {job.category && (
+                        <span className={`px-2 py-0.5 rounded ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                          {job.category}
+                        </span>
+                      )}
+                      {job.contractType && (
+                        <span className={`px-2 py-0.5 rounded ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                          {job.contractType}
                         </span>
                       )}
                       <span>{formatDate(job.created)}</span>
                     </div>
                   </div>
 
-                  {/* Apply buttons */}
+                  {/* Actions */}
                   <div className='flex-shrink-0 flex flex-col gap-2'>
-                    {userAddress && (
+                    {job.isStormChain && userAddress ? (
                       <button
-                        onClick={() => {
-                          setSelectedJob(job)
-                          setApplyModalOpen(true)
-                        }}
-                        className={`flex items-center gap-2 px-6 py-3 font-semibold rounded-lg transition-all duration-200 whitespace-nowrap ${
-                          isDark
-                            ? 'bg-teal-600 hover:bg-teal-500 text-white'
-                            : 'bg-teal-600 hover:bg-teal-700 text-white'
-                        }`}
+                        onClick={() => { setSelectedJob(job); setApplyModalOpen(true) }}
+                        className='flex items-center gap-2 px-5 py-2.5 font-semibold rounded-lg bg-teal-600 hover:bg-teal-500 text-white whitespace-nowrap'
+                      >
+                        <FileText className='w-4 h-4' />
+                        Apply with Career Card
+                      </button>
+                    ) : !job.isStormChain && userAddress ? (
+                      <button
+                        onClick={() => { setSelectedJob(job); setApplyModalOpen(true) }}
+                        className='flex items-center gap-2 px-5 py-2.5 font-semibold rounded-lg bg-teal-600 hover:bg-teal-500 text-white whitespace-nowrap'
                       >
                         <FileText className='w-4 h-4' />
                         Apply with StormChain
                       </button>
+                    ) : null}
+                    {job.redirectUrl && (
+                      <a
+                        href={job.redirectUrl}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className={`flex items-center gap-2 px-5 py-2.5 font-semibold rounded-lg whitespace-nowrap ${
+                          isDark
+                            ? 'bg-gray-700 hover:bg-gray-600 text-white border border-gray-600'
+                            : 'bg-gray-100 hover:bg-gray-200 text-gray-900 border border-gray-300'
+                        }`}
+                      >
+                        View Original
+                        <ExternalLink className='w-4 h-4' />
+                      </a>
                     )}
-                    <a
-                      href={job.redirect_url}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      className={`flex items-center gap-2 px-6 py-3 font-semibold rounded-lg transition-all duration-200 whitespace-nowrap ${
-                        isDark
-                          ? 'bg-gray-700 hover:bg-gray-600 text-white border border-gray-600'
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-900 border border-gray-300'
-                      }`}
-                    >
-                      View Original
-                      <ExternalLink className='w-4 h-4' />
-                    </a>
                   </div>
                 </div>
               </div>
@@ -339,15 +467,17 @@ export default function JobListings({
           </div>
         )}
 
-        {/* Empty state */}
+        {/* Empty */}
         {!isLoading && jobs.length === 0 && !error && (
-          <div className='text-center py-12'>
-            <Briefcase className={`w-16 h-16 mx-auto mb-4 ${isDark ? 'text-gray-600' : 'text-gray-300'}`} />
-            <h3 className={`text-xl font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              No jobs found
+          <div className='text-center py-16'>
+            <Briefcase className={`w-14 h-14 mx-auto mb-4 ${isDark ? 'text-gray-600' : 'text-gray-300'}`} />
+            <h3 className={`text-lg font-semibold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              {activeTab === 'stormchain' ? 'No StormChain jobs yet' : 'No jobs found'}
             </h3>
-            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-              Try adjusting your search criteria
+            <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              {activeTab === 'stormchain'
+                ? 'Employers are getting set up — check External listings or come back soon.'
+                : 'Try adjusting your search criteria'}
             </p>
           </div>
         )}
@@ -366,7 +496,7 @@ export default function JobListings({
             >
               Previous
             </button>
-            <span className={`px-4 py-2 rounded-lg font-medium ${isDark ? 'bg-teal-600 text-white' : 'bg-teal-600 text-white'}`}>
+            <span className='px-4 py-2 rounded-lg font-medium bg-teal-600 text-white'>
               Page {currentPage}
             </span>
             <button
@@ -387,14 +517,25 @@ export default function JobListings({
       {/* Apply Modal */}
       <ApplyWithStormChainModal
         isOpen={applyModalOpen}
-        onClose={() => {
-          setApplyModalOpen(false)
-          setSelectedJob(null)
-        }}
-        job={selectedJob}
+        onClose={() => { setApplyModalOpen(false); setSelectedJob(null) }}
+        job={selectedJob ? {
+          id: selectedJob.id,
+          title: selectedJob.title,
+          company: selectedJob.company,
+          location: selectedJob.location,
+          description: selectedJob.description ?? '',
+          salary: selectedJob.salary,
+          salary_min: selectedJob.salaryMin,
+          salary_max: selectedJob.salaryMax,
+          created: selectedJob.created,
+          redirect_url: selectedJob.redirectUrl ?? '',
+          category: selectedJob.category ?? '',
+          contract_type: selectedJob.contractType,
+          is_external: !selectedJob.isStormChain,
+        } : null}
         userAddress={userAddress}
         onApplicationSubmitted={() => {
-          console.log('Application submitted successfully')
+          console.log('Application submitted')
         }}
       />
     </div>

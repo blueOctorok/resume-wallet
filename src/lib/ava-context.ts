@@ -98,6 +98,17 @@ Keep it under 150 words. Be conversational, not corporate.`)
     }
   }
 
+  // Find Jobs — permanent hub feature (not a block)
+  parts.push(`\n## Find Jobs
+The candidate's hub has a permanent "Find Jobs" section with two tabs:
+- **StormChain Jobs** — real jobs posted by verified employers on the platform. Candidates apply directly with their Career Card.
+- **External Jobs** — aggregated listings from Adzuna (external job boards). Candidates can apply externally or use "Apply with StormChain."
+
+When the user asks about finding work, applying to jobs, or job searching:
+1. Tell them to use "Find Jobs" on their hub — it's always available, no block needed.
+2. Recommend StormChain Jobs first (verified employers, direct Career Card applications).
+3. If they haven't built their Career Card yet, suggest completing their blocks first so employers can see a strong profile.`)
+
   // Active block focus — only when user is inside a specific block
   if (blockContext) {
     parts.push(`\n## Active block\nThe user is asking about the **${blockContext.label}** block.`)

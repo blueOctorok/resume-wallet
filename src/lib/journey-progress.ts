@@ -267,13 +267,13 @@ export function calculateBlockJourney(
     action: data.profileCompleteness < 80 ? { label: 'View Profile', target: null } : undefined,
   }
 
-  // 4. "Browse Jobs" baseline — always last
+  // "Find Jobs" is a permanent hub feature — always the last journey step.
   const jobStep: JourneyStep = {
-    id: 'apply',
+    id: 'find-jobs',
     label: 'Browse & Apply to Jobs',
-    description: 'Find positions that match your profile',
+    description: 'Search StormChain and external job listings',
     status: data.hasAppliedToJobs ? 'complete' : 'pending',
-    action: !data.hasAppliedToJobs ? { label: 'Browse Jobs', target: 'jobs' } : undefined,
+    action: !data.hasAppliedToJobs ? { label: 'Find Jobs', target: 'jobs' } : undefined,
   }
 
   const steps = [walletStep, ...blockSteps, profileStep, jobStep]
@@ -328,8 +328,8 @@ export function calculateBlockJourney(
     }
     if (!data.hasAppliedToJobs) {
       nextActions.push({
-        label: 'Browse Jobs',
-        description: 'Find positions that match your profile',
+        label: 'Find Jobs',
+        description: 'Search StormChain and external job listings',
         target: 'jobs',
         priority: 'low',
       })

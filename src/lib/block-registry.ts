@@ -125,7 +125,6 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     pageRoute: null,
     dataTables: ['block_driver_employment'],
   },
-
   // ── Drivers ────────────────────────────────────────────────────────────────
   {
     id: 'driver-resume',

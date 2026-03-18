@@ -4,6 +4,20 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Find Jobs: permanent hub feature with StormChain + External tabs** (March 2026)
+
+- **Not a block** — Find Jobs is a permanent hub feature (like Career Card / Messages). Every candidate sees a **FindJobsBanner** on their hub. No block installation needed.
+- **Two tabs:**
+  - **StormChain** (default) — queries `job_postings` where `is_external = false` via new **`GET /api/jobs/search`**. Employer-posted, verified jobs. Candidates apply with their Career Card.
+  - **External** — existing Adzuna proxy (`/api/jobs/external/search`). Aggregated listings from job boards.
+- **`JobListings`** — full rewrite with tab switcher, unified `JobListing` type, StormChain badge on cards, "Apply with Career Card" CTA for platform jobs.
+- **CandidateHub** — `FindJobsBanner` renders between Career Card and AvA sections. Routes to `jobs` page.
+- **AvA** — updated system prompt knows about Find Jobs (StormChain + External), guides candidates to build Career Card first then search jobs.
+- **Journey** — permanent "Browse & Apply to Jobs" step (always last, not block-scoped).
+- **Admin** — Jobs tab now shows `isExternal`/`externalSource` badge per card and a StormChain/External source filter.
+
+---
+
 ## **Employer: remove composable blocks (simplify hub)** (March 2026)
 
 - **Rationale:** Employer blocks were decorative — all core features (pipeline, jobs, talent search, outreach, verification) rendered unconditionally. The Career Card is the employer's action surface; gating tools behind blocks was an unnecessary extra step.

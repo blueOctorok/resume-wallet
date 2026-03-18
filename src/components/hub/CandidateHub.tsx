@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useState } from 'react'
 import Image from 'next/image'
-import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink, ChevronLeft, ChevronRight, FileText, ClipboardCheck, MessageCircle, Car, RefreshCw, Trash2 } from 'lucide-react'
+import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink, ChevronLeft, ChevronRight, FileText, ClipboardCheck, MessageCircle, Car, RefreshCw, Trash2, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore, useJourneyStore, useJourneyProgress } from '@/stores'
@@ -882,6 +882,51 @@ function CareerCardBanner() {
   )
 }
 
+function FindJobsBanner() {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  const setCurrentPage = useUIStore((s) => s.setCurrentPage)
+
+  return (
+    <div className={cn(
+      'rounded-2xl border p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4',
+      isDark
+        ? 'bg-gradient-to-r from-sky-500/10 via-gray-800/50 to-gray-800/50 border-sky-500/20'
+        : 'bg-gradient-to-r from-sky-50 via-white/70 to-white/70 border-sky-200/60',
+    )}>
+      <div className='flex items-center gap-3'>
+        <div className={cn(
+          'w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0',
+          isDark ? 'bg-sky-500/20' : 'bg-sky-100'
+        )}>
+          <Search className={cn('w-5 h-5', isDark ? 'text-sky-400' : 'text-sky-600')} />
+        </div>
+        <div>
+          <p className={cn('text-sm font-bold', isDark ? 'text-white' : 'text-gray-900')}>
+            Find Jobs
+          </p>
+          <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+            Browse StormChain and external job listings
+          </p>
+        </div>
+      </div>
+
+      <button
+        onClick={() => setCurrentPage('jobs')}
+        className={cn(
+          'flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-colors sm:flex-shrink-0',
+          isDark
+            ? 'bg-sky-500 text-white hover:bg-sky-400'
+            : 'bg-sky-600 text-white hover:bg-sky-500',
+        )}
+      >
+        <Search className='w-3.5 h-3.5' />
+        Browse Jobs
+      </button>
+    </div>
+  )
+}
+
 // ── My Files ──────────────────────────────────────────────────────────────────
 // Started or completed files: View (read-only), Edit, Verify (until on-chain), Delete.
 
@@ -1547,6 +1592,7 @@ export default function CandidateHub() {
       <div className='max-w-3xl mx-auto space-y-6'>
         <HubProfileHeader />
         <CareerCardBanner />
+        <FindJobsBanner />
         <AvaBanner />
         <MyFilesSection refreshKey={refreshKey} />
 

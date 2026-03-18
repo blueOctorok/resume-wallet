@@ -25,7 +25,8 @@ export async function GET(request: NextRequest) {
       .from('job_postings')
       .select(`
         id, title, description, target_role, location_city, location_state,
-        salary_min, salary_max, job_type, is_active, created_at, updated_at,
+        salary_min, salary_max, job_type, is_active, is_external, external_source,
+        created_at, updated_at,
         company_id,
         companies (
           id, company_name, dot_number
@@ -62,6 +63,8 @@ export async function GET(request: NextRequest) {
           salaryMax: job.salary_max,
           jobType: job.job_type,
           isActive: job.is_active,
+          isExternal: job.is_external ?? false,
+          externalSource: job.external_source ?? null,
           createdAt: job.created_at,
           updatedAt: job.updated_at,
           companyId: job.company_id,

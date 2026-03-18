@@ -139,6 +139,8 @@ export interface AdminJob {
   salaryMax: number | null
   jobType: string | null
   isActive: boolean
+  isExternal: boolean
+  externalSource: string | null
   createdAt: string
   updatedAt: string
   companyId: string
