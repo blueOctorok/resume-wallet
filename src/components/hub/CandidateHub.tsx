@@ -21,6 +21,7 @@ import STORMBalance from '@/components/STORMBalance'
 import CandidateRequestsSection from '@/components/CandidateRequestsSection'
 import HubOnboardingForm from './HubOnboardingForm'
 import BlockPickerModal from './BlockPickerModal'
+import MvrViewModal from '@/components/MvrViewModal'
 import Atropos from 'atropos/react'
 import 'atropos/css'
 
@@ -796,6 +797,8 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
   const [deleting, setDeleting] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  /** Completed MVR: open viewer modal instead of the order form (same pattern as DOT/resume preview). */
+  const [mvrViewOrderId, setMvrViewOrderId] = useState<string | null>(null)
 
   const hasResumeBlock = installedBlocks.some((b) =>
     b.blockType === 'driver-resume' || b.blockType === 'developer-resume'
@@ -865,7 +868,8 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
             txHash: null,
             canVerify: false,
             canDelete: false,
-            editPage: 'mvr',
+            // Completed MVRs open MvrViewModal from My Files; form page is for new orders only
+            editPage: isComplete ? null : 'mvr',
           })
         }
       }
@@ -945,6 +949,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
   if (documents.length === 0) return null
 
   return (
+    <>
     <div className={cn(
       'rounded-2xl border p-4',
       isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white/70 border-gray-200',
@@ -1045,9 +1050,13 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
               {/* Actions */}
               <div className='flex items-center gap-1.5 flex-shrink-0'>
                 {/* Open/view (complete) or continue (in-progress) — hidden while processing */}
-                {doc.editPage && doc.status !== 'processing' && (
+                {(doc.editPage || (doc.type === 'mvr' && doc.status === 'complete')) && doc.status !== 'processing' && (
                 <button
                   onClick={() => {
+                    if (doc.type === 'mvr' && doc.status === 'complete') {
+                      setMvrViewOrderId(doc.id)
+                      return
+                    }
                     if (doc.type === 'resume') setEditingResumeId(doc.id)
                     setCurrentPage(doc.editPage!)
                   }}
@@ -1130,6 +1139,13 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
         ))}
       </div>
     </div>
+    <MvrViewModal
+      isOpen={mvrViewOrderId !== null}
+      onClose={() => setMvrViewOrderId(null)}
+      walletAddress={walletAddress}
+      orderId={mvrViewOrderId}
+    />
+    </>
   )
 }
 

@@ -235,7 +235,15 @@ function SectionRenderer({
         />
       )
     case 'driver-mvr':
-      return <MvrSection data={section.data as MvrData} mode={mode} isDark={isDark} onAction={onAction} />
+      return (
+        <MvrSection
+          data={section.data as MvrData}
+          mode={mode}
+          isDark={isDark}
+          walletAddress={walletAddress}
+          onNavigateToOrder={mode === 'self' && onAction ? onAction : undefined}
+        />
+      )
     case 'driver-cdl-credentials':
       return <CdlSection data={section.data as CdlData} mode={mode} isDark={isDark} />
     case 'developer-portfolio':

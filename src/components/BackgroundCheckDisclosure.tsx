@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import Modal from '@/components/ui/Modal'
 import {
   X,
   Shield,
@@ -275,7 +276,8 @@ export default function BackgroundCheckDisclosure({
   const textSecondary = isDark ? 'text-gray-400' : 'text-gray-600'
 
   return (
-    <div className={`fixed inset-0 z-[10002] flex flex-col ${overlayBg}`}>
+    <Modal onClose={onClose} maxWidth="max-w-full" zIndex={10002} disableBackdropClose>
+    <div className={`flex flex-col max-h-[90vh] ${overlayBg}`}>
       {/* Header */}
       <div className={`flex items-center justify-between px-6 py-4 border-b ${headerBg}`}>
         <div className="flex items-center gap-3">
@@ -620,6 +622,7 @@ export default function BackgroundCheckDisclosure({
         </div>
       </div>
     </div>
+    </Modal>
   )
 }
 

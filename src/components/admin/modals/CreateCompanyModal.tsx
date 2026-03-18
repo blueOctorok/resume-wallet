@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { Building2, X, UserPlus, Loader2 } from 'lucide-react'
+import Modal from '@/components/ui/Modal'
 
 interface CreateCompanyModalProps {
   theme: 'light' | 'dark'
@@ -77,14 +78,8 @@ export default function CreateCompanyModal({
     form.companyName.trim() && form.ownerEmail.trim() && !loading
 
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50'>
-      <div
-        className={`rounded-xl border ${
-          theme === 'dark'
-            ? 'bg-gray-800 border-gray-700'
-            : 'bg-white border-gray-200'
-        } p-6 max-w-md w-full`}
-      >
+    <Modal onClose={handleClose} maxWidth="max-w-md">
+      <div className='p-6'>
         <div className='flex items-center justify-between mb-6'>
           <div className='flex items-center gap-3'>
             <div
@@ -239,6 +234,6 @@ export default function CreateCompanyModal({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }

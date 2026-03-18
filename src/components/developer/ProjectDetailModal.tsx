@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import Modal, { ModalHeader } from '@/components/ui/Modal'
 import {
-  X,
   Globe,
   Github,
   Play,
@@ -171,44 +171,8 @@ export default function ProjectDetailModal({
             : project.role
 
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm'>
-      <div
-        className={`w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl ${
-          theme === 'dark' ? 'bg-gray-900 border border-gray-700' : 'bg-white'
-        }`}
-      >
-        {/* Header with close button */}
-        <div
-          className={`sticky top-0 z-10 flex items-center justify-between p-4 border-b ${
-            theme === 'dark'
-              ? 'bg-gray-900 border-gray-700'
-              : 'bg-white border-gray-200'
-          }`}
-        >
-          <div className='flex items-center gap-3'>
-            <h2
-              className={`text-xl font-bold ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}
-            >
-              {project.title}
-            </h2>
-            {project.isFeatured && (
-              <span className='inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-yellow-500/20 text-yellow-500'>
-                <Star className='w-3 h-3 fill-current' />
-                Featured
-              </span>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            className={`p-2 rounded-lg transition-colors ${
-              theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
-            }`}
-          >
-            <X className='w-5 h-5' />
-          </button>
-        </div>
+    <Modal onClose={onClose} maxWidth="max-w-4xl">
+      <ModalHeader title={project.title} onClose={onClose} />
 
         <div className='p-6 space-y-6'>
           {/* Thumbnail / Live Preview Toggle */}
@@ -518,7 +482,6 @@ export default function ProjectDetailModal({
             )}
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }

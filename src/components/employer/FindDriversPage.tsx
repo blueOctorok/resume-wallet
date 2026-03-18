@@ -9,7 +9,6 @@ import {
   Award,
   Briefcase,
   CheckCircle,
-  X,
   Loader2,
   ExternalLink,
   FileText,
@@ -22,6 +21,7 @@ import {
   Eye,
 } from 'lucide-react'
 import BackToHubButton from '@/components/ui/BackToHubButton'
+import Modal, { ModalHeader } from '@/components/ui/Modal'
 
 interface Driver {
   driverId: string
@@ -527,38 +527,11 @@ function DriverDetailModal({ driver, onClose, theme }: {
   theme: string
 }) {
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className={`relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl ${
-        theme === 'dark'
-          ? 'bg-brand-sage-dark border border-brand-mint/30'
-          : 'bg-white shadow-2xl'
-      }`}>
-        {/* Header */}
-        <div className={`sticky top-0 flex items-center justify-between p-4 border-b ${
-          theme === 'dark' ? 'border-gray-700 bg-brand-sage-dark' : 'border-gray-200 bg-white'
-        }`}>
-          <div>
-            <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              {driver.name}
-            </h3>
-            <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-              Driver Profile
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className={`p-2 rounded-lg ${theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-          >
-            <X className={`w-5 h-5 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`} />
-          </button>
-        </div>
+    <Modal onClose={onClose} maxWidth="max-w-2xl">
+      <ModalHeader title={driver.name} subtitle="Driver Profile" onClose={onClose} />
 
-        {/* Content */}
-        <div className="p-6 space-y-6">
+      {/* Content */}
+      <div className="p-6 space-y-6">
           {/* Contact Info */}
           {(driver.email || driver.phone) && (
             <div className="flex flex-wrap gap-3">
@@ -733,7 +706,6 @@ function DriverDetailModal({ driver, onClose, theme }: {
             )}
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }

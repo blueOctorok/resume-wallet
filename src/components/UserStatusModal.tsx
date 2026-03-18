@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import Modal from '@/components/ui/Modal'
 import USDCBalance from './USDCBalance'
 import STORMBalance from './STORMBalance'
 import SendUSDC from './wallet/SendUSDC'
@@ -56,12 +57,6 @@ export default function UserStatusModal({
     onClose()
   }
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose()
-    }
-  }
-
   const copyAddress = async () => {
     if (!user.address) return
     try {
@@ -72,26 +67,6 @@ export default function UserStatusModal({
       console.error('Failed to copy:', err)
     }
   }
-
-  // Prevent body scroll when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      const scrollY = window.scrollY
-      const originalStyle = window.getComputedStyle(document.body).overflow
-      document.body.style.overflow = 'hidden'
-      document.body.style.position = 'fixed'
-      document.body.style.top = `-${scrollY}px`
-      document.body.style.width = '100%'
-
-      return () => {
-        document.body.style.overflow = originalStyle
-        document.body.style.position = ''
-        document.body.style.top = ''
-        document.body.style.width = ''
-        window.scrollTo(0, scrollY)
-      }
-    }
-  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -126,27 +101,14 @@ export default function UserStatusModal({
   }`
 
   return (
-    <>
-      {/* Backdrop */}
+    <Modal onClose={onClose} maxWidth="max-w-lg" zIndex={100}>
       <div
-        className={`fixed inset-0 z-[100] ${
-          theme === 'dark' ? 'bg-black/60' : 'bg-black/40'
-        } backdrop-blur-sm`}
-        onClick={handleBackdropClick}
-      />
-
-      {/* Modal */}
-      <div
-        className='fixed inset-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-[101] w-full sm:w-[95vw] sm:max-w-lg h-full sm:h-auto sm:max-h-[90vh] flex flex-col'
-        onClick={(e) => e.stopPropagation()}
+        className={`flex flex-col max-h-[90vh] overflow-hidden ${
+          theme === 'dark'
+            ? 'bg-gray-900'
+            : 'bg-gray-50'
+        }`}
       >
-        <div
-          className={`relative flex flex-col h-full sm:h-auto sm:rounded-2xl overflow-hidden ${
-            theme === 'dark'
-              ? 'bg-gray-900 border border-gray-700'
-              : 'bg-gray-50 border border-gray-200'
-          }`}
-        >
           {/* Header */}
           <div
             className={`flex items-center justify-between p-4 sm:p-5 border-b ${
@@ -512,8 +474,7 @@ export default function UserStatusModal({
               />
             )}
           </div>
-        </div>
       </div>
-    </>
+    </Modal>
   )
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Modal from '@/components/ui/Modal'
 import { 
   X, FileText, Calendar, MapPin, CreditCard, AlertCircle, 
   Shield, AlertTriangle, Car, Clock, CheckCircle, XCircle,
@@ -13,6 +14,8 @@ interface MvrViewModalProps {
   isOpen: boolean
   onClose: () => void
   walletAddress: string | null
+  /** Load this order directly (My Files → View). Omit to use legacy latest-order check-status flow. */
+  orderId?: string | null
 }
 
 interface Violation {
@@ -166,7 +169,7 @@ function getStatusBadge(status: string | undefined | null): { bg: string; text: 
   return { bg: 'bg-gray-500/20', text: 'text-gray-400', dot: 'bg-gray-400' }
 }
 
-export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrViewModalProps) {
+export default function MvrViewModal({ isOpen, onClose, walletAddress, orderId: orderIdProp }: MvrViewModalProps) {
   const { theme } = useTheme()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -538,9 +541,38 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
       try {
         setLoading(true)
         setError(null)
+        setMvrOrder(null)
+        setMvrResult(null)
+        setPayments([])
+
+        // Explicit order: My Files "View" on a completed MVR (avoids sending users to the order form)
+        if (orderIdProp) {
+          const statusResponse = await fetch(
+            `/api/mvr/status/${orderIdProp}?walletAddress=${encodeURIComponent(walletAddress)}`
+          )
+          if (!statusResponse.ok) {
+            const errBody = await statusResponse.json().catch(() => ({}))
+            throw new Error(errBody.error || 'Failed to load MVR')
+          }
+          const statusData = await statusResponse.json()
+          const o = statusData.order
+          if (o) {
+            setMvrOrder({
+              id: o.id,
+              orderNumber: o.orderNumber ?? '',
+              status: o.status ?? '',
+              orderedAt: o.orderedAt ?? '',
+              paymentId: null,
+            })
+          }
+          if (statusData.result) {
+            setMvrResult(statusData.result as MvrResult)
+          }
+          return
+        }
 
         const response = await fetch(`/api/mvr/check-status?walletAddress=${encodeURIComponent(walletAddress)}`)
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch MVR data')
         }
@@ -555,9 +587,9 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
           setMvrOrder(data.order)
 
           if (data.result?.id) {
-            const orderId = data.order.id
-            const statusResponse = await fetch(`/api/mvr/status/${orderId}?walletAddress=${encodeURIComponent(walletAddress)}`)
-            
+            const oid = data.order.id
+            const statusResponse = await fetch(`/api/mvr/status/${oid}?walletAddress=${encodeURIComponent(walletAddress)}`)
+
             if (statusResponse.ok) {
               const statusData = await statusResponse.json()
               if (statusData.result) {
@@ -568,16 +600,16 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
         } else {
           setError('No MVR found')
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error fetching MVR data:', err)
-        setError(err.message || 'Failed to load MVR data')
+        setError(err instanceof Error ? err.message : 'Failed to load MVR data')
       } finally {
         setLoading(false)
       }
     }
 
     fetchMvrData()
-  }, [isOpen, walletAddress])
+  }, [isOpen, walletAddress, orderIdProp])
 
   if (!isOpen) return null
 
@@ -585,18 +617,11 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
   const isDark = theme === 'dark'
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Backdrop with blur */}
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-md"
-        onClick={onClose}
-      />
-
-      {/* Modal Container */}
-      <div className={`relative w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl ${
+    <Modal onClose={onClose} maxWidth="max-w-4xl" zIndex={10100}>
+      <div className={`overflow-hidden ${
         isDark 
-          ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border border-gray-700/50' 
-          : 'bg-white border border-gray-200'
+          ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900' 
+          : ''
       }`}>
         
         {/* Header with gradient accent */}
@@ -1253,6 +1278,6 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress }: MvrView
           )}
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }

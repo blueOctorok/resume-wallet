@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { createPortal } from 'react-dom'
 import { useTheme } from '@/contexts/ThemeContext'
+import Modal from '@/components/ui/Modal'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
 import SaveProgressButton from './SaveProgressButton'
 import { PhoneInput } from '@/components/ui/MaskedInputs'
@@ -1916,19 +1916,10 @@ export default function PersonalInfoForm3({
         </button>
       </div>
       
-      {/* Type Selector Modal - Using Portal to escape parent container positioning issues */}
-      {showTypeSelector && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowTypeSelector(false)}
-          />
-          
-          {/* Modal */}
-          <div className={`relative w-full max-w-md rounded-2xl shadow-2xl p-6 ${
-            theme === 'dark' ? 'bg-gray-800' : 'bg-white'
-          }`}>
+      {/* Type Selector Modal */}
+      {showTypeSelector && (
+        <Modal onClose={() => setShowTypeSelector(false)} maxWidth="max-w-md">
+          <div className='p-6'>
             <div className="flex items-center justify-between mb-6">
               <h3 className={`text-xl font-bold ${
                 theme === 'dark' ? 'text-gray-100' : 'text-gray-800'
@@ -1972,8 +1963,7 @@ export default function PersonalInfoForm3({
               ))}
             </div>
           </div>
-        </div>,
-        document.body
+        </Modal>
       )}
     </div>
   )

@@ -12,11 +12,11 @@ import {
   CheckCircle2,
   Send,
   Trash2,
-  X,
   Mail,
   Phone,
   RefreshCw,
 } from 'lucide-react'
+import Modal, { ModalHeader } from '@/components/ui/Modal'
 import VerificationStatusBadge from './VerificationStatusBadge'
 import {
   VerificationRequest,
@@ -535,35 +535,20 @@ export default function DriverEmploymentVerificationSection({
       </div>
 
       {showContactModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div
-            className={`w-full max-w-md rounded-2xl p-6 ${
-              theme === 'dark'
-                ? 'bg-gray-900 border border-gray-700'
-                : 'bg-white shadow-xl'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3
-                className={`font-semibold ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}
-              >
-                Contact Information Needed
-              </h3>
-              <button
-                onClick={() => {
-                  setShowContactModal(null)
-                  setContactEmail('')
-                  setContactPhone('')
-                }}
-                className={`p-2 rounded-lg ${
-                  theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
-                }`}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+        <Modal onClose={() => {
+          setShowContactModal(null)
+          setContactEmail('')
+          setContactPhone('')
+        }} maxWidth="max-w-md">
+          <ModalHeader
+            title="Contact Information Needed"
+            onClose={() => {
+              setShowContactModal(null)
+              setContactEmail('')
+              setContactPhone('')
+            }}
+          />
+          <div className="p-4 sm:p-6">
             <p
               className={`text-sm mb-4 ${
                 theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
@@ -643,26 +628,13 @@ export default function DriverEmploymentVerificationSection({
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
-      {/* Delete employment confirmation */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div
-            className={`w-full max-w-md rounded-2xl p-6 ${
-              theme === 'dark'
-                ? 'bg-gray-900 border border-gray-700'
-                : 'bg-white shadow-xl'
-            }`}
-          >
-            <h3
-              className={`font-semibold mb-2 ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}
-            >
-              Remove employment?
-            </h3>
+        <Modal onClose={() => setDeleteConfirm(null)} maxWidth="max-w-md">
+          <ModalHeader title="Remove employment?" onClose={() => setDeleteConfirm(null)} />
+          <div className="p-4 sm:p-6">
             <p
               className={`text-sm mb-4 ${
                 theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
@@ -694,7 +666,7 @@ export default function DriverEmploymentVerificationSection({
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </>
   )

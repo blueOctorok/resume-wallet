@@ -18,6 +18,7 @@ import {
   User,
 } from 'lucide-react'
 import BackToHubButton from '@/components/ui/BackToHubButton'
+import Modal, { ModalHeader } from '@/components/ui/Modal'
 import CareerCardModal from '@/components/employer/CareerCardModal'
 
 interface Applicant {
@@ -468,51 +469,42 @@ function ApplicantDetailModal({
 
   return (
     <>
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className={`relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl ${
-        theme === 'dark'
-          ? 'bg-brand-sage-dark border border-brand-mint/30'
-          : 'bg-white shadow-2xl'
+    <Modal onClose={onClose} maxWidth="max-w-2xl">
+      {/* Custom header with Career Card button alongside close */}
+      <div className={`sticky top-0 z-10 flex items-center justify-between p-4 border-b ${
+        theme === 'dark' ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'
       }`}>
-        {/* Header */}
-        <div className={`sticky top-0 flex items-center justify-between p-4 border-b ${
-          theme === 'dark' ? 'border-gray-700 bg-brand-sage-dark' : 'border-gray-200 bg-white'
-        }`}>
-          <div>
-            <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              {applicant.applicantName}
-            </h3>
-            <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-              Applied for {applicant.jobTitle}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowCareerCard(true)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                theme === 'dark'
-                  ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30'
-                  : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
-              }`}
-            >
-              <User className="w-3.5 h-3.5" />
-              Career Card
-            </button>
-            <button
-              onClick={onClose}
-              className={`p-2 rounded-lg ${theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-            >
-              <X className={`w-5 h-5 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`} />
-            </button>
-          </div>
+        <div>
+          <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            {applicant.applicantName}
+          </h3>
+          <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+            Applied for {applicant.jobTitle}
+          </p>
         </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowCareerCard(true)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              theme === 'dark'
+                ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30'
+                : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
+            }`}
+          >
+            <User className="w-3.5 h-3.5" />
+            Career Card
+          </button>
+          <button
+            onClick={onClose}
+            className={`p-2 rounded-lg ${theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+          >
+            <X className={`w-5 h-5 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`} />
+          </button>
+        </div>
+      </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-6">
+      {/* Content */}
+      <div className="p-6 space-y-6">
           {/* Contact Info */}
           <div className="flex flex-wrap gap-3">
             {applicant.applicantEmail && (
@@ -635,8 +627,7 @@ function ApplicantDetailModal({
             )}
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
 
     {/* Career card modal — layered above the detail modal */}
     {showCareerCard && (

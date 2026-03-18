@@ -9,9 +9,8 @@ import {
   AlertCircle,
   Building2,
   Calendar,
-  Eye,
-  X,
 } from 'lucide-react'
+import Modal, { ModalHeader } from '@/components/ui/Modal'
 import VerificationStatusBadge from './VerificationStatusBadge'
 import { 
   DriverVerificationSummary, 
@@ -397,181 +396,158 @@ function VerificationDetailModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className={`w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl ${
-        theme === 'dark'
-          ? 'bg-gray-900 border border-gray-700'
-          : 'bg-white shadow-xl'
-      }`}>
-        {/* Header */}
-        <div className={`sticky top-0 flex items-center justify-between p-4 border-b ${
-          theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
-        }`}>
-          <h3 className={`font-semibold ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            Verification Details
-          </h3>
-          <button
-            onClick={onClose}
-            className={`p-2 rounded-lg ${
-              theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
-            }`}
-          >
-            <X className="w-5 h-5" />
-          </button>
+    <Modal onClose={onClose} maxWidth="max-w-lg">
+      <ModalHeader title="Verification Details" onClose={onClose} />
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin" />
         </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin" />
+      ) : (
+        <div className="p-4 space-y-6">
+          {/* Status */}
+          <div className="flex items-center gap-3">
+            <VerificationStatusBadge status={request.status} size="lg" theme={theme} />
           </div>
-        ) : (
-          <div className="p-4 space-y-6">
-            {/* Status */}
-            <div className="flex items-center gap-3">
-              <VerificationStatusBadge status={request.status} size="lg" theme={theme} />
-            </div>
 
-            {/* Employment Details */}
-            <div>
-              <h4 className={`text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              }`}>
-                Employment Being Verified
-              </h4>
-              <div className={`rounded-xl p-4 ${
-                theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
-              }`}>
-                <p className={`font-medium ${
-                  theme === 'dark' ? 'text-white' : 'text-gray-900'
-                }`}>
-                  {request.previousEmployerName}
-                </p>
-                <p className={`text-sm ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                }`}>
-                  {request.claimedPosition}
-                </p>
-                <div className="flex items-center gap-2 mt-2">
-                  <Calendar className="w-4 h-4 text-gray-500" />
-                  <span className={`text-sm ${
-                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                  }`}>
-                    {formatDate(request.claimedStartDate)} - {formatDate(request.claimedEndDate)}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Requesting Company */}
-            <div>
-              <h4 className={`text-sm font-medium mb-2 ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-              }`}>
-                Verification Requested By
-              </h4>
-              <p className={theme === 'dark' ? 'text-white' : 'text-gray-900'}>
-                {request.requestingCompanyName || 'Unknown Company'}
-              </p>
-            </div>
-
-            {/* Verification Answers (if verified) */}
-            {request.answers && (
-              <div>
-                <h4 className={`text-sm font-medium mb-2 ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                }`}>
-                  Verification Results
-                </h4>
-                <div className="space-y-2">
-                  <AnswerRow
-                    label="Employment dates correct"
-                    value={request.answers.datesCorrect}
-                    theme={theme}
-                  />
-                  <AnswerRow
-                    label="Was terminated"
-                    value={request.answers.wasTerminated}
-                    theme={theme}
-                  />
-                  <AnswerRow
-                    label="Eligible to return"
-                    value={request.answers.eligibleToReturn}
-                    theme={theme}
-                  />
-                  <AnswerRow
-                    label="Had accident"
-                    value={request.answers.hadAccident}
-                    theme={theme}
-                  />
-                  <AnswerRow
-                    label="Failed Clearinghouse test"
-                    value={request.answers.failedClearinghouseTest}
-                    theme={theme}
-                  />
-                  <AnswerRow
-                    label="Random drug test/refused"
-                    value={request.answers.randomDrugTestOrRefused}
-                    theme={theme}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Attempt History */}
-            {attempts.length > 0 && (
-              <div>
-                <h4 className={`text-sm font-medium mb-2 ${
-                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                }`}>
-                  Contact Attempts ({attempts.length}/3)
-                </h4>
-                <div className="space-y-2">
-                  {attempts.map((attempt) => (
-                    <div
-                      key={attempt.id}
-                      className={`flex items-center justify-between p-3 rounded-lg text-sm ${
-                        theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
-                      }`}
-                    >
-                      <div>
-                        <span className={theme === 'dark' ? 'text-white' : 'text-gray-900'}>
-                          Attempt {attempt.attemptNumber}
-                        </span>
-                        <span className={`ml-2 ${
-                          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                        }`}>
-                          via {attempt.method}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs ${
-                          theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-                        }`}>
-                          {formatDate(attempt.sentAt)}
-                        </span>
-                        {attempt.responseReceived && (
-                          <span className="text-green-500 text-xs">Responded</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Dates */}
-            <div className={`text-xs ${
-              theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+          {/* Employment Details */}
+          <div>
+            <h4 className={`text-sm font-medium mb-2 ${
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
             }`}>
-              <p>Requested: {formatDate(request.createdAt)}</p>
-              {request.verifiedAt && <p>Verified: {formatDate(request.verifiedAt)}</p>}
+              Employment Being Verified
+            </h4>
+            <div className={`rounded-xl p-4 ${
+              theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
+            }`}>
+              <p className={`font-medium ${
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
+              }`}>
+                {request.previousEmployerName}
+              </p>
+              <p className={`text-sm ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              }`}>
+                {request.claimedPosition}
+              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <Calendar className="w-4 h-4 text-gray-500" />
+                <span className={`text-sm ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                }`}>
+                  {formatDate(request.claimedStartDate)} - {formatDate(request.claimedEndDate)}
+                </span>
+              </div>
             </div>
           </div>
-        )}
-      </div>
-    </div>
+
+          {/* Requesting Company */}
+          <div>
+            <h4 className={`text-sm font-medium mb-2 ${
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            }`}>
+              Verification Requested By
+            </h4>
+            <p className={theme === 'dark' ? 'text-white' : 'text-gray-900'}>
+              {request.requestingCompanyName || 'Unknown Company'}
+            </p>
+          </div>
+
+          {/* Verification Answers (if verified) */}
+          {request.answers && (
+            <div>
+              <h4 className={`text-sm font-medium mb-2 ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              }`}>
+                Verification Results
+              </h4>
+              <div className="space-y-2">
+                <AnswerRow
+                  label="Employment dates correct"
+                  value={request.answers.datesCorrect}
+                  theme={theme}
+                />
+                <AnswerRow
+                  label="Was terminated"
+                  value={request.answers.wasTerminated}
+                  theme={theme}
+                />
+                <AnswerRow
+                  label="Eligible to return"
+                  value={request.answers.eligibleToReturn}
+                  theme={theme}
+                />
+                <AnswerRow
+                  label="Had accident"
+                  value={request.answers.hadAccident}
+                  theme={theme}
+                />
+                <AnswerRow
+                  label="Failed Clearinghouse test"
+                  value={request.answers.failedClearinghouseTest}
+                  theme={theme}
+                />
+                <AnswerRow
+                  label="Random drug test/refused"
+                  value={request.answers.randomDrugTestOrRefused}
+                  theme={theme}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Attempt History */}
+          {attempts.length > 0 && (
+            <div>
+              <h4 className={`text-sm font-medium mb-2 ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              }`}>
+                Contact Attempts ({attempts.length}/3)
+              </h4>
+              <div className="space-y-2">
+                {attempts.map((attempt) => (
+                  <div
+                    key={attempt.id}
+                    className={`flex items-center justify-between p-3 rounded-lg text-sm ${
+                      theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
+                    }`}
+                  >
+                    <div>
+                      <span className={theme === 'dark' ? 'text-white' : 'text-gray-900'}>
+                        Attempt {attempt.attemptNumber}
+                      </span>
+                      <span className={`ml-2 ${
+                        theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                      }`}>
+                        via {attempt.method}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs ${
+                        theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                      }`}>
+                        {formatDate(attempt.sentAt)}
+                      </span>
+                      {attempt.responseReceived && (
+                        <span className="text-green-500 text-xs">Responded</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Dates */}
+          <div className={`text-xs ${
+            theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+          }`}>
+            <p>Requested: {formatDate(request.createdAt)}</p>
+            {request.verifiedAt && <p>Verified: {formatDate(request.verifiedAt)}</p>}
+          </div>
+        </div>
+      )}
+    </Modal>
   )
 }
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import Modal from './ui/Modal'
 import { 
   Trash2, 
   Download, 
@@ -471,21 +472,8 @@ export default function ResumeDashboard({
 
       {/* Delete Confirmation Modal */}
       {deleteModalOpen && resumeToDelete && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className={`relative w-full max-w-md rounded-2xl border p-6 shadow-2xl ${
-            theme === 'dark'
-              ? 'bg-brand-sage-light border-brand-mint/30'
-              : 'bg-white border-gray-200'
-          }`}>
-            <button
-              onClick={() => { setDeleteModalOpen(false); setResumeToDelete(null) }}
-              className={`absolute top-4 right-4 p-1 rounded-lg transition-colors ${
-                theme === 'dark' ? 'hover:bg-brand-sage/50' : 'hover:bg-gray-100'
-              }`}
-            >
-              <X className="w-5 h-5" />
-            </button>
-
+        <Modal onClose={() => { setDeleteModalOpen(false); setResumeToDelete(null) }} maxWidth="max-w-md">
+          <div className='p-6'>
             <div className="flex items-start gap-4">
               <div className={`p-3 rounded-full ${
                 theme === 'dark' ? 'bg-red-500/20' : 'bg-red-100'
@@ -553,7 +541,7 @@ export default function ResumeDashboard({
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       <div

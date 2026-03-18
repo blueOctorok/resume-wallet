@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createPortal } from 'react-dom'
+import Modal from '@/components/ui/Modal'
 import { useTheme } from '@/contexts/ThemeContext'
-import { User, Mail, Phone, MapPin, Loader2, X, Sparkles } from 'lucide-react'
+import { User, Mail, Phone, MapPin, Loader2, Sparkles } from 'lucide-react'
 
 interface ProfileSetupModalProps {
   isOpen: boolean
@@ -54,11 +54,6 @@ export default function ProfileSetupModal({
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   useEffect(() => {
     if (userEmail && !form.email) {
@@ -113,31 +108,11 @@ export default function ProfileSetupModal({
     }
   }
 
-  if (!mounted || !isOpen) return null
+  if (!isOpen) return null
 
-  const modalContent = (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div className={`relative w-full max-w-md rounded-2xl shadow-2xl border ${
-        isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
-      }`}>
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className={`absolute top-4 right-4 p-1 rounded-lg transition-colors ${
-            isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
-          }`}
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        {/* Header */}
+  return (
+    <Modal onClose={onClose} maxWidth="max-w-md" zIndex={100}>
+      {/* Header */}
         <div className={`px-6 pt-6 pb-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
           <div className="flex items-center gap-3 mb-2">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
@@ -345,9 +320,6 @@ export default function ProfileSetupModal({
             You can always update this later from your hub
           </p>
         </form>
-      </div>
-    </div>
+    </Modal>
   )
-
-  return createPortal(modalContent, document.body)
 }

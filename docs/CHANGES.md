@@ -4,6 +4,102 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Career card MVR: View opens report modal** (March 2026)
+
+Same bug class as My Files: **View** called `onNavigateToBlock('driver-mvr')` → `MvrOrderForm`. **View** now opens **`MvrViewModal`** with `data.orderId` (and wallet), matching My Files.
+
+---
+
+## **Career card MVR: fix driver link + section visibility** (March 2026)
+
+### Problem
+Completed MVR showed in My Files (driver hub uses `driver_user_id`) but not on the projected career card.
+
+### Cause
+`GET /api/career-card` queried `mvr_orders` with `.eq('user_id', …)` — that column does not exist on `mvr_orders` (canonical field is `driver_user_id`), so no order was ever found and the `driver-mvr` section was omitted.
+
+### Fix
+- Query `mvr_orders` by `driver_user_id`.
+- Prefer the newest self-ordered MVR that is `completed` / `needs_review` **and** has a `mvr_results` row so a newer pending reorder does not hide a finished report.
+- **MvrSection** treats `needs_review` like `completed` for the summary grid (same as hub).
+
+---
+
+## **Fix: DeveloperResumePreviewModal JSX syntax error** (March 2026)
+
+Removed stray `</div>` left behind during the modal standardization sweep, which broke the build.
+
+---
+
+## **My Files: completed MVR opens viewer, not order form** (March 2026)
+
+### Problem
+Clicking View on a completed MVR in My Files navigated to `currentPage === 'mvr'`, which always renders `MvrOrderForm` (new order flow).
+
+### Fix
+1. **`MvrViewModal`** — optional prop `orderId`. When set, loads that order via `GET /api/mvr/status/[orderId]` instead of the generic check-status flow. Modal `zIndex` raised to `10100` so it stacks above the nav like other hub modals.
+2. **`CandidateHub` / My Files** — completed MVR rows open `MvrViewModal` with the row’s order id; in-progress MVRs still use `editPage: 'mvr'` if we ever show a button (currently hidden while processing).
+
+---
+
+## **Full Modal Standardization Sweep** (March 2026)
+
+### Summary
+Migrated **~40 hand-rolled modal overlays across 36 files** to use the shared `<Modal>` component. Every modal in the app now gets body scroll lock, React portal rendering, Escape key handling, and consistent z-index for free. A permanent cursor rule was added to prevent regressions.
+
+### Root cause
+Most modals were hand-rolling `<div className="fixed inset-0 z-[N]">` with separate backdrop divs, but skipping scroll lock and portal rendering. This caused two recurring bugs: (1) background scrolling while modal is open, (2) navbar rendering on top of the modal.
+
+### What was removed per modal
+- Manual `document.body.style.overflow = 'hidden'` scroll lock `useEffect`s
+- Manual Escape key `useEffect` handlers
+- `handleBackdropClick` functions
+- `createPortal` usage and `mounted` state guards
+- `fixed inset-0` overlay wrappers with separate backdrop divs
+- Unused imports (`X`, `Eye`, `Share2`, `createPortal`, etc.)
+
+### Files changed (36 total)
+**Standalone modals:** `UserStatusModal`, `ProfileConflictModal`, `ProfileSetupModal`, `RoleSelectionModal`, `MvrViewModal`, `MvrManagementModal`, `UploadResumeModal`, `ApplyWithStormChainModal`, `BackgroundCheckDisclosure`, `ResumePreviewModal`, `DeveloperResumePreviewModal`, `MobileConsole`, `JourneyModal`, `ShareProfileCard`
+
+**Admin:** `UserDetailModal`, `CreateCompanyModal`, `DeleteConfirmModal`, `MvrTab`
+
+**Employer:** `CareerCardModal` (3 nested modals), `CandidateOutreach`, `FindDriversPage`, `TalentSearchPage`, `ApplicantsPage`, `TeamManagement`
+
+**Verification:** `DriverVerificationSection`, `EmployerVerificationSection`, `DeveloperEmploymentVerificationSection`, `DriverEmploymentVerificationSection`
+
+**Hub/features:** `DriverHub`, `ResumeDashboard`, `CandidateRequestsSection`, `PortfolioPage`, `ProjectDetailModal`, `PersonalInfoForm3`, `card/[token]/page.tsx`
+
+**Block pickers:** `EmployerBlockPickerModal`, `BlockPickerModal`
+
+### Intentionally skipped (2 files)
+- `AvaJourneyGuide.tsx` — slide-out drawer, not a centered modal
+- `GitHubContributionGraph.tsx` — transparent click-away overlay for a dropdown
+
+### Cursor rule added
+`.cursor/rules/ui-components.mdc` — "Modals — Always Use `Modal`" section with enforcement rule, examples, and new-modal checklist. Set to `alwaysApply: true`.
+
+---
+
+## **Modal Scroll Lock & z-index Fix + Cursor Rule** (March 2026)
+
+### Summary
+Fixed the recurring bug where opening a modal lets the background scroll and the navbar renders on top of it. Created a permanent cursor rule to prevent this from ever happening again.
+
+### Root cause
+Both `BlockPickerModal` (candidate) and `EmployerBlockPickerModal` were hand-rolling `fixed inset-0` overlays instead of using the shared `Modal` component. The `Modal` component handles three critical things: body scroll lock (`overflow: hidden`), React portal (renders outside parent stacking contexts), and managed z-index. Hand-rolled overlays skip all of these.
+
+### What was done
+1. **`EmployerBlockPickerModal`** — rewrote to use `<Modal>` + `<ModalHeader>`. Removed manual `useEffect` for Escape key (Modal handles it). Removed hand-rolled backdrop/overlay divs.
+2. **`BlockPickerModal`** — same treatment.
+3. **`.cursor/rules/ui-components.mdc`** — added "Modals — Always Use `Modal`" section with enforcement rule, examples, and a checklist for new modals. Also changed `alwaysApply` to `true` so this rule is enforced in every conversation.
+
+### Files changed
+- `src/components/employer/EmployerBlockPickerModal.tsx`
+- `src/components/hub/BlockPickerModal.tsx`
+- `.cursor/rules/ui-components.mdc`
+
+---
+
 ## **Manual Refresh Buttons** (March 2026)
 
 ### Summary
@@ -13228,6 +13324,14 @@ Migrated 6 API routes from reading `driver_profiles` to reading from block table
 |------|--------|
 | `src/app/api/driver/share/route.ts` | Share columns from `users` instead of `driver_profiles` |
 | `src/app/api/driver/public/[token]/route.ts` | Token lookup from `users`, profile data from block tables |
+| `src/app/api/driver/verification/initiate-self/route.ts` | Employment from `getDriverEmployment` |
+| `src/app/api/driver/verification/status/route.ts` | Employment from `getDriverEmployment` |
+| `src/app/api/mvr/order/route.ts` | Narrowed profile read to `select('id')` |
+| `src/app/api/mvr/webhook/route.ts` | Profile completeness from block data + supporting queries |
+
+**Status**: ✅ COMPLETE
+
+lookup from `users`, profile data from block tables |
 | `src/app/api/driver/verification/initiate-self/route.ts` | Employment from `getDriverEmployment` |
 | `src/app/api/driver/verification/status/route.ts` | Employment from `getDriverEmployment` |
 | `src/app/api/mvr/order/route.ts` | Narrowed profile read to `select('id')` |

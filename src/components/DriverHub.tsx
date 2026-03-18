@@ -11,6 +11,7 @@ import DriverEmploymentVerificationSection from './verification/DriverEmployment
 import CandidateRequestsSection from './CandidateRequestsSection'
 import ResumePreviewModal from './ResumePreviewModal'
 import UploadResumeModal from './UploadResumeModal'
+import Modal, { ModalHeader } from './ui/Modal'
 import {
   FileText,
   ClipboardList,
@@ -2007,12 +2008,8 @@ export default function DriverHub({
 
       {/* Delete Confirmation Modal */}
       {deletingResume && (
-        <div className='fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm'>
-          <div
-            className={`relative w-full max-w-md rounded-2xl shadow-2xl p-6 ${
-              theme === 'dark' ? 'bg-gray-800' : 'bg-white'
-            }`}
-          >
+        <Modal onClose={() => setDeletingResume(null)} maxWidth="max-w-md">
+          <div className='p-6'>
             <h3
               className={`text-lg font-bold mb-2 ${
                 theme === 'dark' ? 'text-white' : 'text-gray-900'
@@ -2055,7 +2052,7 @@ export default function DriverHub({
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* DOT Application Detail Modal */}
@@ -2341,7 +2338,6 @@ function ItemRow({
 function DetailModal({
   title,
   onClose,
-  theme,
   children,
 }: {
   title: string
@@ -2350,42 +2346,10 @@ function DetailModal({
   children: React.ReactNode
 }) {
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm'>
-      <div
-        className={`relative w-full max-w-lg max-h-[80vh] overflow-y-auto rounded-2xl shadow-2xl ${
-          theme === 'dark'
-            ? 'bg-gray-800/50 border border-gray-700'
-            : 'bg-white border border-gray-200'
-        }`}
-      >
-        <div
-          className={`sticky top-0 flex items-center justify-between p-4 border-b ${
-            theme === 'dark'
-              ? 'bg-gray-800/50 border-gray-700'
-              : 'bg-white border-gray-200'
-          }`}
-        >
-          <h3
-            className={`text-lg font-bold ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}
-          >
-            {title}
-          </h3>
-          <button
-            onClick={onClose}
-            className={`p-2 rounded-lg transition-colors ${
-              theme === 'dark'
-                ? 'hover:bg-gray-700/50 text-gray-400'
-                : 'hover:bg-gray-100'
-            }`}
-          >
-            <X className='w-5 h-5' />
-          </button>
-        </div>
-        <div className='p-4'>{children}</div>
-      </div>
-    </div>
+    <Modal onClose={onClose} maxWidth="max-w-lg">
+      <ModalHeader title={title} onClose={onClose} />
+      <div className='p-4'>{children}</div>
+    </Modal>
   )
 }
 

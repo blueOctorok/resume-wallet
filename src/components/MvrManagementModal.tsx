@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Modal from '@/components/ui/Modal'
 import { X, FileText, DollarSign, Clock, CheckCircle2, AlertCircle, ExternalLink } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 
@@ -107,19 +108,12 @@ export default function MvrManagementModal({
   ) || []
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Backdrop */}
+    <Modal onClose={onClose} maxWidth="max-w-4xl" zIndex={100}>
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div
-        className={`relative w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl border ${
+        className={`overflow-hidden ${
           theme === 'light'
-            ? 'bg-white border-gray-300'
-            : 'bg-gray-900/95 backdrop-blur-xl border-gray-700'
+            ? ''
+            : 'bg-gray-900/95 backdrop-blur-xl'
         }`}
       >
         {/* Header */}
@@ -581,7 +575,7 @@ export default function MvrManagementModal({
           </div>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }
 

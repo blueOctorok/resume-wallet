@@ -1,11 +1,12 @@
 'use client'
 
 import { useCallback, useEffect } from 'react'
-import { X, CheckCircle, FileText, Briefcase, Truck, FileCheck, Send, Building, Users, Code, Github, Star, Search } from 'lucide-react'
+import { CheckCircle, FileText, Briefcase, Truck, FileCheck, Send, Building, Users, Code, Github, Star, Search } from 'lucide-react'
 import { useUIStore, usePreferencesStore } from '@/stores'
 import { getJourneyStep, type JourneyStep, type JourneyAction } from '@/lib/journey-config'
 import { useTheme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
+import Modal from '@/components/ui/Modal'
 
 const ICONS = {
   CheckCircle,
@@ -99,55 +100,13 @@ export default function JourneyModal() {
     dismissJourneyModal()
   }, [setShowJourneyModals, dismissJourneyModal])
 
-  // Close on escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && showJourneyModal) {
-        handleDismiss()
-      }
-    }
-    window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
-  }, [showJourneyModal, handleDismiss])
-
   if (!shouldShow() || !step) return null
 
   const IconComponent = ICONS[step.icon] || CheckCircle
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={handleDismiss}
-      />
-      
-      {/* Modal */}
-      <div 
-        className={cn(
-          'relative w-full max-w-md rounded-2xl shadow-2xl',
-          'transform transition-all duration-300 ease-out',
-          'animate-in fade-in zoom-in-95',
-          theme === 'dark' 
-            ? 'bg-gray-800 border border-gray-700' 
-            : 'bg-white border border-gray-200'
-        )}
-      >
-        {/* Close button */}
-        <button
-          onClick={handleDismiss}
-          className={cn(
-            'absolute top-4 right-4 p-1 rounded-full transition-colors',
-            theme === 'dark'
-              ? 'text-gray-400 hover:text-white hover:bg-gray-700'
-              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-          )}
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        {/* Content */}
-        <div className="p-6 text-center">
+    <Modal onClose={handleDismiss} maxWidth="max-w-md" zIndex={1100}>
+      <div className="p-6 text-center">
           {/* Icon */}
           <div className={cn(
             'mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4',
@@ -214,7 +173,6 @@ export default function JourneyModal() {
             Don&apos;t show these tips again
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }

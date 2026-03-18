@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import ProjectDetailModal from './ProjectDetailModal'
 import BackToHubButton from '@/components/ui/BackToHubButton'
+import Modal, { ModalHeader } from '@/components/ui/Modal'
 import {
   Plus,
   Folder,
@@ -417,36 +418,11 @@ export default function PortfolioPage({
 
       {/* Project Form Modal */}
       {showForm && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm'>
-          <div
-            className={`w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl ${
-              theme === 'dark'
-                ? 'bg-gray-800 border border-gray-700'
-                : 'bg-white'
-            }`}
-          >
-            <div
-              className={`sticky top-0 flex items-center justify-between p-4 border-b ${
-                theme === 'dark'
-                  ? 'bg-gray-800 border-gray-700'
-                  : 'bg-white border-gray-200'
-              }`}
-            >
-              <h2
-                className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
-              >
-                {editingProject ? 'Edit Project' : 'Add Project'}
-              </h2>
-              <button
-                onClick={() => {
-                  setShowForm(false)
-                  resetForm()
-                }}
-                className={`p-2 rounded-lg ${theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-              >
-                <X className='w-5 h-5' />
-              </button>
-            </div>
+        <Modal onClose={() => { setShowForm(false); resetForm() }} maxWidth="max-w-2xl">
+            <ModalHeader
+              title={editingProject ? 'Edit Project' : 'Add Project'}
+              onClose={() => { setShowForm(false); resetForm() }}
+            />
 
             <form onSubmit={handleSubmit} className='p-4 space-y-4'>
               {/* Title */}
@@ -844,8 +820,7 @@ export default function PortfolioPage({
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Projects Grid */}

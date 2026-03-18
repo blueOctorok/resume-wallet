@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { AlertTriangle, Loader2 } from 'lucide-react'
+import Modal from '@/components/ui/Modal'
 import type { DeleteTarget } from '@/components/admin/admin-types'
 
 interface DeleteConfirmModalProps {
@@ -31,14 +32,8 @@ export default function DeleteConfirmModal({
   }
 
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50'>
-      <div
-        className={`rounded-xl border ${
-          theme === 'dark'
-            ? 'bg-gray-800 border-gray-700'
-            : 'bg-white border-gray-200'
-        } p-6 max-w-md w-full`}
-      >
+    <Modal onClose={handleClose} maxWidth="max-w-md">
+      <div className='p-6'>
         <div className='flex items-center gap-3 mb-4'>
           <div className='p-2 rounded-full bg-red-100 dark:bg-red-900/30'>
             <AlertTriangle className='w-6 h-6 text-red-500' />
@@ -108,6 +103,6 @@ export default function DeleteConfirmModal({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }

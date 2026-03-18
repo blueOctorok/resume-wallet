@@ -1,7 +1,7 @@
 ---
-description: UI component standards — enforces use of shared primitives for buttons, cards, and back navigation
+description: UI component standards — enforces use of shared primitives for buttons, cards, modals, and back navigation
 globs: src/**/*.tsx
-alwaysApply: false
+alwaysApply: true
 ---
 
 # UI Component Standards
@@ -66,3 +66,45 @@ import Button from '@/components/ui/Button'
 ```
 
 `ghost` variant is acceptable for icon-only utility buttons inside complex UI (e.g. modal close X).
+
+---
+
+## Modals — Always Use `Modal` (NEVER hand-roll overlays)
+
+Every overlay/dialog/picker in this app MUST use the shared `Modal` component from `@/components/ui/Modal`. This is **non-negotiable** because `Modal` handles three things that hand-rolled `fixed inset-0` divs always forget:
+
+1. **Scroll lock** — sets `body.style.overflow = 'hidden'` on mount so the page behind doesn't scroll. Uses a nested-modal counter so the lock only lifts when the last modal closes.
+2. **Portal** — uses `createPortal(content, document.body)` so the modal is outside every parent stacking context. This prevents the navbar or other `z-index` layers from rendering on top.
+3. **z-index** — accepts a `zIndex` prop (default 1000). Nested modals just pass a higher value.
+
+```tsx
+// ❌ BAD — hand-rolled overlay (WILL have scroll bleed + navbar z-index issues)
+<div className="fixed inset-0 z-[70] flex items-center justify-center">
+  <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+  <div className="relative bg-white rounded-2xl max-w-2xl">
+    {/* content */}
+  </div>
+</div>
+
+// ✅ GOOD — use Modal + ModalHeader
+import Modal, { ModalHeader } from '@/components/ui/Modal'
+
+<Modal onClose={onClose} maxWidth="max-w-2xl">
+  <ModalHeader title="Add Tools" subtitle="Pick industry-specific tools" onClose={onClose} />
+  <div className="p-4">
+    {/* content */}
+  </div>
+</Modal>
+```
+
+### If you think you need a custom overlay
+
+You don't. The only exception is `LoadingScreen` (full-page takeover with no close button). Every other overlay — pickers, confirmations, previews, forms — goes through `Modal`.
+
+### Checklist for new modals
+
+- [ ] Uses `<Modal>` component (not `fixed inset-0`)
+- [ ] Uses `<ModalHeader>` for title + close button (not a custom header)
+- [ ] Sets `zIndex` if it can open on top of another modal
+- [ ] Does NOT manually set `body.style.overflow` (Modal handles it)
+- [ ] Does NOT use `createPortal` directly (Modal handles it)

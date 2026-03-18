@@ -1,10 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createPortal } from 'react-dom'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
-  X,
   Loader2,
   AlertCircle,
   Send,
@@ -14,6 +12,7 @@ import {
   RefreshCw,
   CreditCard,
 } from 'lucide-react'
+import Modal, { ModalHeader } from '@/components/ui/Modal'
 import CareerCard, { type CareerCardData } from '@/components/CareerCard'
 import Avatar from '@/components/ui/Avatar'
 import MessagingButton from '@/components/messaging/MessagingButton'
@@ -63,15 +62,6 @@ export default function CareerCardModal({
   const [mvrOrderError, setMvrOrderError] = useState<string | null>(null)
   const [mvrOrderSuccess, setMvrOrderSuccess] = useState(false)
 
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => { setMounted(true) }, [])
-
-  // Lock body scroll while open
-  useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
-  }, [])
 
   // Fetch on mount
   useEffect(() => {
@@ -234,8 +224,6 @@ export default function CareerCardModal({
     }
   }
 
-  if (!mounted) return null
-
   // ── Action slots passed into CareerCard ───────────────────────────────────
 
   const resumeAction = !careerCard?.hasResume ? (
@@ -357,193 +345,155 @@ export default function CareerCardModal({
   // ── Modal shell ───────────────────────────────────────────────────────────
 
   const modalContent = (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-hidden">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className={`relative z-[10000] w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
-        theme === 'dark' ? 'bg-gray-900 border border-gray-700' : 'bg-white shadow-2xl'
+    <Modal onClose={onClose} maxWidth="max-w-3xl" zIndex={9999}>
+      {/* Custom header with avatar + refresh (not using ModalHeader because of Avatar) */}
+      <div className={`sticky top-0 z-10 flex items-center justify-between p-4 border-b ${
+        theme === 'dark' ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'
       }`}>
-        {/* Header */}
-        <div className={`sticky top-0 z-10 flex items-center justify-between p-4 border-b ${
-          theme === 'dark' ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'
-        }`}>
-          <div className="flex items-center gap-3">
-            <Avatar
-              name={careerCard?.name || '?'}
-              avatarUrl={careerCard?.avatarUrl}
-              size="md"
-              color="teal"
-            />
-            <div>
-              <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                {loading ? 'Loading...' : careerCard?.name || 'Career Card'}
-              </h3>
-              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                Career Card
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Refresh — lets employer manually sync if candidate updated their profile */}
-            <button
-              onClick={() => fetchCareerCard(true)}
-              disabled={isRefreshing}
-              title="Refresh"
-              className={`p-2 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-            <button
-              onClick={onClose}
-              className={`p-2 rounded-lg ${theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}
-            >
-              <X className={`w-5 h-5 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`} />
-            </button>
+        <div className="flex items-center gap-3">
+          <Avatar
+            name={careerCard?.name || '?'}
+            avatarUrl={careerCard?.avatarUrl}
+            size="md"
+            color="teal"
+          />
+          <div>
+            <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              {loading ? 'Loading...' : careerCard?.name || 'Career Card'}
+            </h3>
+            <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              Career Card
+            </p>
           </div>
         </div>
-
-        {/* Body */}
-        <div className="p-6">
-          {loading && (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className={`w-10 h-10 animate-spin ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
-            </div>
-          )}
-          {error && (
-            <div className={`p-6 rounded-xl text-center ${theme === 'dark' ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
-              <AlertCircle className="w-10 h-10 mx-auto mb-2" />
-              <p>{error}</p>
-            </div>
-          )}
-          {!loading && !error && careerCard && (
-            <CareerCard
-              data={careerCard}
-              walletAddress={walletAddress}
-              resumeAction={resumeAction}
-              mvrAction={mvrAction}
-              dotAppAction={dotAppAction}
-              footerActions={footerActions}
-            />
-          )}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => fetchCareerCard(true)}
+            disabled={isRefreshing}
+            title="Refresh"
+            className={`p-2 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
-    </div>
+
+      {/* Body */}
+      <div className="p-6">
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className={`w-10 h-10 animate-spin ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />
+          </div>
+        )}
+        {error && (
+          <div className={`p-6 rounded-xl text-center ${theme === 'dark' ? 'bg-red-900/20 text-red-400' : 'bg-red-50 text-red-600'}`}>
+            <AlertCircle className="w-10 h-10 mx-auto mb-2" />
+            <p>{error}</p>
+          </div>
+        )}
+        {!loading && !error && careerCard && (
+          <CareerCard
+            data={careerCard}
+            walletAddress={walletAddress}
+            resumeAction={resumeAction}
+            mvrAction={mvrAction}
+            dotAppAction={dotAppAction}
+            footerActions={footerActions}
+          />
+        )}
+      </div>
+    </Modal>
   )
 
   // ── Recruit sub-modal ─────────────────────────────────────────────────────
 
   const recruitModalContent = showRecruitModal ? (
-    <div
-      className="fixed inset-0 z-[10001] flex items-center justify-center p-4"
-      onClick={e => { if (e.target === e.currentTarget) setShowRecruitModal(false) }}
-    >
-      <div className="absolute inset-0 bg-black/70 pointer-events-none" />
-      <div
-        className={`relative z-[10002] w-full max-w-md rounded-2xl shadow-2xl ${
-          theme === 'dark' ? 'bg-gray-900' : 'bg-white'
-        }`}
-        onClick={e => e.stopPropagation()}
-      >
-        <div className={`p-6 border-b ${theme === 'dark' ? 'border-gray-800' : 'border-gray-100'}`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`p-2.5 rounded-xl ${theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'}`}>
-                <UserPlus className="w-5 h-5 text-teal-500" />
-              </div>
-              <div>
-                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                  Recruit Candidate
-                </h3>
-                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Select a job for {careerCard?.name || 'this candidate'}
-                </p>
-              </div>
+    <Modal onClose={() => setShowRecruitModal(false)} maxWidth="max-w-md" zIndex={10001}>
+      <ModalHeader
+        title="Recruit Candidate"
+        subtitle={`Select a job for ${careerCard?.name || 'this candidate'}`}
+        onClose={() => setShowRecruitModal(false)}
+      />
+      <div className="p-6 space-y-4">
+        <div>
+          <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+            Select Job Posting *
+          </label>
+          {jobsLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="w-5 h-5 animate-spin text-teal-500" />
             </div>
-            <button onClick={() => setShowRecruitModal(false)} className={`p-2 rounded-lg ${theme === 'dark' ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-        <div className="p-6 space-y-4">
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              Select Job Posting *
-            </label>
-            {jobsLoading ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="w-5 h-5 animate-spin text-teal-500" />
-              </div>
-            ) : jobPostings.length === 0 ? (
-              <p className={`text-sm py-3 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                No active job postings. Create one first.
-              </p>
-            ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {jobPostings.map(job => (
-                  <button
-                    type="button"
-                    key={job.id}
-                    onClick={e => { e.stopPropagation(); setSelectedJobId(job.id) }}
-                    className={`w-full text-left p-3 rounded-lg border transition-all cursor-pointer ${
-                      selectedJobId === job.id
-                        ? theme === 'dark' ? 'border-teal-500 bg-teal-500/10' : 'border-teal-500 bg-teal-50'
-                        : theme === 'dark' ? 'border-gray-700 hover:border-gray-600' : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                        selectedJobId === job.id ? 'border-teal-500 bg-teal-500' : theme === 'dark' ? 'border-gray-500' : 'border-gray-400'
-                      }`}>
-                        {selectedJobId === job.id && <div className="w-2 h-2 rounded-full bg-white" />}
-                      </div>
-                      <span className={theme === 'dark' ? 'text-white' : 'text-gray-900'}>{job.title}</span>
+          ) : jobPostings.length === 0 ? (
+            <p className={`text-sm py-3 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+              No active job postings. Create one first.
+            </p>
+          ) : (
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {jobPostings.map(job => (
+                <button
+                  type="button"
+                  key={job.id}
+                  onClick={() => setSelectedJobId(job.id)}
+                  className={`w-full text-left p-3 rounded-lg border transition-all cursor-pointer ${
+                    selectedJobId === job.id
+                      ? theme === 'dark' ? 'border-teal-500 bg-teal-500/10' : 'border-teal-500 bg-teal-50'
+                      : theme === 'dark' ? 'border-gray-700 hover:border-gray-600' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                      selectedJobId === job.id ? 'border-teal-500 bg-teal-500' : theme === 'dark' ? 'border-gray-500' : 'border-gray-400'
+                    }`}>
+                      {selectedJobId === job.id && <div className="w-2 h-2 rounded-full bg-white" />}
                     </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              Message to Candidate (optional)
-            </label>
-            <textarea
-              value={recruitMessage}
-              onChange={e => setRecruitMessage(e.target.value)}
-              placeholder="Why you think they'd be a great fit..."
-              rows={3}
-              className={`w-full px-3 py-2 rounded-lg border resize-none ${
-                theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-              }`}
-            />
-          </div>
-          <div className={`p-3 rounded-lg text-sm ${theme === 'dark' ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-700'}`}>
-            This will create an application for the candidate and notify them via email.
-          </div>
+                    <span className={theme === 'dark' ? 'text-white' : 'text-gray-900'}>{job.title}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-        <div className={`p-6 border-t ${theme === 'dark' ? 'border-gray-800' : 'border-gray-100'}`}>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowRecruitModal(false)}
-              className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors ${
-                theme === 'dark' ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={recruitCandidate}
-              disabled={!selectedJobId || recruitLoading}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-colors ${
-                !selectedJobId ? 'bg-gray-400 text-gray-200 cursor-not-allowed' : 'bg-teal-600 text-white hover:bg-teal-700'
-              }`}
-            >
-              {recruitLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              Send Invitation
-            </button>
-          </div>
+        <div>
+          <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+            Message to Candidate (optional)
+          </label>
+          <textarea
+            value={recruitMessage}
+            onChange={e => setRecruitMessage(e.target.value)}
+            placeholder="Why you think they'd be a great fit..."
+            rows={3}
+            className={`w-full px-3 py-2 rounded-lg border resize-none ${
+              theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+            }`}
+          />
+        </div>
+        <div className={`p-3 rounded-lg text-sm ${theme === 'dark' ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-700'}`}>
+          This will create an application for the candidate and notify them via email.
         </div>
       </div>
-    </div>
+      <div className={`p-6 border-t ${theme === 'dark' ? 'border-gray-800' : 'border-gray-100'}`}>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowRecruitModal(false)}
+            className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors ${
+              theme === 'dark' ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={recruitCandidate}
+            disabled={!selectedJobId || recruitLoading}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-colors ${
+              !selectedJobId ? 'bg-gray-400 text-gray-200 cursor-not-allowed' : 'bg-teal-600 text-white hover:bg-teal-700'
+            }`}
+          >
+            {recruitLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            Send Invitation
+          </button>
+        </div>
+      </div>
+    </Modal>
   ) : null
 
   // ── MVR order sub-modal ──────────────────────────────────────────────────
@@ -564,9 +514,9 @@ export default function CareerCardModal({
 
   return (
     <>
-      {createPortal(modalContent, document.body)}
-      {recruitModalContent && createPortal(recruitModalContent, document.body)}
-      {mvrOrderModalContent && createPortal(mvrOrderModalContent, document.body)}
+      {modalContent}
+      {recruitModalContent}
+      {mvrOrderModalContent}
     </>
   )
 }
@@ -662,41 +612,15 @@ function MvrOrderModal({
   }`
 
   return (
-    <div
-      className="fixed inset-0 z-[10001] flex items-center justify-center p-4"
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div className="absolute inset-0 bg-black/70 pointer-events-none" />
-      <div
-        className={`relative z-[10002] w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
-          theme === 'dark' ? 'bg-gray-900' : 'bg-white'
-        }`}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className={`sticky top-0 z-10 p-5 border-b ${theme === 'dark' ? 'border-gray-800 bg-gray-900' : 'border-gray-100 bg-white'}`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-xl ${theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'}`}>
-                <CreditCard className="w-5 h-5 text-teal-500" />
-              </div>
-              <div>
-                <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                  Order MVR
-                </h3>
-                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {careerCard?.name || 'Candidate'}
-                </p>
-              </div>
-            </div>
-            <button onClick={onClose} className={`p-2 rounded-lg ${theme === 'dark' ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
+    <Modal onClose={onClose} maxWidth="max-w-lg" zIndex={10001}>
+      <ModalHeader
+        title="Order MVR"
+        subtitle={careerCard?.name || 'Candidate'}
+        onClose={onClose}
+      />
 
-        {/* Success */}
-        {success ? (
+      {/* Success */}
+      {success ? (
           <div className="p-8 text-center">
             <CheckCircle className={`w-12 h-12 mx-auto mb-3 ${theme === 'dark' ? 'text-green-400' : 'text-green-500'}`} />
             <h4 className={`text-lg font-semibold mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
@@ -842,8 +766,7 @@ function MvrOrderModal({
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </Modal>
   )
 }
 

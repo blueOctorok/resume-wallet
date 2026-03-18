@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { Eye, Trash2, X, Loader2 } from 'lucide-react'
+import { Eye, Trash2, Loader2 } from 'lucide-react'
+import Modal, { ModalHeader } from '@/components/ui/Modal'
 import type { AdminTabProps, MvrRow } from '@/components/admin/admin-types'
 import { getTableHeaderClass, getTableCellClass } from '@/components/admin/admin-styles'
 
@@ -179,32 +180,15 @@ export default function MvrTab({
 
       {/* MVR Detail Modal */}
       {(selectedMvrDetail || loadingMvrDetail) && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50'>
-          <div
-            className={`rounded-xl border max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col ${
-              theme === 'dark'
-                ? 'bg-gray-800 border-gray-700'
-                : 'bg-white border-gray-200'
-            }`}
-          >
+        <Modal onClose={() => setSelectedMvrDetail(null)} maxWidth="max-w-4xl">
             {loadingMvrDetail ? (
               <div className='flex items-center justify-center py-12'>
                 <Loader2 className='w-8 h-8 animate-spin text-indigo-400' />
               </div>
             ) : selectedMvrDetail && (
               <>
-                <div className='flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700'>
-                  <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                    MVR Order Details
-                  </h3>
-                  <button
-                    onClick={() => setSelectedMvrDetail(null)}
-                    className={`p-2 rounded-lg ${theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-                  >
-                    <X className='w-5 h-5' />
-                  </button>
-                </div>
-                <div className='p-4 overflow-y-auto flex-1 space-y-6'>
+                <ModalHeader title="MVR Order Details" onClose={() => setSelectedMvrDetail(null)} />
+                <div className='p-4 space-y-6'>
                   {/* Order info */}
                   <div>
                     <h4 className={`font-medium mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>Order</h4>
@@ -324,8 +308,7 @@ export default function MvrTab({
                 </div>
               </>
             )}
-          </div>
-        </div>
+        </Modal>
       )}
     </>
   )

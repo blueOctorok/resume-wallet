@@ -12,6 +12,7 @@ import {
   Github,
   ExternalLink,
 } from 'lucide-react'
+import Modal from '@/components/ui/Modal'
 import type {
   UserDetail,
   DeleteTarget,
@@ -40,65 +41,59 @@ export default function UserDetailModal({
   }
 
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50'>
-      <div
-        className={`rounded-xl border ${
-          theme === 'dark'
-            ? 'bg-gray-800 border-gray-700'
-            : 'bg-white border-gray-200'
-        } p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto`}
-      >
-        {loading ? (
-          <div className='flex items-center justify-center py-12'>
-            <Loader2 className='w-8 h-8 animate-spin text-indigo-400' />
-          </div>
-        ) : (
-          user && (
-            <>
-              {/* Header */}
-              <div className='flex items-center justify-between mb-6'>
-                <div>
-                  <h3
-                    className={`text-xl font-semibold ${
-                      theme === 'dark' ? 'text-white' : 'text-gray-900'
-                    }`}
-                  >
-                    {user.user.displayName || 'Unnamed User'}
-                    {user.user.isAdmin && (
-                      <span className='ml-2 px-2 py-1 rounded text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 font-semibold'>
-                        Admin
-                      </span>
-                    )}
-                  </h3>
+    <Modal onClose={onClose} maxWidth="max-w-4xl">
+      {loading ? (
+        <div className='flex items-center justify-center py-12'>
+          <Loader2 className='w-8 h-8 animate-spin text-indigo-400' />
+        </div>
+      ) : (
+        user && (
+          <>
+            {/* Header — custom because it includes admin badge + wallet + email */}
+            <div className='flex items-center justify-between p-6 pb-0 mb-6'>
+              <div>
+                <h3
+                  className={`text-xl font-semibold ${
+                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                  }`}
+                >
+                  {user.user.displayName || 'Unnamed User'}
+                  {user.user.isAdmin && (
+                    <span className='ml-2 px-2 py-1 rounded text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 font-semibold'>
+                      Admin
+                    </span>
+                  )}
+                </h3>
+                <p
+                  className={`text-sm ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                  }`}
+                >
+                  <code>{user.user.wallet_address}</code>
+                </p>
+                {user.user.displayEmail && (
                   <p
                     className={`text-sm ${
                       theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
                     }`}
                   >
-                    <code>{user.user.wallet_address}</code>
+                    {user.user.displayEmail}
                   </p>
-                  {user.user.displayEmail && (
-                    <p
-                      className={`text-sm ${
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                      }`}
-                    >
-                      {user.user.displayEmail}
-                    </p>
-                  )}
-                </div>
-                <button
-                  onClick={onClose}
-                  className={`p-2 rounded-lg ${
-                    theme === 'dark'
-                      ? 'hover:bg-gray-700'
-                      : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <X className='w-5 h-5' />
-                </button>
+                )}
               </div>
+              <button
+                onClick={onClose}
+                className={`p-2 rounded-lg ${
+                  theme === 'dark'
+                    ? 'hover:bg-gray-700'
+                    : 'hover:bg-gray-100'
+                }`}
+              >
+                <X className='w-5 h-5' />
+              </button>
+            </div>
 
+            <div className='px-6 pb-6'>
               {/* Driver Profile Section */}
               {user.profile && (
                 <div className='mb-6'>
@@ -508,10 +503,10 @@ export default function UserDetailModal({
                   </button>
                 </div>
               )}
+            </div>
             </>
           )
         )}
-      </div>
-    </div>
+    </Modal>
   )
 }

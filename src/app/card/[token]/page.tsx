@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { Loader2, AlertCircle, Send, CheckCircle, X } from 'lucide-react'
+import { Loader2, AlertCircle, Send, CheckCircle } from 'lucide-react'
+import Modal, { ModalHeader } from '@/components/ui/Modal'
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext'
 import ProjectedCareerCard from '@/components/career-card/ProjectedCareerCard'
 import type { ProjectedCareerCard as CardData } from '@/types/career-card'
@@ -130,16 +131,9 @@ function PublicCardContent() {
 
       {/* Connect form modal */}
       {showConnect && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4'>
-          <div className='bg-gray-800 border border-gray-700 rounded-2xl p-6 w-full max-w-md'>
-            <div className='flex items-center justify-between mb-4'>
-              <h3 className='text-lg font-bold text-white'>Connect with {data.name.split(' ')[0]}</h3>
-              <button onClick={() => setShowConnect(false)} className='text-gray-400 hover:text-white'>
-                <X className='w-5 h-5' />
-              </button>
-            </div>
-
-            <form onSubmit={handleConnect} className='space-y-3'>
+        <Modal onClose={() => setShowConnect(false)} maxWidth="max-w-md">
+          <ModalHeader title={`Connect with ${data.name.split(' ')[0]}`} onClose={() => setShowConnect(false)} />
+          <form onSubmit={handleConnect} className='p-6 space-y-3'>
               <input
                 type='text'
                 placeholder='Your name'
@@ -184,8 +178,7 @@ function PublicCardContent() {
                 Send Connection Request
               </button>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Footer */}

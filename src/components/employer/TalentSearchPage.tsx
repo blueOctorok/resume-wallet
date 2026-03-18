@@ -7,7 +7,6 @@ import {
   Filter,
   MapPin,
   CheckCircle,
-  X,
   Loader2,
   FileText,
   Shield,
@@ -19,6 +18,7 @@ import {
   User,
 } from 'lucide-react'
 import BackToHubButton from '@/components/ui/BackToHubButton'
+import Modal, { ModalHeader } from '@/components/ui/Modal'
 import CareerCardModal from './CareerCardModal'
 
 // ============================================================
@@ -415,41 +415,15 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
 
       {/* Quick "Add to Pipeline" modal */}
       {quickRecruitId && (
-        <div
-          className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-4"
-          onClick={closeQuickRecruit}
-        >
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <div
-            className={`relative z-[10000] w-full max-w-sm rounded-2xl shadow-2xl ${
-              theme === 'dark' ? 'bg-gray-900 border border-gray-700' : 'bg-white'
-            }`}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className={`flex items-center justify-between p-5 border-b ${
-              theme === 'dark' ? 'border-gray-800' : 'border-gray-100'
-            }`}>
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-xl ${theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'}`}>
-                  <UserPlus className="w-4 h-4 text-teal-500" />
-                </div>
-                <div>
-                  <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                    Add to Pipeline
-                  </p>
-                  <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {candidates.find(c => c.userId === quickRecruitId)?.name}
-                  </p>
-                </div>
-              </div>
-              <button onClick={closeQuickRecruit} className={`p-1.5 rounded-lg ${theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}>
-                <X className={`w-4 h-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} />
-              </button>
-            </div>
+        <Modal onClose={closeQuickRecruit} maxWidth="max-w-sm" zIndex={9999}>
+          <ModalHeader
+            title="Add to Pipeline"
+            subtitle={candidates.find(c => c.userId === quickRecruitId)?.name}
+            onClose={closeQuickRecruit}
+          />
 
-            {/* Body */}
-            <div className="p-5">
+          {/* Body */}
+          <div className="p-5">
               {quickRecruitResult === 'success' ? (
                 <div className="flex flex-col items-center gap-3 py-4 text-center">
                   <CheckCircle className="w-10 h-10 text-green-500" />
@@ -559,8 +533,7 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
                 </>
               )}
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   )

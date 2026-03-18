@@ -15,10 +15,8 @@ import {
   FileText,
   ClipboardCheck,
   Car,
-  X,
-  Share2,
 } from 'lucide-react'
-import { createPortal } from 'react-dom'
+import Modal, { ModalHeader } from '@/components/ui/Modal'
 import Avatar from './ui/Avatar'
 
 interface ShareSettings {
@@ -79,13 +77,10 @@ export default function ShareProfileCard({
   const [showSettings, setShowSettings] = useState(false)
   const [savingSettings, setSavingSettings] = useState(false)
   const [showQrModal, setShowQrModal] = useState(false)
-  const [mounted, setMounted] = useState(false)
 
   // Career card preview data (drivers only)
   const [preview, setPreview] = useState<CareerPreview | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
-
-  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     if (address) {
@@ -375,124 +370,99 @@ export default function ShareProfileCard({
         </div>
       </div>
 
-      {/* QR Code Modal — portal so it renders above everything */}
-      {mounted && showQrModal && createPortal(
-        <div
-          className='fixed inset-0 z-[9999] flex items-center justify-center p-4'
-          onClick={(e) => { if (e.target === e.currentTarget) setShowQrModal(false) }}
-        >
-          <div className='absolute inset-0 bg-black/60 backdrop-blur-sm' />
-          <div className={`relative z-10 w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden ${
-            isDark ? 'bg-gray-900 border border-gray-700' : 'bg-white'
-          }`}>
-            {/* Modal header */}
-            <div className={`flex items-center justify-between p-4 border-b ${
-              isDark ? 'border-gray-700' : 'border-gray-200'
-            }`}>
-              <div className='flex items-center gap-2'>
-                <QrCode className={`w-5 h-5 ${accentClass}`} />
-                <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  Share Career Card
-                </h3>
+      {/* QR Code Modal */}
+      {showQrModal && (
+        <Modal onClose={() => setShowQrModal(false)} maxWidth="max-w-sm">
+          <ModalHeader title="Share Career Card" onClose={() => setShowQrModal(false)} />
+
+          <div className='p-5'>
+            {!shareToken ? (
+              <div className='text-center py-4'>
+                <button
+                  onClick={() => generateToken(false)}
+                  disabled={generating}
+                  className={`px-6 py-3 rounded-xl font-semibold ${
+                    isDark ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30' : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
+                  } disabled:opacity-50`}
+                >
+                  {generating ? <Loader2 className='w-5 h-5 animate-spin mx-auto' /> : 'Generate QR Code'}
+                </button>
               </div>
-              <button
-                onClick={() => setShowQrModal(false)}
-                className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}
-              >
-                <X className='w-4 h-4' />
-              </button>
-            </div>
-
-            <div className='p-5'>
-              {!shareToken ? (
-                <div className='text-center py-4'>
-                  <button
-                    onClick={() => generateToken(false)}
-                    disabled={generating}
-                    className={`px-6 py-3 rounded-xl font-semibold ${
-                      isDark ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30' : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
-                    } disabled:opacity-50`}
-                  >
-                    {generating ? <Loader2 className='w-5 h-5 animate-spin mx-auto' /> : 'Generate QR Code'}
-                  </button>
-                </div>
-              ) : (
-                <div className='text-center'>
-                  {/* QR image */}
-                  <div className={`inline-block p-4 rounded-2xl mb-4 ${isDark ? 'bg-gray-800' : 'bg-white shadow-lg'}`}>
-                    <img src={getQRUrl()} alt='Career Card QR Code' className='w-48 h-48 mx-auto' />
-                    {(preview?.name || driverName) && (
-                      <p className={`mt-2 font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                        {preview?.name || driverName}
-                      </p>
-                    )}
-                    <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                      Scan to view verified profile
+            ) : (
+              <div className='text-center'>
+                {/* QR image */}
+                <div className={`inline-block p-4 rounded-2xl mb-4 ${isDark ? 'bg-gray-800' : 'bg-white shadow-lg'}`}>
+                  <img src={getQRUrl()} alt='Career Card QR Code' className='w-48 h-48 mx-auto' />
+                  {(preview?.name || driverName) && (
+                    <p className={`mt-2 font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {preview?.name || driverName}
                     </p>
-                  </div>
-
-                  {/* Share link */}
-                  <div className={`flex items-center gap-2 p-3 rounded-xl mb-4 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                    <input
-                      type='text'
-                      value={profileUrl}
-                      readOnly
-                      className={`flex-1 bg-transparent text-sm truncate ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
-                    />
-                    <button
-                      onClick={copyLink}
-                      className={`p-2 rounded-lg transition-colors ${
-                        copied ? 'bg-green-500/20 text-green-500'
-                        : isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-600'
-                      }`}
-                    >
-                      {copied ? <Check className='w-4 h-4' /> : <Copy className='w-4 h-4' />}
-                    </button>
-                  </div>
-
-                  {/* Quick actions */}
-                  <div className='grid grid-cols-3 gap-2'>
-                    <button
-                      onClick={downloadQR}
-                      className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-colors ${
-                        isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                      }`}
-                    >
-                      <Download className='w-5 h-5' />
-                      <span className='text-xs'>Download</span>
-                    </button>
-                    <a
-                      href={profileUrl}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-colors ${
-                        isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                      }`}
-                    >
-                      <ExternalLink className='w-5 h-5' />
-                      <span className='text-xs'>Open</span>
-                    </a>
-                    <button
-                      onClick={() => generateToken(true)}
-                      disabled={generating}
-                      className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-colors ${
-                        isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                      } disabled:opacity-50`}
-                    >
-                      {generating ? <Loader2 className='w-5 h-5 animate-spin' /> : <RefreshCw className='w-5 h-5' />}
-                      <span className='text-xs'>Regenerate</span>
-                    </button>
-                  </div>
-
-                  <p className={`text-xs mt-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                    💡 Show this QR at job fairs for instant credential sharing
+                  )}
+                  <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                    Scan to view verified profile
                   </p>
                 </div>
-              )}
-            </div>
+
+                {/* Share link */}
+                <div className={`flex items-center gap-2 p-3 rounded-xl mb-4 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                  <input
+                    type='text'
+                    value={profileUrl}
+                    readOnly
+                    className={`flex-1 bg-transparent text-sm truncate ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+                  />
+                  <button
+                    onClick={copyLink}
+                    className={`p-2 rounded-lg transition-colors ${
+                      copied ? 'bg-green-500/20 text-green-500'
+                      : isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-600'
+                    }`}
+                  >
+                    {copied ? <Check className='w-4 h-4' /> : <Copy className='w-4 h-4' />}
+                  </button>
+                </div>
+
+                {/* Quick actions */}
+                <div className='grid grid-cols-3 gap-2'>
+                  <button
+                    onClick={downloadQR}
+                    className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-colors ${
+                      isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    }`}
+                  >
+                    <Download className='w-5 h-5' />
+                    <span className='text-xs'>Download</span>
+                  </button>
+                  <a
+                    href={profileUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-colors ${
+                      isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    }`}
+                  >
+                    <ExternalLink className='w-5 h-5' />
+                    <span className='text-xs'>Open</span>
+                  </a>
+                  <button
+                    onClick={() => generateToken(true)}
+                    disabled={generating}
+                    className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-colors ${
+                      isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    } disabled:opacity-50`}
+                  >
+                    {generating ? <Loader2 className='w-5 h-5 animate-spin' /> : <RefreshCw className='w-5 h-5' />}
+                    <span className='text-xs'>Regenerate</span>
+                  </button>
+                </div>
+
+                <p className={`text-xs mt-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Show this QR at job fairs for instant credential sharing
+                </p>
+              </div>
+            )}
           </div>
-        </div>,
-        document.body
+        </Modal>
       )}
     </>
   )

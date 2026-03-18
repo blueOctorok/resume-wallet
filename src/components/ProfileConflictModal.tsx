@@ -1,5 +1,6 @@
 'use client'
 
+import Modal from '@/components/ui/Modal'
 import { useTheme } from '@/contexts/ThemeContext'
 
 interface ProfileConflictData {
@@ -69,14 +70,8 @@ export default function ProfileConflictModal({
   }
 
   return (
-    <div className='fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm'>
-      <div
-        className={`relative w-full max-w-lg rounded-2xl border p-6 shadow-2xl ${
-          theme === 'dark'
-            ? 'bg-gray-800 border-gray-700'
-            : 'bg-white border-gray-200'
-        }`}
-      >
+    <Modal onClose={onKeepExisting} disableBackdropClose zIndex={100}>
+      <div className="p-6">
         <h3
           className={`text-xl font-semibold mb-4 ${
             theme === 'dark' ? 'text-white' : 'text-gray-900'
@@ -212,6 +207,6 @@ export default function ProfileConflictModal({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }

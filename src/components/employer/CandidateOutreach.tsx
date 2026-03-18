@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import Modal, { ModalHeader } from '@/components/ui/Modal'
 import { BLOCK_DEFINITIONS, BLOCK_CATEGORIES, getBlockDefinition } from '@/lib/block-registry'
 import { EMPLOYER_BLOCK_DEFINITIONS } from '@/lib/employer-block-registry'
 import { useEmployerInstalledBlocks } from '@/stores/employer-blocks-store'
@@ -131,27 +132,16 @@ function QrModal({ url, name, onClose }: { url: string; name: string; onClose: (
   }, [url])
 
   return (
-    <div
-      className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-gray-900 border border-gray-700 rounded-2xl p-6 shadow-2xl text-center max-w-xs w-full"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-white text-sm">Scan to Open Invite</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-300">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+    <Modal onClose={onClose} maxWidth="max-w-xs">
+      <ModalHeader title="Scan to Open Invite" onClose={onClose} />
+      <div className="p-6 text-center">
         <div className="bg-white rounded-xl p-3 inline-block mb-3">
           <canvas ref={canvasRef} />
         </div>
         <p className="text-gray-500 text-xs truncate">{name || 'Invite Link'}</p>
         <p className="text-gray-600 text-xs mt-1">Share this QR or copy the link below</p>
       </div>
-    </div>
+    </Modal>
   )
 }
 

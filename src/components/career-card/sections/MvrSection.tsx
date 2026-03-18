@@ -1,18 +1,44 @@
 'use client'
 
-import { Car, CheckCircle, Clock, Shield } from 'lucide-react'
+import { useState } from 'react'
+import { Car, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { MvrData, CareerCardMode } from '@/types/career-card'
+import MvrViewModal from '@/components/MvrViewModal'
 
 interface MvrSectionProps {
   data: MvrData
   mode: CareerCardMode
   isDark: boolean
-  onAction?: () => void
+  /** Self-view: go to MVR order form when user still needs to order / continue */
+  onNavigateToOrder?: () => void
+  walletAddress?: string | null
 }
 
-export default function MvrSection({ data, mode, isDark, onAction }: MvrSectionProps) {
-  const isComplete = data.orderStatus === 'completed'
+export default function MvrSection({
+  data,
+  mode,
+  isDark,
+  onNavigateToOrder,
+  walletAddress,
+}: MvrSectionProps) {
+  const [showMvrViewer, setShowMvrViewer] = useState(false)
+
+  // Align with hub / My Files: needs_review is a terminal success state for display
+  const isComplete =
+    data.orderStatus === 'completed' || data.orderStatus === 'needs_review'
+
+  const handlePrimaryClick = () => {
+    if (isComplete) {
+      setShowMvrViewer(true)
+      return
+    }
+    onNavigateToOrder?.()
+  }
+
+  const showSelfButton =
+    mode === 'self' &&
+    (isComplete ? Boolean(walletAddress && data.orderId) : Boolean(onNavigateToOrder))
 
   return (
     <div className={cn(
@@ -26,9 +52,10 @@ export default function MvrSection({ data, mode, isDark, onAction }: MvrSectionP
             Motor Vehicle Record
           </h3>
         </div>
-        {mode === 'self' && onAction && (
+        {showSelfButton && (
           <button
-            onClick={onAction}
+            type='button'
+            onClick={handlePrimaryClick}
             className={cn(
               'text-xs px-3 py-1 rounded-lg transition-colors',
               isDark ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30' : 'bg-teal-50 text-teal-600 hover:bg-teal-100'
@@ -72,6 +99,15 @@ export default function MvrSection({ data, mode, isDark, onAction }: MvrSectionP
             </p>
           </div>
         </div>
+      )}
+
+      {showMvrViewer && walletAddress && (
+        <MvrViewModal
+          isOpen={showMvrViewer}
+          onClose={() => setShowMvrViewer(false)}
+          walletAddress={walletAddress}
+          orderId={data.orderId}
+        />
       )}
     </div>
   )

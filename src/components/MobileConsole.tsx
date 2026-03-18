@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Modal from '@/components/ui/Modal'
 
 /**
  * Mobile Console Viewer
@@ -92,68 +93,66 @@ export default function MobileConsole() {
 
       {/* Console Panel */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 bg-black/95 text-white p-4" style={{ paddingTop: '60px' }}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold">Mobile Console</h3>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setLogs([])}
-                className="px-3 py-1 bg-red-600 rounded text-sm"
-                style={{ touchAction: 'manipulation' }}
-              >
-                Clear
-              </button>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="px-3 py-1 bg-gray-600 rounded text-sm"
-                style={{ touchAction: 'manipulation' }}
-              >
-                Close
-              </button>
+        <Modal onClose={() => setIsOpen(false)} maxWidth="max-w-full" disableBackdropClose>
+          <div className="bg-black/95 text-white p-4" style={{ paddingTop: '10px' }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Mobile Console</h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setLogs([])}
+                  className="px-3 py-1 bg-red-600 rounded text-sm"
+                  style={{ touchAction: 'manipulation' }}
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="px-3 py-1 bg-gray-600 rounded text-sm"
+                  style={{ touchAction: 'manipulation' }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div
+              ref={logContainerRef}
+              className="bg-gray-900 rounded p-3 font-mono text-xs overflow-y-auto"
+              style={{
+                height: 'calc(90vh - 100px)',
+                maxHeight: 'calc(90vh - 100px)',
+              }}
+            >
+              {logs.length === 0 ? (
+                <div className="text-gray-500">No logs yet...</div>
+              ) : (
+                logs.map((log, index) => (
+                  <div
+                    key={index}
+                    className={`mb-1 pb-1 border-b border-gray-700 ${
+                      log.type === 'error' ? 'text-red-400' :
+                      log.type === 'warn' ? 'text-yellow-400' :
+                      log.type === 'info' ? 'text-blue-400' :
+                      'text-gray-300'
+                    }`}
+                  >
+                    <span className="text-gray-500 text-xs">
+                      {log.timestamp.toLocaleTimeString()}
+                    </span>
+                    <span className="ml-2 text-gray-400">[{log.type}]</span>
+                    <div className="mt-1 whitespace-pre-wrap break-words">
+                      {log.message}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
-
-          <div
-            ref={logContainerRef}
-            className="bg-gray-900 rounded p-3 font-mono text-xs overflow-y-auto"
-            style={{
-              height: 'calc(100vh - 120px)',
-              maxHeight: 'calc(100vh - 120px)',
-            }}
-          >
-            {logs.length === 0 ? (
-              <div className="text-gray-500">No logs yet...</div>
-            ) : (
-              logs.map((log, index) => (
-                <div
-                  key={index}
-                  className={`mb-1 pb-1 border-b border-gray-700 ${
-                    log.type === 'error' ? 'text-red-400' :
-                    log.type === 'warn' ? 'text-yellow-400' :
-                    log.type === 'info' ? 'text-blue-400' :
-                    'text-gray-300'
-                  }`}
-                >
-                  <span className="text-gray-500 text-xs">
-                    {log.timestamp.toLocaleTimeString()}
-                  </span>
-                  <span className="ml-2 text-gray-400">[{log.type}]</span>
-                  <div className="mt-1 whitespace-pre-wrap break-words">
-                    {log.message}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        </Modal>
       )}
     </>
   )
 }
-
-
-
-
 
 
 

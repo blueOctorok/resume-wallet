@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import Modal, { ModalHeader } from './ui/Modal'
 import {
   Inbox,
   Building2,
@@ -384,16 +385,7 @@ export default function CandidateRequestsSection({
 
       {/* Request Detail Modal */}
       {selectedRequest && (
-        <div 
-          className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'
-          onClick={() => setSelectedRequest(null)}
-        >
-          <div 
-            className={`rounded-2xl border max-w-lg w-full max-h-[90vh] overflow-auto ${
-              theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
-            }`}
-            onClick={e => e.stopPropagation()}
-          >
+        <Modal onClose={() => setSelectedRequest(null)} maxWidth="max-w-lg">
             {/* Modal Header */}
             <div className='p-6 border-b border-inherit'>
               <div className='flex items-start justify-between'>
@@ -476,7 +468,6 @@ export default function CandidateRequestsSection({
             {['pending', 'viewed'].includes(selectedRequest.status) && (
               <div className='p-6 border-t border-inherit'>
                 <div className='flex gap-3'>
-                  {/* Action button based on request type */}
                   {selectedRequest.requestType === 'document_upload' && onNavigateToResume && (
                     <button
                       onClick={() => {
@@ -540,7 +531,6 @@ export default function CandidateRequestsSection({
                     Decline
                   </button>
 
-                  {/* Reply — only when a company owner user ID is known */}
                   {selectedRequest.company?.ownerUserId && userAddress && (
                     <MessagingButton
                       otherUserId={selectedRequest.company.ownerUserId}
@@ -557,8 +547,7 @@ export default function CandidateRequestsSection({
                 </div>
               </div>
             )}
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Full-screen FCRA disclosure form — shown when driver opens an MVR request */}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Modal from '@/components/ui/Modal'
 import { X, Briefcase, FileText, CheckCircle, AlertCircle } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import ProfileCompleteness from './ProfileCompleteness'
@@ -121,20 +122,9 @@ export default function ApplyWithStormChainModal({
 
   if (!isOpen || !job) return null
 
-  const cardClass = isDark
-    ? 'bg-gray-800/90 border border-gray-700'
-    : 'bg-white border border-gray-200'
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div className={`relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl ${cardClass}`}>
+    <Modal onClose={onClose} maxWidth="max-w-2xl">
+      <div>
         
         {/* Header */}
         <div className={`sticky top-0 border-b p-6 flex items-center justify-between z-10 ${
@@ -361,6 +351,6 @@ export default function ApplyWithStormChainModal({
         })()}
 
       </div>
-    </div>
+    </Modal>
   )
 }

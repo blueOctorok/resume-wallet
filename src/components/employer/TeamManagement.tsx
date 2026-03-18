@@ -15,6 +15,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import BackToHubButton from '@/components/ui/BackToHubButton'
+import Modal, { ModalHeader } from '@/components/ui/Modal'
 import { INVITEABLE_ROLES, getDisplayRole } from '@/lib/employer-roles'
 import UserIdentity from '@/components/ui/UserIdentity'
 
@@ -436,30 +437,15 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
 
       {/* Invite Modal */}
       {showInviteModal && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center p-4'>
-          <div className='absolute inset-0 bg-black/60 backdrop-blur-sm' onClick={() => setShowInviteModal(false)} />
-          <div className={`relative w-full max-w-lg rounded-2xl shadow-2xl ${
-            theme === 'dark' ? 'bg-gray-900' : 'bg-white'
-          }`}>
-            {/* Modal Header */}
-            <div className={`p-6 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-              <div className='flex items-center gap-3'>
-                <div className={`p-3 rounded-xl ${theme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-100'}`}>
-                  <UserPlus className='w-6 h-6 text-indigo-500' />
-                </div>
-                <div>
-                  <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                    Invite Team Member
-                  </h3>
-                  <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Send an invitation to join your company
-                  </p>
-                </div>
-              </div>
-            </div>
+        <Modal onClose={() => setShowInviteModal(false)} maxWidth="max-w-lg">
+          <ModalHeader
+            title="Invite Team Member"
+            subtitle="Send an invitation to join your company"
+            onClose={() => setShowInviteModal(false)}
+          />
 
-            {/* Modal Body */}
-            <div className='p-6 space-y-6'>
+          {/* Modal Body */}
+          <div className='p-6 space-y-6'>
               {/* Email Input */}
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${
@@ -578,44 +564,43 @@ export default function TeamManagement({ walletAddress, onBack }: TeamManagement
               )}
             </div>
 
-            {/* Modal Footer */}
-            <div className={`p-6 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} flex justify-end gap-3`}>
-              <button
-                onClick={() => {
-                  setShowInviteModal(false)
-                  setInviteEmail('')
-                  setInviteError(null)
-                  setInviteSuccess(null)
-                  setLastInviteUrl(null)
-                }}
-                className={`px-5 py-2.5 rounded-xl font-semibold transition-colors ${
-                  theme === 'dark'
-                    ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Close
-              </button>
-              <button
-                onClick={handleInvite}
-                disabled={inviting || !inviteEmail.trim()}
-                className='flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
-              >
-                {inviting ? (
-                  <>
-                    <Loader2 className='w-4 h-4 animate-spin' />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <Mail className='w-4 h-4' />
-                    Send Invitation
-                  </>
-                )}
-              </button>
-            </div>
+          {/* Modal Footer */}
+          <div className={`p-6 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} flex justify-end gap-3`}>
+            <button
+              onClick={() => {
+                setShowInviteModal(false)
+                setInviteEmail('')
+                setInviteError(null)
+                setInviteSuccess(null)
+                setLastInviteUrl(null)
+              }}
+              className={`px-5 py-2.5 rounded-xl font-semibold transition-colors ${
+                theme === 'dark'
+                  ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Close
+            </button>
+            <button
+              onClick={handleInvite}
+              disabled={inviting || !inviteEmail.trim()}
+              className='flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+            >
+              {inviting ? (
+                <>
+                  <Loader2 className='w-4 h-4 animate-spin' />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Mail className='w-4 h-4' />
+                  Send Invitation
+                </>
+              )}
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   )

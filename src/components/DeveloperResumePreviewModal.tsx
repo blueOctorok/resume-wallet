@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   X,
@@ -20,6 +20,7 @@ import {
   ExternalLink,
   CheckCircle,
 } from 'lucide-react'
+import Modal from '@/components/ui/Modal'
 import type { DeveloperResumeData } from './DeveloperResumeBuilder'
 import { generateDeveloperResumePDF } from '@/lib/developer-resume-pdf'
 
@@ -56,15 +57,6 @@ export default function DeveloperResumePreviewModal({
 
   const data = resume.structured_data
   const isVerified = resume.verification_status === 'VERIFIED'
-
-  // Lock body scroll when modal is open so only the modal content scrolls
-  useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
-  }, [])
 
   const handleDownload = async () => {
     setIsDownloading(true)
@@ -133,19 +125,8 @@ export default function DeveloperResumePreviewModal({
   }`
 
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden'>
-      {/* Backdrop — no scroll */}
-      <div
-        className='absolute inset-0 bg-black/60 backdrop-blur-sm overflow-hidden'
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div
-        className={`relative w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-2xl ${
-          theme === 'dark' ? 'bg-gray-900' : 'bg-white'
-        }`}
-      >
+    <Modal onClose={onClose} maxWidth="max-w-3xl">
+      <div className="flex flex-col max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div
           className={`sticky top-0 z-10 flex items-center justify-between p-4 border-b ${
@@ -514,18 +495,10 @@ export default function DeveloperResumePreviewModal({
         </div>
       </div>
 
-      {/* Delete Confirmation */}
+      {/* Delete Confirmation — higher zIndex to stack above outer modal */}
       {showDeleteConfirm && (
-        <div className='fixed inset-0 z-60 flex items-center justify-center p-4'>
-          <div
-            className='absolute inset-0 bg-black/60'
-            onClick={() => setShowDeleteConfirm(false)}
-          />
-          <div
-            className={`relative p-6 rounded-2xl max-w-sm ${
-              theme === 'dark' ? 'bg-gray-800' : 'bg-white'
-            }`}
-          >
+        <Modal onClose={() => setShowDeleteConfirm(false)} maxWidth="max-w-sm" zIndex={1100}>
+          <div className='p-6'>
             <h3
               className={`text-lg font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
             >
@@ -561,8 +534,8 @@ export default function DeveloperResumePreviewModal({
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
-    </div>
+    </Modal>
   )
 }

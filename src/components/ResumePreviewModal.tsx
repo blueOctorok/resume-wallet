@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { X, Download, Loader2, Edit, Shield, Trash2 } from 'lucide-react'
+import Modal from '@/components/ui/Modal'
 
 // Types for structured resume data
 interface PersonalInfo {
@@ -107,7 +108,7 @@ export default function ResumePreviewModal({
   onDelete,
   isVerifying = false,
   canVerify = false,
-  zIndex = 50,
+  zIndex = 1000,
 }: ResumePreviewModalProps) {
   const formatDate = (dateString?: string) => {
     if (!dateString) return ''
@@ -134,14 +135,8 @@ export default function ResumePreviewModal({
   )
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" style={{ zIndex }}>
-      <div
-        className={`relative w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl flex flex-col ${
-          theme === 'dark'
-            ? 'bg-gray-800 border border-gray-700'
-            : 'bg-white border border-gray-200'
-        }`}
-      >
+    <Modal onClose={onClose} maxWidth="max-w-3xl" zIndex={zIndex}>
+      <div className="flex flex-col max-h-[90vh] overflow-hidden">
         {/* Header with title and actions */}
         <div
           className={`sticky top-0 z-10 p-4 border-b ${
@@ -519,6 +514,6 @@ export default function ResumePreviewModal({
           </div>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }

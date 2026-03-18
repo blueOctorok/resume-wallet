@@ -256,36 +256,48 @@ async function fetchDotAppData(supabase: SupabaseClient, userId: string): Promis
 }
 
 async function fetchMvrData(supabase: SupabaseClient, userId: string): Promise<MvrData | null> {
-  // FCRA: only self-ordered MVRs are shareable on the career card
-  const { data: order } = await supabase
+  // FCRA: only self-ordered MVRs are shareable on the career card.
+  // mvr_orders keys the driver as driver_user_id (not user_id).
+  const { data: orders } = await supabase
     .from('mvr_orders')
     .select('id, status, dl_state, created_at, completed_at')
-    .eq('user_id', userId)
+    .eq('driver_user_id', userId)
     .is('ordered_by_company_id', null)
     .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+    .limit(8)
 
-  if (!order) return null
+  if (!orders?.length) return null
 
-  const { data: results } = await supabase
+  const ids = orders.map((o) => o.id)
+  const { data: resultRows } = await supabase
     .from('mvr_results')
-    .select('license_status, license_class, total_points, violation_count')
-    .eq('mvr_order_id', order.id)
-    .maybeSingle()
+    .select('mvr_order_id, license_status, license_class, total_points, violation_count')
+    .in('mvr_order_id', ids)
 
+  const resultByOrderId = new Map(
+    (resultRows ?? []).map((r) => [r.mvr_order_id as string, r]),
+  )
+
+  const terminal = (s: string) => s === 'completed' || s === 'needs_review'
+  // Prefer newest completed MVR that has parsed results (so a new pending reorder doesn't hide it)
+  const order =
+    orders.find((o) => terminal(o.status) && resultByOrderId.has(o.id)) ?? orders[0]
+
+  const row = resultByOrderId.get(order.id)
   return {
     orderId: order.id,
     orderStatus: order.status,
     licenseState: order.dl_state,
     orderedAt: order.created_at,
     completedAt: order.completed_at,
-    results: results ? {
-      licenseStatus: results.license_status,
-      licenseClass: results.license_class,
-      totalPoints: results.total_points,
-      violationCount: results.violation_count,
-    } : null,
+    results: row
+      ? {
+          licenseStatus: row.license_status,
+          licenseClass: row.license_class,
+          totalPoints: row.total_points,
+          violationCount: row.violation_count,
+        }
+      : null,
   }
 }
 

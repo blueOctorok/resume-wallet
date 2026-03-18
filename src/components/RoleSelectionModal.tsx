@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Modal from '@/components/ui/Modal'
 import { useTheme } from '@/contexts/ThemeContext'
 import { Loader2, CheckCircle, AlertCircle, Building2, Clock } from 'lucide-react'
 
@@ -187,23 +188,6 @@ export default function RoleSelectionModal({
     isAdminWhitelisted
   )
 
-  // Lock body scroll while modal is open
-  useEffect(() => {
-    const originalOverflow = document.body.style.overflow
-    const originalPosition = document.body.style.position
-    const originalWidth = document.body.style.width
-
-    document.body.style.overflow = 'hidden'
-    document.body.style.position = 'fixed'
-    document.body.style.width = '100%'
-
-    return () => {
-      document.body.style.overflow = originalOverflow
-      document.body.style.position = originalPosition
-      document.body.style.width = originalWidth
-    }
-  }, [])
-
   const handleConfirm = () => {
     if (selectedRole && canProceed) {
       if (selectedRole === 'employer') {
@@ -225,19 +209,13 @@ export default function RoleSelectionModal({
   )
 
   return (
-    <div
-      className='fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 overflow-y-auto overscroll-none'
-      style={{ touchAction: 'none' }}
-    >
-      <div className='absolute inset-0 bg-black/50 backdrop-blur-sm' style={{ touchAction: 'none' }} />
-
+    <Modal onClose={() => {}} disableBackdropClose zIndex={80} maxWidth="max-w-2xl">
       <div
-        className={`relative max-w-2xl w-full rounded-xl sm:rounded-2xl shadow-2xl my-auto max-h-[95vh] flex flex-col overflow-hidden ${
+        className={`max-h-[95vh] flex flex-col overflow-hidden ${
           isDark
-            ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border border-gray-700'
-            : 'bg-gradient-to-br from-white via-gray-50 to-white border border-gray-200'
+            ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'
+            : 'bg-gradient-to-br from-white via-gray-50 to-white'
         }`}
-        style={{ touchAction: 'auto' }}
       >
         <div className='overflow-y-auto overscroll-contain flex-1'>
           {/* Header */}
@@ -605,6 +583,6 @@ export default function RoleSelectionModal({
           </div>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }
