@@ -112,6 +112,9 @@ async function syncGitHubData(
  *   - state: Base64-encoded state containing wallet address
  */
 export async function GET(request: NextRequest) {
+  // Use request origin so redirects send user back to the same host (stormchain.ai, localhost, etc.)
+  const origin = new URL(request.url).origin
+
   try {
     const { searchParams } = new URL(request.url)
     const code = searchParams.get('code')
@@ -121,15 +124,11 @@ export async function GET(request: NextRequest) {
     // Handle user denying access
     if (error) {
       console.log('[GITHUB CALLBACK] User denied access:', error)
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/?github_error=denied`
-      )
+      return NextResponse.redirect(`${origin}/?github_error=denied`)
     }
 
     if (!code || !state) {
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/?github_error=missing_params`
-      )
+      return NextResponse.redirect(`${origin}/?github_error=missing_params`)
     }
 
     // Decode state to get wallet address
@@ -140,14 +139,10 @@ export async function GET(request: NextRequest) {
 
       // Check if state is too old (more than 10 minutes)
       if (Date.now() - decoded.ts > 10 * 60 * 1000) {
-        return NextResponse.redirect(
-          `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/?github_error=expired`
-        )
+        return NextResponse.redirect(`${origin}/?github_error=expired`)
       }
     } catch {
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/?github_error=invalid_state`
-      )
+      return NextResponse.redirect(`${origin}/?github_error=invalid_state`)
     }
 
     const clientId = process.env.GITHUB_CLIENT_ID
@@ -155,9 +150,7 @@ export async function GET(request: NextRequest) {
 
     if (!clientId || !clientSecret) {
       console.error('[GITHUB CALLBACK] GitHub OAuth credentials not configured')
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/?github_error=not_configured`
-      )
+      return NextResponse.redirect(`${origin}/?github_error=not_configured`)
     }
 
     // Exchange code for access token
@@ -181,9 +174,7 @@ export async function GET(request: NextRequest) {
 
     if (tokenData.error || !tokenData.access_token) {
       console.error('[GITHUB CALLBACK] Token exchange failed:', tokenData.error)
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/?github_error=token_failed`
-      )
+      return NextResponse.redirect(`${origin}/?github_error=token_failed`)
     }
 
     const accessToken = tokenData.access_token
@@ -200,9 +191,7 @@ export async function GET(request: NextRequest) {
 
     if (!userData.login) {
       console.error('[GITHUB CALLBACK] Failed to fetch GitHub user')
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/?github_error=user_fetch_failed`
-      )
+      return NextResponse.redirect(`${origin}/?github_error=user_fetch_failed`)
     }
 
     const githubUsername = userData.login
@@ -219,9 +208,7 @@ export async function GET(request: NextRequest) {
 
     if (userError || !user) {
       console.error('[GITHUB CALLBACK] User not found:', wallet)
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/?github_error=user_not_found`
-      )
+      return NextResponse.redirect(`${origin}/?github_error=user_not_found`)
     }
 
     // Write to block_dev_github (primary store)
@@ -243,13 +230,9 @@ export async function GET(request: NextRequest) {
     syncGitHubData(user.id, accessToken, githubUsername)
 
     // Redirect back to app with success
-    return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/?github_connected=true`
-    )
+    return NextResponse.redirect(`${origin}/?github_connected=true`)
   } catch (error) {
     console.error('[GITHUB CALLBACK] Error:', error)
-    return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/?github_error=unknown`
-    )
+    return NextResponse.redirect(`${origin}/?github_error=unknown`)
   }
 }

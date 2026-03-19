@@ -39,8 +39,11 @@ export async function GET(request: NextRequest) {
       JSON.stringify({ wallet, ts: Date.now() })
     ).toString('base64')
 
-    // Must match exactly the "Authorization callback URL" in GitHub OAuth App settings
-    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/github/callback`
+    // Use the request's origin so redirect works on any host (localhost, stormchain.ai, etc.)
+    // No need to rely on NEXT_PUBLIC_APP_URL in production.
+    const requestUrl = new URL(request.url)
+    const origin = requestUrl.origin
+    const redirectUri = `${origin}/api/github/callback`
 
     const githubAuthUrl = new URL('https://github.com/login/oauth/authorize')
     githubAuthUrl.searchParams.set('client_id', clientId)
