@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
         .order('position', { ascending: true }),
       supabase
         .from('hub_onboarding')
-        .select('occupation, seeking_reason, suggested_categories, completed_at, updated_at')
+        .select('occupation, seeking_reason, suggested_categories, extra_context, completed_at, updated_at')
         .eq('user_id', user.id)
         .maybeSingle(),
       supabase

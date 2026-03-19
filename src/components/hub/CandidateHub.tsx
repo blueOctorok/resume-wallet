@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useState } from 'react'
 import Image from 'next/image'
-import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink, ChevronLeft, ChevronRight, FileText, ClipboardCheck, MessageCircle, Car, RefreshCw, Trash2, Search } from 'lucide-react'
+import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink, ChevronLeft, ChevronRight, FileText, ClipboardCheck, MessageCircle, Car, RefreshCw, Trash2, Search, Globe, Github } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore, useJourneyStore, useJourneyProgress } from '@/stores'
@@ -22,6 +22,7 @@ import STORMBalance from '@/components/STORMBalance'
 import CandidateRequestsSection from '@/components/CandidateRequestsSection'
 import HubOnboardingForm from './HubOnboardingForm'
 import BlockPickerModal from './BlockPickerModal'
+import AvaContextModal from './AvaContextModal'
 import MvrViewModal from '@/components/MvrViewModal'
 import DotAppPreviewModal from '@/components/career-card/DotAppPreviewModal'
 import ResumeFilePreviewModal from '@/components/hub/ResumeFilePreviewModal'
@@ -656,6 +657,7 @@ function AvaBanner() {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const openGuide = useJourneyStore((s) => s.openGuide)
+  const openAvAContextModal = useHubBlocksStore((s) => s.openAvAContextModal)
   const progress = useJourneyProgress()
   const steps = progress.steps.filter((s) => s.status !== 'skipped')
   const doneCount = steps.filter((s) => s.status === 'complete').length
@@ -718,19 +720,31 @@ function AvaBanner() {
               </p>
             </div>
           </div>
-          <button
-            type='button'
-            onClick={openGuide}
-            className={cn(
-              'flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shrink-0 sm:self-start',
-              isDark
-                ? 'bg-violet-500 text-white hover:bg-violet-400'
-                : 'bg-violet-600 text-white hover:bg-violet-500',
-            )}
-          >
-            <MessageCircle className='w-4 h-4 shrink-0' aria-hidden />
-            Ask AvA
-          </button>
+          <div className='flex flex-col gap-2 shrink-0 sm:self-start'>
+            <button
+              type='button'
+              onClick={openGuide}
+              className={cn(
+                'flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors',
+                isDark
+                  ? 'bg-violet-500 text-white hover:bg-violet-400'
+                  : 'bg-violet-600 text-white hover:bg-violet-500',
+              )}
+            >
+              <MessageCircle className='w-4 h-4 shrink-0' aria-hidden />
+              Ask AvA
+            </button>
+            <button
+              type='button'
+              onClick={openAvAContextModal}
+              className={cn(
+                'text-xs font-medium transition-colors underline underline-offset-2',
+                isDark ? 'text-gray-400 hover:text-violet-300' : 'text-gray-500 hover:text-violet-600',
+              )}
+            >
+              Tell AvA more about you
+            </button>
+          </div>
         </div>
 
         <div
@@ -946,7 +960,7 @@ function myFilesResumeCanView(doc: {
 
 interface HubDocument {
   id: string
-  type: 'resume' | 'dotapp' | 'mvr'
+  type: 'resume' | 'dotapp' | 'mvr' | 'portfolio' | 'github'
   title: string
   subtitle?: string
   createdAt?: string
@@ -959,6 +973,10 @@ interface HubDocument {
   ipfsHash?: string | null
   structuredData?: unknown | null
   resumeSourceRole?: 'driver' | 'developer'
+  /** Set when type === 'portfolio' — opens in new tab for View */
+  portfolioUrl?: string | null
+  /** Set when type === 'github' — link to profile */
+  githubUsername?: string | null
 }
 
 function MyFilesSection({ refreshKey }: { refreshKey: number }) {
@@ -994,9 +1012,11 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
   )
   const hasDotAppBlock = installedBlocks.some((b) => b.blockType === 'driver-dot-application')
   const hasMvrBlock = installedBlocks.some((b) => b.blockType === 'driver-mvr')
+  const hasPortfolioBlock = installedBlocks.some((b) => b.blockType === 'developer-portfolio')
+  const hasGithubBlock = installedBlocks.some((b) => b.blockType === 'developer-github')
 
   const fetchDocuments = useCallback(async () => {
-    if (!walletAddress || (!hasResumeBlock && !hasDotAppBlock && !hasMvrBlock)) {
+    if (!walletAddress || (!hasResumeBlock && !hasDotAppBlock && !hasMvrBlock && !hasPortfolioBlock && !hasGithubBlock)) {
       setLoading(false)
       return
     }
@@ -1076,13 +1096,47 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
         }
       }
 
+      // Portfolio block — one row when user has the block (URL set = complete, else in-progress)
+      if (hasPortfolioBlock) {
+        const portfolioUrl = data.portfolio?.portfolioUrl ?? null
+        docs.push({
+          id: 'portfolio',
+          type: 'portfolio',
+          title: 'Portfolio',
+          status: portfolioUrl ? 'complete' : 'in-progress',
+          verified: false,
+          txHash: null,
+          canVerify: false,
+          canDelete: false,
+          editPage: 'portfolio',
+          portfolioUrl,
+        })
+      }
+
+      // GitHub block — one row when user has the block (connected = complete, else in-progress)
+      if (hasGithubBlock) {
+        const username = data.github?.username ?? null
+        docs.push({
+          id: 'github',
+          type: 'github',
+          title: 'GitHub Activity',
+          status: username ? 'complete' : 'in-progress',
+          verified: false,
+          txHash: null,
+          canVerify: false,
+          canDelete: false,
+          editPage: 'github',
+          githubUsername: username,
+        })
+      }
+
       setDocuments(docs)
     } catch (err) {
       console.error('MyFilesSection fetch error:', err)
     } finally {
       setLoading(false)
     }
-  }, [walletAddress, hasResumeBlock, hasDotAppBlock, hasMvrBlock, installedBlocks])
+  }, [walletAddress, hasResumeBlock, hasDotAppBlock, hasMvrBlock, hasPortfolioBlock, hasGithubBlock, installedBlocks])
 
   // `refreshKey` is incremented externally to trigger a manual re-fetch
   useEffect(() => { fetchDocuments() }, [fetchDocuments, refreshKey])
@@ -1148,9 +1202,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
     }
   }
 
-  if (!hasResumeBlock && !hasDotAppBlock && !hasMvrBlock) return null
-  if (loading) return null
-  if (documents.length === 0) return null
+  const hasFileBlocks = hasResumeBlock || hasDotAppBlock || hasMvrBlock || hasPortfolioBlock || hasGithubBlock
 
   return (
     <>
@@ -1158,7 +1210,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
       'rounded-2xl border p-4',
       isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white/70 border-gray-200',
     )}>
-      {/* Header */}
+      {/* Header — always show so My Files is always visible in the hub */}
       <div className='flex items-center justify-between mb-3'>
         <div className='flex items-center gap-2'>
           <FileText className={cn('w-4 h-4', isDark ? 'text-teal-400' : 'text-teal-600')} />
@@ -1167,11 +1219,34 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
           </p>
         </div>
         <span className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
-          {documents.length} {documents.length === 1 ? 'file' : 'files'}
+          {hasFileBlocks ? `${documents.length} ${documents.length === 1 ? 'file' : 'files'}` : '—'}
         </span>
       </div>
 
-      {/* Status message */}
+      {/* Empty state: no file-related blocks installed */}
+      {!hasFileBlocks && (
+        <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>
+          Install a Resume, DOT Application, or MVR block from the Block Hive below to manage your files here.
+        </p>
+      )}
+
+      {/* Loading: has blocks but still fetching */}
+      {hasFileBlocks && loading && (
+        <div className='flex items-center justify-center py-8'>
+          <Loader2 className={cn('w-6 h-6 animate-spin', isDark ? 'text-teal-400' : 'text-teal-600')} />
+        </div>
+      )}
+
+      {/* Empty state: has blocks but no documents yet */}
+      {hasFileBlocks && !loading && documents.length === 0 && (
+        <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>
+          Your files will appear here after you add a resume, start a DOT application, or order an MVR.
+        </p>
+      )}
+
+      {/* Status message and document list — only when we have docs to show */}
+      {hasFileBlocks && !loading && documents.length > 0 && (
+        <>
       {message && (
         <div className={cn(
           'mb-3 px-3 py-2 rounded-lg text-xs',
@@ -1207,6 +1282,10 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                       : doc.status === 'processing' ? (isDark ? 'text-blue-400' : 'text-blue-600')
                       : isDark ? 'text-gray-400' : 'text-gray-500'
                   )} />
+                ) : doc.type === 'portfolio' ? (
+                  <Globe className={cn('w-4 h-4', doc.status === 'complete' ? (isDark ? 'text-teal-400' : 'text-teal-600') : isDark ? 'text-gray-400' : 'text-gray-500')} />
+                ) : doc.type === 'github' ? (
+                  <Github className={cn('w-4 h-4', doc.status === 'complete' ? (isDark ? 'text-teal-400' : 'text-teal-600') : isDark ? 'text-gray-400' : 'text-gray-500')} />
                 ) : (
                   <ClipboardCheck className={cn('w-4 h-4', doc.verified ? 'text-green-400' : isDark ? 'text-gray-400' : 'text-gray-500')} />
                 )}
@@ -1255,10 +1334,70 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                     putting full MVR payloads on a public chain for privacy/FCRA reasons.
                   </p>
                 )}
+                {doc.type === 'portfolio' && doc.portfolioUrl && (
+                  <p className={cn('text-[11px] truncate mt-0.5', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                    {doc.portfolioUrl}
+                  </p>
+                )}
+                {doc.type === 'github' && doc.githubUsername && (
+                  <p className={cn('text-[11px] truncate mt-0.5', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                    @{doc.githubUsername}
+                  </p>
+                )}
               </div>
 
               {/* Actions: View | Edit | Verify (until on-chain) | Delete */}
               <div className='flex flex-wrap items-center justify-end gap-1 flex-shrink-0 max-w-[min(100%,14rem)] sm:max-w-none'>
+                {doc.type === 'portfolio' && doc.portfolioUrl && (
+                  <a
+                    href={doc.portfolioUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className={cn(
+                      'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
+                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50',
+                    )}
+                  >
+                    <Eye className='w-3 h-3' /> View
+                  </a>
+                )}
+                {doc.type === 'portfolio' && (
+                  <button
+                    type='button'
+                    onClick={() => setCurrentPage('portfolio')}
+                    className={cn(
+                      'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
+                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50',
+                    )}
+                  >
+                    <Pencil className='w-3 h-3' /> Edit
+                  </button>
+                )}
+                {doc.type === 'github' && doc.githubUsername && (
+                  <a
+                    href={`https://github.com/${doc.githubUsername}`}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className={cn(
+                      'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
+                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50',
+                    )}
+                  >
+                    <Eye className='w-3 h-3' /> View
+                  </a>
+                )}
+                {doc.type === 'github' && (
+                  <button
+                    type='button'
+                    onClick={() => setCurrentPage('github')}
+                    className={cn(
+                      'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
+                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50',
+                    )}
+                  >
+                    <Pencil className='w-3 h-3' /> Edit
+                  </button>
+                )}
                 {doc.status !== 'processing' && doc.type === 'resume' && myFilesResumeCanView(doc) && (
                   <button
                     type='button'
@@ -1416,6 +1555,8 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
           </div>
         ))}
       </div>
+        </>
+      )}
     </div>
     <MvrViewModal
                isOpen={mvrViewOrderId !== null}
@@ -1510,6 +1651,7 @@ export default function CandidateHub() {
 
   const installedBlocks = useInstalledBlocks()
   const needsOnboarding = useNeedsOnboarding()
+  const isAvAContextModalOpen = useHubBlocksStore((s) => s.isAvAContextModalOpen)
   const isEditing = useIsEditMode()
 
   useEffect(() => {
@@ -1589,6 +1731,7 @@ export default function CandidateHub() {
     <>
       {needsOnboarding && <HubOnboardingForm />}
       <BlockPickerModal />
+      {isAvAContextModalOpen && <AvaContextModal />}
 
       <div className='max-w-3xl mx-auto space-y-6'>
         <HubProfileHeader />

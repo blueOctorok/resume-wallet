@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
-import { getCdlData, getDriverEmployment, getMvrData, getEmergencyContact, getDrivingExperience, getEducation, getSkills, getReferences } from '@/lib/block-data'
+import { getCdlData, getDriverEmployment, getMvrData, getEmergencyContact, getDrivingExperience, getEducation, getSkills, getReferences, getDevPortfolio, getDevGithub } from '@/lib/block-data'
 
 /**
  * GET /api/driver/hub
@@ -50,6 +50,8 @@ export async function GET(request: NextRequest) {
         resumes: [],
         dotApplications: [],
         mvrRecords: [],
+        portfolio: null,
+        github: null,
         jobApplications: [],
         payments: [],
         stats: {
@@ -84,6 +86,8 @@ export async function GET(request: NextRequest) {
       mvrResultsResult,
       jobAppsResult,
       paymentsResult,
+      portfolioRow,
+      githubRow,
     ] = await Promise.all([
       // 1. User profile (identity: name, avatar, contact)
       supabase
@@ -150,6 +154,11 @@ export async function GET(request: NextRequest) {
         .select('id, type, amount_usdc, tx_hash, status, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
+
+      // 16. Developer portfolio (for My Files when user has developer-portfolio block)
+      getDevPortfolio(supabase, user.id),
+      // 17. Developer GitHub (for My Files + journey when user has developer-github block)
+      getDevGithub(supabase, user.id),
     ])
 
     const userProfile = userProfileResult.data || null
@@ -363,6 +372,13 @@ export async function GET(request: NextRequest) {
       totalTransactions: transactions.length,
     }
 
+    const portfolio = portfolioRow
+      ? { portfolioUrl: portfolioRow.portfolio_url ?? null }
+      : null
+    const github = githubRow
+      ? { username: githubRow.username ?? null }
+      : null
+
     return NextResponse.json({
       success: true,
       isNewUser: false,
@@ -373,6 +389,8 @@ export async function GET(request: NextRequest) {
       resumes,
       dotApplications,
       mvrRecords,
+      portfolio,
+      github,
       jobApplications,
       payments, // Keep for backwards compatibility
       transactions, // New: derived from actual orders/purchases

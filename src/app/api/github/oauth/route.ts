@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
       JSON.stringify({ wallet, ts: Date.now() })
     ).toString('base64')
 
+    // Must match exactly the "Authorization callback URL" in GitHub OAuth App settings
     const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/github/callback`
 
     const githubAuthUrl = new URL('https://github.com/login/oauth/authorize')

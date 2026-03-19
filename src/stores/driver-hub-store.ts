@@ -45,6 +45,10 @@ interface DriverHubState {
   dotApplications: DotApplicationRecord[]
   mvrRecords: MvrRecord[]
   jobApplications: JobApplication[]
+  /** Portfolio URL from block_dev_portfolio (for My Files + AvA journey) */
+  portfolio: { portfolioUrl: string | null } | null
+  /** GitHub from block_dev_github (for My Files + AvA journey) */
+  github: { username: string | null } | null
   
   // Statistics
   stats: DriverHubStats | null
@@ -75,6 +79,8 @@ interface DriverHubActions {
   setMvrRecords: (records: MvrRecord[]) => void
   setJobApplications: (apps: JobApplication[]) => void
   setStats: (stats: DriverHubStats | null) => void
+  setPortfolio: (portfolio: { portfolioUrl: string | null } | null) => void
+  setGithub: (github: { username: string | null } | null) => void
   
   // Loading state
   setIsLoading: (loading: boolean) => void
@@ -108,6 +114,8 @@ interface DriverHubActions {
     mvrRecords?: MvrRecord[]
     jobApplications?: JobApplication[]
     stats?: DriverHubStats | null
+    portfolio?: { portfolioUrl: string | null } | null
+    github?: { username: string | null } | null
   }) => void
   
   clearHubData: () => void
@@ -138,6 +146,8 @@ const initialState: DriverHubState = {
   dotApplications: [],
   mvrRecords: [],
   jobApplications: [],
+  portfolio: null,
+  github: null,
   stats: initialStats,
   isLoading: true,
   isRefreshing: false,
@@ -167,6 +177,8 @@ export const useDriverHubStore = create<DriverHubState & DriverHubActions>()(
     setMvrRecords: (records) => set({ mvrRecords: records }),
     setJobApplications: (apps) => set({ jobApplications: apps }),
     setStats: (stats) => set({ stats }),
+    setPortfolio: (portfolio) => set({ portfolio }),
+    setGithub: (github) => set({ github }),
 
     // Loading state
     setIsLoading: (loading) => set({ isLoading: loading }),
@@ -242,6 +254,8 @@ export const useDriverHubStore = create<DriverHubState & DriverHubActions>()(
       mvrRecords: data.mvrRecords ?? get().mvrRecords,
       jobApplications: data.jobApplications ?? get().jobApplications,
       stats: data.stats ?? get().stats,
+      portfolio: data.portfolio ?? get().portfolio,
+      github: data.github ?? get().github,
       hasResume: (data.resumes ?? get().resumes).length > 0,
       latestResumeIpfsHash: (data.resumes ?? get().resumes)[0]?.ipfsHash ?? null,
       isLoading: false,

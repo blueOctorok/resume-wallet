@@ -146,6 +146,39 @@ await saveCdlData(supabase, userId, { cdl_number: '...', cdl_state: 'OH' })
 3. Set `dataTables` on the block's `BlockDefinition` in `block-registry.ts`
 4. If other blocks need this data, add a composite read function to `block-data.ts`
 
+## 10. My Files Integration (MANDATORY)
+
+**Every block MUST surface a file entry in My Files** once the user has started or completed work in that block. My Files is the universal progress tracker across the hub — it is how users see what they've done across every block.
+
+### Rules
+
+- **My Files always renders** on the hub (even for new users). It is permanent, not gated on specific block types.
+- **Every block generates at least one file.** When a user starts work in a block, a row must appear in My Files. Examples:
+  - Resume block → resume document
+  - DOT application block → application file (in-progress or complete)
+  - MVR block → MVR record (processing or complete)
+  - CDL block → CDL credentials file
+  - Portfolio block → portfolio link file
+  - Skills block → skills snapshot
+  - Education block → education record
+  - GitHub block → GitHub profile link
+- **File status must reflect block progress.** Use statuses: `empty`, `in-progress`, `processing`, `complete`. My Files is where the user tracks what's done and what's not.
+- **The hub API (`/api/driver/hub`)** must return the block's file data so `MyFilesSection` can render it. When adding a new block, add its documents to the hub API response.
+- **`MyFilesSection`** in `CandidateHub.tsx` must handle the new block's document type (icon, actions, status badge, view/edit navigation).
+- **Do NOT skip My Files** when building a new block. If you are building a block and My Files doesn't show anything for it, the block is incomplete.
+
+## 11. AvA Journey Integration (MANDATORY)
+
+**Every block MUST have a corresponding AvA journey step** that is marked complete when the block's work is done, and AvA must have knowledge to track and guide the user.
+
+### Rules
+
+- **When you build a block**, you must add it to **both** My Files (see section 10) **and** the AvA journey.
+- **Journey step:** Add an entry to `BLOCK_JOURNEY_MAP` in `src/lib/journey-progress.ts` for the block's `blockType`. The step's `status` must be derived from real progress data (e.g. "complete" when the user has saved the main artifact: portfolio URL set, resume uploaded, DOT app submitted, etc.).
+- **Progress data:** Add any new completion signals to `BlockProgressData` in `journey-progress.ts` and populate them in `src/stores/journey-store.ts` from the hub store (or from the hub API response). The hub API is the source of truth; the driver hub store is synced from it via `syncDriverHubFromApi`.
+- **AvA knowledge:** Ensure AvA's context (e.g. `src/lib/ava-context.ts`) and any assistant templates (e.g. `developer-brain-templates.ts`) know about the block so AvA can reference it, nudge the user to complete it, and mark the journey step when done.
+- **Completion = done.** The journey step is "complete" when the user has finished the block's primary action (e.g. added portfolio URL, submitted DOT app, added first resume). Do not leave journey steps permanently pending for blocks that have a clear "done" state.
+
 ## Critical Rules
 
 - **`driver_profiles` and `developer_profiles` DO NOT EXIST.** They have been dropped. Any reference to them is a bug.
@@ -156,3 +189,5 @@ await saveCdlData(supabase, userId, { cdl_number: '...', cdl_state: 'OH' })
 - **All data goes through `block-data.ts`.** Each block owns its own `block_*` table. No monolithic profile tables.
 - **Block data is user-scoped.** Every `block_*` table has a `UNIQUE(user_id)` constraint. One row per user per block data type.
 - **Identity is separate.** Name, email, phone, address, avatar live in `user_profiles`, not in block tables. Block tables store role-specific data only.
+- **Every block must surface a file in My Files.** See "My Files Integration" section above. A block with no My Files entry is incomplete.
+- **Every block must have an AvA journey step** that completes when the block's work is done. See "AvA Journey Integration" section above. AvA must have knowledge to track and guide the user.

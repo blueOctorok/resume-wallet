@@ -10,7 +10,7 @@ import { suggestCategories } from '@/lib/block-registry'
  * onboarding form. Runs the block registry's keyword matcher to populate
  * suggested_categories so the block picker can pre-filter on first open.
  *
- * Body:    { occupation: string, seekingReason: string }
+ * Body:    { occupation: string, seekingReason: string, extraContext?: string }
  * Response: { onboarding: HubOnboarding }
  */
 export async function POST(request: NextRequest) {
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { occupation, seekingReason } = body
+    const { occupation, seekingReason, extraContext } = body
 
     if (!occupation?.trim() || !seekingReason?.trim()) {
       return NextResponse.json(
@@ -40,19 +40,21 @@ export async function POST(request: NextRequest) {
     // keyword matcher. Stored so the picker can pre-filter without re-running logic.
     const suggested = suggestCategories(occupation.trim(), seekingReason.trim())
 
+    const payload: Record<string, unknown> = {
+      user_id: user.id,
+      occupation: occupation.trim(),
+      seeking_reason: seekingReason.trim(),
+      suggested_categories: suggested,
+      completed_at: new Date().toISOString(),
+    }
+    if (extraContext !== undefined) {
+      payload.extra_context = extraContext?.trim() || null
+    }
+
     const { data: onboarding, error } = await supabase
       .from('hub_onboarding')
-      .upsert(
-        {
-          user_id: user.id,
-          occupation: occupation.trim(),
-          seeking_reason: seekingReason.trim(),
-          suggested_categories: suggested,
-          completed_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id' }
-      )
-      .select('occupation, seeking_reason, suggested_categories, completed_at, updated_at')
+      .upsert(payload, { onConflict: 'user_id' })
+      .select('occupation, seeking_reason, suggested_categories, extra_context, completed_at, updated_at')
       .single()
 
     if (error) {

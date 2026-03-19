@@ -36,6 +36,11 @@ const PortfolioPage = dynamic(
   { ssr: false, loading: () => <LoadingScreen message='Loading portfolio...' fullScreen={false} /> }
 )
 
+const GitHubPage = dynamic(
+  () => import('@/components/developer/GitHubPage').then((mod) => mod.default),
+  { ssr: false, loading: () => <LoadingScreen message='Loading GitHub...' fullScreen={false} /> }
+)
+
 /**
  * CandidateShell — the composable hub shell for all non-employer users.
  *
@@ -97,6 +102,10 @@ export default function CandidateShell() {
 
   if (currentPage === 'portfolio') {
     return <PortfolioPage userAddress={user?.address ?? ''} onBack={goBack} />
+  }
+
+  if (currentPage === 'github') {
+    return <GitHubPage userAddress={user?.address ?? ''} onBack={goBack} />
   }
 
   if (currentPage === 'jobs') {

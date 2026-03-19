@@ -137,9 +137,10 @@ export function useJourneyProgress(): JourneyProgress {
     hasMvrOrder: hubStore.mvrRecords.length > 0,
     hasAppliedToJobs: hubStore.jobApplications.length > 0,
     jobApplicationCount: hubStore.jobApplications.length,
+    hasPortfolioUrl: Boolean(hubStore.portfolio?.portfolioUrl?.trim()),
     hasPortfolioProjects: false,
     portfolioProjectCount: 0,
-    hasConnectedGithub: false,
+    hasConnectedGithub: Boolean(hubStore.github?.username?.trim()),
   }
 
   const blockTypes = installedBlocks.map((b) => b.blockType)

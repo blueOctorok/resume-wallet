@@ -40,6 +40,7 @@ function useHubContext(): HubContext {
   return {
     occupation: onboarding?.occupation,
     seekingReason: onboarding?.seekingReason,
+    extraContext: onboarding?.extraContext ?? null,
     installedBlocks: installedBlocks.map((b) => ({
       blockType: b.blockType,
       label: b.definition?.label ?? b.blockType,

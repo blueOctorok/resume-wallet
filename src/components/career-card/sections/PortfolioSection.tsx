@@ -4,6 +4,8 @@ import { Globe, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { PortfolioData, CareerCardMode } from '@/types/career-card'
 
+const isSafePreviewUrl = (url: string) => /^https?:\/\//i.test(url.trim())
+
 interface PortfolioSectionProps {
   data: PortfolioData
   mode: CareerCardMode
@@ -42,6 +44,9 @@ export default function PortfolioSection({ data, mode, isDark, onAction }: Portf
     )
   }
 
+  const url = data.portfolioUrl.trim()
+  const showPreview = isSafePreviewUrl(url)
+
   return (
     <div className={cn(
       'rounded-xl p-4',
@@ -55,7 +60,7 @@ export default function PortfolioSection({ data, mode, isDark, onAction }: Portf
           </h3>
         </div>
         <a
-          href={data.portfolioUrl}
+          href={url}
           target='_blank'
           rel='noopener noreferrer'
           className={cn('p-1.5 rounded-lg', isDark ? 'hover:bg-gray-600 text-gray-400' : 'hover:bg-gray-200 text-gray-500')}
@@ -64,8 +69,18 @@ export default function PortfolioSection({ data, mode, isDark, onAction }: Portf
         </a>
       </div>
       <p className={cn('text-xs truncate', isDark ? 'text-gray-400' : 'text-gray-600')}>
-        {data.portfolioUrl}
+        {url}
       </p>
+      {showPreview && (
+        <div className='mt-3 rounded-lg border overflow-hidden bg-white'>
+          <iframe
+            src={url}
+            title='Portfolio preview'
+            className='w-full h-[320px] border-0'
+            sandbox='allow-scripts allow-same-origin allow-forms'
+          />
+        </div>
+      )}
     </div>
   )
 }

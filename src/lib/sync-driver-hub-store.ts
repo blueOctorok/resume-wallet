@@ -19,6 +19,8 @@ export async function syncDriverHubFromApi(walletAddress: string): Promise<void>
       mvrRecords: data.mvrRecords ?? [],
       jobApplications: data.jobApplications ?? [],
       stats: data.stats ?? null,
+      portfolio: data.portfolio ?? null,
+      github: data.github ?? null,
     })
   } catch {
     /* non-fatal */

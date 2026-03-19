@@ -4,6 +4,29 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Blocks: My Files + AvA Journey mandatory (rule + portfolio fix)** (March 2026)
+
+- **Cursor rule** (`.cursor/rules/block-development.mdc`): New **Section 11 — AvA Journey Integration (MANDATORY)**. When building a block you must: (1) surface it in My Files (section 10), (2) add a `BLOCK_JOURNEY_MAP` entry in `journey-progress.ts` whose step completes when the block's work is done, (3) add any new completion signals to `BlockProgressData` and populate them in the journey store from hub data, (4) ensure AvA has context/knowledge to track and guide. Critical Rules updated with a bullet that every block must have an AvA journey step.
+- **Portfolio block journey:** The developer-portfolio step was "Add Portfolio Projects" and never completed (progress was hardcoded). It is now **"Link Your Portfolio"** and completes when the user has set their **portfolio URL** (`block_dev_portfolio.portfolio_url`). Progress is driven by `hasPortfolioUrl` in `BlockProgressData`.
+- **Hub → journey data:** `hasPortfolioUrl` added to `BlockProgressData`. Driver hub store now holds `portfolio: { portfolioUrl }` from `/api/driver/hub`; `syncDriverHubFromApi` passes it into `loadHubData`. Journey store sets `hasPortfolioUrl` from `hubStore.portfolio?.portfolioUrl`.
+
+---
+
+## **My Files always visible on candidate hub** (March 2026)
+
+- **My Files** was only shown when the user had at least one of: driver-resume, developer-resume, driver-dot-application, or driver-mvr, and had at least one document. New users (e.g. new wallet in incognito) saw nothing.
+- **CandidateHub** `MyFilesSection` now always renders the My Files card. When the user has no file-related blocks, it shows: “Install a Resume, DOT Application, or MVR block from the Block Hive below to manage your files here.” When they have blocks but no documents yet, it shows “0 files” and: “Your files will appear here after you add a resume, start a DOT application, or order an MVR.” The document list and actions only render when there are documents to show.
+
+---
+
+## **Developer portfolio block: URL + live preview** (March 2026)
+
+- **Portfolio block** is now the single place to set your portfolio URL and see a live preview. Data still lives in `block_dev_portfolio.portfolio_url`; read/write via existing `GET/PUT /api/developer/profile` (`portfolioUrl`).
+- **PortfolioPage** (`src/components/developer/PortfolioPage.tsx`): Added a top section “Your portfolio URL” with one input, Save button, and a live iframe preview when the URL is set (http/https only; `javascript:`/`data:` blocked).
+- **Career card PortfolioSection** (`src/components/career-card/sections/PortfolioSection.tsx`): When `portfolioUrl` is present, the section now shows an iframe preview of the portfolio in addition to the existing external link. Same URL validation and iframe `sandbox` for security.
+
+---
+
 ## **Treasury Consolidation — 17M** (March 2026)
 
 - **Transferred 2M unallocated reserve** from deployer wallet to TreasuryDistributor contract. Deployer now holds 0 STORM. Every token is in a smart contract.

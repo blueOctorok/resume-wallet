@@ -215,13 +215,13 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
   {
     id: 'developer-github',
     label: 'GitHub Activity',
-    description: 'Contribution graph and public repository highlights',
+    description: 'Contribution graph and repository highlights (public and private)',
     icon: 'Github',
     categoryId: 'developers',
     suggestedFor: ['developer', 'software', 'github', 'open source', 'contributions', 'code'],
     complexity: 'simple',
     appearsOnCareerCard: true,
-    pageRoute: null,
+    pageRoute: 'github',
     dataTables: ['block_dev_github'],
   },
 ]

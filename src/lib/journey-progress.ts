@@ -70,6 +70,8 @@ export interface BlockProgressData {
   hasMvrOrder: boolean
   hasAppliedToJobs: boolean
   jobApplicationCount: number
+  /** Portfolio URL set (block_dev_portfolio.portfolio_url) — drives journey step completion */
+  hasPortfolioUrl: boolean
   hasPortfolioProjects: boolean
   portfolioProjectCount: number
   hasConnectedGithub: boolean
@@ -181,14 +183,14 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
   'developer-portfolio': {
     resolve: (d) => [{
       id: 'developer-portfolio',
-      label: 'Add Portfolio Projects',
-      description: 'Showcase your best work to employers',
-      status: d.hasPortfolioProjects ? 'complete' : 'pending',
-      action: !d.hasPortfolioProjects ? { label: 'Add Project', target: 'portfolio' } : undefined,
+      label: 'Link Your Portfolio',
+      description: 'Add your portfolio URL for a live preview on your career card',
+      status: d.hasPortfolioUrl ? 'complete' : 'pending',
+      action: !d.hasPortfolioUrl ? { label: 'Add Portfolio URL', target: 'portfolio' } : undefined,
     }],
-    nextAction: (d) => !d.hasPortfolioProjects ? {
-      label: 'Add Your First Project',
-      description: 'Showcase your best work',
+    nextAction: (d) => !d.hasPortfolioUrl ? {
+      label: 'Link Your Portfolio',
+      description: 'Add your portfolio URL so employers see a live preview',
       target: 'portfolio',
       priority: 'high',
     } : null,
@@ -198,14 +200,14 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
     resolve: (d) => [{
       id: 'developer-github',
       label: 'Connect GitHub',
-      description: 'Link your GitHub to show contributions',
+      description: 'Link your GitHub to show contributions and repo stats on your career card',
       status: d.hasConnectedGithub ? 'complete' : 'pending',
-      action: !d.hasConnectedGithub ? { label: 'Connect GitHub', target: null } : undefined,
+      action: !d.hasConnectedGithub ? { label: 'Connect GitHub', target: 'github' } : undefined,
     }],
     nextAction: (d) => !d.hasConnectedGithub ? {
       label: 'Connect GitHub',
       description: 'Show employers your open-source contributions',
-      target: null,
+      target: 'github',
       priority: 'medium',
     } : null,
   },

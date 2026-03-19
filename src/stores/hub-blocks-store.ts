@@ -22,7 +22,27 @@ export interface HubOnboarding {
   occupation: string
   seekingReason: string
   suggestedCategories: string[]
+  extraContext: string | null
   completedAt: string
+}
+
+/** Normalize API snake_case to store camelCase */
+function normalizeOnboarding(raw: {
+  occupation?: string
+  seeking_reason?: string
+  suggested_categories?: string[] | null
+  extra_context?: string | null
+  completed_at?: string
+  updated_at?: string
+} | null): HubOnboarding | null {
+  if (!raw) return null
+  return {
+    occupation: raw.occupation ?? '',
+    seekingReason: raw.seeking_reason ?? '',
+    suggestedCategories: raw.suggested_categories ?? [],
+    extraContext: raw.extra_context ?? null,
+    completedAt: raw.completed_at ?? '',
+  }
 }
 
 /** Lightweight profile info shown in the hub header */
@@ -45,6 +65,8 @@ interface HubBlocksState {
 
   /** Whether the mandatory onboarding form needs to be shown */
   needsOnboarding: boolean
+  /** "Tell AvA more about you" modal open state */
+  isAvAContextModalOpen: boolean
 }
 
 interface HubBlocksActions {
@@ -64,8 +86,12 @@ interface HubBlocksActions {
   completeOnboarding: (
     occupation: string,
     seekingReason: string,
-    walletAddress: string
+    walletAddress: string,
+    extraContext?: string | null
   ) => Promise<void>
+  /** Open the AvA context modal (for "Tell AvA more about you") */
+  openAvAContextModal: () => void
+  closeAvAContextModal: () => void
 
   // Profile
   updateAvatarUrl: (url: string) => void
@@ -90,6 +116,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
   isEditMode: false,
   fetchError: null,
   needsOnboarding: false,
+  isAvAContextModalOpen: false,
 
   // ── Fetch ───────────────────────────────────────────────────────────────────
   fetchHubData: async (walletAddress) => {
@@ -124,7 +151,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
 
       set({
         installedBlocks,
-        onboarding: data.onboarding ?? null,
+        onboarding: normalizeOnboarding(data.onboarding ?? null),
         userProfile,
         needsOnboarding: !data.onboarding,
         isLoading: false,
@@ -241,7 +268,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
   },
 
   // ── Onboarding ──────────────────────────────────────────────────────────────
-  completeOnboarding: async (occupation, seekingReason, walletAddress) => {
+  completeOnboarding: async (occupation, seekingReason, walletAddress, extraContext) => {
     try {
       const res = await fetch('/api/hub/onboarding', {
         method: 'POST',
@@ -249,13 +276,13 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
           'Content-Type': 'application/json',
           'x-wallet-address': walletAddress,
         },
-        body: JSON.stringify({ occupation, seekingReason }),
+        body: JSON.stringify({ occupation, seekingReason, extraContext: extraContext ?? undefined }),
       })
       if (!res.ok) throw new Error('Failed to save onboarding')
       const { onboarding } = await res.json()
 
       set({
-        onboarding,
+        onboarding: normalizeOnboarding(onboarding),
         needsOnboarding: false,
       })
     } catch (err) {
@@ -263,6 +290,9 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
       throw err // Surface to the form so it can show an error state
     }
   },
+
+  openAvAContextModal: () => set({ isAvAContextModalOpen: true }),
+  closeAvAContextModal: () => set({ isAvAContextModalOpen: false }),
 
   // ── Picker ──────────────────────────────────────────────────────────────────
   // ── Profile ─────────────────────────────────────────────────────────────────

@@ -31,20 +31,24 @@ export async function DELETE(
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Delete only if the block belongs to this user (ownership check)
-    const { error, count } = await supabase
+    // Delete only if the block belongs to this user (ownership check).
+    // .delete() returns nothing by default; chain .select() to get deleted rows and detect 0 matches.
+    const { data: deleted, error } = await supabase
       .from('hub_blocks')
-      .delete({ count: 'exact' })
+      .delete()
       .eq('id', id)
       .eq('user_id', user.id)
+      .select('id')
 
     if (error) {
       console.error('[HUB BLOCKS] Delete error:', error)
       return NextResponse.json({ error: 'Failed to remove block' }, { status: 500 })
     }
 
-    if (count === 0) {
-      return NextResponse.json({ error: 'Block not found' }, { status: 404 })
+    // 0 rows: block already removed or stale id (e.g. removed in another tab). Return success
+    // so the client keeps the optimistic removal and doesn't show "Failed to remove block".
+    if (!deleted?.length) {
+      return NextResponse.json({ success: true, alreadyRemoved: true })
     }
 
     return NextResponse.json({ success: true })

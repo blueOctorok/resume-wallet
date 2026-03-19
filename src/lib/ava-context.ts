@@ -17,6 +17,8 @@ export interface HubContext {
   occupation?: string
   /** From hub_onboarding.seeking_reason */
   seekingReason?: string
+  /** From hub_onboarding.extra_context — goals, preferences, anything else for AvA */
+  extraContext?: string | null
   /** Installed blocks and their completion status */
   installedBlocks?: Array<{
     blockType: string
@@ -46,13 +48,16 @@ export function buildAvaSystemPrompt(
   const parts: string[] = [AVA_PERSONA]
 
   // Candidate identity section
-  if (hubContext?.occupation || hubContext?.seekingReason) {
+  if (hubContext?.occupation || hubContext?.seekingReason || hubContext?.extraContext) {
     parts.push('\n## About this candidate')
     if (hubContext.occupation) {
       parts.push(`- **What they do:** ${hubContext.occupation}`)
     }
     if (hubContext.seekingReason) {
       parts.push(`- **Why they're here:** ${hubContext.seekingReason}`)
+    }
+    if (hubContext.extraContext?.trim()) {
+      parts.push(`- **Additional context for you:** ${hubContext.extraContext.trim()}`)
     }
   }
 

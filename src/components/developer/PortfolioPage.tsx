@@ -23,6 +23,9 @@ import {
   Eye,
 } from 'lucide-react'
 
+// Only allow http/https in iframe to avoid javascript: or data: URLs
+const isSafePreviewUrl = (url: string) => /^https?:\/\//i.test(url.trim())
+
 // ============================================================
 // TYPES
 // ============================================================
@@ -135,6 +138,8 @@ export default function PortfolioPage({
 }: PortfolioPageProps) {
   const { theme } = useTheme()
   const [projects, setProjects] = useState<Project[]>([])
+  const [portfolioUrl, setPortfolioUrl] = useState<string>('')
+  const [portfolioUrlSaving, setPortfolioUrlSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -190,9 +195,48 @@ export default function PortfolioPage({
     }
   }, [userAddress])
 
+  const fetchPortfolioUrl = useCallback(async () => {
+    if (!userAddress) return
+    try {
+      const res = await fetch('/api/developer/profile', {
+        headers: { 'x-wallet-address': userAddress },
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      setPortfolioUrl(data.profile?.portfolioUrl ?? '')
+    } catch {
+      // ignore
+    }
+  }, [userAddress])
+
   useEffect(() => {
     fetchProjects()
   }, [fetchProjects])
+
+  useEffect(() => {
+    fetchPortfolioUrl()
+  }, [fetchPortfolioUrl])
+
+  const savePortfolioUrl = async () => {
+    if (!userAddress) return
+    setPortfolioUrlSaving(true)
+    try {
+      const res = await fetch('/api/developer/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': userAddress,
+        },
+        body: JSON.stringify({ portfolioUrl: portfolioUrl.trim() || null }),
+      })
+      if (!res.ok) throw new Error('Failed to save')
+      await fetchPortfolioUrl()
+    } catch {
+      setError('Failed to save portfolio URL')
+    } finally {
+      setPortfolioUrlSaving(false)
+    }
+  }
 
   // ============================================================
   // FORM HANDLERS
@@ -415,6 +459,47 @@ export default function PortfolioPage({
           {error}
         </div>
       )}
+
+      {/* Portfolio URL: single link used for live preview on this page and on the career card */}
+      <div className={`mb-6 rounded-2xl border p-4 space-y-4 ${theme === 'dark' ? 'border-white/10 bg-white/5' : 'border-gray-200 bg-gray-50'}`}>
+        <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-zinc-300' : 'text-zinc-700'}`}>
+          Your portfolio URL
+        </label>
+        <div className='flex gap-2'>
+          <input
+            type='url'
+            value={portfolioUrl}
+            onChange={(e) => setPortfolioUrl(e.target.value)}
+            placeholder='https://your-portfolio.com'
+            className={`flex-1 rounded-lg border px-3 py-2 text-sm placeholder:text-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 ${
+              theme === 'dark'
+                ? 'border-zinc-600 bg-zinc-800 text-zinc-100'
+                : 'border-zinc-300 bg-white text-zinc-900'
+            }`}
+          />
+          <button
+            type='button'
+            onClick={savePortfolioUrl}
+            disabled={portfolioUrlSaving || !portfolioUrl.trim()}
+            className='rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50 disabled:pointer-events-none'
+          >
+            {portfolioUrlSaving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+        {portfolioUrl.trim() && isSafePreviewUrl(portfolioUrl) && (
+          <div className='rounded-lg border overflow-hidden bg-white'>
+            <p className={`text-xs px-2 py-1 border-b ${theme === 'dark' ? 'text-zinc-400 border-zinc-700' : 'text-zinc-500 border-zinc-200'}`}>
+              Live preview
+            </p>
+            <iframe
+              src={portfolioUrl.trim()}
+              title='Portfolio preview'
+              className='w-full h-[420px] border-0'
+              sandbox='allow-scripts allow-same-origin allow-forms'
+            />
+          </div>
+        )}
+      </div>
 
       {/* Project Form Modal */}
       {showForm && (
