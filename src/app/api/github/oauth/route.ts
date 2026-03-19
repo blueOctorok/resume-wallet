@@ -39,11 +39,11 @@ export async function GET(request: NextRequest) {
       JSON.stringify({ wallet, ts: Date.now() })
     ).toString('base64')
 
-    // Use the request's origin so redirect works on any host (localhost, stormchain.ai, etc.)
-    // No need to rely on NEXT_PUBLIC_APP_URL in production.
-    const requestUrl = new URL(request.url)
-    const origin = requestUrl.origin
+    // Prefer NEXT_PUBLIC_APP_URL (canonical domain) since reverse proxies / Vercel may expose
+    // an internal origin (e.g. *.vercel.app) in request.url that won't match GitHub's callback URL.
+    const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin
     const redirectUri = `${origin}/api/github/callback`
+    console.log('[GITHUB OAUTH] redirect_uri:', redirectUri)
 
     const githubAuthUrl = new URL('https://github.com/login/oauth/authorize')
     githubAuthUrl.searchParams.set('client_id', clientId)

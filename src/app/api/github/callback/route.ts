@@ -112,8 +112,9 @@ async function syncGitHubData(
  *   - state: Base64-encoded state containing wallet address
  */
 export async function GET(request: NextRequest) {
-  // Use request origin so redirects send user back to the same host (stormchain.ai, localhost, etc.)
-  const origin = new URL(request.url).origin
+  // Prefer NEXT_PUBLIC_APP_URL for the same reason as the oauth route: reverse proxies may
+  // expose an internal hostname in request.url that differs from the user-facing domain.
+  const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin
 
   try {
     const { searchParams } = new URL(request.url)
