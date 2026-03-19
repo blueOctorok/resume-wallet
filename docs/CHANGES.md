@@ -6,12 +6,15 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ## **GitHub career card: Full activity display restored** (March 2026)
 
-- **Problem:** Career card GitHub section only showed `@username` — all the rich data (repos, stars, languages, bio, followers) was hardcoded to empty in `fetchGitHubData`.
-- **Root cause:** The `data` JSONB column in `block_dev_github` (synced by `/api/github/callback`) was never read by the career card API. It returned `publicRepos: 0, followers: 0, languages: {}, topRepos: []`.
-- **GitHub callback** (`/api/github/callback`): Now stores **top 5 repos** (sorted by stars, forks excluded) with `name`, `description`, `stars`, `language`, `url`, and `isPrivate` flag in the `data.topRepos` array alongside the existing aggregate stats.
+- **Problem:** Career card GitHub section only showed `@username` — all the rich data (repos, stars, languages, bio, followers) was hardcoded to empty in `fetchGitHubData`. The `data` JSONB column in `block_dev_github` (synced by `/api/github/callback`) was never read by the career card API.
+- **Root cause #1 (data not read):** `fetchGitHubData` returned hardcoded `publicRepos: 0, followers: 0, languages: {}, topRepos: []`. Fixed to read `row.data` JSONB for all fields.
+- **Root cause #2 (data never synced):** `syncGitHubData` was fire-and-forget (`syncGitHubData(...)` without `await`). On Vercel serverless, the function terminates after sending the redirect response, killing the sync before it finishes. Fixed to `await syncGitHubData(...)` before redirecting.
+- **GitHub callback** (`/api/github/callback`): Now stores **top 5 repos** (sorted by stars, forks excluded) with `name`, `description`, `stars`, `language`, `url`, and `isPrivate`. Sync is now awaited before redirect.
+- **New endpoint** `/api/github/sync` (POST): Re-syncs GitHub data using the stored access token. Called by the GitHubPage "Refresh" button so users can update their data without reconnecting OAuth.
+- **GitHubPage** (`src/components/developer/GitHubPage.tsx`): Refresh button now calls `/api/github/sync` before re-fetching the profile.
 - **Career card API** (`/api/career-card/route.ts` → `fetchGitHubData`): Now reads `row.data` to populate `avatarUrl`, `bio`, `publicRepos`, `followers`, `languages` (from `topLanguages` percentage data), and `topRepos`.
-- **GitHubSection** (`src/components/career-card/sections/GitHubSection.tsx`): Enhanced to show bio, top languages as pill badges with percentages, and up to 5 top repos (was 3) with descriptions.
-- **Re-sync required:** Existing users must disconnect and reconnect GitHub (or hit a refresh endpoint) to re-sync the `topRepos` data.
+- **GitHubSection** (`src/components/career-card/sections/GitHubSection.tsx`): Now shows bio, contribution graph (via `GitHubContributionGraph` component with `shareToken`), language bars with proportional widths, and up to 5 top repos with descriptions.
+- **ProjectedCareerCard**: Now passes `shareToken` through `SectionRenderer` to `GitHubSection` for the contribution graph API calls.
 
 ---
 

@@ -43,8 +43,16 @@ export default function GitHubPage({ userAddress, onBack }: GitHubPageProps) {
     fetchProfile()
   }, [fetchProfile])
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshing(true)
+    try {
+      await fetch('/api/github/sync', {
+        method: 'POST',
+        headers: { 'x-wallet-address': userAddress },
+      })
+    } catch {
+      // sync failed silently — profile fetch below still shows latest DB state
+    }
     fetchProfile()
   }
 

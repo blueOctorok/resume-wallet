@@ -1,27 +1,37 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { Github, ExternalLink, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { GitHubData, CareerCardMode } from '@/types/career-card'
+
+const GitHubContributionGraph = dynamic(
+  () => import('@/components/GitHubContributionGraph'),
+  { ssr: false }
+)
 
 interface GitHubSectionProps {
   data: GitHubData
   mode: CareerCardMode
   isDark: boolean
+  shareToken?: string | null
 }
 
-export default function GitHubSection({ data, isDark }: GitHubSectionProps) {
+export default function GitHubSection({ data, isDark, shareToken }: GitHubSectionProps) {
   if (!data.username) return null
 
   const languageEntries = Object.entries(data.languages)
     .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
+    .slice(0, 6)
+
+  const maxPct = languageEntries.length > 0 ? languageEntries[0][1] : 1
 
   return (
     <div className={cn(
       'rounded-xl p-4',
       isDark ? 'bg-gray-700/50' : 'bg-white/60'
     )}>
+      {/* Header */}
       <div className='flex items-center justify-between mb-3'>
         <div className='flex items-center gap-2'>
           <Github className={cn('w-4 h-4', isDark ? 'text-teal-400' : 'text-teal-600')} />
@@ -63,23 +73,35 @@ export default function GitHubSection({ data, isDark }: GitHubSectionProps) {
         </p>
       )}
 
-      {/* Top languages */}
+      {/* Contribution graph */}
+      {shareToken && (
+        <div className='mb-4'>
+          <GitHubContributionGraph shareToken={shareToken} />
+        </div>
+      )}
+
+      {/* Top languages with proportional bars */}
       {languageEntries.length > 0 && (
-        <div className='mb-3'>
-          <p className={cn('text-[10px] font-semibold uppercase tracking-wide mb-1.5', isDark ? 'text-gray-500' : 'text-gray-400')}>
+        <div className='mb-4'>
+          <p className={cn('text-[10px] font-semibold uppercase tracking-wide mb-2', isDark ? 'text-gray-500' : 'text-gray-400')}>
             Top Languages
           </p>
-          <div className='flex flex-wrap gap-1.5'>
+          <div className='space-y-1.5'>
             {languageEntries.map(([lang, pct]) => (
-              <span
-                key={lang}
-                className={cn(
-                  'text-[10px] px-2 py-0.5 rounded-full font-medium',
-                  isDark ? 'bg-gray-600/50 text-gray-300' : 'bg-gray-100 text-gray-600'
-                )}
-              >
-                {lang} {pct}%
-              </span>
+              <div key={lang} className='flex items-center gap-2'>
+                <span className={cn('text-[11px] w-16 truncate flex-shrink-0', isDark ? 'text-gray-300' : 'text-gray-600')}>
+                  {lang}
+                </span>
+                <div className={cn('flex-1 h-2 rounded-full overflow-hidden', isDark ? 'bg-gray-600/40' : 'bg-gray-200')}>
+                  <div
+                    className='h-full rounded-full bg-teal-500/80'
+                    style={{ width: `${Math.max((pct / maxPct) * 100, 4)}%` }}
+                  />
+                </div>
+                <span className={cn('text-[10px] w-8 text-right flex-shrink-0', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                  {pct}%
+                </span>
+              </div>
             ))}
           </div>
         </div>

@@ -229,7 +229,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}/?github_error=user_not_found`)
     }
 
-    // Write to block_dev_github (primary store)
+    // Write username + token, then sync full GitHub data (repos, languages, etc.)
+    // IMPORTANT: Both must complete before redirecting. Vercel serverless functions
+    // terminate after the response is sent, so fire-and-forget calls get killed.
     try {
       await saveDevGithub(supabase, user.id, {
         username: githubUsername,
@@ -240,14 +242,12 @@ export async function GET(request: NextRequest) {
       console.error('[GITHUB CALLBACK] Failed to save github data:', err)
     }
 
+    await syncGitHubData(user.id, accessToken, githubUsername)
+
     console.log(
       `[GITHUB CALLBACK] Successfully connected GitHub @${githubUsername} for wallet ${wallet}`
     )
 
-    // Sync GitHub data to database (fire and forget - don't block redirect)
-    syncGitHubData(user.id, accessToken, githubUsername)
-
-    // Redirect back to app with success
     return NextResponse.redirect(`${origin}/?github_connected=true`)
   } catch (error) {
     console.error('[GITHUB CALLBACK] Error:', error)

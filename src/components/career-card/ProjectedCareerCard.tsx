@@ -151,6 +151,7 @@ export default function ProjectedCareerCard({
             isDark={isDark}
             userId={data.userId}
             walletAddress={walletAddress}
+            shareToken={data.shareToken}
             onAction={mode === 'self' && onNavigateToBlock
               ? () => onNavigateToBlock(section.blockType)
               : undefined
@@ -211,6 +212,7 @@ function SectionRenderer({
   onAction,
   userId,
   walletAddress,
+  shareToken,
 }: {
   section: CareerCardSection
   mode: CareerCardMode
@@ -218,6 +220,7 @@ function SectionRenderer({
   onAction?: () => void
   userId?: string
   walletAddress?: string
+  shareToken?: string | null
 }) {
   switch (section.blockType as SectionBlockType) {
     case 'driver-resume':
@@ -249,7 +252,7 @@ function SectionRenderer({
     case 'developer-portfolio':
       return <PortfolioSection data={section.data as PortfolioData} mode={mode} isDark={isDark} onAction={onAction} />
     case 'developer-github':
-      return <GitHubSection data={section.data as GitHubData} mode={mode} isDark={isDark} />
+      return <GitHubSection data={section.data as GitHubData} mode={mode} isDark={isDark} shareToken={shareToken} />
     case 'developer-projects':
       return <ProjectsSection data={section.data as ProjectsData} mode={mode} isDark={isDark} />
     case 'general-skills':
