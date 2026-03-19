@@ -15,9 +15,10 @@ interface GitHubSectionProps {
   mode: CareerCardMode
   isDark: boolean
   shareToken?: string | null
+  walletAddress?: string
 }
 
-export default function GitHubSection({ data, isDark, shareToken }: GitHubSectionProps) {
+export default function GitHubSection({ data, isDark, shareToken, walletAddress }: GitHubSectionProps) {
   if (!data.username) return null
 
   const languageEntries = Object.entries(data.languages)
@@ -73,10 +74,10 @@ export default function GitHubSection({ data, isDark, shareToken }: GitHubSectio
         </p>
       )}
 
-      {/* Contribution graph */}
-      {shareToken && (
+      {/* Contribution graph — uses shareToken (public view) or walletAddress (self view) */}
+      {(shareToken || walletAddress) && (
         <div className='mb-4'>
-          <GitHubContributionGraph shareToken={shareToken} />
+          <GitHubContributionGraph shareToken={shareToken} walletAddress={walletAddress} />
         </div>
       )}
 

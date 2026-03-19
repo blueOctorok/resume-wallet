@@ -16,6 +16,7 @@ This file tracks major modifications made to the ResumeWallet codebase.
 - **GitHubSection** (`src/components/career-card/sections/GitHubSection.tsx`): Now shows bio, contribution graph (via `GitHubContributionGraph` component with `shareToken`), language bars with proportional widths, and up to 5 top repos with descriptions.
 - **ProjectedCareerCard**: Now passes `shareToken` through `SectionRenderer` to `GitHubSection` for the contribution graph API calls.
 - **Self-healing sync**: `fetchGitHubData` in the career card API now detects when `data` is null but an `access_token` exists (the fire-and-forget bug left this state). It syncs from GitHub on-the-fly and writes the result, so the career card populates automatically without manual refresh.
+- **Contribution graph on career card**: The `GitHubContributionGraph` component (which was already built for the dev-card public view) is now rendered inside `GitHubSection` on the career card. The graph works for both self-view (via `walletAddress` header) and public view (via `shareToken` query param). The `/api/github/contributions` endpoint now accepts either `token` (query param) or `x-wallet-address` (header) to resolve the user. The `GitHubContributionGraph` component accepts both `shareToken` and `walletAddress` props.
 
 ---
 

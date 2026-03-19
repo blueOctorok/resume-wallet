@@ -10,7 +10,8 @@ interface ContributionDay {
 }
 
 interface GitHubContributionGraphProps {
-  shareToken: string
+  shareToken?: string | null
+  walletAddress?: string | null
   className?: string
 }
 
@@ -41,6 +42,7 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 export default function GitHubContributionGraph({
   shareToken,
+  walletAddress,
   className = '',
 }: GitHubContributionGraphProps) {
   const currentYear = new Date().getFullYear()
@@ -68,9 +70,13 @@ export default function GitHubContributionGraph({
       setError(null)
 
       try {
-        const res = await fetch(
-          `/api/github/contributions?token=${encodeURIComponent(shareToken)}&year=${selectedYear}`
-        )
+        const url = shareToken
+          ? `/api/github/contributions?token=${encodeURIComponent(shareToken)}&year=${selectedYear}`
+          : `/api/github/contributions?year=${selectedYear}`
+        const fetchOptions: RequestInit = shareToken
+          ? {}
+          : { headers: { 'x-wallet-address': walletAddress ?? '' } }
+        const res = await fetch(url, fetchOptions)
         const data = await res.json()
 
         if (!res.ok) {
@@ -89,8 +95,9 @@ export default function GitHubContributionGraph({
       }
     }
 
+    if (!shareToken && !walletAddress) return
     fetchContributions()
-  }, [shareToken, selectedYear])
+  }, [shareToken, walletAddress, selectedYear])
 
   // Organize contributions into weeks (columns) for the grid
   const weeks = useMemo(() => {

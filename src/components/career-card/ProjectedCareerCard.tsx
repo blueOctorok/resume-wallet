@@ -252,7 +252,7 @@ function SectionRenderer({
     case 'developer-portfolio':
       return <PortfolioSection data={section.data as PortfolioData} mode={mode} isDark={isDark} onAction={onAction} />
     case 'developer-github':
-      return <GitHubSection data={section.data as GitHubData} mode={mode} isDark={isDark} shareToken={shareToken} />
+      return <GitHubSection data={section.data as GitHubData} mode={mode} isDark={isDark} shareToken={shareToken} walletAddress={walletAddress} />
     case 'developer-projects':
       return <ProjectsSection data={section.data as ProjectsData} mode={mode} isDark={isDark} />
     case 'general-skills':

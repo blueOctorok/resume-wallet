@@ -55,11 +55,12 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const shareToken = searchParams.get('token')
+    const wallet = request.headers.get('x-wallet-address')
     const yearParam = searchParams.get('year')
 
-    if (!shareToken) {
+    if (!shareToken && !wallet) {
       return NextResponse.json(
-        { error: 'Share token is required' },
+        { error: 'Share token or wallet address is required' },
         { status: 400 }
       )
     }
@@ -74,12 +75,12 @@ export async function GET(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    // share_token lives on users table (036_unified_share_token)
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('share_token', shareToken)
-      .single()
+    // Resolve user from share_token (public view) or wallet address (self view)
+    const userQuery = shareToken
+      ? supabase.from('users').select('id').eq('share_token', shareToken).single()
+      : supabase.from('users').select('id').ilike('wallet_address', wallet!).single()
+
+    const { data: user, error: userError } = await userQuery
 
     if (userError || !user) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
