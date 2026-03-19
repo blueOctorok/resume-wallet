@@ -4,6 +4,17 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **GitHub career card: Full activity display restored** (March 2026)
+
+- **Problem:** Career card GitHub section only showed `@username` — all the rich data (repos, stars, languages, bio, followers) was hardcoded to empty in `fetchGitHubData`.
+- **Root cause:** The `data` JSONB column in `block_dev_github` (synced by `/api/github/callback`) was never read by the career card API. It returned `publicRepos: 0, followers: 0, languages: {}, topRepos: []`.
+- **GitHub callback** (`/api/github/callback`): Now stores **top 5 repos** (sorted by stars, forks excluded) with `name`, `description`, `stars`, `language`, `url`, and `isPrivate` flag in the `data.topRepos` array alongside the existing aggregate stats.
+- **Career card API** (`/api/career-card/route.ts` → `fetchGitHubData`): Now reads `row.data` to populate `avatarUrl`, `bio`, `publicRepos`, `followers`, `languages` (from `topLanguages` percentage data), and `topRepos`.
+- **GitHubSection** (`src/components/career-card/sections/GitHubSection.tsx`): Enhanced to show bio, top languages as pill badges with percentages, and up to 5 top repos (was 3) with descriptions.
+- **Re-sync required:** Existing users must disconnect and reconnect GitHub (or hit a refresh endpoint) to re-sync the `topRepos` data.
+
+---
+
 ## **Blocks: My Files + AvA Journey mandatory (rule + portfolio fix)** (March 2026)
 
 - **Cursor rule** (`.cursor/rules/block-development.mdc`): New **Section 11 — AvA Journey Integration (MANDATORY)**. When building a block you must: (1) surface it in My Files (section 10), (2) add a `BLOCK_JOURNEY_MAP` entry in `journey-progress.ts` whose step completes when the block's work is done, (3) add any new completion signals to `BlockProgressData` and populate them in the journey store from hub data, (4) ensure AvA has context/knowledge to track and guide. Critical Rules updated with a bullet that every block must have an AvA journey step.

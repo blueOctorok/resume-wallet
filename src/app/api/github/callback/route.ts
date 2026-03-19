@@ -69,6 +69,22 @@ async function syncGitHubData(
       .sort((a, b) => b.count - a.count)
       .slice(0, 10)
 
+    // Top repos by stars (descending), keep top 5 for career card display
+    const topRepos = repos
+      .filter((r: Record<string, unknown>) => !r.fork)
+      .sort((a: Record<string, unknown>, b: Record<string, unknown>) =>
+        ((b.stargazers_count as number) || 0) - ((a.stargazers_count as number) || 0)
+      )
+      .slice(0, 5)
+      .map((r: Record<string, unknown>) => ({
+        name: r.name as string,
+        description: (r.description as string | null) ?? null,
+        stars: (r.stargazers_count as number) || 0,
+        language: (r.language as string | null) ?? null,
+        url: (r.html_url as string) || `https://github.com/${githubUsername}/${r.name}`,
+        isPrivate: !!r.private,
+      }))
+
     // Build github_data object to store
     const githubData = {
       totalRepos: repos.length,
@@ -81,6 +97,7 @@ async function syncGitHubData(
       avatarUrl: userData.avatar_url || null,
       bio: userData.bio || null,
       topLanguages,
+      topRepos,
       syncedAt: new Date().toISOString(),
     }
 

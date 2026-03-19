@@ -323,14 +323,33 @@ async function fetchGitHubData(supabase: SupabaseClient, userId: string, userAva
   const row = await getDevGithub(supabase, userId)
   if (!row?.username) return null
 
+  // row.data is the JSONB column synced by /api/github/callback → syncGitHubData
+  const d = (row.data ?? {}) as Record<string, unknown>
+
+  const topLanguages = (d.topLanguages ?? []) as Array<{ language: string; count: number; percentage: number }>
+  const languages: Record<string, number> = {}
+  for (const lang of topLanguages) {
+    languages[lang.language] = lang.percentage
+  }
+
+  const rawRepos = (d.topRepos ?? []) as Array<{
+    name: string; description: string | null; stars: number; language: string | null; url: string
+  }>
+
   return {
     username: row.username,
-    avatarUrl: userAvatarUrl,
-    bio: null,
-    publicRepos: 0,
-    followers: 0,
-    languages: {},
-    topRepos: [],
+    avatarUrl: (d.avatarUrl as string | null) ?? userAvatarUrl,
+    bio: (d.bio as string | null) ?? null,
+    publicRepos: (d.publicRepos as number) ?? 0,
+    followers: (d.followers as number) ?? 0,
+    languages,
+    topRepos: rawRepos.slice(0, 5).map((r) => ({
+      name: r.name,
+      description: r.description,
+      stars: r.stars,
+      language: r.language,
+      url: r.url,
+    })),
   }
 }
 
