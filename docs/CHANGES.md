@@ -4,6 +4,42 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Hub layout restructure** (March 2026)
+
+Major reorder and redesign of the CandidateHub page layout.
+
+**New section order (top to bottom):**
+1. HubProfileHeader (unchanged)
+2. AvA Chat Section (NEW — replaces AvaBanner)
+3. Block Hive + Block Files (merged)
+4. Career Card banner
+5. Find Jobs banner
+6. Refer & Earn Storm
+7. Employer Outreach (CandidateRequestsSection)
+8. STORM Token
+
+**AvA Chat Section** (`AvaChatSection` in `CandidateHub.tsx`):
+- Replaced the old `AvaBanner` (journey-at-a-glance summary) with a chat-first interface
+- Claude/ChatGPT-style pill chat bubbles: user messages right-aligned (teal), AvA messages left-aligned (gray)
+- Chat area starts compact, grows with messages up to ~400px max, then scrolls
+- Rounded pill input bar at the bottom
+- "Powered by Anthropic" branding under the AvA header
+- "Open Journey" button (bottom-right) opens the existing journey sidebar
+
+**Journey sidebar** (`AvaJourneyGuide.tsx`):
+- Stripped all chat UI (thread + input) — now journey-only (progress, steps, next actions)
+- Title changed from "AvA" to "Your Journey"
+
+**Shared chat module** (`src/lib/ava-chat.ts` — NEW):
+- Extracted `sendToAva()`, `ChatMessage` type, and `useHubContext()` hook for shared use
+
+**Block Hive + Block Files merger:**
+- "My Files" renamed to "Block Files"
+- Block Files section now renders inside the Block Hive section (below the honeycomb grid) instead of as a separate card
+- All completed block files now show a "Completed" teal pill badge (previously only MVR had this)
+
+---
+
 ## **GitHub career card: Full activity display restored** (March 2026)
 
 - **Problem:** Career card GitHub section only showed `@username` — all the rich data (repos, stars, languages, bio, followers) was hardcoded to empty in `fetchGitHubData`. The `data` JSONB column in `block_dev_github` (synced by `/api/github/callback`) was never read by the career card API.

@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useCallback, useState } from 'react'
+import { useEffect, useCallback, useState, useRef } from 'react'
 import Image from 'next/image'
-import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink, ChevronLeft, ChevronRight, FileText, ClipboardCheck, MessageCircle, Car, RefreshCw, Trash2, Search, Globe, Github } from 'lucide-react'
+import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink, ChevronLeft, ChevronRight, FileText, ClipboardCheck, Car, RefreshCw, Trash2, Search, Globe, Github, Send, Bot, Compass } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useAuthStore, useUIStore, useJourneyStore, useJourneyProgress } from '@/stores'
+import { useAuthStore, useUIStore, useJourneyStore } from '@/stores'
 import {
   useHubBlocksStore,
   useInstalledBlocks,
@@ -28,6 +28,7 @@ import DotAppPreviewModal from '@/components/career-card/DotAppPreviewModal'
 import ResumeFilePreviewModal from '@/components/hub/ResumeFilePreviewModal'
 import { downloadDriverResumePdfFromStructured } from '@/lib/driver-resume-pdf-download'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
+import { sendToAva, useHubContext, type ChatMessage } from '@/lib/ava-chat'
 import ResumePreviewModal from '@/components/ResumePreviewModal'
 import ReferralBanner from './ReferralBanner'
 import DeveloperResumePreviewModal from '@/components/DeveloperResumePreviewModal'
@@ -651,172 +652,259 @@ function HubProfileHeader() {
 }
 
 // ── AvA + journey (hub) ─────────────────────────────────────────────────────
-// Journey list mirrors AvA modal logic so candidates see status before opening chat.
-
-function AvaBanner() {
+function AvaChatSection() {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const openGuide = useJourneyStore((s) => s.openGuide)
-  const openAvAContextModal = useHubBlocksStore((s) => s.openAvAContextModal)
-  const progress = useJourneyProgress()
-  const steps = progress.steps.filter((s) => s.status !== 'skipped')
-  const doneCount = steps.filter((s) => s.status === 'complete').length
+  const hubContext = useHubContext()
+  const installedBlocks = useInstalledBlocks()
+
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [chatError, setChatError] = useState<string | null>(null)
+  const [input, setInput] = useState('')
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const autoWelcomeSent = useRef(false)
+
+  // Auto-scroll on new messages
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [messages, isLoading])
+
+  // Auto-welcome for brand new users with no blocks
+  useEffect(() => {
+    if (
+      installedBlocks.length === 0 &&
+      messages.length === 0 &&
+      !autoWelcomeSent.current &&
+      !isLoading
+    ) {
+      autoWelcomeSent.current = true
+      setIsLoading(true)
+      sendToAva(
+        'I just signed up and my hub is empty. What is StormChain, what are blocks, and what should I do first?',
+        hubContext,
+      )
+        .then((reply) => setMessages([{ role: 'ava', text: reply }]))
+        .catch((err) => setChatError(err.message))
+        .finally(() => setIsLoading(false))
+    }
+  }, [installedBlocks.length, messages.length, isLoading, hubContext])
+
+  const handleSend = useCallback(async () => {
+    const trimmed = input.trim()
+    if (!trimmed || isLoading) return
+    setInput('')
+    setMessages((prev) => [...prev, { role: 'user', text: trimmed }])
+    setIsLoading(true)
+    setChatError(null)
+    try {
+      const reply = await sendToAva(trimmed, hubContext)
+      setMessages((prev) => [...prev, { role: 'ava', text: reply }])
+    } catch (err) {
+      setChatError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [input, isLoading, hubContext])
+
+  const hasMessages = messages.length > 0 || isLoading
+  const showWelcome = !hasMessages
+
+  const suggestedPrompts = [
+    'What blocks should I add first?',
+    'What is my Career Card?',
+    'What should I do next?',
+  ]
 
   return (
     <div className='ava-glow-border'>
-      <div
-        className={cn(
-          'rounded-[14px] p-5 flex flex-col gap-4',
-          isDark ? 'bg-gray-900' : 'bg-white',
-        )}
-      >
-        <div className='flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4'>
-          <div className='flex gap-3 min-w-0'>
+      <div className={cn('rounded-[14px] flex flex-col overflow-hidden', isDark ? 'bg-gray-900' : 'bg-white')}>
+        {/* Header — Claude-style: prominent, gradient, tagline */}
+        <div
+          className={cn(
+            'relative px-6 pt-6 pb-5',
+            isDark
+              ? 'bg-gradient-to-b from-gray-800/90 via-gray-800/50 to-transparent'
+              : 'bg-gradient-to-b from-gray-50 via-white to-transparent',
+          )}
+        >
+          <div className='flex items-start gap-4'>
             <div
               className={cn(
-                'w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden',
-                // Asset is white-on-black: dark tile shows it raw; light tile inverts to dark-on-white
-                isDark ? 'bg-zinc-950' : 'bg-white ring-1 ring-gray-200/80',
+                'flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center overflow-hidden shadow-lg',
+                isDark
+                  ? 'bg-gradient-to-br from-brand-mint/30 to-brand-mint/10 ring-1 ring-brand-mint/20'
+                  : 'bg-gradient-to-br from-brand-mint/20 to-brand-mint/5 ring-1 ring-brand-mint/30',
               )}
             >
               <Image
                 src='/ava-robot.png'
-                alt='AvA'
-                width={40}
-                height={40}
-                className={cn('object-contain size-9', !isDark && 'invert')}
+                alt=''
+                width={44}
+                height={44}
+                className={cn('object-contain', !isDark && 'invert')}
               />
             </div>
-            <div className='min-w-0 space-y-2'>
-              <p
-                className={cn('text-sm font-bold', isDark ? 'text-white' : 'text-gray-900')}
-              >
-                AvA &amp; your journey
+            <div className='min-w-0 flex-1'>
+              <h2 className={cn('text-xl font-bold tracking-tight', isDark ? 'text-white' : 'text-gray-900')}>
+                Talk to AvA
+              </h2>
+              <p className={cn('mt-0.5 text-sm leading-snug', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                Your guide to building a standout Career Card. Ask anything—what to add, what to do next, or how this hub works.
               </p>
-              <p
-                className={cn(
-                  'text-xs leading-relaxed',
-                  isDark ? 'text-gray-400' : 'text-gray-600',
-                )}
-              >
-                <span className='font-medium text-gray-500 dark:text-gray-300'>
-                  What it is:
-                </span>{' '}
-                A checklist tied to your blocks and what&apos;s already on file (resume, DOT,
-                MVR, profile). It updates as you complete work.
-              </p>
-              <p
-                className={cn(
-                  'text-xs leading-relaxed',
-                  isDark ? 'text-gray-400' : 'text-gray-600',
-                )}
-              >
-                <span className='font-medium text-gray-500 dark:text-gray-300'>
-                  Why it matters:
-                </span>{' '}
-                A finished journey usually means a stronger{' '}
-                <span className='font-medium'>Career Card</span> for employers. AvA helps you
-                decide what to tackle next—open the chat when you want coaching, not guesswork.
-              </p>
+              <div className='mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-gray-500'>
+                <span className={cn('h-1.5 w-1.5 rounded-full', isDark ? 'bg-brand-mint/60' : 'bg-brand-mint')} />
+                Powered by Anthropic
+              </div>
             </div>
           </div>
-          <div className='flex flex-col gap-2 shrink-0 sm:self-start'>
+        </div>
+
+        {/* Chat area — welcome message when empty, then messages */}
+        <div
+          ref={scrollRef}
+          className={cn(
+            'px-5 overflow-y-auto transition-all duration-300',
+            showWelcome ? 'min-h-[200px] max-h-[320px] pb-4' : hasMessages ? 'min-h-[120px] max-h-[400px] pb-3' : 'h-0',
+          )}
+        >
+          {showWelcome && (
+            <div className={cn(
+              'rounded-2xl p-4 text-sm leading-relaxed space-y-3',
+              isDark ? 'bg-gray-800/60 text-gray-300 border border-gray-700/50' : 'bg-gray-50 text-gray-700 border border-gray-200/80',
+            )}>
+              <p className='font-medium'>
+                Your hub is simple: add the blocks you need below, and they become your Career Card.
+              </p>
+              <p>
+                Blocks are things like <strong>Resume</strong>, <strong>DOT Application</strong>, <strong>MVR</strong>, <strong>Portfolio</strong>, or <strong>GitHub</strong>. Each one shows up on your card for employers. You don’t need every block—just the ones that fit your path.
+              </p>
+              <p>
+                Ask me what to add first, what to do next, or tap <strong>Open Journey</strong> below to see your progress. I’m here to make this dead simple.
+              </p>
+              <p className={cn('text-xs pt-1', isDark ? 'text-gray-500' : 'text-gray-400')}>
+                Try a question below or type your own.
+              </p>
+              <div className='flex flex-wrap gap-2 pt-2'>
+                {suggestedPrompts.map((label) => (
+                  <button
+                    key={label}
+                    type='button'
+                    onClick={() => {
+                      setInput(label)
+                      const el = document.querySelector('[data-ava-chat-input]') as HTMLInputElement | null
+                      el?.focus()
+                    }}
+                    className={cn(
+                      'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                      isDark
+                        ? 'bg-gray-700/80 text-gray-300 hover:bg-gray-600 border border-gray-600'
+                        : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200',
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className={cn('space-y-3', !showWelcome && 'pt-1')}>
+            {messages.map((msg, i) => (
+              <div
+                key={i}
+                className={cn('flex gap-2', msg.role === 'user' ? 'justify-end' : 'justify-start')}
+              >
+                {msg.role === 'ava' && (
+                  <div className='flex-shrink-0 w-6 h-6 rounded-full bg-brand-mint/20 flex items-center justify-center mt-0.5'>
+                    <Bot className='w-3.5 h-3.5 text-brand-mint' />
+                  </div>
+                )}
+                <div className={cn(
+                  'max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap',
+                  msg.role === 'ava'
+                    ? cn('rounded-tl-sm', isDark ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-800')
+                    : 'bg-brand-mint text-white rounded-tr-sm',
+                )}>
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+
+            {/* Typing indicator */}
+            {isLoading && (
+              <div className='flex gap-2 justify-start'>
+                <div className='flex-shrink-0 w-6 h-6 rounded-full bg-brand-mint/20 flex items-center justify-center mt-0.5'>
+                  <Bot className='w-3.5 h-3.5 text-brand-mint' />
+                </div>
+                <div className={cn('rounded-2xl rounded-tl-sm px-4 py-2.5', isDark ? 'bg-gray-800' : 'bg-gray-100')}>
+                  <div className='flex gap-1.5'>
+                    <span className='w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:0ms]' />
+                    <span className='w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:150ms]' />
+                    <span className='w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:300ms]' />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {chatError && (
+              <p className='text-xs text-red-500 text-center'>{chatError}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Input + actions row */}
+        <div className='px-5 pb-4 pt-2'>
+          <form
+            onSubmit={(e) => { e.preventDefault(); handleSend() }}
+            className='flex items-center gap-2'
+          >
+            <input
+              data-ava-chat-input
+              type='text'
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder='Ask AvA anything...'
+              disabled={isLoading}
+              className={cn(
+                'flex-1 px-4 py-2.5 rounded-full text-sm border transition-colors',
+                'focus:outline-none focus:ring-2 focus:ring-brand-mint/40',
+                isDark ? 'bg-gray-800 border-gray-700 text-white placeholder:text-gray-500' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400',
+                isLoading && 'opacity-50',
+              )}
+            />
+            <button
+              type='submit'
+              disabled={!input.trim() || isLoading}
+              className={cn(
+                'p-2.5 rounded-full transition-all',
+                input.trim() && !isLoading
+                  ? 'bg-brand-mint text-white hover:bg-brand-mint/90 shadow-sm'
+                  : cn('cursor-not-allowed', isDark ? 'bg-gray-700 text-gray-500' : 'bg-gray-200 text-gray-400'),
+              )}
+              aria-label='Send message'
+            >
+              {isLoading ? <Loader2 className='w-4 h-4 animate-spin' /> : <Send className='w-4 h-4' />}
+            </button>
+          </form>
+
+          {/* Open Journey button */}
+          <div className='flex justify-end mt-2'>
             <button
               type='button'
               onClick={openGuide}
               className={cn(
-                'flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors',
-                isDark
-                  ? 'bg-violet-500 text-white hover:bg-violet-400'
-                  : 'bg-violet-600 text-white hover:bg-violet-500',
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                isDark ? 'text-gray-400 hover:text-violet-300 hover:bg-gray-800' : 'text-gray-500 hover:text-violet-600 hover:bg-gray-50',
               )}
             >
-              <MessageCircle className='w-4 h-4 shrink-0' aria-hidden />
-              Ask AvA
-            </button>
-            <button
-              type='button'
-              onClick={openAvAContextModal}
-              className={cn(
-                'text-xs font-medium transition-colors underline underline-offset-2',
-                isDark ? 'text-gray-400 hover:text-violet-300' : 'text-gray-500 hover:text-violet-600',
-              )}
-            >
-              Tell AvA more about you
+              <Compass className='w-3.5 h-3.5' />
+              Open Journey
             </button>
           </div>
-        </div>
-
-        <div
-          className={cn(
-            'rounded-xl border p-4',
-            isDark ? 'border-gray-700/80 bg-gray-800/50' : 'border-gray-200 bg-gray-50',
-          )}
-        >
-          <div className='flex items-center justify-between gap-2 mb-2'>
-            <span
-              className={cn(
-                'text-[11px] font-semibold uppercase tracking-wide',
-                isDark ? 'text-gray-500' : 'text-gray-500',
-              )}
-            >
-              Journey at a glance
-            </span>
-            <span
-              className={cn('text-xs font-semibold tabular-nums', isDark ? 'text-gray-300' : 'text-gray-700')}
-            >
-              {progress.overallProgress}% · {doneCount}/{steps.length} steps
-            </span>
-          </div>
-          <div
-            className={cn('h-1.5 rounded-full overflow-hidden mb-3', isDark ? 'bg-gray-700' : 'bg-gray-200')}
-          >
-            <div
-              className='h-full rounded-full bg-violet-500 transition-all duration-500'
-              style={{ width: `${progress.overallProgress}%` }}
-            />
-          </div>
-          <ul className='space-y-2 max-h-44 overflow-y-auto pr-1 text-left' aria-label='Journey steps'>
-            {steps.map((step) => (
-              <li key={step.id} className='flex items-start gap-2.5 text-xs'>
-                <span className='mt-0.5 shrink-0' aria-hidden>
-                  {step.status === 'complete' ? (
-                    <Check className='w-3.5 h-3.5 text-green-500' strokeWidth={2.5} />
-                  ) : step.status === 'in_progress' ? (
-                    <span className='flex h-3.5 w-3.5 items-center justify-center'>
-                      <span className='h-2 w-2 rounded-full bg-amber-500' />
-                    </span>
-                  ) : (
-                    <span className='flex h-3.5 w-3.5 items-center justify-center'>
-                      <span
-                        className={cn(
-                          'h-2 w-2 rounded-full border-2',
-                          isDark ? 'border-gray-500' : 'border-gray-400',
-                        )}
-                      />
-                    </span>
-                  )}
-                </span>
-                <span
-                  className={cn(
-                    'leading-snug',
-                    step.status === 'complete' && (isDark ? 'text-gray-500' : 'text-gray-500'),
-                    step.status === 'in_progress' &&
-                      (isDark ? 'text-amber-200 font-medium' : 'text-amber-800 font-medium'),
-                    step.status === 'pending' && (isDark ? 'text-gray-300' : 'text-gray-800'),
-                  )}
-                >
-                  {step.label}
-                  {step.isOptional ? (
-                    <span className={cn('font-normal', isDark ? 'text-gray-500' : 'text-gray-500')}>
-                      {' '}
-                      (optional)
-                    </span>
-                  ) : null}
-                </span>
-              </li>
-            ))}
-          </ul>
         </div>
       </div>
     </div>
@@ -942,7 +1030,7 @@ function FindJobsBanner() {
   )
 }
 
-// ── My Files ──────────────────────────────────────────────────────────────────
+// ── Block Files ───────────────────────────────────────────────────────────────
 // Started or completed files: View (read-only), Edit, Verify (until on-chain), Delete.
 
 function myFilesResumeCanView(doc: {
@@ -1210,12 +1298,12 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
       'rounded-2xl border p-4',
       isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white/70 border-gray-200',
     )}>
-      {/* Header — always show so My Files is always visible in the hub */}
+      {/* Header */}
       <div className='flex items-center justify-between mb-3'>
         <div className='flex items-center gap-2'>
           <FileText className={cn('w-4 h-4', isDark ? 'text-teal-400' : 'text-teal-600')} />
           <p className={cn('text-xs font-bold uppercase tracking-wide', isDark ? 'text-gray-300' : 'text-gray-600')}>
-            My Files
+            Block Files
           </p>
         </div>
         <span className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
@@ -1307,9 +1395,9 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                       <Loader2 className='w-2.5 h-2.5 animate-spin' /> Processing
                     </span>
                   )}
-                  {doc.status === 'complete' && doc.type === 'mvr' && (
+                  {doc.status === 'complete' && !doc.verified && (
                     <span className={cn('flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium', isDark ? 'bg-teal-500/15 text-teal-400' : 'bg-teal-50 text-teal-700')}>
-                      <Check className='w-2.5 h-2.5' /> Complete
+                      <Check className='w-2.5 h-2.5' /> Completed
                     </span>
                   )}
                   {doc.verified && (
@@ -1735,13 +1823,9 @@ export default function CandidateHub() {
 
       <div className='max-w-3xl mx-auto space-y-6'>
         <HubProfileHeader />
-        <CareerCardBanner />
-        <FindJobsBanner />
-        <ReferralBanner />
-        <AvaBanner />
-        <MyFilesSection refreshKey={refreshKey} />
+        <AvaChatSection />
 
-        {/* ── Block Hive ── */}
+        {/* ── Block Hive + Block Files (unified) ── */}
         <div>
           <div className='flex items-center justify-between mb-4'>
             <div className='flex items-center gap-2'>
@@ -1765,7 +1849,6 @@ export default function CandidateHub() {
               </button>
             </div>
             <div className='flex items-center gap-2'>
-              {/* Edit / Done toggle — desktop entry point for jiggle mode */}
               {installedBlocks.length > 0 && (
                 <button
                   onClick={() => setEditMode(!isEditing)}
@@ -1828,27 +1911,32 @@ export default function CandidateHub() {
               </SortableContext>
             </DndContext>
           )}
+
+          {/* Block Files — inside Block Hive */}
+          <div className='mt-6'>
+            <MyFilesSection refreshKey={refreshKey} />
+          </div>
         </div>
 
-        {/* ── Employer Requests ── */}
+        <CareerCardBanner />
+        <FindJobsBanner />
+        <ReferralBanner />
+
+        {/* ── Employer Outreach ── */}
         {walletAddress && (
-          <div className='pt-4'>
-            <CandidateRequestsSection
-              userAddress={walletAddress}
-              onNavigateToResume={() => setCurrentPage('resume')}
-              onNavigateToDotApp={() => setCurrentPage('dotapp')}
-            />
-          </div>
+          <CandidateRequestsSection
+            userAddress={walletAddress}
+            onNavigateToResume={() => setCurrentPage('resume')}
+            onNavigateToDotApp={() => setCurrentPage('dotapp')}
+          />
         )}
 
-        {/* ── STORM Token Footer ── */}
+        {/* ── STORM Token ── */}
         {walletAddress && (
-          <div className='pt-4'>
-            <STORMBalance
-              walletAddress={walletAddress}
-              onReadWhitepaper={() => setCurrentPage('stormchain')}
-            />
-          </div>
+          <STORMBalance
+            walletAddress={walletAddress}
+            onReadWhitepaper={() => setCurrentPage('stormchain')}
+          />
         )}
       </div>
     </>
