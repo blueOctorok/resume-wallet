@@ -2,9 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { buildAvaSystemPrompt } from '@/lib/ava-context'
 import type { HubContext, BlockContext } from '@/lib/ava-context'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getUserByWallet } from '@/lib/user-by-wallet'
+import {
+  getOrCreateUsage,
+  checkUsage,
+  incrementDailyUsage,
+  consumeCredit,
+  AVA_DAILY_FREE,
+} from '@/lib/ava-usage'
 
-// claude-sonnet-4-6: best speed/intelligence ratio — ideal for conversational AvA
-const MODEL = 'claude-sonnet-4-6'
+const MODEL_SONNET = 'claude-sonnet-4-6'
+const MODEL_HAIKU = 'claude-haiku-4-5-20250414'
 const MAX_TOKENS = 1024
 
 const anthropic = new Anthropic({
@@ -14,15 +23,21 @@ const anthropic = new Anthropic({
 /**
  * POST /api/ai/chat
  *
- * AvA's conversational endpoint, powered by Claude Sonnet.
- *
- * Body:
- *   message      — the user's message (required)
- *   hubContext   — candidate's hub state for context-aware responses (optional)
- *   blockContext — the specific block the user is asking about (optional)
+ * AvA's conversational endpoint.
+ * Free tier (10/day) uses Sonnet 4.6, paid credits use Haiku 4.5.
+ * Requires x-wallet-address header for auth + usage tracking.
  */
 export async function POST(request: NextRequest) {
   try {
+    // Auth gate
+    const walletAddress = request.headers.get('x-wallet-address')
+    if (!walletAddress) {
+      return NextResponse.json(
+        { error: 'Missing wallet address' },
+        { status: 401 }
+      )
+    }
+
     const body = await request.json()
     const { message, hubContext, blockContext } = body as {
       message: string
@@ -37,10 +52,43 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Resolve user
+    const supabase = await getAdminSupabaseClient()
+    const user = await getUserByWallet(supabase, walletAddress)
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found. Connect your wallet first.' },
+        { status: 401 }
+      )
+    }
+
+    // Check usage quota
+    const usage = await getOrCreateUsage(supabase, user.id)
+    const usageCheck = checkUsage(usage)
+
+    if (!usageCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: 'out_of_credits',
+          message: `You've used your ${AVA_DAILY_FREE} free messages today. Purchase credits to keep chatting, or come back tomorrow.`,
+          usage: {
+            dailyRemaining: 0,
+            credits: 0,
+            totalMessages: usageCheck.totalMessages,
+            model: null,
+          },
+        },
+        { status: 402 }
+      )
+    }
+
+    // Select model based on tier
+    const model = usageCheck.model === 'sonnet' ? MODEL_SONNET : MODEL_HAIKU
+
     const systemPrompt = buildAvaSystemPrompt(hubContext, blockContext)
 
     const response = await anthropic.messages.create({
-      model: MODEL,
+      model,
       max_tokens: MAX_TOKENS,
       system: systemPrompt,
       messages: [{ role: 'user', content: message.trim() }],
@@ -50,9 +98,28 @@ export async function POST(request: NextRequest) {
       ? response.content[0].text
       : ''
 
-    return NextResponse.json({ success: true, reply })
+    // Record usage AFTER successful response
+    if (usageCheck.usingCredits) {
+      await consumeCredit(supabase, user.id)
+    } else {
+      await incrementDailyUsage(supabase, user.id)
+    }
+
+    // Re-read for accurate post-send numbers
+    const updatedUsage = await getOrCreateUsage(supabase, user.id)
+    const updatedCheck = checkUsage(updatedUsage)
+
+    return NextResponse.json({
+      success: true,
+      reply,
+      usage: {
+        dailyRemaining: updatedCheck.dailyRemaining,
+        credits: updatedCheck.credits,
+        totalMessages: updatedCheck.totalMessages,
+        model: usageCheck.model,
+      },
+    })
   } catch (error) {
-    // Anthropic SDK throws typed errors — surface useful detail without leaking internals
     if (error instanceof Anthropic.APIError) {
       console.error('[AvA Chat] Anthropic API error:', error.status, error.message)
 

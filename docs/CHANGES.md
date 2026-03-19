@@ -4,6 +4,48 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **AvA Chat: Usage Controls, Model Tiering, and USDC Monetization** (March 2026)
+
+Added daily free message limits, model tiering, USDC credit packs, career lane guardrails, and a context-advantage value pitch to the AvA chat feature.
+
+**Usage tracking (new `ava_chat_usage` table):**
+- 10 free messages/day per wallet, powered by Sonnet 4.6 for premium first experience
+- Daily counter self-resets on first request of each new day (UTC) — no cron needed
+- After daily limit: must purchase credits. Model switches to Haiku 4.5 (25x cheaper, great for career Q&A)
+- Atomic counter updates via Postgres RPC functions (`increment_ava_daily`, `consume_ava_credit`)
+
+**Credit packs (USDC on Base Sepolia):**
+- Starter: 50 messages / $1 USDC
+- Standard: 200 messages / $3 USDC
+- Pro: 500 messages / $5 USDC
+- Credits never expire. Payments recorded in `payments` table for audit trail
+
+**Auth gate:**
+- All chat requests now require `x-wallet-address` header — anonymous abuse impossible
+- User resolved via `getUserByWallet` before any AI call
+
+**System prompt overhaul (`ava-context.ts`):**
+- **Dynamic career lane guardrails** — driven entirely by `BLOCK_CATEGORIES` and `BLOCK_DEFINITIONS` from the registry. Adding a new category (nursing, logistics, etc.) automatically creates lane boundaries with zero prompt code changes
+- Active categories: AvA recommends blocks within the user's installed career categories
+- Off-limits: blocks from uninstalled career categories are explicitly forbidden in the prompt
+- General blocks always allowed for everyone
+- **Content guardrails** — no medical/legal/financial advice, no harmful content, everything else fair game
+- **Context-aware greetings** — AvA references specific block completion status when greeting users
+
+**New files:**
+- `supabase/migrations/052_ava_chat_usage.sql` — table + RLS + RPC functions
+- `src/lib/ava-usage.ts` — usage check/increment/credit helpers
+- `src/app/api/ai/credits/route.ts` — GET usage, POST purchase credits
+- `src/components/AvaCreditModal.tsx` — USDC payment modal (same pattern as MvrPaymentButton)
+
+**Modified files:**
+- `src/app/api/ai/chat/route.ts` — auth gate, usage check, model routing (Sonnet vs Haiku), returns usage info
+- `src/lib/ava-context.ts` — full rewrite of career logic (dynamic registry-driven), added guardrails
+- `src/lib/ava-chat.ts` — sends wallet header, handles 402 with `OutOfCreditsError`, returns `AvaUsageInfo`
+- `src/components/hub/CandidateHub.tsx` — usage badge in header, out-of-credits prompt, Buy Credits button, context-advantage welcome copy
+
+---
+
 ## **Hub layout restructure** (March 2026)
 
 Major reorder and redesign of the CandidateHub page layout.

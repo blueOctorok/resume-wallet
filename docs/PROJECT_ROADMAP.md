@@ -1,5 +1,22 @@
 # StormChain - Complete Project Roadmap
 
+## 💬 **AvA Chat Monetization** (March 2026 — Complete)
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| `ava_chat_usage` table | ✅ Done | Per-user daily free counter + purchased credits. Self-resetting on first request of each new day |
+| Daily free tier (10/day) | ✅ Done | 10 messages/day per wallet, powered by Sonnet 4.6 |
+| Paid credits (Haiku 4.5) | ✅ Done | After daily limit, use purchased credits. Model switches to Haiku 4.5 (25x cheaper) |
+| USDC credit packs | ✅ Done | Starter ($1/50msg), Standard ($3/200msg), Pro ($5/500msg) via Base Sepolia USDC |
+| Auth gate | ✅ Done | `x-wallet-address` required on all chat requests — no anonymous abuse |
+| Usage badge in UI | ✅ Done | "7/10 free today" or "200 credits" badge in AvA chat header |
+| Out-of-credits UX | ✅ Done | Inline refill prompt + disabled input when daily limit hit and no credits |
+| AvaCreditModal | ✅ Done | USDC payment modal (same pattern as MvrPaymentButton) |
+| Dynamic career lanes | ✅ Done | System prompt auto-derives lane boundaries from block registry — scales to any future career category |
+| Content guardrails | ✅ Done | No medical/legal/financial advice; all other topics allowed |
+| Context-advantage pitch | ✅ Done | Welcome copy emphasizes "AvA already knows your career" vs generic AI |
+| Credits API | ✅ Done | GET /api/ai/credits (usage), POST /api/ai/credits (purchase with txHash) |
+
 ## 🛡️ **Referral Anti-Sybil Hardening** (March 2026 — Complete)
 
 | Feature | Status | Description |

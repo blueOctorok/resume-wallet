@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useState, useRef } from 'react'
 import Image from 'next/image'
-import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink, ChevronLeft, ChevronRight, FileText, ClipboardCheck, Car, RefreshCw, Trash2, Search, Globe, Github, Send, Bot, Compass } from 'lucide-react'
+import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, QrCode, ShieldCheck, ExternalLink, ChevronLeft, ChevronRight, FileText, ClipboardCheck, Car, RefreshCw, Trash2, Search, Globe, Github, Send, Bot, Compass, Coins } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore, useJourneyStore } from '@/stores'
@@ -28,9 +28,10 @@ import DotAppPreviewModal from '@/components/career-card/DotAppPreviewModal'
 import ResumeFilePreviewModal from '@/components/hub/ResumeFilePreviewModal'
 import { downloadDriverResumePdfFromStructured } from '@/lib/driver-resume-pdf-download'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
-import { sendToAva, useHubContext, type ChatMessage } from '@/lib/ava-chat'
+import { sendToAva, useHubContext, useAvaWallet, OutOfCreditsError, type ChatMessage, type AvaUsageInfo } from '@/lib/ava-chat'
 import ResumePreviewModal from '@/components/ResumePreviewModal'
 import ReferralBanner from './ReferralBanner'
+import AvaCreditModal from '@/components/AvaCreditModal'
 import DeveloperResumePreviewModal from '@/components/DeveloperResumePreviewModal'
 import type { DeveloperResumeData } from '@/components/DeveloperResumeBuilder'
 import Atropos from 'atropos/react'
@@ -657,14 +658,29 @@ function AvaChatSection() {
   const isDark = theme === 'dark'
   const openGuide = useJourneyStore((s) => s.openGuide)
   const hubContext = useHubContext()
+  const walletAddress = useAvaWallet()
   const installedBlocks = useInstalledBlocks()
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [chatError, setChatError] = useState<string | null>(null)
+  const [outOfCredits, setOutOfCredits] = useState(false)
+  const [showCreditModal, setShowCreditModal] = useState(false)
+  const [usage, setUsage] = useState<AvaUsageInfo | null>(null)
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
   const autoWelcomeSent = useRef(false)
+
+  // Fetch initial usage on mount
+  useEffect(() => {
+    if (!walletAddress) return
+    fetch('/api/ai/credits', { headers: { 'x-wallet-address': walletAddress } })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data) setUsage({ dailyRemaining: data.dailyRemaining, credits: data.credits, totalMessages: data.totalMessages, model: null })
+      })
+      .catch(() => {})
+  }, [walletAddress])
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -686,29 +702,47 @@ function AvaChatSection() {
       sendToAva(
         'I just signed up and my hub is empty. What is StormChain, what are blocks, and what should I do first?',
         hubContext,
+        walletAddress,
       )
-        .then((reply) => setMessages([{ role: 'ava', text: reply }]))
-        .catch((err) => setChatError(err.message))
+        .then((res) => {
+          setMessages([{ role: 'ava', text: res.reply }])
+          setUsage(res.usage)
+        })
+        .catch((err) => {
+          if (err instanceof OutOfCreditsError) {
+            setOutOfCredits(true)
+            setUsage(err.usage)
+          } else {
+            setChatError(err.message)
+          }
+        })
         .finally(() => setIsLoading(false))
     }
-  }, [installedBlocks.length, messages.length, isLoading, hubContext])
+  }, [installedBlocks.length, messages.length, isLoading, hubContext, walletAddress])
 
   const handleSend = useCallback(async () => {
     const trimmed = input.trim()
-    if (!trimmed || isLoading) return
+    if (!trimmed || isLoading || outOfCredits) return
     setInput('')
     setMessages((prev) => [...prev, { role: 'user', text: trimmed }])
     setIsLoading(true)
     setChatError(null)
+    setOutOfCredits(false)
     try {
-      const reply = await sendToAva(trimmed, hubContext)
-      setMessages((prev) => [...prev, { role: 'ava', text: reply }])
+      const res = await sendToAva(trimmed, hubContext, walletAddress)
+      setMessages((prev) => [...prev, { role: 'ava', text: res.reply }])
+      setUsage(res.usage)
     } catch (err) {
-      setChatError(err instanceof Error ? err.message : 'Something went wrong')
+      if (err instanceof OutOfCreditsError) {
+        setOutOfCredits(true)
+        setUsage(err.usage)
+      } else {
+        setChatError(err instanceof Error ? err.message : 'Something went wrong')
+      }
     } finally {
       setIsLoading(false)
     }
-  }, [input, isLoading, hubContext])
+  }, [input, isLoading, outOfCredits, hubContext, walletAddress])
 
   const hasMessages = messages.length > 0 || isLoading
   const showWelcome = !hasMessages
@@ -718,6 +752,15 @@ function AvaChatSection() {
     'What is my Career Card?',
     'What should I do next?',
   ]
+
+  // Usage badge text
+  const usageBadge = usage
+    ? usage.dailyRemaining > 0
+      ? `${usage.dailyRemaining}/10 free today`
+      : usage.credits > 0
+        ? `${usage.credits} credits`
+        : 'No messages left'
+    : null
 
   return (
     <div className='ava-glow-border'>
@@ -749,15 +792,44 @@ function AvaChatSection() {
               />
             </div>
             <div className='min-w-0 flex-1'>
-              <h2 className={cn('text-xl font-bold tracking-tight', isDark ? 'text-white' : 'text-gray-900')}>
-                Talk to AvA
-              </h2>
+              <div className='flex items-center gap-2 flex-wrap'>
+                <h2 className={cn('text-xl font-bold tracking-tight', isDark ? 'text-white' : 'text-gray-900')}>
+                  Talk to AvA
+                </h2>
+                {usageBadge && (
+                  <span className={cn(
+                    'text-[10px] font-semibold px-2 py-0.5 rounded-full',
+                    usage && usage.dailyRemaining === 0 && usage.credits === 0
+                      ? 'bg-red-500/15 text-red-400'
+                      : usage && usage.dailyRemaining > 0
+                        ? isDark ? 'bg-brand-mint/15 text-brand-mint' : 'bg-teal-50 text-teal-600'
+                        : isDark ? 'bg-amber-500/15 text-amber-400' : 'bg-amber-50 text-amber-600',
+                  )}>
+                    {usageBadge}
+                  </span>
+                )}
+              </div>
               <p className={cn('mt-0.5 text-sm leading-snug', isDark ? 'text-gray-400' : 'text-gray-500')}>
-                Your guide to building a standout Career Card. Ask anything—what to add, what to do next, or how this hub works.
+                Unlike generic AI, AvA already knows your career — your blocks, your progress, your goals. Just ask.
               </p>
-              <div className='mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-gray-500'>
-                <span className={cn('h-1.5 w-1.5 rounded-full', isDark ? 'bg-brand-mint/60' : 'bg-brand-mint')} />
-                Powered by Anthropic
+              <div className='mt-3 flex items-center gap-3 flex-wrap'>
+                <div className='inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-gray-500'>
+                  <span className={cn('h-1.5 w-1.5 rounded-full', isDark ? 'bg-brand-mint/60' : 'bg-brand-mint')} />
+                  Powered by Anthropic
+                </div>
+                {usage && usage.dailyRemaining === 0 && (
+                  <button
+                    type='button'
+                    onClick={() => setShowCreditModal(true)}
+                    className={cn(
+                      'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors',
+                      isDark ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25' : 'bg-amber-50 text-amber-600 hover:bg-amber-100',
+                    )}
+                  >
+                    <Coins className='w-3 h-3' />
+                    Buy Credits
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -777,13 +849,13 @@ function AvaChatSection() {
               isDark ? 'bg-gray-800/60 text-gray-300 border border-gray-700/50' : 'bg-gray-50 text-gray-700 border border-gray-200/80',
             )}>
               <p className='font-medium'>
-                Your hub is simple: add the blocks you need below, and they become your Career Card.
+                Unlike ChatGPT or Claude, I already know your career. No copy-pasting your resume or explaining your background — I can see your blocks, your progress, and your goals right here.
               </p>
               <p>
-                Blocks are things like <strong>Resume</strong>, <strong>DOT Application</strong>, <strong>MVR</strong>, <strong>Portfolio</strong>, or <strong>GitHub</strong>. Each one shows up on your card for employers. You don’t need every block—just the ones that fit your path.
+                Add blocks below to build your profile. Each block — <strong>Resume</strong>, <strong>DOT Application</strong>, <strong>MVR</strong>, <strong>Portfolio</strong>, <strong>GitHub</strong> — becomes a section on your Career Card for employers. Just add the ones that fit your path.
               </p>
               <p>
-                Ask me what to add first, what to do next, or tap <strong>Open Journey</strong> below to see your progress. I’m here to make this dead simple.
+                Ask me what to add first, what to do next, or tap <strong>Open Journey</strong> below to see your progress.
               </p>
               <p className={cn('text-xs pt-1', isDark ? 'text-gray-500' : 'text-gray-400')}>
                 Try a question below or type your own.
@@ -850,7 +922,27 @@ function AvaChatSection() {
               </div>
             )}
 
-            {chatError && (
+            {/* Out of credits prompt */}
+            {outOfCredits && (
+              <div className={cn(
+                'rounded-2xl p-4 text-sm text-center space-y-2',
+                isDark ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200',
+              )}>
+                <p className={isDark ? 'text-amber-300' : 'text-amber-700'}>
+                  You&apos;ve used your 10 free messages today. Buy credits to keep chatting, or come back tomorrow.
+                </p>
+                <button
+                  type='button'
+                  onClick={() => setShowCreditModal(true)}
+                  className='inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600 transition-colors'
+                >
+                  <Coins className='w-3.5 h-3.5' />
+                  Buy Credits
+                </button>
+              </div>
+            )}
+
+            {chatError && !outOfCredits && (
               <p className='text-xs text-red-500 text-center'>{chatError}</p>
             )}
           </div>
@@ -867,21 +959,21 @@ function AvaChatSection() {
               type='text'
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder='Ask AvA anything...'
-              disabled={isLoading}
+              placeholder={outOfCredits ? 'Buy credits to continue...' : 'Ask AvA anything...'}
+              disabled={isLoading || outOfCredits}
               className={cn(
                 'flex-1 px-4 py-2.5 rounded-full text-sm border transition-colors',
                 'focus:outline-none focus:ring-2 focus:ring-brand-mint/40',
                 isDark ? 'bg-gray-800 border-gray-700 text-white placeholder:text-gray-500' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400',
-                isLoading && 'opacity-50',
+                (isLoading || outOfCredits) && 'opacity-50',
               )}
             />
             <button
               type='submit'
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || isLoading || outOfCredits}
               className={cn(
                 'p-2.5 rounded-full transition-all',
-                input.trim() && !isLoading
+                input.trim() && !isLoading && !outOfCredits
                   ? 'bg-brand-mint text-white hover:bg-brand-mint/90 shadow-sm'
                   : cn('cursor-not-allowed', isDark ? 'bg-gray-700 text-gray-500' : 'bg-gray-200 text-gray-400'),
               )}
@@ -907,6 +999,19 @@ function AvaChatSection() {
           </div>
         </div>
       </div>
+
+      {/* Credit purchase modal */}
+      {showCreditModal && (
+        <AvaCreditModal
+          walletAddress={walletAddress}
+          onClose={() => setShowCreditModal(false)}
+          onSuccess={(newUsage) => {
+            setUsage(newUsage)
+            setOutOfCredits(false)
+            setShowCreditModal(false)
+          }}
+        />
+      )}
     </div>
   )
 }
