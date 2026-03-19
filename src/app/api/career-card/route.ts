@@ -6,6 +6,7 @@ import {
   getCdlData,
   getDevPortfolio,
   getDevGithub,
+  saveDevGithub,
   getSkills,
   getDriverEmployment,
   getDevProfile,
@@ -320,10 +321,20 @@ async function fetchPortfolioData(supabase: SupabaseClient, userId: string): Pro
 }
 
 async function fetchGitHubData(supabase: SupabaseClient, userId: string, userAvatarUrl: string | null): Promise<GitHubData | null> {
-  const row = await getDevGithub(supabase, userId)
+  let row = await getDevGithub(supabase, userId)
   if (!row?.username) return null
 
-  // row.data is the JSONB column synced by /api/github/callback → syncGitHubData
+  // Self-heal: if we have a token but data was never synced (fire-and-forget bug),
+  // sync now so the career card shows real data on first view.
+  if (!row.data && row.access_token) {
+    try {
+      const synced = await syncGitHubToDb(supabase, userId, row.access_token, row.username)
+      if (synced) row = (await getDevGithub(supabase, userId)) ?? row
+    } catch (e) {
+      console.error('[CAREER CARD] GitHub self-heal sync failed:', e)
+    }
+  }
+
   const d = (row.data ?? {}) as Record<string, unknown>
 
   const topLanguages = (d.topLanguages ?? []) as Array<{ language: string; count: number; percentage: number }>
@@ -351,6 +362,95 @@ async function fetchGitHubData(supabase: SupabaseClient, userId: string, userAva
       url: r.url,
     })),
   }
+}
+
+/**
+ * On-demand GitHub sync for self-healing. Fetches repos + profile from GitHub API
+ * and writes to block_dev_github.data. Returns true on success.
+ */
+async function syncGitHubToDb(
+  supabase: SupabaseClient,
+  userId: string,
+  accessToken: string,
+  username: string,
+): Promise<boolean> {
+  const headers: Record<string, string> = {
+    Accept: 'application/vnd.github.v3+json',
+    'User-Agent': 'StormChain-GitHubSync',
+    Authorization: `Bearer ${accessToken}`,
+  }
+
+  const [userRes, reposRes] = await Promise.all([
+    fetch('https://api.github.com/user', { headers }),
+    fetch('https://api.github.com/user/repos?per_page=100&sort=updated', { headers }),
+  ])
+
+  const userData = await userRes.json()
+  const reposData = await reposRes.json()
+  const repos = Array.isArray(reposData) ? reposData : []
+
+  if (userData?.message) {
+    console.error('[GITHUB SELF-HEAL] API error:', userData.message)
+    return false
+  }
+
+  const totalStars = repos.reduce(
+    (sum: number, r: Record<string, unknown>) => sum + ((r.stargazers_count as number) || 0), 0
+  )
+  const totalForks = repos.reduce(
+    (sum: number, r: Record<string, unknown>) => sum + ((r.forks_count as number) || 0), 0
+  )
+  const privateRepos = repos.filter((r: Record<string, unknown>) => r.private).length
+
+  const langCount: Record<string, number> = {}
+  repos.forEach((r: Record<string, unknown>) => {
+    const lang = r.language as string | null
+    if (lang) langCount[lang] = (langCount[lang] || 0) + 1
+  })
+  const totalLangs = Object.values(langCount).reduce((a, b) => a + b, 0)
+  const topLanguages = Object.entries(langCount)
+    .map(([language, count]) => ({
+      language,
+      count,
+      percentage: totalLangs > 0 ? Math.round((count / totalLangs) * 100) : 0,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10)
+
+  const topRepos = repos
+    .filter((r: Record<string, unknown>) => !r.fork)
+    .sort((a: Record<string, unknown>, b: Record<string, unknown>) =>
+      ((b.stargazers_count as number) || 0) - ((a.stargazers_count as number) || 0)
+    )
+    .slice(0, 5)
+    .map((r: Record<string, unknown>) => ({
+      name: r.name as string,
+      description: (r.description as string | null) ?? null,
+      stars: (r.stargazers_count as number) || 0,
+      language: (r.language as string | null) ?? null,
+      url: (r.html_url as string) || `https://github.com/${username}/${r.name}`,
+      isPrivate: !!r.private,
+    }))
+
+  await saveDevGithub(supabase, userId, {
+    data: {
+      totalRepos: repos.length,
+      publicRepos: repos.length - privateRepos,
+      privateRepos,
+      totalStars,
+      totalForks,
+      followers: userData.followers || 0,
+      following: userData.following || 0,
+      avatarUrl: userData.avatar_url || null,
+      bio: userData.bio || null,
+      topLanguages,
+      topRepos,
+      syncedAt: new Date().toISOString(),
+    },
+  })
+
+  console.log(`[GITHUB SELF-HEAL] Synced ${repos.length} repos for user ${userId}`)
+  return true
 }
 
 async function fetchProjectsData(supabase: SupabaseClient, userId: string): Promise<ProjectsData | null> {

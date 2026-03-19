@@ -15,6 +15,7 @@ This file tracks major modifications made to the ResumeWallet codebase.
 - **Career card API** (`/api/career-card/route.ts` → `fetchGitHubData`): Now reads `row.data` to populate `avatarUrl`, `bio`, `publicRepos`, `followers`, `languages` (from `topLanguages` percentage data), and `topRepos`.
 - **GitHubSection** (`src/components/career-card/sections/GitHubSection.tsx`): Now shows bio, contribution graph (via `GitHubContributionGraph` component with `shareToken`), language bars with proportional widths, and up to 5 top repos with descriptions.
 - **ProjectedCareerCard**: Now passes `shareToken` through `SectionRenderer` to `GitHubSection` for the contribution graph API calls.
+- **Self-healing sync**: `fetchGitHubData` in the career card API now detects when `data` is null but an `access_token` exists (the fire-and-forget bug left this state). It syncs from GitHub on-the-fly and writes the result, so the career card populates automatically without manual refresh.
 
 ---
 
