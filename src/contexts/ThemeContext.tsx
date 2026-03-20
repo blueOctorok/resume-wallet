@@ -13,25 +13,21 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Determine initial theme based on device type
+  // Determine initial theme: saved preference > DOM > default light (professional default)
   const getInitialTheme = (): Theme => {
-    if (typeof window === 'undefined') return 'dark'
+    if (typeof window === 'undefined') return 'light'
     
-    // Check if user has a saved preference (takes priority)
     const savedTheme = localStorage.getItem('stormchain-theme') as Theme
     if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
       return savedTheme
     }
     
-    // Check if script already set data-theme attribute (from blocking script in layout)
     const existingTheme = document.documentElement.getAttribute('data-theme') as Theme
     if (existingTheme && (existingTheme === 'light' || existingTheme === 'dark')) {
       return existingTheme
     }
     
-    // No saved preference - use device-based default
-    // Default to dark mode for all devices
-    return 'dark'
+    return 'light'
   }
 
   const [theme, setThemeState] = useState<Theme>(getInitialTheme)
@@ -39,15 +35,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // No longer need the separate useEffect for loading - handled in getInitialTheme
   // But we still apply theme to document on changes
   useEffect(() => {
-    // Recheck on mount in case window wasn't available during SSR
     const savedTheme = localStorage.getItem('stormchain-theme') as Theme
-    if (!savedTheme) {
-      // Only update if no saved preference exists
-      // Default to dark mode for all devices
-      const deviceDefault = 'dark'
-      if (theme !== deviceDefault) {
-        setThemeState(deviceDefault)
-      }
+    if (!savedTheme && theme !== 'light') {
+      setThemeState('light')
     }
   }, [])
 

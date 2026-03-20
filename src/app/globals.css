@@ -1,17 +1,33 @@
 @import 'tailwindcss';
 @config '../../tailwind.config.ts';
 
-/* Theme-aware styling */
+/* Theme-aware styling — default light for professional first paint */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
+  /* Softer surfaces for light mode (used where needed) */
+  --surface-card: #f1f5f9;
+  --surface-elevated: #f8fafc;
+  --border-subtle: #e2e8f0;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
 }
 
 [data-theme='dark'] {
   color-scheme: dark;
+  --surface-card: #1f2937;
+  --surface-elevated: #111827;
+  --border-subtle: #374151;
+  --text-primary: #f3f4f6;
+  --text-secondary: #d1d5db;
 }
 
 [data-theme='light'] {
   color-scheme: light;
+  --surface-card: #f1f5f9;
+  --surface-elevated: #f8fafc;
+  --border-subtle: #e2e8f0;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
 }
 
 body {

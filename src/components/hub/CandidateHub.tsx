@@ -129,7 +129,7 @@ function BlockTile({ block, index, isEditing, onRemove, onOpen }: BlockTileProps
       <div
         className={cn(
           'absolute inset-[2px]',
-          isDark ? 'bg-gray-900/80 backdrop-blur-md' : 'bg-white/70 backdrop-blur-md',
+          isDark ? 'bg-gray-900/80 backdrop-blur-md' : 'bg-slate-100/90 backdrop-blur-md',
         )}
         style={{ clipPath: HEX_CLIP }}
       />
@@ -153,7 +153,7 @@ function BlockTile({ block, index, isEditing, onRemove, onOpen }: BlockTileProps
             {!hasRoute ? (
               <span className={cn(
                 'text-[7px] font-semibold px-1.5 py-0.5 rounded-full',
-                isDark ? 'bg-white/10 text-gray-500' : 'bg-gray-100 text-gray-400'
+                isDark ? 'bg-white/10 text-gray-500' : 'bg-slate-200/80 text-slate-500'
               )}>
                 SOON
               </span>
@@ -514,7 +514,7 @@ function HubProfileHeader() {
 
   const cardClass = cn(
     'rounded-2xl border p-6',
-    isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white/70 border-gray-200'
+    isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-slate-100/95 border-slate-300'
   )
 
   const completionChecks = [
@@ -527,7 +527,7 @@ function HubProfileHeader() {
 
   const inputClass = cn(
     'w-full rounded-lg border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500',
-    isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+    isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-slate-100 border-slate-300 text-slate-900'
   )
 
   return (
@@ -593,7 +593,7 @@ function HubProfileHeader() {
               <div className='flex items-center gap-2'>
                 <h1 className={cn(
                   'text-2xl sm:text-3xl font-bold',
-                  isDark ? 'text-white' : 'text-gray-900'
+                  isDark ? 'text-white' : 'text-slate-800'
                 )}>
                   {displayName}
                 </h1>
@@ -613,7 +613,7 @@ function HubProfileHeader() {
                   {headline}
                 </p>
               ) : (
-                <p className={cn('text-sm mt-1', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                <p className={cn('text-sm mt-1', isDark ? 'text-gray-400' : 'text-slate-600')}>
                   Complete onboarding to set your role
                 </p>
               )}
@@ -623,14 +623,14 @@ function HubProfileHeader() {
 
         <div className='flex-shrink-0 w-full lg:w-72'>
           <div className='flex items-center justify-between mb-2'>
-            <span className={cn('text-sm font-semibold', isDark ? 'text-gray-300' : 'text-gray-600')}>
+            <span className={cn('text-sm font-semibold', isDark ? 'text-gray-300' : 'text-slate-700')}>
               Profile Completeness
             </span>
             <span className={cn(
               'text-lg font-bold',
               completeness >= 75 ? 'text-green-500'
                 : completeness >= 50 ? 'text-yellow-500'
-                : isDark ? 'text-gray-400' : 'text-gray-500'
+                : isDark ? 'text-gray-400' : 'text-slate-600'
             )}>
               {completeness}%
             </span>
@@ -764,7 +764,7 @@ function AvaChatSection() {
 
   return (
     <div className='ava-glow-border'>
-      <div className={cn('rounded-[14px] flex flex-col overflow-hidden', isDark ? 'bg-gray-900' : 'bg-white')}>
+      <div className={cn('rounded-[14px] flex flex-col overflow-hidden', isDark ? 'bg-gray-900' : 'bg-slate-100/95')}>
         {/* Header — Claude-style: prominent, gradient, tagline */}
         <div
           className={cn(
@@ -793,7 +793,7 @@ function AvaChatSection() {
             </div>
             <div className='min-w-0 flex-1'>
               <div className='flex items-center gap-2 flex-wrap'>
-                <h2 className={cn('text-xl font-bold tracking-tight', isDark ? 'text-white' : 'text-gray-900')}>
+                <h2 className={cn('text-xl font-bold tracking-tight', isDark ? 'text-white' : 'text-slate-800')}>
                   Talk to AvA
                 </h2>
                 {usageBadge && (
@@ -809,7 +809,7 @@ function AvaChatSection() {
                   </span>
                 )}
               </div>
-              <p className={cn('mt-0.5 text-sm leading-snug', isDark ? 'text-gray-400' : 'text-gray-500')}>
+              <p className={cn('mt-0.5 text-sm leading-snug', isDark ? 'text-gray-400' : 'text-slate-600')}>
                 Unlike generic AI, AvA already knows your career — your blocks, your progress, your goals. Just ask.
               </p>
               <div className='mt-3 flex items-center gap-3 flex-wrap'>
@@ -846,7 +846,7 @@ function AvaChatSection() {
           {showWelcome && (
             <div className={cn(
               'rounded-2xl p-4 text-sm leading-relaxed space-y-3',
-              isDark ? 'bg-gray-800/60 text-gray-300 border border-gray-700/50' : 'bg-gray-50 text-gray-700 border border-gray-200/80',
+              isDark ? 'bg-gray-800/60 text-gray-300 border border-gray-700/50' : 'bg-slate-200/70 text-slate-800 border border-slate-300',
             )}>
               <p className='font-medium'>
                 Unlike ChatGPT or Claude, I already know your career. No copy-pasting your resume or explaining your background — I can see your blocks, your progress, and your goals right here.
@@ -874,7 +874,7 @@ function AvaChatSection() {
                       'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
                       isDark
                         ? 'bg-gray-700/80 text-gray-300 hover:bg-gray-600 border border-gray-600'
-                        : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200',
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300',
                     )}
                   >
                     {label}
@@ -898,7 +898,7 @@ function AvaChatSection() {
                 <div className={cn(
                   'max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap',
                   msg.role === 'ava'
-                    ? cn('rounded-tl-sm', isDark ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-800')
+                    ? cn('rounded-tl-sm', isDark ? 'bg-gray-800 text-gray-200' : 'bg-slate-200/80 text-slate-800')
                     : 'bg-brand-mint text-white rounded-tr-sm',
                 )}>
                   {msg.text}
@@ -912,7 +912,7 @@ function AvaChatSection() {
                 <div className='flex-shrink-0 w-6 h-6 rounded-full bg-brand-mint/20 flex items-center justify-center mt-0.5'>
                   <Bot className='w-3.5 h-3.5 text-brand-mint' />
                 </div>
-                <div className={cn('rounded-2xl rounded-tl-sm px-4 py-2.5', isDark ? 'bg-gray-800' : 'bg-gray-100')}>
+                <div className={cn('rounded-2xl rounded-tl-sm px-4 py-2.5', isDark ? 'bg-gray-800' : 'bg-slate-200/70')}>
                   <div className='flex gap-1.5'>
                     <span className='w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:0ms]' />
                     <span className='w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:150ms]' />
@@ -964,7 +964,7 @@ function AvaChatSection() {
               className={cn(
                 'flex-1 px-4 py-2.5 rounded-full text-sm border transition-colors',
                 'focus:outline-none focus:ring-2 focus:ring-brand-mint/40',
-                isDark ? 'bg-gray-800 border-gray-700 text-white placeholder:text-gray-500' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400',
+                isDark ? 'bg-gray-800 border-gray-700 text-white placeholder:text-gray-500' : 'bg-slate-100 border-slate-300 text-slate-900 placeholder:text-slate-500',
                 (isLoading || outOfCredits) && 'opacity-50',
               )}
             />
@@ -975,7 +975,7 @@ function AvaChatSection() {
                 'p-2.5 rounded-full transition-all',
                 input.trim() && !isLoading && !outOfCredits
                   ? 'bg-brand-mint text-white hover:bg-brand-mint/90 shadow-sm'
-                  : cn('cursor-not-allowed', isDark ? 'bg-gray-700 text-gray-500' : 'bg-gray-200 text-gray-400'),
+                  : cn('cursor-not-allowed', isDark ? 'bg-gray-700 text-gray-500' : 'bg-slate-200 text-slate-500'),
               )}
               aria-label='Send message'
             >
@@ -990,7 +990,7 @@ function AvaChatSection() {
               onClick={openGuide}
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
-                isDark ? 'text-gray-400 hover:text-violet-300 hover:bg-gray-800' : 'text-gray-500 hover:text-violet-600 hover:bg-gray-50',
+                isDark ? 'text-gray-400 hover:text-violet-300 hover:bg-gray-800' : 'text-slate-600 hover:text-violet-600 hover:bg-slate-100',
               )}
             >
               <Compass className='w-3.5 h-3.5' />
@@ -1051,10 +1051,10 @@ function CareerCardBanner() {
           <Eye className={cn('w-5 h-5', isDark ? 'text-teal-400' : 'text-teal-600')} />
         </div>
         <div>
-          <p className={cn('text-sm font-bold', isDark ? 'text-white' : 'text-gray-900')}>
+          <p className={cn('text-sm font-bold', isDark ? 'text-white' : 'text-slate-800')}>
             Career Card
           </p>
-          <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+          <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-slate-600')}>
             Your public professional profile built from your hub
           </p>
         </div>
@@ -1079,7 +1079,7 @@ function CareerCardBanner() {
             'flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors',
             isDark
               ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
           )}
         >
           <QrCode className='w-3.5 h-3.5' />
@@ -1110,10 +1110,10 @@ function FindJobsBanner() {
           <Search className={cn('w-5 h-5', isDark ? 'text-sky-400' : 'text-sky-600')} />
         </div>
         <div>
-          <p className={cn('text-sm font-bold', isDark ? 'text-white' : 'text-gray-900')}>
+          <p className={cn('text-sm font-bold', isDark ? 'text-white' : 'text-slate-800')}>
             Find Jobs
           </p>
-          <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
+          <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-slate-600')}>
             Browse StormChain and external job listings
           </p>
         </div>
@@ -1401,13 +1401,13 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
     <>
     <div className={cn(
       'rounded-2xl border p-4',
-      isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white/70 border-gray-200',
+      isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-slate-100/95 border-slate-300',
     )}>
       {/* Header */}
       <div className='flex items-center justify-between mb-3'>
         <div className='flex items-center gap-2'>
           <FileText className={cn('w-4 h-4', isDark ? 'text-teal-400' : 'text-teal-600')} />
-          <p className={cn('text-xs font-bold uppercase tracking-wide', isDark ? 'text-gray-300' : 'text-gray-600')}>
+          <p className={cn('text-xs font-bold uppercase tracking-wide', isDark ? 'text-gray-300' : 'text-slate-700')}>
             Block Files
           </p>
         </div>
@@ -1418,7 +1418,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
 
       {/* Empty state: no file-related blocks installed */}
       {!hasFileBlocks && (
-        <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>
+        <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>
           Install a Resume, DOT Application, or MVR block from the Block Hive below to manage your files here.
         </p>
       )}
@@ -1432,7 +1432,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
 
       {/* Empty state: has blocks but no documents yet */}
       {hasFileBlocks && !loading && documents.length === 0 && (
-        <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-500')}>
+        <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>
           Your files will appear here after you add a resume, start a DOT application, or order an MVR.
         </p>
       )}
@@ -1456,7 +1456,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
           <div key={doc.id}>
             <div className={cn(
               'flex items-center gap-3 p-3 rounded-xl transition-colors',
-              isDark ? 'bg-gray-800/50' : 'bg-gray-50',
+              isDark ? 'bg-gray-800/50' : 'bg-slate-100',
             )}>
               {/* Icon + info */}
               <div className={cn(
@@ -1467,26 +1467,26 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                   : isDark ? 'bg-gray-700' : 'bg-gray-200',
               )}>
                 {doc.type === 'resume' ? (
-                  <FileText className={cn('w-4 h-4', doc.verified ? 'text-green-400' : isDark ? 'text-gray-400' : 'text-gray-500')} />
+                  <FileText className={cn('w-4 h-4', doc.verified ? 'text-green-400' : isDark ? 'text-gray-400' : 'text-slate-600')} />
                 ) : doc.type === 'mvr' ? (
                   <Car className={cn(
                     'w-4 h-4',
                     doc.status === 'complete' ? (isDark ? 'text-teal-400' : 'text-teal-600')
                       : doc.status === 'processing' ? (isDark ? 'text-blue-400' : 'text-blue-600')
-                      : isDark ? 'text-gray-400' : 'text-gray-500'
+                      : isDark ? 'text-gray-400' : 'text-slate-600'
                   )} />
                 ) : doc.type === 'portfolio' ? (
-                  <Globe className={cn('w-4 h-4', doc.status === 'complete' ? (isDark ? 'text-teal-400' : 'text-teal-600') : isDark ? 'text-gray-400' : 'text-gray-500')} />
+                  <Globe className={cn('w-4 h-4', doc.status === 'complete' ? (isDark ? 'text-teal-400' : 'text-teal-600') : isDark ? 'text-gray-400' : 'text-slate-600')} />
                 ) : doc.type === 'github' ? (
-                  <Github className={cn('w-4 h-4', doc.status === 'complete' ? (isDark ? 'text-teal-400' : 'text-teal-600') : isDark ? 'text-gray-400' : 'text-gray-500')} />
+                  <Github className={cn('w-4 h-4', doc.status === 'complete' ? (isDark ? 'text-teal-400' : 'text-teal-600') : isDark ? 'text-gray-400' : 'text-slate-600')} />
                 ) : (
-                  <ClipboardCheck className={cn('w-4 h-4', doc.verified ? 'text-green-400' : isDark ? 'text-gray-400' : 'text-gray-500')} />
+                  <ClipboardCheck className={cn('w-4 h-4', doc.verified ? 'text-green-400' : isDark ? 'text-gray-400' : 'text-slate-600')} />
                 )}
               </div>
 
               <div className='flex-1 min-w-0'>
                 <div className='flex items-center gap-2 flex-wrap'>
-                  <p className={cn('text-sm font-medium truncate', isDark ? 'text-white' : 'text-gray-900')}>
+                  <p className={cn('text-sm font-medium truncate', isDark ? 'text-white' : 'text-slate-800')}>
                     {doc.title}
                     {doc.subtitle && <span className={cn('ml-1 font-normal', isDark ? 'text-gray-500' : 'text-gray-400')}>({doc.subtitle})</span>}
                   </p>
@@ -1528,12 +1528,12 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                   </p>
                 )}
                 {doc.type === 'portfolio' && doc.portfolioUrl && (
-                  <p className={cn('text-[11px] truncate mt-0.5', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                  <p className={cn('text-[11px] truncate mt-0.5', isDark ? 'text-gray-400' : 'text-slate-600')}>
                     {doc.portfolioUrl}
                   </p>
                 )}
                 {doc.type === 'github' && doc.githubUsername && (
-                  <p className={cn('text-[11px] truncate mt-0.5', isDark ? 'text-gray-400' : 'text-gray-500')}>
+                  <p className={cn('text-[11px] truncate mt-0.5', isDark ? 'text-gray-400' : 'text-slate-600')}>
                     @{doc.githubUsername}
                   </p>
                 )}
@@ -1548,7 +1548,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                     rel='noopener noreferrer'
                     className={cn(
                       'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
-                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50',
+                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200',
                     )}
                   >
                     <Eye className='w-3 h-3' /> View
@@ -1560,7 +1560,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                     onClick={() => setCurrentPage('portfolio')}
                     className={cn(
                       'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
-                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50',
+                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200',
                     )}
                   >
                     <Pencil className='w-3 h-3' /> Edit
@@ -1573,7 +1573,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                     rel='noopener noreferrer'
                     className={cn(
                       'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
-                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50',
+                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200',
                     )}
                   >
                     <Eye className='w-3 h-3' /> View
@@ -1585,7 +1585,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                     onClick={() => setCurrentPage('github')}
                     className={cn(
                       'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
-                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50',
+                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200',
                     )}
                   >
                     <Pencil className='w-3 h-3' /> Edit
@@ -1616,7 +1616,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                     }}
                     className={cn(
                       'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
-                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50',
+                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200',
                     )}
                   >
                     <Eye className='w-3 h-3' /> View
@@ -1632,7 +1632,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                     }}
                     className={cn(
                       'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
-                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50',
+                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200',
                     )}
                   >
                     <Pencil className='w-3 h-3' /> Edit
@@ -1645,7 +1645,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                     onClick={() => setDotAppPreviewApplicationId(doc.id)}
                     className={cn(
                       'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
-                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50',
+                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200',
                     )}
                   >
                     <Eye className='w-3 h-3' /> View
@@ -1658,7 +1658,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                     onClick={() => setCurrentPage(doc.editPage)}
                     className={cn(
                       'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
-                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50',
+                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200',
                     )}
                   >
                     <Pencil className='w-3 h-3' /> {doc.status === 'complete' ? 'Edit' : 'Continue'}
@@ -1671,7 +1671,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                     onClick={() => setMvrViewOrderId(doc.id)}
                     className={cn(
                       'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
-                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50',
+                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200',
                     )}
                   >
                     <Eye className='w-3 h-3' /> View
@@ -1895,7 +1895,7 @@ export default function CandidateHub() {
   if (isLoading) {
     return (
       <div className='flex items-center justify-center py-20'>
-        <Loader2 className={cn('w-6 h-6 animate-spin', isDark ? 'text-gray-400' : 'text-gray-500')} />
+        <Loader2 className={cn('w-6 h-6 animate-spin', isDark ? 'text-gray-400' : 'text-slate-600')} />
       </div>
     )
   }
@@ -1904,13 +1904,13 @@ export default function CandidateHub() {
     return (
       <div className={cn(
         'rounded-xl border p-6 text-center max-w-md mx-auto',
-        isDark ? 'bg-gray-800/60 border-gray-700' : 'bg-white border-gray-200'
+        isDark ? 'bg-gray-800/60 border-gray-700' : 'bg-slate-100/95 border-slate-300'
       )}>
         <AlertCircle className='w-8 h-8 text-red-500 mx-auto mb-3' />
-        <p className={cn('text-sm font-medium mb-1', isDark ? 'text-white' : 'text-gray-900')}>
+        <p className={cn('text-sm font-medium mb-1', isDark ? 'text-white' : 'text-slate-800')}>
           Failed to load your hub
         </p>
-        <p className={cn('text-xs mb-4', isDark ? 'text-gray-400' : 'text-gray-500')}>
+        <p className={cn('text-xs mb-4', isDark ? 'text-gray-400' : 'text-slate-600')}>
           {fetchError}
         </p>
         <Button variant='secondary' size='sm' onClick={() => walletAddress && fetchHubData(walletAddress)}>
@@ -1934,7 +1934,7 @@ export default function CandidateHub() {
         <div>
           <div className='flex items-center justify-between mb-4'>
             <div className='flex items-center gap-2'>
-              <h2 className={cn('text-lg font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+              <h2 className={cn('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-800')}>
                 Block Hive
               </h2>
               <button
@@ -1947,7 +1947,7 @@ export default function CandidateHub() {
                 className={cn(
                   'p-1 rounded-lg transition-all',
                   isLoading ? 'opacity-50 cursor-not-allowed' : '',
-                  isDark ? 'hover:bg-gray-700 text-gray-500 hover:text-gray-300' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-600'
+                  isDark ? 'hover:bg-gray-700 text-gray-500 hover:text-gray-300' : 'hover:bg-slate-100 text-slate-500 hover:text-slate-700'
                 )}
               >
                 <RefreshCw className={cn('w-3.5 h-3.5', isLoading && 'animate-spin')} />
@@ -1963,7 +1963,7 @@ export default function CandidateHub() {
                       ? 'bg-teal-500 text-white hover:bg-teal-600'
                       : isDark
                         ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   )}
                 >
                   {isEditing ? <Check className='w-3.5 h-3.5' /> : <Pencil className='w-3.5 h-3.5' />}
@@ -1985,10 +1985,10 @@ export default function CandidateHub() {
               <div className='inline-flex items-center justify-center w-12 h-12 rounded-full bg-teal-500/10 mb-4'>
                 <Plus className='w-6 h-6 text-teal-500' />
               </div>
-              <p className={cn('text-sm font-medium mb-1', isDark ? 'text-white' : 'text-gray-900')}>
+              <p className={cn('text-sm font-medium mb-1', isDark ? 'text-white' : 'text-slate-800')}>
                 Your hub is empty
               </p>
-              <p className={cn('text-xs mb-4', isDark ? 'text-gray-400' : 'text-gray-500')}>
+              <p className={cn('text-xs mb-4', isDark ? 'text-gray-400' : 'text-slate-600')}>
                 Add blocks to build your professional profile
               </p>
               <Button variant='secondary' size='sm' onClick={openPicker}>

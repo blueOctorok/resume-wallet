@@ -83,7 +83,7 @@ export default function Navigation({
   // Same surface as employment verification: bg-gray-800/50 (dark) / bg-white/70 (light)
   const navClasses =
     theme === 'light'
-      ? 'max-w-2xl mx-auto bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-200 relative'
+      ? 'max-w-2xl mx-auto bg-slate-100/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-300 relative'
       : 'max-w-2xl mx-auto bg-gray-800/50 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-700 relative'
 
   const innerShadowClasses =
@@ -122,7 +122,7 @@ export default function Navigation({
                     }}
                     className={`relative group flex flex-col items-center space-y-1.5 p-2.5 rounded-xl backdrop-blur-sm transition-all duration-300 border cursor-pointer ${
                       theme === 'light'
-                        ? 'bg-gray-100 border-gray-200 hover:bg-gray-200/80 text-gray-800'
+                        ? 'bg-slate-200/80 border-slate-300 hover:bg-slate-300/80 text-slate-800'
                         : 'bg-gray-700/50 border-gray-600 hover:bg-gray-600/50 text-gray-200'
                     }`}
                     aria-label='View account status'
@@ -149,7 +149,7 @@ export default function Navigation({
                 <h1
                   className={`text-2xl sm:text-4xl lg:text-5xl font-extralight tracking-wide ${
                     theme === 'light'
-                      ? 'text-gray-800 drop-shadow-[0_2px_8px_rgba(0,0,0,0.1)]'
+                      ? 'text-slate-800 drop-shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
                       : 'text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]'
                   }`}
                 >
@@ -166,7 +166,7 @@ export default function Navigation({
                     aria-label={`Messages${unreadMessageCount > 0 ? ` (${unreadMessageCount} unread)` : ''}`}
                     className={`hidden sm:flex relative items-center justify-center w-9 h-9 rounded-xl border transition-all duration-200 cursor-pointer ${
                       theme === 'light'
-                        ? 'bg-gray-100 border-gray-200 hover:bg-gray-200 text-gray-700'
+                        ? 'bg-slate-200/80 border-slate-300 hover:bg-slate-300 text-slate-700'
                         : 'bg-gray-700/50 border-gray-600 hover:bg-gray-600/50 text-gray-300'
                     }`}
                   >
@@ -234,7 +234,7 @@ export default function Navigation({
               className={`${
                 isMenuOpen ? 'flex' : 'hidden'
               } sm:flex flex-col sm:flex-row items-center gap-2 sm:gap-3 pt-3 sm:pt-4 border-t ${
-                theme === 'light' ? 'border-gray-200' : 'border-gray-600'
+                theme === 'light' ? 'border-slate-300' : 'border-gray-600'
               } relative`}
             >
               {/* Mobile-only quick actions row */}
@@ -249,7 +249,7 @@ export default function Navigation({
                     }}
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
                       theme === 'light'
-                        ? 'bg-gray-100 border-gray-200 text-gray-800'
+                        ? 'bg-slate-200/80 border-slate-300 text-slate-800'
                         : 'bg-gray-700/50 border-gray-600 text-gray-200'
                     }`}
                   >
@@ -265,7 +265,7 @@ export default function Navigation({
                     }}
                     className={`relative flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
                       theme === 'light'
-                        ? 'bg-gray-100 border-gray-200 text-gray-700'
+                        ? 'bg-slate-200/80 border-slate-300 text-slate-700'
                         : 'bg-gray-700/50 border-gray-600 text-gray-300'
                     }`}
                   >
@@ -342,7 +342,7 @@ export default function Navigation({
                     <div className={`absolute top-full left-1/2 -translate-x-1/2 min-w-[200px] mt-2 rounded-xl shadow-xl border overflow-hidden z-50 ${
                       theme === 'dark'
                         ? 'bg-gray-900 border-gray-700'
-                        : 'bg-white border-gray-200'
+                        : 'bg-slate-100 border-slate-300'
                     }`}>
                       <button
                         onClick={() => {
@@ -353,7 +353,7 @@ export default function Navigation({
                         className={`w-full px-4 py-3 text-sm font-medium flex items-center gap-3 transition-colors ${
                           theme === 'dark'
                             ? 'text-white hover:bg-gray-800'
-                            : 'text-gray-900 hover:bg-gray-50'
+                            : 'text-slate-800 hover:bg-slate-100'
                         }`}
                       >
                         <LayoutDashboard className='w-4 h-4' />
@@ -369,7 +369,7 @@ export default function Navigation({
                           className={`w-full px-4 py-3 text-sm font-medium flex items-center gap-3 border-t transition-colors ${
                             theme === 'dark'
                               ? 'text-gray-300 hover:bg-gray-800 border-gray-700'
-                              : 'text-gray-700 hover:bg-gray-50 border-gray-100'
+                              : 'text-slate-700 hover:bg-slate-100 border-slate-200'
                           }`}
                         >
                           <RefreshCw className='w-4 h-4' />
@@ -382,7 +382,7 @@ export default function Navigation({
                         className={`w-full px-4 py-3 text-sm font-medium flex items-center justify-between border-t transition-colors ${
                           theme === 'dark'
                             ? 'text-gray-300 hover:bg-gray-800 border-gray-700'
-                            : 'text-gray-700 hover:bg-gray-50 border-gray-100'
+                            : 'text-slate-700 hover:bg-slate-100 border-slate-200'
                         }`}
                       >
                         <span className='flex items-center gap-3'>
@@ -392,7 +392,7 @@ export default function Navigation({
                         <span className={`text-xs px-2 py-0.5 rounded-full ${
                           showJourneyModals
                             ? theme === 'dark' ? 'bg-teal-500/20 text-teal-400' : 'bg-teal-100 text-teal-700'
-                            : theme === 'dark' ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-500'
+                            : theme === 'dark' ? 'bg-gray-700 text-gray-400' : 'bg-slate-200 text-slate-600'
                         }`}>
                           {showJourneyModals ? 'On' : 'Off'}
                         </span>
@@ -407,7 +407,7 @@ export default function Navigation({
                         className={`w-full px-4 py-3 text-sm font-medium flex items-center gap-3 border-t transition-colors ${
                           theme === 'dark'
                             ? 'text-teal-400 hover:bg-gray-800 border-gray-700'
-                            : 'text-teal-600 hover:bg-gray-50 border-gray-100'
+                            : 'text-teal-600 hover:bg-slate-100 border-slate-200'
                         }`}
                       >
                         <HelpCircle className='w-4 h-4' />
