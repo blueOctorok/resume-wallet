@@ -99,11 +99,10 @@ export default function RootLayout({
                     document.documentElement.setAttribute('data-theme', savedTheme);
                     return;
                   }
-                  // No saved preference - default to dark mode for all devices
-                  document.documentElement.setAttribute('data-theme', 'dark');
+                  // No saved preference - default to light (professional default)
+                  document.documentElement.setAttribute('data-theme', 'light');
                 } catch (e) {
-                  // Fallback to dark if anything fails
-                  document.documentElement.setAttribute('data-theme', 'dark');
+                  document.documentElement.setAttribute('data-theme', 'light');
                 }
               })();
               
