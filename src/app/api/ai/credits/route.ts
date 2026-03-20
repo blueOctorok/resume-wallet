@@ -21,7 +21,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing wallet address' }, { status: 401 })
     }
 
-    const supabase = await getAdminSupabaseClient()
+    let supabase
+    try {
+      supabase = await getAdminSupabaseClient()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error('[AvA Credits] GET Supabase init failed:', msg)
+      return NextResponse.json({ error: 'Service temporarily unavailable.' }, { status: 503 })
+    }
     const user = await getUserByWallet(supabase, walletAddress)
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 401 })
@@ -37,7 +44,11 @@ export async function GET(request: NextRequest) {
       packs: AVA_CREDIT_PACKS,
     })
   } catch (error) {
-    console.error('[AvA Credits] GET error:', error)
+    const message = error instanceof Error ? error.message : String(error)
+    console.error('[AvA Credits] GET error:', message)
+    if (error instanceof Error && error.stack) {
+      console.error('[AvA Credits] GET stack:', error.stack)
+    }
     return NextResponse.json({ error: 'Failed to fetch usage' }, { status: 500 })
   }
 }
@@ -73,7 +84,14 @@ export async function POST(request: NextRequest) {
     const packId = pack as AvaCreditPackId
     const packInfo = AVA_CREDIT_PACKS[packId]
 
-    const supabase = await getAdminSupabaseClient()
+    let supabase
+    try {
+      supabase = await getAdminSupabaseClient()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error('[AvA Credits] POST Supabase init failed:', msg)
+      return NextResponse.json({ error: 'Service temporarily unavailable.' }, { status: 503 })
+    }
     const user = await getUserByWallet(supabase, walletAddress)
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 401 })
@@ -103,7 +121,11 @@ export async function POST(request: NextRequest) {
       totalMessages: usageCheck.totalMessages,
     })
   } catch (error) {
-    console.error('[AvA Credits] POST error:', error)
+    const message = error instanceof Error ? error.message : String(error)
+    console.error('[AvA Credits] POST error:', message)
+    if (error instanceof Error && error.stack) {
+      console.error('[AvA Credits] POST stack:', error.stack)
+    }
     return NextResponse.json({ error: 'Failed to purchase credits' }, { status: 500 })
   }
 }

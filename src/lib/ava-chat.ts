@@ -1,4 +1,5 @@
 import { useInstalledBlocks, useHubOnboarding } from '@/stores/hub-blocks-store'
+import { useDriverHubStore } from '@/stores/driver-hub-store'
 import { useAuthStore } from '@/stores'
 import type { HubContext } from '@/lib/ava-context'
 
@@ -29,9 +30,57 @@ export interface AvaResponse {
   usage: AvaUsageInfo
 }
 
+/**
+ * Derives block completion status from the hub store data.
+ * Each block type has its own "complete" condition based on
+ * what data actually exists in the store.
+ */
+function deriveBlockStatus(
+  blockType: string,
+  hubStore: {
+    resumes: Array<{ sourceRole?: string }>
+    dotApplications: Array<{ isComplete?: boolean }>
+    mvrRecords: Array<{ orderStatus?: string }>
+    portfolio: { portfolioUrl: string | null } | null
+    github: { username: string | null } | null
+  },
+): 'complete' | 'in-progress' | 'empty' {
+  switch (blockType) {
+    case 'driver-resume':
+      return hubStore.resumes.some((r) => r.sourceRole === 'driver') ? 'complete' : 'empty'
+    case 'developer-resume':
+      return hubStore.resumes.some((r) => r.sourceRole === 'developer') ? 'complete' : 'empty'
+    case 'driver-dot-application': {
+      const complete = hubStore.dotApplications.some((a) => a.isComplete)
+      const started = hubStore.dotApplications.length > 0
+      return complete ? 'complete' : started ? 'in-progress' : 'empty'
+    }
+    case 'driver-mvr': {
+      const completed = hubStore.mvrRecords.some(
+        (m) => m.orderStatus === 'completed' || m.orderStatus === 'needs_review'
+      )
+      const processing = hubStore.mvrRecords.length > 0
+      return completed ? 'complete' : processing ? 'in-progress' : 'empty'
+    }
+    case 'developer-portfolio':
+      return hubStore.portfolio?.portfolioUrl ? 'complete' : 'empty'
+    case 'developer-github':
+      return hubStore.github?.username ? 'complete' : 'empty'
+    default:
+      return 'empty'
+  }
+}
+
 export function useHubContext(): HubContext {
   const onboarding = useHubOnboarding()
   const installedBlocks = useInstalledBlocks()
+  const resumes = useDriverHubStore((s) => s.resumes)
+  const dotApplications = useDriverHubStore((s) => s.dotApplications)
+  const mvrRecords = useDriverHubStore((s) => s.mvrRecords)
+  const portfolio = useDriverHubStore((s) => s.portfolio)
+  const github = useDriverHubStore((s) => s.github)
+
+  const hubStore = { resumes, dotApplications, mvrRecords, portfolio, github }
 
   return {
     occupation: onboarding?.occupation,
@@ -40,7 +89,7 @@ export function useHubContext(): HubContext {
     installedBlocks: installedBlocks.map((b) => ({
       blockType: b.blockType,
       label: b.definition?.label ?? b.blockType,
-      status: 'empty' as const,
+      status: deriveBlockStatus(b.blockType, hubStore),
     })),
   }
 }

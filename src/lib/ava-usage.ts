@@ -10,6 +10,14 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const AVA_DAILY_FREE = 10
 
+/**
+ * Wallets that bypass usage limits entirely (always Sonnet, no counter).
+ * Add team/admin wallets here.
+ */
+export const AVA_UNLIMITED_WALLETS = new Set([
+  '0x9d17cf2ac64ea97be08e3319fe17d94bd1a0660a',
+])
+
 export interface AvaUsage {
   dailyUsed: number
   credits: number
@@ -59,7 +67,11 @@ export async function getOrCreateUsage(
     .eq('user_id', userId)
     .maybeSingle()
 
-  if (error) throw new Error(`ava_chat_usage read failed: ${error.message}`)
+  if (error) {
+    // Include code (e.g. 42P01 = undefined_table) so Vercel logs show why
+    const code = (error as { code?: string }).code ?? 'unknown'
+    throw new Error(`ava_chat_usage read failed [${code}]: ${error.message}`)
+  }
 
   if (!data) {
     // First ever chat — create row
