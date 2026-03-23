@@ -1,7 +1,10 @@
 import { useInstalledBlocks, useHubOnboarding } from '@/stores/hub-blocks-store'
 import { useDriverHubStore } from '@/stores/driver-hub-store'
 import { useAuthStore } from '@/stores'
-import type { HubContext } from '@/lib/ava-context'
+import type { HubContext, EmployerHubContext, BlockContext } from '@/lib/ava-context'
+import type { AvaAutoWelcomeMode } from '@/lib/ava-auto-welcome'
+
+export type { EmployerHubContext } from '@/lib/ava-context'
 
 export interface ChatMessage {
   role: 'user' | 'ava'
@@ -94,11 +97,26 @@ export function useHubContext(): HubContext {
   }
 }
 
-export async function sendToAva(
-  message: string,
-  hubContext: HubContext,
-  walletAddress?: string | null,
-): Promise<AvaResponse> {
+export type SendToAvaPayload =
+  | {
+      message: string
+      walletAddress?: string | null
+      audience?: 'candidate'
+      hubContext: HubContext
+      blockContext?: BlockContext
+      /** Server records completion on `users` — cross-device idempotency */
+      autoWelcome?: AvaAutoWelcomeMode
+    }
+  | {
+      message: string
+      walletAddress?: string | null
+      audience: 'employer'
+      employerContext: EmployerHubContext
+      autoWelcome?: AvaAutoWelcomeMode
+    }
+
+export async function sendToAva(payload: SendToAvaPayload): Promise<AvaResponse> {
+  const { message, walletAddress } = payload
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   }
@@ -106,10 +124,24 @@ export async function sendToAva(
     headers['x-wallet-address'] = walletAddress
   }
 
+  const autoWelcome =
+    payload.autoWelcome !== undefined ? { autoWelcome: payload.autoWelcome } : {}
+
+  const body =
+    payload.audience === 'employer'
+      ? { message, audience: 'employer', employerContext: payload.employerContext, ...autoWelcome }
+      : {
+          message,
+          hubContext: payload.hubContext,
+          audience: 'candidate' as const,
+          ...(payload.blockContext ? { blockContext: payload.blockContext } : {}),
+          ...autoWelcome,
+        }
+
   const res = await fetch('/api/ai/chat', {
     method: 'POST',
     headers,
-    body: JSON.stringify({ message, hubContext }),
+    body: JSON.stringify(body),
   })
 
   if (res.status === 402) {

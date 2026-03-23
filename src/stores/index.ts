@@ -64,6 +64,11 @@ export {
   useHasSeenWelcome,
 } from './journey-store'
 
+export {
+  useEmployerHiringPathStore,
+  type EmployerHiringPathPayload,
+} from './employer-journey-snapshot-store'
+
 // Hub Blocks Store (composable hub)
 export {
   useHubBlocksStore,

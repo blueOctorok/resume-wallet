@@ -23,14 +23,6 @@ const ApplicantsPage = dynamic(
   }
 )
 
-const FindDriversPage = dynamic(
-  () => import('@/components/employer/FindDriversPage').then((mod) => mod.default),
-  {
-    ssr: false,
-    loading: () => <LoadingScreen message='Loading driver search...' fullScreen={false} />,
-  }
-)
-
 const TalentSearchPage = dynamic(
   () => import('@/components/employer/TalentSearchPage').then((mod) => mod.default),
   {
@@ -55,14 +47,6 @@ const TeamManagement = dynamic(
   }
 )
 
-const ReportsPage = dynamic(
-  () => import('@/components/employer/ReportsPage').then((mod) => mod.default),
-  {
-    ssr: false,
-    loading: () => <LoadingScreen message='Loading reports...' fullScreen={false} />,
-  }
-)
-
 const StormChainView = dynamic(
   () => import('@/components/StormChainView').then((mod) => mod.default),
   {
@@ -79,12 +63,10 @@ interface EmployerShellProps {
 const KNOWN_PAGES = new Set([
   'company-setup',
   'applicants',
-  'find-drivers',
   'talent-search',
   'post-job',
   'team',
   'company-profile',
-  'reports',
   'stormchain',
   'messages',
 ])
@@ -119,10 +101,6 @@ export default function EmployerShell({ walletAddress }: EmployerShellProps) {
     return <ApplicantsPage walletAddress={walletAddress} onBack={goBack} />
   }
 
-  if (currentPage === 'find-drivers') {
-    return <FindDriversPage walletAddress={walletAddress} onBack={goBack} />
-  }
-
   if (currentPage === 'talent-search') {
     return <TalentSearchPage walletAddress={walletAddress} onBack={goBack} />
   }
@@ -151,10 +129,6 @@ export default function EmployerShell({ walletAddress }: EmployerShellProps) {
         showBackButton={true}
       />
     )
-  }
-
-  if (currentPage === 'reports') {
-    return <ReportsPage walletAddress={walletAddress} onBack={goBack} />
   }
 
   if (currentPage === 'stormchain') {

@@ -133,11 +133,11 @@ export const JOURNEY_STEPS: JourneyConfig = {
     jobPosted: {
       id: 'employer.jobPosted',
       title: 'Job Posted!',
-      message: 'Your job is now live and visible to drivers. Share it or wait for applicants to come in.',
+      message: 'Your job is now live. Share it or search the network for candidates.',
       icon: 'Briefcase',
       nextStep: {
-        label: 'Find Drivers',
-        action: { type: 'navigate', target: 'find-drivers' },
+        label: 'Find Talent',
+        action: { type: 'navigate', target: 'talent-search' },
       },
     },
     applicantReviewed: {

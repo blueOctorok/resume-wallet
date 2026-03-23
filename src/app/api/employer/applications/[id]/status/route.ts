@@ -3,20 +3,10 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { sendApplicationStatusNotification } from '@/lib/send-admin-notification'
 import { createNotification } from '@/lib/create-notification'
 
-const VALID_STATUSES = [
-  'submitted',
-  'under_review',
-  'interview',
-  'offer',
-  'hired',
-  'rejected',
-  'withdrawn',
-] as const
+const VALID_STATUSES = ['submitted', 'contacted', 'archived'] as const
 
-type ApplicationStatus = typeof VALID_STATUSES[number]
-
-// Statuses that trigger email notifications
-const NOTIFICATION_STATUSES = ['under_review', 'interview', 'offer', 'hired', 'rejected'] as const
+/** Notify candidate when employer marks them contacted (reached out). Archiving is silent. */
+const NOTIFICATION_STATUSES = ['contacted'] as const
 
 /**
  * PATCH /api/employer/applications/[id]/status
@@ -182,20 +172,12 @@ export async function PATCH(
       const candidateName = [candidateProfile?.first_name, candidateProfile?.last_name].filter(Boolean).join(' ') || 'Candidate'
 
       const statusTitles: Record<string, string> = {
-        under_review: 'Your application is under review',
-        interview:    'Interview requested!',
-        offer:        'You have a job offer! 🎉',
-        hired:        "You're hired! 🎉",
-        rejected:     'Application status update',
+        contacted: 'The employer reached out',
       }
       const companyName = company?.company_name ?? 'The company'
 
       const statusBodies: Record<string, string> = {
-        under_review: `${companyName} is reviewing your application for ${jobPosting.title}.`,
-        interview:    `${companyName} would like to interview you for ${jobPosting.title}.`,
-        offer:        `${companyName} has extended a job offer for ${jobPosting.title}.`,
-        hired:        `Congratulations! ${companyName} has hired you for ${jobPosting.title}.`,
-        rejected:     `Your application for ${jobPosting.title} at ${companyName} was not selected.`,
+        contacted: `${companyName} has updated your application for ${jobPosting.title} — they've marked you as contacted. Check your messages or email for next steps.`,
       }
 
       // In-app notification
@@ -219,7 +201,7 @@ export async function PATCH(
           candidateName: candidateName ?? 'Candidate',
           companyName: companyName,
           jobTitle: jobPosting.title,
-          newStatus: newStatus as 'under_review' | 'interview' | 'offer' | 'hired' | 'rejected',
+          newStatus: newStatus as 'contacted',
         }).then(result => {
           if (result.ok) {
             console.log(`[APPLICATION STATUS] Email sent to ${candidate.email}`)

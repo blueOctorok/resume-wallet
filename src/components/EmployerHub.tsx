@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh'
-import EmployerVerificationSection from './verification/EmployerVerificationSection'
 import ApplicantKanban, { type KanbanApplicant } from './employer/ApplicantKanban'
 import CandidateNotesPanel from './employer/CandidateNotesPanel'
 import CandidateOutreach from './employer/CandidateOutreach'
@@ -11,8 +10,10 @@ import JobPostingsSection from './employer/JobPostingsSection'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import CareerCardModal from '@/components/employer/CareerCardModal'
 import MessagingButton from '@/components/messaging/MessagingButton'
-import { useUIStore } from '@/stores'
-import { useAuthStore } from '@/stores'
+import { useUIStore, useJourneyStore } from '@/stores'
+import { useEmployerHiringPathStore } from '@/stores/employer-journey-snapshot-store'
+import { calculateEmployerProgress, type EmployerProgressData } from '@/lib/journey-progress'
+import EmployerPathSidebar from '@/components/hub/EmployerPathSidebar'
 import {
   Briefcase,
   Users,
@@ -21,7 +22,6 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  Eye,
   ChevronRight,
   ChevronDown,
   Building2,
@@ -30,7 +30,6 @@ import {
   MapPin,
   DollarSign,
   ExternalLink,
-  UserCheck,
   UserX,
   MessageSquare,
   Phone,
@@ -41,9 +40,11 @@ import {
   RefreshCw,
   Link2,
   CreditCard,
+  Compass,
 } from 'lucide-react'
 import { getDisplayRole } from '@/lib/employer-roles'
-import AskAvaButton from '@/components/ui/AskAvaButton'
+import type { EmployerHubContext } from '@/lib/ava-context'
+import AvaChatPanel from '@/components/ava/AvaChatPanel'
 import STORMBalance from '@/components/STORMBalance'
 
 // ============================================================
@@ -114,24 +115,23 @@ interface HubStats {
   totalJobs: number
   totalApplicants: number
   pendingReview: number
-  interviewing: number
-  hiresThisMonth: number
-  totalHires: number
+  contacted: number
+  archived: number
+  archivedThisMonth?: number
 }
 
 interface HubPipeline {
   new: number
-  reviewing: number
-  interviewing: number
-  offerSent: number
-  hired: number
-  rejected: number
+  contacted: number
+  archived: number
 }
 
 interface HubData {
   success: boolean
   isNewUser: boolean
   needsCompanySetup?: boolean
+  /** DB `users.ava_auto_welcome_employer_at` — cross-device AvA auto-welcome idempotency */
+  avaAutoWelcomeEmployerDone?: boolean
   company: HubCompany | null
   /** Current user's role in this company (owner, admin, recruiter, viewer, etc.) */
   userRole?: string | null
@@ -154,6 +154,8 @@ interface EmployerHubProps {
 export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubProps) {
   const { theme } = useTheme()
   const { navigateToMessages } = useUIStore()
+  const openJobPathGuide = useJourneyStore((s) => s.openGuide)
+  const setEmployerHiringPath = useEmployerHiringPathStore((s) => s.setEmployerHiringPath)
   const [data, setData] = useState<HubData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -171,7 +173,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   // Collapsible section state — persisted in localStorage
   const SECTIONS_KEY = 'employer-hub-sections'
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
-    const defaults = { jobs: true, pipeline: true, verification: false, outreach: false }
+    const defaults = { jobs: true, pipeline: true, outreach: false }
     if (typeof window === 'undefined') return defaults
     try {
       const stored = localStorage.getItem(SECTIONS_KEY)
@@ -188,6 +190,64 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       return next
     })
   }
+
+  /** Snapshot for AvA system prompt (employer hiring context — not candidate blocks) */
+  const employerAvaContext = useMemo((): EmployerHubContext | null => {
+    if (!data) return null
+    return {
+      needsCompanySetup: Boolean(data.needsCompanySetup),
+      hasCompany: Boolean(data.company),
+      companyName: data.company?.name ?? null,
+      activeJobs: data.stats.activeJobs,
+      totalJobs: data.stats.totalJobs,
+      totalApplicants: data.stats.totalApplicants,
+      pipeline: { ...data.pipeline },
+      userRole: data.userRole ?? null,
+    }
+  }, [data])
+
+  /** Job-path sidebar + AvA drawer + `useJourneyProgress` (employer) */
+  const hiringPayload = useMemo(() => {
+    if (!data?.company) return null
+    const snapshot: EmployerProgressData = {
+      isWalletConnected: true,
+      hasCompanyProfile: true,
+      companyProfileComplete: data.company.onboardingCompleted,
+      hasPostedJob: data.stats.totalJobs > 0,
+      jobPostCount: data.stats.totalJobs,
+      applicantCount: data.stats.totalApplicants,
+      hasReviewedApplicants: data.stats.contacted > 0 || data.stats.archived > 0,
+      hasRequestedVerification: false,
+    }
+    return {
+      snapshot,
+      progress: calculateEmployerProgress(snapshot),
+      pathSummary: {
+        companyProfileComplete: snapshot.companyProfileComplete,
+        hasPostedJob: snapshot.hasPostedJob,
+      },
+      companyName: data.company.name,
+      activeJobs: data.stats.activeJobs,
+      totalApplicants: data.stats.totalApplicants,
+      pendingReview: data.stats.pendingReview,
+    }
+  }, [data])
+
+  useEffect(() => {
+    if (!hiringPayload) {
+      setEmployerHiringPath(null)
+      return
+    }
+    setEmployerHiringPath({
+      snapshot: hiringPayload.snapshot,
+      companyName: hiringPayload.companyName,
+      activeJobs: hiringPayload.activeJobs,
+      totalApplicants: hiringPayload.totalApplicants,
+      pendingReview: hiringPayload.pendingReview,
+    })
+  }, [hiringPayload, setEmployerHiringPath])
+
+  useEffect(() => () => setEmployerHiringPath(null), [setEmployerHiringPath])
 
   // Fetch hub data
   const fetchHubData = useCallback(async () => {
@@ -225,7 +285,16 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       })
       if (response.ok) {
         const result = await response.json()
-        setData(prev => prev ? { ...prev, applicants: result.applicants, pipeline: result.pipeline } : null)
+        setData(prev =>
+          prev
+            ? {
+                ...prev,
+                applicants: result.applicants,
+                pipeline: result.pipeline,
+                stats: result.stats,
+              }
+            : null,
+        )
       }
     } catch (err) {
       console.error('Error refreshing pipeline:', err)
@@ -376,6 +445,8 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-col lg:flex-row gap-8 lg:items-start">
+        <div className="flex-1 min-w-0 space-y-8">
       {/* Company Header */}
       <div className={`rounded-2xl p-6 mb-8 border shadow-lg transition-all duration-200 ${
         theme === 'dark'
@@ -466,15 +537,19 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         />
         <StatCard
           icon={<MessageSquare className="w-5 h-5" />}
-          label="Interviewing"
-          value={data.stats.interviewing}
+          label="Contacted"
+          value={data.stats.contacted}
           theme={theme}
         />
         <StatCard
-          icon={<UserCheck className="w-5 h-5" />}
-          label="Hired"
-          value={data.stats.totalHires}
-          subValue={`${data.stats.hiresThisMonth} this month`}
+          icon={<UserX className="w-5 h-5" />}
+          label="Archived"
+          value={data.stats.archived}
+          subValue={
+            data.stats.archivedThisMonth != null && data.stats.archivedThisMonth > 0
+              ? `${data.stats.archivedThisMonth} this month`
+              : 'Closed / not pursuing'
+          }
           theme={theme}
         />
       </div>
@@ -536,17 +611,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           Company
         </button>
         <button
-          onClick={() => onNavigate('reports')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
-            theme === 'dark'
-              ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-              : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-          }`}
-        >
-          <FileText className="w-4 h-4" />
-          Reports
-        </button>
-        <button
           onClick={() => onNavigate('team')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
             theme === 'dark'
@@ -559,10 +623,21 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         </button>
       </div>
 
-      {/* Ask AvA — prominent CTA for employer guidance */}
-      <div className='mb-8'>
-        <AskAvaButton label='Ask AvA — What should I do next?' />
-      </div>
+      {/* Same AvA chat shell as candidate hub; server uses employer system prompt + context */}
+      {employerAvaContext && (
+        <div className='mb-8'>
+          <AvaChatPanel
+            mode='employer'
+            walletAddress={walletAddress}
+            employerContext={employerAvaContext}
+            avaAutoWelcomeEmployerDone={data.avaAutoWelcomeEmployerDone ?? false}
+            onAvaAutoWelcomeSynced={() =>
+              setData((prev) => (prev ? { ...prev, avaAutoWelcomeEmployerDone: true } : null))
+            }
+            desktopJourneyScrollTargetId='employer-hub-job-path-sidebar'
+          />
+        </div>
+      )}
 
       {/* Job Postings — kanban by status */}
       <JobPostingsSection
@@ -651,15 +726,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       </div>
 
 
-      {/* Employment Verification Section */}
-      <div className="mb-8">
-        <EmployerVerificationSection
-          userAddress={walletAddress}
-          isCollapsed={!openSections.verification}
-          onToggle={() => toggleSection('verification')}
-        />
-      </div>
-
       {/* Candidate Outreach */}
       <div id="candidate-outreach" className="mb-8">
         <CandidateOutreach
@@ -742,6 +808,34 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         />
       </div>
 
+        </div>
+
+        <EmployerPathSidebar
+          variant='sticky'
+          id='employer-hub-job-path-sidebar'
+          onNavigate={onNavigate}
+          progressOverride={hiringPayload?.progress}
+          pathSummary={hiringPayload?.pathSummary}
+          companyName={data.company?.name ?? null}
+          activeJobs={data.stats.activeJobs}
+          totalApplicants={data.stats.totalApplicants}
+          pendingReview={data.stats.pendingReview}
+        />
+      </div>
+
+      <button
+        type='button'
+        onClick={() => openJobPathGuide()}
+        className={`lg:hidden fixed z-30 flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold shadow-lg bottom-20 right-4 ${
+          theme === 'dark'
+            ? 'bg-teal-600 text-white hover:bg-teal-500'
+            : 'bg-teal-600 text-white hover:bg-teal-700'
+        }`}
+        aria-label='Open job path'
+      >
+        <Compass className='w-4 h-4' />
+        Job path
+      </button>
     </div>
   )
 }
@@ -985,7 +1079,7 @@ function ApplicantDetailContent({
             <p className={`text-sm font-medium ${
               theme === 'dark' ? 'text-white' : 'text-gray-900'
             }`}>
-              {applicant.status}
+              {getStatusConfig(applicant.status).label}
             </p>
           </div>
           <select
@@ -1001,11 +1095,8 @@ function ApplicantDetailContent({
             }`}
           >
             <option value="submitted">New</option>
-            <option value="under_review">Reviewing</option>
-            <option value="interview">Interviewing</option>
-            <option value="offer">Offer Sent</option>
-            <option value="hired">Hired</option>
-            <option value="rejected">Rejected</option>
+            <option value="contacted">Contacted</option>
+            <option value="archived">Archived</option>
           </select>
         </div>
       </div>
@@ -1138,38 +1229,17 @@ function getStatusConfig(status: string): { label: string; icon: React.ReactNode
         icon: <Clock className="w-3 h-3" />,
         className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
       }
-    case 'viewed':
-    case 'reviewing':
+    case 'contacted':
       return {
-        label: 'Reviewing',
-        icon: <Eye className="w-3 h-3" />,
-        className: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
-      }
-    case 'interview':
-    case 'interviewing':
-      return {
-        label: 'Interviewing',
+        label: 'Contacted',
         icon: <MessageSquare className="w-3 h-3" />,
-        className: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+        className: 'bg-teal-500/10 text-teal-600 dark:text-teal-400',
       }
-    case 'offer':
-    case 'offer_sent':
+    case 'archived':
       return {
-        label: 'Offer Sent',
-        icon: <FileText className="w-3 h-3" />,
-        className: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400',
-      }
-    case 'hired':
-      return {
-        label: 'Hired',
-        icon: <UserCheck className="w-3 h-3" />,
-        className: 'bg-green-500/10 text-green-600 dark:text-green-400',
-      }
-    case 'rejected':
-      return {
-        label: 'Rejected',
+        label: 'Archived',
         icon: <UserX className="w-3 h-3" />,
-        className: 'bg-red-500/10 text-red-600 dark:text-red-400',
+        className: 'bg-gray-500/10 text-gray-600 dark:text-gray-400',
       }
     case 'completed':
       return {

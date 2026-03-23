@@ -404,7 +404,7 @@ export function calculateEmployerProgress(data: EmployerProgressData): JourneyPr
       label: 'Company Profile',
       description: 'Set up your company profile to attract talent',
       status: data.companyProfileComplete ? 'complete' : data.hasCompanyProfile ? 'in_progress' : 'pending',
-      action: !data.companyProfileComplete ? { label: 'Set Up Company', target: null } : undefined,
+      action: !data.companyProfileComplete ? { label: 'Set Up Company', target: 'company-profile' } : undefined,
     },
     {
       id: 'postjob',
@@ -438,7 +438,7 @@ export function calculateEmployerProgress(data: EmployerProgressData): JourneyPr
   if (!data.isWalletConnected) {
     nextActions.push({ label: 'Sign In', description: 'Connect your wallet to start hiring', target: 'signin', priority: 'high' })
   } else if (!data.companyProfileComplete) {
-    nextActions.push({ label: 'Complete Company Profile', description: 'Set up your company to attract talent', target: null, priority: 'high' })
+    nextActions.push({ label: 'Complete Company Profile', description: 'Set up your company to attract talent', target: 'company-profile', priority: 'high' })
   } else if (!data.hasPostedJob) {
     nextActions.push({ label: 'Post Your First Job', description: 'Start receiving applications', target: 'post-job', priority: 'high' })
   } else if (data.applicantCount > 0) {

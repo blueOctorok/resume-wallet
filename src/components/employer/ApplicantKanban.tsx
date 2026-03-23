@@ -15,12 +15,9 @@ import {
 import Avatar from '@/components/ui/Avatar'
 
 const PIPELINE_COLUMNS = [
-  { status: 'submitted',    label: 'New',          color: 'blue'   },
-  { status: 'under_review', label: 'Reviewing',    color: 'yellow' },
-  { status: 'interview',    label: 'Interviewing', color: 'purple' },
-  { status: 'offer',        label: 'Offer Sent',   color: 'teal'   },
-  { status: 'hired',        label: 'Hired',        color: 'green'  },
-  { status: 'rejected',     label: 'Rejected',     color: 'gray'   },
+  { status: 'submitted', label: 'New', color: 'blue' },
+  { status: 'contacted', label: 'Contacted', color: 'teal' },
+  { status: 'archived', label: 'Archived', color: 'gray' },
 ] as const
 
 const TALENT_POOL_TITLE = '— Talent Pool —'
@@ -157,7 +154,7 @@ export default function ApplicantKanban({
     e.stopPropagation()
     const colIndex = PIPELINE_COLUMNS.findIndex(c => c.status === applicant.status)
     const next = PIPELINE_COLUMNS[colIndex + 1]
-    if (next && next.status !== 'rejected') {
+    if (next) {
       await onStatusChange(applicant.applicationId, next.status)
     }
   }
@@ -259,7 +256,8 @@ export default function ApplicantKanban({
                   const { label: timeLabel, urgency } = getDaysInStage(applicant.appliedAt)
                   const initials   = getInitials(applicant.applicantName)
                   const colIndex   = PIPELINE_COLUMNS.findIndex(c => c.status === column.status)
-                  const canAdvance = colIndex >= 0 && colIndex < PIPELINE_COLUMNS.length - 2
+                  const canAdvance =
+                    colIndex >= 0 && colIndex < PIPELINE_COLUMNS.length - 1
 
                   return (
                     <div

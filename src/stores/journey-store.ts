@@ -12,6 +12,7 @@ import {
   calculateBlockJourney,
   calculateEmployerProgress,
 } from '@/lib/journey-progress'
+import { useEmployerHiringPathStore } from '@/stores/employer-journey-snapshot-store'
 
 /**
  * Journey Store - Manages AvA Journey Guide state
@@ -86,18 +87,22 @@ export function useJourneyProgress(): JourneyProgress {
   const hubStore = useDriverHubStore()
   const { isApplicationCompleted, currentForm } = useDotApplicationStore()
 
-  // Employer journey — all features are permanent (no composable blocks)
+  const employerHiring = useEmployerHiringPathStore((s) => s.hiring)
+
+  // Employer journey — fed by `EmployerHub` via `useEmployerHiringPathStore`
   if (userRole === 'employer') {
-    const data: EmployerProgressData = {
-      isWalletConnected,
-      hasCompanyProfile: false,
-      companyProfileComplete: false,
-      hasPostedJob: false,
-      jobPostCount: 0,
-      hasReviewedApplicants: false,
-      applicantCount: 0,
-      hasRequestedVerification: false,
-    }
+    const data: EmployerProgressData = employerHiring?.snapshot
+      ? { ...employerHiring.snapshot, isWalletConnected }
+      : {
+          isWalletConnected,
+          hasCompanyProfile: false,
+          companyProfileComplete: false,
+          hasPostedJob: false,
+          jobPostCount: 0,
+          hasReviewedApplicants: false,
+          applicantCount: 0,
+          hasRequestedVerification: false,
+        }
     return calculateEmployerProgress(data)
   }
 

@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAdminSupabaseClient } from '@/utils/supabase/admin';
 import { getUserByWallet } from '@/lib/user-by-wallet';
-
-function isNetworkError(msg: string | undefined): boolean {
-  const m = (msg ?? '').toLowerCase();
-  return msg === 'fetch failed' || m.includes('econnrefused') || m.includes('enotfound') || m.includes('etimedout') || m.includes('network');
-}
+import { isSupabaseNetworkError } from '@/lib/supabase-errors';
 
 export async function POST(request: Request) {
   try {
@@ -26,9 +22,15 @@ export async function POST(request: Request) {
       profile = await getUserByWallet(supabase, walletAddress);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      if (isNetworkError(message)) {
-        console.warn('[PROFILE API] Network error:', message);
-        return NextResponse.json({ error: 'Could not reach database' }, { status: 503 });
+      if (isSupabaseNetworkError(message)) {
+        console.warn('[PROFILE API] Supabase unreachable:', message);
+        return NextResponse.json(
+          {
+            error: 'Could not reach database',
+            hint: 'Check NEXT_PUBLIC_SUPABASE_URL, network/VPN, and that Supabase is up. On Windows, IPv6/DNS issues sometimes cause fetch failed.',
+          },
+          { status: 503 },
+        );
       }
       if (message.includes('column') && message.includes('role')) {
         return NextResponse.json(

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
-import { buildAvaSystemPrompt } from '@/lib/ava-context'
-import type { HubContext, BlockContext } from '@/lib/ava-context'
+import { buildAvaSystemPrompt, buildEmployerAvaSystemPrompt } from '@/lib/ava-context'
+import type { HubContext, BlockContext, EmployerHubContext } from '@/lib/ava-context'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getUserByWallet } from '@/lib/user-by-wallet'
 import {
@@ -13,6 +13,12 @@ import {
   AVA_UNLIMITED_WALLETS,
 } from '@/lib/ava-usage'
 import { normalizeWalletAddress } from '@/lib/user-by-wallet'
+import {
+  AVA_DUPLICATE_AUTO_WELCOME_REPLY,
+  type AvaAutoWelcomeMode,
+  hasCompletedAvaAutoWelcome,
+  markAvaAutoWelcomeComplete,
+} from '@/lib/ava-auto-welcome'
 
 const MODEL_SONNET = 'claude-sonnet-4-6'
 const MODEL_HAIKU = 'claude-haiku-4-5-20250414'
@@ -49,11 +55,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { message, hubContext, blockContext } = body as {
+    const { message, hubContext, blockContext, audience, employerContext } = body as {
       message: string
       hubContext?: HubContext
       blockContext?: BlockContext
+      audience?: 'candidate' | 'employer'
+      employerContext?: EmployerHubContext
     }
+    const rawAutoWelcome = (body as { autoWelcome?: unknown }).autoWelcome
+    const autoWelcome: AvaAutoWelcomeMode | undefined =
+      rawAutoWelcome === 'candidate' || rawAutoWelcome === 'employer' ? rawAutoWelcome : undefined
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return NextResponse.json(
@@ -82,8 +93,67 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const isEmployerChat = audience === 'employer'
+    if (isEmployerChat) {
+      if (user.role !== 'employer') {
+        return NextResponse.json(
+          { error: 'Employer AvA chat is only available for employer accounts.' },
+          { status: 403 }
+        )
+      }
+      if (!employerContext || typeof employerContext !== 'object') {
+        return NextResponse.json(
+          { error: 'Missing or invalid employerContext for employer chat.' },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (autoWelcome !== undefined) {
+      const expected: AvaAutoWelcomeMode = isEmployerChat ? 'employer' : 'candidate'
+      if (autoWelcome !== expected) {
+        return NextResponse.json(
+          { error: 'autoWelcome does not match chat audience' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Whitelisted wallets skip usage limits entirely (always Sonnet)
     const isUnlimited = AVA_UNLIMITED_WALLETS.has(normalizeWalletAddress(walletAddress))
+
+    // Auto-welcome idempotency (DB) — no Anthropic call, no usage charge
+    if (autoWelcome) {
+      const alreadyDone = await hasCompletedAvaAutoWelcome(supabase, user.id, autoWelcome)
+      if (alreadyDone) {
+        if (isUnlimited) {
+          return NextResponse.json({
+            success: true,
+            reply: AVA_DUPLICATE_AUTO_WELCOME_REPLY,
+            duplicateAutoWelcome: true,
+            usage: {
+              dailyRemaining: 999,
+              credits: 0,
+              totalMessages: 0,
+              model: 'sonnet',
+            },
+          })
+        }
+        const usageRow = await getOrCreateUsage(supabase, user.id)
+        const dupCheck = checkUsage(usageRow)
+        return NextResponse.json({
+          success: true,
+          reply: AVA_DUPLICATE_AUTO_WELCOME_REPLY,
+          duplicateAutoWelcome: true,
+          usage: {
+            dailyRemaining: dupCheck.dailyRemaining,
+            credits: dupCheck.credits,
+            totalMessages: dupCheck.totalMessages,
+            model: dupCheck.allowed ? dupCheck.model : null,
+          },
+        })
+      }
+    }
 
     let usageCheck: ReturnType<typeof checkUsage> | null = null
 
@@ -92,6 +162,10 @@ export async function POST(request: NextRequest) {
       usageCheck = checkUsage(usage)
 
       if (!usageCheck.allowed) {
+        // Stop auto-welcome from retrying on every refresh while at 0 quota (same as prior localStorage behavior)
+        if (autoWelcome) {
+          await markAvaAutoWelcomeComplete(supabase, user.id, autoWelcome)
+        }
         return NextResponse.json(
           {
             error: 'out_of_credits',
@@ -113,7 +187,9 @@ export async function POST(request: NextRequest) {
       ? MODEL_SONNET
       : usageCheck!.model === 'sonnet' ? MODEL_SONNET : MODEL_HAIKU
 
-    const systemPrompt = buildAvaSystemPrompt(hubContext, blockContext)
+    const systemPrompt = isEmployerChat
+      ? buildEmployerAvaSystemPrompt(employerContext!)
+      : buildAvaSystemPrompt(hubContext, blockContext)
 
     const response = await anthropic.messages.create({
       model,
@@ -133,6 +209,10 @@ export async function POST(request: NextRequest) {
       } else {
         await incrementDailyUsage(supabase, user.id)
       }
+    }
+
+    if (autoWelcome) {
+      await markAvaAutoWelcomeComplete(supabase, user.id, autoWelcome)
     }
 
     // Return usage info (unlimited wallets show effectively infinite)

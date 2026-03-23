@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 
+const APPLICATION_PIPELINE_STATUSES = ['submitted', 'contacted', 'archived'] as const
+
 /**
  * GET /api/employer/applicants
  *
@@ -273,21 +275,12 @@ export async function GET(request: NextRequest) {
       .eq('company_id', companyId)
       .order('created_at', { ascending: false })
 
-    // Stats
+    // Stats — simplified pipeline (see migration 053)
     const stats = {
       total: applicants.length,
       new: applicants.filter((a) => a.status === 'submitted').length,
-      reviewing: applicants.filter((a) =>
-        ['reviewing', 'viewed'].includes(a.status),
-      ).length,
-      interviewing: applicants.filter((a) =>
-        ['interview', 'interviewing'].includes(a.status),
-      ).length,
-      offerSent: applicants.filter((a) =>
-        ['offer_sent', 'offer'].includes(a.status),
-      ).length,
-      hired: applicants.filter((a) => a.status === 'hired').length,
-      rejected: applicants.filter((a) => a.status === 'rejected').length,
+      contacted: applicants.filter((a) => a.status === 'contacted').length,
+      archived: applicants.filter((a) => a.status === 'archived').length,
     }
 
     return NextResponse.json({
@@ -404,8 +397,22 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
+    if (
+      status &&
+      !APPLICATION_PIPELINE_STATUSES.includes(
+        status as (typeof APPLICATION_PIPELINE_STATUSES)[number],
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error: `status must be one of: ${APPLICATION_PIPELINE_STATUSES.join(', ')}`,
+        },
+        { status: 400 },
+      )
+    }
+
     // Update application
-    const updateData: any = {}
+    const updateData: Record<string, unknown> = {}
     if (status) {
       updateData.status = status
       updateData.last_viewed_at = new Date().toISOString()

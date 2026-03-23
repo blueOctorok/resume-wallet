@@ -6,12 +6,12 @@ import {
   ExternalLink,
   Eye,
   Clock,
-  CheckCircle,
   XCircle,
   FileText,
   Calendar,
   MapPin,
   DollarSign,
+  MessageSquare,
 } from 'lucide-react'
 import LoadingScreen from './LoadingScreen'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -87,14 +87,10 @@ export default function MyApplications({
     switch (status) {
       case 'submitted':
         return <Clock className='w-5 h-5 text-blue-500' />
-      case 'viewed':
-        return <Eye className='w-5 h-5 text-purple-500' />
-      case 'interviewing':
-        return <Briefcase className='w-5 h-5 text-orange-500' />
-      case 'hired':
-        return <CheckCircle className='w-5 h-5 text-green-500' />
-      case 'rejected':
-        return <XCircle className='w-5 h-5 text-red-500' />
+      case 'contacted':
+        return <MessageSquare className='w-5 h-5 text-teal-500' />
+      case 'archived':
+        return <XCircle className='w-5 h-5 text-slate-500' />
       default:
         return <Clock className='w-5 h-5 text-gray-500' />
     }
@@ -104,17 +100,22 @@ export default function MyApplications({
     switch (status) {
       case 'submitted':
         return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
-      case 'viewed':
-        return 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
-      case 'interviewing':
-        return 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800'
-      case 'hired':
-        return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
-      case 'rejected':
-        return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
+      case 'contacted':
+        return 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300 border-teal-200 dark:border-teal-800'
+      case 'archived':
+        return 'bg-slate-100 dark:bg-slate-900/30 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
       default:
         return 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-800'
     }
+  }
+
+  const pipelineStatusLabel = (status: string) => {
+    const map: Record<string, string> = {
+      submitted: 'New',
+      contacted: 'Contacted',
+      archived: 'Archived',
+    }
+    return map[status] ?? status.charAt(0).toUpperCase() + status.slice(1)
   }
 
   const formatDate = (dateString: string) => {
@@ -248,7 +249,7 @@ export default function MyApplications({
 
                 <div className='flex items-center gap-3 flex-wrap'>
                   <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold border ${getStatusColor(app.status)}`}>
-                    {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                    {pipelineStatusLabel(app.status)}
                   </span>
 
                   <button

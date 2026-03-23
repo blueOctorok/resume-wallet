@@ -20,6 +20,7 @@ import {
 import BackToHubButton from '@/components/ui/BackToHubButton'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import CareerCardModal from './CareerCardModal'
+import { BLOCK_CATEGORIES, getBlocksByCategory } from '@/lib/block-registry'
 
 // ============================================================
 // TYPES
@@ -68,6 +69,10 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
     state: '',
     minExperience: '',
     search: '',
+    /** When set, user can pick block types from that category (registry-driven). */
+    careerCategoryId: '',
+    /** Hub block_type ids — API requires candidate to have all selected blocks. */
+    blockTypes: [] as string[],
   })
   const [showFilters, setShowFilters] = useState(true)
   
@@ -155,6 +160,9 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
       if (filters.state) params.append('state', filters.state)
       if (filters.minExperience) params.append('minExperience', filters.minExperience)
       if (filters.search) params.append('search', filters.search)
+      if (filters.blockTypes.length > 0) {
+        params.append('blockTypes', filters.blockTypes.join(','))
+      }
       params.append('limit', String(LIMIT))
       params.append('offset', String(currentOffset))
 
@@ -199,13 +207,14 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
       state: '',
       minExperience: '',
       search: '',
+      careerCategoryId: '',
+      blockTypes: [],
     })
   }
 
-  const activeFilterCount = [
-    filters.state,
-    filters.minExperience,
-  ].filter(Boolean).length
+  const activeFilterCount =
+    [filters.state, filters.minExperience].filter(Boolean).length +
+    filters.blockTypes.length
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -324,6 +333,69 @@ export default function TalentSearchPage({ walletAddress, onBack }: TalentSearch
                     : 'bg-white border-gray-300 text-gray-900'
                 } focus:outline-none focus:ring-2 focus:ring-teal-500/50`}
               />
+            </div>
+
+            {/* Career focus + blocks (registry-driven — scales when new categories are added) */}
+            <div className="md:col-span-2 lg:col-span-3">
+              <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Career focus
+              </label>
+              <select
+                value={filters.careerCategoryId}
+                onChange={(e) =>
+                  setFilters({
+                    ...filters,
+                    careerCategoryId: e.target.value,
+                    blockTypes: [],
+                  })
+                }
+                className={`w-full max-w-md px-4 py-2.5 rounded-xl border ${
+                  theme === 'dark'
+                    ? 'bg-gray-900 border-gray-700 text-white'
+                    : 'bg-white border-gray-300 text-gray-900'
+                } focus:outline-none focus:ring-2 focus:ring-teal-500/50`}
+              >
+                <option value="">Any (no block filter)</option>
+                {BLOCK_CATEGORIES.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+              {filters.careerCategoryId ? (
+                <p className={`text-xs mt-2 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                  Candidates must have <strong>all</strong> checked blocks installed in their hub.
+                </p>
+              ) : null}
+              {filters.careerCategoryId ? (
+                <div className="flex flex-wrap gap-3 mt-3">
+                  {getBlocksByCategory(filters.careerCategoryId).map((b) => (
+                    <label
+                      key={b.id}
+                      className={`flex items-center gap-2 text-sm cursor-pointer px-3 py-2 rounded-lg border ${
+                        theme === 'dark'
+                          ? 'border-gray-600 bg-gray-900/80'
+                          : 'border-gray-200 bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-400"
+                        checked={filters.blockTypes.includes(b.id)}
+                        onChange={() => {
+                          setFilters((f) => ({
+                            ...f,
+                            blockTypes: f.blockTypes.includes(b.id)
+                              ? f.blockTypes.filter((x) => x !== b.id)
+                              : [...f.blockTypes, b.id],
+                          }))
+                        }}
+                      />
+                      {b.label}
+                    </label>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

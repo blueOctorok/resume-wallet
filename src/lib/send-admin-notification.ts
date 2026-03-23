@@ -30,7 +30,7 @@ export interface ApplicationStatusNotificationParams {
   candidateName: string
   companyName: string
   jobTitle: string
-  newStatus: 'under_review' | 'interview' | 'offer' | 'hired' | 'rejected'
+  newStatus: 'contacted'
 }
 
 // ─── Admin: New Company ───────────────────────────────────────────────────────
@@ -190,35 +190,11 @@ const STATUS_CONFIG: Record<string, {
   body: string
   accentColor: string
 }> = {
-  under_review: {
-    subject: 'Your application is being reviewed',
-    heading: 'Application Under Review',
-    body: "Your application is now being reviewed by the hiring team. We'll keep you updated as things progress.",
-    accentColor: '#d97706',
-  },
-  interview: {
-    subject: 'Interview requested',
-    heading: 'Interview Requested 🎉',
-    body: "Great news — the employer would like to schedule an interview with you. They'll be in touch with more details soon.",
-    accentColor: '#7c3aed',
-  },
-  offer: {
-    subject: 'You have a job offer',
-    heading: 'Job Offer Extended 🎉',
-    body: 'Congratulations! The employer has extended a job offer to you. Log in to view the details and next steps.',
+  contacted: {
+    subject: 'Employer reached out',
+    heading: "They've marked you as contacted",
+    body: "The employer has moved your application forward and marked you as contacted. Check StormChain for messages or follow up in your usual channels.",
     accentColor: '#0d9488',
-  },
-  hired: {
-    subject: 'Congratulations on your new job!',
-    heading: "You're Hired! 🎉",
-    body: "Congratulations! You've been officially hired. The employer will be in touch with onboarding details.",
-    accentColor: '#16a34a',
-  },
-  rejected: {
-    subject: 'An update on your application',
-    heading: 'Application Status Update',
-    body: "Thank you for your interest in this position. The employer has decided to move forward with other candidates at this time. Don't be discouraged — keep building your profile and applying.",
-    accentColor: '#64748b',
   },
 }
 

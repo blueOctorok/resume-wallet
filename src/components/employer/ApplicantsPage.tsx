@@ -5,11 +5,9 @@ import { useTheme } from '@/contexts/ThemeContext'
 import {
   Users,
   Search,
-  Eye,
   FileText,
   Clock,
   MessageSquare,
-  UserCheck,
   UserX,
   Calendar,
   X,
@@ -63,11 +61,8 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
   const [stats, setStats] = useState({
     total: 0,
     new: 0,
-    reviewing: 0,
-    interviewing: 0,
-    offerSent: 0,
-    hired: 0,
-    rejected: 0,
+    contacted: 0,
+    archived: 0,
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -117,13 +112,13 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
   const updateStatus = async (applicationId: string, newStatus: string) => {
     try {
       setUpdatingStatus(applicationId)
-      const response = await fetch('/api/employer/applicants', {
+      const response = await fetch(`/api/employer/applications/${applicationId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'x-wallet-address': walletAddress,
         },
-        body: JSON.stringify({ applicationId, status: newStatus }),
+        body: JSON.stringify({ status: newStatus }),
       })
 
       if (!response.ok) {
@@ -181,14 +176,12 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+      {/* Stats Cards — simplified pipeline (submitted / contacted / archived) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <StatCard label="Total" value={stats.total} theme={theme} />
         <StatCard label="New" value={stats.new} theme={theme} highlight />
-        <StatCard label="Reviewing" value={stats.reviewing} theme={theme} />
-        <StatCard label="Interviewing" value={stats.interviewing} theme={theme} />
-        <StatCard label="Offer Sent" value={stats.offerSent} theme={theme} />
-        <StatCard label="Hired" value={stats.hired} theme={theme} success />
+        <StatCard label="Contacted" value={stats.contacted} theme={theme} />
+        <StatCard label="Archived" value={stats.archived} theme={theme} />
       </div>
 
       {/* Filters */}
@@ -252,12 +245,8 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
           >
             <option value="all">All Status</option>
             <option value="submitted">New</option>
-            <option value="viewed">Viewed</option>
-            <option value="reviewing">Reviewing</option>
-            <option value="interviewing">Interviewing</option>
-            <option value="offer_sent">Offer Sent</option>
-            <option value="hired">Hired</option>
-            <option value="rejected">Rejected</option>
+            <option value="contacted">Contacted</option>
+            <option value="archived">Archived</option>
           </select>
         </div>
       </div>
@@ -459,12 +448,8 @@ function ApplicantDetailModal({
 
   const statusOptions = [
     { value: 'submitted', label: 'New' },
-    { value: 'viewed', label: 'Viewed' },
-    { value: 'reviewing', label: 'Reviewing' },
-    { value: 'interviewing', label: 'Interviewing' },
-    { value: 'offer_sent', label: 'Offer Sent' },
-    { value: 'hired', label: 'Hired' },
-    { value: 'rejected', label: 'Rejected' },
+    { value: 'contacted', label: 'Contacted' },
+    { value: 'archived', label: 'Archived' },
   ]
 
   return (
@@ -666,38 +651,17 @@ function getStatusConfig(status: string) {
         icon: <Clock className="w-3 h-3" />,
         className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
       }
-    case 'viewed':
-    case 'reviewing':
+    case 'contacted':
       return {
-        label: 'Reviewing',
-        icon: <Eye className="w-3 h-3" />,
-        className: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
-      }
-    case 'interview':
-    case 'interviewing':
-      return {
-        label: 'Interviewing',
+        label: 'Contacted',
         icon: <MessageSquare className="w-3 h-3" />,
-        className: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+        className: 'bg-teal-500/10 text-teal-600 dark:text-teal-400',
       }
-    case 'offer':
-    case 'offer_sent':
+    case 'archived':
       return {
-        label: 'Offer Sent',
-        icon: <FileText className="w-3 h-3" />,
-        className: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400',
-      }
-    case 'hired':
-      return {
-        label: 'Hired',
-        icon: <UserCheck className="w-3 h-3" />,
-        className: 'bg-green-500/10 text-green-600 dark:text-green-400',
-      }
-    case 'rejected':
-      return {
-        label: 'Rejected',
+        label: 'Archived',
         icon: <UserX className="w-3 h-3" />,
-        className: 'bg-red-500/10 text-red-600 dark:text-red-400',
+        className: 'bg-gray-500/10 text-gray-600 dark:text-gray-400',
       }
     default:
       return {

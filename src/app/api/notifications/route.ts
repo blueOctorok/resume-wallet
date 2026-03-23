@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { isSupabaseNetworkError } from '@/lib/supabase-errors'
 
 /**
  * GET /api/notifications
@@ -19,14 +20,25 @@ export async function GET(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    const { data: user } = await supabase
+    const { data: user, error: userError } = await supabase
       .from('users')
       .select('id')
       .ilike('wallet_address', walletAddress)
-      .single()
+      .maybeSingle()
+
+    if (userError) {
+      if (isSupabaseNetworkError(userError.message)) {
+        return NextResponse.json(
+          { error: 'Database unavailable', notifications: [], unreadCount: 0 },
+          { status: 503 },
+        )
+      }
+      console.error('[NOTIFICATIONS] User lookup error:', userError)
+      return NextResponse.json({ error: 'Failed to resolve user' }, { status: 500 })
+    }
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      return NextResponse.json({ notifications: [], unreadCount: 0 })
     }
 
     const { data: notifications, error } = await supabase
@@ -39,6 +51,12 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('[NOTIFICATIONS] Fetch error:', error)
+      if (isSupabaseNetworkError(error.message)) {
+        return NextResponse.json(
+          { error: 'Database unavailable', notifications: [], unreadCount: 0 },
+          { status: 503 },
+        )
+      }
       return NextResponse.json({ error: 'Failed to fetch notifications' }, { status: 500 })
     }
 
@@ -66,14 +84,22 @@ export async function PATCH(request: NextRequest) {
 
     const supabase = await getAdminSupabaseClient()
 
-    const { data: user } = await supabase
+    const { data: user, error: userError } = await supabase
       .from('users')
       .select('id')
       .ilike('wallet_address', walletAddress)
-      .single()
+      .maybeSingle()
+
+    if (userError) {
+      if (isSupabaseNetworkError(userError.message)) {
+        return NextResponse.json({ error: 'Database unavailable' }, { status: 503 })
+      }
+      console.error('[NOTIFICATIONS] User lookup error:', userError)
+      return NextResponse.json({ error: 'Failed to resolve user' }, { status: 500 })
+    }
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      return NextResponse.json({ ok: true, message: 'No user record yet' })
     }
 
     const { error } = await supabase

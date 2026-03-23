@@ -57,6 +57,8 @@ interface HubBlocksState {
   installedBlocks: InstalledBlock[]
   onboarding: HubOnboarding | null
   userProfile: HubUserProfile | null
+  /** Synced from GET /api/hub/blocks — DB `users.ava_auto_welcome_candidate_at` */
+  avaAutoWelcomeCandidateDone: boolean
 
   isLoading: boolean
   isPickerOpen: boolean
@@ -93,6 +95,9 @@ interface HubBlocksActions {
   openAvAContextModal: () => void
   closeAvAContextModal: () => void
 
+  /** After AvA auto-welcome completes server-side (keeps UI in sync without full refetch) */
+  setAvaAutoWelcomeCandidateDone: (done: boolean) => void
+
   // Profile
   updateAvatarUrl: (url: string) => void
   updateUserProfile: (patch: Partial<HubUserProfile>) => void
@@ -111,6 +116,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
   installedBlocks: [],
   onboarding: null,
   userProfile: null,
+  avaAutoWelcomeCandidateDone: false,
   isLoading: false,
   isPickerOpen: false,
   isEditMode: false,
@@ -154,6 +160,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
         onboarding: normalizeOnboarding(data.onboarding ?? null),
         userProfile,
         needsOnboarding: !data.onboarding,
+        avaAutoWelcomeCandidateDone: Boolean(data.avaAutoWelcomeCandidateDone),
         isLoading: false,
       })
 
@@ -294,6 +301,8 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
   openAvAContextModal: () => set({ isAvAContextModalOpen: true }),
   closeAvAContextModal: () => set({ isAvAContextModalOpen: false }),
 
+  setAvaAutoWelcomeCandidateDone: (done) => set({ avaAutoWelcomeCandidateDone: done }),
+
   // ── Picker ──────────────────────────────────────────────────────────────────
   // ── Profile ─────────────────────────────────────────────────────────────────
   updateAvatarUrl: (url) =>
@@ -335,6 +344,9 @@ export const useNeedsOnboarding = () =>
 
 export const useHubOnboarding = () =>
   useHubBlocksStore((s) => s.onboarding)
+
+export const useAvaAutoWelcomeCandidateDone = () =>
+  useHubBlocksStore((s) => s.avaAutoWelcomeCandidateDone)
 
 /**
  * Returns block definitions the user has NOT yet installed.

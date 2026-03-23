@@ -127,7 +127,7 @@ interface HubStats {
   totalJobApplications: number
   pendingApplications: number
   viewedApplications: number
-  interviewingApplications: number
+  contactedApplications: number
   totalSpentUSDC: number
   totalTransactions: number
 }
@@ -972,7 +972,7 @@ export default function DriverHub({
       totalJobApplications: 0,
       pendingApplications: 0,
       viewedApplications: 0,
-      interviewingApplications: 0,
+      contactedApplications: 0,
       totalSpentUSDC: 0,
       totalTransactions: 0,
     },
@@ -1179,10 +1179,10 @@ export default function DriverHub({
           label='Applications'
           value={data.stats.totalJobApplications}
           subValue={
-            data.stats.interviewingApplications > 0
-              ? `${data.stats.interviewingApplications} interviewing`
+            data.stats.contactedApplications > 0
+              ? `${data.stats.contactedApplications} employer contacted`
               : data.stats.viewedApplications > 0
-                ? `${data.stats.viewedApplications} viewed`
+                ? `${data.stats.viewedApplications} profile views`
                 : undefined
           }
           theme={theme}

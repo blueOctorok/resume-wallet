@@ -1,5 +1,24 @@
 # StormChain - Complete Project Roadmap
 
+## 🏢 **Employer Side Simplification** (March 2026 — Phase 1 Done)
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| Scope decision doc | ✅ Done | `docs/EMPLOYER_PLAN.md` |
+| Employer cursor rule | ✅ Done | `.cursor/rules/employer-architecture.mdc` |
+| Migration 053 | ✅ Done | `applications.status` → submitted / contacted / archived |
+| Pipeline → 3 columns | ✅ Done | Kanban, hub, APIs, My Applications, admin tab, Applicants page |
+| Remove FindDriversPage | ✅ Done | Shell + types; `TalentSearchPage` + `blockTypes` API filter |
+| Remove ReportsPage | ✅ Done | Reports + analytics API + components removed |
+| Remove dead code | ✅ Done | `ApplicationInvites.tsx`, driver-data, applications export routes (invites API kept for CandidateOutreach) |
+| Remove EmployerVerificationSection | ✅ Done | Removed from `EmployerHub` |
+| Talent Search: registry filters | ✅ Done | Category + `getBlocksByCategory` checkboxes → `blockTypes` param |
+| Polish job posting flow | 🔲 Todo | UX pass |
+| Subscription system | 🔲 Todo | Free tier limits + Pro USDC |
+| AvA for employers | ✅ Done | Shared `AvaChatPanel` on employer hub; `buildEmployerAvaSystemPrompt` + `employerContext`; `/api/ai/chat` `audience: employer` + role gate |
+| Sponsored job posts | 🔲 Future | Visibility boost |
+| Candidate match scoring | 🔲 Future | AvA + blocks |
+
 ## 💬 **AvA Chat Monetization** (March 2026 — Complete)
 
 | Feature | Status | Description |
@@ -72,6 +91,7 @@ The career card becomes a pure read-only projection of the hub.
 | iPhone Home Screen Hub | ✅ Done | 2-col tile grid with jiggle-mode editing, long-press, status badges |
 | Premium Glass Tiles | ✅ Done | Glassmorphic tiles with per-block colors, illustrations, Atropos 3D tilt |
 | Hub layout pass | ✅ Done | Career Card banner + on-chain verification bar, removed old stats |
+| Hub career / job path | ✅ Done | `PathGuidance` + `CareerPathSteps` (“Next steps”); candidate **career path** + employer **job path** rails; `MiniEmployerHiringCard`; `useEmployerHiringPathStore`; AvA drawer role-aware; mobile FABs |
 | Employer Composable Hub Phase 1 | ✅ Done | Hybrid employer hub: permanent core + composable industry blocks, generic company setup |
 | Employer Composable Hub Phase 2 | ✅ Done | Role-agnostic polish: data-driven driver detection, 3-tier role badges, block-conditional quick actions, legacy cleanup |
 | Generic Block-Based Outreach | ✅ Done | Outreach reworked from hardcoded invite types to block-aware system with deep-linking |

@@ -1,0 +1,171 @@
+# Employer Architecture Rules
+
+## What the Employer Side IS
+
+A talent discovery platform. Employers find verified candidates and make first contact. Period.
+
+## What the Employer Side IS NOT
+
+- NOT an ATS (no interview scheduling, no offer letters, no onboarding workflows)
+- NOT an HRIS (no payroll, benefits, compliance tracking)
+- NOT a background check company (MVR ordering is the ONLY exception)
+- NOT a reporting/analytics platform (V1 has zero analytics)
+
+If a feature belongs after the employer decides to hire someone, it does NOT belong in this app.
+
+## Banned Patterns
+
+### Do NOT add pipeline complexity
+
+The candidate pipeline has exactly **3 statuses**:
+
+| Status | DB value | Meaning |
+|--------|----------|---------|
+| New | `submitted` | Just applied or saved from talent search |
+| Contacted | `contacted` | Employer has reached out |
+| Archived | `archived` | Not interested / passed / already hired elsewhere |
+
+**NEVER** add statuses like "Reviewing", "Interviewing", "Offer Sent", "Hired", or "Rejected". Those are ATS features. We are not an ATS.
+
+```typescript
+// ✅ ALLOWED — the only 3 pipeline columns
+const PIPELINE_COLUMNS = [
+  { status: 'submitted',  label: 'New',       color: 'blue'  },
+  { status: 'contacted',  label: 'Contacted',  color: 'teal'  },
+  { status: 'archived',   label: 'Archived',   color: 'gray'  },
+]
+
+// ❌ BANNED — ATS territory
+{ status: 'interview',   label: 'Interviewing' }
+{ status: 'offer',       label: 'Offer Sent'   }
+{ status: 'hired',       label: 'Hired'        }
+{ status: 'under_review', label: 'Reviewing'   }
+```
+
+### Do NOT create career-specific search pages
+
+There is ONE talent search page: `TalentSearchPage.tsx`. It uses block-type filters that work across ALL career categories.
+
+```typescript
+// ❌ BANNED — career-specific discovery pages
+'find-drivers'     // REMOVED — do not recreate
+'find-developers'  // do not create
+'find-nurses'      // do not create
+
+// ✅ CORRECT — one search with dynamic filters
+'talent-search'    // filters adapt to block registry categories
+```
+
+Block-type filters in Talent Search must be **derived from the block registry**, not hardcoded to specific careers. When a new career category is added (nursing, logistics, etc.), talent search filters should appear automatically.
+
+### Do NOT build employer-side reports or analytics (V1)
+
+The `reports` route and `ReportsPage.tsx` are being removed. Do not recreate them or add analytics dashboards, compliance reports, or hiring metrics.
+
+If analytics are added post-launch, they must be limited to: views per job, contacts made, time-to-first-contact. Nothing more.
+
+### Do NOT duplicate candidate data management
+
+Employers read candidate data through career cards. They do NOT manage candidate data.
+
+```typescript
+// ✅ ALLOWED — read-only views of candidate data
+GET /api/employer/talent/[userId]          // view career card
+GET /api/employer/talent/[userId]/dot-app  // view DOT app
+
+// ✅ ALLOWED — employer's own private data about candidates
+POST /api/employer/candidate-data          // employer's private notes
+
+// ❌ BANNED — employers editing candidate data
+PUT /api/employer/talent/[userId]/profile  // never
+PATCH /api/candidate/...                   // from employer context, never
+```
+
+## EmployerShell Routing
+
+These are the ONLY routes EmployerShell should handle:
+
+| Route | Component | Purpose |
+|-------|-----------|---------|
+| `null` (default) | `EmployerHub` | Main dashboard |
+| `company-setup` | `CompanyOnboarding` | First-time company setup (blocking) |
+| `company-profile` | `CompanyOnboarding` | Edit company profile |
+| `talent-search` | `TalentSearchPage` | Single discovery page for ALL career categories |
+| `post-job` | `JobPostingForm` | Create/edit job posting |
+| `applicants` | `ApplicantsPage` | Full-page view of candidate pool |
+| `team` | `TeamManagement` | Manage team members |
+| `messages` | `MessageInbox` | Direct messaging |
+| `stormchain` | `StormChainView` | STORM token info |
+
+Any route not in this table requires explicit approval before adding.
+
+## Dead Code — Do NOT Resurrect
+
+These files/routes have been intentionally removed or marked dead:
+
+| What | Why |
+|------|-----|
+| `FindDriversPage.tsx` | Career-specific search page. Use TalentSearchPage instead. |
+| `ReportsPage.tsx` / `AnalyticsDashboard.tsx` | Over-scoped for V1. |
+| `ApplicationInvites.tsx` | Never wired up. `CandidateOutreach.tsx` replaced it. The invite API routes (`/api/employer/invites`) are still live — CandidateOutreach uses them. |
+| `/api/employer/hub/driver-data` | Removed — no client calls. |
+| `/api/employer/applications/[id]/export` | Removed — no UI. |
+| `/api/employer/reports` | Removed with Reports page. |
+| `/api/employer/analytics` | Removed with analytics dashboard. |
+| `/api/employer/drivers/search` | Removed — use `/api/employer/talent/search` + `blockTypes`. |
+| `EmployerVerificationSection` | Scope creep. |
+
+## Revenue Architecture
+
+### Subscription Tiers
+
+| Tier | Limits |
+|------|--------|
+| **Free** | 1 active job, blurred talent details, 5 messages/month |
+| **Pro** (~$49/mo USDC) | Unlimited jobs, full search, unlimited messaging, AvA, team |
+| **Enterprise** | Custom |
+
+### Per-Transaction
+
+| Action | Model |
+|--------|-------|
+| MVR order | Per-order USDC (existing) |
+| Sponsored job post | Future — pay to boost visibility |
+
+When implementing subscription gates, use the same USDC payment pattern as the candidate-side AvA credits. Subscription state should be stored per-company (not per-user), since team members share the subscription.
+
+## Talent Search Filters
+
+Filters must be registry-driven, not hardcoded:
+
+```typescript
+// ✅ CORRECT — derive from block registry
+import { BLOCK_CATEGORIES, getBlocksByCategory } from '@/lib/block-registry'
+
+const filterOptions = BLOCK_CATEGORIES.map(cat => ({
+  categoryId: cat.id,
+  label: cat.label,
+  blockTypes: getBlocksByCategory(cat.id).map(b => b.id),
+}))
+
+// ❌ BANNED — hardcoded career filters
+const filters = [
+  { label: 'CDL', value: 'driver-cdl-credentials' },
+  { label: 'GitHub', value: 'developer-github' },
+]
+```
+
+## Adding Employer Features
+
+Before adding ANY new employer feature, check:
+
+1. Does this belong BEFORE or AFTER the hiring decision?
+   - Before → might belong here
+   - After → does NOT belong here
+2. Does Indeed offer this?
+   - Yes → probably in scope, but keep it simpler
+   - No → probably out of scope
+3. Does this add a new pipeline status?
+   - If yes → STOP. We have 3 statuses. That's final.
+4. Is this career-specific?
+   - If yes → make it filter-driven from the block registry, not a separate page

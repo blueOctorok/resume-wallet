@@ -5,8 +5,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
  * GET /api/employer/hub
  *
  * Role-agnostic employer hub data. Returns universal applicant info only.
- * Role-specific data (CDL, MVR, DOT) is fetched by separate block-conditional
- * endpoints (e.g. /api/employer/hub/driver-data).
+ * Role-specific data (CDL, MVR, DOT) is read from block tables when needed in the UI.
  *
  * Headers:
  *   x-wallet-address: User's wallet address
@@ -34,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, created_at, role')
+      .select('id, created_at, role, ava_auto_welcome_employer_at')
       .ilike('wallet_address', walletAddress)
       .single()
 
@@ -42,6 +41,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: true,
         isNewUser: true,
+        avaAutoWelcomeEmployerDone: false,
         company: null,
         jobPostings: [],
         applicants: [],
@@ -49,17 +49,14 @@ export async function GET(request: NextRequest) {
           activeJobs: 0,
           totalApplicants: 0,
           pendingReview: 0,
-          interviewing: 0,
-          hiresThisMonth: 0,
+          contacted: 0,
+          archived: 0,
         },
         pipeline: {
           new: 0,
-          reviewing: 0,
-          interviewing: 0,
-          offerSent: 0,
-          hired: 0,
-          rejected: 0,
-        }
+          contacted: 0,
+          archived: 0,
+        },
       })
     }
 
@@ -95,6 +92,7 @@ export async function GET(request: NextRequest) {
         success: true,
         isNewUser: false,
         needsCompanySetup: true,
+        avaAutoWelcomeEmployerDone: Boolean(user.ava_auto_welcome_employer_at),
         company: null,
         userRole: null,
         jobPostings: [],
@@ -103,16 +101,13 @@ export async function GET(request: NextRequest) {
           activeJobs: 0,
           totalApplicants: 0,
           pendingReview: 0,
-          interviewing: 0,
-          hiresThisMonth: 0,
+          contacted: 0,
+          archived: 0,
         },
         pipeline: {
           new: 0,
-          reviewing: 0,
-          interviewing: 0,
-          offerSent: 0,
-          hired: 0,
-          rejected: 0,
+          contacted: 0,
+          archived: 0,
         },
         memberSince: user.created_at,
       })
@@ -217,21 +212,18 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Pipeline stats
+    // Pipeline stats — submitted / contacted / archived only (migration 053)
     const pipeline = {
       new: applications.filter(a => a.status === 'submitted').length,
-      reviewing: applications.filter(a => a.status === 'reviewing' || a.status === 'viewed').length,
-      interviewing: applications.filter(a => ['interview', 'interviewing'].includes(a.status)).length,
-      offerSent: applications.filter(a => a.status === 'offer_sent' || a.status === 'offer').length,
-      hired: applications.filter(a => a.status === 'hired').length,
-      rejected: applications.filter(a => a.status === 'rejected').length,
+      contacted: applications.filter(a => a.status === 'contacted').length,
+      archived: applications.filter(a => a.status === 'archived').length,
     }
 
     const thisMonth = new Date()
     thisMonth.setDate(1)
     thisMonth.setHours(0, 0, 0, 0)
-    const hiresThisMonth = applications.filter(a =>
-      a.status === 'hired' && new Date(a.applied_at) >= thisMonth
+    const archivedThisMonth = applications.filter(a =>
+      a.status === 'archived' && new Date(a.applied_at) >= thisMonth
     ).length
 
     const stats = {
@@ -239,15 +231,16 @@ export async function GET(request: NextRequest) {
       totalJobs: jobPostings.length,
       totalApplicants: applicants.length,
       pendingReview: pipeline.new,
-      interviewing: pipeline.interviewing,
-      hiresThisMonth,
-      totalHires: pipeline.hired,
+      contacted: pipeline.contacted,
+      archived: pipeline.archived,
+      archivedThisMonth,
     }
 
     return NextResponse.json({
       success: true,
       isNewUser: false,
       needsCompanySetup: false,
+      avaAutoWelcomeEmployerDone: Boolean(user.ava_auto_welcome_employer_at),
       company: {
         id: company.id,
         name: company.company_name,

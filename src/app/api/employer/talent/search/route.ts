@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getBlockDefinition } from '@/lib/block-registry'
 
 /**
  * GET /api/employer/talent/search
@@ -18,6 +19,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
  *   - search: Text search (name, city, email)
  *   - limit: Results limit (default 50, max 100)
  *   - offset: Pagination offset (default 0)
+ *   - blockTypes: Comma-separated hub block_type ids — candidate must have all listed blocks installed
  */
 export async function GET(request: NextRequest) {
   try {
@@ -33,6 +35,13 @@ export async function GET(request: NextRequest) {
     const hasDriverApp = searchParams.get('hasDriverApp')
     const endorsements = searchParams.get('endorsements')
     const searchText = searchParams.get('search')
+    const blockTypesRaw = searchParams.get('blockTypes')
+    const requiredBlockTypes = blockTypesRaw
+      ? blockTypesRaw
+          .split(',')
+          .map((s) => s.trim())
+          .filter((id) => getBlockDefinition(id))
+      : []
     const limitRaw = parseInt(searchParams.get('limit') || '50', 10)
     const limit = Number.isNaN(limitRaw) ? 50 : Math.min(limitRaw, 100)
     const offsetRaw = parseInt(searchParams.get('offset') || '0', 10)
@@ -241,9 +250,31 @@ export async function GET(request: NextRequest) {
     // Filter out users whose profile was deleted — they have no name and shouldn't appear.
     // This is a safety net until migration 026 is applied to the DB, which fixes this at
     // the view level by requiring dp.id IS NOT NULL OR devp.id IS NOT NULL.
-    const validCandidates = (candidates || []).filter(
+    let validCandidates = (candidates || []).filter(
       (c: RawCandidate) => c.full_name !== null && c.full_name.trim() !== ''
     )
+
+    // Optional: must have every listed block installed (hub_blocks)
+    if (requiredBlockTypes.length > 0 && validCandidates.length > 0) {
+      const uids = validCandidates.map((c: RawCandidate) => c.user_id)
+      const { data: hubRows } = await supabase
+        .from('hub_blocks')
+        .select('user_id, block_type')
+        .in('user_id', uids)
+
+      const byUser = new Map<string, Set<string>>()
+      for (const row of hubRows ?? []) {
+        const uid = row.user_id as string
+        const bt = row.block_type as string
+        if (!byUser.has(uid)) byUser.set(uid, new Set())
+        byUser.get(uid)!.add(bt)
+      }
+
+      validCandidates = validCandidates.filter((c: RawCandidate) => {
+        const set = byUser.get(c.user_id) ?? new Set<string>()
+        return requiredBlockTypes.every((bt) => set.has(bt))
+      })
+    }
 
     // Transform results
     const results = validCandidates.map((c: RawCandidate) => ({

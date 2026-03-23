@@ -63,7 +63,7 @@ export async function PATCH(
     const body = await request.json()
     const { status } = body
 
-    const validStatuses = ['submitted', 'under_review', 'interview', 'offer', 'hired', 'rejected', 'withdrawn']
+    const validStatuses = ['submitted', 'contacted', 'archived']
     if (status && !validStatuses.includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
     }

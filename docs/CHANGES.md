@@ -4,6 +4,73 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Candidate hub: career path sidebar + mini career card** (March 2026)
+
+- **`src/components/hub/CandidateHub.tsx`:** `lg+` two-column layout (**`w-full`** inside page `max-w-7xl` — no inner `max-w-6xl` centering so main column aligns with content padding and career path sits right); **sticky right rail** (`HubSidebar`, id `candidate-hub-quest-sidebar`). Removed **`CareerCardBanner`** (redundant — CTAs live on mini card). **Mobile:** fixed **Career path** FAB opens `AvaJourneyGuide` (same content as sidebar).
+- **`src/components/hub/HubSidebar.tsx`:** **`PathGuidance`** (plain-language + 3-step strip + “How this works”) + **`CareerPathSteps`** (“Next steps”) + **mini career card**; `variant: sticky | drawer`.
+- **`src/components/hub/CareerPathSteps.tsx`:** Step list from `useJourneyProgress()` (or `progressOverride` for employers).
+- **`src/components/hub/MiniCareerCard.tsx`:** Avatar, name, headline, block status pills via `useHubContext()`, **Full card** / **QR** → `career-card` page.
+- **`src/components/AvaJourneyGuide.tsx`:** Drawer: **candidates** → `HubSidebar`; **employers** → `EmployerPathSidebar` (job path). Titles: career path / job path.
+- **`src/components/ava/AvaChatPanel.tsx`:** Optional **`desktopJourneyScrollTargetId`** (candidate + employer) — **Open Journey** on `lg+` scrolls to that element instead of opening the drawer.
+
+## **Employer hub: job path rail + hiring snapshot** (March 2026)
+
+- **`src/components/EmployerHub.tsx`:** `lg+` two-column layout; sticky **`EmployerPathSidebar`** (`employer-hub-job-path-sidebar`); syncs **`useEmployerHiringPathStore`** for AvA drawer + `useJourneyProgress` (employer). **Mobile:** **Job path** FAB. **`AvaChatPanel`** passes **`desktopJourneyScrollTargetId`**.
+- **`src/components/hub/EmployerPathSidebar.tsx`:** Same pattern as candidate: `PathGuidance` (employer copy) + steps + **`MiniEmployerHiringCard`**.
+- **`src/stores/employer-journey-snapshot-store.ts`:** `useEmployerHiringPathStore` — snapshot + hiring counts for path UI and journey hook.
+- **`src/stores/journey-store.ts`:** Employer branch reads **`useEmployerHiringPathStore`** instead of hard-coded zeros.
+- **`src/lib/journey-progress.ts`:** Company step / next-action navigate to **`company-profile`** (was `null`).
+
+---
+
+## **Employer hub: AvA chat (same shell as candidate)** (March 2026)
+
+- **`src/components/ava/AvaChatPanel.tsx`:** Shared “Talk to AvA” UI (header, usage badge, welcome, suggested prompts, credits modal, Open Journey). Props: `mode: 'candidate' | 'employer'` with matching context.
+- **`src/components/hub/CandidateHub.tsx`:** Replaced inline `AvaChatSection` with `<AvaChatPanel mode="candidate" … />`.
+- **`src/components/EmployerHub.tsx`:** Replaced `AskAvaButton` strip with `<AvaChatPanel mode="employer" … />`; builds `EmployerHubContext` from hub API data.
+- **`src/lib/ava-context.ts`:** `EmployerHubContext` type + `buildEmployerAvaSystemPrompt()` — hiring/pipeline/talent/Career Card (read-only) context; explicitly **not** candidate blocks / Find Jobs / referrals.
+- **`src/lib/ava-chat.ts`:** `sendToAva` now takes a **payload object** (`SendToAvaPayload`); employer calls use `audience: 'employer'` + `employerContext`.
+- **`src/app/api/ai/chat/route.ts`:** If `audience === 'employer'`, requires `employerContext`, verifies `user.role === 'employer'`, uses employer system prompt; otherwise unchanged candidate path.
+
+**Follow-up (DB idempotency):** Auto-welcome is recorded on `users` (`ava_auto_welcome_candidate_at`, `ava_auto_welcome_employer_at`, migration `054_ava_auto_welcome_flags.sql`). `POST /api/ai/chat` accepts `autoWelcome: 'candidate' | 'employer'` — skips Anthropic + usage if already set; sets timestamp after success or on 402 for that flow. GET `/api/hub/blocks` returns `avaAutoWelcomeCandidateDone`; GET `/api/employer/hub` returns `avaAutoWelcomeEmployerDone` so the client avoids redundant POSTs across browsers.
+
+---
+
+## **Dev: Supabase “fetch failed” handling** (March 2026)
+
+- **`src/lib/supabase-errors.ts`:** `isSupabaseNetworkError()` — detects `TypeError: fetch failed` and common DNS/TCP messages from `@supabase/supabase-js`
+- **`/api/user/profile`:** Wrapped errors like `Failed to fetch user by wallet: TypeError: fetch failed` now map to **503** with a short hint (was **500** because the check only matched the exact string `fetch failed`)
+- **`/api/notifications`:** User lookup uses **`.maybeSingle()`** — wallets without a lazy `users` row get **200** `{ notifications: [], unreadCount: 0 }` instead of **404**; network failures return **503** where applicable
+
+**If you still see fetch failed:** verify `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`, VPN/firewall, and Supabase project status. On Windows, try `set NODE_OPTIONS=--dns-result-order=ipv4first` before `npm run dev` if IPv6/DNS misbehaves.
+
+---
+
+## **Employer Side: Scope Decision & Simplification** (March 2026)
+
+Defined what the employer side IS (talent discovery) and IS NOT (ATS/HRIS/compliance). Created `docs/EMPLOYER_PLAN.md` and `.cursor/rules/employer-architecture.mdc` with strict implementation rules.
+
+**Implemented (March 2026):**
+- **DB migration `053_simplify_pipeline_statuses.sql`:** Maps legacy statuses → `submitted` / `contacted` / `archived`; new CHECK constraint on `applications.status`
+- **Kanban + hub + APIs:** `ApplicantKanban`, `EmployerHub`, `/api/employer/hub`, `/api/employer/applicants`, `/api/employer/applications/[id]/status`, admin applications PATCH, candidate `MyApplications`, admin `ApplicationsTab`, `ApplicantsPage` — all use 3-status pipeline
+- **Notifications:** `sendApplicationStatusNotification` only for `contacted` (archived is silent)
+- **Removed:** `FindDriversPage`, `ReportsPage`, `AnalyticsDashboard`, `ApplicationInvites`; routes `/api/employer/drivers/search`, `/api/employer/reports`, `/api/employer/analytics`, `/api/employer/hub/driver-data`, `/api/employer/applications/[id]/export`; `EmployerShell` pages `find-drivers`, `reports`; `PageType` entries for those pages
+- **Journey:** Employer “job posted” next step → `talent-search` (“Find Talent”) instead of find-drivers
+- **Talent search:** `blockTypes` query param + UI — career category dropdown + checkboxes from `getBlocksByCategory` (must have all selected blocks in `hub_blocks`)
+- **Driver hub:** Stats `interviewingApplications` → `contactedApplications`; `viewedApplications` = view count only
+
+**Kept:** `/api/employer/invites` + `CandidateOutreach` (block-specific outreach; not the dead `ApplicationInvites.tsx` component).
+
+**Revenue model (unchanged doc target):**
+- Free tier: 1 job, blurred talent, 5 messages/month
+- Pro: ~$49/mo USDC — unlimited jobs, full search, messaging, AvA, team
+
+**Files added earlier:**
+- `docs/EMPLOYER_PLAN.md` — product plan
+- `.cursor/rules/employer-architecture.mdc` — strict rules
+
+---
+
 ## **AvA Chat: Usage Controls, Model Tiering, and USDC Monetization** (March 2026)
 
 Added daily free message limits, model tiering, USDC credit packs, career lane guardrails, and a context-advantage value pitch to the AvA chat feature.

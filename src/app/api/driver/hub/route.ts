@@ -64,7 +64,10 @@ export async function GET(request: NextRequest) {
           validMvrRecords: 0,
           totalJobApplications: 0,
           pendingApplications: 0,
+          viewedApplications: 0,
+          contactedApplications: 0,
           totalSpentUSDC: 0,
+          totalTransactions: 0,
         }
       })
     }
@@ -366,8 +369,9 @@ export async function GET(request: NextRequest) {
       validMvrRecords: mvrRecords.filter(m => m.licenseStatus === 'Valid' || m.orderStatus === 'completed').length,
       totalJobApplications: jobApplications.length,
       pendingApplications: jobApplications.filter(a => a.status === 'submitted').length,
-      viewedApplications: jobApplications.filter(a => a.status === 'viewed' || a.viewCount > 0).length,
-      interviewingApplications: jobApplications.filter(a => ['interview', 'interviewing'].includes(a.status)).length,
+      viewedApplications: jobApplications.filter(a => a.viewCount > 0).length,
+      /** Employer marked the application as contacted (simplified pipeline). */
+      contactedApplications: jobApplications.filter(a => a.status === 'contacted').length,
       totalSpentUSDC: totalSpent,
       totalTransactions: transactions.length,
     }

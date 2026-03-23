@@ -15,7 +15,9 @@ export default function ApplicationsTab({
   onDelete,
 }: AdminTabProps) {
   const [applications, setApplications] = useState<AdminApplication[]>([])
-  const [applicationsFilter, setApplicationsFilter] = useState<'all' | 'submitted' | 'under_review' | 'hired' | 'rejected'>('all')
+  const [applicationsFilter, setApplicationsFilter] = useState<
+    'all' | 'submitted' | 'contacted' | 'archived'
+  >('all')
 
   const tableHeaderClass = getTableHeaderClass(theme)
   const tableCellClass = getTableCellClass(theme)
@@ -46,7 +48,7 @@ export default function ApplicationsTab({
     <div className='p-6'>
       {/* Filter Pills */}
       <div className='flex flex-wrap gap-2 mb-6'>
-        {(['all', 'submitted', 'under_review', 'hired', 'rejected'] as const).map((status) => (
+        {(['all', 'submitted', 'contacted', 'archived'] as const).map((status) => (
           <button
             key={status}
             onClick={() => setApplicationsFilter(status)}
@@ -58,7 +60,11 @@ export default function ApplicationsTab({
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            {status === 'all' ? 'All' : status.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+            {status === 'all'
+              ? 'All'
+              : status === 'submitted'
+                ? 'New'
+                : status.charAt(0).toUpperCase() + status.slice(1)}
           </button>
         ))}
       </div>
@@ -107,14 +113,11 @@ export default function ApplicationsTab({
                 <td className={tableCellClass}>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     app.status === 'submitted' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                    app.status === 'under_review' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                    app.status === 'interview' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
-                    app.status === 'offer' ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400' :
-                    app.status === 'hired' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                    app.status === 'rejected' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                    app.status === 'contacted' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400' :
+                    app.status === 'archived' ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' :
                     'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400'
                   }`}>
-                    {app.status.replace('_', ' ')}
+                    {app.status === 'submitted' ? 'New' : app.status.charAt(0).toUpperCase() + app.status.slice(1)}
                   </span>
                 </td>
                 <td className={tableCellClass}>
