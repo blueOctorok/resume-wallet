@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { nanoid } from 'nanoid'
 import { sendCandidateRequestNotification } from '@/lib/send-admin-notification'
+import { createNotification } from '@/lib/create-notification'
 import {
   getCdlData,
   getDriverEmployment,
@@ -356,6 +357,20 @@ export async function POST(
     }
 
     console.log(`[RECRUIT] Created application ${application.id} for candidate ${candidateUserId} via employer ${employer.id}`)
+
+    // In-app notification so the candidate sees it in their bell
+    const companyLabel = company?.company_name || 'A company'
+    const isTalentPool = jobPosting.title === TALENT_POOL_TITLE
+    createNotification({
+      userId: candidateUserId,
+      type: 'candidate_request',
+      title: isTalentPool ? `${companyLabel} saved you to their talent pool` : `${companyLabel} recruited you`,
+      body: isTalentPool
+        ? `${companyLabel} added you to their talent pool for future opportunities.${message ? ` Message: "${message}"` : ''}`
+        : `${companyLabel} wants you for "${jobPosting.title}".${message ? ` Message: "${message}"` : ''}`,
+      actionUrl: '/applications',
+      data: { companyName: companyLabel, jobTitle: jobPosting.title, applicationId: application.id },
+    }).catch(err => console.error('[RECRUIT] Notification error:', err))
 
     // Send email notification to candidate (non-blocking)
     if (candidate.email) {

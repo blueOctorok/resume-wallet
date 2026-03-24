@@ -126,7 +126,7 @@ function AdminDashboardContent() {
   }, [walletAddress])
 
   // Handle delete — supports force-delete for admin wallets (prompts confirmation)
-  const handleDelete = async (forceAdminDelete = false) => {
+  const handleDelete = async () => {
     if (!deleteTarget || !walletAddress) return
 
     setDeleting(true)
@@ -149,7 +149,6 @@ function AdminDashboardContent() {
       if (!endpoint) return
 
       const headers: Record<string, string> = { 'x-wallet-address': walletAddress }
-      if (forceAdminDelete) headers['x-force-admin-delete'] = 'true'
 
       const response = await fetch(endpoint, { method: 'DELETE', headers })
 
@@ -159,17 +158,7 @@ function AdminDashboardContent() {
         setRefreshKey((k) => k + 1)
       } else {
         const data = await response.json().catch(() => ({}))
-        // Admin wallet protection — ask for confirmation then retry with force header
-        if (data.isAdminWallet && !forceAdminDelete) {
-          if (confirm('This is an admin wallet. Are you sure you want to delete this user and all their data? This cannot be undone.')) {
-            setDeleting(false)
-            return handleDelete(true)
-          }
-          setDeleteError(null)
-          setDeleteTarget(null)
-        } else {
-          setDeleteError(data.error || 'Delete failed. Please try again.')
-        }
+        setDeleteError(data.error || 'Delete failed. Please try again.')
       }
     } catch {
       setDeleteError('Network error. Please try again.')

@@ -92,6 +92,7 @@ The career card becomes a pure read-only projection of the hub.
 | Premium Glass Tiles | ✅ Done | Glassmorphic tiles with per-block colors, illustrations, Atropos 3D tilt |
 | Hub layout pass | ✅ Done | Career Card banner + on-chain verification bar, removed old stats |
 | Hub career / job path | ✅ Done | `PathGuidance` + `CareerPathSteps` (“Next steps”); candidate **career path** + employer **job path** rails; `MiniEmployerHiringCard`; `useEmployerHiringPathStore`; AvA drawer role-aware; mobile FABs |
+| Outreach auto-install + deep-link | ✅ Done | Fixed `?onboard=` deep-link mismatch; talent requests auto-install `targetBlockType` + `actionUrl` on notification; recruit creates in-app notification; `REQUEST_BLOCK_MAP`; new architecture rule §12 |
 | Employer Composable Hub Phase 1 | ✅ Done | Hybrid employer hub: permanent core + composable industry blocks, generic company setup |
 | Employer Composable Hub Phase 2 | ✅ Done | Role-agnostic polish: data-driven driver detection, 3-tier role badges, block-conditional quick actions, legacy cleanup |
 | Generic Block-Based Outreach | ✅ Done | Outreach reworked from hardcoded invite types to block-aware system with deep-linking |

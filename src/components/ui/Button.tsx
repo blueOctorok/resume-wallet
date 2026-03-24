@@ -11,8 +11,9 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
+  // brand-mint is a light sage (#c9d9c3) — white text fails contrast; use near-black label
   primary:
-    'bg-brand-mint hover:bg-brand-mint/90 dark:bg-brand-mint dark:hover:bg-brand-mint/90 text-white shadow-sm',
+    'bg-brand-mint hover:bg-brand-mint/90 dark:bg-brand-mint dark:hover:bg-brand-mint/90 text-gray-900 shadow-sm',
   secondary:
     'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white border border-gray-300 dark:border-gray-600',
   ghost:

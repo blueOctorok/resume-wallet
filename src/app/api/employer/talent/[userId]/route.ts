@@ -260,7 +260,7 @@ export async function GET(
     // 8. Pending requests from this company
     const { data: pendingRequests } = await supabase
       .from('candidate_requests')
-      .select('id, request_type, document_type, status, created_at')
+      .select('id, request_type, document_type, target_block_type, status, created_at')
       .eq('candidate_user_id', userId)
       .eq('company_id', companyId)
       .in('status', ['pending', 'viewed'])

@@ -4,6 +4,90 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Accessibility: contrast on brand-mint fills** (March 2026)
+
+`--brand-mint` is a light sage (`#c9d9c3`); **white** labels on solid mint fail WCAG. Switched filled mint controls to **`text-gray-900`** and tightened chat accents.
+
+- **`src/components/ui/Button.tsx`:** Primary variant label `text-white` → `text-gray-900` (fixes **+ Add** and all primary buttons app-wide).
+- **`src/components/ava/AvaChatPanel.tsx`:** User bubbles + send button use `text-gray-900`; AvA row bot icon uses `text-brand-sage-dark` / `dark:text-teal-300`; usage badge light mode `text-teal-800`, dark `text-teal-200`; focus ring uses teal instead of faint mint.
+- **`src/components/hub/CandidateHub.tsx`:** Mobile career-path FAB light mode was `text-white` on mint → `text-gray-900` (matches dark branch).
+- **`src/components/hub/CareerPathSteps.tsx`:** Mint CTA + in-progress step dot use `text-gray-900`; step counter uses `text-brand-sage-dark dark:text-teal-300` instead of low-contrast mint-on-light.
+
+---
+
+## **AvA chat: restore robot + larger title** (March 2026)
+
+- **`src/components/ava/AvaChatPanel.tsx`:** Empty state again uses `/ava-robot.png` in the mint gradient tile (replacing Sparkles). "Ask AvA" is `text-xl` / `text-2xl` bold with a one-line subtitle; usage badge aligned top-right.
+
+---
+
+## **UX: stop auto-opening block picker + simplify AvA chat** (March 2026)
+
+- **`src/components/hub/HubOnboardingForm.tsx`:** Removed `openPicker()` call after onboarding completes. New candidates now land on the hub with the career path sidebar guiding next steps instead of an immediate block picker modal.
+- **`src/components/ava/AvaChatPanel.tsx`:** Completely rewritten for a clean, minimal chat UX:
+  - Removed the large header with AvA avatar image and verbose multi-paragraph welcome text
+  - Removed the auto-welcome API call (one-shot `sendToAva` on mount) — no API call until the user explicitly sends a message
+  - Empty state is now just "Ask AvA" label + suggested prompt chips + input field (like Claude's empty state)
+  - Suggested prompts now directly fire `handleSend()` instead of just populating the input
+  - Thread only appears after the first message
+  - Footer slimmed to a single row: "Powered by Anthropic" + "Journey" link
+- **`src/components/hub/CandidateHub.tsx`:** Removed unused `setAvaAutoWelcomeCandidateDone` store reference.
+
+---
+
+## **Architecture rules audit — comprehensive rule gap fill** (March 2026)
+
+Added missing rules across all `.cursor/rules/*.mdc` files and updated the `block-registry.ts` checklist comment to ensure adding or removing a block is a fully documented, nothing-left-undone process.
+
+### `block-development.mdc`
+- **Section 13 — "Removing / Deprecating a Block"**: 12-step code removal checklist (reverse of the add checklist), data cleanup guidance, and a "do NOT" list.
+- **Hardcoded touchpoints table**: 11 files that contain per-block logic NOT driven by the registry. Must be checked when adding or removing any block.
+
+### `architecture.mdc`
+- **Navigation Contract**: Documents the 5 things that must stay in sync when a block has a page route (`PageType`, `pageRoute`, `validOnboardPages`, shell route case, `BLOCK_TO_SLOT`).
+- **API Route Standards**: Auth pattern, error response shape (`{ error: string }`), logging conventions, Supabase client rules.
+- **Notification & Email Patterns**: In-app notification contract (`createNotification` fields), email template map, guidance on adding new types.
+- **Error Handling**: API try/catch + `ErrorBoundary` wrapper convention, stores own error/loading state.
+- **Loading States**: Store-owned `isLoading`, `LoadingScreen` vs inline `Loader2`, no blank screens.
+
+### `ui-components.mdc`
+- **Dark Mode**: Every element must have both `light` and `dark:` variants; common pairs table; brand color contrast notes.
+- **Empty States**: Every list/table must handle "no data yet" with a helpful empty state, not blank space.
+
+### `block-registry.ts`
+- Updated the checklist comment from 9 steps to 13 (add) + a pointer to the removal checklist. Now covers `BLOCK_TO_SLOT`, `MyFilesSection`, AvA journey, and data table migrations.
+
+---
+
+## **Admin: unlock all delete operations for admin wallets** (March 2026)
+
+- **`src/app/api/admin/users/[id]/route.ts`:** Removed the 403 guard + `x-force-admin-delete` header requirement for admin wallet users. Admin access is env-based (`ADMIN_WALLETS`), not DB-based — deleting a user row doesn't affect admin capabilities. Now just logs a warning.
+- **`src/components/admin/AdminDashboardShell.tsx`:** Removed `forceAdminDelete` param and the retry-with-force-header flow from `handleDelete`.
+- **`src/components/admin/tabs/CandidatesTab.tsx`:** Replaced disabled trash icon for admin users with a normal delete button.
+- **`src/components/admin/tabs/UsersTab.tsx`:** Same — removed admin delete guard.
+- **`src/components/admin/modals/UserDetailModal.tsx`:** Removed all 6 `!user.user.isAdmin` guards on delete buttons (profile, DOT app, resume, dev profile, dev project, full user delete). Admin badge still shows for informational purposes.
+
+---
+
+## **Registry-driven employer outreach** (March 2026)
+
+### Phase 2: Data-driven from block registry
+- **`src/lib/block-registry.ts`:** Added 3 new fields to `BlockDefinition`: `employerRequestable`, `requestLabel`, `completionField`. Added `getRequestableBlocks()` helper. Updated checklist comment. Every existing block now has these fields set.
+- **`src/components/employer/CareerCardModal.tsx`:** Refactored from 3 hardcoded action slots to a **registry-driven loop**. `buildBlockAction()` reads `getRequestableBlocks()` and auto-generates request buttons per block. Removed legacy `REQUEST_BLOCK_MAP`, `createRequest`, `resendRequest`, `getPendingRequest`. New: `requestBlockById`, `resendBlockRequest`, `getPendingRequestForBlock` (handles both new `block_request` type and legacy request types). Added `BLOCK_TO_SLOT` map to bridge block IDs → CareerCard's named action props.
+- **`src/app/api/employer/talent/[userId]/request/route.ts`:** Added `block_request` to valid types. Stores `target_block_type` column on `candidate_requests`. Duplicate check uses `target_block_type` for `block_request`. Notification body uses registry label. Email sends `blockLabel`.
+- **`src/app/api/employer/talent/[userId]/route.ts`:** Talent API now returns `target_block_type` in pending requests select.
+- **`src/components/CareerCard.tsx`:** Added `target_block_type` to `pendingRequests` type in `CareerCardData`.
+- **`src/lib/send-admin-notification.ts`:** Added `block_request` to `requestType` union. Added `blockLabel` param. `REQUEST_TYPE_LABELS` and `REQUEST_ACTION_TEXT` now handle `block_request` using the label from the registry. Added `resolveLabel()` helper for dynamic labels.
+- **`supabase/migrations/055_candidate_requests_target_block.sql`:** Adds `target_block_type` column + index to `candidate_requests`.
+- **`.cursor/rules/block-development.mdc`:** Rewrote section 5 ("Employer Outreach") to document the data-driven system. Updated section 6 ("Central Admin") with automatic vs manual split. Updated section 1 (registry fields) and section 12 (summary table). Updated critical rules.
+
+### Phase 1: Auto-install + deep-link fixes
+- **`src/app/page.tsx`:** Fixed `?onboard=` deep-link — replaced stale `pageMap` with `validOnboardPages` array.
+- **`src/app/api/employer/talent/[userId]/request/route.ts`:** Auto-installs `targetBlockType` on candidate hub + sets `actionUrl` on notification.
+- **`src/app/api/employer/talent/[userId]/recruit/route.ts`:** Added in-app notification via `createNotification` (was email-only). Notification `actionUrl` → `/applications`.
+
+---
+
 ## **Candidate hub: career path sidebar + mini career card** (March 2026)
 
 - **`src/components/hub/CandidateHub.tsx`:** `lg+` two-column layout (**`w-full`** inside page `max-w-7xl` — no inner `max-w-6xl` centering so main column aligns with content padding and career path sits right); **sticky right rail** (`HubSidebar`, id `candidate-hub-quest-sidebar`). Removed **`CareerCardBanner`** (redundant — CTAs live on mini card). **Mobile:** fixed **Career path** FAB opens `AvaJourneyGuide` (same content as sidebar).

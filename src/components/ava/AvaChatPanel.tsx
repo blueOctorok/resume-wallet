@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * Shared AvA chat shell — same UX on candidate hub and employer hub.
- * Audience-specific copy + `sendToAva` payload; server picks system prompt via `audience`.
+ * Shared AvA chat — clean empty state with robot avatar + prominent "Ask AvA" title.
+ * No auto-welcome call. Suggested prompts as chips. Thread appears after first send.
  */
 
 import Image from 'next/image'
@@ -27,11 +27,8 @@ export type AvaChatPanelProps =
       walletAddress: string | null
       hubContext: HubContext
       candidateEmptyHub: boolean
-      /** From GET /api/hub/blocks — `users.ava_auto_welcome_candidate_at` */
       avaAutoWelcomeCandidateDone: boolean
-      /** Keep Zustand in sync after server records auto-welcome (incl. 402 path) */
       onAvaAutoWelcomeSynced?: () => void
-      /** lg+: “Open Journey” scrolls this element into view instead of opening the drawer */
       desktopJourneyScrollTargetId?: string
     }
   | {
@@ -66,11 +63,6 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
     openGuide()
   }, [openGuide, props])
 
-  const employerFreshHiring =
-    props.mode === 'employer' &&
-    props.employerContext.activeJobs === 0 &&
-    props.employerContext.totalApplicants === 0
-
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [chatError, setChatError] = useState<string | null>(null)
@@ -79,8 +71,6 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
   const [usage, setUsage] = useState<AvaUsageInfo | null>(null)
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
-  /** In-memory guard for the same mount (e.g. dev Strict Mode remount patterns) */
-  const autoWelcomeSent = useRef(false)
 
   useEffect(() => {
     if (!walletAddress) return
@@ -105,76 +95,8 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
     }
   }, [messages, isLoading])
 
-  // One-shot auto welcome: empty candidate hub, or employer with no jobs/applicants yet.
-  // Idempotency is enforced on the server (`users.ava_auto_welcome_*_at`); hub APIs expose flags so we skip redundant POSTs.
-  useEffect(() => {
-    const shouldAutoWelcome =
-      props.mode === 'candidate'
-        ? props.candidateEmptyHub
-        : employerFreshHiring
-
-    const dbSaysDone =
-      props.mode === 'candidate'
-        ? props.avaAutoWelcomeCandidateDone
-        : props.avaAutoWelcomeEmployerDone
-
-    if (
-      !walletAddress ||
-      !shouldAutoWelcome ||
-      dbSaysDone ||
-      messages.length > 0 ||
-      autoWelcomeSent.current ||
-      isLoading
-    ) {
-      return
-    }
-
-    const welcomeMessage =
-      props.mode === 'candidate'
-        ? 'I just signed up and my hub is empty. What is StormChain, what are blocks, and what should I do first?'
-        : 'I have my company on StormChain but no active jobs and no applicants in the pipeline yet. What should I do first to start hiring?'
-
-    const autoWelcome = props.mode === 'candidate' ? ('candidate' as const) : ('employer' as const)
-
-    autoWelcomeSent.current = true
-    setIsLoading(true)
-
-    const req =
-      props.mode === 'candidate'
-        ? {
-            message: welcomeMessage,
-            hubContext: props.hubContext,
-            walletAddress,
-            autoWelcome,
-          }
-        : {
-            message: welcomeMessage,
-            audience: 'employer' as const,
-            employerContext: props.employerContext,
-            walletAddress,
-            autoWelcome,
-          }
-
-    sendToAva(req)
-      .then((res) => {
-        props.onAvaAutoWelcomeSynced?.()
-        setMessages([{ role: 'ava', text: res.reply }])
-        setUsage(res.usage)
-      })
-      .catch((err) => {
-        if (err instanceof OutOfCreditsError) {
-          props.onAvaAutoWelcomeSynced?.()
-          setOutOfCredits(true)
-          setUsage(err.usage)
-        } else {
-          setChatError(err instanceof Error ? err.message : String(err))
-        }
-      })
-      .finally(() => setIsLoading(false))
-  }, [props, employerFreshHiring, messages.length, isLoading, walletAddress])
-
-  const handleSend = useCallback(async () => {
-    const trimmed = input.trim()
+  const handleSend = useCallback(async (text?: string) => {
+    const trimmed = (text ?? input).trim()
     if (!trimmed || isLoading || outOfCredits) return
     setInput('')
     setMessages((prev) => [...prev, { role: 'user', text: trimmed }])
@@ -210,21 +132,11 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
   }, [input, isLoading, outOfCredits, props, walletAddress])
 
   const hasMessages = messages.length > 0 || isLoading
-  const showWelcome = !hasMessages
-
-  const tagline =
-    props.mode === 'candidate'
-      ? 'Unlike generic AI, AvA already knows your career — your blocks, your progress, your goals. Just ask.'
-      : 'Unlike generic AI, AvA already knows your company, jobs, and pipeline on StormChain — just ask.'
 
   const suggestedPrompts =
     props.mode === 'candidate'
-      ? ['What blocks should I add first?', 'What is my Career Card?', 'What should I do next?']
-      : [
-          'How should I use Find Talent vs posting a job?',
-          'How does the hiring pipeline work?',
-          'What should I look for on a candidate Career Card?',
-        ]
+      ? ['What blocks should I add?', 'What is my Career Card?', 'What should I do next?']
+      : ['How does the hiring pipeline work?', 'How should I use Find Talent?', 'What should I do next?']
 
   const usageBadge = usage
     ? usage.dailyRemaining > 0
@@ -242,168 +154,162 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
           isDark ? 'bg-gray-900' : 'bg-slate-100/95',
         )}
       >
-        <div
-          className={cn(
-            'relative px-6 pt-6 pb-5',
-            isDark
-              ? 'bg-gradient-to-b from-gray-800/90 via-gray-800/50 to-transparent'
-              : 'bg-gradient-to-b from-gray-50 via-white to-transparent',
-          )}
-        >
-          <div className='flex items-start gap-4'>
-            <div
-              className={cn(
-                'flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center overflow-hidden shadow-lg',
-                isDark
-                  ? 'bg-gradient-to-br from-brand-mint/30 to-brand-mint/10 ring-1 ring-brand-mint/20'
-                  : 'bg-gradient-to-br from-brand-mint/20 to-brand-mint/5 ring-1 ring-brand-mint/30',
-              )}
-            >
-              <Image
-                src='/ava-robot.png'
-                alt=''
-                width={44}
-                height={44}
-                className={cn('object-contain', !isDark && 'invert')}
-              />
-            </div>
-            <div className='min-w-0 flex-1'>
-              <div className='flex items-center gap-2 flex-wrap'>
-                <h2
-                  className={cn(
-                    'text-xl font-bold tracking-tight',
-                    isDark ? 'text-white' : 'text-slate-800',
-                  )}
+        {/* ── Thread (only visible after first message) ── */}
+        {hasMessages && (
+          <div
+            ref={scrollRef}
+            className='px-5 pt-4 pb-2 overflow-y-auto max-h-[400px]'
+          >
+            <div className='space-y-3'>
+              {messages.map((msg, i) => (
+                <div
+                  key={i}
+                  className={cn('flex gap-2', msg.role === 'user' ? 'justify-end' : 'justify-start')}
                 >
-                  Talk to AvA
-                </h2>
-                {usageBadge && (
-                  <span
+                  {msg.role === 'ava' && (
+                    <div className='flex-shrink-0 w-6 h-6 rounded-full bg-brand-mint/25 dark:bg-brand-mint/20 flex items-center justify-center mt-0.5'>
+                      <Bot className='w-3.5 h-3.5 text-brand-sage-dark dark:text-teal-300' />
+                    </div>
+                  )}
+                  <div
                     className={cn(
-                      'text-[10px] font-semibold px-2 py-0.5 rounded-full',
-                      usage && usage.dailyRemaining === 0 && usage.credits === 0
-                        ? 'bg-red-500/15 text-red-400'
-                        : usage && usage.dailyRemaining > 0
-                          ? isDark
-                            ? 'bg-brand-mint/15 text-brand-mint'
-                            : 'bg-teal-50 text-teal-600'
-                          : isDark
-                            ? 'bg-amber-500/15 text-amber-400'
-                            : 'bg-amber-50 text-amber-600',
+                      'max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap',
+                      msg.role === 'ava'
+                        ? cn(
+                            'rounded-tl-sm',
+                            isDark ? 'bg-gray-800 text-gray-200' : 'bg-slate-200/80 text-slate-800',
+                          )
+                        : 'bg-brand-mint text-gray-900 rounded-tr-sm',
                     )}
                   >
-                    {usageBadge}
-                  </span>
-                )}
-              </div>
-              <p
-                className={cn(
-                  'mt-0.5 text-sm leading-snug',
-                  isDark ? 'text-gray-400' : 'text-slate-600',
-                )}
-              >
-                {tagline}
-              </p>
-              <div className='mt-3 flex items-center gap-3 flex-wrap'>
-                <div className='inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-gray-500'>
-                  <span
-                    className={cn(
-                      'h-1.5 w-1.5 rounded-full',
-                      isDark ? 'bg-brand-mint/60' : 'bg-brand-mint',
-                    )}
-                  />
-                  Powered by Anthropic
+                    {msg.text}
+                  </div>
                 </div>
-                {usage && usage.dailyRemaining === 0 && (
+              ))}
+
+              {isLoading && (
+                <div className='flex gap-2 justify-start'>
+                  <div className='flex-shrink-0 w-6 h-6 rounded-full bg-brand-mint/25 dark:bg-brand-mint/20 flex items-center justify-center mt-0.5'>
+                    <Bot className='w-3.5 h-3.5 text-brand-sage-dark dark:text-teal-300' />
+                  </div>
+                  <div
+                    className={cn(
+                      'rounded-2xl rounded-tl-sm px-4 py-2.5',
+                      isDark ? 'bg-gray-800' : 'bg-slate-200/70',
+                    )}
+                  >
+                    <div className='flex gap-1.5'>
+                      <span className='w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:0ms]' />
+                      <span className='w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:150ms]' />
+                      <span className='w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:300ms]' />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {outOfCredits && (
+                <div
+                  className={cn(
+                    'rounded-2xl p-4 text-sm text-center space-y-2',
+                    isDark ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200',
+                  )}
+                >
+                  <p className={isDark ? 'text-amber-300' : 'text-amber-700'}>
+                    You&apos;ve used your 10 free messages today. Buy credits to keep chatting, or come back
+                    tomorrow.
+                  </p>
                   <button
                     type='button'
                     onClick={() => setShowCreditModal(true)}
-                    className={cn(
-                      'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors',
-                      isDark
-                        ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
-                        : 'bg-amber-50 text-amber-600 hover:bg-amber-100',
-                    )}
+                    className='inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600 transition-colors'
                   >
-                    <Coins className='w-3 h-3' />
+                    <Coins className='w-3.5 h-3.5' />
                     Buy Credits
                   </button>
-                )}
-              </div>
+                </div>
+              )}
+
+              {chatError && !outOfCredits && (
+                <p className='text-xs text-red-500 text-center'>{chatError}</p>
+              )}
             </div>
           </div>
-        </div>
+        )}
 
-        <div
-          ref={scrollRef}
-          className={cn(
-            'px-5 overflow-y-auto transition-all duration-300',
-            showWelcome ? 'min-h-[200px] max-h-[320px] pb-4' : hasMessages ? 'min-h-[120px] max-h-[400px] pb-3' : 'h-0',
-          )}
-        >
-          {showWelcome && (
-            <div
-              className={cn(
-                'rounded-2xl p-4 text-sm leading-relaxed space-y-3',
-                isDark
-                  ? 'bg-gray-800/60 text-gray-300 border border-gray-700/50'
-                  : 'bg-slate-200/70 text-slate-800 border border-slate-300',
-              )}
-            >
-              {props.mode === 'candidate' ? (
-                <>
-                  <p className='font-medium'>
-                    Unlike ChatGPT or Claude, I already know your career. No copy-pasting your resume — I
-                    can see your blocks, your progress, and your goals right here.
+        {/* ── Input area ── */}
+        <div className={cn('px-5 pb-4', hasMessages ? 'pt-2' : 'pt-5')}>
+          {/* Empty-state: suggested prompts above the input */}
+          {!hasMessages && (
+            <div className='mb-5'>
+              <div className='flex items-center gap-4 mb-4'>
+                <div
+                  className={cn(
+                    'flex-shrink-0 w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] rounded-2xl flex items-center justify-center overflow-hidden shadow-lg',
+                    isDark
+                      ? 'bg-gradient-to-br from-brand-mint/30 to-brand-mint/10 ring-1 ring-brand-mint/20'
+                      : 'bg-gradient-to-br from-brand-mint/20 to-brand-mint/5 ring-1 ring-brand-mint/30',
+                  )}
+                >
+                  <Image
+                    src='/ava-robot.png'
+                    alt=''
+                    width={52}
+                    height={52}
+                    className={cn('object-contain', !isDark && 'invert')}
+                  />
+                </div>
+                <div className='min-w-0 flex-1 flex flex-col gap-1'>
+                  <div className='flex items-start justify-between gap-3'>
+                    <h2
+                      className={cn(
+                        'text-xl sm:text-2xl font-bold tracking-tight leading-tight',
+                        isDark ? 'text-white' : 'text-slate-800',
+                      )}
+                    >
+                      Ask AvA
+                    </h2>
+                    {usageBadge && (
+                      <span
+                        className={cn(
+                          'flex-shrink-0 text-[10px] font-semibold px-2 py-1 rounded-full',
+                          usage && usage.dailyRemaining === 0 && usage.credits === 0
+                            ? 'bg-red-500/15 text-red-400'
+                            : usage && usage.dailyRemaining > 0
+                              ? isDark
+                            ? 'bg-brand-mint/20 text-teal-200'
+                            : 'bg-teal-50 text-teal-800'
+                              : isDark
+                                ? 'bg-amber-500/15 text-amber-400'
+                                : 'bg-amber-50 text-amber-600',
+                        )}
+                      >
+                        {usageBadge}
+                      </span>
+                    )}
+                  </div>
+                  <p
+                    className={cn(
+                      'text-sm leading-snug',
+                      isDark ? 'text-gray-400' : 'text-slate-600',
+                    )}
+                  >
+                    {props.mode === 'candidate'
+                      ? 'She knows your blocks and progress — type or tap a suggestion.'
+                      : 'She knows your company and pipeline — type or tap a suggestion.'}
                   </p>
-                  <p>
-                    Add blocks below to build your profile. Each block — <strong>Resume</strong>,{' '}
-                    <strong>DOT Application</strong>, <strong>MVR</strong>, <strong>Portfolio</strong>,{' '}
-                    <strong>GitHub</strong> — becomes a section on your Career Card for employers. Add the
-                    ones that fit your path.
-                  </p>
-                  <p>
-                    Ask me what to add first, what to do next, or tap <strong>Open Journey</strong> below to
-                    see your progress.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className='font-medium'>
-                    I&apos;m tuned for <strong>employers</strong> on StormChain — not candidate career
-                    blocks. I know your company snapshot, job counts, and pipeline so advice stays relevant
-                    to hiring here.
-                  </p>
-                  <p>
-                    Use <strong>Post Job</strong> and <strong>Find Talent</strong> to bring people in, then
-                    move them through <strong>New</strong> → <strong>Contacted</strong> →{' '}
-                    <strong>Archived</strong>. Open a candidate&apos;s <strong>Career Card</strong> to see
-                    what they chose to verify.
-                  </p>
-                  <p>
-                    Ask about workflow, what to do next, or tap <strong>Open Journey</strong> for your
-                    employer checklist.
-                  </p>
-                </>
-              )}
-              <p className={cn('text-xs pt-1', isDark ? 'text-gray-500' : 'text-gray-400')}>
-                Try a question below or type your own.
-              </p>
-              <div className='flex flex-wrap gap-2 pt-2'>
+                </div>
+              </div>
+              <div className='flex flex-wrap gap-2'>
                 {suggestedPrompts.map((label) => (
                   <button
                     key={label}
                     type='button'
-                    onClick={() => {
-                      setInput(label)
-                      const el = document.querySelector('[data-ava-chat-input]') as HTMLInputElement | null
-                      el?.focus()
-                    }}
+                    onClick={() => handleSend(label)}
                     className={cn(
                       'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
                       isDark
-                        ? 'bg-gray-700/80 text-gray-300 hover:bg-gray-600 border border-gray-600'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300',
+                        ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
+                        : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200',
                     )}
                   >
                     {label}
@@ -413,82 +319,6 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
             </div>
           )}
 
-          <div className={cn('space-y-3', !showWelcome && 'pt-1')}>
-            {messages.map((msg, i) => (
-              <div
-                key={i}
-                className={cn('flex gap-2', msg.role === 'user' ? 'justify-end' : 'justify-start')}
-              >
-                {msg.role === 'ava' && (
-                  <div className='flex-shrink-0 w-6 h-6 rounded-full bg-brand-mint/20 flex items-center justify-center mt-0.5'>
-                    <Bot className='w-3.5 h-3.5 text-brand-mint' />
-                  </div>
-                )}
-                <div
-                  className={cn(
-                    'max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap',
-                    msg.role === 'ava'
-                      ? cn(
-                          'rounded-tl-sm',
-                          isDark ? 'bg-gray-800 text-gray-200' : 'bg-slate-200/80 text-slate-800',
-                        )
-                      : 'bg-brand-mint text-white rounded-tr-sm',
-                  )}
-                >
-                  {msg.text}
-                </div>
-              </div>
-            ))}
-
-            {isLoading && (
-              <div className='flex gap-2 justify-start'>
-                <div className='flex-shrink-0 w-6 h-6 rounded-full bg-brand-mint/20 flex items-center justify-center mt-0.5'>
-                  <Bot className='w-3.5 h-3.5 text-brand-mint' />
-                </div>
-                <div
-                  className={cn(
-                    'rounded-2xl rounded-tl-sm px-4 py-2.5',
-                    isDark ? 'bg-gray-800' : 'bg-slate-200/70',
-                  )}
-                >
-                  <div className='flex gap-1.5'>
-                    <span className='w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:0ms]' />
-                    <span className='w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:150ms]' />
-                    <span className='w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:300ms]' />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {outOfCredits && (
-              <div
-                className={cn(
-                  'rounded-2xl p-4 text-sm text-center space-y-2',
-                  isDark ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200',
-                )}
-              >
-                <p className={isDark ? 'text-amber-300' : 'text-amber-700'}>
-                  You&apos;ve used your 10 free messages today. Buy credits to keep chatting, or come back
-                  tomorrow.
-                </p>
-                <button
-                  type='button'
-                  onClick={() => setShowCreditModal(true)}
-                  className='inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600 transition-colors'
-                >
-                  <Coins className='w-3.5 h-3.5' />
-                  Buy Credits
-                </button>
-              </div>
-            )}
-
-            {chatError && !outOfCredits && (
-              <p className='text-xs text-red-500 text-center'>{chatError}</p>
-            )}
-          </div>
-        </div>
-
-        <div className='px-5 pb-4 pt-2'>
           <form
             onSubmit={(e) => {
               e.preventDefault()
@@ -505,10 +335,10 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
               disabled={isLoading || outOfCredits}
               className={cn(
                 'flex-1 px-4 py-2.5 rounded-full text-sm border transition-colors',
-                'focus:outline-none focus:ring-2 focus:ring-brand-mint/40',
+                'focus:outline-none focus:ring-2 focus:ring-teal-600/35 dark:focus:ring-teal-400/40',
                 isDark
                   ? 'bg-gray-800 border-gray-700 text-white placeholder:text-gray-500'
-                  : 'bg-slate-100 border-slate-300 text-slate-900 placeholder:text-slate-500',
+                  : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400',
                 (isLoading || outOfCredits) && 'opacity-50',
               )}
             />
@@ -518,8 +348,8 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
               className={cn(
                 'p-2.5 rounded-full transition-all',
                 input.trim() && !isLoading && !outOfCredits
-                  ? 'bg-brand-mint text-white hover:bg-brand-mint/90 shadow-sm'
-                  : cn('cursor-not-allowed', isDark ? 'bg-gray-700 text-gray-500' : 'bg-slate-200 text-slate-500'),
+                  ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-sm'
+                  : cn('cursor-not-allowed', isDark ? 'bg-gray-700 text-gray-500' : 'bg-slate-200 text-slate-400'),
               )}
               aria-label='Send message'
             >
@@ -527,19 +357,40 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
             </button>
           </form>
 
-          <div className='flex justify-end mt-2'>
+          {/* Footer row: credits + journey link */}
+          <div className='flex items-center justify-between mt-2'>
+            <div className='flex items-center gap-2'>
+              <span className={cn('text-[10px]', isDark ? 'text-gray-600' : 'text-slate-400')}>
+                Powered by Anthropic
+              </span>
+              {usage && usage.dailyRemaining === 0 && (
+                <button
+                  type='button'
+                  onClick={() => setShowCreditModal(true)}
+                  className={cn(
+                    'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold transition-colors',
+                    isDark
+                      ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
+                      : 'bg-amber-50 text-amber-600 hover:bg-amber-100',
+                  )}
+                >
+                  <Coins className='w-3 h-3' />
+                  Buy Credits
+                </button>
+              )}
+            </div>
             <button
               type='button'
               onClick={handleOpenJourney}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                'flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium transition-colors',
                 isDark
-                  ? 'text-gray-400 hover:text-violet-300 hover:bg-gray-800'
-                  : 'text-slate-600 hover:text-violet-600 hover:bg-slate-100',
+                  ? 'text-gray-500 hover:text-gray-300 hover:bg-gray-800'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100',
               )}
             >
-              <Compass className='w-3.5 h-3.5' />
-              Open Journey
+              <Compass className='w-3 h-3' />
+              Journey
             </button>
           </div>
         </div>

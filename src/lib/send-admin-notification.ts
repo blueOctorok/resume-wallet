@@ -20,9 +20,11 @@ export interface CandidateRequestNotificationParams {
   candidateEmail: string
   candidateName: string
   companyName: string
-  requestType: 'mvr_order' | 'document_upload' | 'verification' | 'profile_completion' | 'custom'
+  requestType: 'mvr_order' | 'document_upload' | 'verification' | 'profile_completion' | 'custom' | 'block_request'
   documentType?: string | null
   message?: string | null
+  /** Block label from the registry (e.g. "Driver Resume"). Used for block_request emails. */
+  blockLabel?: string | null
 }
 
 export interface ApplicationStatusNotificationParams {
@@ -97,12 +99,19 @@ export async function sendNewCompanyNotification(
 
 // ─── Candidate: Employer Request ──────────────────────────────────────────────
 
-const REQUEST_TYPE_LABELS: Record<string, string> = {
+const REQUEST_TYPE_LABELS: Record<string, string | ((p: CandidateRequestNotificationParams) => string)> = {
   mvr_order: 'Background Check & MVR Request',
   document_upload: 'Resume Request',
   verification: 'Employment Verification Request',
   profile_completion: 'DOT Application Request',
   custom: 'New Request',
+  block_request: (p) => p.blockLabel ? `${p.blockLabel} Request` : 'New Request',
+}
+
+function resolveLabel(requestType: string, params: CandidateRequestNotificationParams): string {
+  const entry = REQUEST_TYPE_LABELS[requestType]
+  if (!entry) return 'Request'
+  return typeof entry === 'function' ? entry(params) : entry
 }
 
 const REQUEST_ACTION_TEXT: Record<string, (params: CandidateRequestNotificationParams) => string> = {
@@ -118,6 +127,8 @@ const REQUEST_ACTION_TEXT: Record<string, (params: CandidateRequestNotificationP
       ? 'They are requesting you complete your DOT Driver Application on StormChain. A completed application strengthens your profile and speeds up the hiring process.'
       : 'They are requesting you complete additional sections of your profile.',
   custom: (p) => p.message || 'They have a request for you.',
+  block_request: (p) =>
+    `They are requesting your ${p.blockLabel || 'data'}. Log in to StormChain to complete it.`,
 }
 
 /**
@@ -132,7 +143,7 @@ export async function sendCandidateRequestNotification(
   }
 
   const { candidateEmail, candidateName, companyName, requestType, message } = params
-  const requestLabel = REQUEST_TYPE_LABELS[requestType] || 'Request'
+  const requestLabel = resolveLabel(requestType, params)
   const actionText = REQUEST_ACTION_TEXT[requestType]?.(params) || ''
   const firstName = candidateName.split(' ')[0] || 'there'
 

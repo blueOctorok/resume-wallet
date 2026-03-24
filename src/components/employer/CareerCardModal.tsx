@@ -18,6 +18,7 @@ import Avatar from '@/components/ui/Avatar'
 import MessagingButton from '@/components/messaging/MessagingButton'
 import MvrPaymentButton from '@/components/MvrPaymentButton'
 import { useUIStore } from '@/stores'
+import { getRequestableBlocks, getBlockDefinition } from '@/lib/block-registry'
 
 // Re-export for consumers that imported from here previously
 export type { CareerCardData }
@@ -100,21 +101,21 @@ export default function CareerCardModal({
     }
   }
 
-  // ── Employer request helpers ──────────────────────────────────────────────
+  // ── Registry-driven block request helpers ──────────────────────────────
+  // The block registry is the source of truth. Any block with
+  // employerRequestable: true automatically gets a request button.
 
-  const getPendingRequest = (type: string, documentType?: string) =>
-    careerCard?.pendingRequests?.find(r =>
-      r.request_type === type &&
-      (documentType === undefined || r.document_type === documentType)
-    ) || null
-
-  const createRequest = async (requestType: string, documentType?: string) => {
+  const requestBlockById = async (blockType: string) => {
     try {
-      setRequestLoading(requestType)
+      setRequestLoading(blockType)
       const response = await fetch(`/api/employer/talent/${candidateUserId}/request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
-        body: JSON.stringify({ requestType, documentType, message: 'Requested via StormChain Talent Search' }),
+        body: JSON.stringify({
+          requestType: 'block_request',
+          targetBlockType: blockType,
+          message: 'Requested via StormChain Talent Search',
+        }),
       })
       if (!response.ok) {
         const data = await response.json()
@@ -128,11 +129,11 @@ export default function CareerCardModal({
     }
   }
 
-  const resendRequest = async (requestType: string, documentType?: string) => {
-    const pending = getPendingRequest(requestType, documentType)
+  const resendBlockRequest = async (blockType: string) => {
+    const pending = getPendingRequestForBlock(blockType)
     if (!pending) return
     try {
-      setResendLoading(requestType)
+      setResendLoading(blockType)
       await fetch(`/api/employer/talent/${candidateUserId}/request`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
@@ -141,7 +142,11 @@ export default function CareerCardModal({
       await fetch(`/api/employer/talent/${candidateUserId}/request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
-        body: JSON.stringify({ requestType, documentType, message: 'Requested via StormChain Talent Search' }),
+        body: JSON.stringify({
+          requestType: 'block_request',
+          targetBlockType: blockType,
+          message: 'Requested via StormChain Talent Search',
+        }),
       })
       await fetchCareerCard()
     } catch (err) {
@@ -150,6 +155,17 @@ export default function CareerCardModal({
       setResendLoading(null)
     }
   }
+
+  /** Find a pending request that targets a specific block (new style) or matches legacy request types */
+  const getPendingRequestForBlock = (blockType: string) =>
+    careerCard?.pendingRequests?.find(r =>
+      // New style: block_request with target_block_type stored in data
+      (r.target_block_type === blockType) ||
+      // Legacy compat: old request types
+      (blockType === 'driver-resume' && r.request_type === 'document_upload' && r.document_type === 'resume') ||
+      (blockType === 'driver-mvr' && r.request_type === 'mvr_order') ||
+      (blockType === 'driver-dot-application' && r.request_type === 'profile_completion')
+    ) || null
 
   // ── Recruit helpers ───────────────────────────────────────────────────────
 
@@ -224,72 +240,99 @@ export default function CareerCardModal({
     }
   }
 
-  // ── Action slots passed into CareerCard ───────────────────────────────────
+  // ── Registry-driven action slots ────────────────────────────────────────
+  // Every block with employerRequestable: true gets a "Request {label}" button
+  // automatically. No manual wiring needed when a new block is added.
 
-  const resumeAction = !careerCard?.hasResume ? (
-    <ActionButton
-      label="Request Resume"
-      loading={requestLoading === 'document_upload'}
-      resendLoading={resendLoading === 'document_upload'}
-      isPending={!!getPendingRequest('document_upload', 'resume')}
-      onClick={() => createRequest('document_upload', 'resume')}
-      onResend={() => resendRequest('document_upload', 'resume')}
-      theme={theme}
-    />
-  ) : null
+  const requestableBlocks = getRequestableBlocks()
 
-  // MVR actions — only if candidate has the driver-mvr block and no MVR exists yet
-  const hasDriverMvrBlock = careerCard?.installedBlockTypes?.includes('driver-mvr')
-  const consentReady = careerCard?.hasBgcheckConsent === true
-  const mvrAction = hasDriverMvrBlock && !careerCard?.hasMvr && !careerCard?.companyMvr ? (
-    <div className="flex items-center gap-2">
+  /** Build an action node for a requestable block — returns null if not applicable */
+  const buildBlockAction = (blockId: string): React.ReactNode => {
+    const def = getBlockDefinition(blockId)
+    if (!def?.employerRequestable) return null
+
+    // Only show if candidate has the block installed
+    const installed = careerCard?.installedBlockTypes?.includes(blockId)
+    if (!installed) return null
+
+    // Hide if the block's deliverable is already complete
+    if (def.completionField) {
+      const complete = (careerCard as Record<string, unknown>)?.[def.completionField]
+      if (complete) return null
+    }
+
+    // MVR has extra "Order MVR" button alongside the standard request
+    if (blockId === 'driver-mvr' && careerCard?.companyMvr) return null
+
+    const pending = getPendingRequestForBlock(blockId)
+
+    const actionButton = (
       <ActionButton
-        label="Request MVR"
-        loading={requestLoading === 'mvr_order'}
-        resendLoading={resendLoading === 'mvr_order'}
-        isPending={!!getPendingRequest('mvr_order')}
-        onClick={() => createRequest('mvr_order')}
-        onResend={() => resendRequest('mvr_order')}
+        label={`Request ${def.requestLabel}`}
+        loading={requestLoading === blockId}
+        resendLoading={resendLoading === blockId}
+        isPending={!!pending}
+        onClick={() => requestBlockById(blockId)}
+        onResend={() => resendBlockRequest(blockId)}
         theme={theme}
       />
-      <button
-        onClick={() => setShowMvrOrderModal(true)}
-        disabled={!consentReady || mvrOrderSuccess}
-        title={consentReady ? 'Order MVR' : 'Waiting for candidate to sign disclosure'}
-        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-          mvrOrderSuccess
-            ? theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-700'
-            : consentReady
-              ? theme === 'dark'
-                ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 cursor-pointer'
-                : 'bg-teal-50 text-teal-700 hover:bg-teal-100 cursor-pointer'
-              : theme === 'dark'
-                ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-        }`}
-      >
-        {mvrOrderSuccess ? (
-          <><CheckCircle className="w-3 h-3" /> Ordered</>
-        ) : (
-          <><CreditCard className="w-3 h-3" /> Order MVR</>
-        )}
-      </button>
-    </div>
-  ) : null
+    )
 
-  // DOT app request — only if candidate has the driver-dot-application block and no app yet
-  const hasDotBlock = careerCard?.installedBlockTypes?.includes('driver-dot-application')
-  const dotAppAction = hasDotBlock && !careerCard?.hasDriverApp ? (
-    <ActionButton
-      label="Request DOT App"
-      loading={requestLoading === 'profile_completion'}
-      resendLoading={resendLoading === 'profile_completion'}
-      isPending={!!getPendingRequest('profile_completion')}
-      onClick={() => createRequest('profile_completion')}
-      onResend={() => resendRequest('profile_completion')}
-      theme={theme}
-    />
-  ) : null
+    // MVR special case: add the paid "Order MVR" button
+    if (blockId === 'driver-mvr') {
+      const consentReady = careerCard?.hasBgcheckConsent === true
+      return (
+        <div className="flex items-center gap-2">
+          {actionButton}
+          <button
+            onClick={() => setShowMvrOrderModal(true)}
+            disabled={!consentReady || mvrOrderSuccess}
+            title={consentReady ? 'Order MVR' : 'Waiting for candidate to sign disclosure'}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              mvrOrderSuccess
+                ? theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-700'
+                : consentReady
+                  ? theme === 'dark'
+                    ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 cursor-pointer'
+                    : 'bg-teal-50 text-teal-700 hover:bg-teal-100 cursor-pointer'
+                  : theme === 'dark'
+                    ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {mvrOrderSuccess ? (
+              <><CheckCircle className="w-3 h-3" /> Ordered</>
+            ) : (
+              <><CreditCard className="w-3 h-3" /> Order MVR</>
+            )}
+          </button>
+        </div>
+      )
+    }
+
+    return actionButton
+  }
+
+  // Map block IDs → CareerCard's named action props.
+  // CareerCard uses named slots; this bridge keeps both sides clean.
+  const BLOCK_TO_SLOT: Record<string, 'resumeAction' | 'mvrAction' | 'dotAppAction'> = {
+    'driver-resume': 'resumeAction',
+    'developer-resume': 'resumeAction',
+    'driver-mvr': 'mvrAction',
+    'driver-dot-application': 'dotAppAction',
+  }
+
+  const actionSlots: Record<string, React.ReactNode> = {}
+  for (const block of requestableBlocks) {
+    const slotName = BLOCK_TO_SLOT[block.id]
+    if (slotName) {
+      actionSlots[slotName] = actionSlots[slotName] ?? buildBlockAction(block.id)
+    }
+  }
+
+  const resumeAction = actionSlots.resumeAction ?? null
+  const mvrAction = actionSlots.mvrAction ?? null
+  const dotAppAction = actionSlots.dotAppAction ?? null
 
   // Messaging is available once there's an existing application or pending request
   const messagingContext = careerCard?.existingApplication?.id

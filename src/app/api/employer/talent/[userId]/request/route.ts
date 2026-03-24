@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { sendCandidateRequestNotification } from '@/lib/send-admin-notification'
 import { createNotification } from '@/lib/create-notification'
+import { getBlockDefinition } from '@/lib/block-registry'
 
 /**
  * POST /api/employer/talent/[userId]/request
@@ -34,6 +35,7 @@ export async function POST(
       documentType,
       message,
       expiresInDays = 30,
+      targetBlockType,
     } = body
 
     if (!walletAddress) {
@@ -50,7 +52,7 @@ export async function POST(
       )
     }
 
-    const validTypes = ['mvr_order', 'document_upload', 'verification', 'profile_completion', 'custom']
+    const validTypes = ['mvr_order', 'document_upload', 'verification', 'profile_completion', 'custom', 'block_request']
     if (!requestType || !validTypes.includes(requestType)) {
       return NextResponse.json(
         { error: `requestType must be one of: ${validTypes.join(', ')}` },
@@ -150,15 +152,21 @@ export async function POST(
       )
     }
 
-    // Check for duplicate pending requests of the same type
-    const { data: existingRequest } = await supabase
+    // Check for duplicate pending requests of the same type/block
+    let dupeQuery = supabase
       .from('candidate_requests')
       .select('id')
       .eq('company_id', companyId)
       .eq('candidate_user_id', candidateUserId)
-      .eq('request_type', requestType)
       .in('status', ['pending', 'viewed'])
-      .single()
+
+    if (requestType === 'block_request' && targetBlockType) {
+      dupeQuery = dupeQuery.eq('target_block_type', targetBlockType)
+    } else {
+      dupeQuery = dupeQuery.eq('request_type', requestType)
+    }
+
+    const { data: existingRequest } = await dupeQuery.maybeSingle()
 
     if (existingRequest) {
       return NextResponse.json(
@@ -180,6 +188,7 @@ export async function POST(
         candidate_user_id: candidateUserId,
         request_type: requestType,
         document_type: documentType || null,
+        target_block_type: targetBlockType || null,
         message: message || null,
         status: 'pending',
         expires_at: expiresAt.toISOString(),
@@ -197,23 +206,59 @@ export async function POST(
 
     console.log(`[CANDIDATE REQUEST] Created request ${newRequest.id} for candidate ${candidateUserId}`)
 
+    // Auto-install the target block on the candidate's hub (if they don't have it yet)
+    const blockDef = targetBlockType ? getBlockDefinition(targetBlockType) : null
+    if (targetBlockType && blockDef) {
+      const { data: existingBlock } = await supabase
+        .from('hub_blocks')
+        .select('id')
+        .eq('user_id', candidateUserId)
+        .eq('block_type', targetBlockType)
+        .maybeSingle()
+
+      if (!existingBlock) {
+        const { data: maxOrder } = await supabase
+          .from('hub_blocks')
+          .select('display_order')
+          .eq('user_id', candidateUserId)
+          .order('display_order', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        await supabase.from('hub_blocks').insert({
+          user_id: candidateUserId,
+          block_type: targetBlockType,
+          display_order: (maxOrder?.display_order ?? -1) + 1,
+        })
+        console.log(`[CANDIDATE REQUEST] Auto-installed block ${targetBlockType} for candidate ${candidateUserId}`)
+      }
+    }
+
+    // Deep-link: route to the block's page so the candidate lands right on it
+    const blockPageRoute = blockDef?.pageRoute
+    const actionUrl = blockPageRoute ? `/?onboard=${blockPageRoute}` : null
+
     const requestLabels: Record<string, string> = {
       mvr_order: 'Background Check & MVR Request',
       document_upload: 'Document Upload Request',
       verification: 'Employment Verification Request',
       profile_completion: 'Profile Completion Request',
       custom: 'New Request',
+      block_request: blockDef ? `${blockDef.label} Request` : 'New Request',
     }
     const notifTitle = requestLabels[requestType] || 'New Request'
-    const notifBody = `${companyName} has sent you a ${requestLabels[requestType]?.toLowerCase() || 'request'}.${message ? ` Message: "${message}"` : ''}`
+    const notifBody = blockDef
+      ? `${companyName} has requested your ${blockDef.label}.${message ? ` Message: "${message}"` : ''}`
+      : `${companyName} has sent you a ${requestLabels[requestType]?.toLowerCase() || 'request'}.${message ? ` Message: "${message}"` : ''}`
 
-    // In-app notification (non-blocking, fire-and-forget)
+    // In-app notification — includes deep-link so bell click routes to the block
     createNotification({
       userId: candidateUserId,
       type: 'candidate_request',
       title: notifTitle,
       body: notifBody,
-      data: { companyName, requestType, requestId: newRequest.id },
+      actionUrl: actionUrl ?? undefined,
+      data: { companyName, requestType, requestId: newRequest.id, targetBlockType: targetBlockType ?? undefined },
     }).catch(err => console.error('[CANDIDATE REQUEST] Notification error:', err))
 
     // Resolve candidate name from user_profiles
@@ -231,9 +276,10 @@ export async function POST(
         candidateEmail,
         candidateName,
         companyName,
-        requestType: requestType as 'mvr_order' | 'document_upload' | 'verification' | 'profile_completion' | 'custom',
+        requestType: requestType as 'mvr_order' | 'document_upload' | 'verification' | 'profile_completion' | 'custom' | 'block_request',
         documentType: documentType || null,
         message: message || null,
+        blockLabel: blockDef?.label ?? null,
       }).then(result => {
         if (result.ok) {
           console.log(`[CANDIDATE REQUEST] Email sent to ${candidateEmail}`)
@@ -425,6 +471,7 @@ export async function GET(
         id: r.id,
         requestType: r.request_type,
         documentType: r.document_type,
+        targetBlockType: r.target_block_type ?? null,
         message: r.message,
         status: r.status,
         completedAt: r.completed_at,

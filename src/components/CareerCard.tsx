@@ -153,6 +153,7 @@ export interface CareerCardData {
     id: string
     request_type: string
     document_type: string | null
+    target_block_type: string | null
     status: string
     created_at: string
   }>

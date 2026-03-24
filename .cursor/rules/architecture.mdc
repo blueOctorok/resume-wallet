@@ -93,6 +93,120 @@ const { data } = await supabase.from('block_driver_cdl').select('*')...
 
 ---
 
+## Navigation Contract
+
+Four things must stay in sync when a block has a full-page view. If any one is missing, something breaks silently.
+
+| Thing | File | What to do |
+|---|---|---|
+| `PageType` | `src/stores/types.ts` | Add the route string to the union type |
+| `pageRoute` | `src/lib/block-registry.ts` | Set to the same `PageType` string |
+| `validOnboardPages` | `src/app/page.tsx` | Add the route string so `?onboard=` deep-links work |
+| Shell route case | `src/components/app/CandidateShell.tsx` | Add an `if (currentPage === '...')` that renders the block component |
+| `BLOCK_TO_SLOT` | `src/components/employer/CareerCardModal.tsx` | Map block ID → CareerCard action slot (if `employerRequestable`) |
+
+### Rules
+
+- **`pageRoute` on the registry MUST match a `PageType` value.** They are the same string.
+- **`validOnboardPages` MUST include every `pageRoute` that exists.** Otherwise invite → onboard → deep-link silently fails.
+- **`CandidateShell` MUST have a route case for every `pageRoute`.** Otherwise `setCurrentPage('xyz')` renders nothing.
+- **When removing a block**, reverse all four: drop the `PageType` (if no other block uses it), remove from `validOnboardPages`, remove the shell case, remove from `BLOCK_TO_SLOT`.
+
+---
+
+## API Route Standards
+
+Every API route (`src/app/api/...`) must follow these patterns:
+
+### Authentication
+
+```typescript
+// Candidate/employer routes — wallet address from header
+const walletAddress = request.headers.get('x-wallet-address')
+if (!walletAddress) return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+
+// Admin routes — use requireAdmin helper
+import { requireAdmin } from '@/lib/admin-auth'
+const auth = requireAdmin(request)
+if (auth instanceof NextResponse) return auth
+```
+
+### Error response shape
+
+Always return `{ error: string }` on failure. Never return plain strings or HTML.
+
+```typescript
+// GOOD
+return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
+
+// BAD
+return new Response('Not found', { status: 404 })
+```
+
+### Logging
+
+Use bracketed prefixes so logs are filterable:
+
+```typescript
+console.log(`[RECRUIT] Created application ${id}`)
+console.error('[CANDIDATE REQUEST] Insert error:', error)
+```
+
+### Supabase client
+
+- **API routes** that need to bypass RLS: `getAdminSupabaseClient()`
+- **Block data**: always go through `src/lib/block-data.ts` helpers
+- **Never** import `createClient` directly in a route — use the shared helpers
+
+---
+
+## Notification & Email Patterns
+
+### In-app notifications
+
+Use `createNotification()` from `src/lib/create-notification.ts`. Every notification should have:
+
+- `type` — one of the `NotificationType` values
+- `title` + `body` — human-readable
+- `actionUrl` — where bell-click navigates (use `/?onboard={pageRoute}` for block deep-links)
+- `data` — structured metadata for programmatic use
+
+When adding a new notification type, add it to the `NotificationType` union in `create-notification.ts` and handle it in `NotificationBell.tsx` (icon + color).
+
+### Emails
+
+| Path | Template | How it works |
+|---|---|---|
+| Invite outreach | `src/lib/send-invite-email.ts` | Auto-reads `label` + `description` from block registry. No per-block template needed. |
+| Request/recruit | `src/lib/send-admin-notification.ts` | Uses `requestType` + `blockLabel` for copy. Add new `requestType` entries to `REQUEST_TYPE_LABELS` and `REQUEST_ACTION_TEXT`. |
+| Admin alerts | `src/lib/send-admin-notification.ts` | For admin-facing notifications (new company, etc.) |
+
+When adding a new email type, add it to the appropriate file above. Never create a one-off email sender — reuse the shared HTML wrapper functions (`detailsBox`, `infoBox`, `ctaButton`).
+
+---
+
+## Error Handling
+
+### API routes
+
+- **Always** wrap the entire handler in `try/catch`
+- **Always** return `{ error: string }` with appropriate status code
+- **Log** errors with `console.error` and a bracketed prefix
+
+### Components
+
+- **Feature pages** should be wrapped in `<ErrorBoundary section="Feature Name">` (see `src/components/app/ErrorBoundary.tsx`)
+- **Stores own their own error state.** Each store that fetches data should have an `error: string | null` field. Components read `error` from the store, not from props.
+
+### Loading states
+
+- **Stores own their own loading state.** Each store that fetches data should have an `isLoading: boolean` field.
+- **Full-page loading** — use `<LoadingScreen message="..." />` for initial page loads
+- **Inline loading** — use `<Loader2 className="w-4 h-4 animate-spin" />` from lucide-react for buttons and small sections
+- **Never show a blank screen** while data loads. Always show either a loading indicator or skeleton.
+
+---
+
 ## State Management
 
 All state lives in Zustand stores. No `useState` for shared or feature-level data.

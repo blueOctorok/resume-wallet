@@ -1409,7 +1409,6 @@ export default function CandidateHub() {
   const installedBlocks = useInstalledBlocks()
   const hubContext = useHubContext()
   const avaAutoWelcomeCandidateDone = useAvaAutoWelcomeCandidateDone()
-  const setAvaAutoWelcomeCandidateDone = useHubBlocksStore((s) => s.setAvaAutoWelcomeCandidateDone)
   const needsOnboarding = useNeedsOnboarding()
   const isAvAContextModalOpen = useHubBlocksStore((s) => s.isAvAContextModalOpen)
   const isEditing = useIsEditMode()
@@ -1504,7 +1503,7 @@ export default function CandidateHub() {
               hubContext={hubContext}
               candidateEmptyHub={installedBlocks.length === 0}
               avaAutoWelcomeCandidateDone={avaAutoWelcomeCandidateDone}
-              onAvaAutoWelcomeSynced={() => setAvaAutoWelcomeCandidateDone(true)}
+              onAvaAutoWelcomeSynced={undefined}
               desktopJourneyScrollTargetId='candidate-hub-quest-sidebar'
             />
 
@@ -1632,9 +1631,7 @@ export default function CandidateHub() {
           className={cn(
             'lg:hidden fixed z-30 flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold shadow-lg',
             'bottom-20 right-4',
-            isDark
-              ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-              : 'bg-brand-mint text-white hover:bg-brand-mint/90',
+            'bg-brand-mint text-gray-900 hover:bg-brand-mint/90',
           )}
           aria-label='Open career path'
         >

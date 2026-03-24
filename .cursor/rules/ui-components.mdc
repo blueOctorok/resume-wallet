@@ -108,3 +108,63 @@ You don't. The only exception is `LoadingScreen` (full-page takeover with no clo
 - [ ] Sets `zIndex` if it can open on top of another modal
 - [ ] Does NOT manually set `body.style.overflow` (Modal handles it)
 - [ ] Does NOT use `createPortal` directly (Modal handles it)
+
+---
+
+## Dark Mode — Every Element Must Have Both Variants
+
+This app supports dark and light mode via `useTheme()`. Every visual element must work in both.
+
+### Rules
+
+- **Every background, text, and border class MUST have a `dark:` variant.** No exceptions.
+- **Use `theme === 'dark'` ternaries** for complex class switching (not separate components for dark/light).
+- **Never use raw `bg-white` or `text-black`** without a `dark:bg-gray-*` / `dark:text-gray-*` companion.
+
+```tsx
+// ❌ BAD — no dark variant
+<div className="bg-white border border-gray-200 text-gray-900">
+
+// ✅ GOOD
+<div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+
+// ✅ GOOD — ternary for complex themes
+<div className={theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>
+```
+
+### Common pairs (use these, not custom values)
+
+| Light | Dark | Use for |
+|---|---|---|
+| `bg-white` | `dark:bg-gray-900` | Page/card backgrounds |
+| `bg-gray-50` | `dark:bg-gray-800` | Inset/secondary backgrounds |
+| `text-gray-900` | `dark:text-gray-100` | Primary text |
+| `text-gray-600` | `dark:text-gray-400` | Secondary text |
+| `text-gray-500` | `dark:text-gray-400` | Muted/caption text |
+| `border-gray-200` | `dark:border-gray-700` | Borders and dividers |
+| `bg-gray-100` | `dark:bg-gray-700` | Hover states, subtle fills |
+
+### Brand colors
+
+Brand colors (`bg-brand-mint`, `text-teal-*`) generally work in both modes. But always verify contrast — teal on dark gray needs different opacity than teal on white.
+
+---
+
+## Empty States
+
+Every list, table, or data section must handle the "no data yet" case with a helpful empty state — not a blank space.
+
+```tsx
+// ❌ BAD — nothing renders when list is empty
+{items.map(item => <ItemCard key={item.id} {...item} />)}
+
+// ✅ GOOD
+{items.length === 0 ? (
+  <div className="text-center py-8">
+    <Package className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+    <p className="text-sm text-gray-500 dark:text-gray-400">No items yet</p>
+  </div>
+) : (
+  items.map(item => <ItemCard key={item.id} {...item} />)
+)}
+```

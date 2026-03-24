@@ -218,14 +218,12 @@ const HomeContent = () => {
 
     didHandleOnboardRef.current = true
 
-    // Map onboard action to page type
-    const pageMap: Record<string, PageType> = {
-      'dot-application': 'dotapp',
-      'developer-profile': 'resume', // Developer resume/profile builder
-    }
-    const targetPage = pageMap[onboardAction]
-    if (targetPage) {
-      setCurrentPage(targetPage)
+    // onboard param is the block's `pageRoute` from the registry (e.g. 'dotapp', 'resume', 'mvr').
+    // Cast directly — these already match PageType values in CandidateShell.
+    const validOnboardPages: PageType[] = ['dotapp', 'resume', 'mvr', 'portfolio', 'github', 'jobs', 'applications']
+    const target = onboardAction as PageType
+    if (validOnboardPages.includes(target)) {
+      setCurrentPage(target)
     }
 
     // Clean up URL (remove query params)

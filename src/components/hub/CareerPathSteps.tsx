@@ -43,7 +43,7 @@ export default function CareerPathSteps({ onNavigate, progressOverride }: Career
             onClick={() => openPicker()}
             className={cn(
               'mt-3 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors',
-              'bg-brand-mint text-white hover:bg-brand-mint/90',
+              'bg-brand-mint text-gray-900 hover:bg-brand-mint/90',
             )}
           >
             Open block store
@@ -59,7 +59,7 @@ export default function CareerPathSteps({ onNavigate, progressOverride }: Career
         <span className='text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400'>
           Next steps
         </span>
-        <span className='text-xs font-bold text-brand-mint tabular-nums'>
+        <span className='text-xs font-bold text-brand-sage-dark dark:text-teal-300 tabular-nums'>
           {progress.completedSteps}/{progress.totalSteps}
         </span>
       </div>
@@ -111,7 +111,7 @@ function PathStepRow({
           className={cn(
             'flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-0.5',
             step.status === 'complete' && 'bg-green-500 text-white',
-            step.status === 'in_progress' && 'bg-brand-mint text-white',
+            step.status === 'in_progress' && 'bg-brand-mint text-gray-900',
             step.status === 'pending' && 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400',
           )}
         >

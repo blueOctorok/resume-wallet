@@ -7,15 +7,25 @@
  *
  * Full checklist for adding a new block: see .cursor/rules/block-development.mdc
  *
- * Quick reference:
- *   1. Add a BlockDefinition + BlockColorSet entry here
- *   2. Create the block component in src/components/blocks/
- *   3. Register it in CandidateShell's lazy block map
- *   4. Gate career card section on installedBlockTypes (CareerCard.tsx)
- *   5. Gate employer request buttons on installedBlockTypes (CareerCardModal.tsx)
- *   6. Add BLOCK_JOURNEY_MAP entry (journey-progress.ts)
- *   7. Register PageType if block has a full-page route (stores/types.ts)
- *   8. Admin: add a tab if block has admin-manageable data
+ * Quick reference (full checklist in .cursor/rules/block-development.mdc):
+ *
+ *   ADDING a block:
+ *   1.  Add a BlockDefinition + BlockColorSet entry here
+ *   2.  Create the block component in src/components/blocks/
+ *   3.  Register it in CandidateShell's lazy block map + route case
+ *   4.  Gate career card section on installedBlockTypes (CareerCard.tsx)
+ *   5.  Set employerRequestable + requestLabel + completionField (CareerCardModal reads this)
+ *   6.  Add BLOCK_TO_SLOT in CareerCardModal.tsx if employerRequestable
+ *   7.  Add BLOCK_JOURNEY_MAP entry (journey-progress.ts)
+ *   8.  Register PageType if block has a full-page route (stores/types.ts)
+ *   9.  Add pageRoute to validOnboardPages in page.tsx for deep-link support
+ *   10. Surface a file entry in MyFilesSection (CandidateHub.tsx)
+ *   11. Add AvA journey step + context (journey-progress.ts, ava-context.ts)
+ *   12. Admin: add a tab if block has admin-manageable data
+ *   13. Data: create block_* table migration + block-data.ts helpers
+ *
+ *   REMOVING a block: see section 13 in .cursor/rules/block-development.mdc
+ *   — reverse every step above + check the hardcoded touchpoints table
  */
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -54,6 +64,27 @@ export interface BlockDefinition {
    * null means the block doesn't own persistent data (yet).
    */
   dataTables: string[] | null
+
+  // ── Employer outreach ────────────────────────────────────────────────────
+  /**
+   * Whether employers can request this block from a candidate via talent search.
+   * When true, CareerCardModal renders a "Request {requestLabel}" button,
+   * the request API auto-installs the block, and the notification deep-links
+   * to `pageRoute`.
+   */
+  employerRequestable: boolean
+  /**
+   * CTA label shown to employers (e.g. "Resume", "DOT Application", "MVR").
+   * Rendered as "Request {requestLabel}". Only meaningful when employerRequestable is true.
+   */
+  requestLabel: string | null
+  /**
+   * The career card field that indicates the block's deliverable is complete.
+   * Used to hide the request button when the candidate has already finished it.
+   * Examples: 'hasResume', 'hasDriverApp', 'hasMvr'.
+   * null means the button always shows (rely on block install status only).
+   */
+  completionField: string | null
 }
 
 export interface BlockCategory {
@@ -112,6 +143,9 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     appearsOnCareerCard: true,
     pageRoute: null,
     dataTables: ['block_skills'],
+    employerRequestable: false,
+    requestLabel: null,
+    completionField: null,
   },
   {
     id: 'general-work-history',
@@ -124,6 +158,9 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     appearsOnCareerCard: true,
     pageRoute: null,
     dataTables: ['block_driver_employment'],
+    employerRequestable: false,
+    requestLabel: null,
+    completionField: null,
   },
   // ── Drivers ────────────────────────────────────────────────────────────────
   {
@@ -137,6 +174,9 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     appearsOnCareerCard: true,
     pageRoute: 'resume',
     dataTables: ['block_driver_cdl', 'block_driver_employment', 'block_education', 'block_skills', 'block_references'],
+    employerRequestable: true,
+    requestLabel: 'Resume',
+    completionField: 'hasResume',
   },
   {
     id: 'driver-dot-application',
@@ -149,6 +189,9 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     appearsOnCareerCard: true,
     pageRoute: 'dotapp',
     dataTables: ['block_driver_cdl', 'block_driver_employment', 'block_driver_emergency', 'block_driver_experience', 'block_education', 'block_references'],
+    employerRequestable: true,
+    requestLabel: 'DOT Application',
+    completionField: 'hasDriverApp',
   },
   {
     id: 'driver-mvr',
@@ -161,6 +204,9 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     appearsOnCareerCard: true,
     pageRoute: 'mvr',
     dataTables: ['block_driver_mvr'],
+    employerRequestable: true,
+    requestLabel: 'MVR',
+    completionField: 'hasMvr',
   },
   {
     id: 'driver-cdl-credentials',
@@ -173,6 +219,9 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     appearsOnCareerCard: true,
     pageRoute: null,
     dataTables: ['block_driver_cdl'],
+    employerRequestable: false,
+    requestLabel: null,
+    completionField: null,
   },
 
   // ── Developers ─────────────────────────────────────────────────────────────
@@ -187,6 +236,9 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     appearsOnCareerCard: true,
     pageRoute: 'resume',
     dataTables: ['block_skills', 'block_education', 'block_references'],
+    employerRequestable: true,
+    requestLabel: 'Resume',
+    completionField: 'hasResume',
   },
   {
     id: 'developer-portfolio',
@@ -199,6 +251,9 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     appearsOnCareerCard: true,
     pageRoute: 'portfolio',
     dataTables: ['block_dev_portfolio'],
+    employerRequestable: true,
+    requestLabel: 'Portfolio',
+    completionField: null,
   },
   {
     id: 'developer-projects',
@@ -211,6 +266,9 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     appearsOnCareerCard: true,
     pageRoute: null,
     dataTables: null,
+    employerRequestable: false,
+    requestLabel: null,
+    completionField: null,
   },
   {
     id: 'developer-github',
@@ -223,6 +281,9 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     appearsOnCareerCard: true,
     pageRoute: 'github',
     dataTables: ['block_dev_github'],
+    employerRequestable: false,
+    requestLabel: null,
+    completionField: null,
   },
 ]
 
@@ -334,6 +395,11 @@ export function getBlockColor(blockType: string): BlockColorSet {
 /** Get a block definition by its id. Returns undefined for unknown types. */
 export function getBlockDefinition(blockType: string): BlockDefinition | undefined {
   return BLOCK_DEFINITIONS.find((b) => b.id === blockType)
+}
+
+/** All blocks that employers can request from candidates via talent search. */
+export function getRequestableBlocks(): BlockDefinition[] {
+  return BLOCK_DEFINITIONS.filter((b) => b.employerRequestable)
 }
 
 /** Get all block definitions for a category, sorted by complexity (simple first). */

@@ -105,20 +105,18 @@ export default function UserDetailModal({
                     >
                       Driver Profile
                     </h4>
-                    {!user.user.isAdmin && (
-                      <button
-                        onClick={() =>
-                          handleDeleteAndClose({
-                            type: 'profile',
-                            id: user.profile!.id,
-                            name: `${user.user.displayName}'s profile`,
-                          })
-                        }
-                        className='text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50'
-                      >
-                        Delete Profile
-                      </button>
-                    )}
+                    <button
+                      onClick={() =>
+                        handleDeleteAndClose({
+                          type: 'profile',
+                          id: user.profile!.id,
+                          name: `${user.user.displayName}'s profile`,
+                        })
+                      }
+                      className='text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50'
+                    >
+                      Delete Profile
+                    </button>
                   </div>
                   <div
                     className={`p-4 rounded-lg ${
@@ -204,20 +202,18 @@ export default function UserDetailModal({
                             {app.verification_status}
                           </span>
                         </div>
-                        {!user.user.isAdmin && (
-                          <button
-                            onClick={() =>
-                              handleDeleteAndClose({
-                                type: 'dotApp',
-                                id: app.id,
-                                name: `DOT application from ${new Date(app.created_at).toLocaleDateString()}`,
-                              })
-                            }
-                            className='p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500'
-                          >
-                            <Trash2 className='w-4 h-4' />
-                          </button>
-                        )}
+                        <button
+                          onClick={() =>
+                            handleDeleteAndClose({
+                              type: 'dotApp',
+                              id: app.id,
+                              name: `DOT application from ${new Date(app.created_at).toLocaleDateString()}`,
+                            })
+                          }
+                          className='p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500'
+                        >
+                          <Trash2 className='w-4 h-4' />
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -276,23 +272,21 @@ export default function UserDetailModal({
                             <CheckCircle className='w-4 h-4 text-green-500' />
                           )}
                         </div>
-                        {!user.user.isAdmin && (
-                          <button
-                            onClick={() =>
-                              handleDeleteAndClose({
-                                type: 'resume',
-                                id: resume.id,
-                                name:
-                                  resume.title ||
-                                  resume.filename ||
-                                  'resume',
-                              })
-                            }
-                            className='p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500'
-                          >
-                            <Trash2 className='w-4 h-4' />
-                          </button>
-                        )}
+                        <button
+                          onClick={() =>
+                            handleDeleteAndClose({
+                              type: 'resume',
+                              id: resume.id,
+                              name:
+                                resume.title ||
+                                resume.filename ||
+                                'resume',
+                            })
+                          }
+                          className='p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500'
+                        >
+                          <Trash2 className='w-4 h-4' />
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -311,20 +305,18 @@ export default function UserDetailModal({
                       <Code className='w-4 h-4 text-teal-500' />
                       Developer Profile
                     </h4>
-                    {!user.user.isAdmin && (
-                      <button
-                        onClick={() =>
-                          handleDeleteAndClose({
-                            type: 'devProfile',
-                            id: user.devProfile!.id,
-                            name: `${user.user.displayName}'s developer profile`,
-                          })
-                        }
-                        className='text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50'
-                      >
-                        Delete Dev Profile
-                      </button>
-                    )}
+                    <button
+                      onClick={() =>
+                        handleDeleteAndClose({
+                          type: 'devProfile',
+                          id: user.devProfile!.id,
+                          name: `${user.user.displayName}'s developer profile`,
+                        })
+                      }
+                      className='text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50'
+                    >
+                      Delete Dev Profile
+                    </button>
                   </div>
                   <div
                     className={`p-4 rounded-lg ${
@@ -463,20 +455,18 @@ export default function UserDetailModal({
                               <Github className='w-4 h-4' />
                             </a>
                           )}
-                          {!user.user.isAdmin && (
-                            <button
-                              onClick={() =>
-                                handleDeleteAndClose({
-                                  type: 'devProject',
-                                  id: project.id,
-                                  name: project.title,
-                                })
-                              }
-                              className='p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500'
-                            >
-                              <Trash2 className='w-4 h-4' />
-                            </button>
-                          )}
+                          <button
+                            onClick={() =>
+                              handleDeleteAndClose({
+                                type: 'devProject',
+                                id: project.id,
+                                name: project.title,
+                              })
+                            }
+                            className='p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500'
+                          >
+                            <Trash2 className='w-4 h-4' />
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -485,24 +475,22 @@ export default function UserDetailModal({
               )}
 
               {/* Delete All User Data Button */}
-              {!user.user.isAdmin && (
-                <div className='pt-4 border-t border-gray-200 dark:border-gray-700'>
-                  <button
-                    onClick={() =>
-                      handleDeleteAndClose({
-                        type: 'user',
-                        id: user.user.id,
-                        name:
-                          user.user.displayName ||
-                          user.user.wallet_address,
-                      })
-                    }
-                    className='w-full px-4 py-2 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700'
-                  >
-                    Delete User and All Data
-                  </button>
+              <div className='pt-4 border-t border-gray-200 dark:border-gray-700'>
+                <button
+                  onClick={() =>
+                    handleDeleteAndClose({
+                      type: 'user',
+                      id: user.user.id,
+                      name:
+                        user.user.displayName ||
+                        user.user.wallet_address,
+                    })
+                  }
+                  className='w-full px-4 py-2 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700'
+                >
+                  Delete User and All Data
+                </button>
                 </div>
-              )}
             </div>
             </>
           )

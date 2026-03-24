@@ -14,8 +14,8 @@ import Modal from '@/components/ui/Modal'
  * Uses the shared Modal component so the background does not scroll and the nav
  * sits behind the overlay. The hub is blocked until both required fields are submitted.
  *
- * On success: overlay disappears and the block picker opens with AvA's
- * suggested categories already filtered.
+ * On success: overlay disappears and the user lands on their hub with the
+ * career path sidebar already guiding next steps.
  */
 export default function HubOnboardingForm() {
   const { theme } = useTheme()
@@ -28,7 +28,6 @@ export default function HubOnboardingForm() {
   const [error, setError] = useState<string | null>(null)
 
   const completeOnboarding = useHubBlocksStore((s) => s.completeOnboarding)
-  const openPicker = useHubBlocksStore((s) => s.openPicker)
   const walletAddress = useAuthStore((s) => s.walletAddress)
 
   const canSubmit = occupation.trim().length > 0 && seekingReason.trim().length > 0
@@ -47,7 +46,6 @@ export default function HubOnboardingForm() {
         walletAddress,
         extraContext.trim() || null
       )
-      openPicker()
     } catch {
       setError('Something went wrong saving your answers. Please try again.')
     } finally {

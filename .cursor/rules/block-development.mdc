@@ -35,6 +35,9 @@ Add a `BlockDefinition` entry in `src/lib/block-registry.ts`. This is the single
 - `categoryId`: Must match an existing `BLOCK_CATEGORIES` entry (`general`, `drivers`, `developers`)
 - `appearsOnCareerCard`: Set `true` if employers should see data from this block
 - `pageRoute`: The `PageType` string if the block has a full-page view, else `null`
+- `employerRequestable`: Set `true` if employers can request this block from a candidate (see section 5)
+- `requestLabel`: The CTA label (e.g. `'Resume'` → "Request Resume"). Required when `employerRequestable` is `true`.
+- `completionField`: Career card field that hides the button when `true` (e.g. `'hasResume'`). `null` = always show.
 - Add a `BlockColorSet` entry in `BLOCK_COLORS` for the hub grid tile accent
 
 ## 2. Block Component
@@ -58,21 +61,46 @@ Blocks signal what sections appear on a candidate's career card.
 
 - **`src/app/api/employer/talent/[userId]/route.ts`**: Already returns `installedBlockTypes` from `hub_blocks`. No changes needed unless the block stores data in a new table that the career card needs.
 
-## 5. Employer Request Gating
+## 5. Employer Outreach (Automatic)
 
-Employers can only request things a candidate has a block for.
+Employer request buttons are **data-driven from the block registry**. When you set `employerRequestable: true` on your `BlockDefinition`, `CareerCardModal` auto-generates a "Request {requestLabel}" button. You do NOT manually add JSX.
 
-- **`src/components/employer/CareerCardModal.tsx`**: Request/order buttons are gated by `careerCard?.installedBlockTypes?.includes('your-block-id')`. Add a gated action if the block supports employer requests.
+### What to set in the registry
+
+| Field | Purpose | Example |
+|---|---|---|
+| `employerRequestable` | Whether employers can request this block from a candidate | `true` |
+| `requestLabel` | CTA text shown to employers ("Request {requestLabel}") | `'Resume'` |
+| `completionField` | Career card field to check — hides button when complete | `'hasResume'` |
+
+### What's automatic (zero code changes)
+
+- **Request button** in `CareerCardModal` — loops `getRequestableBlocks()` and renders `ActionButton` per block.
+- **Block auto-install** — the request API installs the block on the candidate's hub via `targetBlockType`.
+- **Deep-link notification** — `actionUrl` routes to `/?onboard={pageRoute}` so bell-click navigates to the block.
+- **Invite emails** — `send-invite-email.ts` reads `label` + `description` from the registry. No per-block template needed.
+- **Request emails** — `send-admin-notification.ts` uses `blockLabel` from the registry for `block_request` types.
+
+### What you still wire manually
+
+- **`BLOCK_TO_SLOT`** in `CareerCardModal.tsx` — maps your block ID to a `CareerCard` action slot (`resumeAction`, `mvrAction`, `dotAppAction`). If your block needs a new slot, add a prop to `CareerCard`.
+- **`validOnboardPages`** in `page.tsx` — add your block's `pageRoute` so `?onboard=` deep-links work after invite onboarding.
 - Employer MVR purchases must NOT update candidate career cards (CRA compliance).
 
 ## 6. Central Admin
 
-Admin is block-centric.
+Admin is block-centric. Most things are automatic; dedicated admin tabs are the exception.
 
-- **`/api/admin/users`** already returns `installedBlocks` and `blockCategories` per user by reading `hub_blocks`. No changes needed for new blocks — they appear automatically.
-- **`CandidatesTab.tsx`** renders block pills using `BLOCK_DEFINITIONS` labels. New blocks show up automatically.
-- The `blockFilter` query param uses the `{category}-` prefix convention to filter. As long as your block ID follows the naming convention, filtering works.
-- If the block has admin-manageable data (like DOT apps, MVR orders), add a dedicated admin tab under the "Candidates" sidebar section.
+### Automatic (zero code changes)
+
+- **Block pills** on the candidates table — `CandidatesTab.tsx` reads `BLOCK_DEFINITIONS` for labels and uses the `{category}-` prefix convention for colors. New blocks appear as pills automatically.
+- **Category filter** — `blockFilter` uses the prefix convention (`driver-*`, `developer-*`, `general-*`). Standard-prefixed block IDs work without changes.
+- **`/api/admin/users`** returns `installedBlocks` and `blockCategories` per user from `hub_blocks`. No changes needed.
+
+### Manual (when needed)
+
+- **Admin tab** — If the block has data admins need to manage (like DOT apps, MVR orders), add a dedicated tab in `AdminDashboardShell.tsx` with its own API route. Not every block needs this — only blocks with admin-reviewable artifacts.
+- **Data columns** — The candidates table has artifact-count columns (resume count, DOT app count) that are hardcoded. Add a count column if your block produces a countable artifact admins track.
 
 ## 7. AvA Journey Integration
 
@@ -179,6 +207,72 @@ await saveCdlData(supabase, userId, { cdl_number: '...', cdl_state: 'OH' })
 - **AvA knowledge:** Ensure AvA's context (e.g. `src/lib/ava-context.ts`) and any assistant templates (e.g. `developer-brain-templates.ts`) know about the block so AvA can reference it, nudge the user to complete it, and mark the journey step when done.
 - **Completion = done.** The journey step is "complete" when the user has finished the block's primary action (e.g. added portfolio URL, submitted DOT app, added first resume). Do not leave journey steps permanently pending for blocks that have a clear "done" state.
 
+## 12. Employer Outreach Summary
+
+Outreach is **registry-driven**. See section 5 for the full rules. Quick reference:
+
+| Path | Auto-install? | Deep-link? | Block email? |
+|------|--------------|------------|-------------|
+| **Application invite** (`CandidateOutreach` → `/api/employer/invites`) | Yes (`/onboard/[token]`) | Yes (`?onboard={pageRoute}`) | Yes (`send-invite-email.ts` + registry) |
+| **Talent request** (`CareerCardModal` → `/api/employer/talent/[userId]/request`) | Yes (API auto-installs `targetBlockType`) | Yes (`actionUrl` on notification) | Yes (`blockLabel` from registry) |
+| **Recruit** (`CareerCardModal` → `/api/employer/talent/[userId]/recruit`) | No (application-only) | Yes (notification → `/applications`) | Generic email |
+
+### Do NOT:
+- Set `employerRequestable: true` without setting `requestLabel`
+- Skip `validOnboardPages` in `page.tsx` when your block has a `pageRoute`
+- Hardcode notification URLs — always derive from `getBlockDefinition(blockType).pageRoute`
+
+## 13. Removing / Deprecating a Block
+
+There is NO shortcut for removal. Every file touched by "adding a block" must be reversed, plus data cleanup. Follow every step.
+
+### Code removal (reverse of the add checklist)
+
+1. **`src/lib/block-registry.ts`** — Remove the `BlockDefinition` entry and its `BLOCK_COLORS` entry
+2. **`src/components/blocks/[BlockName]Block.tsx`** — Delete the component (and subfolder if any)
+3. **`src/components/app/CandidateShell.tsx`** — Remove the lazy import and route case
+4. **`src/stores/types.ts`** — Remove the `PageType` value if this was the only block using it
+5. **`src/app/page.tsx`** — Remove the `pageRoute` from `validOnboardPages`
+6. **`src/components/employer/CareerCardModal.tsx`** — Remove from `BLOCK_TO_SLOT` if present
+7. **`src/lib/journey-progress.ts`** — Remove the `BLOCK_JOURNEY_MAP` entry and any `BlockProgressData` fields only this block used
+8. **`src/stores/journey-store.ts`** — Remove the progress data population for this block
+9. **`src/components/hub/CandidateHub.tsx`** — Remove any `MyFilesSection` gating for this block's document type
+10. **`src/components/hub/BlockIllustrations.tsx`** — Remove the illustration entry
+11. **`src/lib/block-data.ts`** — Remove read/write helpers if no other block shares the tables
+12. **Block store** (`src/stores/[block]-store.ts`) — Delete if exists
+
+### Hardcoded touchpoint files (check EVERY one)
+
+These files contain per-block logic that is NOT driven by the registry. When adding or removing a block, you MUST check each:
+
+| File | What's hardcoded | Why it matters |
+|---|---|---|
+| `src/lib/journey-progress.ts` | `BLOCK_JOURNEY_MAP` — per-block journey steps | Missing entry = block has no journey progress |
+| `src/components/hub/CandidateHub.tsx` | `MyFilesSection` — `blockType === '...'` checks | Missing check = block produces no file entry |
+| `src/components/hub/BlockIllustrations.tsx` | Block ID → illustration component map | Missing = generic placeholder on hub tile |
+| `src/components/employer/CareerCardModal.tsx` | `BLOCK_TO_SLOT` — block ID → CareerCard prop | Missing = request button exists but doesn't attach to a card section |
+| `src/app/page.tsx` | `validOnboardPages` array | Missing = invite deep-link silently fails |
+| `src/components/CareerCard.tsx` | `startsWith('driver-')` section gating | Only matters if adding a new **category** |
+| `src/components/career-card/ProjectedCareerCard.tsx` | `switch(blockType)` per-section rendering | Missing = projected career card shows nothing for this block |
+| `src/app/api/career-card/route.ts` | `switch` building career card sections | Missing = career card API omits block data |
+| `src/lib/ava-chat.ts` | Per-block switch for AvA conversation behavior | Missing = AvA has no block-specific guidance |
+| `src/components/ShareProfileCard.tsx` | `sectionTypes.has('...')` badge checks | Missing = shared profile card omits block badge |
+| `src/components/HomePage.tsx` | Hero hex tile block IDs + labels | Missing = block not shown on marketing page |
+
+### Data cleanup
+
+- **`hub_blocks` rows** — Existing users may still have `block_type = 'removed-block'`. The UI must handle `getBlockDefinition()` returning `undefined` gracefully (show raw ID, not crash).
+- **`candidate_requests.target_block_type`** and **`application_invites.target_block_type`** — Text columns that may still reference the old block ID. These are historical records; do NOT delete them.
+- **`block_*` tables** — If the block's data tables are NOT shared by other blocks, write a migration to drop them. If shared, leave them.
+- **Notifications** — Old notifications with `actionUrl` pointing to the removed block's page will land on the hub (graceful fallback). No cleanup needed.
+
+### Do NOT:
+- Remove a block from the registry without checking every file in the touchpoints table above
+- Delete `block_*` tables that other blocks share (check `dataTables` on all `BlockDefinition` entries)
+- Leave `BLOCK_JOURNEY_MAP` entries for blocks that no longer exist (causes phantom journey steps)
+
+---
+
 ## Critical Rules
 
 - **`driver_profiles` and `developer_profiles` DO NOT EXIST.** They have been dropped. Any reference to them is a bug.
@@ -191,3 +285,4 @@ await saveCdlData(supabase, userId, { cdl_number: '...', cdl_state: 'OH' })
 - **Identity is separate.** Name, email, phone, address, avatar live in `user_profiles`, not in block tables. Block tables store role-specific data only.
 - **Every block must surface a file in My Files.** See "My Files Integration" section above. A block with no My Files entry is incomplete.
 - **Every block must have an AvA journey step** that completes when the block's work is done. See "AvA Journey Integration" section above. AvA must have knowledge to track and guide the user.
+- **Outreach is automatic for requestable blocks.** Set `employerRequestable: true` + `requestLabel` on your `BlockDefinition`. The request button, auto-install, deep-link, and email all derive from the registry. See "Employer Outreach" (section 5 + 12).

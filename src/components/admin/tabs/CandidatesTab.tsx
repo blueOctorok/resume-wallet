@@ -254,19 +254,13 @@ export default function CandidatesTab({
                         <circle cx="12" cy="12" r="3" />
                       </svg>
                     </button>
-                    {user.isAdmin ? (
-                      <span className="p-1.5 text-gray-400 dark:text-gray-600 cursor-not-allowed" title="Cannot delete admin accounts">
-                        <Trash2 className="w-4 h-4" />
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => onDelete({ type: 'user', id: user.id, name: user.displayName || user.wallet_address })}
-                        className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500"
-                        title="Delete user and all data"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => onDelete({ type: 'user', id: user.id, name: user.displayName || user.wallet_address })}
+                      className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500"
+                      title="Delete user and all data"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </td>
               </tr>
