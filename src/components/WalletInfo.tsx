@@ -103,8 +103,8 @@ export default function WalletInfo({
     }
   }, [refreshInterval, walletAddress])
 
-  // Same surface as employment verification
-  const baseBoxClasses = `hidden md:flex flex-col rounded-xl backdrop-blur-xl border transition-all duration-300 shadow-lg overflow-hidden ${
+  // Always visible at all breakpoints (company wallet modal is mobile-first; hiding below md hid balances entirely).
+  const baseBoxClasses = `flex flex-col rounded-xl backdrop-blur-xl border transition-all duration-300 shadow-lg overflow-hidden ${
     theme === 'dark'
       ? 'bg-gray-800/50 border-gray-700'
       : 'bg-white/70 border-gray-200'

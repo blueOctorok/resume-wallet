@@ -2,8 +2,17 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Modal from '@/components/ui/Modal'
+import Button from '@/components/ui/Button'
 import { useTheme } from '@/contexts/ThemeContext'
-import { Loader2, CheckCircle, AlertCircle, Building2, Clock } from 'lucide-react'
+import { Loader2, CheckCircle, AlertCircle, Building2, Clock, Info, Lock } from 'lucide-react'
+
+const MAX_REVIEW_NOTE_CHARS = 400
+
+function truncateReviewNote(text: string, max = MAX_REVIEW_NOTE_CHARS) {
+  const t = text.trim()
+  if (t.length <= max) return t
+  return `${t.slice(0, max).trim()}…`
+}
 
 const EMPLOYER_WHITELIST_WALLETS = [
   '0x9499cD25C6737A8195e74262f3c5eAE6dA607df3',
@@ -55,10 +64,18 @@ export default function RoleSelectionModal({
   const [submittingRequest, setSubmittingRequest] = useState(false)
   const [requestError, setRequestError] = useState<string | null>(null)
   const [requestSubmitted, setRequestSubmitted] = useState(false)
-  const [pendingRequest, setPendingRequest] = useState<{ companyName: string; createdAt: string; message?: string } | null>(null)
+  const [pendingRequest, setPendingRequest] = useState<{
+    companyName: string
+    createdAt: string
+    message?: string
+    status?: 'flagged' | 'pending'
+    reviewNote?: string
+  } | null>(null)
 
   const isAdminWhitelisted = walletAddress && EMPLOYER_WHITELIST_WALLETS.includes(walletAddress.toLowerCase())
   const needsEmailForEmployer = !userEmail && !walletAddress && !isAdminWhitelisted
+  /** Employer-linked wallets cannot use the candidate hub (same rule as POST /api/user/set-role). */
+  const candidateDisabled = existingRole === 'employer'
 
   const checkEmployerAccess = useCallback(async () => {
     if (isAdminWhitelisted) {
@@ -96,6 +113,11 @@ export default function RoleSelectionModal({
         setPendingRequest({
           companyName: data.request.company_name,
           createdAt: data.request.created_at,
+          status: data.request.status === 'flagged' ? 'flagged' : 'pending',
+          reviewNote:
+            typeof data.request.ai_reason === 'string' && data.request.ai_reason.trim()
+              ? truncateReviewNote(data.request.ai_reason)
+              : undefined,
         })
       }
     } catch (err) {
@@ -154,12 +176,17 @@ export default function RoleSelectionModal({
         return
       }
 
-      // Flagged / pending — show "under review" state with the API's explanation
+      // Flagged / pending — explicit outcome (not silent "loading")
       setRequestSubmitted(true)
       setPendingRequest({
         companyName: data.request?.companyName || requestCompanyName.trim(),
         createdAt: new Date().toISOString(),
-        message: data.message,
+        status: data.request?.status === 'flagged' ? 'flagged' : 'pending',
+        message: typeof data.message === 'string' ? data.message : undefined,
+        reviewNote:
+          typeof data.reviewNote === 'string' && data.reviewNote.trim()
+            ? truncateReviewNote(data.reviewNote)
+            : undefined,
       })
       setShowRequestForm(false)
     } catch (err) {
@@ -170,17 +197,27 @@ export default function RoleSelectionModal({
   }
 
   useEffect(() => {
-    if (selectedRole === 'employer' && !checkingAccess) {
-      checkEmployerAccess()
-      checkPendingRequest()
+    if (candidateDisabled && selectedRole === 'candidate') {
+      setSelectedRole('employer')
     }
+  }, [candidateDisabled, selectedRole])
+
+  useEffect(() => {
     if (selectedRole !== 'employer') {
       setEmployerAccess(null)
       setShowRequestForm(false)
       setRequestError(null)
       setRequestSubmitted(false)
+      return
     }
-  }, [selectedRole])
+    checkEmployerAccess()
+  }, [selectedRole, checkEmployerAccess])
+
+  useEffect(() => {
+    if (selectedRole === 'employer' && walletAddress) {
+      checkPendingRequest()
+    }
+  }, [selectedRole, walletAddress, checkPendingRequest])
 
   const canProceed = selectedRole !== null && (
     selectedRole !== 'employer' ||
@@ -233,17 +270,25 @@ export default function RoleSelectionModal({
 
           {/* Role Options — 2 columns */}
           <div className='p-4 sm:p-8 grid gap-4 sm:gap-6 md:grid-cols-2'>
-            {/* Candidate Option */}
+            {/* Candidate Option — disabled for employer accounts (server-enforced too) */}
             <button
-              onClick={() => setSelectedRole('candidate')}
-              disabled={isLoading}
+              type="button"
+              onClick={() => {
+                if (!candidateDisabled) setSelectedRole('candidate')
+              }}
+              disabled={isLoading || candidateDisabled}
+              aria-disabled={candidateDisabled}
               className={`group relative p-4 sm:p-6 rounded-lg sm:rounded-xl transition-all duration-300 text-left ${
-                selectedRole === 'candidate'
-                  ? 'bg-gradient-to-br from-teal-600 to-teal-700 border-2 border-teal-400 shadow-lg shadow-teal-500/50'
-                  : isDark
-                    ? 'bg-gray-800/50 border-2 border-gray-700 hover:border-teal-500 hover:bg-gray-800'
-                    : 'bg-white border-2 border-gray-200 hover:border-teal-500 hover:bg-gray-50'
-              } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-[0.98] sm:hover:scale-[1.02]'}`}
+                candidateDisabled
+                  ? isDark
+                    ? 'bg-gray-900/40 border-2 border-gray-700 opacity-70 cursor-not-allowed'
+                    : 'bg-gray-100 border-2 border-gray-200 opacity-75 cursor-not-allowed'
+                  : selectedRole === 'candidate'
+                    ? 'bg-gradient-to-br from-teal-600 to-teal-700 border-2 border-teal-400 shadow-lg shadow-teal-500/50'
+                    : isDark
+                      ? 'bg-gray-800/50 border-2 border-gray-700 hover:border-teal-500 hover:bg-gray-800'
+                      : 'bg-white border-2 border-gray-200 hover:border-teal-500 hover:bg-gray-50'
+              } ${isLoading ? 'opacity-50 cursor-not-allowed' : candidateDisabled ? '' : 'cursor-pointer active:scale-[0.98] sm:hover:scale-[1.02]'}`}
             >
               <div className={`inline-flex items-center justify-center w-10 h-10 sm:w-14 sm:h-14 rounded-lg mb-3 sm:mb-4 ${
                 selectedRole === 'candidate'
@@ -255,27 +300,54 @@ export default function RoleSelectionModal({
                 <span className='text-2xl sm:text-3xl'>🧑‍💼</span>
               </div>
 
-              <h3 className={`text-lg sm:text-xl font-bold mb-1 sm:mb-2 ${
-                selectedRole === 'candidate' ? 'text-white' : isDark ? 'text-white' : 'text-gray-900'
-              }`}>
+              <h3
+                className={`text-lg sm:text-xl font-bold mb-1 sm:mb-2 flex items-center gap-2 ${
+                  candidateDisabled
+                    ? isDark
+                      ? 'text-gray-500'
+                      : 'text-gray-500'
+                    : selectedRole === 'candidate'
+                      ? 'text-white'
+                      : isDark
+                        ? 'text-white'
+                        : 'text-gray-900'
+                }`}
+              >
+                {candidateDisabled && (
+                  <Lock className="w-5 h-5 shrink-0 text-gray-400 dark:text-gray-500" aria-hidden />
+                )}
                 Candidate
               </h3>
-              <p className={`text-xs sm:text-sm mb-3 sm:mb-4 ${
-                selectedRole === 'candidate' ? 'text-white/90' : isDark ? 'text-gray-400' : 'text-gray-600'
-              }`}>
-                Build your professional profile
+              <p
+                className={`text-xs sm:text-sm mb-3 sm:mb-4 ${
+                  candidateDisabled
+                    ? isDark
+                      ? 'text-gray-500'
+                      : 'text-gray-600'
+                    : selectedRole === 'candidate'
+                      ? 'text-white/90'
+                      : isDark
+                        ? 'text-gray-400'
+                        : 'text-gray-600'
+                }`}
+              >
+                {candidateDisabled
+                  ? 'Not available — this wallet is tied to your company. Use another wallet for a candidate profile.'
+                  : 'Build your professional profile'}
               </p>
 
-              <ul className='space-y-1.5 sm:space-y-2'>
-                {['Composable hub you build', 'Verified credentials & history', 'Shareable Career Card'].map((feature, idx) => (
-                  <li key={idx} className='flex items-start gap-1.5 sm:gap-2 text-xs sm:text-sm'>
-                    <span className={selectedRole === 'candidate' ? 'text-teal-200' : isDark ? 'text-teal-400' : 'text-teal-600'}>✓</span>
-                    <span className={selectedRole === 'candidate' ? 'text-white' : isDark ? 'text-gray-300' : 'text-gray-700'}>{feature}</span>
-                  </li>
-                ))}
-              </ul>
+              {!candidateDisabled && (
+                <ul className='space-y-1.5 sm:space-y-2'>
+                  {['Composable hub you build', 'Verified credentials & history', 'Shareable Career Card'].map((feature, idx) => (
+                    <li key={idx} className='flex items-start gap-1.5 sm:gap-2 text-xs sm:text-sm'>
+                      <span className={selectedRole === 'candidate' ? 'text-teal-200' : isDark ? 'text-teal-400' : 'text-teal-600'}>✓</span>
+                      <span className={selectedRole === 'candidate' ? 'text-white' : isDark ? 'text-gray-300' : 'text-gray-700'}>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
 
-              {selectedRole === 'candidate' && (
+              {selectedRole === 'candidate' && !candidateDisabled && (
                 <div className='absolute top-3 right-3 sm:top-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white flex items-center justify-center'>
                   {checkmarkIcon}
                 </div>

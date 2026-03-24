@@ -307,8 +307,9 @@ const HomeContent = () => {
           setShowRoleSelection(false)
           setCurrentPage(null)
         } else {
-          const err = await res.json().catch(() => ({}))
-          alert(`Failed to set role: ${err.error || res.statusText}. Please try again.`)
+          const err = await res.json().catch(() => ({} as { error?: string; details?: string }))
+          const msg = err.details ? `${err.error || 'Request failed'}\n\n${err.details}` : `Failed to set role: ${err.error || res.statusText}. Please try again.`
+          alert(msg)
         }
       } catch {
         alert('An error occurred. Please try again.')
@@ -399,8 +400,12 @@ const HomeContent = () => {
         {/* Journey Modal — guided "what's next" prompts after key actions */}
         <JourneyModal />
 
-        {/* Main content area */}
-        <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-8 relative z-0'>
+        {/* Main content area — employer hub uses a wider cap (two sticky rails + 4K monitors); others stay 7xl */}
+        <div
+          className={`mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8 mt-8 relative z-0 ${
+            userRole === 'employer' ? 'max-w-[min(100%,120rem)]' : 'max-w-7xl'
+          }`}
+        >
 
           {/* Role loading overlay */}
           {user && (isRoleLoading || isSettingRole) && !showRoleSelection && (

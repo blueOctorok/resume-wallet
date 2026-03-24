@@ -6,9 +6,8 @@
  */
 
 import { createMultiOwnerLightAccountAlchemyClient } from '@account-kit/smart-contracts'
-import { alchemy } from '@account-kit/infra'
+import { alchemy, baseSepolia } from '@account-kit/infra'
 import { LocalAccountSigner } from '@aa-sdk/core'
-import { baseSepolia } from 'viem/chains'
 import { getAddress, type Address } from 'viem'
 import { companyIdToWalletSalt } from '@/lib/company-wallet-salt'
 

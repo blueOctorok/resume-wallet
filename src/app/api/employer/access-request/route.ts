@@ -247,7 +247,9 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
           success: true,
+          reviewRequired: true,
           message: `${matchedCompany.company_name} already exists on StormChain. Your request to join has been submitted for review. Please ensure you use a @${companyEmailDomain ?? 'company'} email address for instant access.`,
+          reviewNote: `Your email domain (@${emailDomain ?? 'unknown'}) did not match the domain on file for this company (@${companyEmailDomain ?? 'unknown'}). A human reviewer will verify before you are added.`,
           request: {
             companyName: matchedCompany.company_name,
             status: 'flagged',
@@ -264,7 +266,10 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: 'Your request has been submitted and is under review.',
+        reviewRequired: true,
+        message:
+          'Your request was not auto-approved. A team member will review it—you do not have employer access until then.',
+        reviewNote: evalResult.reason,
         request: {
           companyName: companyName.trim(),
           status: 'flagged',
@@ -376,7 +381,7 @@ export async function GET(request: NextRequest) {
 
     const { data: pendingRequest } = await supabase
       .from('employer_access_requests')
-      .select('id, company_name, status, created_at')
+      .select('id, company_name, status, created_at, ai_reason')
       .ilike('wallet_address', walletAddress)
       .in('status', ['pending', 'flagged'])
       .maybeSingle()

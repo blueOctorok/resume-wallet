@@ -4,6 +4,29 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Employer wallets cannot switch to candidate** (March 2026)
+
+- **`src/lib/employer-account-guard.ts`:** `isUserEmployerLinked()` — `users.role === 'employer'`, or company owner, or active `company_members` row.
+- **`POST /api/user/set-role`:** If `role === 'candidate'` and the user is employer-linked, returns **403** with `code: 'EMPLOYER_NO_CANDIDATE'`.
+- **`RoleSelectionModal`:** When `existingRole === 'employer'`, the Candidate tile is disabled with copy + lock icon; selection is forced off candidate.
+- **`page.tsx`:** Role error alerts include `details` when the API returns it.
+
+---
+
+## **Employer hub: company wallet left rail + mobile modal** (March 2026)
+
+- **`CompanyWallet.tsx`:** Exports `CompanyWalletContent` with `layout: 'rail' | 'modal'` and optional `omitHero` (avoids duplicating the title when using `ModalHeader`).
+- **`WalletInfo.tsx`:** Removed `hidden md:flex` so the component is not invisible below the `md` breakpoint. It is only used by the company wallet panel; mobile modal was missing balances, copyable address, and the collapsible “Wallet” header for that reason.
+- **`EmployerHub.tsx`:** Desktop — sticky left `aside` (`w-80`, matches job-path rail styling) with wallet + balances + compact activity. Mobile — floating **Company wallet** button (`bottom-20 left-4`, mirrors **Job path** on the right) opens shared `Modal` with scrollable body. **Width:** the real cap was `src/app/page.tsx` main wrapper `max-w-7xl` for all roles; employer now uses `max-w-[min(100%,120rem)]` (~1920px) on that wrapper only. `EmployerHub` outer shell is `w-full` (padding comes from `page.tsx` once — avoids double horizontal padding).
+
+---
+
+## **Fix: company wallet — use Account Kit `baseSepolia`** (March 2026)
+
+- **`src/lib/company-wallet-server.ts`:** Import `baseSepolia` from `@account-kit/infra` (same as `alchemy-account-config.ts`), not from `viem/chains`. `createMultiOwnerLightAccountAlchemyClient` requires a chain object that includes Alchemy RPC metadata; passing the plain viem chain caused `ZodError: chain must include an alchemy rpc url`, so `POST /api/employer/company/ensure-wallet` (and wallet persistence on `POST /api/employer/company`) logged failures / returned 503 even when the company row was created successfully.
+
+---
+
 ## **Employer: shared company wallet (MultiOwnerLightAccount)** (March 2026)
 
 - **DB (`056_company_wallet.sql`):** `companies.wallet_address`, optional `payments.company_id`, optional `storm_distributions.company_id`.

@@ -41,12 +41,14 @@ import {
   Link2,
   CreditCard,
   Compass,
+  Wallet,
 } from 'lucide-react'
 import { getDisplayRole } from '@/lib/employer-roles'
 import type { EmployerHubContext } from '@/lib/ava-context'
 import AvaChatPanel from '@/components/ava/AvaChatPanel'
 import STORMBalance from '@/components/STORMBalance'
-import CompanyWallet from '@/components/employer/CompanyWallet'
+import { CompanyWalletContent } from '@/components/employer/CompanyWallet'
+import Button from '@/components/ui/Button'
 
 // ============================================================
 // TYPES
@@ -173,6 +175,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   // Section-specific loading states for granular refresh
   const [refreshingPipeline, setRefreshingPipeline] = useState(false)
   const [companyWalletProvisioning, setCompanyWalletProvisioning] = useState(false)
+  const [companyWalletModalOpen, setCompanyWalletModalOpen] = useState(false)
   const companyEnsureAttemptedId = useRef<string | null>(null)
 
   // Collapsible section state — persisted in localStorage
@@ -486,8 +489,25 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+    <div className="w-full">
       <div className="flex flex-col lg:flex-row gap-8 lg:items-start">
+        {data.company && (
+          <aside
+            className={`hidden lg:block w-80 shrink-0 self-start sticky top-24 rounded-2xl border shadow-sm backdrop-blur-sm p-4 ${
+              theme === 'dark'
+                ? 'border-gray-700 bg-gray-900/90'
+                : 'border-gray-200 bg-white/90'
+            }`}
+            aria-label="Company wallet"
+          >
+            <CompanyWalletContent
+              layout="rail"
+              companyName={data.company.name}
+              companyWalletAddress={data.company.walletAddress ?? null}
+              walletProvisioning={companyWalletProvisioning}
+            />
+          </aside>
+        )}
         <div className="flex-1 min-w-0 space-y-8">
       {/* Company Header */}
       <div className={`rounded-2xl p-6 mb-8 border shadow-lg transition-all duration-200 ${
@@ -559,14 +579,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           </div>
         </div>
       </div>
-
-      {data.company && (
-        <CompanyWallet
-          companyName={data.company.name}
-          companyWalletAddress={data.company.walletAddress ?? null}
-          walletProvisioning={companyWalletProvisioning}
-        />
-      )}
 
       {/* Stats band */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -872,6 +884,43 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           pendingReview={data.stats.pendingReview}
         />
       </div>
+
+      {data.company && (
+        <>
+          {companyWalletModalOpen && (
+            <Modal
+              onClose={() => setCompanyWalletModalOpen(false)}
+              maxWidth="max-w-lg"
+              zIndex={95}
+            >
+              <ModalHeader
+                title="Company wallet"
+                subtitle={`${data.company.name} · shared team address`}
+                onClose={() => setCompanyWalletModalOpen(false)}
+              />
+              <div className="p-4 max-h-[min(85vh,720px)] overflow-y-auto overscroll-contain">
+                <CompanyWalletContent
+                  layout="modal"
+                  omitHero
+                  companyName={data.company.name}
+                  companyWalletAddress={data.company.walletAddress ?? null}
+                  walletProvisioning={companyWalletProvisioning}
+                />
+              </div>
+            </Modal>
+          )}
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => setCompanyWalletModalOpen(true)}
+            className="lg:hidden fixed z-30 bottom-20 left-4 rounded-full shadow-lg !py-2.5 !px-4 text-sm"
+            aria-label="Open company wallet"
+          >
+            <Wallet className="w-4 h-4 shrink-0" />
+            Company wallet
+          </Button>
+        </>
+      )}
 
       <button
         type='button'

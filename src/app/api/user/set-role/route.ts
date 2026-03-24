@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { sendNewCompanyNotification } from '@/lib/send-admin-notification'
 import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
+import { isUserEmployerLinked } from '@/lib/employer-account-guard'
 
 // Admin wallets that bypass company/invite requirement for employer role (for testing)
 const EMPLOYER_WHITELIST_WALLETS = [
@@ -45,6 +46,22 @@ export async function POST(request: Request) {
     console.log(
       `[SET ROLE] User ${userToUpdate.id} changing role from "${currentRole}" to "${newRole ?? 'NULL (cleared)'}"`
     )
+
+    if (newRole === 'candidate') {
+      const employerLinked = await isUserEmployerLinked(supabase, userToUpdate.id)
+      if (employerLinked) {
+        console.log(`[SET ROLE] Rejected candidate role for employer-linked user ${userToUpdate.id}`)
+        return NextResponse.json(
+          {
+            error: 'Employer accounts cannot use the candidate hub',
+            details:
+              'This wallet is tied to a company. Use a different wallet if you need a separate candidate profile.',
+            code: 'EMPLOYER_NO_CANDIDATE',
+          },
+          { status: 403 }
+        )
+      }
+    }
 
     // Update user role (set to null if clearing) when it actually changed
     if (currentRole !== newRole) {
