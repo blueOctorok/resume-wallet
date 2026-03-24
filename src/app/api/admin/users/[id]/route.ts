@@ -166,8 +166,47 @@ export async function DELETE(
     await supabase.from('user_profiles').delete().eq('user_id', id)
     await supabase.from('developer_projects').delete().eq('user_id', id)
 
-    // 5. Delete payments and candidate requests
+    // 5. Payments — storm_distributions.payment_id → payments(id) (FK, no ON DELETE in 044)
+    const { data: userPaymentRows, error: paymentsSelectError } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('user_id', id)
+
+    if (paymentsSelectError) {
+      console.error('[ADMIN USER DELETE] payments select:', paymentsSelectError)
+      return NextResponse.json(
+        {
+          error: 'Failed to prepare user deletion',
+          details: paymentsSelectError.message,
+          code: paymentsSelectError.code,
+        },
+        { status: 500 }
+      )
+    }
+
+    const paymentIds = (userPaymentRows ?? []).map((r) => r.id).filter(Boolean)
+    if (paymentIds.length > 0) {
+      const { error: stormDistError } = await supabase
+        .from('storm_distributions')
+        .delete()
+        .in('payment_id', paymentIds)
+
+      if (stormDistError) {
+        console.error('[ADMIN USER DELETE] storm_distributions delete:', stormDistError)
+        return NextResponse.json(
+          {
+            error: 'Failed to clear STORM distribution rows for this user',
+            details: stormDistError.message,
+            code: stormDistError.code,
+          },
+          { status: 500 }
+        )
+      }
+    }
+
     await supabase.from('payments').delete().eq('user_id', id)
+
+    // 5b. Candidate requests (employer-initiated)
     await supabase.from('candidate_requests').delete().eq('requested_by_user_id', id)
 
     // 6. Delete employer-created data rows where this user was the creator
@@ -185,6 +224,8 @@ export async function DELETE(
     await supabase.from('mvr_orders').update({ ordered_by_user_id: null }).eq('ordered_by_user_id', id)
     await supabase.from('employer_candidate_data').update({ updated_by: null }).eq('updated_by', id)
     await supabase.from('company_members').update({ invited_by: null }).eq('invited_by', id)
+    // Admin who approved/rejected employer access requests — common when wiping an admin test account
+    await supabase.from('employer_access_requests').update({ reviewed_by: null }).eq('reviewed_by', id)
 
     // 8. Delete the user
     const { error: deleteError } = await supabase
@@ -195,7 +236,12 @@ export async function DELETE(
     if (deleteError) {
       console.error('[ADMIN USER DELETE] Error:', deleteError)
       return NextResponse.json(
-        { error: 'Failed to delete user' },
+        {
+          error: 'Failed to delete user',
+          details: deleteError.message,
+          code: deleteError.code,
+          hint: deleteError.hint ?? undefined,
+        },
         { status: 500 }
       )
     }

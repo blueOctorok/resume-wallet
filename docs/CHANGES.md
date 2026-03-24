@@ -4,6 +4,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Admin: fix DELETE user 500 — storm_distributions → payments** (March 2026)
+
+- **`src/app/api/admin/users/[id]/route.ts`:** Before deleting `payments` for the user, delete `storm_distributions` rows whose `payment_id` is in that user’s payment IDs. `storm_distributions.payment_id` references `payments(id)` without `ON DELETE CASCADE` (see `044_storm_distributions_retroactive.sql`), so deleting payments first raised `23503` / `storm_distributions_payment_id_fkey`.
+
+---
+
+## **Admin: fix DELETE user 500 when reviewer FK blocks** (March 2026)
+
+- **`src/app/api/admin/users/[id]/route.ts`:** Before deleting a `users` row, clear `employer_access_requests.reviewed_by` when it points at that user. Admins who approve/reject employer access requests store their `users.id` there; without this, Postgres rejects the delete (FK RESTRICT). DELETE failure responses now include `details`, `code`, and optional `hint` from PostgREST for easier debugging.
+
+---
+
 ## **Accessibility: contrast on brand-mint fills** (March 2026)
 
 `--brand-mint` is a light sage (`#c9d9c3`); **white** labels on solid mint fail WCAG. Switched filled mint controls to **`text-gray-900`** and tightened chat accents.
