@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh'
 import ApplicantKanban, { type KanbanApplicant } from './employer/ApplicantKanban'
@@ -46,6 +46,7 @@ import { getDisplayRole } from '@/lib/employer-roles'
 import type { EmployerHubContext } from '@/lib/ava-context'
 import AvaChatPanel from '@/components/ava/AvaChatPanel'
 import STORMBalance from '@/components/STORMBalance'
+import CompanyWallet from '@/components/employer/CompanyWallet'
 
 // ============================================================
 // TYPES
@@ -64,6 +65,8 @@ interface HubCompany {
   city: string | null
   state: string | null
   onboardingCompleted: boolean
+  /** MultiOwnerLightAccount for shared employer USDC / STORM */
+  walletAddress?: string | null
 }
 
 interface HubJobPosting {
@@ -169,6 +172,8 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
 
   // Section-specific loading states for granular refresh
   const [refreshingPipeline, setRefreshingPipeline] = useState(false)
+  const [companyWalletProvisioning, setCompanyWalletProvisioning] = useState(false)
+  const companyEnsureAttemptedId = useRef<string | null>(null)
 
   // Collapsible section state — persisted in localStorage
   const SECTIONS_KEY = 'employer-hub-sections'
@@ -248,6 +253,43 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   }, [hiringPayload, setEmployerHiringPath])
 
   useEffect(() => () => setEmployerHiringPath(null), [setEmployerHiringPath])
+
+  // Legacy companies: one ensure-wallet attempt per company per session (avoids 503 loops)
+  useEffect(() => {
+    if (!data?.company?.id || data.company.walletAddress || !walletAddress) return
+    if (data.needsCompanySetup) return
+    if (companyEnsureAttemptedId.current === data.company.id) return
+    companyEnsureAttemptedId.current = data.company.id
+    let cancelled = false
+    setCompanyWalletProvisioning(true)
+    void (async () => {
+      try {
+        const r = await fetch('/api/employer/company/ensure-wallet', {
+          method: 'POST',
+          headers: { 'x-wallet-address': walletAddress },
+        })
+        const j = await r.json().catch(() => ({}))
+        if (cancelled) return
+        if (r.ok && j.walletAddress) {
+          setData((prev) =>
+            prev?.company
+              ? {
+                  ...prev,
+                  company: { ...prev.company, walletAddress: j.walletAddress },
+                }
+              : prev,
+          )
+        }
+      } catch (e) {
+        console.warn('[EmployerHub] ensure-wallet failed:', e)
+      } finally {
+        if (!cancelled) setCompanyWalletProvisioning(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [data?.company?.id, data?.company?.walletAddress, data?.needsCompanySetup, walletAddress])
 
   // Fetch hub data
   const fetchHubData = useCallback(async () => {
@@ -517,6 +559,14 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           </div>
         </div>
       </div>
+
+      {data.company && (
+        <CompanyWallet
+          companyName={data.company.name}
+          companyWalletAddress={data.company.walletAddress ?? null}
+          walletProvisioning={companyWalletProvisioning}
+        />
+      )}
 
       {/* Stats band */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

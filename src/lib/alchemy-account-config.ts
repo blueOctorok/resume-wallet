@@ -1,6 +1,10 @@
 /**
  * Alchemy Smart Wallets Configuration
  *
+ * Employer **company shared wallet** (optional):
+ * - Server: `COMPANY_WALLET_SERVICE_PRIVATE_KEY` — EOA used as permanent co-owner to add/remove team members on-chain (`company-wallet-server.ts`).
+ * - Client: `NEXT_PUBLIC_COMPANY_WALLET_SERVICE_ADDRESS` — same account’s **address** (0x…); required for `MultiOwnerLightAccount` init params when paying from the company wallet (`MvrPaymentButton`).
+ *
  * Professional SaaS-first authentication for resume verification platform
  * - Email + OTP login (dead simple for drivers and employers)
  * - Automatic wallet creation (users don't know it's crypto)

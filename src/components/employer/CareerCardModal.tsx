@@ -63,6 +63,11 @@ export default function CareerCardModal({
   const [mvrOrderError, setMvrOrderError] = useState<string | null>(null)
   const [mvrOrderSuccess, setMvrOrderSuccess] = useState(false)
 
+  const [employerCompany, setEmployerCompany] = useState<{
+    id: string
+    walletAddress: string | null
+  } | null>(null)
+
 
   // Fetch on mount
   useEffect(() => {
@@ -93,6 +98,7 @@ export default function CareerCardModal({
 
       const data = await response.json()
       setCareerCard(data.careerCard)
+      setEmployerCompany(data.employerCompany ?? null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load career card')
     } finally {
@@ -799,6 +805,9 @@ function MvrOrderModal({
                   )}
                   <MvrPaymentButton
                     userAddress={walletAddress}
+                    payFromCompanyWallet={Boolean(employerCompany?.walletAddress)}
+                    companyWalletAddress={employerCompany?.walletAddress ?? undefined}
+                    companyId={employerCompany?.id}
                     onPaymentSuccess={handlePaymentSuccess}
                     onPaymentError={(msg) => console.error('[MVR PAYMENT]', msg)}
                     disabled={!isFormValid || loading}

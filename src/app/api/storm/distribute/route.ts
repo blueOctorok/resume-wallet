@@ -31,7 +31,14 @@ import {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { walletAddress, usdcAmount, paymentId, paymentType, userType: rawUserType } = body
+    const {
+      walletAddress,
+      usdcAmount,
+      paymentId,
+      paymentType,
+      userType: rawUserType,
+      companyId: companyIdRaw,
+    } = body
     
     // Validate and default userType
     const userType: UserType = rawUserType === 'employer' ? 'employer' : 'applicant'
@@ -154,6 +161,9 @@ export async function POST(request: NextRequest) {
           rate_multiplier: multiplier,
           tx_hash: txHash,
           total_distributed_before: totalDistributed,
+          ...(typeof companyIdRaw === 'string' && companyIdRaw.trim()
+            ? { company_id: companyIdRaw.trim() }
+            : {}),
         }).then(({ error }) => {
           if (error && !error.message.includes('does not exist')) {
             console.warn('[STORM] Failed to record distribution:', error.message)

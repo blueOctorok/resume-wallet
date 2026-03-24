@@ -30,8 +30,10 @@
     "payment:credits": "node scripts/check-credits.js"
   },
   "dependencies": {
+    "@aa-sdk/core": "^4.86.1",
     "@account-kit/core": "^4.64.0",
     "@account-kit/react": "^4.64.0",
+    "@account-kit/smart-contracts": "^4.86.1",
     "@anthropic-ai/sdk": "^0.78.0",
     "@base-org/account": "^2.2.0",
     "@base-org/account-ui": "^1.0.1",

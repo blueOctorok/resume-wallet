@@ -254,6 +254,7 @@ export async function GET(request: NextRequest) {
         city: company.address_city,
         state: company.address_state,
         onboardingCompleted: company.onboarding_completed ?? false,
+        walletAddress: company.wallet_address ?? null,
       },
       userRole,
       jobPostings,

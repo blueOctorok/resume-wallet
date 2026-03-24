@@ -4,6 +4,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Employer: shared company wallet (MultiOwnerLightAccount)** (March 2026)
+
+- **DB (`056_company_wallet.sql`):** `companies.wallet_address`, optional `payments.company_id`, optional `storm_distributions.company_id`.
+- **Server:** `src/lib/company-wallet-server.ts` — create multi-owner account (service EOA + owner Light Account), `addOwner` / `removeOwner` for team sync. `src/lib/persist-company-wallet.ts` — persist address + `syncCoOwnersAfterWalletCreation` for legacy companies.
+- **API:** `POST /api/employer/company/ensure-wallet` (owner/admin, backfill). `POST /api/employer/company` creates wallet after company row exists. Team `accept-invite`, `PATCH`/`DELETE` `[memberId]` update on-chain owners when `wallet_address` is set.
+- **Payments:** `POST /api/mvr/payment` accepts optional `companyId` + `paidByWalletAddress` (company SCW vs acting member). `POST /api/storm/distribute` records optional `company_id`. Employer MVR order rejects payments whose `company_id` does not match the employer’s company.
+- **Client:** `NEXT_PUBLIC_COMPANY_WALLET_SERVICE_ADDRESS` (must match `COMPANY_WALLET_SERVICE_PRIVATE_KEY`), `companyIdToWalletSalt`, `MvrPaymentButton` uses `MultiOwnerLightAccount` when paying from company. `CompanyWallet` section on employer hub; hub returns `company.walletAddress`; one ensure-wallet attempt per company per session for legacy rows.
+- **Talent API:** Returns `employerCompany: { id, walletAddress }` for `CareerCardModal` MVR flow.
+- **Dependencies:** `@account-kit/smart-contracts`, `@aa-sdk/core`.
+
+---
+
 ## **Admin: fix DELETE user 500 — storm_distributions → payments** (March 2026)
 
 - **`src/app/api/admin/users/[id]/route.ts`:** Before deleting `payments` for the user, delete `storm_distributions` rows whose `payment_id` is in that user’s payment IDs. `storm_distributions.payment_id` references `payments(id)` without `ON DELETE CASCADE` (see `044_storm_distributions_retroactive.sql`), so deleting payments first raised `23503` / `storm_distributions_payment_id_fkey`.

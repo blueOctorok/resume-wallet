@@ -309,8 +309,18 @@ export async function GET(
     const upName = [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ')
     const effectiveRole = driverProfile ? 'driver' : developerProfile ? 'developer' : candidate?.role
 
+    const { data: companyWalletRow } = await supabase
+      .from('companies')
+      .select('wallet_address')
+      .eq('id', companyId)
+      .maybeSingle()
+
     return NextResponse.json({
       success: true,
+      employerCompany: {
+        id: companyId,
+        walletAddress: companyWalletRow?.wallet_address ?? null,
+      },
       careerCard: {
         userId: candidate?.id,
         role: effectiveRole,

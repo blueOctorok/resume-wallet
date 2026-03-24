@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import {
+  persistCompanyWalletIfMissing,
+  syncCoOwnersAfterWalletCreation,
+} from '@/lib/persist-company-wallet'
 
 /**
  * POST /api/employer/company
@@ -185,7 +189,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: memberError.message || 'Failed to link owner to company' }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, companyId })
+    const walletResult = await persistCompanyWalletIfMissing(
+      supabase,
+      companyId,
+      walletAddress
+    )
+
+    if (walletResult?.created) {
+      const { data: coFull } = await supabase
+        .from('companies')
+        .select('employer_user_id')
+        .eq('id', companyId)
+        .single()
+      if (coFull?.employer_user_id) {
+        await syncCoOwnersAfterWalletCreation(
+          supabase,
+          companyId,
+          walletResult.walletAddress,
+          coFull.employer_user_id
+        )
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      companyId,
+      companyWalletAddress: walletResult?.walletAddress ?? null,
+    })
   } catch (error) {
     console.error('[EMPLOYER COMPANY SETUP] Unexpected error:', error)
     const message = error instanceof Error ? error.message : 'Internal server error'

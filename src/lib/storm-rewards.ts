@@ -128,7 +128,8 @@ export async function triggerStormReward(
   usdcAmount: number,
   paymentId: string,
   paymentType: string,
-  userType: UserType = 'applicant'
+  userType: UserType = 'applicant',
+  companyId?: string | null
 ): Promise<void> {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
@@ -142,6 +143,7 @@ export async function triggerStormReward(
         paymentId,
         paymentType,
         userType,
+        companyId: companyId ?? undefined,
       }),
     })
 

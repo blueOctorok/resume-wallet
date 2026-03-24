@@ -14,7 +14,15 @@ import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { txHash, amountUsdc, walletAddress, userType = 'applicant' } = body
+    const {
+      txHash,
+      amountUsdc,
+      walletAddress,
+      userType = 'applicant',
+      companyId: companyIdRaw,
+      /** When paying from company SCW, record which member initiated (personal smart wallet). */
+      paidByWalletAddress,
+    } = body
 
     if (!txHash) {
       return NextResponse.json(
@@ -56,10 +64,15 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Get or create user (single place — avoids duplicate user rows)
+    const payerLookupAddress =
+      typeof paidByWalletAddress === 'string' && paidByWalletAddress.trim()
+        ? paidByWalletAddress.trim()
+        : walletAddress
+
+    // Get or create user for the acting payer (member), not the company SCW
     let user: { id: string }
     try {
-      const { user: u } = await getOrCreateUserByWallet(supabase, walletAddress)
+      const { user: u } = await getOrCreateUserByWallet(supabase, payerLookupAddress)
       user = { id: u.id }
     } catch (err) {
       console.error('[MVR PAYMENT] Error get/create user:', err)
@@ -67,6 +80,26 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to get or create user record', details: err instanceof Error ? err.message : String(err) },
         { status: 500 }
       )
+    }
+
+    let companyId: string | null = null
+    if (typeof companyIdRaw === 'string' && companyIdRaw.trim()) {
+      const { data: co } = await supabase
+        .from('companies')
+        .select('id, wallet_address')
+        .eq('id', companyIdRaw.trim())
+        .maybeSingle()
+      if (
+        co?.wallet_address &&
+        co.wallet_address.toLowerCase() === String(walletAddress).toLowerCase()
+      ) {
+        companyId = co.id
+      } else {
+        console.warn('[MVR PAYMENT] Ignoring companyId: does not match payer wallet', {
+          companyIdRaw,
+          walletAddress,
+        })
+      }
     }
 
     // Record payment
@@ -101,7 +134,14 @@ export async function POST(request: NextRequest) {
       // unfairly penalized users when tx_hash was reused across purchases.
       console.log('[MVR PAYMENT] ⛈️ Distributing STORM for existing payment (user paid, user gets rewarded)')
       try {
-        await triggerStormReward(walletAddress, existingPayment.amount_usdc, existingPayment.id, 'MVR_ORDER', userType)
+        await triggerStormReward(
+          walletAddress,
+          existingPayment.amount_usdc,
+          existingPayment.id,
+          'MVR_ORDER',
+          userType,
+          companyId
+        )
       } catch (stormError) {
         console.error('[MVR PAYMENT] STORM reward failed for existing payment (non-fatal):', stormError)
       }
@@ -121,6 +161,7 @@ export async function POST(request: NextRequest) {
       .from('payments')
       .insert({
         user_id: user.id,
+        company_id: companyId,
         type: 'MVR_ORDER',
         amount_usdc: parseFloat(amountUsdc),
         tx_hash: truncatedTxHash,
@@ -150,7 +191,14 @@ export async function POST(request: NextRequest) {
     // Distribute STORM rewards at the caller's rate (applicant = 1x, employer = 0.5x)
     // Must await in serverless - unawaited promises get terminated when response is sent
     try {
-      await triggerStormReward(walletAddress, payment.amount_usdc, payment.id, 'MVR_ORDER', userType)
+      await triggerStormReward(
+        walletAddress,
+        payment.amount_usdc,
+        payment.id,
+        'MVR_ORDER',
+        userType,
+        companyId
+      )
     } catch (stormError) {
       // Log but don't fail the payment
       console.error('[MVR PAYMENT] STORM reward failed (non-fatal):', stormError)

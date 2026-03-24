@@ -9,8 +9,8 @@ import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from 
  *   - Valid employer wallet with company membership
  *   - Driver's signed background check consent (hasBgcheckConsent = true)
  *
- * Unlike the driver route there is no crypto payment — billing is handled
- * at the company level. Unlike the admin route there is no requireAdmin()
+ * Requires a completed USDC payment (from the company shared wallet via MvrPaymentButton).
+ * Unlike the admin route there is no requireAdmin()
  * middleware — any authenticated employer with company access can order.
  *
  * Body:
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
     const truncatedTxHash = paymentTxHash.length > 66 ? paymentTxHash.substring(0, 66) : paymentTxHash
     const { data: payment } = await supabase
       .from('payments')
-      .select('id, status, user_id')
+      .select('id, status, user_id, company_id')
       .eq('tx_hash', truncatedTxHash)
       .eq('type', 'MVR_ORDER')
       .maybeSingle()
@@ -119,6 +119,12 @@ export async function POST(request: NextRequest) {
     }
     if (payment.status !== 'COMPLETED') {
       return NextResponse.json({ error: 'Payment not yet confirmed' }, { status: 402 })
+    }
+    if (payment.company_id && payment.company_id !== companyId) {
+      return NextResponse.json(
+        { error: 'This payment is tied to a different company' },
+        { status: 403 }
+      )
     }
 
     // Verify the candidate exists and has signed the disclosure
