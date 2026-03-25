@@ -330,3 +330,51 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
+/**
+ * DELETE /api/employer/invites?id=<uuid>
+ * Permanently remove an invite for this company (link stops working).
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const walletAddress = request.headers.get('x-wallet-address')
+    if (!walletAddress) {
+      return NextResponse.json({ error: 'Wallet address is required' }, { status: 401 })
+    }
+
+    const supabase = await getAdminSupabaseClient()
+    const ctx = await getEmployerContext(supabase, walletAddress)
+
+    if (ctx.error) {
+      return NextResponse.json({ error: ctx.error }, { status: ctx.status })
+    }
+
+    const id = new URL(request.url).searchParams.get('id')
+    if (!id) {
+      return NextResponse.json({ error: 'Invite id is required' }, { status: 400 })
+    }
+
+    const { data: existing } = await supabase
+      .from('application_invites')
+      .select('id')
+      .eq('id', id)
+      .eq('company_id', ctx.companyId)
+      .single()
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
+    }
+
+    const { error } = await supabase.from('application_invites').delete().eq('id', id)
+
+    if (error) {
+      console.error('[EMPLOYER INVITES] Delete error:', error)
+      return NextResponse.json({ error: 'Failed to remove invite' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('[EMPLOYER INVITES] Unexpected delete error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

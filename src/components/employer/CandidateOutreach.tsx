@@ -3,7 +3,13 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
+import Button from '@/components/ui/Button'
 import { BLOCK_DEFINITIONS, BLOCK_CATEGORIES, getBlockDefinition } from '@/lib/block-registry'
+import {
+  buildCandidateInviteSmsBody,
+  buildSmsHref,
+  normalizeSmsPhone,
+} from '@/lib/invite-sms-body'
 import QRCode from 'qrcode'
 import {
   Link2,
@@ -27,6 +33,10 @@ import {
   MapPin,
   Package,
   ArrowLeft,
+  MessageSquare,
+  Download,
+  Share2,
+  Trash2,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -116,8 +126,21 @@ function StatusBadge({ status }: { status: InviteStatus }) {
   )
 }
 
+function inviteQrFilename(name: string) {
+  const slug = name
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .toLowerCase()
+    .slice(0, 40) || 'invite'
+  return `stormchain-invite-qr-${slug}.png`
+}
+
 function QrModal({ url, name, onClose }: { url: string; name: string; onClose: () => void }) {
+  const { theme } = useTheme()
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [shareBusy, setShareBusy] = useState(false)
+  const [copiedImage, setCopiedImage] = useState(false)
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -129,15 +152,99 @@ function QrModal({ url, name, onClose }: { url: string; name: string; onClose: (
     }
   }, [url])
 
+  const downloadPng = () => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const a = document.createElement('a')
+    a.href = canvas.toDataURL('image/png')
+    a.download = inviteQrFilename(name)
+    a.click()
+  }
+
+  const copyImage = async () => {
+    const canvas = canvasRef.current
+    if (!canvas || !navigator.clipboard?.write) return
+    const blob = await new Promise<Blob | null>(r => canvas.toBlob(b => r(b), 'image/png'))
+    if (!blob) return
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
+      setCopiedImage(true)
+      setTimeout(() => setCopiedImage(false), 2000)
+    } catch {
+      // Clipboard image unsupported in some browsers
+    }
+  }
+
+  const shareQr = async () => {
+    const canvas = canvasRef.current
+    if (!canvas || !navigator.share) return
+    setShareBusy(true)
+    try {
+      const blob = await new Promise<Blob | null>(r => canvas.toBlob(b => r(b), 'image/png'))
+      if (blob) {
+        const file = new File([blob], inviteQrFilename(name), { type: 'image/png' })
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'StormChain invite',
+            text: `Open or scan: ${url}`,
+          })
+          return
+        }
+      }
+      await navigator.share({ title: 'StormChain invite', text: url })
+    } catch (e: unknown) {
+      if (e && typeof e === 'object' && 'name' in e && (e as Error).name === 'AbortError') return
+      console.error('[QrModal] share failed', e)
+    } finally {
+      setShareBusy(false)
+    }
+  }
+
+  const canShare = typeof navigator !== 'undefined' && Boolean(navigator.share)
+  const canCopyImage =
+    typeof navigator !== 'undefined' &&
+    Boolean(navigator.clipboard?.write && typeof ClipboardItem !== 'undefined')
+
+  const muted = theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+  const sub = theme === 'dark' ? 'text-gray-500' : 'text-gray-600'
+
   return (
-    <Modal onClose={onClose} maxWidth="max-w-xs">
-      <ModalHeader title="Scan to Open Invite" onClose={onClose} />
-      <div className="p-6 text-center">
-        <div className="bg-white rounded-xl p-3 inline-block mb-3">
+    <Modal onClose={onClose} maxWidth="max-w-sm">
+      <ModalHeader title="Invite QR code" onClose={onClose} />
+      <div className="p-6 text-center space-y-4">
+        <div className="bg-white rounded-xl p-3 inline-block">
           <canvas ref={canvasRef} />
         </div>
-        <p className="text-gray-500 text-xs truncate">{name || 'Invite Link'}</p>
-        <p className="text-gray-600 text-xs mt-1">Share this QR or copy the link below</p>
+        <div>
+          <p className={`text-xs truncate px-1 ${muted}`}>{name || 'Invite link'}</p>
+          <p className={`text-xs mt-1 ${sub}`}>Download, copy image, or use your device share sheet</p>
+        </div>
+        <div className="flex flex-col sm:flex-row flex-wrap gap-2 justify-center">
+          <Button type="button" variant="primary" size="sm" onClick={downloadPng} className="gap-1.5">
+            <Download className="w-4 h-4" />
+            Download PNG
+          </Button>
+          {canCopyImage && (
+            <Button type="button" variant="secondary" size="sm" onClick={copyImage} className="gap-1.5">
+              {copiedImage ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              {copiedImage ? 'Copied' : 'Copy image'}
+            </Button>
+          )}
+          {canShare && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={shareQr}
+              disabled={shareBusy}
+              className="gap-1.5"
+            >
+              {shareBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
+              Share…
+            </Button>
+          )}
+        </div>
       </div>
     </Modal>
   )
@@ -161,6 +268,10 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
   const [qrInvite, setQrInvite] = useState<Invite | null>(null)
   const [showEmailInput, setShowEmailInput] = useState<string | null>(null)
   const [emailInput, setEmailInput] = useState('')
+  const [showSmsInput, setShowSmsInput] = useState<string | null>(null)
+  const [smsInput, setSmsInput] = useState('')
+  const [companyName, setCompanyName] = useState('')
+  const [removingId, setRemovingId] = useState<string | null>(null)
   const [showAll, setShowAll] = useState(false)
 
   const [selectedBlockType, setSelectedBlockType] = useState<string | null>(null)
@@ -205,6 +316,7 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
       if (res.ok) {
         const data = await res.json()
         setInvites(data.invites || [])
+        if (typeof data.companyName === 'string') setCompanyName(data.companyName)
       }
     } catch (err) {
       console.error('[CandidateOutreach] fetchInvites error:', err)
@@ -372,6 +484,32 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
     }
   }
 
+  const handleRemove = async (id: string) => {
+    if (
+      !window.confirm(
+        'Remove this outreach from your list? The invite link will stop working and cannot be undone.'
+      )
+    ) {
+      return
+    }
+    setRemovingId(id)
+    setError(null)
+    try {
+      const res = await fetch(`/api/employer/invites?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: { 'x-wallet-address': walletAddress },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error((data as { error?: string }).error || 'Failed to remove')
+      setInvites(prev => prev.filter(inv => inv.id !== id))
+      setQrInvite(q => (q?.id === id ? null : q))
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Remove failed')
+    } finally {
+      setRemovingId(null)
+    }
+  }
+
   const handleSendEmail = async (invite: Invite, emailOverride?: string) => {
     const email = emailOverride || invite.candidateEmail
     if (!email) return
@@ -409,6 +547,25 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
     setCopiedId(id)
     setTimeout(() => setCopiedId(null), 2000)
   }, [])
+
+  const openInviteSms = useCallback(
+    (invite: Invite, phoneRaw: string) => {
+      const name = companyName.trim() || 'Your company'
+      const body = buildCandidateInviteSmsBody({
+        companyName: name,
+        inviteUrl: invite.url,
+        targetBlockType: invite.targetBlockType,
+        candidateName: invite.candidateName,
+        jobTitle: invite.jobTitle,
+      })
+      const e164 = normalizeSmsPhone(phoneRaw)
+      const href = buildSmsHref(e164, body)
+      setShowSmsInput(null)
+      setSmsInput('')
+      window.location.href = href
+    },
+    [companyName]
+  )
 
   // ── Derived ────────────────────────────────────────────────────────────────
 
@@ -759,14 +916,22 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
                 emailSentId={emailSentId}
                 showEmailInput={showEmailInput}
                 emailInput={emailInput}
+                showSmsInput={showSmsInput}
+                smsInput={smsInput}
                 onCopy={copyToClipboard}
                 onShowQr={() => setQrInvite(invite)}
                 onCancel={handleCancel}
                 onSendEmail={handleSendEmail}
-                onShowEmailInput={(id) => { setShowEmailInput(id); setEmailInput('') }}
+                onShowEmailInput={(id) => { setShowEmailInput(id); setEmailInput(''); setShowSmsInput(null); setSmsInput('') }}
                 onEmailInputChange={setEmailInput}
                 onEmailInputSubmit={() => handleSendEmail(invite, emailInput)}
                 onEmailInputCancel={() => { setShowEmailInput(null); setEmailInput('') }}
+                onRequestSms={(phone) => openInviteSms(invite, phone)}
+                onShowSmsInput={(id) => { setShowSmsInput(id); setSmsInput(''); setShowEmailInput(null); setEmailInput('') }}
+                onSmsInputChange={setSmsInput}
+                onSmsInputCancel={() => { setShowSmsInput(null); setSmsInput('') }}
+                removingId={removingId}
+                onRemove={handleRemove}
               />
             ))
           )}
@@ -848,6 +1013,8 @@ interface InviteRowProps {
   emailSentId: string | null
   showEmailInput: string | null
   emailInput: string
+  showSmsInput: string | null
+  smsInput: string
   onCopy: (url: string, id: string) => void
   onShowQr: () => void
   onCancel: (id: string) => void
@@ -856,6 +1023,12 @@ interface InviteRowProps {
   onEmailInputChange: (v: string) => void
   onEmailInputSubmit: () => void
   onEmailInputCancel: () => void
+  onRequestSms: (phoneRaw: string) => void
+  onShowSmsInput: (id: string) => void
+  onSmsInputChange: (v: string) => void
+  onSmsInputCancel: () => void
+  removingId: string | null
+  onRemove: (id: string) => void
 }
 
 function InviteRow({
@@ -866,6 +1039,8 @@ function InviteRow({
   emailSentId,
   showEmailInput,
   emailInput,
+  showSmsInput,
+  smsInput,
   onCopy,
   onShowQr,
   onCancel,
@@ -874,12 +1049,31 @@ function InviteRow({
   onEmailInputChange,
   onEmailInputSubmit,
   onEmailInputCancel,
+  onRequestSms,
+  onShowSmsInput,
+  onSmsInputChange,
+  onSmsInputCancel,
+  removingId,
+  onRemove,
 }: InviteRowProps) {
+  const [smsFieldError, setSmsFieldError] = useState<string | null>(null)
   const isSending = sendingEmailId === invite.id
   const isEmailSent = emailSentId === invite.id
   const isCopied = copiedId === invite.id
   const showingEmailInput = showEmailInput === invite.id
+  const showingSmsInput = showSmsInput === invite.id
+  const isRemoving = removingId === invite.id
   const canAct = !['cancelled', 'completed', 'expired'].includes(invite.status)
+
+  const handleSmsSubmit = () => {
+    const t = smsInput.trim()
+    if (t && !normalizeSmsPhone(t)) {
+      setSmsFieldError('Use 10 digits, or + and country code (e.g. +44…).')
+      return
+    }
+    setSmsFieldError(null)
+    onRequestSms(smsInput)
+  }
 
   const timeAgo = (dateStr: string) => {
     const diff = Date.now() - new Date(dateStr).getTime()
@@ -963,6 +1157,43 @@ function InviteRow({
               </button>
             </div>
           )}
+
+          {showingSmsInput && (
+            <div className="mt-2 space-y-1">
+              <p className={`text-[11px] ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+                Opens your SMS app with the invite link filled in. Add a number to pre-select the recipient, or leave blank and pick a contact in Messages.
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  type="tel"
+                  autoFocus
+                  placeholder="Phone (optional)"
+                  value={smsInput}
+                  onChange={e => { onSmsInputChange(e.target.value); setSmsFieldError(null) }}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSmsSubmit(); if (e.key === 'Escape') onSmsInputCancel() }}
+                  className={`flex-1 min-w-[140px] px-2.5 py-1.5 text-xs rounded-lg border ${
+                    theme === 'dark'
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={handleSmsSubmit}
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs font-medium"
+                >
+                  <MessageSquare className="w-3 h-3" />
+                  Open Messages
+                </button>
+                <button type="button" onClick={onSmsInputCancel} className="text-gray-500 hover:text-gray-300 dark:text-gray-500 dark:hover:text-gray-300">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {smsFieldError && (
+                <p className="text-red-400 text-[11px]">{smsFieldError}</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right: actions */}
@@ -991,6 +1222,20 @@ function InviteRow({
 
           {canAct && (
             <button
+              type="button"
+              onClick={() => onShowSmsInput(invite.id)}
+              title="Text invite link (SMS)"
+              className={`p-1.5 rounded-lg transition-colors ${
+                theme === 'dark' ? 'text-gray-500 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <MessageSquare className="w-4 h-4" />
+            </button>
+          )}
+
+          {canAct && (
+            <button
+              type="button"
               onClick={() => {
                 if (invite.candidateEmail) {
                   onSendEmail(invite)
@@ -1024,8 +1269,9 @@ function InviteRow({
 
           {canAct && (
             <button
+              type="button"
               onClick={() => onCancel(invite.id)}
-              title="Cancel invite"
+              title="Cancel invite (link stops working, row stays until removed)"
               className={`p-1.5 rounded-lg transition-colors ${
                 theme === 'dark' ? 'text-gray-600 hover:text-red-400 hover:bg-gray-700' : 'text-gray-300 hover:text-red-500 hover:bg-gray-100'
               }`}
@@ -1033,6 +1279,20 @@ function InviteRow({
               <XCircle className="w-4 h-4" />
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={() => onRemove(invite.id)}
+            disabled={isRemoving}
+            title="Remove from list"
+            className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
+              theme === 'dark'
+                ? 'text-gray-600 hover:text-orange-400 hover:bg-gray-700'
+                : 'text-gray-400 hover:text-orange-600 hover:bg-gray-100'
+            }`}
+          >
+            {isRemoving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+          </button>
         </div>
       </div>
     </div>

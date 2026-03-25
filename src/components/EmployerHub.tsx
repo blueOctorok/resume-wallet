@@ -23,6 +23,7 @@ import {
   Clock,
   AlertCircle,
   ChevronRight,
+  ChevronLeft,
   ChevronDown,
   Building2,
   Calendar,
@@ -191,6 +192,9 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
 
   // Collapsible section state — persisted in localStorage
   const SECTIONS_KEY = 'employer-hub-sections'
+  const RAIL_WALLET_LS = 'employer-hub-rail-wallet-open'
+  const RAIL_JOBPATH_LS = 'employer-hub-rail-jobpath-open'
+
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
     const defaults = { jobs: true, pipeline: true, outreach: false }
     if (typeof window === 'undefined') return defaults
@@ -201,6 +205,39 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       return defaults
     }
   })
+
+  /** Desktop xl+ side rails — default expanded; user can collapse to slim strips (persisted). */
+  const [walletRailOpen, setWalletRailOpen] = useState(true)
+  const [jobPathRailOpen, setJobPathRailOpen] = useState(true)
+
+  useEffect(() => {
+    try {
+      const w = localStorage.getItem(RAIL_WALLET_LS)
+      if (w !== null) setWalletRailOpen(w === '1' || w === 'true')
+      const j = localStorage.getItem(RAIL_JOBPATH_LS)
+      if (j !== null) setJobPathRailOpen(j === '1' || j === 'true')
+    } catch {
+      /* keep defaults */
+    }
+  }, [])
+
+  const persistWalletRail = useCallback((open: boolean) => {
+    setWalletRailOpen(open)
+    try {
+      localStorage.setItem(RAIL_WALLET_LS, open ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  const persistJobPathRail = useCallback((open: boolean) => {
+    setJobPathRailOpen(open)
+    try {
+      localStorage.setItem(RAIL_JOBPATH_LS, open ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }, [])
 
   const toggleSection = (key: string) => {
     setOpenSections(prev => {
@@ -530,24 +567,66 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     <div className="w-full">
       {/* xl (1280px)+: wallet + main + job path. Below xl: full-width main + FAB modals — avoids iPad portrait (~1024px) squeezed between two 320px rails */}
       <div className="flex flex-col xl:flex-row gap-8 xl:items-start">
-        {data.company && (
-          <aside
-            className={`hidden xl:block w-80 shrink-0 self-start sticky top-24 rounded-2xl border shadow-sm backdrop-blur-sm p-4 ${
-              theme === 'dark'
-                ? 'border-gray-700 bg-gray-900/90'
-                : 'border-gray-200 bg-white/90'
-            }`}
-            aria-label="Company wallet"
-          >
-            <CompanyWalletContent
-              layout="rail"
-              companyName={data.company.name}
-              companyWalletAddress={data.company.walletAddress ?? null}
-              walletProvisioning={companyWalletProvisioning}
-            />
-          </aside>
-        )}
-        <div className="flex-1 min-w-0 space-y-8">
+        {data.company &&
+          (walletRailOpen ? (
+            <aside
+              className={`hidden xl:block w-80 shrink-0 self-start sticky top-24 rounded-2xl border shadow-sm backdrop-blur-sm p-4 ${
+                theme === 'dark'
+                  ? 'border-gray-700 bg-gray-900/90'
+                  : 'border-gray-200 bg-white/90'
+              }`}
+              aria-label="Company wallet"
+            >
+              <div className="absolute top-2 left-2 z-10">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="!p-1.5 h-8 w-8 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200/80 dark:border-gray-600/80 shadow-sm text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
+                  onClick={() => persistWalletRail(false)}
+                  aria-label="Collapse company wallet panel"
+                  title="Collapse company wallet"
+                >
+                  <ChevronLeft className="w-4 h-4" aria-hidden />
+                </Button>
+              </div>
+              <div className="pl-10">
+                <CompanyWalletContent
+                  layout="rail"
+                  companyName={data.company.name}
+                  companyWalletAddress={data.company.walletAddress ?? null}
+                  walletProvisioning={companyWalletProvisioning}
+                />
+              </div>
+            </aside>
+          ) : (
+            <aside
+              className={`hidden xl:flex w-11 shrink-0 self-start sticky top-24 flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)] rounded-2xl border shadow-sm backdrop-blur-sm ${
+                theme === 'dark'
+                  ? 'border-gray-700 bg-gray-900/90'
+                  : 'border-gray-200 bg-white/90'
+              }`}
+              aria-label="Company wallet collapsed"
+            >
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => persistWalletRail(true)}
+                className="!p-0 h-auto w-full touch-manipulation"
+                aria-label="Expand company wallet panel"
+                title="Expand company wallet"
+              >
+                <span className="flex items-center gap-2 -rotate-90 whitespace-nowrap py-6">
+                  <Wallet className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" aria-hidden />
+                  <span className="text-[10px] font-bold tracking-wide text-gray-700 dark:text-gray-200">
+                    Wallet
+                  </span>
+                </span>
+              </Button>
+            </aside>
+          ))}
+        <div className="flex-1 min-w-0 flex justify-center">
+          <div className="w-full min-w-0 space-y-8 xl:max-w-7xl">
       {/* Company Header */}
       <div className={`rounded-2xl p-6 mb-8 border shadow-lg transition-all duration-200 ${
         theme === 'dark'
@@ -908,19 +987,44 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         />
       </div>
 
+          </div>
         </div>
 
-        <EmployerPathSidebar
-          variant='sticky'
-          id='employer-hub-job-path-sidebar'
-          onNavigate={onNavigate}
-          progressOverride={hiringPayload?.progress}
-          pathSummary={hiringPayload?.pathSummary}
-          companyName={data.company?.name ?? null}
-          activeJobs={data.stats.activeJobs}
-          totalApplicants={data.stats.totalApplicants}
-          pendingReview={data.stats.pendingReview}
-        />
+        {jobPathRailOpen ? (
+          <EmployerPathSidebar
+            variant='sticky'
+            id='employer-hub-job-path-sidebar'
+            onNavigate={onNavigate}
+            progressOverride={hiringPayload?.progress}
+            pathSummary={hiringPayload?.pathSummary}
+            companyName={data.company?.name ?? null}
+            activeJobs={data.stats.activeJobs}
+            totalApplicants={data.stats.totalApplicants}
+            pendingReview={data.stats.pendingReview}
+            onRequestCollapse={() => persistJobPathRail(false)}
+          />
+        ) : (
+          <aside
+            className={`hidden xl:flex w-11 shrink-0 self-start sticky top-24 flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)] rounded-2xl border shadow-sm backdrop-blur-sm border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900/90`}
+            aria-label="Job path collapsed"
+          >
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => persistJobPathRail(true)}
+              className="!p-0 h-auto w-full touch-manipulation"
+              aria-label="Expand job path panel"
+              title="Expand job path"
+            >
+              <span className="flex items-center gap-2 rotate-90 whitespace-nowrap py-6">
+                <Compass className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" aria-hidden />
+                <span className="text-[10px] font-bold tracking-wide text-gray-700 dark:text-gray-200">
+                  Job path
+                </span>
+              </span>
+            </Button>
+          </aside>
+        )}
       </div>
 
       {data.company && (

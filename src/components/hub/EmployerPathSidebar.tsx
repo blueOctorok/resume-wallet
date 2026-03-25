@@ -1,7 +1,9 @@
 'use client'
 
 import { useMemo } from 'react'
+import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import Button from '@/components/ui/Button'
 import type { PageType } from '@/stores/types'
 import {
   calculateEmployerProgress,
@@ -33,6 +35,8 @@ export interface EmployerPathSidebarProps {
   totalApplicants?: number
   pendingReview?: number
   className?: string
+  /** Sticky rail only: collapse control for desktop clutter-free layout */
+  onRequestCollapse?: () => void
 }
 
 const EMPTY_EMPLOYER: EmployerProgressData = {
@@ -58,6 +62,7 @@ export default function EmployerPathSidebar({
   totalApplicants: totalApplicantsProp,
   pendingReview: pendingReviewProp,
   className,
+  onRequestCollapse,
 }: EmployerPathSidebarProps) {
   const hiring = useEmployerHiringPathStore((s) => s.hiring)
 
@@ -82,7 +87,7 @@ export default function EmployerPathSidebar({
   }
 
   const body = (
-    <div className='space-y-5'>
+    <div className={cn('space-y-5', onRequestCollapse && 'pr-8')}>
       <PathGuidance
         audience='employer'
         companyName={companyName}
@@ -125,6 +130,21 @@ export default function EmployerPathSidebar({
           className,
         )}
       >
+        {onRequestCollapse && (
+          <div className="absolute top-2 right-2 z-10">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="!p-1.5 h-8 w-8 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200/80 dark:border-gray-600/80 shadow-sm text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
+              onClick={onRequestCollapse}
+              aria-label="Collapse job path panel"
+              title="Collapse job path"
+            >
+              <ChevronRight className="w-4 h-4" aria-hidden />
+            </Button>
+          </div>
+        )}
         {body}
       </aside>
     )

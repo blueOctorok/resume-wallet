@@ -4,6 +4,56 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DB constraint audit: three CHECK constraints out of sync with application code** (March 2026)
+
+Full audit of every CHECK constraint in the public schema against every value the application code and cron jobs actually write. Found three mismatches — all would cause silent 500s or cron failures.
+
+### Mismatches fixed in `058_fix_check_constraints_audit.sql`
+
+| Table | Constraint | Missing value | Impact |
+|---|---|---|---|
+| `candidate_requests` | `request_type_check` | `block_request` | **Every employer block request from CareerCardModal crashes** (same class of bug as the invite issue). The composable hub sends `request_type: 'block_request'` but the constraint from the original migration only allowed 5 legacy types. |
+| `mvr_orders` | `status_check` | `expired` | **Nightly cron (`032_cron_expiry_gaps.sql`) fails silently** — it writes `status = 'expired'` but the constraint didn't allow it. MVR orders would never expire. |
+| `application_invites` | `type` DEFAULT | `driver_dot` → `general` | No code path produces `driver_dot` anymore; the default was stale. Constraint already had `block` from a prior patch. |
+
+### What passed audit (no issues)
+
+- `applications.status` + `initiated_by` — all code values match constraint.
+- `employer_access_requests.status` — all code values match constraint.
+- `resumes.source_role` — code writes `driver` or `developer`; `general` allowed but unused.
+- `application_invites.status` — all code + cron values match constraint.
+- `candidate_requests.status` — all code + cron values match constraint.
+- `notifications` — no CHECK constraints (open `type` + `jsonb data`), no issues.
+
+### How to apply
+
+Run `058_fix_check_constraints_audit.sql` in the Supabase SQL editor or via `npx supabase db push`.
+
+---
+
+## **Candidate Outreach: SMS / Text invite** (March 2026)
+
+- **`CandidateOutreach.tsx`:** Message icon next to copy / QR / email opens an inline row: optional phone (US 10-digit or `+` international), then **Open Messages** — uses the `sms:` URL scheme so the OS messaging app opens with the invite link and short copy prefilled (no Twilio). **`GET /api/employer/invites`** `companyName` is stored in state for that copy.
+- **`invite-sms-body.ts`:** `buildCandidateInviteSmsBody` (block label from registry, same idea as invite email), `normalizeSmsPhone`, `buildSmsHref`.
+
+---
+
+## **Candidate Outreach: QR share + remove invite** (March 2026)
+
+- **QR modal:** **Download PNG**, **Copy image** (where `ClipboardItem` is supported), and **Share…** (`navigator.share` with QR file when `canShare` allows, else URL only). Dark-mode-friendly helper copy.
+- **Remove:** Trash control on every row; confirms, then **`DELETE /api/employer/invites?id=`** (company-scoped). Cancelling an invite still only sets status; remove deletes the row and invalidates the link.
+- **Cancel** tooltip clarifies it keeps the row until removed.
+
+---
+
+## **Employer hub: collapsible desktop company wallet + job path rails** (March 2026)
+
+- **`xl`+ only:** Left **Company wallet** and right **Job path** panels can be collapsed to slim vertical strips (same idea as mobile edge tabs). **Default expanded** on first visit; preference stored in `localStorage` (`employer-hub-rail-wallet-open`, `employer-hub-rail-jobpath-open`).
+- **`EmployerHub.tsx`:** Wallet collapse control **top-left** of the rail (`ChevronLeft`); content wrapped with `pl-10` so it clears the button. Job path collapse stays **top-right** (`ChevronRight`). Main column: **`flex-1 flex justify-center`** + inner **`xl:max-w-7xl`** so the center **does not stretch** when rails collapse on wide screens.
+- **`EmployerPathSidebar`:** optional `onRequestCollapse`; floating chevron + `pr-8` on body so content clears the control.
+
+---
+
 ## **Fix: “Ask owner to invite” + no central admin row (company onboarding bypassed AvA)** (March 2026)
 
 - **What users saw:** Copy from **`POST /api/employer/company`** (409), not from AvA access-request. That happens when someone is already **`role: employer`** but has **no company** (e.g. access-request set employer **before** creating the company row; company insert then failed on duplicate name). They are sent to **Company onboarding** → duplicate name → 409 → **no** `employer_access_requests` insert → **Access Requests** admin tab empty.
