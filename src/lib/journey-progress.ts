@@ -56,10 +56,11 @@ export interface JourneyProgress {
 export interface BlockProgressData {
   isWalletConnected: boolean
   profileCompleteness: number
-  /** Any resume (driver or developer) */
+  /** Any resume (driver, developer, or general) */
   hasResume: boolean
   hasDriverResume: boolean
   hasDeveloperResume: boolean
+  hasGeneralResume: boolean
   resumeCount: number
   dotAppComplete: boolean
   dotAppVerified: boolean
@@ -119,6 +120,22 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
       label: 'Build Your Resume',
       description: 'Showcase your experience to hiring managers',
       target: 'developer-resume',
+      priority: 'high',
+    } : null,
+  },
+
+  'general-resume': {
+    resolve: (d) => [{
+      id: 'general-resume',
+      label: 'Build Your Resume',
+      description: 'Create a professional resume for any industry',
+      status: d.hasGeneralResume ? 'complete' : 'pending',
+      action: !d.hasGeneralResume ? { label: 'Build Resume', target: 'general-resume' } : undefined,
+    }],
+    nextAction: (d) => !d.hasGeneralResume ? {
+      label: 'Build Your Resume',
+      description: 'Your career card starts with a strong resume',
+      target: 'general-resume',
       priority: 'high',
     } : null,
   },
@@ -217,15 +234,6 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
     resolve: () => [],
   },
 
-  'general-skills': {
-    // Informational block — no journey step (skills are part of profile completeness)
-    resolve: () => [],
-  },
-
-  'general-work-history': {
-    // Informational block — no journey step (work history is part of profile completeness)
-    resolve: () => [],
-  },
 }
 
 // ===== CANDIDATE / BLOCK-BASED JOURNEY =====

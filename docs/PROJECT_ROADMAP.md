@@ -107,6 +107,7 @@ The career card becomes a pure read-only projection of the hub.
 | **Block-Owned Data — Phase 2** | **✅ Done** | **Switched ALL reads (~40 API routes) from `driver_profiles`/`developer_profiles` to block tables. Created migration 047 (`block_dev_profile` for orphaned dev columns). Added dual-writes to MVR webhook, developer profile PUT, GitHub callback, dev quick-setup. Standardized share data on `users` table.** |
 | **Block-Owned Data — Phase 3** | **✅ Done** | **Switched ALL writes (~20 API routes) to block tables. Migration 048: rewrote `career_cards` view + `search_talent()`, dropped FK constraints, removed trigger. Fixed share token bug (writes to `users`). Fixed identity prefill (merges from `user_profiles`). Removed dual-write sync functions.** |
 | **Block-Owned Data — Phase 4** | **✅ Done** | **Migration 049: dropped `driver_profiles` and `developer_profiles` tables. Removed dead code (`DriverProfileRow`, `rowToProfile`, `profileToRow`). Cleaned ~20 stale comments. Updated cursor rule. Complete — no legacy profile tables remain.** |
+| **general-resume block** | **✅ Done** | **Universal professional resume (`source_role: general`) for non-driver/non-dev candidates — Indeed-style hub block with builder, My Files, on-chain verify, career card section, employer Request Resume, outreach `?onboard=general-resume`, journey step. Replaces `general-skills` / `general-work-history`. Migration `060_hub_blocks_general_resume.sql`.** |
 
 ---
 

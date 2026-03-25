@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
         .from('resumes')
         .select('id, title, filename, ipfs_hash, structured_data, verification_status, blockchain_tx_hash, created_at, file_size, resume_type, source_role, is_paid')
         .eq('user_id', user.id)
-        .in('source_role', ['driver', 'developer'])
+        .in('source_role', ['driver', 'developer', 'general'])
         .order('created_at', { ascending: false }),
 
       // 11. All DOT applications (include application_data to extract applicant name)
@@ -210,7 +210,7 @@ export async function GET(request: NextRequest) {
       filename: resume.filename,
       ipfsHash: resume.ipfs_hash,
       structuredData: resume.structured_data ?? null,
-      sourceRole: resume.source_role as 'driver' | 'developer',
+      sourceRole: resume.source_role as 'driver' | 'developer' | 'general',
       verificationStatus: resume.verification_status || 'PENDING',
       blockchainTxHash: resume.blockchain_tx_hash,
       createdAt: resume.created_at,

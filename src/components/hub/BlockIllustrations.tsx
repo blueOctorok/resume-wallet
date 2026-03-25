@@ -14,8 +14,6 @@ import {
   Github,
   FolderGit2,
   Wrench,
-  Briefcase,
-  Star,
   Check,
   Link,
   GitBranch,
@@ -125,35 +123,6 @@ function ProjectsIllustration({ accentText }: IllustrationProps) {
   )
 }
 
-function SkillsIllustration({ accentText }: IllustrationProps) {
-  return (
-    <div className='relative'>
-      <Wrench className={cn('w-9 h-9', accentText)} />
-      <Star className={cn('w-3 h-3 absolute -top-0.5 -right-1 fill-current', accentText, 'opacity-60')} />
-      <Star className={cn('w-2.5 h-2.5 absolute -bottom-0.5 -left-0.5 fill-current', accentText, 'opacity-40')} />
-    </div>
-  )
-}
-
-function WorkHistoryIllustration({ accentText, isDark }: IllustrationProps) {
-  const dotColor = isDark ? 'bg-gray-500' : 'bg-gray-400'
-  const lineColor = isDark ? 'bg-gray-600/60' : 'bg-gray-300/80'
-  return (
-    <div className='flex gap-2 items-start'>
-      <Briefcase className={cn('w-7 h-7 flex-shrink-0', accentText)} />
-      {/* Mini timeline */}
-      <div className='flex flex-col gap-1.5 pt-1'>
-        {[0, 1, 2].map((i) => (
-          <div key={i} className='flex items-center gap-1'>
-            <div className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', dotColor)} />
-            <div className={cn('h-[2px] rounded-full', lineColor, i === 0 ? 'w-8' : i === 1 ? 'w-6' : 'w-4')} />
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 /** Default fallback */
 function DefaultIllustration({ accentText }: IllustrationProps) {
   return <Wrench className={cn('w-9 h-9', accentText)} />
@@ -170,8 +139,7 @@ const ILLUSTRATION_MAP: Record<string, IllustrationComponent> = {
   'developer-portfolio':    PortfolioIllustration,
   'developer-github':       GithubIllustration,
   'developer-projects':     ProjectsIllustration,
-  'general-skills':         SkillsIllustration,
-  'general-work-history':   WorkHistoryIllustration,
+  'general-resume':         ResumeIllustration,
 }
 
 export function getBlockIllustration(blockType: string): IllustrationComponent {

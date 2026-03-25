@@ -46,10 +46,9 @@ const HIVE_BLOCKS = [
   { id: 'driver-dot-application', icon: ClipboardList, label: 'DOT App' },      // center (hero)
   { id: 'driver-resume',          icon: FileText,      label: 'Resume' },
   { id: 'driver-mvr',            icon: Car,            label: 'MVR' },
-  { id: 'general-skills',        icon: Wrench,         label: 'Skills' },
+  { id: 'general-resume',        icon: FileText,       label: 'Pro Resume' },
   { id: 'developer-portfolio',   icon: Globe,          label: 'Portfolio' },
   { id: 'developer-github',      icon: Github,         label: 'GitHub' },
-  { id: 'general-work-history',  icon: Briefcase,      label: 'Work History' },
 ]
 
 // ── Scroll-reveal hook ───────────────────────────────────────────────────────

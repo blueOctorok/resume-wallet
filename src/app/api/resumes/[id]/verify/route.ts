@@ -118,11 +118,15 @@ export async function POST(
     // The structured_data from Resume Builder already has the correct field names
     const structuredData = resume.structured_data as Record<string, unknown>
     
-    // Detect format: Resume Builder format has `employments` with `companyName`, 
+    // General resume (and future builders) set schema so we PDF-map even with zero jobs.
+    const schema = (structuredData as { schema?: string }).schema
+    // Detect format: Resume Builder format has `employments` with `companyName`,
     // old format (from uploaded resumes) has `employments` with `company`
-    const isResumeBuilderFormat = Array.isArray(structuredData.employments) && 
-      structuredData.employments.length > 0 && 
-      'companyName' in (structuredData.employments[0] as Record<string, unknown>)
+    const isResumeBuilderFormat =
+      schema === 'stormchain_resume_v1' ||
+      (Array.isArray(structuredData.employments) &&
+        structuredData.employments.length > 0 &&
+        'companyName' in (structuredData.employments[0] as Record<string, unknown>))
     
     // Detect if skills are in Resume Builder format (array of {name, category}) 
     // vs old format (array of {category, items[]})
@@ -135,17 +139,19 @@ export async function POST(
     if (isResumeBuilderFormat) {
       // Resume Builder format - data is already in the correct shape
       console.log('📄 Detected Resume Builder format')
+      const pi = structuredData.personalInfo as Record<string, unknown> | undefined
       resumeData = {
         personalInfo: {
-          firstName: (structuredData.personalInfo as Record<string, unknown>)?.firstName as string | undefined,
-          lastName: (structuredData.personalInfo as Record<string, unknown>)?.lastName as string | undefined,
-          email: (structuredData.personalInfo as Record<string, unknown>)?.email as string | undefined,
-          phone: (structuredData.personalInfo as Record<string, unknown>)?.phone as string | undefined,
-          address: (structuredData.personalInfo as Record<string, unknown>)?.address as string | undefined,
-          city: (structuredData.personalInfo as Record<string, unknown>)?.city as string | undefined,
-          state: (structuredData.personalInfo as Record<string, unknown>)?.state as string | undefined,
-          zipCode: (structuredData.personalInfo as Record<string, unknown>)?.zipCode as string | undefined,
-          professionalSummary: (structuredData.personalInfo as Record<string, unknown>)?.professionalSummary as string | undefined,
+          firstName: pi?.firstName as string | undefined,
+          lastName: pi?.lastName as string | undefined,
+          headline: pi?.headline as string | undefined,
+          email: pi?.email as string | undefined,
+          phone: pi?.phone as string | undefined,
+          address: pi?.address as string | undefined,
+          city: pi?.city as string | undefined,
+          state: pi?.state as string | undefined,
+          zipCode: pi?.zipCode as string | undefined,
+          professionalSummary: pi?.professionalSummary as string | undefined,
         },
         cdlInfo: {
           cdlClass: (structuredData.cdlInfo as Record<string, unknown>)?.cdlClass as string | undefined,
@@ -175,6 +181,14 @@ export async function POST(
               category: (skill.category || 'other') as 'equipment' | 'route' | 'technology' | 'safety' | 'other',
             }))
           : [], // Will be converted from old format below
+        professionalCertifications: (
+          (structuredData.professionalCertifications as Array<Record<string, unknown>>) || []
+        ).map((c) => ({
+          name: c.name as string | undefined,
+          issuer: c.issuer as string | undefined,
+          date: (c.issuedDate ?? c.date) as string | undefined,
+          expiresDate: c.expiresDate as string | undefined,
+        })),
         references: (structuredData.references as Array<Record<string, unknown>> || []).map(ref => ({
           name: ref.name as string | undefined,
           title: ref.title as string | undefined,

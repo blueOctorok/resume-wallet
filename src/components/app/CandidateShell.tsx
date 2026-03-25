@@ -21,6 +21,11 @@ const DeveloperResumeBlock = dynamic(
   { ssr: false, loading: () => <LoadingScreen message='Loading developer resume…' fullScreen={false} /> }
 )
 
+const GeneralResumeBlock = dynamic(
+  () => import('@/components/blocks/GeneralResumeBlock'),
+  { ssr: false, loading: () => <LoadingScreen message='Loading resume builder…' fullScreen={false} /> }
+)
+
 const JobListings = dynamic(
   () => import('@/components/JobListings').then((mod) => mod.default),
   { ssr: false, loading: () => <LoadingScreen message='Loading jobs...' fullScreen={false} /> }
@@ -100,6 +105,17 @@ export default function CandidateShell() {
   if (currentPage === 'developer-resume') {
     return (
       <DeveloperResumeBlock
+        user={user}
+        onBack={goBack}
+        existingResumeId={editingResumeId}
+        onSave={goBack}
+      />
+    )
+  }
+
+  if (currentPage === 'general-resume') {
+    return (
+      <GeneralResumeBlock
         user={user}
         onBack={goBack}
         existingResumeId={editingResumeId}

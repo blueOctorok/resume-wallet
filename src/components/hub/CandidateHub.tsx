@@ -746,7 +746,7 @@ interface HubDocument {
   editPage: PageType | null
   ipfsHash?: string | null
   structuredData?: unknown | null
-  resumeSourceRole?: 'driver' | 'developer'
+  resumeSourceRole?: 'driver' | 'developer' | 'general'
   /** Set when type === 'portfolio' — opens in new tab for View */
   portfolioUrl?: string | null
   /** Set when type === 'github' — link to profile */
@@ -782,7 +782,9 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
   const [resumePdfLoading, setResumePdfLoading] = useState(false)
 
   const hasResumeBlock = installedBlocks.some((b) =>
-    b.blockType === 'driver-resume' || b.blockType === 'developer-resume'
+    b.blockType === 'driver-resume' ||
+    b.blockType === 'developer-resume' ||
+    b.blockType === 'general-resume'
   )
   const hasDotAppBlock = installedBlocks.some((b) => b.blockType === 'driver-dot-application')
   const hasMvrBlock = installedBlocks.some((b) => b.blockType === 'driver-mvr')
@@ -807,13 +809,17 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
 
       const hasDriverResumeBlock = installedBlocks.some((b) => b.blockType === 'driver-resume')
       const hasDeveloperResumeBlock = installedBlocks.some((b) => b.blockType === 'developer-resume')
+      const hasGeneralResumeBlock = installedBlocks.some((b) => b.blockType === 'general-resume')
 
       if (hasResumeBlock && data.resumes) {
         for (const resume of data.resumes) {
-          const role = resume.sourceRole as 'driver' | 'developer' | undefined
+          const role = resume.sourceRole as 'driver' | 'developer' | 'general' | undefined
           if (role === 'driver' && !hasDriverResumeBlock) continue
           if (role === 'developer' && !hasDeveloperResumeBlock) continue
-          if (role !== 'driver' && role !== 'developer') continue
+          if (role === 'general' && !hasGeneralResumeBlock) continue
+          if (role !== 'driver' && role !== 'developer' && role !== 'general') continue
+          const isBuilt =
+            resume.resumeType === 'built' || resume.resumeType === 'developer_built'
           docs.push({
             id: resume.id,
             type: 'resume',
@@ -822,9 +828,14 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
             createdAt: resume.createdAt,
             verified: !!resume.blockchainTxHash,
             txHash: resume.blockchainTxHash,
-            canVerify: !resume.blockchainTxHash,
+            canVerify: Boolean(isBuilt && resume.structuredData && !resume.blockchainTxHash),
             canDelete: true,
-            editPage: role === 'developer' ? 'developer-resume' : 'resume',
+            editPage:
+              role === 'developer'
+                ? 'developer-resume'
+                : role === 'general'
+                  ? 'general-resume'
+                  : 'resume',
             ipfsHash: resume.ipfsHash ?? null,
             structuredData: resume.structuredData ?? null,
             resumeSourceRole: role,
@@ -1628,9 +1639,8 @@ export default function CandidateHub() {
                   const route = targetBlockType
                     ? getBlockDefinition(targetBlockType)?.pageRoute
                     : null
-                  setCurrentPage(
-                    route === 'developer-resume' ? 'developer-resume' : 'resume',
-                  )
+                  if (route) setCurrentPage(route as PageType)
+                  else setCurrentPage('resume')
                 }}
                 onNavigateToDotApp={() => setCurrentPage('dotapp')}
               />

@@ -121,8 +121,9 @@ export function useJourneyProgress(): JourneyProgress {
     Boolean(m.hasResult)
 
   const resumes = hubStore.resumes as ResumeData[]
-  const hasDriverResume = resumes.some((r) => r.sourceRole !== 'developer')
+  const hasDriverResume = resumes.some((r) => r.sourceRole === 'driver')
   const hasDeveloperResume = resumes.some((r) => r.sourceRole === 'developer')
+  const hasGeneralResume = resumes.some((r) => r.sourceRole === 'general')
 
   const data: BlockProgressData = {
     isWalletConnected,
@@ -130,6 +131,7 @@ export function useJourneyProgress(): JourneyProgress {
     hasResume: resumes.length > 0,
     hasDriverResume,
     hasDeveloperResume,
+    hasGeneralResume,
     resumeCount: resumes.length,
     dotAppComplete: dotDone,
     dotAppVerified: hasVerifiedDotApp || (hubStore.stats?.verifiedDotApps ? hubStore.stats.verifiedDotApps > 0 : false),

@@ -17,6 +17,8 @@ const SKILL_CATEGORIES: { value: 'equipment' | 'route' | 'technology' | 'safety'
 interface PersonalInfo {
   firstName?: string
   lastName?: string
+  /** Job title / tagline (general resume) */
+  headline?: string
   email?: string
   phone?: string
   address?: string
@@ -74,12 +76,21 @@ interface Reference {
   relationship?: string
 }
 
+interface ProfessionalCertification {
+  name?: string
+  issuer?: string
+  date?: string
+  expiresDate?: string
+}
+
 interface ResumeData {
   personalInfo: PersonalInfo
   cdlInfo: CDLInfo
   employments: Employment[]
   educations: Education[]
   skills: Skill[]
+  /** Licenses/credentials not tied to a school row (general resume) */
+  professionalCertifications?: ProfessionalCertification[]
   references: Reference[]
 }
 
@@ -133,6 +144,14 @@ export function generateStyledResumePDF(data: ResumeData): Buffer {
   pdf.setTextColor(...primaryColor)
   pdf.text(fullName, pageWidth / 2, y, { align: 'center' })
   y += 8
+
+  if (data.personalInfo.headline?.trim()) {
+    pdf.setFontSize(11)
+    pdf.setFont('helvetica', 'normal')
+    pdf.setTextColor(...accentColor)
+    pdf.text(data.personalInfo.headline.trim(), pageWidth / 2, y, { align: 'center' })
+    y += 6
+  }
 
   // Contact info - centered, smaller
   const contactParts = [
@@ -335,6 +354,33 @@ export function generateStyledResumePDF(data: ResumeData): Buffer {
       }
     })
     y += 2
+  }
+
+  // === STANDALONE CERTIFICATIONS (general resume) ===
+  const certs = data.professionalCertifications ?? []
+  if (certs.length > 0) {
+    drawSectionHeader('Certifications')
+    pdf.setFontSize(9)
+    pdf.setFont('helvetica', 'normal')
+    pdf.setTextColor(...textDark)
+    certs.forEach((c) => {
+      checkPageBreak(8)
+      const line = [c.name, c.issuer].filter(Boolean).join(' — ')
+      const meta = [c.date, c.expiresDate ? `Exp: ${c.expiresDate}` : ''].filter(Boolean).join(' · ')
+      pdf.setFont('helvetica', 'bold')
+      pdf.text(line || 'Credential', margin, y)
+      y += 4
+      if (meta) {
+        pdf.setFont('helvetica', 'normal')
+        pdf.setTextColor(...textMedium)
+        pdf.text(meta, margin, y)
+        y += 5
+      } else {
+        y += 2
+      }
+      pdf.setTextColor(...textDark)
+    })
+    y += 4
   }
 
   // === REFERENCES ===

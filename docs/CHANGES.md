@@ -4,6 +4,23 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **general-resume block — universal Indeed-style resume** (March 2026)
+
+- **Product:** Single **Professional Resume** block for any occupation (replaces `general-skills` + `general-work-history`, which had no builder). Driver blocks still target Tenstreet-style flows; dev blocks stay separate; this is the default “everyone else” path.
+- **Registry:** `general-resume` in [`src/lib/block-registry.ts`](src/lib/block-registry.ts) — `employerRequestable`, `requestLabel: Resume`, `completionField: hasResume`, `pageRoute: general-resume`, `dataTables`: education / skills / references.
+- **UI:** [`GeneralResumeBuilder.tsx`](src/components/GeneralResumeBuilder.tsx) + [`GeneralResumeBlock.tsx`](src/components/blocks/GeneralResumeBlock.tsx); [`CandidateShell`](src/components/app/CandidateShell.tsx) route; [`validOnboardPages`](src/app/page.tsx) for invite deep-links.
+- **API:** [`POST/PUT/GET /api/general/resume`](src/app/api/general/resume/route.ts) — `resumes.source_role = 'general'`, `resume_type = 'built'`, `structured_data.schema = stormchain_resume_v1` (see [`general-resume-schema.ts`](src/lib/general-resume-schema.ts)); syncs to `block_education`, `block_skills`, `block_references` via `block-data.ts`.
+- **Verify/PDF:** [`/api/resumes/[id]/verify`](src/app/api/resumes/[id]/verify/route.ts) treats `stormchain_resume_v1` like the driver builder path (works with zero jobs). [`resume-pdf-generator`](src/lib/resume-pdf-generator.ts): optional `headline` + **Certifications** section from `professionalCertifications`.
+- **Hub:** [`/api/driver/hub`](src/app/api/driver/hub/route.ts) returns `general` resumes; [My Files](src/components/hub/CandidateHub.tsx) filters by installed block, `editPage: general-resume`, verify only for built rows with `structured_data`.
+- **Career card:** [`/api/career-card`](src/app/api/career-card/route.ts) + [`ProjectedCareerCard`](src/components/career-card/ProjectedCareerCard.tsx) — `general-resume` uses same `ResumeSection` as driver/dev.
+- **Employer:** [`CareerCardModal` `BLOCK_TO_SLOT`](src/components/employer/CareerCardModal.tsx) maps `general-resume` → `resumeAction` (Request Resume).
+- **Journey:** [`BLOCK_JOURNEY_MAP`](src/lib/journey-progress.ts) + [`hasGeneralResume`](src/stores/journey-store.ts); `hasDriverResume` is now **driver-only** (`source_role === 'driver'`), not “any non-developer”.
+- **Marketing:** [HomePage](src/components/HomePage.tsx) hive tile; [BlockIllustrations](src/components/hub/BlockIllustrations.tsx) reuses resume illustration.
+- **DB:** [`060_hub_blocks_general_resume.sql`](supabase/migrations/060_hub_blocks_general_resume.sql) — migrate hub rows from legacy general blocks to `general-resume`, then delete legacy rows.
+- **Docs/rules:** [block-development.mdc](.cursor/rules/block-development.mdc), [COMPOSABLE_HUB_BUILD_GUIDE.md](docs/COMPOSABLE_HUB_BUILD_GUIDE.md).
+
+---
+
 ## **Developer resume vs driver resume: separate hub route** (March 2026)
 
 - **Root cause:** `driver-resume` and `developer-resume` both used `pageRoute: 'resume'`, so the candidate hub always opened the **driver** `ResumeBuilder` (CDL, trucking employment, sync to `block_driver_*`). The developer flow already lived in `DeveloperResumeBuilder` + `POST/PUT /api/developer/resume` (`source_role: 'developer'`), but it was never reached from the composable hub.

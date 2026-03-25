@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import Avatar from '@/components/ui/Avatar'
 import type { ProjectedCareerCard as CardData, CareerCardMode, CareerCardSection, SectionBlockType } from '@/types/career-card'
-import type { ResumeData, DotAppData, MvrData, CdlData, PortfolioData, GitHubData, ProjectsData, SkillsData, WorkHistoryData } from '@/types/career-card'
+import type { ResumeData, DotAppData, MvrData, CdlData, PortfolioData, GitHubData, ProjectsData } from '@/types/career-card'
 
 import {
   ResumeSection,
@@ -15,8 +15,6 @@ import {
   PortfolioSection,
   GitHubSection,
   ProjectsSection,
-  SkillsSection,
-  WorkHistorySection,
 } from './sections'
 
 interface ProjectedCareerCardProps {
@@ -225,6 +223,7 @@ function SectionRenderer({
   switch (section.blockType as SectionBlockType) {
     case 'driver-resume':
     case 'developer-resume':
+    case 'general-resume':
       return <ResumeSection data={section.data as ResumeData} mode={mode} isDark={isDark} onAction={onAction} />
     case 'driver-dot-application':
       return (
@@ -255,10 +254,6 @@ function SectionRenderer({
       return <GitHubSection data={section.data as GitHubData} mode={mode} isDark={isDark} shareToken={shareToken} walletAddress={walletAddress} />
     case 'developer-projects':
       return <ProjectsSection data={section.data as ProjectsData} mode={mode} isDark={isDark} />
-    case 'general-skills':
-      return <SkillsSection data={section.data as SkillsData} mode={mode} isDark={isDark} />
-    case 'general-work-history':
-      return <WorkHistorySection data={section.data as WorkHistoryData} mode={mode} isDark={isDark} />
     default:
       return null
   }

@@ -102,14 +102,13 @@ export interface WorkHistoryData {
 export type SectionDataMap = {
   'driver-resume': ResumeData
   'developer-resume': ResumeData
+  'general-resume': ResumeData
   'driver-dot-application': DotAppData
   'driver-mvr': MvrData
   'driver-cdl-credentials': CdlData
   'developer-portfolio': PortfolioData
   'developer-github': GitHubData
   'developer-projects': ProjectsData
-  'general-skills': SkillsData
-  'general-work-history': WorkHistoryData
 }
 
 export type SectionBlockType = keyof SectionDataMap

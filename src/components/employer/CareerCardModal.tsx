@@ -324,6 +324,7 @@ export default function CareerCardModal({
   const BLOCK_TO_SLOT: Record<string, 'resumeAction' | 'mvrAction' | 'dotAppAction'> = {
     'driver-resume': 'resumeAction',
     'developer-resume': 'resumeAction',
+    'general-resume': 'resumeAction',
     'driver-mvr': 'mvrAction',
     'driver-dot-application': 'dotAppAction',
   }

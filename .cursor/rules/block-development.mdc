@@ -31,7 +31,7 @@ Blocks are the atomic unit of the composable hub. A block defines a candidate's 
 
 Add a `BlockDefinition` entry in `src/lib/block-registry.ts`. This is the single source of truth.
 
-- `id`: Convention is `{category}-{name}` (e.g. `driver-mvr`, `developer-portfolio`, `general-skills`)
+- `id`: Convention is `{category}-{name}` (e.g. `driver-mvr`, `developer-portfolio`, `general-resume`)
 - `categoryId`: Must match an existing `BLOCK_CATEGORIES` entry (`general`, `drivers`, `developers`)
 - `appearsOnCareerCard`: Set `true` if employers should see data from this block
 - `pageRoute`: The `PageType` string if the block has a full-page view, else `null`
@@ -120,13 +120,13 @@ Block data lives in `block_*` tables (e.g. `block_driver_cdl`, `block_education`
 | Table | Owned by | Shared across |
 |---|---|---|
 | `block_driver_cdl` | `driver-resume`, `driver-dot-application`, `driver-cdl-credentials` | Driver blocks that need CDL info |
-| `block_driver_employment` | `driver-resume`, `general-work-history` | Any block needing employment data |
+| `block_driver_employment` | `driver-resume` | Driver employment history (CDL resume / DOT) |
 | `block_driver_mvr` | `driver-mvr` | Employer MVR requests |
 | `block_driver_emergency` | `driver-dot-application` | — |
 | `block_driver_experience` | `driver-dot-application` | — |
-| `block_education` | `driver-resume`, `developer-resume` | Shared across all roles |
-| `block_skills` | `general-skills`, `driver-resume`, `developer-resume` | Shared across all roles |
-| `block_references` | `driver-resume`, `driver-dot-application` | — |
+| `block_education` | `general-resume`, `driver-resume`, `developer-resume` | Shared across all roles |
+| `block_skills` | `general-resume`, `driver-resume`, `developer-resume` | Shared across all roles |
+| `block_references` | `general-resume`, `driver-resume`, `driver-dot-application` | — |
 | `block_dev_profile` | `developer-resume`, `developer-portfolio` | Developer blocks needing bio/employment |
 | `block_dev_github` | `developer-github` | — |
 | `block_dev_portfolio` | `developer-portfolio` | — |

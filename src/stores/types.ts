@@ -11,6 +11,7 @@
 export type PageType =
   | 'signin'
   | 'resume'
+  | 'general-resume'
   | 'developer-resume'
   | 'dotapp'
   | 'jobs'
@@ -70,7 +71,7 @@ export interface ResumeData {
   fileSize: number | null
   resumeType: string
   isPaid: boolean
-  sourceRole?: 'driver' | 'developer'
+  sourceRole?: 'driver' | 'developer' | 'general'
 }
 
 export interface DotApplicationRecord {

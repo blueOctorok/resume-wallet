@@ -251,13 +251,12 @@ Dedicated block stores can be added later when blocks need inline hub views.
 | `driver-dot-application` | `dotapp` | `DotApplicationFlow` |
 | `driver-mvr` | `mvr` | `MvrOrderForm` |
 | `driver-resume` | `resume` | `ResumeBuilder` |
-| `developer-resume` | `resume` | `ResumeBuilder` |
+| `developer-resume` | `developer-resume` | `DeveloperResumeBlock` |
+| `general-resume` | `general-resume` | `GeneralResumeBlock` |
 | `developer-portfolio` | `portfolio` | `PortfolioPage` |
 | `driver-cdl-credentials` | `null` | Coming soon |
 | `developer-projects` | `null` | Coming soon |
 | `developer-github` | `null` | Coming soon |
-| `general-skills` | `null` | Coming soon |
-| `general-work-history` | `null` | Coming soon |
 
 ### UI behavior
 - Blocks with a `pageRoute` show a chevron arrow and are clickable
@@ -295,7 +294,7 @@ career card view.
 | `driver-cdl-credentials` | CDL class, endorsements, expiration |
 | `developer-portfolio` | Portfolio links + highlights |
 | `developer-github` | Contribution graph |
-| `general-skills` | Skills tag cloud |
+| `general-resume` | Resume preview / structured sections |
 
 ### Acceptance criteria
 - [ ] Career card shows only blocks the candidate has installed

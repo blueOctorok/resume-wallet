@@ -7,8 +7,6 @@ import {
   getDevPortfolio,
   getDevGithub,
   saveDevGithub,
-  getSkills,
-  getDriverEmployment,
   getDevProfile,
 } from '@/lib/block-data'
 import type {
@@ -22,8 +20,6 @@ import type {
   PortfolioData,
   GitHubData,
   ProjectsData,
-  SkillsData,
-  WorkHistoryData,
 } from '@/types/career-card'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -184,11 +180,12 @@ async function fetchSectionData(
   userAvatarUrl: string | null,
 ): Promise<
   ResumeData | DotAppData | MvrData | CdlData | PortfolioData |
-  GitHubData | ProjectsData | SkillsData | WorkHistoryData | null
+  GitHubData | ProjectsData | null
 > {
   switch (blockType) {
     case 'driver-resume':
     case 'developer-resume':
+    case 'general-resume':
       return fetchResumeData(supabase, userId, blockType)
     case 'driver-dot-application':
       return fetchDotAppData(supabase, userId)
@@ -202,10 +199,6 @@ async function fetchSectionData(
       return fetchGitHubData(supabase, userId, userAvatarUrl)
     case 'developer-projects':
       return fetchProjectsData(supabase, userId)
-    case 'general-skills':
-      return fetchSkillsData(supabase, userId)
-    case 'general-work-history':
-      return fetchWorkHistoryData(supabase, userId)
     default:
       return null
   }
@@ -214,9 +207,10 @@ async function fetchSectionData(
 async function fetchResumeData(
   supabase: SupabaseClient,
   userId: string,
-  blockType: 'driver-resume' | 'developer-resume',
+  blockType: 'driver-resume' | 'developer-resume' | 'general-resume',
 ): Promise<ResumeData | null> {
-  const sourceRole = blockType === 'developer-resume' ? 'developer' : 'driver'
+  const sourceRole =
+    blockType === 'developer-resume' ? 'developer' : blockType === 'general-resume' ? 'general' : 'driver'
   const { data } = await supabase
     .from('resumes')
     .select('id, title, filename, ipfs_hash, verification_status, structured_data, created_at')
@@ -472,48 +466,4 @@ async function fetchProjectsData(supabase: SupabaseClient, userId: string): Prom
       isFeatured: p.is_featured,
     })),
   }
-}
-
-async function fetchSkillsData(supabase: SupabaseClient, userId: string): Promise<SkillsData | null> {
-  const entries = await getSkills(supabase, userId)
-  if (entries.length === 0) return null
-  return { skills: entries.map(s => ({ name: s.name, category: s.category })) }
-}
-
-async function fetchWorkHistoryData(supabase: SupabaseClient, userId: string): Promise<WorkHistoryData | null> {
-  // Check both driver and developer employment block tables
-  const [driverHistory, devProfile] = await Promise.all([
-    getDriverEmployment(supabase, userId),
-    getDevProfile(supabase, userId),
-  ])
-
-  const devHistory = (devProfile?.employment_history ?? []) as Record<string, unknown>[]
-
-  // Prefer driver employment (structured UnifiedEmployment[]), fall back to dev profile
-  const useDriverHistory = driverHistory.length > 0
-  const entries = useDriverHistory
-    ? driverHistory.map(e => ({
-        companyName: e.companyName ?? '',
-        position: e.position ?? '',
-        startDate: e.startDate ?? '',
-        endDate: e.endDate || null,
-        isCurrent: e.isCurrent ?? false,
-      }))
-    : devHistory.map(e => ({
-        companyName: (e.companyName as string) ?? '',
-        position: (e.position as string) ?? '',
-        startDate: (e.startDate as string) ?? '',
-        endDate: (e.endDate as string | null) ?? null,
-        isCurrent: (e.isCurrent as boolean) ?? false,
-      }))
-
-  if (entries.length === 0) return null
-
-  const { count } = await supabase
-    .from('employment_verification_requests')
-    .select('id', { count: 'exact', head: true })
-    .eq('driver_id', userId)
-    .eq('status', 'verified')
-
-  return { entries, verifiedCount: count ?? 0 }
 }
