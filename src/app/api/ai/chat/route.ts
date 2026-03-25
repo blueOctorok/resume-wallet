@@ -19,6 +19,7 @@ import {
   hasCompletedAvaAutoWelcome,
   markAvaAutoWelcomeComplete,
 } from '@/lib/ava-auto-welcome'
+import { buildAnthropicMessagesFromHistory } from '@/lib/ava-conversation'
 
 const MODEL_SONNET = 'claude-sonnet-4-6'
 const MODEL_HAIKU = 'claude-haiku-4-5-20250414'
@@ -55,13 +56,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { message, hubContext, blockContext, audience, employerContext } = body as {
-      message: string
-      hubContext?: HubContext
-      blockContext?: BlockContext
-      audience?: 'candidate' | 'employer'
-      employerContext?: EmployerHubContext
-    }
+    const { message, hubContext, blockContext, audience, employerContext, conversationHistory } =
+      body as {
+        message: string
+        hubContext?: HubContext
+        blockContext?: BlockContext
+        audience?: 'candidate' | 'employer'
+        employerContext?: EmployerHubContext
+        /** Prior turns only; latest user text is `message`. Ignored when autoWelcome is set. */
+        conversationHistory?: unknown
+      }
     const rawAutoWelcome = (body as { autoWelcome?: unknown }).autoWelcome
     const autoWelcome: AvaAutoWelcomeMode | undefined =
       rawAutoWelcome === 'candidate' || rawAutoWelcome === 'employer' ? rawAutoWelcome : undefined
@@ -191,11 +195,19 @@ export async function POST(request: NextRequest) {
       ? buildEmployerAvaSystemPrompt(employerContext!)
       : buildAvaSystemPrompt(hubContext, blockContext)
 
+    const messagesPayload = autoWelcome
+      ? [{ role: 'user' as const, content: message.trim() }]
+      : buildAnthropicMessagesFromHistory(conversationHistory, message.trim())
+
+    if (messagesPayload.length === 0) {
+      return NextResponse.json({ error: 'Missing or invalid message' }, { status: 400 })
+    }
+
     const response = await anthropic.messages.create({
       model,
       max_tokens: MAX_TOKENS,
       system: systemPrompt,
-      messages: [{ role: 'user', content: message.trim() }],
+      messages: messagesPayload,
     })
 
     const reply = response.content[0].type === 'text'

@@ -1,11 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Modal from '@/components/ui/Modal'
-import { X, Briefcase, FileText, CheckCircle, AlertCircle } from 'lucide-react'
+import Button from '@/components/ui/Button'
+import { Briefcase, CheckCircle, AlertCircle, User, X } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
-import ProfileCompleteness from './ProfileCompleteness'
-import { calculateProfileScore, canApplyToJobs } from '@/lib/profile-completeness'
+import {
+  computeCareerApplyReadiness,
+  canApplyWithCareerCard,
+  getStatusColor,
+  getStatusMessage,
+} from '@/lib/profile-completeness'
+import type { ProjectedCareerCard } from '@/types/career-card'
 
 interface Job {
   id: string
@@ -25,63 +31,71 @@ interface ApplyWithStormChainModalProps {
   onApplicationSubmitted?: () => void
 }
 
-interface DriverProfile {
-  id: string
-  resume_url: string | null
-  cdl_class: string | null
-  cdl_endorsements: string[] | null
-  experience_years: number | null
-  profile_completion_score: number
-  dot_application_data: any
-}
-
 export default function ApplyWithStormChainModal({
   isOpen,
   onClose,
   job,
   userAddress,
-  onApplicationSubmitted
+  onApplicationSubmitted,
 }: ApplyWithStormChainModalProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
-  const [profile, setProfile] = useState<DriverProfile | null>(null)
+  const [card, setCard] = useState<ProjectedCareerCard | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [coverLetter, setCoverLetter] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
+  const resetState = useCallback(() => {
+    setCard(null)
+    setLoading(true)
+    setSubmitting(false)
+    setCoverLetter('')
+    setError(null)
+    setSuccess(false)
+  }, [])
+
   useEffect(() => {
-    if (isOpen && userAddress) {
-      fetchDriverProfile()
+    if (!isOpen) {
+      resetState()
+      return
     }
-  }, [isOpen, userAddress])
-
-  const fetchDriverProfile = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch('/api/driver/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: userAddress })
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setProfile(data.profile)
-      } else {
-        setError('Failed to load your profile. Please complete your DOT application first.')
-      }
-    } catch (err) {
-      console.error('Error fetching profile:', err)
-      setError('Failed to load your profile.')
-    } finally {
+    if (!userAddress) {
       setLoading(false)
+      setError('Connect your wallet to apply.')
+      return
     }
-  }
+
+    const load = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const response = await fetch('/api/career-card', {
+          headers: { 'x-wallet-address': userAddress },
+        })
+        const data = await response.json()
+        if (!response.ok || !data.card) {
+          setError(data.error || 'Could not load your career card.')
+          setCard(null)
+          return
+        }
+        setCard(data.card as ProjectedCareerCard)
+      } catch (err) {
+        console.error('[ApplyModal] career card fetch:', err)
+        setError('Failed to load your career card.')
+        setCard(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+    void load()
+  }, [isOpen, userAddress, resetState])
 
   const handleSubmit = async () => {
-    if (!job || !userAddress || !profile) return
+    if (!job || !userAddress || !card) return
+    const gate = canApplyWithCareerCard(card)
+    if (!gate.canApply) return
 
     try {
       setSubmitting(true)
@@ -97,8 +111,8 @@ export default function ApplyWithStormChainModal({
           employerName: job.company,
           jobLocation: job.location,
           jobUrl: job.redirect_url,
-          coverLetter: coverLetter.trim() || undefined
-        })
+          coverLetter: coverLetter.trim() || undefined,
+        }),
       })
 
       const data = await response.json()
@@ -122,42 +136,42 @@ export default function ApplyWithStormChainModal({
 
   if (!isOpen || !job) return null
 
+  const readiness = card ? computeCareerApplyReadiness(card) : null
+  const eligibility = card ? canApplyWithCareerCard(card) : { canApply: false }
+  const readinessColors = readiness ? getStatusColor(readiness.status) : null
+
   return (
     <Modal onClose={onClose} maxWidth="max-w-2xl">
       <div>
-        
-        {/* Header */}
-        <div className={`sticky top-0 border-b p-6 flex items-center justify-between z-10 ${
-          isDark ? 'bg-gray-800/90 border-gray-700' : 'bg-white border-gray-200'
-        }`}>
+        <div
+          className={`sticky top-0 border-b p-6 flex items-center justify-between z-10 ${
+            isDark ? 'bg-gray-800/90 border-gray-700' : 'bg-white border-gray-200'
+          }`}
+        >
           <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-              isDark
-                ? 'bg-teal-500/20 border border-teal-500/30'
-                : 'bg-teal-100 border border-teal-200'
-            }`}>
+            <div
+              className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                isDark
+                  ? 'bg-teal-500/20 border border-teal-500/30'
+                  : 'bg-teal-100 border border-teal-200'
+              }`}
+            >
               <Briefcase className={`w-6 h-6 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
             </div>
             <div>
               <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Apply with StormChain
+                Easy apply with Career Card
               </h2>
               <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                Your verified application
+                One submission — your StormChain profile snapshot
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
-              isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-            }`}
-          >
-            <X className={isDark ? 'text-gray-400' : 'text-gray-600'} />
-          </button>
+          <Button type="button" variant="ghost" size="md" className="!p-2 shrink-0" onClick={onClose} aria-label="Close">
+            <X className={`w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
+          </Button>
         </div>
 
-        {/* Success State */}
         {success && (
           <div className="p-6">
             <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-6 text-center">
@@ -172,16 +186,14 @@ export default function ApplyWithStormChainModal({
           </div>
         )}
 
-        {/* Loading State */}
         {loading && !success && (
           <div className="p-12 text-center">
             <div className="w-16 h-16 border-4 border-gray-200 dark:border-gray-700 border-t-teal-500 rounded-full animate-spin mx-auto mb-4" />
-            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Loading your profile...</p>
+            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Loading your career card…</p>
           </div>
         )}
 
-        {/* Error State */}
-        {error && !success && (
+        {error && !success && !loading && (
           <div className="p-6">
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
@@ -193,103 +205,109 @@ export default function ApplyWithStormChainModal({
           </div>
         )}
 
-        {/* Main Content */}
-        {!loading && !success && profile && (() => {
-          const completeness = calculateProfileScore(profile)
-          const eligibility = canApplyToJobs(profile)
-
-          return (
-            <div className="p-6 space-y-6">
-              
-              {/* Job Details */}
-              <div className={`rounded-xl p-4 border ${
+        {!loading && !success && card && readiness && readinessColors && (
+          <div className="p-6 space-y-6">
+            <div
+              className={`rounded-xl p-4 border ${
                 isDark ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'
-              }`}>
-                <h3 className={`font-semibold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  {job.title}
-                </h3>
-                <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                  {job.company} • {job.location}
-                </p>
-                {job.salary && (
-                  <p className="text-sm text-green-600 dark:text-green-400 font-semibold mt-1">
-                    {job.salary}
+              }`}
+            >
+              <h3 className={`font-semibold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{job.title}</h3>
+              <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+                {job.company} • {job.location}
+              </p>
+              {job.salary && (
+                <p className="text-sm text-green-600 dark:text-green-400 font-semibold mt-1">{job.salary}</p>
+              )}
+            </div>
+
+            <div className={`rounded-xl p-6 ${readinessColors.bg} border-2 ${readinessColors.border}`}>
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className={`text-lg font-bold ${readinessColors.text}`}>Application readiness</h3>
+                  <p className={`text-sm ${readinessColors.text} opacity-80`}>
+                    {getStatusMessage(readiness.status)}
                   </p>
+                </div>
+                <div className={`text-3xl font-bold ${readinessColors.text}`}>{readiness.percentage}</div>
+              </div>
+              <div className="h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden mb-3">
+                <div
+                  className="h-full rounded-full bg-teal-500 dark:bg-teal-400 transition-all"
+                  style={{ width: `${readiness.score}%` }}
+                />
+              </div>
+              {readiness.hints.length > 0 && (
+                <ul className={`text-sm space-y-1 ${readinessColors.text} opacity-90 list-disc list-inside`}>
+                  {readiness.hints.map((h) => (
+                    <li key={h}>{h}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {!eligibility.canApply && eligibility.reason && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-red-900 dark:text-red-100 font-semibold">Complete your career card</p>
+                  <p className="text-red-700 dark:text-red-300 text-sm">{eligibility.reason}</p>
+                </div>
+              </div>
+            )}
+
+            <div
+              className={`rounded-xl p-4 border flex gap-3 ${
+                isDark ? 'bg-gray-800/80 border-gray-600' : 'bg-white border-gray-200'
+              }`}
+            >
+              <div
+                className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${
+                  isDark ? 'bg-gray-700' : 'bg-gray-100'
+                }`}
+              >
+                <User className={`w-6 h-6 ${isDark ? 'text-gray-300' : 'text-gray-600'}`} />
+              </div>
+              <div className="min-w-0">
+                <p className={`font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{card.name}</p>
+                {card.occupation && (
+                  <p className={`text-sm truncate ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{card.occupation}</p>
+                )}
+                {card.location && (
+                  <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{card.location}</p>
                 )}
               </div>
+            </div>
 
-              {/* Profile Completeness - Full Component */}
-              <ProfileCompleteness 
-                completeness={completeness}
-                showDetails={true}
-              />
-
-              {/* Eligibility Warning */}
-              {!eligibility.canApply && (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-red-900 dark:text-red-100 font-semibold">Profile Incomplete</p>
-                    <p className="text-red-700 dark:text-red-300 text-sm">{eligibility.reason}</p>
-                    <p className="text-red-600 dark:text-red-400 text-xs mt-1">
-                      Please complete your DOT application and add your CDL information.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* What Will Be Sent */}
-              <div>
+            <div>
               <h3 className={`font-semibold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                What we'll send to the employer:
+                Included in your application
               </h3>
               <div className="space-y-2">
-                <div className="flex items-center gap-3 text-sm">
-                  <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                  <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>
-                    Your complete DOT application
-                  </span>
-                </div>
-                {profile.resume_url && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                    <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>
-                      Resume (blockchain-verified)
-                    </span>
-                  </div>
-                )}
-                {profile.cdl_class && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                    <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>
-                      CDL Class {profile.cdl_class}
-                      {profile.cdl_endorsements && profile.cdl_endorsements.length > 0 && 
-                        ` with ${profile.cdl_endorsements.join(', ')} endorsements`
-                      }
-                    </span>
-                  </div>
-                )}
-                {profile.experience_years && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                    <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>
-                      {profile.experience_years} years of experience
-                    </span>
-                  </div>
+                {card.sections.length === 0 ? (
+                  <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    No career card sections yet — add blocks on your hub.
+                  </p>
+                ) : (
+                  card.sections.map((s) => (
+                    <div key={`${s.blockType}-${s.label}`} className="flex items-center gap-3 text-sm">
+                      <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
+                      <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>{s.label}</span>
+                    </div>
+                  ))
                 )}
                 <div className="flex items-center gap-3 text-sm">
-                  <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
                   <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>
-                    Shareable StormChain profile link
+                    Shareable application link (view count for you)
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Cover Letter (Optional) */}
             <div>
               <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Cover Letter <span className="text-gray-500 font-normal">(Optional)</span>
+                Cover letter <span className="text-gray-500 font-normal">(optional)</span>
               </label>
               <textarea
                 value={coverLetter}
@@ -307,49 +325,30 @@ export default function ApplyWithStormChainModal({
               </p>
             </div>
 
-            {/* Actions */}
-            <div className="flex gap-3 pt-4">
-              <button
-                onClick={onClose}
-                disabled={submitting}
-                className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 ${
-                  isDark
-                    ? 'bg-gray-700 text-white hover:bg-gray-600'
-                    : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                }`}
-              >
+            <div className="flex gap-3 pt-2">
+              <Button type="button" variant="secondary" size="lg" className="flex-1" onClick={onClose} disabled={submitting}>
                 Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={submitting || !profile || !eligibility.canApply}
-                className="flex-1 px-6 py-3 rounded-xl font-semibold bg-teal-600 hover:bg-teal-500 text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="lg"
+                className="flex-1"
+                onClick={() => void handleSubmit()}
+                disabled={submitting || !eligibility.canApply}
+                isLoading={submitting}
               >
-                {submitting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="w-4 h-4" />
-                    {eligibility.canApply ? 'Submit Application' : 'Complete Profile to Apply'}
-                  </>
-                )}
-              </button>
+                {eligibility.canApply ? 'Submit application' : 'Complete career card to apply'}
+              </Button>
             </div>
 
-            {/* Disclaimer */}
             <p className={`text-xs text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              By submitting, your StormChain application will be sent directly to {job.company}.
+              By submitting, employers receive your StormChain application snapshot and link.
               <br />
-              You can track the status in "My Applications".
+              Track status in My Applications.
             </p>
-
           </div>
-          )
-        })()}
-
+        )}
       </div>
     </Modal>
   )

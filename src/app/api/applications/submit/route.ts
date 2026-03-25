@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { nanoid } from 'nanoid'
-import { getCdlData } from '@/lib/block-data'
+import { getCdlData, getDevGithub, getDevPortfolio } from '@/lib/block-data'
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,7 +54,17 @@ export async function POST(request: NextRequest) {
     // Read block data and source tables directly
     const adminSupabaseForBlocks = await getAdminSupabaseClient()
 
-    const [cdlData, { data: latestResume }, { data: latestDotApp }] = await Promise.all([
+    const [
+      cdlData,
+      { data: latestResume },
+      { data: latestDotApp },
+      { data: hubBlockRows },
+      { data: userProfile },
+      { data: mvrOrderRow },
+      { data: devProjectRow },
+      devPortfolio,
+      devGithub,
+    ] = await Promise.all([
       getCdlData(adminSupabaseForBlocks, user.id),
       adminSupabaseForBlocks
         .from('resumes')
@@ -65,13 +75,76 @@ export async function POST(request: NextRequest) {
         .maybeSingle(),
       adminSupabaseForBlocks
         .from('driver_applications')
-        .select('id, application_data')
+        .select('id, application_data, is_complete')
         .eq('user_id', user.id)
-        .eq('is_complete', true)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle(),
+      adminSupabaseForBlocks
+        .from('hub_blocks')
+        .select('block_type')
+        .eq('user_id', user.id)
+        .order('position', { ascending: true }),
+      adminSupabaseForBlocks
+        .from('user_profiles')
+        .select(
+          'first_name, last_name, headline, professional_summary, city, state, email, phone',
+        )
+        .eq('user_id', user.id)
+        .maybeSingle(),
+      adminSupabaseForBlocks
+        .from('mvr_orders')
+        .select('id')
+        .eq('driver_user_id', user.id)
+        .limit(1)
+        .maybeSingle(),
+      adminSupabaseForBlocks
+        .from('developer_projects')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle(),
+      getDevPortfolio(adminSupabaseForBlocks, user.id),
+      getDevGithub(adminSupabaseForBlocks, user.id),
     ])
+
+    const installedBlockTypes = (hubBlockRows ?? []).map((r) => r.block_type as string)
+
+    const applicantName =
+      [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ').trim() || null
+    const profileLocation =
+      userProfile?.city && userProfile?.state
+        ? `${userProfile.city}, ${userProfile.state}`
+        : userProfile?.city || userProfile?.state || null
+
+    const hasIdentity =
+      !!(applicantName && applicantName.length > 0) ||
+      !!(userProfile?.headline?.trim()) ||
+      !!(userProfile?.professional_summary?.trim())
+    const hasCareerArtifact =
+      !!latestResume?.id ||
+      !!latestDotApp?.id /* in-progress DOT still shows on career card */ ||
+      !!(cdlData?.cdl_class && String(cdlData.cdl_class).trim()) ||
+      !!(devPortfolio?.portfolio_url?.trim()) ||
+      !!(devGithub?.username?.trim()) ||
+      !!mvrOrderRow?.id ||
+      !!devProjectRow?.id
+
+    if (!hasIdentity) {
+      return NextResponse.json(
+        { error: 'Add your name or a professional headline in your profile before applying.' },
+        { status: 400 },
+      )
+    }
+    if (!hasCareerArtifact) {
+      return NextResponse.json(
+        {
+          error:
+            'Your career card needs content first — add a resume, portfolio link, or complete a hub block.',
+        },
+        { status: 400 },
+      )
+    }
 
     // Check if job_posting exists for this external job, create if not
     let jobPostingId = null
@@ -134,25 +207,22 @@ export async function POST(request: NextRequest) {
     // Generate unique share token
     const shareToken = nanoid(16)
 
-    // Fetch name from user_profiles for the application snapshot
-    const { data: userProfile } = await adminSupabaseForBlocks
-      .from('user_profiles')
-      .select('first_name, last_name')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    const applicantName = [userProfile?.first_name, userProfile?.last_name].filter(Boolean).join(' ').trim() || null
-
-    // Prepare application data snapshot — CDL from block tables, rest from source tables
+    // Career-card style snapshot for all candidates; CDL/DOT when present
     const applicationData = {
       applicant_name: applicantName,
-      applicant_email: user.email,
+      applicant_email: userProfile?.email ?? user.email,
+      applicant_phone: userProfile?.phone ?? null,
+      occupation: userProfile?.headline ?? null,
+      professional_summary: userProfile?.professional_summary ?? null,
+      location: profileLocation,
+      installed_block_types: installedBlockTypes,
       cdl_class: cdlData?.cdl_class ?? null,
       cdl_endorsements: cdlData?.endorsements ?? null,
       cdl_state: cdlData?.cdl_state ?? null,
       resume_url: latestResume?.ipfs_url ?? null,
-      dot_application: latestDotApp?.application_data ?? null,
-      submitted_at: new Date().toISOString()
+      dot_application:
+        latestDotApp?.is_complete ? latestDotApp.application_data ?? null : null,
+      submitted_at: new Date().toISOString(),
     }
 
     // Create application record
@@ -161,7 +231,8 @@ export async function POST(request: NextRequest) {
       .insert({
         applicant_user_id: user.id,
         job_posting_id: jobPostingId,
-        driver_application_id: latestDotApp?.id ?? null,
+        driver_application_id:
+          latestDotApp?.is_complete ? latestDotApp.id : null,
         resume_id: latestResume?.id ?? null,
         cover_letter: coverLetter,
         application_data: applicationData,

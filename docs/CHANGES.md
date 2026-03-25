@@ -4,6 +4,16 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 1 — Career Card Easy Apply + AvA multi-turn memory** (March 2026)
+
+- **Easy apply:** [`ApplyWithStormChainModal`](src/components/ApplyWithStormChainModal.tsx) loads **[`GET /api/career-card`](src/app/api/career-card/route.ts)** (wallet header) instead of driver-only `/api/driver/profile`. Submit is allowed when the career card has **identity** (name, headline, or summary) and **at least one populated section** — no CDL gate. UI shows readiness score, section checklist, and uses shared **`Button`** / **`Modal`** patterns.
+- **Apply readiness helpers:** [`profile-completeness.ts`](src/lib/profile-completeness.ts) — `computeCareerApplyReadiness`, `canApplyWithCareerCard` (driver `canApplyToJobs` unchanged for legacy flows).
+- **Application snapshot:** [`POST /api/applications/submit`](src/app/api/applications/submit/route.ts) validates **before** creating external `job_postings` — identity + at least one of: resume, **any** DOT application row (in-progress counts for eligibility; snapshot still embeds full DOT JSON only when `is_complete`), CDL class, portfolio URL, GitHub username, MVR order, or developer project. `application_data` adds **`occupation`**, **`professional_summary`**, **`location`**, **`applicant_phone`**, **`installed_block_types`**, keeps CDL/DOT/resume fields.
+- **AvA memory:** [`buildAnthropicMessagesFromHistory`](src/lib/ava-conversation.ts) — client sends **`conversationHistory`** (prior turns); [`/api/ai/chat`](src/app/api/ai/chat/route.ts) builds up to 20 messages (merges consecutive same-role). **`autoWelcome`** still uses a single user turn. [`AvaChatPanel`](src/components/ava/AvaChatPanel.tsx) + [`sendToAva`](src/lib/ava-chat.ts) pass history for candidate and employer.
+- **Hub context:** [`deriveBlockStatus`](src/lib/ava-chat.ts) includes **`general-resume`** completion from `sourceRole === 'general'`.
+
+---
+
 ## **general-resume block — universal Indeed-style resume** (March 2026)
 
 - **Product:** Single **Professional Resume** block for any occupation (replaces `general-skills` + `general-work-history`, which had no builder). Driver blocks still target Tenstreet-style flows; dev blocks stay separate; this is the default “everyone else” path.

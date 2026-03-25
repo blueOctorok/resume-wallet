@@ -80,6 +80,10 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
     const trimmed = (text ?? input).trim()
     if (!trimmed || isLoading || outOfCredits) return
     setInput('')
+    const conversationHistory = messages.map((m) => ({
+      role: m.role === 'user' ? ('user' as const) : ('assistant' as const),
+      content: m.text,
+    }))
     setMessages((prev) => [...prev, { role: 'user', text: trimmed }])
     setIsLoading(true)
     setChatError(null)
@@ -91,12 +95,14 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
               message: trimmed,
               hubContext: props.hubContext,
               walletAddress,
+              conversationHistory,
             })
           : await sendToAva({
               message: trimmed,
               audience: 'employer',
               employerContext: props.employerContext,
               walletAddress,
+              conversationHistory,
             })
       setMessages((prev) => [...prev, { role: 'ava', text: res.reply }])
       setUsage(res.usage)
@@ -110,7 +116,7 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [input, isLoading, outOfCredits, props, walletAddress])
+  }, [input, isLoading, outOfCredits, messages, props, walletAddress])
 
   const hasMessages = messages.length > 0 || isLoading
 

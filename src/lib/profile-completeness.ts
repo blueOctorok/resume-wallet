@@ -4,6 +4,8 @@
  * Used to guide drivers through profile completion and ensure quality applications
  */
 
+import type { ProjectedCareerCard } from '@/types/career-card'
+
 export interface ProfileData {
   // Core Requirements (50 points total)
   cdl_class?: string | null
@@ -328,5 +330,95 @@ export function canApplyToJobs(profile: ProfileData): {
     canApply: true,
     missingCritical: []
   }
+}
+
+// ── Career Card Easy Apply (all candidates, not driver-only) ───────────────
+
+export interface CareerApplyReadinessResult {
+  score: number
+  percentage: string
+  status: ProfileCompletenessResult['status']
+  /** Actionable hints when profile or sections are thin */
+  hints: string[]
+}
+
+const RESUME_BLOCK_TYPES = new Set([
+  'driver-resume',
+  'developer-resume',
+  'general-resume',
+])
+
+function hasCareerCardIdentity(card: ProjectedCareerCard): boolean {
+  const name = card.name?.trim() ?? ''
+  if (name && name !== 'Candidate') return true
+  if (card.occupation?.trim()) return true
+  if (card.professionalSummary?.trim()) return true
+  return false
+}
+
+/**
+ * Readiness score for applying with a StormChain career card (keyword search apply flow).
+ * Separate from driver CDL completeness — use this in ApplyWithStormChainModal.
+ */
+export function computeCareerApplyReadiness(card: ProjectedCareerCard): CareerApplyReadinessResult {
+  const hints: string[] = []
+  let score = 0
+
+  if (hasCareerCardIdentity(card)) {
+    score += 35
+  } else {
+    hints.push('Add your name and headline in Profile so employers know who you are.')
+  }
+
+  const sectionCount = card.sections.length
+  if (sectionCount > 0) {
+    score += Math.min(50, 10 + sectionCount * 10)
+  } else {
+    hints.push('Complete at least one hub block (e.g. resume) so your career card has content to send.')
+  }
+
+  const hasResumeSection = card.sections.some((s) => RESUME_BLOCK_TYPES.has(s.blockType))
+  if (hasResumeSection) {
+    score += 15
+  } else if (sectionCount > 0) {
+    hints.push('Adding a resume makes your application much stronger.')
+  }
+
+  score = Math.min(100, score)
+
+  let status: CareerApplyReadinessResult['status']
+  if (score < 40) status = 'incomplete'
+  else if (score < 70) status = 'basic'
+  else if (score < 90) status = 'good'
+  else status = 'excellent'
+
+  return {
+    score,
+    percentage: `${score}%`,
+    status,
+    hints,
+  }
+}
+
+/**
+ * Minimum bar to submit: identifiable candidate + at least one career-card section with data.
+ */
+export function canApplyWithCareerCard(card: ProjectedCareerCard): {
+  canApply: boolean
+  reason?: string
+} {
+  if (!hasCareerCardIdentity(card)) {
+    return {
+      canApply: false,
+      reason: 'Add your name or a professional headline in your profile before applying.',
+    }
+  }
+  if (card.sections.length === 0) {
+    return {
+      canApply: false,
+      reason: 'Your career card has no sections yet. Add a block (such as Professional Resume) and fill it in.',
+    }
+  }
+  return { canApply: true }
 }
 

@@ -18,6 +18,7 @@
 | AvA for employers | ✅ Done | Shared `AvaChatPanel` on employer hub; `buildEmployerAvaSystemPrompt` + `employerContext`; `/api/ai/chat` `audience: employer` + role gate |
 | Sponsored job posts | 🔲 Future | Visibility boost |
 | Candidate match scoring | 🔲 Future | AvA + blocks |
+| **Career Card Easy Apply + AvA chat memory** | **✅ Done** | **External job apply uses `/api/career-card` (not driver profile); submit snapshot includes `installed_block_types` + profile fields; server-side eligibility before job row insert. AvA `/api/ai/chat` accepts `conversationHistory` (multi-turn).** |
 
 ## 💬 **AvA Chat Monetization** (March 2026 — Complete)
 

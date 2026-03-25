@@ -3,6 +3,9 @@ import { useDriverHubStore } from '@/stores/driver-hub-store'
 import { useAuthStore } from '@/stores'
 import type { HubContext, EmployerHubContext, BlockContext } from '@/lib/ava-context'
 import type { AvaAutoWelcomeMode } from '@/lib/ava-auto-welcome'
+import type { AvaConversationTurn } from '@/lib/ava-conversation'
+
+export type { AvaConversationTurn } from '@/lib/ava-conversation'
 
 export type { EmployerHubContext } from '@/lib/ava-context'
 
@@ -69,6 +72,8 @@ function deriveBlockStatus(
       return hubStore.portfolio?.portfolioUrl ? 'complete' : 'empty'
     case 'developer-github':
       return hubStore.github?.username ? 'complete' : 'empty'
+    case 'general-resume':
+      return hubStore.resumes.some((r) => r.sourceRole === 'general') ? 'complete' : 'empty'
     default:
       return 'empty'
   }
@@ -104,6 +109,8 @@ export type SendToAvaPayload =
       audience?: 'candidate'
       hubContext: HubContext
       blockContext?: BlockContext
+      /** Prior turns only (excludes current `message`). Enables multi-turn memory. */
+      conversationHistory?: AvaConversationTurn[]
       /** Server records completion on `users` — cross-device idempotency */
       autoWelcome?: AvaAutoWelcomeMode
     }
@@ -112,6 +119,7 @@ export type SendToAvaPayload =
       walletAddress?: string | null
       audience: 'employer'
       employerContext: EmployerHubContext
+      conversationHistory?: AvaConversationTurn[]
       autoWelcome?: AvaAutoWelcomeMode
     }
 
@@ -127,14 +135,26 @@ export async function sendToAva(payload: SendToAvaPayload): Promise<AvaResponse>
   const autoWelcome =
     payload.autoWelcome !== undefined ? { autoWelcome: payload.autoWelcome } : {}
 
+  const history =
+    'conversationHistory' in payload && payload.conversationHistory?.length
+      ? { conversationHistory: payload.conversationHistory }
+      : {}
+
   const body =
     payload.audience === 'employer'
-      ? { message, audience: 'employer', employerContext: payload.employerContext, ...autoWelcome }
+      ? {
+          message,
+          audience: 'employer',
+          employerContext: payload.employerContext,
+          ...history,
+          ...autoWelcome,
+        }
       : {
           message,
           hubContext: payload.hubContext,
           audience: 'candidate' as const,
           ...(payload.blockContext ? { blockContext: payload.blockContext } : {}),
+          ...history,
           ...autoWelcome,
         }
 
