@@ -1,10 +1,14 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { Briefcase, CheckCircle, AlertCircle, User, X } from 'lucide-react'
+import { Briefcase, CheckCircle, AlertCircle, User, X, Sparkles } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
+import type { AvaUsageInfo } from '@/lib/ava-chat'
+
+const AvaCreditModal = dynamic(() => import('@/components/AvaCreditModal'), { ssr: false })
 import {
   computeCareerApplyReadiness,
   canApplyWithCareerCard,
@@ -21,6 +25,13 @@ interface Job {
   salary?: string
   description?: string
   redirect_url?: string
+  /** Passed from JobListings; optional for apply + cover-letter context */
+  salary_min?: number
+  salary_max?: number
+  created?: string
+  category?: string
+  contract_type?: string
+  is_external?: boolean
 }
 
 interface ApplyWithStormChainModalProps {
@@ -46,6 +57,8 @@ export default function ApplyWithStormChainModal({
   const [coverLetter, setCoverLetter] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [generatingLetter, setGeneratingLetter] = useState(false)
+  const [showCreditModal, setShowCreditModal] = useState(false)
 
   const resetState = useCallback(() => {
     setCard(null)
@@ -54,6 +67,8 @@ export default function ApplyWithStormChainModal({
     setCoverLetter('')
     setError(null)
     setSuccess(false)
+    setGeneratingLetter(false)
+    setShowCreditModal(false)
   }, [])
 
   useEffect(() => {
@@ -91,6 +106,43 @@ export default function ApplyWithStormChainModal({
     }
     void load()
   }, [isOpen, userAddress, resetState])
+
+  const handleGenerateCoverLetter = async () => {
+    if (!job || !userAddress) return
+    setGeneratingLetter(true)
+    setError(null)
+    try {
+      const response = await fetch('/api/ai/cover-letter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': userAddress,
+        },
+        body: JSON.stringify({
+          jobTitle: job.title,
+          company: job.company,
+          location: job.location,
+          description: job.description ?? '',
+        }),
+      })
+      const data = await response.json()
+      if (response.status === 402) {
+        setShowCreditModal(true)
+        return
+      }
+      if (!response.ok) {
+        setError(typeof data.error === 'string' ? data.error : 'Could not generate cover letter')
+        return
+      }
+      const text = typeof data.coverLetter === 'string' ? data.coverLetter : ''
+      setCoverLetter(text.slice(0, 1000))
+    } catch (err) {
+      console.error('[ApplyModal] cover letter:', err)
+      setError('Failed to generate cover letter.')
+    } finally {
+      setGeneratingLetter(false)
+    }
+  }
 
   const handleSubmit = async () => {
     if (!job || !userAddress || !card) return
@@ -141,6 +193,7 @@ export default function ApplyWithStormChainModal({
   const readinessColors = readiness ? getStatusColor(readiness.status) : null
 
   return (
+    <>
     <Modal onClose={onClose} maxWidth="max-w-2xl">
       <div>
         <div
@@ -306,9 +359,25 @@ export default function ApplyWithStormChainModal({
             </div>
 
             <div>
-              <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Cover letter <span className="text-gray-500 font-normal">(optional)</span>
-              </label>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <label className={`block text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  Cover letter <span className="text-gray-500 font-normal">(optional)</span>
+                </label>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void handleGenerateCoverLetter()}
+                  disabled={generatingLetter || submitting}
+                  isLoading={generatingLetter}
+                >
+                  {!generatingLetter && <Sparkles className="w-3.5 h-3.5 shrink-0" />}
+                  Generate with AvA
+                </Button>
+              </div>
+              <p className={`text-xs mb-2 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                3 free per day (Sonnet), then uses your AvA credits (Haiku).
+              </p>
               <textarea
                 value={coverLetter}
                 onChange={(e) => setCoverLetter(e.target.value)}
@@ -351,5 +420,17 @@ export default function ApplyWithStormChainModal({
         )}
       </div>
     </Modal>
+
+      {showCreditModal && (
+        <AvaCreditModal
+          walletAddress={userAddress}
+          onClose={() => setShowCreditModal(false)}
+          onSuccess={(_usage: AvaUsageInfo) => {
+            setShowCreditModal(false)
+            void handleGenerateCoverLetter()
+          }}
+        />
+      )}
+    </>
   )
 }

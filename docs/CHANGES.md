@@ -4,6 +4,16 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 2 — AI cover letter + personalized job feed** (March 2026)
+
+- **DB:** [`061_ava_job_ai_usage.sql`](supabase/migrations/061_ava_job_ai_usage.sql) — `cover_letters_daily_used`, `job_match_ai_daily_used`, `job_match_cache`, `job_match_cache_at` on `ava_chat_usage`; RPCs `increment_ava_cover_letter_daily`, `increment_ava_job_match_daily`. Daily UTC reset (with chat counters) clears job-match cache for a fresh free run.
+- **Usage:** [`ava-usage.ts`](src/lib/ava-usage.ts) — `AVA_COVER_LETTER_DAILY_FREE` (3), `AVA_JOB_MATCH_FREE_DAILY` (1), `checkCoverLetterUsage`, `incrementCoverLetterDaily`, `incrementJobMatchAiDaily`, `saveJobMatchCache`, `getCoverLetterDailyRemaining`. [`GET /api/ai/credits`](src/app/api/ai/credits/route.ts) returns `coverLettersDailyRemaining` + `jobMatchFreeRemainingToday`.
+- **Cover letter:** [`POST /api/ai/cover-letter`](src/app/api/ai/cover-letter/route.ts) + [`cover-letter-ai.ts`](src/lib/cover-letter-ai.ts) — brief from [`job-match-candidate-brief.ts`](src/lib/job-match-candidate-brief.ts); 3× Sonnet/day then 1 credit → Haiku. [`ApplyWithStormChainModal`](src/components/ApplyWithStormChainModal.tsx) “Generate with AvA” + `AvaCreditModal` on 402.
+- **Job recommendations:** [`GET /api/jobs/recommended`](src/app/api/jobs/recommended/route.ts) — Adzuna via [`adzuna-server.ts`](src/lib/adzuna-server.ts), scoring via [`job-match-ai.ts`](src/lib/job-match-ai.ts); cache served until next UTC day; `?force=1` costs 1 credit (new AI + cache). External tab: [`JobListings`](src/components/JobListings.tsx) “Recommended for you” + refresh.
+- **Refactor:** [`/api/jobs/external/search`](src/app/api/jobs/external/search/route.ts) delegates to `searchAdzunaJobsServer` (shared with recommendations).
+
+---
+
 ## **Phase 1 — Career Card Easy Apply + AvA multi-turn memory** (March 2026)
 
 - **Easy apply:** [`ApplyWithStormChainModal`](src/components/ApplyWithStormChainModal.tsx) loads **[`GET /api/career-card`](src/app/api/career-card/route.ts)** (wallet header) instead of driver-only `/api/driver/profile`. Submit is allowed when the career card has **identity** (name, headline, or summary) and **at least one populated section** — no CDL gate. UI shows readiness score, section checklist, and uses shared **`Button`** / **`Modal`** patterns.

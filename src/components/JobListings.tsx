@@ -13,14 +13,18 @@ import {
   Globe,
   Building2,
   Loader2,
+  Sparkles,
 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import BackToHubButton from './ui/BackToHubButton'
+import Button from '@/components/ui/Button'
 import dynamic from 'next/dynamic'
+import type { AvaUsageInfo } from '@/lib/ava-chat'
 
 const ApplyWithStormChainModal = dynamic(() => import('./ApplyWithStormChainModal'), {
   ssr: false,
 })
+const AvaCreditModal = dynamic(() => import('@/components/AvaCreditModal'), { ssr: false })
 
 // ── Shared job shape (both sources normalize to this) ─────────────────────────
 
@@ -42,6 +46,9 @@ interface JobListing {
   jobType: string | null
   targetRole: string | null
   remoteAllowed: boolean | null
+  /** AvA job match (external recommended only) */
+  matchScore?: number
+  matchReason?: string
 }
 
 type TabId = 'stormchain' | 'external'
@@ -101,6 +108,12 @@ export default function JobListings({ onBack, userAddress }: JobListingsProps) {
 
   const [applyModalOpen, setApplyModalOpen] = useState(false)
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null)
+
+  const [recoJobs, setRecoJobs] = useState<JobListing[]>([])
+  const [recoLoading, setRecoLoading] = useState(false)
+  const [recoError, setRecoError] = useState<string | null>(null)
+  const [recoKeywords, setRecoKeywords] = useState<string | null>(null)
+  const [recoCreditModal, setRecoCreditModal] = useState(false)
 
   // ── Fetchers ──────────────────────────────────────────────────────────────
 
@@ -203,10 +216,75 @@ export default function JobListings({ onBack, userAddress }: JobListingsProps) {
     return fetchExternalJobs(page)
   }, [activeTab, fetchStormChainJobs, fetchExternalJobs])
 
+  const fetchRecommended = useCallback(
+    async (force: boolean) => {
+      if (!userAddress || activeTab !== 'external') return
+      setRecoLoading(true)
+      setRecoError(null)
+      try {
+        const q = new URLSearchParams()
+        if (location.trim()) q.set('location', location.trim())
+        if (force) q.set('force', '1')
+        const res = await fetch(`/api/jobs/recommended?${q}`, {
+          headers: { 'x-wallet-address': userAddress },
+        })
+        const data = await res.json()
+        if (res.status === 402) {
+          setRecoCreditModal(true)
+          setRecoError(typeof data.message === 'string' ? data.message : 'AvA credits required.')
+          setRecoJobs([])
+          return
+        }
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to load recommendations')
+        }
+        const mapped: JobListing[] = (data.jobs || []).map((j: Record<string, unknown>) => ({
+          id: String(j.id),
+          title: j.title as string,
+          company: j.company as string,
+          companyLogoUrl: null,
+          location: j.location as string,
+          description: (j.description as string) || null,
+          salary: j.salary as string | null,
+          salaryMin: j.salary_min as number | null,
+          salaryMax: j.salary_max as number | null,
+          created: j.created as string,
+          redirectUrl: (j.redirect_url as string) || null,
+          category: j.category as string | null,
+          contractType: j.contract_type as string | null,
+          isStormChain: false,
+          jobType: j.contract_type as string | null,
+          targetRole: null,
+          remoteAllowed: null,
+          matchScore: typeof j.matchScore === 'number' ? j.matchScore : undefined,
+          matchReason: typeof j.matchReason === 'string' ? j.matchReason : undefined,
+        }))
+        setRecoJobs(mapped)
+        setRecoKeywords(typeof data.keywords === 'string' ? data.keywords : null)
+      } catch (err) {
+        setRecoError(err instanceof Error ? err.message : 'Recommendations unavailable')
+        setRecoJobs([])
+      } finally {
+        setRecoLoading(false)
+      }
+    },
+    [userAddress, activeTab, location],
+  )
+
   // Fetch on mount and when tab changes
   useEffect(() => {
     fetchJobs(1)
   }, [activeTab]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (activeTab === 'external' && userAddress) {
+      void fetchRecommended(false)
+    } else {
+      setRecoJobs([])
+      setRecoKeywords(null)
+      setRecoError(null)
+    }
+  }, [activeTab, userAddress, fetchRecommended])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -271,6 +349,112 @@ export default function JobListings({ onBack, userAddress }: JobListingsProps) {
         <p className={`text-xs mb-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
           {TABS.find(t => t.id === activeTab)?.description}
         </p>
+
+        {/* AvA personalized external jobs */}
+        {activeTab === 'external' && userAddress && (
+          <div
+            className={`rounded-2xl p-5 mb-6 border ${
+              isDark ? 'bg-gray-800/40 border-gray-700' : 'bg-teal-50/80 border-teal-200/80'
+            }`}
+          >
+            <div className='flex flex-wrap items-start justify-between gap-3 mb-2'>
+              <div className='flex items-center gap-2 min-w-0'>
+                <Sparkles className={`w-5 h-5 shrink-0 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
+                <div>
+                  <h2 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    Recommended for you
+                  </h2>
+                  <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    AvA scores listings against your career card. One free refresh per day; extra refreshes use 1
+                    credit.
+                    {recoKeywords ? ` Searching: “${recoKeywords}”.` : ''}
+                  </p>
+                </div>
+              </div>
+              <Button
+                type='button'
+                variant='secondary'
+                size='sm'
+                onClick={() => void fetchRecommended(true)}
+                disabled={recoLoading}
+                isLoading={recoLoading}
+              >
+                Refresh matches
+              </Button>
+            </div>
+            {recoError && (
+              <p className={`text-sm mb-3 ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>{recoError}</p>
+            )}
+            {recoLoading && recoJobs.length === 0 && (
+              <div className='flex justify-center py-8'>
+                <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
+              </div>
+            )}
+            {recoJobs.length > 0 && (
+              <div className='space-y-3 mt-2'>
+                {recoJobs.map((job) => (
+                  <div
+                    key={`reco-${job.id}`}
+                    className={`rounded-xl p-4 border ${isDark ? 'bg-gray-900/50 border-gray-600' : 'bg-white border-gray-200'}`}
+                  >
+                    <div className='flex flex-wrap items-center gap-2 mb-2'>
+                      {job.matchScore != null && (
+                        <span
+                          className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                            isDark ? 'bg-teal-500/20 text-teal-300' : 'bg-teal-100 text-teal-800'
+                          }`}
+                        >
+                          {job.matchScore}% match
+                        </span>
+                      )}
+                      <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>External</span>
+                    </div>
+                    <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{job.title}</h3>
+                    <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {job.company} · {job.location}
+                    </p>
+                    {job.matchReason && (
+                      <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{job.matchReason}</p>
+                    )}
+                    <div className='flex flex-wrap gap-2 mt-3'>
+                      <Button
+                        type='button'
+                        variant='primary'
+                        size='sm'
+                        onClick={() => {
+                          setSelectedJob(job)
+                          setApplyModalOpen(true)
+                        }}
+                      >
+                        Apply with StormChain
+                      </Button>
+                      {job.redirectUrl && (
+                        <a
+                          href={job.redirectUrl}
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg ${
+                            isDark
+                              ? 'bg-gray-700 text-white border border-gray-600 hover:bg-gray-600'
+                              : 'bg-gray-100 text-gray-900 border border-gray-300 hover:bg-gray-200'
+                          }`}
+                        >
+                          View original
+                          <ExternalLink className='w-3.5 h-3.5' />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {!recoLoading && recoJobs.length === 0 && !recoError && (
+              <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                No scored listings yet — add headline, skills, and blocks on your hub, or try again later.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Search Form */}
         <form onSubmit={handleSearch} className='mb-6'>
@@ -538,6 +722,17 @@ export default function JobListings({ onBack, userAddress }: JobListingsProps) {
           console.log('Application submitted')
         }}
       />
+
+      {recoCreditModal && (
+        <AvaCreditModal
+          walletAddress={userAddress}
+          onClose={() => setRecoCreditModal(false)}
+          onSuccess={(_u: AvaUsageInfo) => {
+            setRecoCreditModal(false)
+            void fetchRecommended(true)
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -5,7 +5,9 @@ import {
   getOrCreateUsage,
   checkUsage,
   addCredits,
+  getCoverLetterDailyRemaining,
   AVA_CREDIT_PACKS,
+  AVA_JOB_MATCH_FREE_DAILY,
   type AvaCreditPackId,
 } from '@/lib/ava-usage'
 
@@ -41,6 +43,8 @@ export async function GET(request: NextRequest) {
       dailyRemaining: usageCheck.dailyRemaining,
       credits: usageCheck.credits,
       totalMessages: usageCheck.totalMessages,
+      coverLettersDailyRemaining: getCoverLetterDailyRemaining(usage),
+      jobMatchFreeRemainingToday: Math.max(0, AVA_JOB_MATCH_FREE_DAILY - usage.jobMatchAiDailyUsed),
       packs: AVA_CREDIT_PACKS,
     })
   } catch (error) {

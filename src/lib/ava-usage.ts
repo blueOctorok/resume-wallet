@@ -1,19 +1,16 @@
 /**
- * AvA Chat Usage Tracking
- *
- * Tracks daily free messages and purchased credits per user.
- * The daily counter self-resets on first request of each new day (UTC),
- * so no cron job is needed.
+ * AvA Chat + Job AI usage (daily free chat, credits, cover letters, job match cache).
+ * Daily counters self-reset on first request of each new UTC day.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const AVA_DAILY_FREE = 10
+/** Free AI cover letters per UTC day before credits (same credit pool as chat). */
+export const AVA_COVER_LETTER_DAILY_FREE = 3
+/** Free personalized job-list AI run per UTC day (cache reused until next day). */
+export const AVA_JOB_MATCH_FREE_DAILY = 1
 
-/**
- * Wallets that bypass usage limits entirely (always Sonnet, no counter).
- * Add team/admin wallets here.
- */
 export const AVA_UNLIMITED_WALLETS = new Set([
   '0x9d17cf2ac64ea97be08e3319fe17d94bd1a0660a',
 ])
@@ -22,90 +19,122 @@ export interface AvaUsage {
   dailyUsed: number
   credits: number
   totalMessages: number
+  coverLettersDailyUsed: number
+  jobMatchAiDailyUsed: number
+  jobMatchCache: unknown | null
+  jobMatchCacheAt: string | null
 }
 
 export interface AvaUsageCheck {
   allowed: boolean
-  /** Which model the API should use for this message */
   model: 'sonnet' | 'haiku'
-  /** True when deducting from purchased credits (not free tier) */
   usingCredits: boolean
   dailyRemaining: number
   credits: number
   totalMessages: number
 }
 
-/**
- * Credit packs — single source of truth for pricing.
- * Pack id is the key sent from the client on purchase.
- */
+export interface AvaCoverLetterCheck {
+  allowed: boolean
+  model: 'sonnet' | 'haiku'
+  usingCredits: boolean
+  coverLettersDailyRemaining: number
+  credits: number
+}
+
 export const AVA_CREDIT_PACKS = {
-  starter:  { messages: 50,  priceUsdc: '1.00' },
+  starter: { messages: 50, priceUsdc: '1.00' },
   standard: { messages: 200, priceUsdc: '3.00' },
-  pro:      { messages: 500, priceUsdc: '5.00' },
+  pro: { messages: 500, priceUsdc: '5.00' },
 } as const
 
 export type AvaCreditPackId = keyof typeof AVA_CREDIT_PACKS
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 function todayUTC(): string {
-  return new Date().toISOString().slice(0, 10) // 'YYYY-MM-DD'
+  return new Date().toISOString().slice(0, 10)
+}
+
+function rowToUsage(data: Record<string, unknown>): AvaUsage {
+  return {
+    dailyUsed: (data.daily_used as number) ?? 0,
+    credits: (data.credits as number) ?? 0,
+    totalMessages: (data.total_messages as number) ?? 0,
+    coverLettersDailyUsed: (data.cover_letters_daily_used as number) ?? 0,
+    jobMatchAiDailyUsed: (data.job_match_ai_daily_used as number) ?? 0,
+    jobMatchCache: (data.job_match_cache as unknown) ?? null,
+    jobMatchCacheAt: (data.job_match_cache_at as string) ?? null,
+  }
 }
 
 /**
- * Get or create the usage row for a user.
- * Auto-resets daily_used when the stored date is before today.
+ * Get or create the usage row. Resets all daily counters (+ clears job match cache) on new UTC day.
  */
-export async function getOrCreateUsage(
-  supabase: SupabaseClient,
-  userId: string,
-): Promise<AvaUsage> {
+export async function getOrCreateUsage(supabase: SupabaseClient, userId: string): Promise<AvaUsage> {
   const { data, error } = await supabase
     .from('ava_chat_usage')
-    .select('daily_used, daily_reset_at, credits, total_messages')
+    .select(
+      'daily_used, daily_reset_at, credits, total_messages, cover_letters_daily_used, job_match_ai_daily_used, job_match_cache, job_match_cache_at',
+    )
     .eq('user_id', userId)
     .maybeSingle()
 
   if (error) {
-    // Include code (e.g. 42P01 = undefined_table) so Vercel logs show why
     const code = (error as { code?: string }).code ?? 'unknown'
     throw new Error(`ava_chat_usage read failed [${code}]: ${error.message}`)
   }
 
   if (!data) {
-    // First ever chat — create row
-    const { error: insertErr } = await supabase
-      .from('ava_chat_usage')
-      .insert({ user_id: userId, daily_used: 0, daily_reset_at: todayUTC(), credits: 0, total_messages: 0 })
+    const { error: insertErr } = await supabase.from('ava_chat_usage').insert({
+      user_id: userId,
+      daily_used: 0,
+      daily_reset_at: todayUTC(),
+      credits: 0,
+      total_messages: 0,
+    })
 
     if (insertErr && !insertErr.message?.includes('duplicate')) {
       throw new Error(`ava_chat_usage insert failed: ${insertErr.message}`)
     }
 
-    return { dailyUsed: 0, credits: 0, totalMessages: 0 }
+    return {
+      dailyUsed: 0,
+      credits: 0,
+      totalMessages: 0,
+      coverLettersDailyUsed: 0,
+      jobMatchAiDailyUsed: 0,
+      jobMatchCache: null,
+      jobMatchCacheAt: null,
+    }
   }
 
-  // Self-resetting daily counter
   if (data.daily_reset_at < todayUTC()) {
     await supabase
       .from('ava_chat_usage')
-      .update({ daily_used: 0, daily_reset_at: todayUTC(), updated_at: new Date().toISOString() })
+      .update({
+        daily_used: 0,
+        daily_reset_at: todayUTC(),
+        cover_letters_daily_used: 0,
+        job_match_ai_daily_used: 0,
+        job_match_cache: null,
+        job_match_cache_at: null,
+        updated_at: new Date().toISOString(),
+      })
       .eq('user_id', userId)
 
-    return { dailyUsed: 0, credits: data.credits, totalMessages: data.total_messages }
+    return {
+      dailyUsed: 0,
+      credits: data.credits ?? 0,
+      totalMessages: data.total_messages ?? 0,
+      coverLettersDailyUsed: 0,
+      jobMatchAiDailyUsed: 0,
+      jobMatchCache: null,
+      jobMatchCacheAt: null,
+    }
   }
 
-  return {
-    dailyUsed: data.daily_used,
-    credits: data.credits,
-    totalMessages: data.total_messages,
-  }
+  return rowToUsage(data as Record<string, unknown>)
 }
 
-/**
- * Determine whether the user can send a message and which model to use.
- */
 export function checkUsage(usage: AvaUsage): AvaUsageCheck {
   const dailyRemaining = Math.max(0, AVA_DAILY_FREE - usage.dailyUsed)
 
@@ -141,32 +170,67 @@ export function checkUsage(usage: AvaUsage): AvaUsageCheck {
   }
 }
 
-/** Increment daily free counter + total. Call AFTER a successful Sonnet reply. */
-export async function incrementDailyUsage(
-  supabase: SupabaseClient,
-  userId: string,
-): Promise<void> {
-  // Use raw SQL increment to avoid race conditions
+/** Cover letter: 3× Sonnet/day, then 1 credit → Haiku (same as post-quota chat). */
+export function checkCoverLetterUsage(usage: AvaUsage, isUnlimited: boolean): AvaCoverLetterCheck {
+  if (isUnlimited) {
+    return {
+      allowed: true,
+      model: 'sonnet',
+      usingCredits: false,
+      coverLettersDailyRemaining: 999,
+      credits: usage.credits,
+    }
+  }
+
+  const used = usage.coverLettersDailyUsed
+  const remaining = Math.max(0, AVA_COVER_LETTER_DAILY_FREE - used)
+
+  if (remaining > 0) {
+    return {
+      allowed: true,
+      model: 'sonnet',
+      usingCredits: false,
+      coverLettersDailyRemaining: remaining,
+      credits: usage.credits,
+    }
+  }
+
+  if (usage.credits > 0) {
+    return {
+      allowed: true,
+      model: 'haiku',
+      usingCredits: true,
+      coverLettersDailyRemaining: 0,
+      credits: usage.credits,
+    }
+  }
+
+  return {
+    allowed: false,
+    model: 'haiku',
+    usingCredits: false,
+    coverLettersDailyRemaining: 0,
+    credits: 0,
+  }
+}
+
+export async function incrementDailyUsage(supabase: SupabaseClient, userId: string): Promise<void> {
   const { error } = await supabase.rpc('increment_ava_daily', { p_user_id: userId })
 
-  // Fallback: if the RPC doesn't exist yet, do a manual update
   if (error) {
+    const u = await getOrCreateUsage(supabase, userId)
     await supabase
       .from('ava_chat_usage')
       .update({
-        daily_used: (await getOrCreateUsage(supabase, userId)).dailyUsed + 1,
-        total_messages: (await getOrCreateUsage(supabase, userId)).totalMessages + 1,
+        daily_used: u.dailyUsed + 1,
+        total_messages: u.totalMessages + 1,
         updated_at: new Date().toISOString(),
       })
       .eq('user_id', userId)
   }
 }
 
-/** Decrement credits + bump total. Call AFTER a successful Haiku reply. */
-export async function consumeCredit(
-  supabase: SupabaseClient,
-  userId: string,
-): Promise<void> {
+export async function consumeCredit(supabase: SupabaseClient, userId: string): Promise<void> {
   const { error } = await supabase.rpc('consume_ava_credit', { p_user_id: userId })
 
   if (error) {
@@ -182,12 +246,54 @@ export async function consumeCredit(
   }
 }
 
-/** Add purchased credits to a user's balance. */
-export async function addCredits(
+/** After a successful cover letter from the free daily pool. */
+export async function incrementCoverLetterDaily(supabase: SupabaseClient, userId: string): Promise<void> {
+  const { error } = await supabase.rpc('increment_ava_cover_letter_daily', { p_user_id: userId })
+  if (error) {
+    const u = await getOrCreateUsage(supabase, userId)
+    await supabase
+      .from('ava_chat_usage')
+      .update({
+        cover_letters_daily_used: u.coverLettersDailyUsed + 1,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+  }
+}
+
+/** After a successful free job-match AI run (once per UTC day). */
+export async function incrementJobMatchAiDaily(supabase: SupabaseClient, userId: string): Promise<void> {
+  const { error } = await supabase.rpc('increment_ava_job_match_daily', { p_user_id: userId })
+  if (error) {
+    const u = await getOrCreateUsage(supabase, userId)
+    await supabase
+      .from('ava_chat_usage')
+      .update({
+        job_match_ai_daily_used: u.jobMatchAiDailyUsed + 1,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+  }
+}
+
+export async function saveJobMatchCache(
   supabase: SupabaseClient,
   userId: string,
-  amount: number,
+  cache: unknown,
 ): Promise<void> {
+  const { error } = await supabase
+    .from('ava_chat_usage')
+    .update({
+      job_match_cache: cache as Record<string, unknown>,
+      job_match_cache_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', userId)
+
+  if (error) throw new Error(`saveJobMatchCache failed: ${error.message}`)
+}
+
+export async function addCredits(supabase: SupabaseClient, userId: string, amount: number): Promise<void> {
   const usage = await getOrCreateUsage(supabase, userId)
   const { error } = await supabase
     .from('ava_chat_usage')
@@ -200,7 +306,10 @@ export async function addCredits(
   if (error) throw new Error(`addCredits failed: ${error.message}`)
 }
 
-/** Convenience: how many free messages remain today. */
 export function getDailyRemaining(usage: AvaUsage): number {
   return Math.max(0, AVA_DAILY_FREE - usage.dailyUsed)
+}
+
+export function getCoverLetterDailyRemaining(usage: AvaUsage): number {
+  return Math.max(0, AVA_COVER_LETTER_DAILY_FREE - usage.coverLettersDailyUsed)
 }
