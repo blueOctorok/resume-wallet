@@ -8,8 +8,6 @@ import {
   getResumeVerificationHistory,
   getUSDCTransferHistory,
   formatTransferForDisplay,
-  parseTransactionHistory,
-  hasTransactionHistory,
   TransferResult,
   BASE_SEPOLIA_USDC_ADDRESS,
 } from '@/lib/alchemy-transfers-api'
@@ -38,10 +36,7 @@ export default function TransactionHistory({
   const [transfers, setTransfers] = useState<TransferResult[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
-  // Default to 'usdc' filter since users typically want to see USDC transfers
   const [filter, setFilter] = useState<FilterType>('usdc')
-  const [hasHistory, setHasHistory] = useState<boolean>(false)
-  const [transactionCount, setTransactionCount] = useState<number>(0)
   const [pageKey, setPageKey] = useState<string | undefined>()
   const [loadingMore, setLoadingMore] = useState<boolean>(false)
 
@@ -61,39 +56,25 @@ export default function TransactionHistory({
       }
 
       let response
-      const options = {
-        maxCount: maxTransactions,
-        pageKey: isLoadMore ? pageKey : undefined,
-      }
+      const base = { maxCount: maxTransactions }
+      const paged = { ...base, pageKey: isLoadMore ? pageKey : undefined }
 
-      // Fetch based on filter (following Alchemy tutorial patterns)
       switch (filter) {
         case 'from':
-          // Get transactions originating FROM the address (what user sent/spent)
-          response = await getTransactionsFrom(walletAddress, options)
+          response = await getTransactionsFrom(walletAddress, base)
           break
         case 'to':
-          // Get transactions sent TO the address (what user received)
-          response = await getTransactionsTo(walletAddress, options)
+          response = await getTransactionsTo(walletAddress, base)
           break
         case 'resume':
-          response = await getResumeVerificationHistory(
-            walletAddress,
-            contractAddress,
-            options
-          )
+          response = await getResumeVerificationHistory(walletAddress, contractAddress, paged)
           break
         case 'usdc':
-          response = await getUSDCTransferHistory(
-            walletAddress,
-            BASE_SEPOLIA_USDC_ADDRESS,
-            options
-          )
+          response = await getUSDCTransferHistory(walletAddress, BASE_SEPOLIA_USDC_ADDRESS, base)
           break
         case 'all':
         default:
-          // Get complete transaction history (both from and to)
-          response = await getWalletTransfers(walletAddress, options)
+          response = await getWalletTransfers(walletAddress, base)
           break
       }
 
@@ -108,19 +89,10 @@ export default function TransactionHistory({
         }
         setPageKey(response.pageKey)
       }
-
-      // Check if address has any history (only on initial load)
-      if (!isLoadMore) {
-        const historyCheck = await hasTransactionHistory(walletAddress)
-        if (historyCheck.success) {
-          setHasHistory(historyCheck.hasHistory)
-          setTransactionCount(historyCheck.transactionCount)
-        }
-      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
       setError(errorMessage)
-      console.error('❌ Error fetching transaction history:', errorMessage)
+      console.error('[TX HISTORY UI]', errorMessage)
     } finally {
       setLoading(false)
       setLoadingMore(false)
@@ -246,8 +218,6 @@ export default function TransactionHistory({
               Address: {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}
             </span>
             <span>•</span>
-            <span>Total: {transactionCount}</span>
-            <span>•</span>
             <span>Showing: {transfers.length}</span>
           </div>
 
@@ -285,9 +255,7 @@ export default function TransactionHistory({
             <div className='text-4xl mb-2'>📭</div>
             <div>No transactions found</div>
             <div className='text-xs mt-1'>
-              {hasHistory
-                ? 'Try adjusting the filter'
-                : 'This address has no transaction history'}
+              Try a different filter or check back later
             </div>
           </div>
         ) : (

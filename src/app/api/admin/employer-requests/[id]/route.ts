@@ -94,7 +94,7 @@ export async function PATCH(
       })
     }
 
-    // Handle approval - create company and set up user as owner
+    // Handle approval
     // 1. Get or create user
     let { data: user } = await supabase
       .from('users')
@@ -140,47 +140,89 @@ export async function PATCH(
       )
     }
 
-    // 2. Create the company
-    const { data: newCompany, error: createCompanyError } = await supabase
+    // 2. Check if the company already exists (e.g. flagged "join existing company" requests)
+    const { data: existingCompany } = await supabase
       .from('companies')
-      .insert({
-        company_name: accessRequest.company_name,
-        employer_user_id: user.id,
-        designated_owner_email: accessRequest.email,
-        status: 'active',
-        approved_at: new Date().toISOString(),
-        approved_by: adminUser?.id || null,
-        onboarding_completed: false,
-      })
-      .select('id')
-      .single()
+      .select('id, company_name')
+      .ilike('company_name', accessRequest.company_name)
+      .maybeSingle()
 
-    if (createCompanyError) {
-      console.error('[ADMIN REQUESTS] Create company error:', createCompanyError)
-      return NextResponse.json(
-        { error: 'Failed to create company' },
-        { status: 500 }
-      )
+    let companyId: string
+    let companyName: string
+    let joinedExisting = false
+
+    if (existingCompany) {
+      // Company exists — add user as a team member (recruiter), not a second owner
+      companyId = existingCompany.id
+      companyName = existingCompany.company_name
+      joinedExisting = true
+
+      const { error: memberError } = await supabase
+        .from('company_members')
+        .insert({
+          company_id: companyId,
+          user_id: user.id,
+          role: 'recruiter',
+          invite_email: accessRequest.email,
+          accepted_at: new Date().toISOString(),
+          is_active: true,
+        })
+
+      if (memberError) {
+        console.error('[ADMIN REQUESTS] Add member to existing company error:', memberError)
+        return NextResponse.json(
+          { error: 'Failed to add user to existing company' },
+          { status: 500 }
+        )
+      }
+
+      console.log(`[ADMIN REQUESTS] Approved (joined existing): ${accessRequest.name} -> ${companyName}`)
+    } else {
+      // No existing company — create one and make requester the owner
+      const { data: newCompany, error: createCompanyError } = await supabase
+        .from('companies')
+        .insert({
+          company_name: accessRequest.company_name,
+          employer_user_id: user.id,
+          designated_owner_email: accessRequest.email,
+          status: 'active',
+          approved_at: new Date().toISOString(),
+          approved_by: adminUser?.id || null,
+          onboarding_completed: false,
+        })
+        .select('id')
+        .single()
+
+      if (createCompanyError) {
+        console.error('[ADMIN REQUESTS] Create company error:', createCompanyError)
+        return NextResponse.json(
+          { error: 'Failed to create company' },
+          { status: 500 }
+        )
+      }
+
+      companyId = newCompany.id
+      companyName = accessRequest.company_name
+
+      const { error: memberError } = await supabase
+        .from('company_members')
+        .insert({
+          company_id: companyId,
+          user_id: user.id,
+          role: 'owner',
+          invite_email: accessRequest.email,
+          accepted_at: new Date().toISOString(),
+          is_active: true,
+        })
+
+      if (memberError) {
+        console.error('[ADMIN REQUESTS] Create member error:', memberError)
+      }
+
+      console.log(`[ADMIN REQUESTS] Approved (new company): ${companyName} -> Company ID: ${companyId}`)
     }
 
-    // 3. Add user as owner in company_members
-    const { error: memberError } = await supabase
-      .from('company_members')
-      .insert({
-        company_id: newCompany.id,
-        user_id: user.id,
-        role: 'owner',
-        invite_email: accessRequest.email,
-        accepted_at: new Date().toISOString(),
-        is_active: true,
-      })
-
-    if (memberError) {
-      console.error('[ADMIN REQUESTS] Create member error:', memberError)
-      // Company created but member failed - still mark as approved
-    }
-
-    // 4. Update the request as approved
+    // 3. Update the request as approved
     const { error: updateError } = await supabase
       .from('employer_access_requests')
       .update({
@@ -195,15 +237,13 @@ export async function PATCH(
       console.error('[ADMIN REQUESTS] Update request error:', updateError)
     }
 
-    console.log(`[ADMIN REQUESTS] Approved: ${accessRequest.company_name} -> Company ID: ${newCompany.id}`)
-
     return NextResponse.json({
       success: true,
-      message: `${accessRequest.company_name} has been approved`,
-      company: {
-        id: newCompany.id,
-        name: accessRequest.company_name,
-      }
+      message: joinedExisting
+        ? `${accessRequest.name} has been added to ${companyName}`
+        : `${companyName} has been approved`,
+      company: { id: companyId, name: companyName },
+      joinedExisting,
     })
 
   } catch (error) {

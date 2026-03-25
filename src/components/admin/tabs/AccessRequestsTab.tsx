@@ -227,6 +227,12 @@ export default function AccessRequestsTab({
                     <>
                       <button
                         onClick={async () => {
+                          const isJoin = req.ai_reason?.toLowerCase().includes('already exists')
+                          const msg = isJoin
+                            ? `Approve ${req.name} to join the existing "${req.company_name}" team as a recruiter?`
+                            : `Approve and create company "${req.company_name}" with ${req.name} as owner?`
+                          if (!confirm(msg)) return
+
                           setProcessingRequestId(req.id)
                           try {
                             const res = await fetch(`/api/admin/employer-requests/${req.id}`, {
@@ -254,7 +260,7 @@ export default function AccessRequestsTab({
                         ) : (
                           <CheckCircle className='w-4 h-4' />
                         )}
-                        Approve
+                        {req.ai_reason?.toLowerCase().includes('already exists') ? 'Approve & Join Team' : 'Approve'}
                       </button>
                       <button
                         onClick={async () => {

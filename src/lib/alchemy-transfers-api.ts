@@ -44,12 +44,94 @@ export interface TransfersResponse {
   error?: string
 }
 
+/** Deduplicate by `uniqueId`, sort by block number (desc = newest first). */
+function deduplicateAndSort(
+  transfers: TransferResult[],
+  order: 'asc' | 'desc' = 'desc',
+): TransferResult[] {
+  const seen = new Set<string>()
+  const unique = transfers.filter((t) => {
+    if (seen.has(t.uniqueId)) return false
+    seen.add(t.uniqueId)
+    return true
+  })
+  unique.sort((a, b) => {
+    const diff = parseInt(b.blockNum, 16) - parseInt(a.blockNum, 16)
+    return order === 'desc' ? diff : -diff
+  })
+  return unique
+}
+
 /**
- * Get complete transaction history for a wallet address using raw Alchemy API
- * Implements the official Alchemy tutorial approach for comprehensive transaction history
+ * Single-direction asset transfer call (fromAddress XOR toAddress).
+ * Shared by every public helper so query logic lives in one place.
+ */
+async function fetchTransfers(
+  address: string,
+  direction: 'from' | 'to',
+  options: {
+    fromBlock?: string
+    toBlock?: string
+    maxCount?: number
+    category?: string[]
+    order?: 'asc' | 'desc'
+    withMetadata?: boolean
+    contractAddresses?: string[]
+  } = {},
+): Promise<TransfersResponse> {
+  const {
+    fromBlock = '0x0',
+    toBlock = 'latest',
+    maxCount = 100,
+    category = ['external', 'erc20', 'erc721', 'erc1155'],
+    order = 'desc',
+    withMetadata = true,
+    contractAddresses,
+  } = options
+
+  const ALCHEMY_API_KEY =
+    process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || '1EacVcYetgk_QIWCKp4hI'
+  const url = `https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const params: Record<string, any> = {
+    fromBlock,
+    toBlock,
+    maxCount: `0x${maxCount.toString(16)}`,
+    category,
+    order,
+    withMetadata,
+    ...(direction === 'from' ? { fromAddress: address } : { toAddress: address }),
+    ...(contractAddresses?.length ? { contractAddresses } : {}),
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      method: 'alchemy_getAssetTransfers',
+      params: [params],
+      id: 1,
+    }),
+  })
+
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+  const data = await res.json()
+  if (data.error) throw new Error(`Alchemy: ${data.error.message}`)
+
+  return {
+    transfers: data.result.transfers ?? [],
+    pageKey: data.result.pageKey,
+    success: true,
+  }
+}
+
+/**
+ * Complete wallet transfer history (sent + received, merged & deduped).
  *
- * This function gets transactions both FROM and TO the specified address to create
- * a complete picture of the user's transaction history.
+ * alchemy_getAssetTransfers treats fromAddress + toAddress as AND (must match
+ * both), not OR. We fire two parallel calls and merge so every transfer shows.
  */
 export async function getWalletTransfers(
   address: string,
@@ -57,173 +139,74 @@ export async function getWalletTransfers(
     fromBlock?: string
     toBlock?: string
     maxCount?: number
-    pageKey?: string
-    category?: (
-      | 'external'
-      | 'internal'
-      | 'erc20'
-      | 'erc721'
-      | 'erc1155'
-      | 'specialnft'
-    )[]
+    category?: ('external' | 'internal' | 'erc20' | 'erc721' | 'erc1155' | 'specialnft')[]
     order?: 'asc' | 'desc'
     withMetadata?: boolean
+    /** @deprecated Use getTransactionsFrom / getTransactionsTo instead */
     includeFromAddress?: boolean
+    /** @deprecated Use getTransactionsFrom / getTransactionsTo instead */
     includeToAddress?: boolean
-  } = {}
+  } = {},
 ): Promise<TransfersResponse> {
   try {
-    console.log(`🔍 Getting transfers for wallet: ${address}`)
-
     const {
-      fromBlock = '0x0',
-      toBlock = 'latest',
       maxCount = 100,
-      pageKey,
-      category = ['external', 'erc20', 'erc721', 'erc1155'], // Removed 'internal' - not supported on Base Sepolia
-      order = 'desc', // newest first
-      withMetadata = true,
       includeFromAddress = true,
       includeToAddress = true,
+      ...rest
     } = options
 
-    // Use raw Alchemy API call
-    const ALCHEMY_API_KEY =
-      process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || '1EacVcYetgk_QIWCKp4hI'
-    const url = `https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`
+    const onlyFrom = includeFromAddress && !includeToAddress
+    const onlyTo = !includeFromAddress && includeToAddress
 
-    // Build request parameters following Alchemy tutorial approach
-    const params: any = {
-      fromBlock,
-      toBlock,
-      maxCount: `0x${maxCount.toString(16)}`, // Convert to hex string
-      pageKey,
-      category,
-      order,
-      withMetadata,
-    }
+    if (onlyFrom) return fetchTransfers(address, 'from', { ...rest, maxCount })
+    if (onlyTo) return fetchTransfers(address, 'to', { ...rest, maxCount })
 
-    // Include fromAddress and/or toAddress based on options
-    // Following the tutorial: use both for complete transaction history
-    if (includeFromAddress) {
-      params.fromAddress = address
-    }
-    if (includeToAddress) {
-      params.toAddress = address
-    }
+    const [sent, received] = await Promise.all([
+      fetchTransfers(address, 'from', { ...rest, maxCount }),
+      fetchTransfers(address, 'to', { ...rest, maxCount }),
+    ])
 
-    const requestBody = {
-      jsonrpc: '2.0',
-      method: 'alchemy_getAssetTransfers',
-      params: [params],
-      id: 1,
-    }
+    if (!sent.success) return sent
+    if (!received.success) return received
 
-    console.log('🔧 Raw API request:', requestBody)
+    const merged = deduplicateAndSort(
+      [...sent.transfers, ...received.transfers],
+      rest.order ?? 'desc',
+    )
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-
-    const data = await response.json()
-
-    if (data.error) {
-      throw new Error(`Alchemy API Error: ${data.error.message}`)
-    }
-
-    console.log(`✅ Retrieved ${data.result.transfers.length} transfers`)
-    console.log('🔧 Raw API response:', JSON.stringify(data.result, null, 2))
-    if (data.result.transfers.length === 0) {
-      console.warn('⚠️ No transfers returned from Alchemy API. This could mean:')
-      console.warn('   - Transaction is too recent (may take 30-60 seconds to index)')
-      console.warn('   - Address has no transaction history')
-      console.warn('   - API query parameters need adjustment')
-    }
-
-    return {
-      transfers: data.result.transfers,
-      pageKey: data.result.pageKey,
-      success: true,
-    }
+    return { transfers: merged.slice(0, maxCount), success: true }
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error'
-    console.error('❌ Failed to get wallet transfers:', errorMessage)
-
-    return {
-      transfers: [],
-      success: false,
-      error: errorMessage,
-    }
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    console.error('[WALLET TRANSFERS]', msg)
+    return { transfers: [], success: false, error: msg }
   }
 }
 
-/**
- * Get transactions originating FROM an address (following Alchemy tutorial)
- * Shows what the user has sent/spent
- */
+/** Transfers originating FROM an address (what the user sent). */
 export async function getTransactionsFrom(
   address: string,
-  options: {
-    fromBlock?: string
-    toBlock?: string
-    maxCount?: number
-    pageKey?: string
-    category?: (
-      | 'external'
-      | 'internal'
-      | 'erc20'
-      | 'erc721'
-      | 'erc1155'
-      | 'specialnft'
-    )[]
-    order?: 'asc' | 'desc'
-    withMetadata?: boolean
-  } = {}
+  options: { maxCount?: number; order?: 'asc' | 'desc' } = {},
 ): Promise<TransfersResponse> {
-  return getWalletTransfers(address, {
-    ...options,
-    includeFromAddress: true,
-    includeToAddress: false,
-  })
+  try {
+    return await fetchTransfers(address, 'from', options)
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    return { transfers: [], success: false, error: msg }
+  }
 }
 
-/**
- * Get transactions sent TO an address (following Alchemy tutorial)
- * Shows what the user has received
- */
+/** Transfers sent TO an address (what the user received). */
 export async function getTransactionsTo(
   address: string,
-  options: {
-    fromBlock?: string
-    toBlock?: string
-    maxCount?: number
-    pageKey?: string
-    category?: (
-      | 'external'
-      | 'internal'
-      | 'erc20'
-      | 'erc721'
-      | 'erc1155'
-      | 'specialnft'
-    )[]
-    order?: 'asc' | 'desc'
-    withMetadata?: boolean
-  } = {}
+  options: { maxCount?: number; order?: 'asc' | 'desc' } = {},
 ): Promise<TransfersResponse> {
-  return getWalletTransfers(address, {
-    ...options,
-    includeFromAddress: false,
-    includeToAddress: true,
-  })
+  try {
+    return await fetchTransfers(address, 'to', options)
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    return { transfers: [], success: false, error: msg }
+  }
 }
 
 /**
@@ -241,70 +224,41 @@ export async function getResumeVerificationHistory(
   } = {}
 ): Promise<TransfersResponse> {
   try {
-    console.log(`🔍 Getting resume verification history for: ${userAddress}`)
-
     const { maxCount = 50, pageKey, order = 'desc' } = options
 
     if (!contractAddress) {
-      console.warn(
-        '⚠️ No contract address provided for resume verification history'
-      )
-      return {
-        transfers: [],
-        success: true,
-        pageKey: undefined,
-      }
+      return { transfers: [], success: true, pageKey: undefined }
     }
 
-    // Use raw Alchemy API call with contractAddresses filter (following tutorial)
     const ALCHEMY_API_KEY =
       process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || '1EacVcYetgk_QIWCKp4hI'
     const url = `https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`
 
-    const requestBody = {
-      jsonrpc: '2.0',
-      method: 'alchemy_getAssetTransfers',
-      params: [
-        {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'alchemy_getAssetTransfers',
+        id: 1,
+        params: [{
           fromBlock: '0x0',
           toBlock: 'latest',
-          fromAddress: userAddress, // Transactions FROM the user (resume submissions)
-          contractAddresses: [contractAddress], // Filter for our ResumeRegistry contract
+          fromAddress: userAddress,
+          contractAddresses: [contractAddress],
           maxCount,
           pageKey,
-          category: ['external'], // Contract interactions (removed 'internal' - not supported on Base Sepolia)
+          category: ['external'],
           order,
           withMetadata: true,
-          excludeZeroValue: false, // Include gas-sponsored transactions
-        },
-      ],
-      id: 1,
-    }
-
-    console.log('🔧 Resume verification API request:', requestBody)
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
+          excludeZeroValue: false,
+        }],
+      }),
     })
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-
-    const data = await response.json()
-
-    if (data.error) {
-      throw new Error(`Alchemy API Error: ${data.error.message}`)
-    }
-
-    console.log(
-      `✅ Found ${data.result.transfers.length} resume verification transactions`
-    )
-    console.log('🔧 Resume verification API response:', data.result)
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+    const data = await res.json()
+    if (data.error) throw new Error(`Alchemy: ${data.error.message}`)
 
     return {
       transfers: data.result.transfers,
@@ -312,15 +266,9 @@ export async function getResumeVerificationHistory(
       success: true,
     }
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error'
-    console.error('❌ Failed to get resume verification history:', errorMessage)
-
-    return {
-      transfers: [],
-      success: false,
-      error: errorMessage,
-    }
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    console.error('[RESUME HISTORY]', msg)
+    return { transfers: [], success: false, error: msg }
   }
 }
 
@@ -343,55 +291,36 @@ export async function getContractFirstTransfer(
   } = {}
 ): Promise<TransfersResponse> {
   try {
-    console.log(`🔍 Getting first transfer for contract: ${contractAddress}`)
-
     const {
-      category = ['external', 'erc20', 'erc721', 'erc1155'], // Removed 'internal' - not supported on Base Sepolia
+      category = ['external', 'erc20', 'erc721', 'erc1155'],
       excludeZeroValue = true,
     } = options
 
-    // Use raw Alchemy API call following the tutorial exactly
     const ALCHEMY_API_KEY =
       process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || '1EacVcYetgk_QIWCKp4hI'
     const url = `https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`
 
-    const requestBody = {
-      jsonrpc: '2.0',
-      method: 'alchemy_getAssetTransfers',
-      params: [
-        {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'alchemy_getAssetTransfers',
+        id: 1,
+        params: [{
           fromBlock: '0x0',
           contractAddresses: [contractAddress],
           excludeZeroValue,
           category,
-          maxCount: '0x1', // Only need the first one (hex required for direct API)
-          order: 'asc', // Ascending to get the earliest
-        },
-      ],
-      id: 1,
-    }
-
-    console.log('🔧 First transfer API request:', requestBody)
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
+          maxCount: '0x1',
+          order: 'asc',
+        }],
+      }),
     })
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-
-    const data = await response.json()
-
-    if (data.error) {
-      throw new Error(`Alchemy API Error: ${data.error.message}`)
-    }
-
-    console.log('✅ First transfer found:', data.result.transfers[0])
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+    const data = await res.json()
+    if (data.error) throw new Error(`Alchemy: ${data.error.message}`)
 
     return {
       transfers: data.result.transfers,
@@ -399,15 +328,9 @@ export async function getContractFirstTransfer(
       success: true,
     }
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error'
-    console.error('❌ Failed to get first contract transfer:', errorMessage)
-
-    return {
-      transfers: [],
-      success: false,
-      error: errorMessage,
-    }
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    console.error('[CONTRACT FIRST TRANSFER]', msg)
+    return { transfers: [], success: false, error: msg }
   }
 }
 
@@ -434,67 +357,45 @@ export async function getContractLastTransfer(
   TransfersResponse & { totalTransfers?: number; pagesSearched?: number }
 > {
   try {
-    console.log(`🔍 Getting last transfer for contract: ${contractAddress}`)
-
     const {
-      category = ['external', 'erc20', 'erc721', 'erc1155'], // Removed 'internal' - not supported on Base Sepolia
+      category = ['external', 'erc20', 'erc721', 'erc1155'],
       excludeZeroValue = true,
-      maxPages = 10, // Prevent infinite loops for very active contracts
+      maxPages = 10,
     } = options
 
     const ALCHEMY_API_KEY =
       process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || '1EacVcYetgk_QIWCKp4hI'
     const url = `https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`
 
-    // First request - get initial page (most recent by default)
-    const initialRequestBody = {
-      jsonrpc: '2.0',
-      method: 'alchemy_getAssetTransfers',
-      params: [
-        {
-          fromBlock: '0x0',
-          toBlock: 'latest',
-          contractAddresses: [contractAddress],
-          excludeZeroValue,
-          category,
-          maxCount: '0x3e8', // Max per request (1000 in hex)
-          order: 'desc', // Descending to get most recent first
-        },
-      ],
-      id: 1,
+    const baseParams = {
+      fromBlock: '0x0',
+      toBlock: 'latest',
+      contractAddresses: [contractAddress],
+      excludeZeroValue,
+      category,
+      maxCount: '0x3e8',
+      order: 'desc' as const,
     }
 
-    console.log('🔧 Last transfer initial API request:', initialRequestBody)
-
-    const initialResponse = await fetch(url, {
+    const initialRes = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(initialRequestBody),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', method: 'alchemy_getAssetTransfers', id: 1,
+        params: [baseParams],
+      }),
     })
 
-    if (!initialResponse.ok) {
-      throw new Error(
-        `HTTP ${initialResponse.status}: ${initialResponse.statusText}`
-      )
-    }
-
-    const initialData = await initialResponse.json()
-
-    if (initialData.error) {
-      throw new Error(`Alchemy API Error: ${initialData.error.message}`)
-    }
+    if (!initialRes.ok) throw new Error(`HTTP ${initialRes.status}: ${initialRes.statusText}`)
+    const initialData = await initialRes.json()
+    if (initialData.error) throw new Error(`Alchemy: ${initialData.error.message}`)
 
     let pageKey = initialData.result.pageKey
     let pagesSearched = 1
     let totalTransfers = initialData.result.transfers.length
 
-    // If no pageKey, we have all transfers in the first page
     if (!pageKey) {
-      const lastTransfer = initialData.result.transfers[0] // First item in desc order is the latest
-      console.log('✅ Last transfer found (single page):', lastTransfer)
-
+      const lastTransfer = initialData.result.transfers[0]
       return {
         transfers: lastTransfer ? [lastTransfer] : [],
         pageKey: undefined,
@@ -504,78 +405,36 @@ export async function getContractLastTransfer(
       }
     }
 
-    // Following the tutorial: use pagination to find the absolute last transfer
-    console.log(
-      '📄 Contract has multiple pages, searching for absolute last transfer...'
-    )
-
+    // Paginate to find the absolute latest transfer
     let lastTransferFound: TransferResult | null = null
     let counter = 0
 
     while (pageKey && counter < maxPages) {
-      const nextRequestBody = {
-        jsonrpc: '2.0',
-        method: 'alchemy_getAssetTransfers',
-        params: [
-          {
-            fromBlock: '0x0',
-            toBlock: 'latest',
-            contractAddresses: [contractAddress],
-            excludeZeroValue,
-            category,
-            maxCount: '0x3e8', // 1000 in hex
-            order: 'desc',
-            pageKey: pageKey.toString(),
-          },
-        ],
-        id: 1,
-      }
-
-      const nextResponse = await fetch(url, {
+      const nextRes = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(nextRequestBody),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0', method: 'alchemy_getAssetTransfers', id: 1,
+          params: [{ ...baseParams, pageKey: pageKey.toString() }],
+        }),
       })
 
-      if (!nextResponse.ok) {
-        throw new Error(
-          `HTTP ${nextResponse.status}: ${nextResponse.statusText}`
-        )
-      }
-
-      const nextData = await nextResponse.json()
-
-      if (nextData.error) {
-        throw new Error(`Alchemy API Error: ${nextData.error.message}`)
-      }
+      if (!nextRes.ok) throw new Error(`HTTP ${nextRes.status}: ${nextRes.statusText}`)
+      const nextData = await nextRes.json()
+      if (nextData.error) throw new Error(`Alchemy: ${nextData.error.message}`)
 
       pageKey = nextData.result.pageKey
       counter += 1
       pagesSearched += 1
       totalTransfers += nextData.result.transfers.length
 
-      console.log(
-        `📄 Request #${counter} made! Found ${nextData.result.transfers.length} more transfers`
-      )
-
       if (!pageKey) {
-        // This is the last page - the first transfer in desc order is the most recent overall
         lastTransferFound = nextData.result.transfers[0]
-        console.log(
-          `✅ Last transfer found after ${counter} additional pages:`,
-          lastTransferFound
-        )
         break
       }
     }
 
-    // If we hit maxPages limit, use the most recent from initial page
     if (counter >= maxPages && pageKey) {
-      console.log(
-        `⚠️ Reached maxPages limit (${maxPages}), using most recent from search`
-      )
       lastTransferFound = initialData.result.transfers[0]
     }
 
@@ -587,101 +446,83 @@ export async function getContractLastTransfer(
       pagesSearched,
     }
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error'
-    console.error('❌ Failed to get last contract transfer:', errorMessage)
-
-    return {
-      transfers: [],
-      success: false,
-      error: errorMessage,
-      totalTransfers: 0,
-      pagesSearched: 0,
-    }
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    console.error('[CONTRACT LAST TRANSFER]', msg)
+    return { transfers: [], success: false, error: msg, totalTransfers: 0, pagesSearched: 0 }
   }
 }
 
 /**
- * Get USDC transaction history using raw Alchemy API
- * Shows all USDC transfers for gas payment tracking
+ * Get USDC transaction history using raw Alchemy API.
+ *
+ * alchemy_getAssetTransfers does NOT support fromAddress + toAddress in the
+ * same request (it means "from AND to", not "from OR to"). We fire two
+ * parallel calls — sent + received — then merge, deduplicate on uniqueId, and
+ * sort newest-first.
  */
 export async function getUSDCTransferHistory(
   address: string,
   usdcContractAddress: string,
   options: {
     maxCount?: number
-    pageKey?: string
     order?: 'asc' | 'desc'
   } = {}
 ): Promise<TransfersResponse> {
   try {
-    console.log(`🔍 Getting USDC transfer history for: ${address}`)
+    const { maxCount = 50, order = 'desc' } = options
+    const hexMax = `0x${maxCount.toString(16)}`
 
-    const { maxCount = 50, pageKey, order = 'desc' } = options
-
-    // Use raw Alchemy API call
     const ALCHEMY_API_KEY =
       process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || '1EacVcYetgk_QIWCKp4hI'
     const url = `https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`
 
-    const requestBody = {
-      jsonrpc: '2.0',
-      method: 'alchemy_getAssetTransfers',
-      params: [
-        {
-          fromBlock: '0x0',
-          toBlock: 'latest',
-          fromAddress: address,
-          toAddress: address,
-          contractAddresses: [usdcContractAddress],
-          maxCount: `0x${maxCount.toString(16)}`, // Convert to hex string (required by Alchemy API)
-          pageKey,
-          category: ['erc20'],
-          order,
-          withMetadata: true,
-        },
-      ],
-      id: 1,
+    const shared = {
+      fromBlock: '0x0',
+      toBlock: 'latest',
+      contractAddresses: [usdcContractAddress],
+      maxCount: hexMax,
+      category: ['erc20'],
+      order,
+      withMetadata: true,
     }
 
-    console.log('🔧 USDC API request:', requestBody)
+    const [sentRes, recvRes] = await Promise.all([
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0', method: 'alchemy_getAssetTransfers', id: 1,
+          params: [{ ...shared, fromAddress: address }],
+        }),
+      }),
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0', method: 'alchemy_getAssetTransfers', id: 2,
+          params: [{ ...shared, toAddress: address }],
+        }),
+      }),
+    ])
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    })
+    if (!sentRes.ok) throw new Error(`HTTP ${sentRes.status}: ${sentRes.statusText}`)
+    if (!recvRes.ok) throw new Error(`HTTP ${recvRes.status}: ${recvRes.statusText}`)
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
+    const sentData = await sentRes.json()
+    const recvData = await recvRes.json()
+    if (sentData.error) throw new Error(`Alchemy: ${sentData.error.message}`)
+    if (recvData.error) throw new Error(`Alchemy: ${recvData.error.message}`)
 
-    const data = await response.json()
+    const merged = deduplicateAndSort(
+      [...(sentData.result.transfers ?? []), ...(recvData.result.transfers ?? [])],
+      order,
+    )
 
-    if (data.error) {
-      throw new Error(`Alchemy API Error: ${data.error.message}`)
-    }
-
-    console.log(`✅ Retrieved ${data.result.transfers.length} USDC transfers`)
-    console.log('🔧 USDC API response:', data.result)
-
-    return {
-      transfers: data.result.transfers,
-      pageKey: data.result.pageKey,
-      success: true,
-    }
+    return { transfers: merged.slice(0, maxCount), success: true }
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error'
-    console.error('❌ Failed to get USDC transfer history:', errorMessage)
-
-    return {
-      transfers: [],
-      success: false,
-      error: errorMessage,
-    }
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    console.error('[USDC HISTORY]', msg)
+    return { transfers: [], success: false, error: msg }
   }
 }
 
@@ -695,30 +536,16 @@ export async function getTransactionDetails(transactionHash: string): Promise<{
   error?: string
 }> {
   try {
-    console.log(`🔍 Getting transaction details for: ${transactionHash}`)
-
-    // Get transaction and receipt in parallel
     const [transaction, receipt] = await Promise.all([
       alchemySDK.core.getTransaction(transactionHash),
       alchemySDK.core.getTransactionReceipt(transactionHash),
     ])
 
-    console.log(`✅ Retrieved transaction details`)
-
-    return {
-      transaction,
-      receipt,
-      success: true,
-    }
+    return { transaction, receipt, success: true }
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error'
-    console.error('❌ Failed to get transaction details:', errorMessage)
-
-    return {
-      success: false,
-      error: errorMessage,
-    }
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    console.error('[TX DETAILS]', msg)
+    return { success: false, error: msg }
   }
 }
 
@@ -798,7 +625,8 @@ export function parseTransactionHistory(transfers: TransferResult[]): Array<{
 }
 
 /**
- * Check if address has any transaction history
+ * Quick check: does this address have any transfer history?
+ * Uses maxCount=1 so it's cheap (no redundant 1000-transfer fetch).
  */
 export async function hasTransactionHistory(address: string): Promise<{
   hasHistory: boolean
@@ -807,51 +635,24 @@ export async function hasTransactionHistory(address: string): Promise<{
   error?: string
 }> {
   try {
-    console.log(`🔍 Checking transaction history for: ${address}`)
-
     const response = await getWalletTransfers(address, {
       maxCount: 1,
       order: 'desc',
     })
 
     if (!response.success) {
-      return {
-        hasHistory: false,
-        transactionCount: 0,
-        success: false,
-        error: response.error,
-      }
+      return { hasHistory: false, transactionCount: 0, success: false, error: response.error }
     }
-
-    const hasHistory = response.transfers.length > 0
-
-    // If there are transfers, get a rough count
-    let transactionCount = 0
-    if (hasHistory) {
-      const fullResponse = await getWalletTransfers(address, {
-        maxCount: 1000, // Get up to 1000 to estimate
-      })
-      transactionCount = fullResponse.transfers.length
-    }
-
-    console.log(`✅ Address has ${transactionCount} transactions`)
 
     return {
-      hasHistory,
-      transactionCount,
+      hasHistory: response.transfers.length > 0,
+      transactionCount: response.transfers.length,
       success: true,
     }
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error'
-    console.error('❌ Failed to check transaction history:', errorMessage)
-
-    return {
-      hasHistory: false,
-      transactionCount: 0,
-      success: false,
-      error: errorMessage,
-    }
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    console.error('[HAS HISTORY]', msg)
+    return { hasHistory: false, transactionCount: 0, success: false, error: msg }
   }
 }
 

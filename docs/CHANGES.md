@@ -4,6 +4,40 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Fix: @pacedrivers.com did not auto-join when company email on file was missing or personal** (March 2026)
+
+- **Cause:** Existing-company auto-join only compared the requester’s domain to `companies.email` / `designated_owner_email`. If the owner signed up with Gmail (or those fields were empty), `@pacedrivers.com` never matched → unnecessary flag + confusing “use company email” copy.
+- **`src/lib/employer-domain-match.ts`:** `emailDomainAllowsEmployerJoin()` — still **exact match** when the company row has a real corporate domain. If the on-file email domain is **missing or a public provider**, allow **name↔domain alignment** (e.g. company name “Pace Drivers” + registrable label `pacedrivers`), with guards: no public requester domains, min slug/root length, substring match only when both sides are long enough to avoid `acme` ⊂ `acmeevil` style abuse.
+- **`access-request` route:** Uses the helper for the existing-company branch; flagged copy no longer implies the requester used the wrong domain when the real issue is missing corporate email on the company row.
+
+---
+
+## **Fix: admin approve for existing company creates duplicate instead of joining team** (March 2026)
+
+- **Root cause:** When AvA flagged a request because the company name matched an existing company (e.g. domain mismatch), the admin "Approve" handler (`PATCH /api/admin/employer-requests/[id]`) always tried to `INSERT` a new company — it never checked if the company already existed. This either failed silently (unique constraint) or created a duplicate.
+- **`/api/admin/employer-requests/[id]/route.ts`:** The approve path now checks `companies` for an `ilike` match on `company_name` before deciding what to do:
+  - **Company exists:** Adds the user as a `recruiter` team member on the existing company (not a second owner).
+  - **Company doesn't exist:** Creates a new company with the user as `owner` (original behavior).
+  - Returns `joinedExisting: true` so the UI can show the right confirmation message.
+- **`AccessRequestsTab.tsx`:** For flagged requests where AvA's reason mentions "already exists", the approve button now reads **"Approve & Join Team"** and shows a confirmation dialog explaining the user will be added as a team member. Normal new-company approvals still say "Approve".
+
+---
+
+## **Fix: transaction history not showing transfers (Alchemy AND vs OR bug)** (March 2026)
+
+- **Root cause:** `alchemy_getAssetTransfers` treats `fromAddress` + `toAddress` in the same request as AND (transfers that match **both**), not OR. The old code passed both, so USDC Transfers and All Transactions only returned self-transfers (almost always zero).
+- **`alchemy-transfers-api.ts`:**
+  - Extracted shared `fetchTransfers(address, direction, options)` — single-direction call used by all public helpers. Eliminates code duplication.
+  - `getWalletTransfers` (All filter): fires two parallel calls (sent + received), merges, deduplicates by `uniqueId`, sorts by block number.
+  - `getUSDCTransferHistory`: same two-call merge pattern with `contractAddresses` filter for the USDC contract.
+  - Added `deduplicateAndSort()` helper — `Set<uniqueId>` for dedup, block-number sort for consistent ordering.
+  - `hasTransactionHistory`: removed the redundant second `maxCount: 1000` fetch that ran on every filter change. Now uses `maxCount: 1` only.
+  - `getTransactionsFrom` / `getTransactionsTo`: simplified to thin wrappers around `fetchTransfers`.
+  - Replaced all verbose `console.log` emoji spam with bracketed prefixes (e.g. `[USDC HISTORY]`) — only on errors now.
+- **`TransactionHistory.tsx`:** Removed `hasTransactionHistory` call that ran on every filter switch (wasteful). Removed unused `hasHistory` / `transactionCount` state. Summary now shows `transfers.length` (what's actually loaded).
+
+---
+
 ## **AvA chat: remove Journey link; employer hub rails at `xl` only** (March 2026)
 
 - **`AvaChatPanel`:** Removed footer **Journey** button and `desktopJourneyScrollTargetId` prop (career/job path remains via floating FAB + nav / `AvaJourneyGuide`).

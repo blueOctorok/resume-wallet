@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { evaluateEmployerRequest } from '@/lib/ava-employer-eval'
+import { emailDomainAllowsEmployerJoin } from '@/lib/employer-domain-match'
 
 /**
  * POST /api/employer/access-request
@@ -171,12 +172,16 @@ export async function POST(request: NextRequest) {
         .maybeSingle()
 
       if (matchedCompany) {
-        // Fall back to designated_owner_email if email column wasn't set
         const companyEmail = matchedCompany.email || matchedCompany.designated_owner_email
-        const companyEmailDomain = companyEmail?.split('@')[1]?.toLowerCase() ?? null
 
-        // Domain match -> auto-join as recruiter
-        if (emailDomain && companyEmailDomain && emailDomain === companyEmailDomain) {
+        // Exact domain match OR (weak/missing company email + name-aligned work domain, e.g. Pace Drivers + @pacedrivers.com)
+        const domainAllowsJoin = emailDomainAllowsEmployerJoin(
+          matchedCompany.company_name,
+          emailDomain,
+          companyEmail,
+        )
+
+        if (domainAllowsJoin) {
           // Get or create user
           let userId: string
           if (existingUser) {
@@ -227,7 +232,9 @@ export async function POST(request: NextRequest) {
           // Audit trail
           await insertAuditRow({ status: 'auto_approved', reviewed_at: new Date().toISOString() })
 
-          console.log(`[ACCESS REQUEST] Auto-joined: ${fullName} -> ${matchedCompany.company_name} (domain match: @${emailDomain})`)
+          console.log(
+            `[ACCESS REQUEST] Auto-joined: ${fullName} -> ${matchedCompany.company_name} (@${emailDomain})`,
+          )
 
           return NextResponse.json({
             success: true,
@@ -237,10 +244,15 @@ export async function POST(request: NextRequest) {
           })
         }
 
+        const onFileDomain =
+          companyEmail?.includes('@') === true
+            ? (companyEmail.split('@')[1]?.toLowerCase() ?? 'none')
+            : 'none on file'
+
         // Domain mismatch -> flag for human review regardless of AvA decision
         await insertAuditRow({
           status: 'flagged',
-          ai_reason: `Company "${matchedCompany.company_name}" already exists. Requester email domain @${emailDomain ?? 'unknown'} does not match company domain @${companyEmailDomain ?? 'unknown'}.`,
+          ai_reason: `Company "${matchedCompany.company_name}" already exists. Requester @${emailDomain ?? 'unknown'} could not be auto-verified (on-file domain: ${onFileDomain}).`,
         })
 
         console.log(`[ACCESS REQUEST] Flagged (domain mismatch): ${fullName} for ${matchedCompany.company_name}`)
@@ -248,8 +260,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           reviewRequired: true,
-          message: `${matchedCompany.company_name} already exists on StormChain. Your request to join has been submitted for review. Please ensure you use a @${companyEmailDomain ?? 'company'} email address for instant access.`,
-          reviewNote: `Your email domain (@${emailDomain ?? 'unknown'}) did not match the domain on file for this company (@${companyEmailDomain ?? 'unknown'}). A human reviewer will verify before you are added.`,
+          message: `${matchedCompany.company_name} already exists on StormChain. Your request to join has been submitted for review.`,
+          reviewNote: `We could not automatically verify your work email against this company's record. A reviewer will verify before you are added. If your company email should qualify, ask the owner to set the company email in StormChain to your corporate domain.`,
           request: {
             companyName: matchedCompany.company_name,
             status: 'flagged',
