@@ -4,6 +4,15 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Candidate: reopen AvA hub intro (edit onboarding context)** (March 2026)
+
+- **`openAvAContextModal`** existed in `hub-blocks-store` but was never called from UI.
+- **`AvaChatPanel` (candidate):** Footer link **Edit intro** (next to Journey) opens `AvaContextModal`.
+- **`HubProfileHeader`:** Link **Edit what you told AvA** when onboarding is complete (`!needsOnboarding && onboarding`).
+- **`AvaContextModal`:** Doc comment updated — same persistence as first-time `HubOnboardingForm` via `/api/hub/onboarding`.
+
+---
+
 ## **Employer wallets cannot switch to candidate** (March 2026)
 
 - **`src/lib/employer-account-guard.ts`:** `isUserEmployerLinked()` — `users.role === 'employer'`, or company owner, or active `company_members` row.

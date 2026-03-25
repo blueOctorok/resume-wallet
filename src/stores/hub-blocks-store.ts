@@ -91,7 +91,7 @@ interface HubBlocksActions {
     walletAddress: string,
     extraContext?: string | null
   ) => Promise<void>
-  /** Open the AvA context modal (for "Tell AvA more about you") */
+  /** Open the AvA context modal — edit hub onboarding answers anytime (wired in AvaChatPanel + HubProfileHeader) */
   openAvAContextModal: () => void
   closeAvAContextModal: () => void
 

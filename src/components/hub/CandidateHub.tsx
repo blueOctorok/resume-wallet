@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useCallback, useState } from 'react'
-import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, ShieldCheck, ChevronLeft, ChevronRight, FileText, ClipboardCheck, Car, RefreshCw, Trash2, Search, Globe, Github, Compass } from 'lucide-react'
+import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, ShieldCheck, ChevronLeft, ChevronRight, FileText, ClipboardCheck, Car, RefreshCw, Trash2, Search, Globe, Github, Compass, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore, useJourneyStore } from '@/stores'
@@ -452,9 +452,11 @@ function HubProfileHeader() {
   const walletAddress = useAuthStore((s) => s.walletAddress)
   const userProfile = useHubBlocksStore((s) => s.userProfile)
   const onboarding = useHubBlocksStore((s) => s.onboarding)
+  const openAvAContextModal = useHubBlocksStore((s) => s.openAvAContextModal)
   const updateAvatarUrl = useHubBlocksStore((s) => s.updateAvatarUrl)
   const updateUserProfile = useHubBlocksStore((s) => s.updateUserProfile)
   const installedBlocks = useInstalledBlocks()
+  const needsOnboarding = useNeedsOnboarding()
 
   // Inline edit state
   const [isEditing, setIsEditing] = useState(false)
@@ -617,6 +619,22 @@ function HubProfileHeader() {
                 <p className={cn('text-sm mt-1', isDark ? 'text-gray-400' : 'text-slate-600')}>
                   Complete onboarding to set your role
                 </p>
+              )}
+              {!needsOnboarding && onboarding && (
+                <button
+                  type='button'
+                  onClick={() => openAvAContextModal()}
+                  className={cn(
+                    'mt-2 inline-flex items-center gap-1.5 text-xs font-medium transition-colors',
+                    isDark
+                      ? 'text-teal-400/90 hover:text-teal-300'
+                      : 'text-teal-700 hover:text-teal-800',
+                  )}
+                  aria-label='Edit what you do and why you are here for AvA'
+                >
+                  <Sparkles className='w-3.5 h-3.5 shrink-0' />
+                  Edit what you told AvA
+                </button>
               )}
             </div>
           )}

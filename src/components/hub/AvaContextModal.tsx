@@ -9,11 +9,10 @@ import Button from '@/components/ui/Button'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 
 /**
- * AvA Context Modal — "Tell AvA more about you".
+ * AvA Context Modal — same fields as first-time hub onboarding ("what you do", etc.).
  *
- * Opened from the Ask AvA section. Pre-fills from hub_onboarding and lets the user
- * add or update context (occupation, why they're here, extra info for AvA) so she
- * can give better guidance.
+ * Opened via **Edit intro** under Ask AvA, or **Edit what you told AvA** on the profile
+ * card. Pre-fills from `hub_onboarding` and upserts through POST /api/hub/onboarding.
  */
 export default function AvaContextModal() {
   const { theme } = useTheme()
