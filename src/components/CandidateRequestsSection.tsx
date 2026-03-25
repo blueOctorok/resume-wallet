@@ -23,11 +23,11 @@ import {
 import BackgroundCheckDisclosure from '@/components/BackgroundCheckDisclosure'
 import MessagingButton from '@/components/messaging/MessagingButton'
 import { useUIStore } from '@/stores'
-
 interface CandidateRequest {
   id: string
   requestType: 'mvr_order' | 'document_upload' | 'verification' | 'profile_completion' | 'custom'
   documentType?: string | null
+  targetBlockType?: string | null
   message?: string | null
   status: 'pending' | 'viewed' | 'completed' | 'declined' | 'expired' | 'cancelled'
   completedAt?: string | null
@@ -44,7 +44,8 @@ interface CandidateRequest {
 
 interface CandidateRequestsSectionProps {
   userAddress: string | null
-  onNavigateToResume?: () => void
+  /** Pass requested block id (e.g. driver-resume vs developer-resume) so the correct builder opens */
+  onNavigateToResume?: (targetBlockType?: string | null) => void
   onNavigateToDotApp?: () => void
 }
 
@@ -471,7 +472,7 @@ export default function CandidateRequestsSection({
                   {selectedRequest.requestType === 'document_upload' && onNavigateToResume && (
                     <button
                       onClick={() => {
-                        onNavigateToResume()
+                        onNavigateToResume(selectedRequest.targetBlockType ?? null)
                         setSelectedRequest(null)
                       }}
                       className='flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition-colors'

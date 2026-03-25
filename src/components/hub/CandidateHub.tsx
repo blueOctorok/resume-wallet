@@ -14,7 +14,7 @@ import {
 } from '@/stores/hub-blocks-store'
 import type { InstalledBlock } from '@/stores/hub-blocks-store'
 import type { PageType } from '@/stores/types'
-import { getBlockColor } from '@/lib/block-registry'
+import { getBlockColor, getBlockDefinition } from '@/lib/block-registry'
 import { getBlockIllustration } from './BlockIllustrations'
 import Button from '@/components/ui/Button'
 import AvatarUpload from '@/components/ui/AvatarUpload'
@@ -824,7 +824,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
             txHash: resume.blockchainTxHash,
             canVerify: !resume.blockchainTxHash,
             canDelete: true,
-            editPage: 'resume',
+            editPage: role === 'developer' ? 'developer-resume' : 'resume',
             ipfsHash: resume.ipfsHash ?? null,
             structuredData: resume.structuredData ?? null,
             resumeSourceRole: role,
@@ -1624,7 +1624,14 @@ export default function CandidateHub() {
             {walletAddress && (
               <CandidateRequestsSection
                 userAddress={walletAddress}
-                onNavigateToResume={() => setCurrentPage('resume')}
+                onNavigateToResume={(targetBlockType) => {
+                  const route = targetBlockType
+                    ? getBlockDefinition(targetBlockType)?.pageRoute
+                    : null
+                  setCurrentPage(
+                    route === 'developer-resume' ? 'developer-resume' : 'resume',
+                  )
+                }}
                 onNavigateToDotApp={() => setCurrentPage('dotapp')}
               />
             )}

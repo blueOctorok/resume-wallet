@@ -285,7 +285,22 @@ export default function DeveloperResumeBuilder({
             }
           }
         } else {
-          // Prefill from developer profile
+          // Prefer latest saved developer resume (so hub tile opens real data without My Files → Edit)
+          const listRes = await fetch('/api/developer/resume', {
+            headers: { 'x-wallet-address': userAddress },
+          })
+          if (listRes.ok) {
+            const listJson = await listRes.json()
+            const rows = listJson.resumes as Array<{ id: string; structured_data?: DeveloperResumeData }> | undefined
+            const latest = rows?.[0]
+            if (latest?.structured_data && typeof latest.structured_data === 'object') {
+              setData(latest.structured_data as DeveloperResumeData)
+              setResumeId(latest.id)
+              return
+            }
+          }
+
+          // Prefill from developer hub profile when no resume row yet
           const res = await fetch('/api/developer/hub', {
             headers: { 'x-wallet-address': userAddress },
           })
@@ -310,7 +325,6 @@ export default function DeveloperResumeBuilder({
                   portfolioUrl: profile.portfolioUrl || '',
                   personalWebsite: profile.personalWebsite || '',
                 },
-                // Prefill skills from profile if available
                 skills: (profile.skills || []).map(
                   (s: string | { name: string }) => ({
                     id: generateId(),

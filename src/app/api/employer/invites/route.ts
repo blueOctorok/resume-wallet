@@ -248,6 +248,7 @@ export async function POST(request: NextRequest) {
         status: invite.status,
         expiresAt: invite.expires_at,
         createdAt: invite.created_at,
+        emailSentAt: null,
       },
       companyName: ctx.companyName,
     })

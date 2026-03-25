@@ -4,6 +4,16 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Developer resume vs driver resume: separate hub route** (March 2026)
+
+- **Root cause:** `driver-resume` and `developer-resume` both used `pageRoute: 'resume'`, so the candidate hub always opened the **driver** `ResumeBuilder` (CDL, trucking employment, sync to `block_driver_*`). The developer flow already lived in `DeveloperResumeBuilder` + `POST/PUT /api/developer/resume` (`source_role: 'developer'`), but it was never reached from the composable hub.
+- **Fix:** `developer-resume` → `pageRoute: 'developer-resume'`, new `PageType`, `CandidateShell` route rendering `DeveloperResumeBlock` (wraps `DeveloperResumeBuilder`). My Files **Edit** uses `developer-resume` vs `resume` from `resumeSourceRole`. Invite/notification deep links (`?onboard=`) and journey “Build resume” targets updated. Registry `dataTables` set to `block_dev_profile` (employment + bio sync from the dev resume API).
+- **API:** Saving a developer resume now also writes **summary → `block_dev_profile.bio`** when present (experience still maps to `employment_history`).
+- **UX:** Opening the developer builder without a prior “Edit” id loads the **latest `source_role: developer` resume** from `GET /api/developer/resume` when available.
+- **Employer requests:** `GET /api/candidate/requests` includes `targetBlockType`; inbox “Go to Resume” routes via registry `pageRoute` (hub handler).
+
+---
+
 ## **DB constraint audit: three CHECK constraints out of sync with application code** (March 2026)
 
 Full audit of every CHECK constraint in the public schema against every value the application code and cron jobs actually write. Found three mismatches — all would cause silent 500s or cron failures.
@@ -31,10 +41,11 @@ Run `058_fix_check_constraints_audit.sql` in the Supabase SQL editor or via `npx
 
 ---
 
-## **Candidate Outreach: SMS / Text invite** (March 2026)
+## **Candidate Outreach: copy text for SMS (no Twilio)** (March 2026)
 
-- **`CandidateOutreach.tsx`:** Message icon next to copy / QR / email opens an inline row: optional phone (US 10-digit or `+` international), then **Open Messages** — uses the `sms:` URL scheme so the OS messaging app opens with the invite link and short copy prefilled (no Twilio). **`GET /api/employer/invites`** `companyName` is stored in state for that copy.
-- **`invite-sms-body.ts`:** `buildCandidateInviteSmsBody` (block label from registry, same idea as invite email), `normalizeSmsPhone`, `buildSmsHref`.
+- **Vercel (and any host) cannot send carrier SMS for free** — that always needs a paid provider (Twilio, etc.) or the user’s own phone/app.
+- **Second action:** **message icon** copies a short invite blurb **plus the link** (`buildCandidateInviteSmsBody` in `invite-sms-body.ts`) so the recruiter pastes into Messages/WhatsApp themselves. First icon stays **link only**.
+- **Removed:** `send-sms` API route, `send-invite-sms.ts`, Twilio env. **`059_application_invites_candidate_phone.sql`** removed from repo (if you already applied it, extra DB columns are harmless).
 
 ---
 

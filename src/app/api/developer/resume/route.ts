@@ -7,28 +7,47 @@ import { saveDevProfile } from '@/lib/block-data'
  * Map developer resume "experience" to block_dev_profile.employment_history
  * so the Employment Verification section can show and verify these jobs.
  */
-async function syncResumeExperienceToProfile(
+async function syncStructuredDataToDevProfile(
   supabase: SupabaseClient,
   userId: string,
-  structuredData: { experience?: Array<{ id: string; company: string; title: string; location?: string; startDate?: string; endDate?: string; isCurrent?: boolean; description?: string }> }
+  structuredData: {
+    personalInfo?: { summary?: string }
+    experience?: Array<{
+      id: string
+      company: string
+      title: string
+      location?: string
+      startDate?: string
+      endDate?: string
+      isCurrent?: boolean
+      description?: string
+    }>
+  },
 ) {
   const experience = structuredData?.experience
-  if (!experience?.length) return
+  const summary = structuredData?.personalInfo?.summary?.trim()
 
-  const employmentHistory = experience.map((exp) => ({
-    id: exp.id,
-    companyName: exp.company || '',
-    position: exp.title || '',
-    location: exp.location || '',
-    startDate: exp.startDate || '',
-    endDate: exp.isCurrent ? '' : (exp.endDate || ''),
-    description: exp.description || undefined,
-  }))
+  const employmentHistory =
+    experience?.map((exp) => ({
+      id: exp.id,
+      companyName: exp.company || '',
+      position: exp.title || '',
+      location: exp.location || '',
+      startDate: exp.startDate || '',
+      endDate: exp.isCurrent ? '' : (exp.endDate || ''),
+      description: exp.description || undefined,
+    })) ?? null
+
+  const payload: Parameters<typeof saveDevProfile>[2] = {}
+  if (summary) payload.bio = summary
+  if (employmentHistory?.length) payload.employment_history = employmentHistory
+
+  if (Object.keys(payload).length === 0) return
 
   try {
-    await saveDevProfile(supabase, userId, { employment_history: employmentHistory })
+    await saveDevProfile(supabase, userId, payload)
   } catch (err) {
-    console.warn('[DEVELOPER RESUME] Failed to sync experience to block table:', err)
+    console.warn('[DEVELOPER RESUME] Failed to sync to block_dev_profile:', err)
   }
 }
 
@@ -98,7 +117,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    await syncResumeExperienceToProfile(supabase, user.id, structuredData)
+    await syncStructuredDataToDevProfile(supabase, user.id, structuredData)
 
     return NextResponse.json({
       success: true,
@@ -186,7 +205,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    await syncResumeExperienceToProfile(supabase, user.id, structuredData)
+    await syncStructuredDataToDevProfile(supabase, user.id, structuredData)
 
     return NextResponse.json({
       success: true,
