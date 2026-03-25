@@ -50,6 +50,7 @@ import AvaChatPanel from '@/components/ava/AvaChatPanel'
 import STORMBalance from '@/components/STORMBalance'
 import { CompanyWalletContent } from '@/components/employer/CompanyWallet'
 import Button from '@/components/ui/Button'
+import Card from '@/components/ui/Card'
 
 // ============================================================
 // TYPES
@@ -132,10 +133,19 @@ interface HubPipeline {
   archived: number
 }
 
+interface EmployerAccessPendingInfo {
+  companyName: string
+  status: string
+  submittedAt: string
+  reviewNote?: string | null
+}
+
 interface HubData {
   success: boolean
   isNewUser: boolean
   needsCompanySetup?: boolean
+  /** Pending AvA / admin employer access — show waiting state instead of company-setup loop */
+  employerAccessPending?: EmployerAccessPendingInfo | null
   /** DB `users.ava_auto_welcome_employer_at` — cross-device AvA auto-welcome idempotency */
   avaAutoWelcomeEmployerDone?: boolean
   company: HubCompany | null
@@ -204,7 +214,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   const employerAvaContext = useMemo((): EmployerHubContext | null => {
     if (!data) return null
     return {
-      needsCompanySetup: Boolean(data.needsCompanySetup),
+      needsCompanySetup: Boolean(data.needsCompanySetup) && !data.employerAccessPending,
       hasCompany: Boolean(data.company),
       companyName: data.company?.name ?? null,
       activeJobs: data.stats.activeJobs,
@@ -364,6 +374,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   // Redirect to company setup if onboarding is incomplete (must be in useEffect, not during render)
   useEffect(() => {
     if (!data || loading) return
+    if (data.employerAccessPending) return
     // No company at all — owner needs to create one
     if (data.needsCompanySetup) {
       onNavigate('company-setup')
@@ -482,6 +493,32 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
   // No data yet or needs redirect to company setup (handled by useEffect above)
   if (!data) {
     return null
+  }
+
+  // Waiting on admin / AvA for employer access (row in employer_access_requests)
+  if (data.employerAccessPending && !data.company) {
+    const p = data.employerAccessPending
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] px-4">
+        <Card variant="elevated" className="max-w-lg w-full p-8 text-center">
+          <Clock className={`w-12 h-12 mx-auto mb-4 ${theme === 'dark' ? 'text-amber-400' : 'text-amber-600'}`} />
+          <h2 className={`text-xl font-semibold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            Employer access pending review
+          </h2>
+          <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+            Your request to join <strong>{p.companyName}</strong> is in the queue. StormChain admin will
+            approve it — you do not need your company owner to send an invite for this step.
+          </p>
+          <p className={`text-xs mb-6 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
+            Status: {p.status === 'flagged' ? 'Flagged for review' : 'Pending'}
+            {p.submittedAt ? ` · Submitted ${new Date(p.submittedAt).toLocaleString()}` : ''}
+          </p>
+          <Button variant="secondary" onClick={() => fetchHubData()}>
+            Refresh status
+          </Button>
+        </Card>
+      </div>
+    )
   }
 
   // While redirecting to company-setup, show nothing (prevents flash of hub content)

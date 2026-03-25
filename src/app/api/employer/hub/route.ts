@@ -88,10 +88,28 @@ export async function GET(request: NextRequest) {
     }
 
     if (!company) {
+      const { data: pendingAccess } = await supabase
+        .from('employer_access_requests')
+        .select('id, company_name, status, created_at, ai_reason')
+        .ilike('wallet_address', walletAddress)
+        .in('status', ['pending', 'flagged'])
+        .maybeSingle()
+
+      const hasPendingAccess = Boolean(pendingAccess)
+
       return NextResponse.json({
         success: true,
         isNewUser: false,
-        needsCompanySetup: true,
+        // If they already submitted for review, do not loop them back into company-setup
+        needsCompanySetup: !hasPendingAccess,
+        employerAccessPending: hasPendingAccess
+          ? {
+              companyName: pendingAccess!.company_name,
+              status: pendingAccess!.status,
+              submittedAt: pendingAccess!.created_at,
+              reviewNote: pendingAccess!.ai_reason,
+            }
+          : null,
         avaAutoWelcomeEmployerDone: Boolean(user.ava_auto_welcome_employer_at),
         company: null,
         userRole: null,

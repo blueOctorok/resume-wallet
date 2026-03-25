@@ -4,6 +4,7 @@ import {
   persistCompanyWalletIfMissing,
   syncCoOwnersAfterWalletCreation,
 } from '@/lib/persist-company-wallet'
+import { emailDomainAllowsEmployerJoin } from '@/lib/employer-domain-match'
 
 /**
  * POST /api/employer/company
@@ -98,19 +99,99 @@ export async function POST(request: NextRequest) {
       { onConflict: 'user_id' }
     )
 
-    // Duplicate company name check (case-insensitive).
-    // Only block if this user does NOT already own/belong to a pre-created version of the company.
-    const { data: duplicateCompany } = await supabase
+    // Duplicate company name (case-insensitive). Another owner already has this name.
+    // Most users hit this from Company onboarding after a failed access-request left role=employer
+    // with no company — they never went through AvA, so central admin had no row. We either
+    // auto-join (domain + name rules), or enqueue employer_access_requests for admin review.
+    const { data: dupRows } = await supabase
       .from('companies')
-      .select('id, employer_user_id')
+      .select('id, employer_user_id, company_name, email, designated_owner_email')
       .ilike('company_name', companyName.trim())
-      .maybeSingle()
+      .limit(1)
+
+    const duplicateCompany = dupRows?.[0]
 
     if (duplicateCompany && duplicateCompany.employer_user_id !== user.id) {
-      return NextResponse.json(
-        { error: `A company named "${companyName.trim()}" already exists on StormChain. If you belong to this company, ask the owner to invite you.` },
-        { status: 409 }
-      )
+      const requesterDomain = email.split('@')[1]?.toLowerCase() ?? null
+      const companyContact = duplicateCompany.email || duplicateCompany.designated_owner_email
+
+      if (emailDomainAllowsEmployerJoin(duplicateCompany.company_name, requesterDomain, companyContact)) {
+        await supabase
+          .from('users')
+          .update({ role: 'employer', email: email.toLowerCase() })
+          .eq('id', user.id)
+
+        const { data: alreadyMember } = await supabase
+          .from('company_members')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('company_id', duplicateCompany.id)
+          .maybeSingle()
+
+        if (!alreadyMember) {
+          const { error: joinErr } = await supabase.from('company_members').insert({
+            company_id: duplicateCompany.id,
+            user_id: user.id,
+            role: 'recruiter',
+            invite_email: email.toLowerCase(),
+            accepted_at: new Date().toISOString(),
+            is_active: true,
+          })
+          if (joinErr) {
+            console.error('[EMPLOYER COMPANY SETUP] Join existing company error:', joinErr)
+            return NextResponse.json(
+              { error: 'Could not add you to this company. Try again or contact support.' },
+              { status: 500 }
+            )
+          }
+        }
+
+        console.log(
+          `[EMPLOYER COMPANY SETUP] Auto-joined user ${user.id} to existing "${duplicateCompany.company_name}" (onboarding form)`
+        )
+
+        return NextResponse.json({
+          success: true,
+          companyId: duplicateCompany.id,
+          joinedExisting: true,
+          companyWalletAddress: null,
+        })
+      }
+
+      const { data: existingPending } = await supabase
+        .from('employer_access_requests')
+        .select('id')
+        .ilike('wallet_address', walletAddress)
+        .in('status', ['pending', 'flagged'])
+        .maybeSingle()
+
+      if (!existingPending) {
+        const { error: insErr } = await supabase.from('employer_access_requests').insert({
+          wallet_address: walletAddress.toLowerCase(),
+          email: email.toLowerCase(),
+          name: fullName,
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          company_name: companyName.trim(),
+          description:
+            'Submitted from company onboarding: name matches an existing company. Awaiting admin approval to join the team.',
+          status: 'flagged',
+          ai_decision: 'flag',
+          ai_reason:
+            'Onboarding duplicate: user completed company setup form for an existing company name; automatic domain join did not apply.',
+          ai_confidence: null,
+        })
+        if (insErr) {
+          console.error('[EMPLOYER COMPANY SETUP] employer_access_requests insert:', insErr)
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        reviewRequired: true,
+        message:
+          `${companyName.trim()} is already on StormChain. We submitted your details to StormChain admin for review — you do not need the owner to invite you. You will get employer access after approval.`,
+      })
     }
 
     // Check for a pre-created company (admin set up a company with designated_owner_email)

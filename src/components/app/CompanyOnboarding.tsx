@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore } from '@/stores'
-import { Building2, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Building2, Loader2, AlertCircle, CheckCircle2, Clock } from 'lucide-react'
 import BackToHubButton from '@/components/ui/BackToHubButton'
+import Button from '@/components/ui/Button'
 
 interface CompanyOnboardingProps {
   onComplete: () => void
@@ -57,6 +58,9 @@ export default function CompanyOnboarding({ onComplete, showBackButton = false }
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  /** Duplicate company name: row created for central admin; hub shows pending state */
+  const [submittedForReview, setSubmittedForReview] = useState(false)
+  const [reviewMessage, setReviewMessage] = useState<string | null>(null)
 
   const isDark = theme === 'dark'
 
@@ -95,7 +99,14 @@ export default function CompanyOnboarding({ onComplete, showBackButton = false }
         body: JSON.stringify(form),
       })
 
-      let data: { error?: string; success?: boolean; companyId?: string } = {}
+      let data: {
+        error?: string
+        success?: boolean
+        companyId?: string
+        joinedExisting?: boolean
+        reviewRequired?: boolean
+        message?: string
+      } = {}
       try {
         data = await res.json()
       } catch {
@@ -108,8 +119,14 @@ export default function CompanyOnboarding({ onComplete, showBackButton = false }
         return
       }
 
+      if (data.reviewRequired) {
+        setReviewMessage(typeof data.message === 'string' ? data.message : null)
+        setSubmittedForReview(true)
+        return
+      }
+
       setSuccess(true)
-      setTimeout(onComplete, 1200)
+      setTimeout(onComplete, data.joinedExisting ? 800 : 1200)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
@@ -130,6 +147,28 @@ export default function CompanyOnboarding({ onComplete, showBackButton = false }
   const labelClass = `block text-sm font-medium mb-2 ${
     isDark ? 'text-gray-300' : 'text-gray-700'
   }`
+
+  if (submittedForReview) {
+    return (
+      <div className='max-w-2xl mx-auto py-12 px-4'>
+        <div className={`rounded-2xl border p-12 text-center ${cardClass}`}>
+          <div className='w-16 h-16 mx-auto mb-4 rounded-full bg-amber-500/20 flex items-center justify-center'>
+            <Clock className='w-8 h-8 text-amber-500' />
+          </div>
+          <h2 className={`text-xl font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            Request submitted
+          </h2>
+          <p className={`text-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            {reviewMessage ||
+              'StormChain admin will review your request. You do not need your company owner to invite you for this step.'}
+          </p>
+          <Button variant='primary' onClick={onComplete}>
+            Continue to hub
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   if (success) {
     return (

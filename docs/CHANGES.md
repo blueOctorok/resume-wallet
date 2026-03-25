@@ -4,6 +4,17 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Fix: “Ask owner to invite” + no central admin row (company onboarding bypassed AvA)** (March 2026)
+
+- **What users saw:** Copy from **`POST /api/employer/company`** (409), not from AvA access-request. That happens when someone is already **`role: employer`** but has **no company** (e.g. access-request set employer **before** creating the company row; company insert then failed on duplicate name). They are sent to **Company onboarding** → duplicate name → 409 → **no** `employer_access_requests` insert → **Access Requests** admin tab empty.
+- **`access-request` (new company path):** Create/link user **without** setting `role: 'employer'` until after the company insert succeeds. New users get `role: null` until then. Prevents orphan employers stuck in company-setup.
+- **`POST /api/employer/company`:** On duplicate name for another owner: (1) If `emailDomainAllowsEmployerJoin` → add user as **recruiter** on the existing company (same rules as access-request). (2) Else → insert **`employer_access_requests`** (`flagged`) and return **200** with `reviewRequired: true` (not 409) so UI can explain admin review — no dependency on owner invite.
+- **`GET /api/employer/hub`:** If no company but a **pending/flagged** `employer_access_requests` row exists for the wallet → **`needsCompanySetup: false`**, **`employerAccessPending`**. Stops redirect loop to company-setup.
+- **`EmployerHub`:** Renders a **pending review** card (Clock + Refresh) when `employerAccessPending` is set.
+- **`CompanyOnboarding`:** Handles `reviewRequired` / `joinedExisting` responses; **Continue to hub** after review submission.
+
+---
+
 ## **Fix: @pacedrivers.com did not auto-join when company email on file was missing or personal** (March 2026)
 
 - **Cause:** Existing-company auto-join only compared the requester’s domain to `companies.email` / `designated_owner_email`. If the owner signed up with Gmail (or those fields were empty), `@pacedrivers.com` never matched → unnecessary flag + confusing “use company email” copy.

@@ -290,22 +290,21 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Handle: APPROVE (new company) ────────────────────────────
+    // Important: do not set users.role = 'employer' until the company row exists.
+    // Otherwise a failed insert (e.g. duplicate name) leaves an orphan employer with no company,
+    // and the user hits Company onboarding → POST /api/employer/company → 409 with no admin request.
 
-    // 1. Get or create user
     let userId: string
     if (existingUser) {
-      await supabase
-        .from('users')
-        .update({ role: 'employer', email: email.toLowerCase() })
-        .eq('id', existingUser.id)
       userId = existingUser.id
+      await supabase.from('users').update({ email: email.toLowerCase() }).eq('id', userId)
     } else {
       const { data: newUser, error: createUserErr } = await supabase
         .from('users')
         .insert({
           wallet_address: walletAddress.toLowerCase(),
           email: email.toLowerCase(),
-          role: 'employer',
+          role: null,
         })
         .select('id')
         .single()
@@ -317,7 +316,6 @@ export async function POST(request: NextRequest) {
       userId = newUser.id
     }
 
-    // 2. Upsert user_profiles
     await supabase.from('user_profiles').upsert(
       {
         user_id: userId,
@@ -328,7 +326,6 @@ export async function POST(request: NextRequest) {
       { onConflict: 'user_id' }
     )
 
-    // 3. Create company (email is set so domain matching works for future join requests)
     const { data: newCompany, error: companyErr } = await supabase
       .from('companies')
       .insert({
@@ -348,7 +345,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create company' }, { status: 500 })
     }
 
-    // 4. Add owner to company_members
+    const { error: roleErr } = await supabase
+      .from('users')
+      .update({ role: 'employer' })
+      .eq('id', userId)
+    if (roleErr) {
+      console.error('[ACCESS REQUEST] Set employer role error:', roleErr)
+    }
+
     await supabase.from('company_members').insert({
       company_id: newCompany.id,
       user_id: userId,
@@ -358,7 +362,6 @@ export async function POST(request: NextRequest) {
       is_active: true,
     })
 
-    // 5. Audit trail
     await insertAuditRow({ status: 'auto_approved', reviewed_at: new Date().toISOString() })
 
     console.log(`[ACCESS REQUEST] Auto-approved: ${companyName} -> Company ID: ${newCompany.id}`)
