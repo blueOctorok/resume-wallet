@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Bell, BriefcaseBusiness, UserCheck, ShieldCheck, Users, FileText, ClipboardCheck, MessageSquare, X, CheckCheck } from 'lucide-react'
+import { Bell, BriefcaseBusiness, UserCheck, ShieldCheck, Users, FileText, ClipboardCheck, MessageSquare, X, CheckCheck, Sparkles } from 'lucide-react'
 import { useNotificationStore, type AppNotification } from '@/stores/notification-store'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useUIStore } from '@/stores'
@@ -18,6 +18,7 @@ const TYPE_ICON: Record<string, React.ReactNode> = {
   new_application:        <FileText className='w-4 h-4' />,
   consent_signed:         <ClipboardCheck className='w-4 h-4' />,
   new_message:            <MessageSquare className='w-4 h-4' />,
+  job_match:              <Sparkles className='w-4 h-4' />,
 }
 
 const TYPE_COLOR: Record<string, string> = {
@@ -28,6 +29,7 @@ const TYPE_COLOR: Record<string, string> = {
   new_application:         'bg-orange-500/20 text-orange-400',
   consent_signed:          'bg-teal-500/20 text-teal-400',
   new_message:             'bg-blue-500/20 text-blue-400',
+  job_match:               'bg-sky-500/20 text-sky-400',
 }
 
 function timeAgo(dateString: string): string {

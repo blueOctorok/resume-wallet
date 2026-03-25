@@ -31,6 +31,7 @@ import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 import { useHubContext } from '@/lib/ava-chat'
 import ResumePreviewModal from '@/components/ResumePreviewModal'
 import ReferralBanner from './ReferralBanner'
+import JobAlertsHubSection from './JobAlertsHubSection'
 import AvaChatPanel from '@/components/ava/AvaChatPanel'
 import HubSidebar from '@/components/hub/HubSidebar'
 import DeveloperResumePreviewModal from '@/components/DeveloperResumePreviewModal'
@@ -695,23 +696,25 @@ function FindJobsBanner() {
             Find Jobs
           </p>
           <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-slate-600')}>
-            Browse StormChain and external job listings
+            Browse listings and set AI alerts below — we notify you when AvA spots a strong new match
           </p>
         </div>
       </div>
 
-      <button
-        onClick={() => setCurrentPage('jobs')}
+      <Button
+        variant='primary'
+        size='sm'
         className={cn(
-          'flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-colors sm:flex-shrink-0',
+          'flex items-center gap-1.5 sm:flex-shrink-0',
           isDark
-            ? 'bg-sky-500 text-white hover:bg-sky-400'
-            : 'bg-sky-600 text-white hover:bg-sky-500',
+            ? 'bg-sky-500 hover:bg-sky-400 text-white'
+            : 'bg-sky-600 hover:bg-sky-500 text-white',
         )}
+        onClick={() => setCurrentPage('jobs')}
       >
         <Search className='w-3.5 h-3.5' />
         Browse Jobs
-      </button>
+      </Button>
     </div>
   )
 }
@@ -1629,6 +1632,9 @@ export default function CandidateHub() {
             </div>
 
             <FindJobsBanner />
+            <div className='mt-4'>
+              <JobAlertsHubSection />
+            </div>
             <ReferralBanner />
 
             {/* ── Employer Outreach ── */}

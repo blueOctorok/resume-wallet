@@ -4,6 +4,17 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Phase 3 — AI job alerts (push)** (March 2026)
+
+- **DB:** [`062_job_alert_preferences.sql`](supabase/migrations/062_job_alert_preferences.sql) — `job_alert_preferences` (keywords, optional location / label / `salary_min`, `min_match_score`, `is_active`, `last_scan_at`) and `job_alert_sent` dedupe `(user_id, external_job_id)`. RLS enabled with no policies (service role / admin API only).
+- **Types + data:** [`job-alert-types.ts`](src/lib/job-alert-types.ts), [`job-alert-data.ts`](src/lib/job-alert-data.ts) — list/create/update/delete, cron batch fetch, sent-id set, caps **2** alerts free / **5** with any AvA credits (`ava_chat_usage.credits > 0`).
+- **API:** [`GET/POST /api/job-alerts`](src/app/api/job-alerts/route.ts), [`PATCH/DELETE /api/job-alerts/[id]`](src/app/api/job-alerts/[id]/route.ts) — `x-wallet-address` auth.
+- **Cron:** [`GET/POST /api/cron/job-alerts`](src/app/api/cron/job-alerts/route.ts) — `Authorization: Bearer` or `x-internal-secret` matching `CRON_SECRET` or `INTERNAL_API_SECRET`; Adzuna + [`buildJobMatchCandidateBrief`](src/lib/job-match-candidate-brief.ts) + [`scoreJobsForCandidate`](src/lib/job-match-ai.ts) (Haiku); up to **3** notifications per preference per run; `action_url` `/?onboard=jobs`. [`vercel.json`](vercel.json) — daily schedule `0 13 * * *` (UTC).
+- **Notifications:** [`job_match`](src/lib/create-notification.ts) type; [`NotificationBell`](src/components/ui/NotificationBell.tsx) Sparkles + sky accent.
+- **Hub UI:** [`JobAlertsHubSection`](src/components/hub/JobAlertsHubSection.tsx) on [`CandidateHub`](src/components/hub/CandidateHub.tsx) — `Card` + `Modal` create/edit/delete, pause/resume.
+
+---
+
 ## **Phase 2 — AI cover letter + personalized job feed** (March 2026)
 
 - **DB:** [`061_ava_job_ai_usage.sql`](supabase/migrations/061_ava_job_ai_usage.sql) — `cover_letters_daily_used`, `job_match_ai_daily_used`, `job_match_cache`, `job_match_cache_at` on `ava_chat_usage`; RPCs `increment_ava_cover_letter_daily`, `increment_ava_job_match_daily`. Daily UTC reset (with chat counters) clears job-match cache for a fresh free run.

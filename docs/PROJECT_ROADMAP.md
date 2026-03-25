@@ -20,6 +20,7 @@
 | Candidate match scoring | 🔲 Future | AvA + blocks |
 | **Career Card Easy Apply + AvA chat memory** | **✅ Done** | **External job apply uses `/api/career-card` (not driver profile); submit snapshot includes `installed_block_types` + profile fields; server-side eligibility before job row insert. AvA `/api/ai/chat` accepts `conversationHistory` (multi-turn).** |
 | **Phase 2 — AI cover letter + job recommendations** | **✅ Done** | **`POST /api/ai/cover-letter` (3 free/day + credits). `GET /api/jobs/recommended` (1 free AI/day + cache; `force=1` = 1 credit). Migration `061_ava_job_ai_usage.sql`. External jobs tab UI + shared `adzuna-server`.** |
+| **Phase 3 — AI job alerts** | **✅ Done** | **Saved searches on hub (`JobAlertsHubSection`); migration `062`; daily Vercel cron `/api/cron/job-alerts`; Adzuna + Haiku scoring vs profile; dedupe `job_alert_sent`; in-app `job_match` notifications → `/?onboard=jobs`; 2 free / 5 with credits.** |
 
 ## 💬 **AvA Chat Monetization** (March 2026 — Complete)
 

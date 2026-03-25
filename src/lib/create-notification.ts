@@ -7,6 +7,7 @@ export type NotificationType =
   | 'team_invite'
   | 'new_application'
   | 'consent_signed'
+  | 'job_match'
   | 'system'
 
 export interface CreateNotificationParams {
