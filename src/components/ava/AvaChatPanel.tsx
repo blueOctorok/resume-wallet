@@ -7,9 +7,8 @@
 
 import Image from 'next/image'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Bot, Coins, Compass, Loader2, Send, Sparkles } from 'lucide-react'
+import { Bot, Coins, Loader2, Send, Sparkles } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useJourneyStore } from '@/stores'
 import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { cn } from '@/lib/utils'
 import type { HubContext } from '@/lib/ava-context'
@@ -30,7 +29,6 @@ export type AvaChatPanelProps =
       candidateEmptyHub: boolean
       avaAutoWelcomeCandidateDone: boolean
       onAvaAutoWelcomeSynced?: () => void
-      desktopJourneyScrollTargetId?: string
     }
   | {
       mode: 'employer'
@@ -38,32 +36,13 @@ export type AvaChatPanelProps =
       employerContext: EmployerHubContext
       avaAutoWelcomeEmployerDone: boolean
       onAvaAutoWelcomeSynced?: () => void
-      desktopJourneyScrollTargetId?: string
     }
 
 export default function AvaChatPanel(props: AvaChatPanelProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
-  const openGuide = useJourneyStore((s) => s.openGuide)
   const openAvAContextModal = useHubBlocksStore((s) => s.openAvAContextModal)
   const walletAddress = props.walletAddress
-
-  const handleOpenJourney = useCallback(() => {
-    const scrollId =
-      'desktopJourneyScrollTargetId' in props ? props.desktopJourneyScrollTargetId : undefined
-    if (
-      scrollId &&
-      typeof window !== 'undefined' &&
-      window.matchMedia('(min-width: 1024px)').matches
-    ) {
-      const el = document.getElementById(scrollId)
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-        return
-      }
-    }
-    openGuide()
-  }, [openGuide, props])
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -359,8 +338,13 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
             </button>
           </form>
 
-          {/* Footer row: credits + edit intro (candidates) + journey */}
-          <div className='flex flex-wrap items-center justify-between gap-y-1 gap-x-2 mt-2'>
+          {/* Footer row: credits + edit intro (candidates only) */}
+          <div
+            className={cn(
+              'flex flex-wrap items-center gap-y-1 gap-x-2 mt-2',
+              props.mode === 'candidate' ? 'justify-between' : '',
+            )}
+          >
             <div className='flex items-center gap-2 flex-wrap'>
               <span className={cn('text-[10px]', isDark ? 'text-gray-600' : 'text-slate-400')}>
                 Powered by Anthropic
@@ -381,37 +365,22 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
                 </button>
               )}
             </div>
-            <div className='flex items-center gap-1 sm:gap-2'>
-              {props.mode === 'candidate' && (
-                <button
-                  type='button'
-                  onClick={() => openAvAContextModal()}
-                  className={cn(
-                    'flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium transition-colors',
-                    isDark
-                      ? 'text-teal-400/90 hover:text-teal-300 hover:bg-gray-800'
-                      : 'text-teal-700 hover:text-teal-800 hover:bg-teal-50',
-                  )}
-                  aria-label='Edit what you told AvA about your work and goals'
-                >
-                  <Sparkles className='w-3 h-3' />
-                  Edit intro
-                </button>
-              )}
+            {props.mode === 'candidate' && (
               <button
                 type='button'
-                onClick={handleOpenJourney}
+                onClick={() => openAvAContextModal()}
                 className={cn(
                   'flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium transition-colors',
                   isDark
-                    ? 'text-gray-500 hover:text-gray-300 hover:bg-gray-800'
-                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100',
+                    ? 'text-teal-400/90 hover:text-teal-300 hover:bg-gray-800'
+                    : 'text-teal-700 hover:text-teal-800 hover:bg-teal-50',
                 )}
+                aria-label='Edit what you told AvA about your work and goals'
               >
-                <Compass className='w-3 h-3' />
-                Journey
+                <Sparkles className='w-3 h-3' />
+                Edit intro
               </button>
-            </div>
+            )}
           </div>
         </div>
       </div>

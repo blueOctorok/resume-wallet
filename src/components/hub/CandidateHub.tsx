@@ -1522,7 +1522,6 @@ export default function CandidateHub() {
               candidateEmptyHub={installedBlocks.length === 0}
               avaAutoWelcomeCandidateDone={avaAutoWelcomeCandidateDone}
               onAvaAutoWelcomeSynced={undefined}
-              desktopJourneyScrollTargetId='candidate-hub-quest-sidebar'
             />
 
             {/* ── Block Hive + Block Files (unified) ── */}

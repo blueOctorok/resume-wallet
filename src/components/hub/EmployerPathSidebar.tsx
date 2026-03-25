@@ -119,7 +119,7 @@ export default function EmployerPathSidebar({
       <aside
         id={id}
         className={cn(
-          'hidden lg:block w-80 shrink-0 self-start sticky top-24',
+          'hidden xl:block w-80 shrink-0 self-start sticky top-24',
           'rounded-2xl border border-gray-200 dark:border-gray-700',
           'bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm p-4 shadow-sm',
           className,

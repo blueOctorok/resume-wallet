@@ -4,6 +4,13 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **AvA chat: remove Journey link; employer hub rails at `xl` only** (March 2026)
+
+- **`AvaChatPanel`:** Removed footer **Journey** button and `desktopJourneyScrollTargetId` prop (career/job path remains via floating FAB + nav / `AvaJourneyGuide`).
+- **Employer hub layout:** Company wallet rail, `flex-row`, and job-path sticky aside use **`xl` (1280px)** instead of **`lg` (1024px)`**. **Company wallet** and **Job path** edge controls use **`xl:hidden`**. Below `xl`, **tall narrow vertical tabs** sit on the left/right screen edges (rotated label + icon), not bottom FABs — respects `safe-area-inset` for notched devices.
+
+---
+
 ## **Candidate: reopen AvA hub intro (edit onboarding context)** (March 2026)
 
 - **`openAvAContextModal`** existed in `hub-blocks-store` but was never called from UI.

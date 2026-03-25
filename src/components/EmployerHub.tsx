@@ -43,6 +43,7 @@ import {
   Compass,
   Wallet,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { getDisplayRole } from '@/lib/employer-roles'
 import type { EmployerHubContext } from '@/lib/ava-context'
 import AvaChatPanel from '@/components/ava/AvaChatPanel'
@@ -490,10 +491,11 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
 
   return (
     <div className="w-full">
-      <div className="flex flex-col lg:flex-row gap-8 lg:items-start">
+      {/* xl (1280px)+: wallet + main + job path. Below xl: full-width main + FAB modals — avoids iPad portrait (~1024px) squeezed between two 320px rails */}
+      <div className="flex flex-col xl:flex-row gap-8 xl:items-start">
         {data.company && (
           <aside
-            className={`hidden lg:block w-80 shrink-0 self-start sticky top-24 rounded-2xl border shadow-sm backdrop-blur-sm p-4 ${
+            className={`hidden xl:block w-80 shrink-0 self-start sticky top-24 rounded-2xl border shadow-sm backdrop-blur-sm p-4 ${
               theme === 'dark'
                 ? 'border-gray-700 bg-gray-900/90'
                 : 'border-gray-200 bg-white/90'
@@ -696,7 +698,6 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             onAvaAutoWelcomeSynced={() =>
               setData((prev) => (prev ? { ...prev, avaAutoWelcomeEmployerDone: true } : null))
             }
-            desktopJourneyScrollTargetId='employer-hub-job-path-sidebar'
           />
         </div>
       )}
@@ -913,28 +914,42 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             type="button"
             variant="primary"
             onClick={() => setCompanyWalletModalOpen(true)}
-            className="lg:hidden fixed z-30 bottom-20 left-4 rounded-full shadow-lg !py-2.5 !px-4 text-sm"
+            className={cn(
+              'xl:hidden fixed z-30 top-1/2 -translate-y-1/2',
+              'left-[max(0px,env(safe-area-inset-left,0px))]',
+              'h-[min(60vh,20rem)] w-11 min-h-[11rem] max-h-[320px]',
+              'rounded-none rounded-r-2xl border border-l-0 border-gray-300/40 dark:border-gray-600/50',
+              'shadow-lg !p-0 touch-manipulation active:opacity-90',
+            )}
             aria-label="Open company wallet"
           >
-            <Wallet className="w-4 h-4 shrink-0" />
-            Company wallet
+            <span className="flex items-center gap-2 -rotate-90 whitespace-nowrap">
+              <Wallet className="h-4 w-4 shrink-0" aria-hidden />
+              <span className="text-[11px] font-bold tracking-wide">Company wallet</span>
+            </span>
           </Button>
         </>
       )}
 
-      <button
-        type='button'
+      <Button
+        type="button"
+        variant="primary"
         onClick={() => openJobPathGuide()}
-        className={`lg:hidden fixed z-30 flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold shadow-lg bottom-20 right-4 ${
-          theme === 'dark'
-            ? 'bg-teal-600 text-white hover:bg-teal-500'
-            : 'bg-teal-600 text-white hover:bg-teal-700'
-        }`}
-        aria-label='Open job path'
+        className={cn(
+          'xl:hidden fixed z-30 top-1/2 -translate-y-1/2',
+          'right-[max(0px,env(safe-area-inset-right,0px))]',
+          'h-[min(60vh,20rem)] w-11 min-h-[11rem] max-h-[320px]',
+          'rounded-none rounded-l-2xl border border-r-0 border-gray-300/40 dark:border-gray-600/50',
+          'shadow-lg !p-0 touch-manipulation active:opacity-90',
+          '!bg-teal-600 hover:!bg-teal-500 dark:!bg-teal-600 dark:hover:!bg-teal-500 !text-white',
+        )}
+        aria-label="Open job path"
       >
-        <Compass className='w-4 h-4' />
-        Job path
-      </button>
+        <span className="flex items-center gap-2 rotate-90 whitespace-nowrap">
+          <Compass className="h-4 w-4 shrink-0" aria-hidden />
+          <span className="text-[11px] font-bold tracking-wide">Job path</span>
+        </span>
+      </Button>
     </div>
   )
 }
