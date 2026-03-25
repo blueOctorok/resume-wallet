@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useCallback, useState } from 'react'
-import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, ShieldCheck, ChevronLeft, ChevronRight, FileText, ClipboardCheck, Car, RefreshCw, Trash2, Search, Globe, Github, Compass, Sparkles } from 'lucide-react'
+import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, ShieldCheck, ChevronLeft, ChevronRight, FileText, ClipboardCheck, Car, RefreshCw, Trash2, Globe, Github, Compass, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore, useJourneyStore } from '@/stores'
@@ -668,53 +668,6 @@ function HubProfileHeader() {
           </div>
         </div>
       </div>
-    </div>
-  )
-}
-
-function FindJobsBanner() {
-  const { theme } = useTheme()
-  const isDark = theme === 'dark'
-  const setCurrentPage = useUIStore((s) => s.setCurrentPage)
-
-  return (
-    <div className={cn(
-      'rounded-2xl border p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4',
-      isDark
-        ? 'bg-gradient-to-r from-sky-500/10 via-gray-800/50 to-gray-800/50 border-sky-500/20'
-        : 'bg-gradient-to-r from-sky-50 via-white/70 to-white/70 border-sky-200/60',
-    )}>
-      <div className='flex items-center gap-3'>
-        <div className={cn(
-          'w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0',
-          isDark ? 'bg-sky-500/20' : 'bg-sky-100'
-        )}>
-          <Search className={cn('w-5 h-5', isDark ? 'text-sky-400' : 'text-sky-600')} />
-        </div>
-        <div>
-          <p className={cn('text-sm font-bold', isDark ? 'text-white' : 'text-slate-800')}>
-            Find Jobs
-          </p>
-          <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-slate-600')}>
-            Browse listings and set AI alerts below — we notify you when AvA spots a strong new match
-          </p>
-        </div>
-      </div>
-
-      <Button
-        variant='primary'
-        size='sm'
-        className={cn(
-          'flex items-center gap-1.5 sm:flex-shrink-0',
-          isDark
-            ? 'bg-sky-500 hover:bg-sky-400 text-white'
-            : 'bg-sky-600 hover:bg-sky-500 text-white',
-        )}
-        onClick={() => setCurrentPage('jobs')}
-      >
-        <Search className='w-3.5 h-3.5' />
-        Browse Jobs
-      </Button>
     </div>
   )
 }
@@ -1631,7 +1584,6 @@ export default function CandidateHub() {
           </div>
             </div>
 
-            <FindJobsBanner />
             <div className='mt-4'>
               <JobAlertsHubSection />
             </div>

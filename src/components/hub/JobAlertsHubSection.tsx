@@ -1,9 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Bell, Pencil, Trash2, Loader2 } from 'lucide-react'
+import { Bell, Pencil, Trash2, Loader2, Search } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useAuthStore } from '@/stores'
+import { useAuthStore, useUIStore } from '@/stores'
 import { cn } from '@/lib/utils'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -29,6 +29,7 @@ export default function JobAlertsHubSection() {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const walletAddress = useAuthStore((s) => s.walletAddress)
+  const setCurrentPage = useUIStore((s) => s.setCurrentPage)
 
   const [preferences, setPreferences] = useState<JobAlertPreferenceRow[]>([])
   const [maxAlerts, setMaxAlerts] = useState(JOB_ALERTS_MAX_FREE)
@@ -220,8 +221,9 @@ export default function JobAlertsHubSection() {
                 AI job alerts
               </h3>
               <p className={cn('text-xs mt-1 max-w-xl', isDark ? 'text-gray-400' : 'text-slate-600')}>
-                Once a day we search Adzuna with your terms, score new listings against your hub profile
-                with AvA (Haiku), and notify you in-app for strong matches. Same job is never pinged twice.
+                Use <span className='font-medium text-slate-700 dark:text-gray-300'>Browse jobs</span> for
+                StormChain + external listings and recommendations. Save alerts here — we scan daily, score
+                new matches with AvA, and notify in-app. Same job is never pinged twice.
               </p>
               <p className={cn('text-xs mt-2', isDark ? 'text-gray-500' : 'text-slate-500')}>
                 {activeCount} active · {preferences.length}/{maxAlerts} saved
@@ -234,15 +236,31 @@ export default function JobAlertsHubSection() {
               </p>
             </div>
           </div>
-          <Button
-            variant='primary'
-            size='sm'
-            className='shrink-0 bg-sky-600 hover:bg-sky-500 dark:bg-sky-500 dark:hover:bg-sky-400 text-white'
-            disabled={atCap}
-            onClick={openCreate}
-          >
-            Add alert
-          </Button>
+          <div className='flex flex-wrap gap-2 shrink-0 w-full sm:w-auto sm:justify-end'>
+            <Button
+              variant='secondary'
+              size='sm'
+              className='flex-1 sm:flex-initial min-w-0'
+              onClick={() => setCurrentPage('jobs')}
+            >
+              <Search className='w-3.5 h-3.5 shrink-0' />
+              Browse jobs
+            </Button>
+            <Button
+              variant='primary'
+              size='sm'
+              className={cn(
+                'flex-1 sm:flex-initial min-w-0',
+                // High contrast: avoid light sage + white (illegible); solid sky / dark text in dark mode
+                'bg-sky-800 hover:bg-sky-700 text-white',
+                'dark:bg-sky-300 dark:hover:bg-sky-200 dark:text-gray-900',
+              )}
+              disabled={atCap}
+              onClick={openCreate}
+            >
+              Add alert
+            </Button>
+          </div>
         </div>
 
         {error && (

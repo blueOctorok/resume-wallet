@@ -2,6 +2,7 @@ import { useInstalledBlocks, useHubOnboarding } from '@/stores/hub-blocks-store'
 import { useDriverHubStore } from '@/stores/driver-hub-store'
 import { useAuthStore } from '@/stores'
 import type { HubContext, EmployerHubContext, BlockContext } from '@/lib/ava-context'
+import type { AvaJobSuggestion } from '@/lib/ava-job-suggestions'
 import type { AvaAutoWelcomeMode } from '@/lib/ava-auto-welcome'
 import type { AvaConversationTurn } from '@/lib/ava-conversation'
 
@@ -12,6 +13,8 @@ export type { EmployerHubContext } from '@/lib/ava-context'
 export interface ChatMessage {
   role: 'user' | 'ava'
   text: string
+  /** External jobs AvA surfaced this turn (View listing + Apply with Career Card). */
+  jobSuggestions?: AvaJobSuggestion[]
 }
 
 export interface AvaUsageInfo {
@@ -34,6 +37,7 @@ export class OutOfCreditsError extends Error {
 export interface AvaResponse {
   reply: string
   usage: AvaUsageInfo
+  jobSuggestions?: AvaJobSuggestion[]
 }
 
 /**
@@ -181,6 +185,9 @@ export async function sendToAva(payload: SendToAvaPayload): Promise<AvaResponse>
   return {
     reply: data.reply,
     usage: data.usage ?? { dailyRemaining: 10, credits: 0, totalMessages: 0, model: 'sonnet' },
+    ...(Array.isArray(data.jobSuggestions) && data.jobSuggestions.length > 0
+      ? { jobSuggestions: data.jobSuggestions as AvaJobSuggestion[] }
+      : {}),
   }
 }
 

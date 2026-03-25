@@ -20,6 +20,8 @@ import {
   markAvaAutoWelcomeComplete,
 } from '@/lib/ava-auto-welcome'
 import { buildAnthropicMessagesFromHistory } from '@/lib/ava-conversation'
+import { runCandidateAvaChatWithJobTools } from '@/lib/ava-candidate-chat-with-tools'
+import type { AvaJobSuggestion } from '@/lib/ava-job-suggestions'
 
 const MODEL_SONNET = 'claude-sonnet-4-6'
 const MODEL_HAIKU = 'claude-haiku-4-5-20250414'
@@ -203,16 +205,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing or invalid message' }, { status: 400 })
     }
 
-    const response = await anthropic.messages.create({
-      model,
-      max_tokens: MAX_TOKENS,
-      system: systemPrompt,
-      messages: messagesPayload,
-    })
+    const useJobTools = !isEmployerChat && !autoWelcome
 
-    const reply = response.content[0].type === 'text'
-      ? response.content[0].text
-      : ''
+    let reply: string
+    let jobSuggestions: AvaJobSuggestion[] | undefined
+
+    if (useJobTools) {
+      const out = await runCandidateAvaChatWithJobTools({
+        anthropic,
+        systemPrompt,
+        conversationHistory,
+        latestUserMessage: message.trim(),
+        supabase,
+        userId: user.id,
+      })
+      reply = out.reply
+      jobSuggestions = out.jobSuggestions.length ? out.jobSuggestions : undefined
+    } else {
+      const response = await anthropic.messages.create({
+        model,
+        max_tokens: MAX_TOKENS,
+        system: systemPrompt,
+        messages: messagesPayload,
+      })
+
+      reply =
+        response.content[0].type === 'text'
+          ? response.content[0].text
+          : ''
+    }
 
     // Record usage AFTER successful response (skip for unlimited)
     if (!isUnlimited && usageCheck) {
@@ -232,6 +253,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         reply,
+        ...(jobSuggestions ? { jobSuggestions } : {}),
         usage: {
           dailyRemaining: 999,
           credits: 0,
@@ -247,6 +269,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       reply,
+      ...(jobSuggestions ? { jobSuggestions } : {}),
       usage: {
         dailyRemaining: updatedCheck.dailyRemaining,
         credits: updatedCheck.credits,

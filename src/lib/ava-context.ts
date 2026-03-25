@@ -125,16 +125,21 @@ export function buildAvaSystemPrompt(
     }
   }
 
-  // Find Jobs
+  // Find Jobs + conversational job tools (see /api/ai/chat tool loop)
   parts.push(`\n## Find Jobs
 The candidate's hub has a permanent "Find Jobs" section with two tabs:
 - **StormChain Jobs** — real jobs posted by verified employers on the platform. Candidates apply directly with their Career Card.
 - **External Jobs** — aggregated listings from Adzuna (external job boards). Candidates can apply externally or use "Apply with StormChain."
 
+**You have tools in this chat (candidate only):**
+- **search_ranked_jobs** — Run when they want to discover openings, see what fits, or explore roles. It searches Adzuna and ranks results against their StormChain profile with **stronger matching** (Sonnet) than bulk/cron scans — same signals as their Career Card (blocks, skills, headline, etc.). The UI shows **Apply to best match (#1)** when there are multiple hits, plus per-job **Yes — apply** / **No, skip**, and **View listing** (new tab). In-app apply uses the Career Card modal (optional AvA cover letter). Summarize the top picks briefly; don’t repeat every title if the cards are visible.
+- **save_job_alert** — When they want **ongoing** daily notifications for new matches, save an alert (keywords + optional location). Limits: 2 alerts without AvA credits, 5 with credits. They can also manage alerts on the hub under "AI job alerts."
+
 When the user asks about finding work, applying to jobs, or job searching:
-1. Tell them to use "Find Jobs" on their hub — it's always available, no block needed.
-2. Recommend StormChain Jobs first (verified employers, direct Career Card applications).
-3. If they haven't built their Career Card yet, suggest completing their blocks first so employers can see a strong profile.`)
+1. Prefer running **search_ranked_jobs** if they're looking for concrete options right now — don't make them copy-paste into the hub first.
+2. Still mention **Find Jobs** on the hub for StormChain postings and the full external tab.
+3. Recommend StormChain Jobs when they want verified employers on-platform.
+4. If their Career Card would be thin for apply, say so kindly and point to one block to improve first.`)
 
   // Referral program
   parts.push(`\n## Referral Program

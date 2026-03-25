@@ -6,8 +6,9 @@
  */
 
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Bot, Coins, Loader2, Send, Sparkles } from 'lucide-react'
+import { Bot, Coins, ExternalLink, Loader2, Send, Sparkles } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { cn } from '@/lib/utils'
@@ -19,7 +20,130 @@ import {
   type AvaUsageInfo,
   type EmployerHubContext,
 } from '@/lib/ava-chat'
+import type { AvaJobSuggestion } from '@/lib/ava-job-suggestions'
 import AvaCreditModal from '@/components/AvaCreditModal'
+import Button from '@/components/ui/Button'
+import Card from '@/components/ui/Card'
+
+const ApplyWithStormChainModal = dynamic(() => import('@/components/ApplyWithStormChainModal'), {
+  ssr: false,
+})
+
+/** Shape expected by ApplyWithStormChainModal `job` prop */
+function toApplyModalJob(j: AvaJobSuggestion) {
+  return {
+    id: j.id,
+    title: j.title,
+    company: j.company,
+    location: j.location,
+    redirect_url: j.redirectUrl ?? undefined,
+    salary: j.salary ?? undefined,
+    is_external: true as const,
+  }
+}
+
+/** Ranked job cards under an AvA turn — Yes/No + apply-to-#1 shortcut; skips are per-message local state */
+function AvaJobSuggestionCards(props: {
+  messageIndex: number
+  jobs: AvaJobSuggestion[]
+  dismissed: Record<string, true>
+  onDismiss: (messageIndex: number, jobId: string) => void
+  onApply: (job: AvaJobSuggestion) => void
+  isDark: boolean
+}) {
+  const { messageIndex, jobs, dismissed, onDismiss, onApply, isDark } = props
+  const visible = jobs.filter((j) => !dismissed[`${messageIndex}-${j.id}`])
+
+  if (visible.length === 0) {
+    return (
+      <p
+        className={cn(
+          'text-xs rounded-xl px-3 py-2 border border-dashed',
+          isDark ? 'text-gray-500 border-gray-600 bg-gray-800/40' : 'text-slate-500 border-slate-200 bg-slate-50',
+        )}
+      >
+        You skipped these. Ask AvA for another search or tweak what you&apos;re looking for.
+      </p>
+    )
+  }
+
+  const topTitle =
+    visible[0].title.length > 44 ? `${visible[0].title.slice(0, 44)}…` : visible[0].title
+
+  return (
+    <div className='space-y-2'>
+      {visible.length >= 2 && (
+        <Button
+          variant='primary'
+          size='sm'
+          className='w-full text-xs'
+          onClick={() => onApply(visible[0])}
+        >
+          Apply to best match (#1 — {topTitle})
+        </Button>
+      )}
+      {visible.map((job) => (
+        <Card
+          key={job.id}
+          variant='elevated'
+          className={cn(
+            'p-3 border',
+            isDark ? 'border-gray-700 bg-gray-800/80' : 'border-gray-200 bg-white',
+          )}
+        >
+          <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+            {job.title}
+          </p>
+          <p className={cn('text-xs mt-0.5', isDark ? 'text-gray-400' : 'text-slate-600')}>
+            {job.company} · {job.location}
+          </p>
+          {job.salary && (
+            <p className={cn('text-[11px] mt-1', isDark ? 'text-gray-500' : 'text-slate-500')}>
+              {job.salary}
+            </p>
+          )}
+          <p
+            className={cn('text-[11px] mt-1.5 italic', isDark ? 'text-sky-300/90' : 'text-sky-800')}
+          >
+            Match {job.score}% — {job.reason}
+          </p>
+          <p
+            className={cn('text-[10px] mt-2 font-medium', isDark ? 'text-gray-500' : 'text-slate-500')}
+          >
+            Want to apply with your Career Card?
+          </p>
+          <div className='flex flex-wrap gap-2 mt-1.5'>
+            <Button variant='primary' size='sm' className='text-xs' onClick={() => onApply(job)}>
+              Yes — apply
+            </Button>
+            <Button
+              variant='secondary'
+              size='sm'
+              className='text-xs'
+              onClick={() => onDismiss(messageIndex, job.id)}
+            >
+              No, skip
+            </Button>
+            {job.redirectUrl ? (
+              <Button
+                variant='ghost'
+                size='sm'
+                className={cn(
+                  'text-xs',
+                  isDark ? 'text-sky-400 hover:text-sky-300' : 'text-sky-700 hover:text-sky-800',
+                )}
+                onClick={() => window.open(job.redirectUrl!, '_blank', 'noopener,noreferrer')}
+              >
+                <ExternalLink className='w-3.5 h-3.5 mr-1' />
+                View listing
+              </Button>
+            ) : null}
+          </div>
+        </Card>
+      ))}
+    </div>
+  )
+}
 
 export type AvaChatPanelProps =
   | {
@@ -52,6 +176,15 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
   const [usage, setUsage] = useState<AvaUsageInfo | null>(null)
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
+  /** External job chosen from AvA-ranked cards — opens shared apply modal */
+  const [applyJob, setApplyJob] = useState<ReturnType<typeof toApplyModalJob> | null>(null)
+  /** Per-message job dismissals (No, skip) — key `${msgIndex}-${jobId}` */
+  const [dismissedJobKeys, setDismissedJobKeys] = useState<Record<string, true>>({})
+
+  const dismissJobSuggestion = useCallback((messageIndex: number, jobId: string) => {
+    const k = `${messageIndex}-${jobId}`
+    setDismissedJobKeys((prev) => ({ ...prev, [k]: true }))
+  }, [])
 
   useEffect(() => {
     if (!walletAddress) return
@@ -104,7 +237,14 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
               walletAddress,
               conversationHistory,
             })
-      setMessages((prev) => [...prev, { role: 'ava', text: res.reply }])
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'ava',
+          text: res.reply,
+          ...(res.jobSuggestions?.length ? { jobSuggestions: res.jobSuggestions } : {}),
+        },
+      ])
       setUsage(res.usage)
     } catch (err) {
       if (err instanceof OutOfCreditsError) {
@@ -122,7 +262,12 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
 
   const suggestedPrompts =
     props.mode === 'candidate'
-      ? ['What blocks should I add?', 'What is my Career Card?', 'What should I do next?']
+      ? [
+          'Find jobs that fit my profile',
+          'What blocks should I add?',
+          'What is my Career Card?',
+          'What should I do next?',
+        ]
       : ['How does the hiring pipeline work?', 'How should I use Find Talent?', 'What should I do next?']
 
   const usageBadge = usage
@@ -160,16 +305,36 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
                   )}
                   <div
                     className={cn(
-                      'max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap',
-                      msg.role === 'ava'
-                        ? cn(
-                            'rounded-tl-sm',
-                            isDark ? 'bg-gray-800 text-gray-200' : 'bg-slate-200/80 text-slate-800',
-                          )
-                        : 'bg-brand-mint text-gray-900 rounded-tr-sm',
+                      'flex flex-col gap-2',
+                      msg.role === 'user' ? 'max-w-[85%]' : 'max-w-[min(100%,24rem)]',
                     )}
                   >
-                    {msg.text}
+                    <div
+                      className={cn(
+                        'rounded-2xl px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap',
+                        msg.role === 'ava'
+                          ? cn(
+                              'rounded-tl-sm',
+                              isDark ? 'bg-gray-800 text-gray-200' : 'bg-slate-200/80 text-slate-800',
+                            )
+                          : 'bg-brand-mint text-gray-900 rounded-tr-sm',
+                      )}
+                    >
+                      {msg.text}
+                    </div>
+                    {msg.role === 'ava' &&
+                      msg.jobSuggestions &&
+                      msg.jobSuggestions.length > 0 &&
+                      props.mode === 'candidate' && (
+                        <AvaJobSuggestionCards
+                          messageIndex={i}
+                          jobs={msg.jobSuggestions}
+                          dismissed={dismissedJobKeys}
+                          onDismiss={dismissJobSuggestion}
+                          onApply={(job) => setApplyJob(toApplyModalJob(job))}
+                          isDark={isDark}
+                        />
+                      )}
                   </div>
                 </div>
               ))}
@@ -281,7 +446,7 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
                     )}
                   >
                     {props.mode === 'candidate'
-                      ? 'She knows your blocks and progress — type or tap a suggestion.'
+                      ? 'She knows your hub — find ranked jobs in chat, open listings in a new tab, apply with your Career Card here.'
                       : 'She knows your company and pipeline — type or tap a suggestion.'}
                   </p>
                 </div>
@@ -400,6 +565,15 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
             setOutOfCredits(false)
             setShowCreditModal(false)
           }}
+        />
+      )}
+
+      {props.mode === 'candidate' && (
+        <ApplyWithStormChainModal
+          isOpen={applyJob != null}
+          onClose={() => setApplyJob(null)}
+          job={applyJob}
+          userAddress={walletAddress}
         />
       )}
     </div>
