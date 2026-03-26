@@ -4,6 +4,27 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Hub career card — QR opens share link + QR modal** (March 2026)
+
+- **Mini hub card:** [`MiniCareerCard`](src/components/hub/MiniCareerCard.tsx) — **QR & link** opens [`CareerCardShareModal`](src/components/hub/CareerCardShareModal.tsx) (public URL `/card/[token]`, copy, QR image, preview, regenerate). **Full card** still navigates to the in-app career card page.
+- **Shared modal:** [`ShareProfileCard`](src/components/ShareProfileCard.tsx) reuses the same component so share UX stays one place.
+- **Save QR:** QR is generated with the **`qrcode`** package as a **data URL** so **Save QR** triggers a real download; cross-origin `api.qrserver.com` links ignore the `download` attribute and only open a tab.
+
+---
+
+## **AvA chat — expand layout** (March 2026)
+
+- [`AvaChatPanel`](src/components/ava/AvaChatPanel.tsx): after the first message, **top-right** expand/shrink toggles taller thread (`max-h` ~78vh), wider AvA column, **2-column job cards** on `md+`, full-width action stacks in cells; **Esc** shrinks; subtle ring when expanded.
+- **Persistence:** [`ava-chat-persistence.ts`](src/lib/ava-chat-persistence.ts) — thread (incl. job cards) saved to **localStorage** per wallet + candidate/employer so **refresh does not clear** AvA. Up to 120 messages; empty thread removes the key.
+
+---
+
+## **Anthropic Haiku model ID** (March 2026)
+
+- **`claude-haiku-4-5-20250414`** was retired from the API (404). Centralized IDs in [`anthropic-models.ts`](src/lib/anthropic-models.ts) — **`claude-haiku-4-5-20251001`** per [Anthropic models docs](https://docs.anthropic.com/en/docs/about-claude/models). Used by chat, job-match, cover-letter, AvA job tools.
+
+---
+
 ## **Phase 3 — AI job alerts (push)** (March 2026)
 
 - **DB:** [`062_job_alert_preferences.sql`](supabase/migrations/062_job_alert_preferences.sql) — `job_alert_preferences` (keywords, optional location / label / `salary_min`, `min_match_score`, `is_active`, `last_scan_at`) and `job_alert_sent` dedupe `(user_id, external_job_id)`. RLS enabled with no policies (service role / admin API only).

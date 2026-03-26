@@ -1,7 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
 
-const MODEL_SONNET = 'claude-sonnet-4-6'
-const MODEL_HAIKU = 'claude-haiku-4-5-20250414'
+import { ANTHROPIC_MODEL_HAIKU, ANTHROPIC_MODEL_SONNET } from '@/lib/anthropic-models'
+
+const MODEL_SONNET = ANTHROPIC_MODEL_SONNET
+const MODEL_HAIKU = ANTHROPIC_MODEL_HAIKU
 
 export function stripHtmlToText(html: string, maxLen: number): string {
   const t = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()

@@ -8,7 +8,7 @@
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Bot, Coins, ExternalLink, Loader2, Send, Sparkles } from 'lucide-react'
+import { Bot, Coins, ExternalLink, Loader2, Maximize2, Minimize2, Send, Sparkles } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { cn } from '@/lib/utils'
@@ -20,6 +20,7 @@ import {
   type AvaUsageInfo,
   type EmployerHubContext,
 } from '@/lib/ava-chat'
+import { loadAvaChatMessages, saveAvaChatMessages } from '@/lib/ava-chat-persistence'
 import type { AvaJobSuggestion } from '@/lib/ava-job-suggestions'
 import AvaCreditModal from '@/components/AvaCreditModal'
 import Button from '@/components/ui/Button'
@@ -50,8 +51,10 @@ function AvaJobSuggestionCards(props: {
   onDismiss: (messageIndex: number, jobId: string) => void
   onApply: (job: AvaJobSuggestion) => void
   isDark: boolean
+  /** Wider layout: 2-col grid for listings on md+ */
+  expandedLayout: boolean
 }) {
-  const { messageIndex, jobs, dismissed, onDismiss, onApply, isDark } = props
+  const { messageIndex, jobs, dismissed, onDismiss, onApply, isDark, expandedLayout } = props
   const visible = jobs.filter((j) => !dismissed[`${messageIndex}-${j.id}`])
 
   if (visible.length === 0) {
@@ -70,13 +73,19 @@ function AvaJobSuggestionCards(props: {
   const topTitle =
     visible[0].title.length > 44 ? `${visible[0].title.slice(0, 44)}…` : visible[0].title
 
+  const useGrid = expandedLayout && visible.length >= 2
+
   return (
-    <div className='space-y-2'>
+    <div
+      className={cn(
+        useGrid ? 'grid grid-cols-1 md:grid-cols-2 gap-3' : 'space-y-2',
+      )}
+    >
       {visible.length >= 2 && (
         <Button
           variant='primary'
           size='sm'
-          className='w-full text-xs'
+          className={cn('text-xs', useGrid ? 'md:col-span-2 w-full' : 'w-full')}
           onClick={() => onApply(visible[0])}
         >
           Apply to best match (#1 — {topTitle})
@@ -87,8 +96,9 @@ function AvaJobSuggestionCards(props: {
           key={job.id}
           variant='elevated'
           className={cn(
-            'p-3 border',
+            'p-3 border flex flex-col',
             isDark ? 'border-gray-700 bg-gray-800/80' : 'border-gray-200 bg-white',
+            useGrid && 'min-h-0',
           )}
         >
           <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
@@ -112,14 +122,19 @@ function AvaJobSuggestionCards(props: {
           >
             Want to apply with your Career Card?
           </p>
-          <div className='flex flex-wrap gap-2 mt-1.5'>
-            <Button variant='primary' size='sm' className='text-xs' onClick={() => onApply(job)}>
+          <div
+            className={cn(
+              'flex flex-wrap gap-2 mt-auto pt-2',
+              expandedLayout && 'flex-col sm:flex-row sm:flex-wrap',
+            )}
+          >
+            <Button variant='primary' size='sm' className='text-xs w-full sm:w-auto' onClick={() => onApply(job)}>
               Yes — apply
             </Button>
             <Button
               variant='secondary'
               size='sm'
-              className='text-xs'
+              className='text-xs w-full sm:w-auto'
               onClick={() => onDismiss(messageIndex, job.id)}
             >
               No, skip
@@ -129,7 +144,7 @@ function AvaJobSuggestionCards(props: {
                 variant='ghost'
                 size='sm'
                 className={cn(
-                  'text-xs',
+                  'text-xs w-full sm:w-auto justify-center',
                   isDark ? 'text-sky-400 hover:text-sky-300' : 'text-sky-700 hover:text-sky-800',
                 )}
                 onClick={() => window.open(job.redirectUrl!, '_blank', 'noopener,noreferrer')}
@@ -167,8 +182,11 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
   const isDark = theme === 'dark'
   const openAvAContextModal = useHubBlocksStore((s) => s.openAvAContextModal)
   const walletAddress = props.walletAddress
+  const persistenceMode = props.mode
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  /** Avoid writing [] to storage before we have loaded prior thread */
+  const [persistReady, setPersistReady] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [chatError, setChatError] = useState<string | null>(null)
   const [outOfCredits, setOutOfCredits] = useState(false)
@@ -180,11 +198,29 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
   const [applyJob, setApplyJob] = useState<ReturnType<typeof toApplyModalJob> | null>(null)
   /** Per-message job dismissals (No, skip) — key `${msgIndex}-${jobId}` */
   const [dismissedJobKeys, setDismissedJobKeys] = useState<Record<string, true>>({})
+  /** Larger thread + wider bubbles + 2-col job cards (candidate) */
+  const [chatExpanded, setChatExpanded] = useState(false)
 
   const dismissJobSuggestion = useCallback((messageIndex: number, jobId: string) => {
     const k = `${messageIndex}-${jobId}`
     setDismissedJobKeys((prev) => ({ ...prev, [k]: true }))
   }, [])
+
+  // Restore thread after refresh (per wallet + candidate vs employer)
+  useEffect(() => {
+    if (!walletAddress) {
+      setMessages([])
+      setPersistReady(true)
+      return
+    }
+    setMessages(loadAvaChatMessages(persistenceMode, walletAddress))
+    setPersistReady(true)
+  }, [walletAddress, persistenceMode])
+
+  useEffect(() => {
+    if (!persistReady || !walletAddress) return
+    saveAvaChatMessages(persistenceMode, walletAddress, messages)
+  }, [messages, walletAddress, persistenceMode, persistReady])
 
   useEffect(() => {
     if (!walletAddress) return
@@ -207,7 +243,16 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [messages, isLoading])
+  }, [messages, isLoading, chatExpanded])
+
+  useEffect(() => {
+    if (!chatExpanded) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setChatExpanded(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [chatExpanded])
 
   const handleSend = useCallback(async (text?: string) => {
     const trimmed = (text ?? input).trim()
@@ -279,18 +324,53 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
     : null
 
   return (
-    <div className='ava-glow-border'>
+    <div
+      className={cn(
+        'ava-glow-border transition-[box-shadow] duration-200',
+        chatExpanded && 'ring-2 ring-teal-500/35 dark:ring-teal-400/30 rounded-[16px]',
+      )}
+    >
       <div
         className={cn(
-          'rounded-[14px] flex flex-col overflow-hidden',
+          'rounded-[14px] flex flex-col overflow-hidden relative',
           isDark ? 'bg-gray-900' : 'bg-slate-100/95',
         )}
       >
+        {hasMessages && (
+          <button
+            type='button'
+            onClick={() => setChatExpanded((e) => !e)}
+            title={
+              chatExpanded
+                ? 'Shrink chat (Esc)'
+                : 'Expand chat — taller thread & side-by-side job cards'
+            }
+            aria-expanded={chatExpanded}
+            aria-label={chatExpanded ? 'Shrink AvA chat' : 'Expand AvA chat'}
+            className={cn(
+              'absolute top-2 right-2 z-20 p-2 rounded-xl border transition-colors',
+              isDark
+                ? 'border-gray-600 bg-gray-800/95 text-gray-300 hover:bg-gray-700 hover:text-white'
+                : 'border-slate-200 bg-white/95 text-slate-600 hover:bg-slate-50 hover:text-slate-900 shadow-sm',
+            )}
+          >
+            {chatExpanded ? (
+              <Minimize2 className='w-4 h-4' aria-hidden />
+            ) : (
+              <Maximize2 className='w-4 h-4' aria-hidden />
+            )}
+          </button>
+        )}
+
         {/* ── Thread (only visible after first message) ── */}
         {hasMessages && (
           <div
             ref={scrollRef}
-            className='px-5 pt-4 pb-2 overflow-y-auto max-h-[400px]'
+            className={cn(
+              'px-5 pb-2 overflow-y-auto scroll-smooth',
+              'pt-11',
+              chatExpanded ? 'max-h-[min(78vh,920px)]' : 'max-h-[400px]',
+            )}
           >
             <div className='space-y-3'>
               {messages.map((msg, i) => (
@@ -306,7 +386,11 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
                   <div
                     className={cn(
                       'flex flex-col gap-2',
-                      msg.role === 'user' ? 'max-w-[85%]' : 'max-w-[min(100%,24rem)]',
+                      msg.role === 'user'
+                        ? 'max-w-[85%]'
+                        : chatExpanded
+                          ? 'max-w-[min(100%,48rem)] w-full'
+                          : 'max-w-[min(100%,24rem)]',
                     )}
                   >
                     <div
@@ -333,6 +417,7 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
                           onDismiss={dismissJobSuggestion}
                           onApply={(job) => setApplyJob(toApplyModalJob(job))}
                           isDark={isDark}
+                          expandedLayout={chatExpanded}
                         />
                       )}
                   </div>
@@ -446,8 +531,8 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
                     )}
                   >
                     {props.mode === 'candidate'
-                      ? 'She knows your hub — find ranked jobs in chat, open listings in a new tab, apply with your Career Card here.'
-                      : 'She knows your company and pipeline — type or tap a suggestion.'}
+                      ? 'She knows your hub — find ranked jobs in chat, open listings in a new tab, apply with your Career Card here. After you start, use the corner expand icon for a taller thread and side-by-side job cards.'
+                      : 'She knows your company and pipeline — type or tap a suggestion. After you start, use the corner icon to expand the thread.'}
                   </p>
                 </div>
               </div>

@@ -2,22 +2,26 @@
 
 /**
  * Live preview of what employers see — name, headline, and installed block pills with status.
- * Full Career Card + QR live on the career-card page (CTAs here).
+ * Full card opens the in-app career card; QR opens share link + QR modal (public /card/[token]).
  */
 
+import { useState } from 'react'
 import { ExternalLink, QrCode } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
-import { useUIStore } from '@/stores'
+import { useUIStore, useAuthStore } from '@/stores'
 import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { useHubContext } from '@/lib/ava-chat'
 import type { PageType } from '@/stores/types'
 import Avatar from '@/components/ui/Avatar'
+import Button from '@/components/ui/Button'
+import CareerCardShareModal from '@/components/hub/CareerCardShareModal'
 
 export default function MiniCareerCard() {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
+  const walletAddress = useAuthStore((s) => s.walletAddress)
   const userProfile = useHubBlocksStore((s) => s.userProfile)
   const onboarding = useHubBlocksStore((s) => s.onboarding)
   const hubCtx = useHubContext()
@@ -28,6 +32,7 @@ export default function MiniCareerCard() {
   const headline = userProfile?.headline || onboarding?.occupation || 'Add a headline'
 
   const goCareerCard = () => setCurrentPage('career-card' as PageType)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
 
   const statusStyles = {
     complete: 'bg-green-500/15 text-green-700 dark:text-green-300 border-green-500/30',
@@ -84,31 +89,28 @@ export default function MiniCareerCard() {
       )}
 
       <div className='flex flex-wrap gap-2 pt-0.5'>
-        <button
-          type='button'
-          onClick={goCareerCard}
-          className={cn(
-            'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors',
-            isDark ? 'bg-teal-600 text-white hover:bg-teal-500' : 'bg-teal-600 text-white hover:bg-teal-700',
-          )}
-        >
+        <Button variant='primary' size='sm' onClick={goCareerCard} className='text-[11px] px-2.5 py-1 h-auto'>
           <ExternalLink className='w-3 h-3' />
           Full card
-        </button>
-        <button
-          type='button'
-          onClick={goCareerCard}
-          className={cn(
-            'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors',
-            isDark
-              ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-              : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
-          )}
+        </Button>
+        <Button
+          variant='secondary'
+          size='sm'
+          onClick={() => setShareModalOpen(true)}
+          className='text-[11px] px-2.5 py-1 h-auto'
+          title='Share link and QR code'
         >
           <QrCode className='w-3 h-3' />
-          QR
-        </button>
+          QR & link
+        </Button>
       </div>
+
+      <CareerCardShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        walletAddress={walletAddress}
+        displayName={displayName === 'Your name' ? undefined : displayName}
+      />
     </div>
   )
 }

@@ -4,10 +4,6 @@ import { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   QrCode,
-  Download,
-  Copy,
-  Check,
-  RefreshCw,
   Settings,
   ExternalLink,
   Loader2,
@@ -16,8 +12,8 @@ import {
   ClipboardCheck,
   Car,
 } from 'lucide-react'
-import Modal, { ModalHeader } from '@/components/ui/Modal'
 import Avatar from './ui/Avatar'
+import CareerCardShareModal from '@/components/hub/CareerCardShareModal'
 
 interface ShareSettings {
   showResume: boolean
@@ -57,10 +53,8 @@ export default function ShareProfileCard({
   const { theme } = useTheme()
   const address = walletAddress ?? userAddress
   const shareApiUrl = '/api/career-card/share'
-  const profileBasePath = '/card'
   const careerCardApiUrl = '/api/career-card'
 
-  const [shareToken, setShareToken] = useState<string | null>(null)
   const [settings, setSettings] = useState<ShareSettings>({
     showResume: true,
     showDotApp: true,
@@ -72,8 +66,6 @@ export default function ShareProfileCard({
   })
   const [viewCount, setViewCount] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [generating, setGenerating] = useState(false)
-  const [copied, setCopied] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [savingSettings, setSavingSettings] = useState(false)
   const [showQrModal, setShowQrModal] = useState(false)
@@ -100,7 +92,6 @@ export default function ShareProfileCard({
       })
       if (res.ok) {
         const data = await res.json()
-        if (data.shareToken) setShareToken(data.shareToken)
         if (data.shareSettings) setSettings(data.shareSettings)
         setViewCount(data.shareViewsCount || 0)
       }
@@ -135,24 +126,6 @@ export default function ShareProfileCard({
     finally { setPreviewLoading(false) }
   }
 
-  const generateToken = async (regenerate = false) => {
-    if (!address) return
-    try {
-      setGenerating(true)
-      const res = await fetch(shareApiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-wallet-address': address },
-        body: JSON.stringify({ regenerate }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setShareToken(data.shareToken)
-        if (regenerate) setViewCount(0)
-      }
-    } catch { /* non-critical */ }
-    finally { setGenerating(false) }
-  }
-
   const updateSettings = async (newSettings: ShareSettings) => {
     if (!address) return
     try {
@@ -165,30 +138,6 @@ export default function ShareProfileCard({
       if (res.ok) setSettings(newSettings)
     } catch { /* non-critical */ }
     finally { setSavingSettings(false) }
-  }
-
-  const profileUrl = shareToken
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}${profileBasePath}/${shareToken}`
-    : ''
-
-  const getQRUrl = () => {
-    if (!shareToken || !profileUrl) return ''
-    const encoded = encodeURIComponent(profileUrl)
-    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encoded}&bgcolor=1a1a2e&color=5eead4&margin=10`
-  }
-
-  const copyLink = () => {
-    if (!profileUrl) return
-    navigator.clipboard.writeText(profileUrl)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  const downloadQR = () => {
-    const link = document.createElement('a')
-    link.href = getQRUrl()
-    link.download = `career-card-${driverName?.replace(/\s+/g, '-').toLowerCase() || 'profile'}.png`
-    link.click()
   }
 
   const isDark = theme === 'dark'
@@ -352,11 +301,8 @@ export default function ShareProfileCard({
               View Career Card
             </button>
             <button
-              onClick={() => {
-                if (!shareToken) generateToken(false).then(() => setShowQrModal(true))
-                else setShowQrModal(true)
-              }}
-              title='Share via QR code'
+              onClick={() => setShowQrModal(true)}
+              title='Share link and QR code'
               className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                 isDark
                   ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
@@ -370,100 +316,13 @@ export default function ShareProfileCard({
         </div>
       </div>
 
-      {/* QR Code Modal */}
-      {showQrModal && (
-        <Modal onClose={() => setShowQrModal(false)} maxWidth="max-w-sm">
-          <ModalHeader title="Share Career Card" onClose={() => setShowQrModal(false)} />
-
-          <div className='p-5'>
-            {!shareToken ? (
-              <div className='text-center py-4'>
-                <button
-                  onClick={() => generateToken(false)}
-                  disabled={generating}
-                  className={`px-6 py-3 rounded-xl font-semibold ${
-                    isDark ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30' : 'bg-teal-50 text-teal-700 hover:bg-teal-100'
-                  } disabled:opacity-50`}
-                >
-                  {generating ? <Loader2 className='w-5 h-5 animate-spin mx-auto' /> : 'Generate QR Code'}
-                </button>
-              </div>
-            ) : (
-              <div className='text-center'>
-                {/* QR image */}
-                <div className={`inline-block p-4 rounded-2xl mb-4 ${isDark ? 'bg-gray-800' : 'bg-white shadow-lg'}`}>
-                  <img src={getQRUrl()} alt='Career Card QR Code' className='w-48 h-48 mx-auto' />
-                  {(preview?.name || driverName) && (
-                    <p className={`mt-2 font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {preview?.name || driverName}
-                    </p>
-                  )}
-                  <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                    Scan to view verified profile
-                  </p>
-                </div>
-
-                {/* Share link */}
-                <div className={`flex items-center gap-2 p-3 rounded-xl mb-4 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                  <input
-                    type='text'
-                    value={profileUrl}
-                    readOnly
-                    className={`flex-1 bg-transparent text-sm truncate ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
-                  />
-                  <button
-                    onClick={copyLink}
-                    className={`p-2 rounded-lg transition-colors ${
-                      copied ? 'bg-green-500/20 text-green-500'
-                      : isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-600'
-                    }`}
-                  >
-                    {copied ? <Check className='w-4 h-4' /> : <Copy className='w-4 h-4' />}
-                  </button>
-                </div>
-
-                {/* Quick actions */}
-                <div className='grid grid-cols-3 gap-2'>
-                  <button
-                    onClick={downloadQR}
-                    className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-colors ${
-                      isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                    }`}
-                  >
-                    <Download className='w-5 h-5' />
-                    <span className='text-xs'>Download</span>
-                  </button>
-                  <a
-                    href={profileUrl}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-colors ${
-                      isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                    }`}
-                  >
-                    <ExternalLink className='w-5 h-5' />
-                    <span className='text-xs'>Open</span>
-                  </a>
-                  <button
-                    onClick={() => generateToken(true)}
-                    disabled={generating}
-                    className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-colors ${
-                      isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                    } disabled:opacity-50`}
-                  >
-                    {generating ? <Loader2 className='w-5 h-5 animate-spin' /> : <RefreshCw className='w-5 h-5' />}
-                    <span className='text-xs'>Regenerate</span>
-                  </button>
-                </div>
-
-                <p className={`text-xs mt-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                  Show this QR at job fairs for instant credential sharing
-                </p>
-              </div>
-            )}
-          </div>
-        </Modal>
-      )}
+      <CareerCardShareModal
+        isOpen={showQrModal}
+        onClose={() => setShowQrModal(false)}
+        walletAddress={address ?? null}
+        displayName={preview?.name || driverName}
+        onShareUpdated={() => void fetchShareInfo()}
+      />
     </>
   )
 }

@@ -10,10 +10,11 @@ import { buildAnthropicMessagesFromHistory } from '@/lib/ava-conversation'
 import { AVA_JOB_CHAT_TOOLS, executeAvaJobChatTool } from '@/lib/ava-job-chat-tools'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { AvaJobSuggestion } from '@/lib/ava-job-suggestions'
+import { ANTHROPIC_MODEL_HAIKU, ANTHROPIC_MODEL_SONNET } from '@/lib/anthropic-models'
 
 const MAX_TOOL_ROUNDS = 6
-const MODEL_SONNET = 'claude-sonnet-4-6'
-const MODEL_HAIKU = 'claude-haiku-4-5-20250414'
+const MODEL_SONNET = ANTHROPIC_MODEL_SONNET
+const MODEL_HAIKU = ANTHROPIC_MODEL_HAIKU
 
 function extractTextFromContent(content: Anthropic.Messages.ContentBlock[]): string {
   const parts: string[] = []

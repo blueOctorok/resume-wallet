@@ -22,9 +22,10 @@ import {
 import { buildAnthropicMessagesFromHistory } from '@/lib/ava-conversation'
 import { runCandidateAvaChatWithJobTools } from '@/lib/ava-candidate-chat-with-tools'
 import type { AvaJobSuggestion } from '@/lib/ava-job-suggestions'
+import { ANTHROPIC_MODEL_HAIKU, ANTHROPIC_MODEL_SONNET } from '@/lib/anthropic-models'
 
-const MODEL_SONNET = 'claude-sonnet-4-6'
-const MODEL_HAIKU = 'claude-haiku-4-5-20250414'
+const MODEL_SONNET = ANTHROPIC_MODEL_SONNET
+const MODEL_HAIKU = ANTHROPIC_MODEL_HAIKU
 const MAX_TOKENS = 1024
 
 const anthropic = new Anthropic({
