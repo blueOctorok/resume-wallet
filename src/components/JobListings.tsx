@@ -88,13 +88,28 @@ interface JobListingsProps {
   onClose?: () => void
   onBack: () => void
   userAddress: string | null
+  /**
+   * Guest browse (Indeed-style): search StormChain + external listings without a wallet.
+   * Apply / AvA ranking require `onSignIn` → connect flow.
+   */
+  publicBrowseMode?: boolean
+  onSignIn?: () => void
+  backLabel?: string
 }
 
-export default function JobListings({ onBack, userAddress }: JobListingsProps) {
+export default function JobListings({
+  onBack,
+  userAddress,
+  publicBrowseMode = false,
+  onSignIn,
+  backLabel = 'Back to Hub',
+}: JobListingsProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
 
-  const [activeTab, setActiveTab] = useState<TabId>('stormchain')
+  const [activeTab, setActiveTab] = useState<TabId>(() =>
+    publicBrowseMode ? 'external' : 'stormchain',
+  )
   const [jobs, setJobs] = useState<JobListing[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -304,50 +319,152 @@ export default function JobListings({ onBack, userAddress }: JobListingsProps) {
     ? 'bg-gray-800/50 border border-gray-700'
     : 'bg-white border border-gray-200'
 
-  const TABS: { id: TabId; label: string; icon: React.ReactNode; description: string }[] = [
-    { id: 'stormchain', label: 'StormChain', icon: <Zap className='w-4 h-4' />, description: 'Jobs from verified employers on StormChain' },
-    { id: 'external', label: 'External', icon: <Globe className='w-4 h-4' />, description: 'Aggregated listings from job boards' },
-  ]
+  const promptConnect = Boolean(publicBrowseMode && !userAddress && onSignIn)
+
+  // Guests: external first (most listings) + clearer labels. Logged-in: StormChain first (product default).
+  const TABS: { id: TabId; label: string; hint: string; icon: React.ReactNode; description: string }[] =
+    publicBrowseMode
+      ? [
+          {
+            id: 'external',
+            label: 'External job boards',
+            hint: 'Indeed-style aggregate — usually the most results',
+            icon: <Globe className='w-5 h-5 shrink-0' />,
+            description: 'Listings aggregated from major job boards. Search and open listings without an account.',
+          },
+          {
+            id: 'stormchain',
+            label: 'StormChain employers',
+            hint: 'Roles posted directly on StormChain',
+            icon: <Zap className='w-5 h-5 shrink-0' />,
+            description: 'Jobs from employers posting on StormChain — the list grows as companies join.',
+          },
+        ]
+      : [
+          {
+            id: 'stormchain',
+            label: 'StormChain',
+            hint: 'Employers on our network',
+            icon: <Zap className='w-5 h-5 shrink-0' />,
+            description: 'Jobs from verified employers on StormChain',
+          },
+          {
+            id: 'external',
+            label: 'External boards',
+            hint: 'Aggregated listings',
+            icon: <Globe className='w-5 h-5 shrink-0' />,
+            description: 'Aggregated listings from job boards',
+          },
+        ]
 
   return (
     <div className='w-full p-4 sm:p-6 lg:p-8'>
       <div className='max-w-7xl mx-auto'>
         {/* Header */}
         <div className='mb-6'>
-          <BackToHubButton onClick={onBack} className='mb-4' />
+          <BackToHubButton onClick={onBack} label={backLabel} className='mb-4' />
           <h1 className={`text-3xl md:text-4xl font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Find Jobs
+            {publicBrowseMode ? 'Browse jobs' : 'Find Jobs'}
           </h1>
           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            {totalCount > 0 ? `${totalCount.toLocaleString()} jobs found` : 'Search for your next opportunity'}
+            {publicBrowseMode
+              ? totalCount > 0
+                ? `${totalCount.toLocaleString()} listings — connect your wallet to apply with your career card & AvA`
+                : 'Search StormChain and external boards. No account needed to look — wallet required to apply.'
+              : totalCount > 0
+                ? `${totalCount.toLocaleString()} jobs found`
+                : 'Search for your next opportunity'}
           </p>
         </div>
 
-        {/* Tab Switcher */}
-        <div className={`flex gap-2 p-1 rounded-xl mb-6 ${isDark ? 'bg-gray-800/60' : 'bg-gray-100'}`}>
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                activeTab === tab.id
-                  ? isDark
-                    ? 'bg-gray-700 text-white shadow-sm'
-                    : 'bg-white text-gray-900 shadow-sm'
-                  : isDark
-                    ? 'text-gray-400 hover:text-gray-200'
-                    : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
+        {publicBrowseMode && onSignIn && (
+          <div
+            className={`mb-6 rounded-2xl border px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
+              isDark ? 'bg-teal-500/10 border-teal-500/25' : 'bg-teal-50 border-teal-200/80'
+            }`}
+          >
+            <p className={`text-sm ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+              <span className='font-semibold'>Applying is wallet-gated.</span>{' '}
+              Easy Apply, AvA match scores, and cover letters use your on-chain career card.
+            </p>
+            <Button type='button' variant='primary' size='sm' className='shrink-0' onClick={onSignIn}>
+              Connect wallet
+            </Button>
+          </div>
+        )}
+
+        {/* Tab switcher — explicit “two sources” so guests don’t miss External vs StormChain */}
+        <div className='mb-2'>
+          <p
+            className={`text-xs font-bold uppercase tracking-wider mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+          >
+            Job source
+          </p>
+          <div
+            className={`flex flex-col sm:flex-row gap-2 p-1.5 rounded-2xl border-2 ${
+              isDark ? 'bg-gray-800/80 border-gray-600' : 'bg-gray-100 border-gray-200'
+            }`}
+            role='tablist'
+            aria-label='Choose where to search for jobs'
+          >
+            {TABS.map((tab) => {
+              const selected = activeTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  type='button'
+                  role='tab'
+                  aria-selected={selected}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`flex-1 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-1 sm:gap-3 px-4 py-3 sm:py-3.5 rounded-xl text-sm font-semibold transition-all ${
+                    selected
+                      ? isDark
+                        ? 'bg-teal-600/25 text-white ring-2 ring-teal-500/60 shadow-md'
+                        : 'bg-white text-gray-900 ring-2 ring-teal-500/50 shadow-md'
+                      : isDark
+                        ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/70'
+                  }`}
+                >
+                  {tab.icon}
+                  <span className='flex flex-col gap-0.5 min-w-0'>
+                    <span>{tab.label}</span>
+                    <span
+                      className={`text-[11px] font-normal leading-snug ${
+                        selected
+                          ? isDark
+                            ? 'text-gray-300'
+                            : 'text-gray-600'
+                          : isDark
+                            ? 'text-gray-500'
+                            : 'text-gray-500'
+                      }`}
+                    >
+                      {tab.hint}
+                    </span>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
-        {/* Tab description */}
-        <p className={`text-xs mb-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-          {TABS.find(t => t.id === activeTab)?.description}
+        {publicBrowseMode && (
+          <p
+            className={`text-xs sm:text-sm mb-4 rounded-lg px-3 py-2 border ${
+              isDark ? 'bg-gray-800/40 border-gray-700 text-gray-300' : 'bg-sky-50/80 border-sky-200/80 text-gray-700'
+            }`}
+          >
+            <span className='font-semibold'>Browsing without an account?</span> We open{' '}
+            <strong>External job boards</strong> first — that’s where most listings live. Use{' '}
+            <strong>StormChain employers</strong> to see roles posted only on StormChain (that list may be empty early
+            on).
+          </p>
+        )}
+
+        {/* Active tab detail */}
+        <p className={`text-sm mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          {TABS.find((t) => t.id === activeTab)?.description}
         </p>
 
         {/* AvA personalized external jobs */}
@@ -417,17 +534,23 @@ export default function JobListings({ onBack, userAddress }: JobListingsProps) {
                       <p className={`text-xs mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{job.matchReason}</p>
                     )}
                     <div className='flex flex-wrap gap-2 mt-3'>
-                      <Button
-                        type='button'
-                        variant='primary'
-                        size='sm'
-                        onClick={() => {
-                          setSelectedJob(job)
-                          setApplyModalOpen(true)
-                        }}
-                      >
-                        Apply with StormChain
-                      </Button>
+                      {promptConnect ? (
+                        <Button type='button' variant='primary' size='sm' onClick={onSignIn}>
+                          Connect to apply
+                        </Button>
+                      ) : (
+                        <Button
+                          type='button'
+                          variant='primary'
+                          size='sm'
+                          onClick={() => {
+                            setSelectedJob(job)
+                            setApplyModalOpen(true)
+                          }}
+                        >
+                          Apply with StormChain
+                        </Button>
+                      )}
                       {job.redirectUrl && (
                         <a
                           href={job.redirectUrl}
@@ -612,23 +735,37 @@ export default function JobListings({ onBack, userAddress }: JobListingsProps) {
 
                   {/* Actions */}
                   <div className='flex-shrink-0 flex flex-col gap-2'>
-                    {job.isStormChain && userAddress ? (
-                      <button
-                        onClick={() => { setSelectedJob(job); setApplyModalOpen(true) }}
-                        className='flex items-center gap-2 px-5 py-2.5 font-semibold rounded-lg bg-teal-600 hover:bg-teal-500 text-white whitespace-nowrap'
+                    {promptConnect ? (
+                      <Button
+                        type='button'
+                        variant='primary'
+                        onClick={onSignIn}
+                        className='whitespace-nowrap'
                       >
                         <FileText className='w-4 h-4' />
-                        Apply with Career Card
-                      </button>
-                    ) : !job.isStormChain && userAddress ? (
-                      <button
-                        onClick={() => { setSelectedJob(job); setApplyModalOpen(true) }}
-                        className='flex items-center gap-2 px-5 py-2.5 font-semibold rounded-lg bg-teal-600 hover:bg-teal-500 text-white whitespace-nowrap'
-                      >
-                        <FileText className='w-4 h-4' />
-                        Apply with StormChain
-                      </button>
-                    ) : null}
+                        Connect to apply
+                      </Button>
+                    ) : (
+                      <>
+                        {job.isStormChain && userAddress ? (
+                          <button
+                            onClick={() => { setSelectedJob(job); setApplyModalOpen(true) }}
+                            className='flex items-center gap-2 px-5 py-2.5 font-semibold rounded-lg bg-teal-600 hover:bg-teal-500 text-white whitespace-nowrap'
+                          >
+                            <FileText className='w-4 h-4' />
+                            Apply with Career Card
+                          </button>
+                        ) : !job.isStormChain && userAddress ? (
+                          <button
+                            onClick={() => { setSelectedJob(job); setApplyModalOpen(true) }}
+                            className='flex items-center gap-2 px-5 py-2.5 font-semibold rounded-lg bg-teal-600 hover:bg-teal-500 text-white whitespace-nowrap'
+                          >
+                            <FileText className='w-4 h-4' />
+                            Apply with StormChain
+                          </button>
+                        ) : null}
+                      </>
+                    )}
                     {job.redirectUrl && (
                       <a
                         href={job.redirectUrl}
@@ -700,7 +837,7 @@ export default function JobListings({ onBack, userAddress }: JobListingsProps) {
 
       {/* Apply Modal */}
       <ApplyWithStormChainModal
-        isOpen={applyModalOpen}
+        isOpen={applyModalOpen && !publicBrowseMode}
         onClose={() => { setApplyModalOpen(false); setSelectedJob(null) }}
         job={selectedJob ? {
           id: selectedJob.id,

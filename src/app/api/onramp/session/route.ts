@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { SignJWT, importPKCS8, importJWK } from 'jose'
 import { randomBytes } from 'crypto'
+import { getAddress, isAddress } from 'viem'
 
 // Support both formats: the new format (id/privateKey) and legacy (CDP_API_KEY_NAME/CDP_API_KEY_PRIVATE_KEY)
 // Strip quotes if present (env files sometimes have them)
@@ -27,8 +28,10 @@ const CDP_API_KEY_PRIVATE_KEY_BASE64 = getEnvVar('privateKey') || getEnvVar('CDP
 const ONRAMP_TOKEN_URL = 'https://api.developer.coinbase.com/onramp/v1/token'
 
 /**
- * Generate a JWT for CDP API authentication
- * Following: https://docs.cdp.coinbase.com/get-started/authentication/jwt-authentication
+ * Generate a JWT for CDP API authentication.
+ * Must match @coinbase/cdp-sdk `generateJwt`: `uris` (array), no legacy `uri` claim;
+ * audience claim was removed from the official SDK — wrong `aud` causes 401.
+ * @see https://github.com/coinbase/cdp-sdk/blob/main/typescript/src/auth/utils/jwt.ts
  */
 async function generateCDPJWT(): Promise<string> {
   if (!CDP_API_KEY_ID || !CDP_API_KEY_PRIVATE_KEY_BASE64) {
@@ -92,24 +95,24 @@ async function generateCDPJWT(): Promise<string> {
   // Coinbase requires the URI claim in format: "METHOD host/path"
   // Parse the URL to get host and path
   const url = new URL(ONRAMP_TOKEN_URL)
-  const uri = `POST ${url.host}${url.pathname}`
-  
-  console.log(`🔐 JWT uri claim: ${uri}`)
+  const uriEntry = `POST ${url.host}${url.pathname}`
+
+  console.log(`🔐 JWT uris[0]: ${uriEntry}`)
   console.log(`🔐 JWT kid: ${apiKeyName}`)
   console.log(`🔐 JWT algorithm: ${algorithm}`)
 
   const jwt = await new SignJWT({
     sub: apiKeyName,
     iss: 'cdp',
-    aud: ['cdp_service'],
-    uri: uri, // Required: "POST api.developer.coinbase.com/onramp/v1/token"
+    uris: [uriEntry],
   })
-    .setProtectedHeader({ 
-      alg: algorithm, 
+    .setProtectedHeader({
+      alg: algorithm,
       typ: 'JWT',
       kid: apiKeyName,
-      nonce: nonce, // Required: random nonce
+      nonce,
     })
+    .setIssuedAt(now)
     .setNotBefore(now)
     .setExpirationTime(now + 120) // 2 minutes
     .sign(privateKey)
@@ -123,12 +126,22 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { walletAddress } = body
 
-    if (!walletAddress) {
+    if (!walletAddress || typeof walletAddress !== 'string') {
       return NextResponse.json(
         { error: 'Wallet address is required' },
         { status: 400 }
       )
     }
+
+    if (!isAddress(walletAddress)) {
+      return NextResponse.json(
+        { error: 'Invalid wallet address' },
+        { status: 400 }
+      )
+    }
+
+    // Coinbase expects a canonical EIP-55 address; clients often send lowercase from our store.
+    const destinationAddress = getAddress(walletAddress)
 
     // Check if CDP credentials are configured
     if (!CDP_API_KEY_ID || !CDP_API_KEY_PRIVATE_KEY_BASE64) {
@@ -147,23 +160,23 @@ export async function POST(request: NextRequest) {
     const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     const realIp = request.headers.get('x-real-ip')
     
-    // Check if we have a real public IP (not localhost or private)
-    const isPrivateIp = (ip: string) => {
-      return ip === '127.0.0.1' || 
-             ip === 'localhost' ||
-             ip.startsWith('10.') ||
-             ip.startsWith('192.168.') ||
-             ip.startsWith('172.16.') ||
-             ip.startsWith('172.17.') ||
-             ip.startsWith('172.18.') ||
-             ip.startsWith('172.19.') ||
-             ip.startsWith('172.2') ||
-             ip.startsWith('172.30.') ||
-             ip.startsWith('172.31.')
+    // Only send clientIp for real routable addresses. ::1 was misclassified as "public"
+    // and breaks local dev; Coinbase also documents TEST-NET placeholders for sandbox.
+    const isPrivateOrLocalIp = (ip: string) => {
+      const lower = ip.toLowerCase()
+      if (lower === 'localhost' || lower === '127.0.0.1') return true
+      // IPv6 loopback / IPv4-mapped loopback
+      if (lower === '::1' || lower === '0:0:0:0:0:0:0:1') return true
+      if (lower.startsWith('::ffff:127.')) return true
+      if (ip.startsWith('10.')) return true
+      if (ip.startsWith('192.168.')) return true
+      // RFC1918 172.16.0.0/12
+      if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(ip)) return true
+      return false
     }
     
     const clientIp = forwardedFor || realIp || null
-    const hasPublicIp = clientIp && !isPrivateIp(clientIp)
+    const hasPublicIp = Boolean(clientIp && !isPrivateOrLocalIp(clientIp))
     
     console.log(`🌐 Client IP: ${clientIp || 'none'} (public: ${hasPublicIp})`)
 
@@ -175,7 +188,7 @@ export async function POST(request: NextRequest) {
     const requestBody: Record<string, unknown> = {
       addresses: [
         {
-          address: walletAddress,
+          address: destinationAddress,
           // Coinbase Onramp only supports mainnet (real purchases)
           blockchains: ['base'], // Base Mainnet
         },
@@ -207,10 +220,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const data = await response.json()
+    const data = (await response.json()) as Record<string, unknown>
+    const nested = data.data as Record<string, unknown> | undefined
+    const sessionToken =
+      (typeof nested?.token === 'string' ? nested.token : undefined) ??
+      (typeof data.token === 'string' ? data.token : undefined) ??
+      (typeof data.sessionToken === 'string' ? data.sessionToken : undefined) ??
+      (typeof nested?.sessionToken === 'string' ? nested.sessionToken : undefined)
+
+    if (!sessionToken) {
+      console.error('[ONRAMP] Token response missing session token keys:', Object.keys(data))
+      return NextResponse.json(
+        { error: 'Invalid session response from Coinbase' },
+        { status: 502 }
+      )
+    }
 
     return NextResponse.json({
-      sessionToken: data.data?.token || data.token,
+      sessionToken,
       success: true,
     })
   } catch (error) {

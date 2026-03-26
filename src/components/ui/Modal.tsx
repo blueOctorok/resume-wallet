@@ -81,9 +81,9 @@ export default function Modal({
       className="fixed inset-0 flex items-center justify-center p-4"
       style={{ zIndex }}
     >
-      {/* Backdrop */}
+      {/* Backdrop — depth + cool tint (reads premium vs flat gray) */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-gradient-to-b from-slate-950/75 via-slate-950/65 to-teal-950/40 backdrop-blur-md dark:from-black/80 dark:via-slate-950/70 dark:to-teal-950/30"
         onClick={disableBackdropClose ? undefined : onClose}
         aria-hidden="true"
       />
@@ -94,13 +94,19 @@ export default function Modal({
         role="dialog"
         aria-modal="true"
         className={cn(
-          'relative w-full max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl',
+          'relative w-full max-h-[90vh] overflow-y-auto overflow-x-hidden rounded-2xl',
+          'shadow-[0_24px_64px_-12px_rgba(0,0,0,0.45)] dark:shadow-[0_28px_72px_-8px_rgba(0,0,0,0.75)]',
+          'ring-1 ring-white/15 dark:ring-white/10',
           maxWidth,
           theme === 'dark'
-            ? 'bg-gray-900 border border-gray-700'
-            : 'bg-white'
+            ? 'bg-gradient-to-b from-gray-900 to-gray-950 border border-gray-600/80'
+            : 'bg-gradient-to-b from-white to-slate-50/95 border border-gray-200/90'
         )}
       >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-400/50 to-transparent dark:via-teal-400/40"
+        />
         {children}
       </div>
     </div>
@@ -127,18 +133,27 @@ export function ModalHeader({ title, subtitle, onClose }: ModalHeaderProps) {
   return (
     <div
       className={cn(
-        'sticky top-0 z-10 flex items-start justify-between gap-4 p-4 border-b',
+        'sticky top-0 z-10 flex items-start justify-between gap-4 p-4 sm:p-5 border-b relative',
         theme === 'dark'
-          ? 'border-gray-700 bg-gray-900'
-          : 'border-gray-200 bg-white'
+          ? 'border-gray-700/80 bg-gray-900/95 backdrop-blur-sm'
+          : 'border-gray-200/90 bg-white/95 backdrop-blur-sm'
       )}
     >
+      <div
+        aria-hidden
+        className="absolute bottom-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-teal-500/20 to-transparent dark:via-teal-400/15"
+      />
       <div>
-        <h3 className={cn('font-semibold', theme === 'dark' ? 'text-white' : 'text-gray-900')}>
+        <h3
+          className={cn(
+            'text-base sm:text-lg font-semibold tracking-tight',
+            theme === 'dark' ? 'text-white' : 'text-gray-900',
+          )}
+        >
           {title}
         </h3>
         {subtitle && (
-          <p className={cn('text-sm mt-0.5', theme === 'dark' ? 'text-gray-400' : 'text-gray-600')}>
+          <p className={cn('text-sm mt-1 leading-snug', theme === 'dark' ? 'text-gray-400' : 'text-gray-600')}>
             {subtitle}
           </p>
         )}

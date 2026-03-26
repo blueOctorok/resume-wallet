@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { LayoutDashboard, Coins, ChevronDown, RefreshCw, Car, Code, Building2, Sparkles, HelpCircle, MessageSquare, User } from 'lucide-react'
+import { LayoutDashboard, Coins, ChevronDown, RefreshCw, Car, Code, Building2, Sparkles, HelpCircle, MessageSquare, User, Home, Briefcase } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 import { useTheme } from '@/contexts/ThemeContext'
 import { usePreferencesStore, useJourneyStore, useUIStore } from '@/stores'
@@ -282,6 +282,42 @@ export default function Navigation({
                   {walletAddress && (
                     <NotificationBell walletAddress={walletAddress} />
                   )}
+                </div>
+              )}
+
+              {/* Guest: browse like Indeed before wallet — hub stays dumb until connect */}
+              {!isAuthenticated && (
+                <div className='w-full sm:w-auto flex flex-wrap items-center justify-center gap-2'>
+                  <button
+                    type='button'
+                    onClick={() => {
+                      handleNavigation('home')
+                      setIsMenuOpen(false)
+                    }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ${
+                      theme === 'light'
+                        ? 'border-slate-300 text-slate-800 hover:bg-slate-200/80'
+                        : 'border-gray-600 text-gray-200 hover:bg-gray-700/50'
+                    }`}
+                  >
+                    <Home className='w-4 h-4' />
+                    Home
+                  </button>
+                  <button
+                    type='button'
+                    onClick={() => {
+                      handleNavigation('jobs')
+                      setIsMenuOpen(false)
+                    }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ${
+                      theme === 'light'
+                        ? 'border-teal-500/50 text-teal-800 bg-teal-50/90 hover:bg-teal-100'
+                        : 'border-teal-500/40 text-teal-300 bg-teal-500/10 hover:bg-teal-500/20'
+                    }`}
+                  >
+                    <Briefcase className='w-4 h-4' />
+                    Browse jobs
+                  </button>
                 </div>
               )}
 

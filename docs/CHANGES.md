@@ -4,6 +4,66 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Coinbase Onramp 401 (localhost / CDP JWT)** (March 2026)
+
+- [`src/app/api/onramp/session/route.ts`](src/app/api/onramp/session/route.ts): CDP JWT now matches **@coinbase/cdp-sdk** — payload uses **`uris: string[]`** (not legacy **`uri`**), drops **`aud`** (SDK changelog: removed default audience; wrong claim → **401**). Adds **`iat`** via `setIssuedAt`. Treats **IPv6 loopback `::1`** (and `::ffff:127.*`) as local so **`clientIp` is not sent** on localhost (was mislabeled “public”).
+
+---
+
+## **Buy USDC — candidate hub + onramp hardening** (March 2026)
+
+- **Why it felt “broken” after the composable hub:** [`WalletCard`](src/components/WalletCard.tsx) (which embedded [`BuyUSDCButton`](src/components/BuyUSDCButton.tsx)) was still dynamically imported in [`page.tsx`](src/app/page.tsx) but **never rendered**, so candidates on [`CandidateHub`](src/components/hub/CandidateHub.tsx) lost the on-hub entry point; only the nav **Wallet** modal still had Buy USDC.
+- [`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx): **`Card` + `BuyUSDCButton`** above the STORM section so funding is visible on the hub again.
+- [`src/app/api/onramp/session/route.ts`](src/app/api/onramp/session/route.ts): validate with **`viem` `isAddress` / `getAddress`** (store uses lowercase; Coinbase prefers canonical form); **defensive parsing** of session token from multiple possible JSON shapes; **502** if token missing.
+- [`UserStatusModal.tsx`](src/components/UserStatusModal.tsx): role pill **`candidate`** no longer falls through to “Employer”.
+- Removed dead **`WalletCard`** dynamic import from [`page.tsx`](src/app/page.tsx).
+
+---
+
+## **Hub sidebars — top alignment (candidate + employer)** (March 2026)
+
+- [`HubSidebar.tsx`](src/components/hub/HubSidebar.tsx) / [`EmployerPathSidebar.tsx`](src/components/hub/EmployerPathSidebar.tsx): **`overflow-hidden` moved off the sticky `<aside>`** onto an inner card wrapper — `overflow` on the sticky element breaks sticky/alignment in WebKit (rail could sit a full block lower).
+- [`EmployerHub.tsx`](src/components/EmployerHub.tsx): main column uses **`xl:contents`** so the **`max-w-7xl`** block is a **direct grid item**; explicit **`xl:col-start-{1,2,3}`** for wallet / main / job path.
+- [`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx): explicit **`lg:col-start-1`** (main) and **`lg:col-start-2`** ([`HubSidebar`](src/components/hub/HubSidebar.tsx)).
+
+---
+
+## **Career card premium shell** (March 2026)
+
+- **Shared tokens:** [`career-card-styles.ts`](src/lib/career-card-styles.ts) — elevated shell (gradient base, teal ring/shadow), top hairline, ambient blob, hero gradient + radial wash, inset panel helper.
+- **Employer + legacy data card:** [`CareerCard.tsx`](src/components/CareerCard.tsx) — replaces flat neumorphic gray with shell + hero strip (name + “Career card” label), completeness inset panel with icon tile, section titles with teal accent bar, pill badges with rings, dashed empty states, footer gradient divider + public profile CTA.
+- **Block-projected card:** [`ProjectedCareerCard.tsx`](src/components/career-card/ProjectedCareerCard.tsx) — same shell vocabulary; gradient avatar frame; empty/public CTAs use **`Button`**.
+- **Employer modal:** [`CareerCardModal.tsx`](src/components/employer/CareerCardModal.tsx) — `max-w-4xl`, blurred sticky header, eyebrow copy, avatar ring, refresh via **`Button`** ghost; body tint.
+- **Hub preview + resume section:** [`MiniCareerCard.tsx`](src/components/hub/MiniCareerCard.tsx), [`ResumeSection.tsx`](src/components/career-card/sections/ResumeSection.tsx) — hairline + ring + gradient fill aligned with the card.
+
+---
+
+## **Hub premium UI pass (candidate + employer)** (March 2026)
+
+- **Shared (earlier in same effort):** [`Card`](src/components/ui/Card.tsx) default/elevated glass + teal shadow/ring/hairline; [`Modal`](src/components/ui/Modal.tsx) tinted backdrop blur + elevated panel chrome; [`BlockCard`](src/components/ui/BlockCard.tsx) header icon treatment (gradient + ring).
+- **Sidebars:** [`HubSidebar`](src/components/hub/HubSidebar.tsx) + [`EmployerPathSidebar`](src/components/hub/EmployerPathSidebar.tsx) sticky variant — gradient surfaces, teal-accent shadow/ring, top hairline (matches elevated cards).
+- **Candidate hub:** [`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx) — profile band uses **`Card` elevated** + **`Button`** for save/cancel; completeness bar with inset ring + richer gradients; Block Hive title row (accent bar + subtitle); empty state **`Card`** with soft glow + primary CTA; mobile **Career path** FAB uses **`Button`**.
+- **Employer hub:** [`EmployerHub.tsx`](src/components/EmployerHub.tsx) — company header **`Card` elevated** + icon shell; **StatCard** mini-elevated tiles (hairline, hover border); quick actions row **`Card` + `Button`** (primary outreach + secondary nav); collapsed wallet rail aligned with sidebar chrome.
+- **Block picker:** [`BlockPickerModal.tsx`](src/components/hub/BlockPickerModal.tsx) — `max-w-3xl`, scrollable body with subtle tinted background + top divider.
+
+---
+
+## **Homepage polish — hero blend + full hive** (March 2026)
+
+- [`HomePage.tsx`](src/components/HomePage.tsx): hero uses **blurred color blooms** + **radial mask** instead of sharp rectangular gradient overlays (blends into `StormBackground`). Hive: **7th block** `driver-cdl-credentials` (CDL) completes the ring; cluster gets a **radial fade mask** + slightly lighter dark hex glass.
+- **Iridescent film:** full-viewport `fixed` `z-[5]` — muted **conic gradients** (~half stop alpha + ~0.2 / 0.16 layer opacity), **larger blur**, **`mix-blend-soft-light`** (light + dark), stronger edge vignettes. **`prefers-reduced-motion`:** no spin.
+- **Home CTA:** “See what AvA does” uses **`scrollIntoView({ behavior: 'smooth' })`** (instant scroll if **`prefers-reduced-motion`**) instead of a raw `#` jump; keeps **`href`** for no-JS.
+
+---
+
+## **Public job browse + marketing homepage (AvA / AI)** (March 2026)
+
+- **Indeed-style discovery:** Guests can open **Browse jobs** from nav or the landing page without a wallet. [`DriverShell`](src/components/app/DriverShell.tsx) routes `currentPage === 'jobs'` + `!user` to [`JobListings`](src/components/JobListings.tsx) with `publicBrowseMode`, `onSignIn` → sign-in, `backLabel="Back to home"`. **`publicBrowseMode` defaults to External tab first** (most listings); **Job source** segmented control + hints + guest explainer. AvA “Recommended” and apply modal stay wallet-gated.
+- **Navigation:** [`Navigation.tsx`](src/components/Navigation.tsx) — unauthenticated **Home** + **Browse jobs** in the link row.
+- **Homepage:** [`HomePage.tsx`](src/components/HomePage.tsx) — hero reframed around **AvA + on-chain**; **Meet AvA** bento (ranked matches, Easy Apply / cover letters, job alerts, journey guide); **Search jobs before connect** band; `onBrowseJobs` prop; shared [`Button`](src/components/ui/Button.tsx) for primary CTAs; “vs LinkedIn/Indeed” side column next to career card mockup.
+
+---
+
 ## **Hub career card — QR opens share link + QR modal** (March 2026)
 
 - **Mini hub card:** [`MiniCareerCard`](src/components/hub/MiniCareerCard.tsx) — **QR & link** opens [`CareerCardShareModal`](src/components/hub/CareerCardShareModal.tsx) (public URL `/card/[token]`, copy, QR image, preview, regenerate). **Full card** still navigates to the in-app career card page.

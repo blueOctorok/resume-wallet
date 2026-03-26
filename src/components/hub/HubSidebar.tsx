@@ -51,17 +51,31 @@ export default function HubSidebar({ variant, id, onCloseDrawer, className }: Hu
   )
 
   if (variant === 'sticky') {
+    // Sticky lives on the outer <aside> with NO overflow-hidden — overflow on a sticky ancestor
+    // breaks stickiness / alignment in WebKit and can make the rail sit “one block” lower visually.
+    // The chrome (blur, hairline, clip) stays on an inner wrapper.
     return (
       <aside
         id={id}
         className={cn(
-          'hidden lg:block w-80 shrink-0 self-start sticky top-24',
-          'rounded-2xl border border-gray-200 dark:border-gray-700',
-          'bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm p-4 shadow-sm',
+          'hidden lg:block w-80 max-w-full shrink-0 self-start sticky top-24 p-0',
           className,
         )}
       >
-        {body}
+        <div
+          className={cn(
+            'relative overflow-hidden rounded-2xl border border-gray-200/90 dark:border-gray-600/70',
+            'bg-gradient-to-b from-white/95 to-slate-50/90 dark:from-gray-900/95 dark:to-gray-950/90',
+            'backdrop-blur-md p-4 shadow-[0_12px_40px_-16px_rgba(13,148,136,0.15)] dark:shadow-[0_16px_48px_-12px_rgba(0,0,0,0.5)]',
+            'ring-1 ring-teal-500/[0.06] dark:ring-teal-400/[0.08]',
+          )}
+        >
+          <div
+            aria-hidden
+            className='pointer-events-none absolute inset-x-0 top-0 z-[1] h-px bg-gradient-to-r from-transparent via-teal-400/40 to-transparent dark:via-teal-400/30'
+          />
+          {body}
+        </div>
       </aside>
     )
   }

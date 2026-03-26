@@ -565,12 +565,12 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
 
   return (
     <div className="w-full">
-      {/* xl (1280px)+: wallet + main + job path. Below xl: full-width main + FAB modals — avoids iPad portrait (~1024px) squeezed between two 320px rails */}
-      <div className="flex flex-col xl:flex-row gap-8 xl:items-start">
+      {/* xl+: CSS grid (not flex row) so wallet, main, and job path share row 1 and align to the same top edge — flex + sticky was dropping the job path rail below the company header */}
+      <div className="flex flex-col gap-8 xl:grid xl:grid-cols-[auto_minmax(0,1fr)_20rem] xl:items-start xl:content-start xl:gap-x-8 xl:gap-y-0">
         {data.company &&
           (walletRailOpen ? (
             <aside
-              className={`hidden xl:block w-80 shrink-0 self-start sticky top-24 rounded-2xl border shadow-sm backdrop-blur-sm p-4 ${
+              className={`hidden xl:block w-80 shrink-0 self-start sticky top-24 xl:col-start-1 xl:row-start-1 xl:self-start rounded-2xl border shadow-sm backdrop-blur-sm p-4 ${
                 theme === 'dark'
                   ? 'border-gray-700 bg-gray-900/90'
                   : 'border-gray-200 bg-white/90'
@@ -601,11 +601,13 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             </aside>
           ) : (
             <aside
-              className={`hidden xl:flex w-11 shrink-0 self-start sticky top-24 flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)] rounded-2xl border shadow-sm backdrop-blur-sm ${
-                theme === 'dark'
-                  ? 'border-gray-700 bg-gray-900/90'
-                  : 'border-gray-200 bg-white/90'
-              }`}
+              className={cn(
+                'hidden xl:flex w-11 shrink-0 self-start sticky top-24 xl:col-start-1 xl:row-start-1 xl:self-start flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)]',
+                'relative overflow-hidden rounded-2xl border border-gray-200/90 dark:border-gray-600/70',
+                'bg-gradient-to-b from-white/95 to-slate-50/90 dark:from-gray-900/95 dark:to-gray-950/90',
+                'backdrop-blur-md shadow-[0_8px_28px_-14px_rgba(13,148,136,0.12)] dark:shadow-[0_12px_36px_-10px_rgba(0,0,0,0.45)]',
+                'ring-1 ring-teal-500/[0.06] dark:ring-teal-400/[0.08]',
+              )}
               aria-label="Company wallet collapsed"
             >
               <Button
@@ -625,21 +627,25 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
               </Button>
             </aside>
           ))}
-        <div className="flex-1 min-w-0 flex justify-center">
-          <div className="w-full min-w-0 space-y-8 xl:max-w-7xl">
+        {/* xl:contents removes this flex box from layout so the inner column is a direct grid item — avoids extra formatting context that was shifting the job-path rail down vs the company card */}
+        <div className="w-full min-w-0 flex flex-1 flex-col justify-center xl:contents">
+          <div className="w-full min-w-0 space-y-8 xl:max-w-7xl xl:col-start-2 xl:row-start-1 xl:justify-self-center xl:min-w-0">
       {/* Company Header */}
-      <div className={`rounded-2xl p-6 mb-8 border shadow-lg transition-all duration-200 ${
-        theme === 'dark'
-          ? 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
-          : 'bg-white/70 border-gray-200 hover:border-gray-300'
-      }`}>
+      <Card variant="elevated" className="p-6 sm:p-7 mb-8">
         <div className="flex items-center gap-4">
-          <div className={`w-16 h-16 rounded-xl flex items-center justify-center ${
-            theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
-          }`}>
-            <Building2 className={`w-8 h-8 ${
-              theme === 'dark' ? 'text-teal-400' : 'text-teal-600'
-            }`} />
+          <div
+            className={cn(
+              'w-16 h-16 rounded-xl flex items-center justify-center shrink-0',
+              'bg-gradient-to-br from-teal-500/20 to-cyan-500/10 dark:from-teal-400/25 dark:to-violet-500/15',
+              'ring-1 ring-teal-500/25 dark:ring-teal-400/30 shadow-sm',
+            )}
+          >
+            <Building2
+              className={cn(
+                'w-8 h-8',
+                theme === 'dark' ? 'text-teal-400' : 'text-teal-600',
+              )}
+            />
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-3 flex-wrap">
@@ -691,12 +697,12 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
               {data.company?.dotNumber && ` • DOT #${data.company.dotNumber}`}
             </p>
           </div>
-          <div className={`text-right text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <div className={`text-right text-sm shrink-0 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
             <p>Member since</p>
             <p className="font-medium">{formatDate(data.memberSince || '')}</p>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Stats band */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -735,73 +741,37 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
       </div>
 
       {/* Quick Actions */}
-      <div className={`flex flex-wrap items-center gap-2 mb-8 p-3 rounded-xl border ${
-        theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'
-      }`}>
-        {/* Primary: outreach */}
-        <button
+      <Card variant="elevated" className="p-3 sm:p-4 mb-8 flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          variant="primary"
+          size="md"
           onClick={() => document.getElementById('candidate-outreach')?.scrollIntoView({ behavior: 'smooth' })}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all bg-teal-600 text-white hover:bg-teal-500"
         >
           <Link2 className="w-4 h-4" />
           New Outreach
-        </button>
-        <button
-          onClick={() => onNavigate('talent-search')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
-            theme === 'dark'
-              ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-              : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-          }`}
-        >
+        </Button>
+        <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('talent-search')}>
           <Search className="w-4 h-4" />
           Find Talent
-        </button>
-        <button
-          onClick={() => onNavigate('post-job')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
-            theme === 'dark'
-              ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-              : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-          }`}
-        >
+        </Button>
+        <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('post-job')}>
           <Plus className="w-4 h-4" />
           Post Job
-        </button>
-        <button
-          onClick={() => onNavigate('applicants')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
-            theme === 'dark'
-              ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-              : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-          }`}
-        >
+        </Button>
+        <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('applicants')}>
           <Users className="w-4 h-4" />
           Applicants
-        </button>
-        <button
-          onClick={() => onNavigate('company-profile')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
-            theme === 'dark'
-              ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-              : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-          }`}
-        >
+        </Button>
+        <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('company-profile')}>
           <Building2 className="w-4 h-4" />
           Company
-        </button>
-        <button
-          onClick={() => onNavigate('team')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-colors ${
-            theme === 'dark'
-              ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-              : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-          }`}
-        >
+        </Button>
+        <Button type="button" variant="secondary" size="md" onClick={() => onNavigate('team')}>
           <Shield className="w-4 h-4" />
           Team
-        </button>
-      </div>
+        </Button>
+      </Card>
 
       {/* Same AvA chat shell as candidate hub; server uses employer system prompt + context */}
       {employerAvaContext && (
@@ -994,6 +964,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           <EmployerPathSidebar
             variant='sticky'
             id='employer-hub-job-path-sidebar'
+            className='xl:col-start-3 xl:row-start-1 xl:self-start'
             onNavigate={onNavigate}
             progressOverride={hiringPayload?.progress}
             pathSummary={hiringPayload?.pathSummary}
@@ -1005,7 +976,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
           />
         ) : (
           <aside
-            className={`hidden xl:flex w-11 shrink-0 self-start sticky top-24 flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)] rounded-2xl border shadow-sm backdrop-blur-sm border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900/90`}
+            className={`hidden xl:flex w-11 shrink-0 self-start sticky top-24 xl:col-start-3 xl:row-start-1 xl:self-start flex-col items-center justify-center py-4 min-h-[11rem] max-h-[min(60vh,20rem)] rounded-2xl border shadow-sm backdrop-blur-sm border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900/90`}
             aria-label="Job path collapsed"
           >
             <Button
@@ -1114,33 +1085,50 @@ function StatCard({
   theme: string
   highlight?: boolean
 }) {
+  const isDark = theme === 'dark'
   return (
-    <div className={`rounded-xl p-4 border transition-all duration-200 ${
-      theme === 'dark'
-        ? 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
-        : 'bg-white/70 border-gray-200 hover:border-gray-300 shadow-sm'
-    }`}>
+    <div
+      className={cn(
+        'relative overflow-hidden rounded-xl p-4 transition-all duration-300',
+        'border border-gray-200/90 dark:border-gray-600/70',
+        'bg-gradient-to-b from-white/95 to-slate-50/90 dark:from-gray-900/90 dark:to-gray-950/90',
+        'shadow-[0_8px_28px_-14px_rgba(13,148,136,0.14)] dark:shadow-[0_12px_36px_-10px_rgba(0,0,0,0.45)]',
+        'ring-1 ring-teal-500/[0.06] dark:ring-teal-400/[0.08]',
+        'hover:border-teal-500/25 dark:hover:border-teal-400/30',
+      )}
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-400/40 to-transparent dark:via-teal-400/28"
+      />
       <div className="flex items-center gap-2 mb-2">
-        <div className={`p-1.5 rounded-lg ${
-          theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'
-        }`}>
-          <span className={theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}>
-            {icon}
-          </span>
+        <div
+          className={cn(
+            'p-1.5 rounded-lg',
+            'bg-gradient-to-br from-teal-500/15 to-cyan-500/10 dark:from-teal-400/20 dark:to-violet-500/10',
+            'ring-1 ring-teal-500/20 dark:ring-teal-400/25',
+          )}
+        >
+          <span className={isDark ? 'text-teal-400' : 'text-teal-600'}>{icon}</span>
         </div>
-        <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+        <span className={cn('text-sm font-medium', isDark ? 'text-gray-400' : 'text-gray-600')}>
           {label}
         </span>
       </div>
-      <p className={`text-2xl font-bold ${
-        highlight
-          ? 'text-orange-500'
-          : theme === 'dark' ? 'text-white' : 'text-gray-900'
-      }`}>
+      <p
+        className={cn(
+          'text-2xl font-bold tracking-tight',
+          highlight
+            ? 'text-orange-500 dark:text-orange-400'
+            : isDark
+              ? 'text-white'
+              : 'text-gray-900',
+        )}
+      >
         {value}
       </p>
       {subValue && (
-        <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+        <p className={cn('text-xs mt-1', isDark ? 'text-gray-500' : 'text-gray-400')}>
           {subValue}
         </p>
       )}

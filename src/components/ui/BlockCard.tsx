@@ -73,16 +73,16 @@ export default function BlockCard({
   return (
     <Card variant='elevated' className={cn('overflow-hidden', className)}>
       {/* Header */}
-      <div className='flex items-start justify-between gap-3 p-4 sm:p-5 border-b border-gray-100 dark:border-gray-700/60'>
+      <div className='flex items-start justify-between gap-3 p-4 sm:p-5 border-b border-gray-100/90 dark:border-gray-700/50'>
         <div className='flex items-center gap-3 min-w-0'>
           {/* Block icon */}
-          <div className='flex-shrink-0 w-9 h-9 rounded-lg bg-teal-500/10 dark:bg-teal-400/10 flex items-center justify-center'>
+          <div className='flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500/15 to-cyan-500/10 dark:from-teal-400/20 dark:to-violet-500/10 ring-1 ring-teal-500/20 dark:ring-teal-400/25 flex items-center justify-center shadow-sm'>
             <Icon className='w-5 h-5 text-teal-600 dark:text-teal-400' />
           </div>
 
           {/* Title + description */}
           <div className='min-w-0'>
-            <h3 className='text-sm font-semibold text-gray-900 dark:text-white truncate'>
+            <h3 className='text-sm font-semibold tracking-tight text-gray-900 dark:text-white truncate'>
               {title}
             </h3>
             {description && (

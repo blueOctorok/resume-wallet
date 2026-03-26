@@ -380,7 +380,17 @@ export default function DriverShell({
   if (currentPage === 'jobs') {
     return (
       <div className='max-w-7xl mx-auto relative z-0'>
-        <JobListings onBack={handleNavigateToHub} userAddress={user?.address || null} />
+        {!user ? (
+          <JobListings
+            onBack={handleNavigateToHub}
+            userAddress={null}
+            publicBrowseMode
+            onSignIn={() => setCurrentPage('signin')}
+            backLabel='Back to home'
+          />
+        ) : (
+          <JobListings onBack={handleNavigateToHub} userAddress={user.address} />
+        )}
       </div>
     )
   }
@@ -515,6 +525,7 @@ export default function DriverShell({
       <HomePage
         isAuthenticated={false}
         onGetStarted={() => setCurrentPage('signin')}
+        onBrowseJobs={() => setCurrentPage('jobs')}
       />
     )
   }

@@ -17,8 +17,10 @@ import type { PageType } from '@/stores/types'
 import { getBlockColor, getBlockDefinition } from '@/lib/block-registry'
 import { getBlockIllustration } from './BlockIllustrations'
 import Button from '@/components/ui/Button'
+import Card from '@/components/ui/Card'
 import AvatarUpload from '@/components/ui/AvatarUpload'
 import STORMBalance from '@/components/STORMBalance'
+import BuyUSDCButton from '@/components/BuyUSDCButton'
 import CandidateRequestsSection from '@/components/CandidateRequestsSection'
 import HubOnboardingForm from './HubOnboardingForm'
 import BlockPickerModal from './BlockPickerModal'
@@ -516,11 +518,6 @@ function HubProfileHeader() {
     }
   }
 
-  const cardClass = cn(
-    'rounded-2xl border p-6',
-    isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-slate-100/95 border-slate-300'
-  )
-
   const completionChecks = [
     !!userProfile?.firstName,
     !!headline,
@@ -535,7 +532,7 @@ function HubProfileHeader() {
   )
 
   return (
-    <div className={cardClass}>
+    <Card variant='elevated' className='p-6 sm:p-7'>
       <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6'>
         <div className='flex items-center gap-4'>
           <AvatarUpload
@@ -572,24 +569,21 @@ function HubProfileHeader() {
                 className={inputClass}
               />
               <div className='flex gap-2'>
-                <button
+                <Button
+                  type='button'
+                  variant='primary'
+                  size='sm'
                   onClick={saveProfile}
                   disabled={saving || !editFirst.trim() || !editLast.trim()}
-                  className='flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-teal-500 text-white hover:bg-teal-600 disabled:opacity-50 transition-colors'
+                  isLoading={saving}
                 >
-                  {saving ? <Loader2 className='w-3 h-3 animate-spin' /> : <Check className='w-3 h-3' />}
+                  {!saving ? <Check className='w-3.5 h-3.5' /> : null}
                   Save
-                </button>
-                <button
-                  onClick={cancelEditing}
-                  className={cn(
-                    'flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium transition-colors',
-                    isDark ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  )}
-                >
-                  <X className='w-3 h-3' />
+                </Button>
+                <Button type='button' variant='secondary' size='sm' onClick={cancelEditing} className='gap-1'>
+                  <X className='w-3.5 h-3.5' />
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
@@ -655,20 +649,27 @@ function HubProfileHeader() {
               {completeness}%
             </span>
           </div>
-          <div className={cn('h-3 rounded-full overflow-hidden', isDark ? 'bg-gray-700' : 'bg-gray-200')}>
+          <div
+            className={cn(
+              'h-3 rounded-full overflow-hidden ring-1 ring-inset',
+              isDark ? 'bg-gray-800 ring-gray-600/50' : 'bg-gray-200/90 ring-gray-300/60',
+            )}
+          >
             <div
               className={cn(
-                'h-full rounded-full transition-all duration-500',
-                completeness >= 75 ? 'bg-gradient-to-r from-green-500 to-green-400'
-                  : completeness >= 50 ? 'bg-gradient-to-r from-yellow-500 to-yellow-400'
-                  : 'bg-teal-500/50'
+                'h-full rounded-full transition-all duration-500 shadow-[0_0_12px_rgba(20,184,166,0.35)]',
+                completeness >= 75
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-400 dark:from-emerald-400 dark:to-teal-500'
+                  : completeness >= 50
+                    ? 'bg-gradient-to-r from-amber-500 to-yellow-400 dark:from-amber-400 dark:to-yellow-500'
+                    : 'bg-gradient-to-r from-teal-500 to-cyan-400 dark:from-teal-400 dark:to-cyan-500',
               )}
               style={{ width: `${completeness}%` }}
             />
           </div>
         </div>
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -1479,8 +1480,11 @@ export default function CandidateHub() {
 
       {/* Full width of page content (`max-w-7xl` + px from page.tsx) — avoids double-centering so main column aligns with nav band and sidebar sits right */}
       <div className='w-full'>
-        <div className='flex flex-col lg:flex-row gap-8 lg:items-start'>
-          <div className='flex-1 min-w-0 space-y-6'>
+        {/* lg: grid (not flex row) so the sticky sidebar shares one row with the main column and
+            aligns to the top edge of the profile card — flex + sticky was leaving the rail visually
+            dropped next to AvA in some layouts */}
+        <div className='flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:content-start lg:gap-x-8 lg:gap-y-0'>
+          <div className='min-w-0 space-y-6 lg:col-start-1 lg:row-start-1 lg:self-start'>
             <HubProfileHeader />
             <AvaChatPanel
               mode='candidate'
@@ -1494,10 +1498,24 @@ export default function CandidateHub() {
             {/* ── Block Hive + Block Files (unified) ── */}
             <div>
           <div className='flex items-center justify-between mb-4'>
-            <div className='flex items-center gap-2'>
-              <h2 className={cn('text-lg font-semibold', isDark ? 'text-white' : 'text-slate-800')}>
-                Block Hive
-              </h2>
+            <div className='flex items-center gap-3 min-w-0'>
+              <span
+                aria-hidden
+                className='hidden sm:block w-1 h-9 shrink-0 rounded-full bg-gradient-to-b from-teal-400 via-cyan-400 to-violet-500/80 opacity-90'
+              />
+              <div className='min-w-0'>
+                <h2
+                  className={cn(
+                    'text-lg font-semibold tracking-tight',
+                    isDark ? 'text-white' : 'text-slate-800',
+                  )}
+                >
+                  Block Hive
+                </h2>
+                <p className={cn('text-xs mt-0.5', isDark ? 'text-gray-500' : 'text-slate-500')}>
+                  Drag to reorder · tap to open
+                </p>
+              </div>
               <button
                 onClick={() => {
                   if (walletAddress) fetchHubData(walletAddress)
@@ -1539,23 +1557,32 @@ export default function CandidateHub() {
           </div>
 
           {installedBlocks.length === 0 ? (
-            <div className={cn(
-              'rounded-2xl border-2 border-dashed p-12 text-center',
-              isDark ? 'border-gray-700' : 'border-gray-300'
-            )}>
-              <div className='inline-flex items-center justify-center w-12 h-12 rounded-full bg-teal-500/10 mb-4'>
-                <Plus className='w-6 h-6 text-teal-500' />
+            <Card
+              variant='elevated'
+              className={cn(
+                'relative p-10 sm:p-14 text-center overflow-hidden',
+                'border-2 border-dashed border-teal-500/25 dark:border-teal-400/20',
+                'ring-2 ring-dashed ring-teal-500/[0.12] dark:ring-teal-400/[0.1]',
+              )}
+            >
+              <div
+                aria-hidden
+                className='pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[min(100%,28rem)] h-48 rounded-full bg-gradient-to-b from-teal-400/15 via-cyan-500/10 to-transparent dark:from-teal-400/10 dark:via-violet-500/5 blur-2xl'
+              />
+              <div className='relative inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500/20 to-cyan-500/10 dark:from-teal-400/25 dark:to-violet-500/15 ring-1 ring-teal-500/25 dark:ring-teal-400/30 mb-5 shadow-sm'>
+                <Plus className='w-7 h-7 text-teal-600 dark:text-teal-400' />
               </div>
-              <p className={cn('text-sm font-medium mb-1', isDark ? 'text-white' : 'text-slate-800')}>
+              <p className={cn('text-base font-semibold tracking-tight mb-1', isDark ? 'text-white' : 'text-slate-800')}>
                 Your hub is empty
               </p>
-              <p className={cn('text-xs mb-4', isDark ? 'text-gray-400' : 'text-slate-600')}>
-                Add blocks to build your professional profile
+              <p className={cn('text-sm max-w-sm mx-auto mb-6', isDark ? 'text-gray-400' : 'text-slate-600')}>
+                Add blocks to build your professional profile — each block is a capability employers can discover.
               </p>
-              <Button variant='secondary' size='sm' onClick={openPicker}>
-                Browse Blocks
+              <Button variant='primary' size='sm' onClick={openPicker}>
+                <Plus className='w-4 h-4' />
+                Browse blocks
               </Button>
-            </div>
+            </Card>
           ) : (
             <DndContext
               sensors={sensors}
@@ -1604,6 +1631,29 @@ export default function CandidateHub() {
               />
             )}
 
+            {/* ── Buy USDC (was on floating WalletCard before composable hub; nav wallet modal still has this too) ── */}
+            {walletAddress && (
+              <Card variant='elevated' className='p-4 sm:p-5 mt-4'>
+                <h3
+                  className={cn(
+                    'text-sm font-semibold mb-1',
+                    isDark ? 'text-gray-100' : 'text-gray-900',
+                  )}
+                >
+                  Add USDC
+                </h3>
+                <p
+                  className={cn(
+                    'text-xs mb-3',
+                    isDark ? 'text-gray-400' : 'text-gray-600',
+                  )}
+                >
+                  Card purchase settles on Base mainnet; this app runs on Base Sepolia — use Wallet → Send to move funds for testnet.
+                </p>
+                <BuyUSDCButton walletAddress={walletAddress} />
+              </Card>
+            )}
+
             {/* ── STORM Token ── */}
             {walletAddress && (
               <STORMBalance
@@ -1613,23 +1663,24 @@ export default function CandidateHub() {
             )}
           </div>
 
-          <HubSidebar variant='sticky' id='candidate-hub-quest-sidebar' />
+          <HubSidebar variant='sticky' id='candidate-hub-quest-sidebar' className='lg:col-start-2 lg:row-start-1 lg:self-start' />
         </div>
 
         {/* Mobile: same sidebar content as slide-over (AvaJourneyGuide); FAB avoids hunting for Open Journey */}
-        <button
+        <Button
           type='button'
+          variant='primary'
+          size='md'
           onClick={() => openJourneyGuide()}
           className={cn(
-            'lg:hidden fixed z-30 flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold shadow-lg',
+            'lg:hidden fixed z-30 rounded-full px-4 py-2.5 shadow-lg shadow-teal-900/15 dark:shadow-black/40',
             'bottom-20 right-4',
-            'bg-brand-mint text-gray-900 hover:bg-brand-mint/90',
           )}
           aria-label='Open career path'
         >
           <Compass className='w-4 h-4' />
           Career path
-        </button>
+        </Button>
       </div>
     </>
   )

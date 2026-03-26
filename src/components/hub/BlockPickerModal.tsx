@@ -59,13 +59,19 @@ export default function BlockPickerModal() {
   if (!isOpen) return null
 
   return (
-    <Modal onClose={closePicker} maxWidth='max-w-2xl'>
+    <Modal onClose={closePicker} maxWidth='max-w-3xl'>
       <ModalHeader
         title='Add Blocks'
         subtitle={allAdded ? "You've added all available blocks!" : 'Choose blocks to build your hub'}
         onClose={closePicker}
       />
-      <div className='p-4 sm:p-5 space-y-3'>
+      <div
+        className={cn(
+          'p-4 sm:p-5 space-y-3 max-h-[min(70vh,36rem)] overflow-y-auto',
+          'border-t border-gray-200/80 dark:border-gray-700/80',
+          isDark ? 'bg-gray-950/30' : 'bg-slate-50/50',
+        )}
+      >
         {sortedCategories.map((category) => {
           const blocks = getBlocksByCategory(category.id)
           if (blocks.length === 0) return null

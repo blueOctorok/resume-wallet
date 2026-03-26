@@ -28,7 +28,19 @@ export default function ResumeSection({ data, mode, isDark }: ResumeSectionProps
 
   return (
     <>
-      <div className={cn('rounded-xl p-4', isDark ? 'bg-gray-700/50' : 'bg-white/60')}>
+      <div
+        className={cn(
+          'relative overflow-hidden rounded-xl border p-4',
+          isDark
+            ? 'border-gray-600/55 bg-gray-800/45 ring-1 ring-white/[0.04]'
+            : 'border-gray-200/90 bg-white/85 ring-1 ring-gray-900/[0.04]',
+          'shadow-sm',
+        )}
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-400/30 to-transparent dark:via-teal-400/20"
+        />
         <div className='flex items-center justify-between mb-3'>
           <div className='flex items-center gap-2'>
             <FileText className={cn('w-4 h-4', isDark ? 'text-teal-400' : 'text-teal-600')} />

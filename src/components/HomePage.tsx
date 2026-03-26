@@ -29,26 +29,37 @@ import {
   CheckCircle,
   Mail,
   MapPin,
+  Bot,
+  Radar,
+  BellRing,
+  Layers,
+  Link2,
+  IdCard,
 } from 'lucide-react'
 import { getBlockColor } from '@/lib/block-registry'
 import StormChainView from '@/components/StormChainView'
+import Button from '@/components/ui/Button'
 
 interface HomePageProps {
   isAuthenticated: boolean
   onGetStarted: () => void
+  /** Guest: open public job browse (no wallet) */
+  onBrowseJobs?: () => void
 }
 
 // ── Hex clip-path (same constant used in the hub) ────────────────────────────
 const HEX_CLIP = 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'
 
 // ── Hive showcase blocks — used in hero and section 3 ────────────────────────
+// Seven entries = full ring (center + 6 around) — layout expects slice(0, 7).
 const HIVE_BLOCKS = [
-  { id: 'driver-dot-application', icon: ClipboardList, label: 'DOT App' },      // center (hero)
-  { id: 'driver-resume',          icon: FileText,      label: 'Resume' },
-  { id: 'driver-mvr',            icon: Car,            label: 'MVR' },
-  { id: 'general-resume',        icon: FileText,       label: 'Pro Resume' },
-  { id: 'developer-portfolio',   icon: Globe,          label: 'Portfolio' },
-  { id: 'developer-github',      icon: Github,         label: 'GitHub' },
+  { id: 'driver-dot-application', icon: ClipboardList, label: 'DOT App' },
+  { id: 'driver-resume', icon: FileText, label: 'Resume' },
+  { id: 'driver-mvr', icon: Car, label: 'MVR' },
+  { id: 'general-resume', icon: FileText, label: 'Pro Resume' },
+  { id: 'developer-portfolio', icon: Globe, label: 'Portfolio' },
+  { id: 'developer-github', icon: Github, label: 'GitHub' },
+  { id: 'driver-cdl-credentials', icon: IdCard, label: 'CDL' },
 ]
 
 // ── Scroll-reveal hook ───────────────────────────────────────────────────────
@@ -162,7 +173,7 @@ function HiveShowcase({ blocks, isDark }: ShowcaseHiveProps) {
                 style={{ clipPath: HEX_CLIP }}
               />
               <div
-                className={`absolute inset-[2px] backdrop-blur-md ${isDark ? 'bg-gray-900/70' : 'bg-white/70'}`}
+                className={`absolute inset-[2px] backdrop-blur-md ${isDark ? 'bg-gray-900/55' : 'bg-white/70'}`}
                 style={{ clipPath: HEX_CLIP }}
               />
               <div className='absolute inset-0 flex flex-col items-center justify-center z-[1] px-[12%]'>
@@ -291,7 +302,7 @@ function CareerCardMockup({ isDark }: { isDark: boolean }) {
 // ── HomePage ─────────────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════════════
 
-export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProps) {
+export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }: HomePageProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const [showWhitepaper, setShowWhitepaper] = useState(false)
@@ -311,90 +322,326 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
   }
 
   return (
-    <div ref={revealRef} className='max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 overflow-hidden'>
+    <>
+      {/*
+        Iridescent film — sits above StormBackground (cloud z-[-3], particles z-[-1]) but below
+        this page’s content (z-10). Slow spin reads as shifting teal / indigo / violet without
+        competing with readability. prefers-reduced-motion: static wash, no spin.
+      */}
+      <div
+        aria-hidden
+        className='pointer-events-none fixed inset-0 z-[5] overflow-hidden mix-blend-soft-light dark:mix-blend-soft-light'
+      >
+        {/* Muted iridescence: low layer opacity + softer stops + extra blur so color stays a whisper */}
+        <div className='absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2'>
+          <div
+            className='h-[min(200vmin,120rem)] w-[min(200vmin,120rem)] blur-[110px] sm:blur-[150px] opacity-[0.2] dark:opacity-[0.16] motion-reduce:animate-none animate-spin [animation-duration:100s]'
+            style={{
+              background: `conic-gradient(from 45deg at 50% 50%,
+                rgba(45,212,191,0.42) 0deg,
+                rgba(56,189,248,0.36) 50deg,
+                rgba(99,102,241,0.4) 110deg,
+                rgba(167,139,250,0.38) 170deg,
+                rgba(20,184,166,0.4) 230deg,
+                rgba(79,70,229,0.34) 290deg,
+                rgba(45,212,191,0.42) 360deg)`,
+            }}
+          />
+        </div>
+        <div className='absolute left-1/2 top-[58%] -translate-x-1/2 -translate-y-1/2'>
+          <div
+            className='h-[min(160vmin,90rem)] w-[min(160vmin,90rem)] blur-[130px] sm:blur-[170px] opacity-[0.12] dark:opacity-[0.1] motion-reduce:animate-none animate-spin [animation-duration:160s] [animation-direction:reverse]'
+            style={{
+              background: `conic-gradient(from 200deg at 50% 50%,
+                rgba(129,140,248,0.38) 0deg,
+                rgba(34,211,238,0.32) 90deg,
+                rgba(16,185,129,0.36) 180deg,
+                rgba(99,102,241,0.32) 270deg,
+                rgba(129,140,248,0.38) 360deg)`,
+            }}
+          />
+        </div>
+        <div className='absolute inset-0 bg-gradient-to-b from-white/[0.12] via-transparent to-indigo-950/[0.18] dark:from-gray-950/45 dark:via-transparent dark:to-slate-950/55 mix-blend-normal opacity-95' />
+        <div
+          className='absolute inset-0 mix-blend-normal pointer-events-none'
+          style={{
+            background:
+              'radial-gradient(ellipse 100% 85% at 50% 35%, transparent 0%, transparent 38%, rgba(15,23,42,0.22) 100%)',
+          }}
+        />
+        <div
+          className='absolute inset-0 mix-blend-normal dark:hidden opacity-90'
+          style={{
+            background:
+              'radial-gradient(ellipse 90% 80% at 50% 40%, transparent 0%, transparent 45%, rgba(255,255,255,0.48) 100%)',
+          }}
+        />
+      </div>
+
+      <div ref={revealRef} className='relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-hidden'>
 
       {/* ═══════════════════════════════════════════════════════════════════════
           SECTION 1 — Hero
           ═══════════════════════════════════════════════════════════════════════ */}
-      <section className='pt-12 sm:pt-20 pb-16 sm:pb-24'>
-        <div className='text-center'>
-          {/* Badge */}
-          <div className='mb-6'>
-            <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border ${
-              isDark
-                ? 'bg-teal-500/10 text-teal-400 border-teal-500/30'
-                : 'bg-teal-50 text-teal-700 border-teal-300/50'
-            }`}>
-              <Sparkles className='w-4 h-4' />
-              Composable Career Platform
+      <section className='relative isolate pt-10 sm:pt-16 pb-12 sm:pb-20 overflow-x-hidden overflow-y-visible'>
+        {/*
+          Large blurred blooms + radial mask so color never ends in a sharp rectangle
+          against StormBackground — avoids the obvious “overlay box” edge.
+        */}
+        <div
+          aria-hidden
+          className='pointer-events-none absolute inset-0 -z-10 flex items-start justify-center pt-0 overflow-hidden'
+        >
+          <div
+            className='relative w-[min(135vw,85rem)] h-[min(85vh,44rem)] shrink-0 -translate-y-[8%] opacity-80 dark:opacity-[0.65] [mask-image:radial-gradient(ellipse_72%_68%_at_50%_42%,#000_0%,transparent_78%)] [-webkit-mask-image:radial-gradient(ellipse_72%_68%_at_50%_42%,#000_0%,transparent_78%)]'
+          >
+            <div className='absolute left-1/2 top-[18%] h-[min(75vw,48rem)] w-[min(75vw,48rem)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-teal-400/35 blur-[100px] dark:bg-teal-400/18 dark:blur-[128px]' />
+            <div className='absolute right-[-8%] top-[8%] h-[min(55vw,28rem)] w-[min(55vw,28rem)] rounded-full bg-cyan-400/25 blur-[88px] dark:bg-violet-500/20 dark:blur-[104px]' />
+            <div className='absolute left-[-5%] bottom-[-5%] h-[min(50vw,26rem)] w-[min(50vw,26rem)] rounded-full bg-teal-500/20 blur-[96px] dark:bg-cyan-500/12 dark:blur-[112px]' />
+          </div>
+        </div>
+
+        <div className='text-center relative'>
+          <div className='mb-5 flex flex-wrap justify-center gap-2'>
+            <span
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider border ${
+                isDark
+                  ? 'bg-violet-500/15 text-violet-300 border-violet-500/35'
+                  : 'bg-violet-50 text-violet-800 border-violet-200'
+              }`}
+            >
+              <Bot className='w-3.5 h-3.5' />
+              AvA AI
+            </span>
+            <span
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider border ${
+                isDark
+                  ? 'bg-teal-500/15 text-teal-300 border-teal-500/35'
+                  : 'bg-teal-50 text-teal-800 border-teal-200'
+              }`}
+            >
+              <Link2 className='w-3.5 h-3.5' />
+              On-chain career wallet
             </span>
           </div>
 
-          {/* Headline */}
-          <h1 className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight ${
-            isDark ? 'text-white' : 'text-gray-900'
-          }`}>
-            Fill it once.
-            <br />
-            <span className='bg-gradient-to-r from-teal-400 via-cyan-400 to-teal-500 bg-clip-text text-transparent'>
-              Prove it forever.
+          <h1
+            className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-5 leading-[1.08] tracking-tight max-w-5xl mx-auto ${
+              isDark ? 'text-white' : 'text-gray-900'
+            }`}
+          >
+            Your career,{' '}
+            <span className='bg-gradient-to-r from-teal-400 via-cyan-400 to-violet-400 bg-clip-text text-transparent'>
+              supercharged by AI
             </span>
+            <br />
+            <span className={isDark ? 'text-gray-200' : 'text-gray-800'}>and anchored on-chain</span>
           </h1>
 
-          {/* Subhead */}
-          <p className={`text-lg sm:text-xl md:text-2xl mb-10 max-w-3xl mx-auto leading-relaxed ${
-            isDark ? 'text-gray-300' : 'text-gray-600'
-          }`}>
-            Complex credentials, compliance paperwork, professional records — done once, verified on-chain,
-            <br className='hidden sm:block' />
-            and packaged into one beautiful Career Card you can share with a QR code.
+          <p
+            className={`text-base sm:text-lg md:text-xl mb-8 max-w-3xl mx-auto leading-relaxed ${
+              isDark ? 'text-gray-400' : 'text-gray-600'
+            }`}
+          >
+            <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>AvA</strong> finds and ranks jobs
+            against your profile, helps you apply with one flow, runs smart alerts, and guides your hub. Your{' '}
+            <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>Career Card</strong> is a composable,
+            verifiable identity — not another static PDF lost in an ATS black hole.
           </p>
 
-          {/* CTAs */}
-          <div className='flex flex-col sm:flex-row gap-4 justify-center items-center mb-14'>
-            <button
+          <div className='flex flex-col sm:flex-row gap-3 justify-center items-stretch sm:items-center mb-10 max-w-xl mx-auto sm:max-w-none'>
+            <Button
+              variant='primary'
+              size='lg'
               onClick={onGetStarted}
-              className='group px-8 py-4 text-lg font-semibold rounded-xl transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 flex items-center gap-2 bg-teal-500 text-white hover:bg-teal-400'
+              className='group text-base px-8 py-4 h-auto rounded-xl shadow-lg shadow-teal-900/20 dark:shadow-black/40'
             >
-              <span>{isAuthenticated ? 'Go to Dashboard' : 'Get Started'}</span>
+              <span>{isAuthenticated ? 'Go to dashboard' : 'Connect wallet'}</span>
               <ArrowRight className='w-5 h-5 group-hover:translate-x-1 transition-transform' />
-            </button>
-
+            </Button>
+            {onBrowseJobs && (
+              <Button
+                variant='secondary'
+                size='lg'
+                onClick={onBrowseJobs}
+                className='text-base px-8 py-4 h-auto rounded-xl border-2'
+              >
+                <Search className='w-5 h-5' />
+                Browse jobs — no login
+              </Button>
+            )}
             <a
-              href='#how-it-works'
-              className={`px-8 py-4 text-lg font-semibold rounded-xl border-2 transition-all duration-300 hover:scale-105 backdrop-blur-sm ${
-                isDark
-                  ? 'border-white/20 text-gray-200 hover:bg-white/[0.06]'
-                  : 'border-gray-300 text-gray-700 hover:bg-white/50'
+              href='#ava-intelligence'
+              onClick={(e) => {
+                e.preventDefault()
+                const el = document.getElementById('ava-intelligence')
+                if (!el) return
+                const reduce =
+                  typeof window !== 'undefined' &&
+                  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+              }}
+              className={`inline-flex items-center justify-center px-6 py-3.5 text-sm font-semibold rounded-xl transition-colors ${
+                isDark ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-800'
               }`}
             >
-              See How It Works
+              See what AvA does ↓
             </a>
           </div>
         </div>
 
-        {/* Hero visual — Career Card mockup */}
-        <div className='flex justify-center mb-12'>
+        <div className='flex flex-col lg:flex-row items-center justify-center gap-10 lg:gap-16 mb-12'>
           <CareerCardMockup isDark={isDark} />
+          <div className={`max-w-md text-left space-y-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className={`text-sm font-bold uppercase tracking-widest ${isDark ? 'text-teal-400' : 'text-teal-700'}`}>
+              Why we&apos;re not Indeed or LinkedIn
+            </p>
+            <ul className='space-y-3 text-sm sm:text-base'>
+              <li className='flex gap-3'>
+                <Sparkles className={`w-5 h-5 shrink-0 mt-0.5 ${isDark ? 'text-violet-400' : 'text-violet-600'}`} />
+                <span>
+                  <strong className={isDark ? 'text-gray-200' : 'text-gray-900'}>Intelligence layer:</strong> AvA
+                  scores listings to <em>you</em>, drafts context-aware apply flows, and keeps nudging your hub — not
+                  generic keyword spam.
+                </span>
+              </li>
+              <li className='flex gap-3'>
+                <Shield className={`w-5 h-5 shrink-0 mt-0.5 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
+                <span>
+                  <strong className={isDark ? 'text-gray-200' : 'text-gray-900'}>Proof, not prose:</strong> blocks
+                  (resume, DOT, MVR, portfolio…) back a single shareable card — employers see verified artifacts, not
+                  self-reported fluff.
+                </span>
+              </li>
+              <li className='flex gap-3'>
+                <Zap className={`w-5 h-5 shrink-0 mt-0.5 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
+                <span>
+                  <strong className={isDark ? 'text-gray-200' : 'text-gray-900'}>Wallet-native:</strong> your address
+                  is your anchor; STORM rewards real progress. No duplicate accounts — the chain of record is you.
+                </span>
+              </li>
+            </ul>
+          </div>
         </div>
 
-        {/* Trust bar */}
-        <div className='flex flex-wrap justify-center gap-6 sm:gap-10'>
+        <div className='flex flex-wrap justify-center gap-x-8 gap-y-3 sm:gap-x-12'>
           {[
-            { icon: CreditCard, text: 'Career Card' },
-            { icon: Shield,     text: 'On-Chain Verified' },
-            { icon: Zap,        text: 'STORM Rewards' },
-            { icon: Sparkles,   text: 'AI-Powered' },
+            { icon: Bot, text: 'AvA assistant' },
+            { icon: CreditCard, text: 'Career Card + QR' },
+            { icon: Layers, text: 'Composable blocks' },
+            { icon: Shield, text: 'Verifiable credentials' },
+            { icon: Zap, text: 'STORM on Base' },
           ].map((item) => (
             <div key={item.text} className='flex items-center gap-2'>
-              <item.icon className={`w-4 h-4 ${isDark ? 'text-teal-400/70' : 'text-teal-600/70'}`} />
-              <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              <item.icon className={`w-4 h-4 ${isDark ? 'text-teal-400/80' : 'text-teal-600/80'}`} />
+              <span className={`text-xs sm:text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                 {item.text}
               </span>
             </div>
           ))}
         </div>
       </section>
+
+      {/* AvA — product depth (was missing when homepage shipped) */}
+      <section id='ava-intelligence' className='py-16 sm:py-24 scroll-mt-24'>
+        <div data-reveal className='reveal-item text-center mb-12 max-w-3xl mx-auto'>
+          <h2 className={`text-3xl sm:text-4xl md:text-5xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            Meet{' '}
+            <span className='bg-gradient-to-r from-violet-400 to-teal-400 bg-clip-text text-transparent'>AvA</span>
+          </h2>
+          <p className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            Not a chatbot bolted onto a job board — a copilot wired to your hub, your career card, and live job data.
+            It gets smarter as you add blocks and as we ship more tools.
+          </p>
+        </div>
+
+        <div className='grid sm:grid-cols-2 gap-4 lg:gap-5 max-w-5xl mx-auto'>
+          {[
+            {
+              icon: Radar,
+              title: 'Ranked job matches',
+              body: 'AvA pulls real listings and scores them against your headline, skills, blocks, and goals — so you spend time on fits, not infinite scroll.',
+              accent: isDark ? 'from-teal-500/20 to-cyan-500/10' : 'from-teal-100 to-cyan-50',
+            },
+            {
+              icon: FileText,
+              title: 'Easy Apply + cover letters',
+              body: 'One guided flow ships your verified career card to employers. AvA can help draft tailored cover copy when you want backup.',
+              accent: isDark ? 'from-violet-500/20 to-indigo-500/10' : 'from-violet-100 to-indigo-50',
+            },
+            {
+              icon: BellRing,
+              title: 'AI job alerts',
+              body: 'Save what you care about — keywords, location, salary floor. We scan, match, and notify when strong listings land.',
+              accent: isDark ? 'from-amber-500/15 to-orange-500/10' : 'from-amber-50 to-orange-50',
+            },
+            {
+              icon: Sparkles,
+              title: 'Journey guide',
+              body: 'AvA knows which blocks you’ve installed and what’s incomplete. It nudges the next best step so your hub doesn’t stall halfway.',
+              accent: isDark ? 'from-emerald-500/20 to-teal-500/10' : 'from-emerald-50 to-teal-50',
+            },
+          ].map((cell) => (
+            <div key={cell.title} data-reveal className='reveal-item'>
+              <GlassCard
+                isDark={isDark}
+                className={`p-6 sm:p-7 h-full text-left bg-gradient-to-br ${cell.accent} hover:scale-[1.02] transition-transform duration-300`}
+              >
+                <div
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${
+                    isDark ? 'bg-gray-900/60 text-teal-300' : 'bg-white/90 text-teal-700 shadow-sm'
+                  }`}
+                >
+                  <cell.icon className='w-5 h-5' />
+                </div>
+                <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>{cell.title}</h3>
+                <p className={`text-sm leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{cell.body}</p>
+              </GlassCard>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Public job browse CTA — Indeed-style discovery before wallet */}
+      {onBrowseJobs && (
+        <section className='py-14 sm:py-20'>
+          <div
+            data-reveal
+            className={`reveal-item relative overflow-hidden rounded-3xl border px-6 py-10 sm:px-12 sm:py-14 max-w-5xl mx-auto ${
+              isDark
+                ? 'border-gray-700 bg-gradient-to-br from-gray-900 via-gray-900 to-teal-950/40'
+                : 'border-gray-200 bg-gradient-to-br from-white via-teal-50/40 to-cyan-50/30'
+            }`}
+          >
+            <div
+              className={`absolute -right-20 -top-20 w-64 h-64 rounded-full blur-3xl pointer-events-none ${
+                isDark ? 'bg-teal-500/20' : 'bg-teal-400/25'
+              }`}
+            />
+            <div className='relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 text-center lg:text-left'>
+              <div className='max-w-xl mx-auto lg:mx-0'>
+                <Briefcase className={`w-10 h-10 mx-auto lg:mx-0 mb-4 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
+                <h2 className={`text-2xl sm:text-3xl font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  Search real jobs before you connect
+                </h2>
+                <p className={`text-sm sm:text-base ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  StormChain postings plus aggregated boards — same search experience as logged-in users. Applying,
+                  AvA match scores, and alerts stay tied to your wallet so we never mint empty profiles.
+                </p>
+              </div>
+              <div className='flex flex-col sm:flex-row gap-3 justify-center lg:justify-end shrink-0'>
+                <Button variant='primary' size='lg' onClick={onBrowseJobs} className='h-auto py-4 px-8 rounded-xl'>
+                  <Search className='w-5 h-5' />
+                  Open job search
+                </Button>
+                <Button variant='secondary' size='lg' onClick={onGetStarted} className='h-auto py-4 px-8 rounded-xl'>
+                  Connect to apply
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
           SECTION 2 — The Problem
@@ -446,8 +693,11 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
           </p>
         </div>
 
-        {/* Hive showcase grid */}
-        <div data-reveal className='reveal-item mb-14'>
+        {/* Hive — radial mask softens the cluster edge so it doesn’t read as a dark card on clouds */}
+        <div
+          data-reveal
+          className='reveal-item mb-14 flex justify-center px-2 [mask-image:radial-gradient(ellipse_78%_72%_at_50%_50%,#000_52%,transparent_96%)] [-webkit-mask-image:radial-gradient(ellipse_78%_72%_at_50%_50%,#000_52%,transparent_96%)]'
+        >
           <HiveShowcase blocks={HIVE_BLOCKS} isDark={isDark} />
         </div>
 
@@ -509,8 +759,8 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
             },
             {
               step: '2',
-              title: 'Install your blocks',
-              desc: 'Browse the Block Store. Add what fits your career.',
+              title: 'Install blocks + let AvA help',
+              desc: 'Add the credentials that matter for your trade. AvA tracks progress and surfaces the next move.',
               icon: Sparkles,
             },
             {
@@ -658,30 +908,40 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
       <section className='text-center py-16 sm:py-24 pb-20 sm:pb-32'>
         <div data-reveal className='reveal-item'>
           <h2 className={`text-3xl sm:text-4xl md:text-5xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Ready to build your career?
+            Ready when you are
           </h2>
           <p className={`text-lg mb-8 max-w-xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            It&apos;s free to start. No credit card. No catch.
+            Peek at jobs without an account. Connect a wallet when you&apos;re ready to apply with your career card
+            and AvA.
           </p>
 
-          <button
-            onClick={onGetStarted}
-            className='group px-10 py-5 text-xl font-semibold rounded-xl transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 inline-flex items-center gap-3 bg-teal-500 text-white hover:bg-teal-400'
-          >
-            <span>{isAuthenticated ? 'Go to Dashboard' : 'Get Started Free'}</span>
-            <ArrowRight className='w-6 h-6 group-hover:translate-x-1 transition-transform' />
-          </button>
-
-          <div className='mt-6'>
-            <button
-              onClick={openWhitepaper}
-              className={`text-sm underline underline-offset-4 transition-colors ${
-                isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
-              }`}
+          <div className='flex flex-col sm:flex-row gap-3 justify-center items-center mb-6'>
+            <Button
+              variant='primary'
+              size='lg'
+              onClick={onGetStarted}
+              className='group text-lg px-10 py-5 h-auto rounded-xl shadow-xl'
             >
-              Read the Whitepaper
-            </button>
+              <span>{isAuthenticated ? 'Go to dashboard' : 'Connect wallet'}</span>
+              <ArrowRight className='w-6 h-6 group-hover:translate-x-1 transition-transform' />
+            </Button>
+            {onBrowseJobs && (
+              <Button variant='secondary' size='lg' onClick={onBrowseJobs} className='text-lg px-10 py-5 h-auto rounded-xl'>
+                <Briefcase className='w-5 h-5' />
+                Browse jobs
+              </Button>
+            )}
           </div>
+
+          <button
+            type='button'
+            onClick={openWhitepaper}
+            className={`text-sm underline underline-offset-4 transition-colors ${
+              isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            Read the STORM whitepaper
+          </button>
         </div>
       </section>
 
@@ -707,6 +967,7 @@ export default function HomePage({ isAuthenticated, onGetStarted }: HomePageProp
           100% { transform: translateY(0) rotate(-0.5deg); }
         }
       `}</style>
-    </div>
+      </div>
+    </>
   )
 }

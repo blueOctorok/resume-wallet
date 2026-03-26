@@ -4,6 +4,14 @@ import { MapPin, Calendar, Mail, Phone, Eye, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import Avatar from '@/components/ui/Avatar'
+import Button from '@/components/ui/Button'
+import {
+  careerCardShellClass,
+  careerCardHairlineTop,
+  careerCardAmbientBlobClass,
+  careerCardHeroClass,
+  careerCardHeroWashClass,
+} from '@/lib/career-card-styles'
 import type { ProjectedCareerCard as CardData, CareerCardMode, CareerCardSection, SectionBlockType } from '@/types/career-card'
 import type { ResumeData, DotAppData, MvrData, CdlData, PortfolioData, GitHubData, ProjectsData } from '@/types/career-card'
 
@@ -48,47 +56,53 @@ export default function ProjectedCareerCard({
   const { theme } = useTheme()
   const isDark = theme === 'dark'
 
-  // Neumorphic shadow: dark shadow (bottom-right) + light shadow (top-left)
-  // creates a "raised from the surface" 3D illusion via pure CSS.
-  const cardShadow = isDark
-    ? '20px 20px 60px #0d1117, -20px -20px 60px #374151'
-    : '20px 20px 60px #bebebe, -20px -20px 60px #ffffff'
-
   return (
-    <div
-      className={cn(
-        'max-w-2xl mx-auto rounded-[2.5rem] overflow-hidden',
-        isDark ? 'bg-gray-800' : 'bg-[#e0e0e0]'
-      )}
-      style={{ boxShadow: cardShadow }}
-    >
+    <div className={cn('max-w-2xl mx-auto', careerCardShellClass(isDark))}>
+      <div className={careerCardHairlineTop()} aria-hidden />
+      <div className={careerCardAmbientBlobClass(isDark)} aria-hidden />
+
       {/* ── Profile Header ── */}
       <div>
-        <div className={cn(
-          'h-20',
-          isDark
-            ? 'bg-gradient-to-r from-teal-900/40 to-gray-700'
-            : 'bg-gradient-to-r from-teal-100 to-gray-200'
-        )} />
-        <div className='px-6 pb-5 -mt-10'>
+        <div className={careerCardHeroClass(isDark)}>
+          <div className={careerCardHeroWashClass(isDark)} aria-hidden />
+        </div>
+        <div className='px-6 sm:px-8 pb-5 -mt-11 sm:-mt-12 relative z-[1]'>
           <div className='flex items-end gap-4'>
-            <div className={cn(
-              'rounded-full border-4',
-              isDark ? 'border-gray-800' : 'border-white'
-            )}>
-              <Avatar
-                name={data.name}
-                avatarUrl={data.avatarUrl}
-                size='xl'
-                color='teal'
-              />
+            <div
+              className={cn(
+                'rounded-full p-0.5',
+                'bg-gradient-to-br from-teal-400/80 via-cyan-400/50 to-violet-500/60 dark:from-teal-400/90 dark:via-teal-600/40 dark:to-violet-600/50',
+                'shadow-lg shadow-teal-900/20 dark:shadow-black/50',
+              )}
+            >
+              <div
+                className={cn(
+                  'rounded-full border-[3px]',
+                  isDark ? 'border-gray-950' : 'border-white',
+                )}
+              >
+                <Avatar name={data.name} avatarUrl={data.avatarUrl} size='xl' color='teal' />
+              </div>
             </div>
-            <div className='flex-1 min-w-0 pb-1'>
-              <h1 className={cn('text-xl font-bold truncate', isDark ? 'text-white' : 'text-gray-900')}>
+            <div className='flex-1 min-w-0 pb-1 pt-1'>
+              <p
+                className={cn(
+                  'text-[10px] font-semibold uppercase tracking-[0.2em] mb-0.5',
+                  isDark ? 'text-teal-300/85' : 'text-teal-800/75',
+                )}
+              >
+                Career card
+              </p>
+              <h1
+                className={cn(
+                  'text-xl sm:text-2xl font-bold tracking-tight truncate',
+                  isDark ? 'text-white' : 'text-gray-900',
+                )}
+              >
                 {data.name}
               </h1>
               {data.occupation && (
-                <p className={cn('text-sm', isDark ? 'text-teal-400' : 'text-teal-600')}>
+                <p className={cn('text-sm font-medium mt-0.5', isDark ? 'text-teal-300' : 'text-teal-700')}>
                   {data.occupation}
                 </p>
               )}
@@ -140,7 +154,7 @@ export default function ProjectedCareerCard({
       </div>
 
       {/* ── Dynamic Sections ── */}
-      <div className='px-6 pb-6 space-y-5'>
+      <div className='px-6 sm:px-8 pb-7 space-y-5 relative z-[1]'>
         {data.sections.map((section) => (
           <SectionRenderer
             key={section.blockType}
@@ -159,41 +173,34 @@ export default function ProjectedCareerCard({
 
         {/* ── Empty state for self mode ── */}
         {mode === 'self' && data.sections.length === 0 && (
-          <div className={cn(
-            'rounded-xl border-2 border-dashed p-8 text-center',
-            isDark ? 'border-gray-600' : 'border-gray-400/50'
-          )}>
-            <p className={cn('text-sm mb-2', isDark ? 'text-gray-400' : 'text-gray-600')}>
+          <div
+            className={cn(
+              'rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center',
+              'border-teal-500/25 dark:border-teal-400/20',
+              'bg-gradient-to-b from-teal-500/[0.04] to-transparent dark:from-teal-400/[0.06]',
+            )}
+          >
+            <p className={cn('text-sm font-semibold mb-1', isDark ? 'text-white' : 'text-gray-900')}>
               Your career card is empty
             </p>
-            <p className={cn('text-xs mb-4', isDark ? 'text-gray-500' : 'text-gray-500')}>
-              Add blocks to your hub to build your professional profile
+            <p className={cn('text-xs mb-5 max-w-xs mx-auto', isDark ? 'text-gray-400' : 'text-gray-600')}>
+              Add blocks to your hub — they appear here in the order you arrange them.
             </p>
             {onAddBlock && (
-              <button
-                onClick={onAddBlock}
-                className={cn(
-                  'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                  isDark
-                    ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30'
-                    : 'bg-teal-100 text-teal-700 hover:bg-teal-200'
-                )}
-              >
-                <Plus className='w-4 h-4' /> Add Blocks
-              </button>
+              <Button type="button" variant="primary" size="sm" onClick={onAddBlock}>
+                <Plus className="w-4 h-4" />
+                Add blocks
+              </Button>
             )}
           </div>
         )}
 
         {/* ── Connect CTA (public mode) ── */}
         {mode === 'public' && data.settings.allowConnect && onConnect && (
-          <div className='pt-4 text-center'>
-            <button
-              onClick={onConnect}
-              className='px-6 py-2.5 rounded-xl bg-teal-500 text-white text-sm font-semibold hover:bg-teal-600 transition-colors'
-            >
+          <div className='pt-2 text-center'>
+            <Button type="button" variant="primary" size="md" onClick={onConnect}>
               Connect with {data.name.split(' ')[0]}
-            </button>
+            </Button>
           </div>
         )}
       </div>

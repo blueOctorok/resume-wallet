@@ -21,6 +21,7 @@
 | **Career Card Easy Apply + AvA chat memory** | **✅ Done** | **External job apply uses `/api/career-card` (not driver profile); submit snapshot includes `installed_block_types` + profile fields; server-side eligibility before job row insert. AvA `/api/ai/chat` accepts `conversationHistory` (multi-turn).** |
 | **Phase 2 — AI cover letter + job recommendations** | **✅ Done** | **`POST /api/ai/cover-letter` (3 free/day + credits). `GET /api/jobs/recommended` (1 free AI/day + cache; `force=1` = 1 credit). Migration `061_ava_job_ai_usage.sql`. External jobs tab UI + shared `adzuna-server`.** |
 | **Phase 3 — AI job alerts** | **✅ Done** | **Hub saved searches + daily cron `/api/cron/job-alerts` + in-app notifications. Plus candidate AvA chat tools: `search_ranked_jobs` + `save_job_alert`; chat UI shows ranked job cards → new-tab listing + Apply with Career Card modal.** |
+| **Public guest job browse + homepage (AvA pitch)** | **✅ Done** | **Unauthenticated users: nav Home / Browse jobs; `JobListings` `publicBrowseMode` (StormChain + external search, connect CTA for apply). HomePage hero + AvA bento + pre-wallet job search band.** |
 
 ## 💬 **AvA Chat Monetization** (March 2026 — Complete)
 

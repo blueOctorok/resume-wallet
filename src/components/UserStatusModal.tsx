@@ -244,7 +244,11 @@ export default function UserStatusModal({
                             ? '🚗 Driver'
                             : userRole === 'developer'
                               ? '💻 Developer'
-                              : '🏢 Employer'}
+                              : userRole === 'candidate'
+                                ? '🧩 Candidate'
+                                : userRole === 'employer'
+                                  ? '🏢 Employer'
+                                  : userRole}
                         </p>
                       )}
                     </div>

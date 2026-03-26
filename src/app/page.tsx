@@ -33,11 +33,6 @@ import ErrorBoundary from '@/components/app/ErrorBoundary'
 import { JourneyModal } from '@/components/ui'
 import AvaJourneyGuide from '@/components/AvaJourneyGuide'
 
-const WalletCard = dynamic(
-  () => import('@/components/WalletCard').then((mod) => mod.default),
-  { ssr: false }
-)
-
 const RoleSelectionModal = dynamic(
   () => import('@/components/RoleSelectionModal').then((mod) => mod.default),
   { ssr: false, loading: () => <LoadingScreen message='Loading...' fullScreen={false} /> }

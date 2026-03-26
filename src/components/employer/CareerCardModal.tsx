@@ -12,9 +12,11 @@ import {
   RefreshCw,
   CreditCard,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import CareerCard, { type CareerCardData } from '@/components/CareerCard'
 import Avatar from '@/components/ui/Avatar'
+import Button from '@/components/ui/Button'
 import MessagingButton from '@/components/messaging/MessagingButton'
 import MvrPaymentButton from '@/components/MvrPaymentButton'
 import { useUIStore } from '@/stores'
@@ -395,41 +397,77 @@ export default function CareerCardModal({
   // ── Modal shell ───────────────────────────────────────────────────────────
 
   const modalContent = (
-    <Modal onClose={onClose} maxWidth="max-w-3xl" zIndex={9999}>
+    <Modal onClose={onClose} maxWidth="max-w-4xl" zIndex={9999}>
       {/* Custom header with avatar + refresh (not using ModalHeader because of Avatar) */}
-      <div className={`sticky top-0 z-10 flex items-center justify-between p-4 border-b ${
-        theme === 'dark' ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'
-      }`}>
-        <div className="flex items-center gap-3">
-          <Avatar
-            name={careerCard?.name || '?'}
-            avatarUrl={careerCard?.avatarUrl}
-            size="md"
-            color="teal"
-          />
-          <div>
-            <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              {loading ? 'Loading...' : careerCard?.name || 'Career Card'}
-            </h3>
-            <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-              Career Card
+      <div
+        className={cn(
+          'sticky top-0 z-10 flex items-center justify-between gap-3 p-4 sm:p-5 border-b',
+          'backdrop-blur-md border-gray-200/90 dark:border-gray-700/80',
+          theme === 'dark'
+            ? 'bg-gray-950/85'
+            : 'bg-white/90',
+        )}
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-teal-400/35 to-transparent dark:via-teal-400/25"
+        />
+        <div className="flex items-center gap-3 min-w-0 relative">
+          <div
+            className={cn(
+              'rounded-full ring-2 ring-offset-2 shrink-0',
+              theme === 'dark' ? 'ring-teal-400/40 ring-offset-gray-950' : 'ring-teal-500/30 ring-offset-white',
+            )}
+          >
+            <Avatar
+              name={careerCard?.name || '?'}
+              avatarUrl={careerCard?.avatarUrl}
+              size="md"
+              color="teal"
+            />
+          </div>
+          <div className="min-w-0">
+            <p
+              className={cn(
+                'text-[10px] font-semibold uppercase tracking-[0.18em] mb-0.5',
+                theme === 'dark' ? 'text-teal-400/80' : 'text-teal-700/80',
+              )}
+            >
+              Talent · Career card
             </p>
+            <h3
+              className={cn(
+                'font-bold text-lg tracking-tight truncate',
+                theme === 'dark' ? 'text-white' : 'text-gray-900',
+              )}
+            >
+              {loading ? 'Loading…' : careerCard?.name || 'Career card'}
+            </h3>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
+        <div className="flex items-center gap-2 shrink-0 relative">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => fetchCareerCard(true)}
             disabled={isRefreshing}
             title="Refresh"
-            className={`p-2 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
+            aria-label="Refresh career card"
+            className="!p-2"
           >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
+            <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
+          </Button>
         </div>
       </div>
 
       {/* Body */}
-      <div className="p-6">
+      <div
+        className={cn(
+          'p-4 sm:p-6',
+          theme === 'dark' ? 'bg-gray-950/40' : 'bg-slate-50/40',
+        )}
+      >
         {loading && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className={`w-10 h-10 animate-spin ${theme === 'dark' ? 'text-teal-400' : 'text-teal-600'}`} />

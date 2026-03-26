@@ -2,6 +2,15 @@
 
 import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { cn } from '@/lib/utils'
+import {
+  careerCardShellClass,
+  careerCardHairlineTop,
+  careerCardAmbientBlobClass,
+  careerCardHeroClass,
+  careerCardHeroWashClass,
+  careerCardInsetPanelClass,
+} from '@/lib/career-card-styles'
 import {
   Mail,
   Phone,
@@ -248,38 +257,74 @@ export default function CareerCard({
     }
   }
 
-  // Neumorphic shadow works by having both a dark shadow (bottom-right)
-  // and a light shadow (top-left), creating the illusion of depth.
-  // Dark mode flips to near-black / mid-gray to match the darker base color.
-  const cardShadow =
-    theme === 'dark'
-      ? '20px 20px 60px #0d1117, -20px -20px 60px #374151'
-      : '20px 20px 60px #bebebe, -20px -20px 60px #ffffff'
+  const isDark = theme === 'dark'
 
   return (
-    <div
-      className={`rounded-[2.5rem] p-6 space-y-6 ${theme === 'dark' ? 'bg-gray-800' : 'bg-[#e0e0e0]'}`}
-      style={{ boxShadow: cardShadow }}
-    >
+    <div className={cn(careerCardShellClass(isDark))}>
+      <div className={careerCardHairlineTop()} aria-hidden />
+      <div className={careerCardAmbientBlobClass(isDark)} aria-hidden />
+
+      {/* Hero — document identity (name also appears in employer modal chrome; this anchors the card as an artifact) */}
+      <div className={careerCardHeroClass(isDark)}>
+        <div className={careerCardHeroWashClass(isDark)} aria-hidden />
+        <div
+          className={cn(
+            'absolute inset-x-6 sm:inset-x-8 bottom-3 flex flex-col gap-0.5',
+            'z-[1]',
+          )}
+        >
+          <p
+            className={cn(
+              'text-[10px] font-semibold uppercase tracking-[0.2em]',
+              isDark ? 'text-teal-300/80' : 'text-teal-800/70',
+            )}
+          >
+            Career card
+          </p>
+          <p
+            className={cn(
+              'text-lg sm:text-xl font-bold tracking-tight truncate pr-4',
+              isDark ? 'text-white' : 'text-gray-900',
+            )}
+          >
+            {data.name}
+          </p>
+        </div>
+      </div>
+
+      <div className="relative z-[1] p-6 sm:p-7 space-y-6">
       {/* Profile Score Banner */}
-      <div className={`p-4 rounded-xl ${theme === 'dark' ? 'bg-gray-700/50' : 'bg-white/40'}`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <TrendingUp className={`w-5 h-5 ${
-              data.completenessScore >= 80 ? 'text-green-500' :
-              data.completenessScore >= 60 ? 'text-yellow-500' :
-              'text-orange-500'
-            }`} />
-            <div>
-              <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                Profile Completeness: {data.completenessScore}%
+      <div className={careerCardInsetPanelClass(isDark)}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className={cn(
+                'flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center',
+                'bg-gradient-to-br from-teal-500/20 to-cyan-500/10 dark:from-teal-400/25 dark:to-violet-500/15',
+                'ring-1 ring-teal-500/25 dark:ring-teal-400/30',
+              )}
+            >
+              <TrendingUp
+                className={cn(
+                  'w-5 h-5',
+                  data.completenessScore >= 80
+                    ? 'text-emerald-500 dark:text-emerald-400'
+                    : data.completenessScore >= 60
+                      ? 'text-amber-500 dark:text-amber-400'
+                      : 'text-orange-500 dark:text-orange-400',
+                )}
+              />
+            </div>
+            <div className="min-w-0">
+              <p className={cn('font-semibold tracking-tight', isDark ? 'text-white' : 'text-gray-900')}>
+                Profile completeness · {data.completenessScore}%
               </p>
-              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
                 {data.verifiedJobsCount} verified jobs · {data.workHistoryCount} work entries
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {data.hasResume && <Badge label="Resume" color="green" theme={theme} />}
             {data.hasDriverApp && <Badge label="DOT" color="green" theme={theme} />}
             {data.hasMvr && <Badge label="MVR" color="green" theme={theme} />}
@@ -681,27 +726,39 @@ export default function CareerCard({
 
       {/* Footer */}
       {(footerActions || profile?.share_token) && (
-        <div className={`pt-6 border-t ${theme === 'dark' ? 'border-gray-600' : 'border-gray-300/60'}`}>
+        <div
+          className={cn(
+            'pt-6 border-t',
+            isDark ? 'border-gray-600/60' : 'border-gray-200/90',
+          )}
+        >
+          <div
+            className="h-px w-full mb-6 bg-gradient-to-r from-transparent via-teal-400/30 to-transparent dark:via-teal-400/20"
+            aria-hidden
+          />
           <div className="flex flex-wrap gap-3">
             {profile?.share_token && (
               <a
                 href={`/${isDriver ? 'd' : 'dev-card'}/${profile.share_token}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm ${
-                  theme === 'dark'
-                    ? 'bg-teal-500/20 text-teal-400 border border-teal-500/40 hover:bg-teal-500/30'
-                    : 'bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100'
-                }`}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors',
+                  'ring-1 ring-teal-500/25 dark:ring-teal-400/30',
+                  isDark
+                    ? 'bg-teal-500/15 text-teal-300 border border-teal-500/35 hover:bg-teal-500/25'
+                    : 'bg-teal-50 text-teal-800 border border-teal-200/90 hover:bg-teal-100/90',
+                )}
               >
                 <ExternalLink className="w-4 h-4" />
-                View Public Profile
+                View public profile
               </a>
             )}
             {footerActions}
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }
@@ -723,17 +780,27 @@ export function Section({
   children: React.ReactNode
   theme: string
 }) {
+  const isDark = theme === 'dark'
   return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <h4 className={`font-medium flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+    <section className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <h4
+          className={cn(
+            'font-semibold text-sm tracking-tight flex items-center gap-2 min-w-0',
+            isDark ? 'text-white' : 'text-gray-900',
+          )}
+        >
+          <span
+            className="w-1 h-5 rounded-full bg-gradient-to-b from-teal-400 to-cyan-500 dark:from-teal-400 dark:to-violet-400 shrink-0"
+            aria-hidden
+          />
           {icon}
           {title}
         </h4>
         {action}
       </div>
       {children}
-    </div>
+    </section>
   )
 }
 
@@ -1064,23 +1131,40 @@ export function InfoItem({ label, value, theme }: { label: string; value: string
 
 export function Badge({ label, color, theme }: { label: string; color: 'green' | 'yellow' | 'red'; theme: string }) {
   const colors = {
-    green: theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700',
-    yellow: theme === 'dark' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-100 text-yellow-700',
-    red: theme === 'dark' ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-700',
+    green:
+      theme === 'dark'
+        ? 'bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-400/25'
+        : 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-600/15',
+    yellow:
+      theme === 'dark'
+        ? 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/25'
+        : 'bg-amber-50 text-amber-900 ring-1 ring-amber-600/15',
+    red:
+      theme === 'dark'
+        ? 'bg-red-500/15 text-red-400 ring-1 ring-red-400/25'
+        : 'bg-red-50 text-red-800 ring-1 ring-red-600/15',
   }
   return (
-    <span className={`px-2 py-1 rounded text-xs font-medium ${colors[color]}`}>
+    <span className={cn('px-2.5 py-1 rounded-full text-xs font-semibold', colors[color])}>
       {label}
     </span>
   )
 }
 
 export function EmptyState({ message, subtext, theme }: { message: string; subtext?: string; theme: string }) {
+  const isDark = theme === 'dark'
   return (
-    <div className={`p-4 rounded-lg text-center ${theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
-      <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>{message}</p>
+    <div
+      className={cn(
+        'p-4 rounded-xl text-center border border-dashed',
+        isDark
+          ? 'border-gray-600/60 bg-gray-800/30 text-gray-400'
+          : 'border-gray-300/80 bg-slate-50/80 text-gray-500',
+      )}
+    >
+      <p className="text-sm font-medium">{message}</p>
       {subtext && (
-        <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>{subtext}</p>
+        <p className={cn('text-xs mt-1.5', isDark ? 'text-gray-500' : 'text-gray-400')}>{subtext}</p>
       )}
     </div>
   )

@@ -43,11 +43,18 @@ export default function MiniCareerCard() {
   return (
     <div
       className={cn(
-        'rounded-xl border p-3 space-y-3',
-        isDark ? 'border-gray-700 bg-gray-800/40' : 'border-slate-200 bg-white/90',
+        'relative overflow-hidden rounded-2xl border p-3 space-y-3 shadow-sm',
+        'ring-1 ring-teal-500/[0.06] dark:ring-teal-400/[0.08]',
+        isDark
+          ? 'border-gray-600/60 bg-gradient-to-b from-gray-900/90 to-gray-950/90'
+          : 'border-gray-200/90 bg-gradient-to-b from-white to-slate-50/90',
       )}
     >
-      <p className='text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400'>
+      <div
+        aria-hidden
+        className='pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-400/35 to-transparent dark:via-teal-400/25'
+      />
+      <p className='text-[10px] font-bold uppercase tracking-[0.18em] text-teal-700/80 dark:text-teal-400/80'>
         Career card preview
       </p>
 
