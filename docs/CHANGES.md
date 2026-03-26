@@ -4,9 +4,11 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
-## **Coinbase Onramp 401 (localhost / CDP JWT)** (March 2026)
+## **Coinbase Onramp -- official SDK + localhost fix** (March 2026)
 
-- [`src/app/api/onramp/session/route.ts`](src/app/api/onramp/session/route.ts): CDP JWT now matches **@coinbase/cdp-sdk** — payload uses **`uris: string[]`** (not legacy **`uri`**), drops **`aud`** (SDK changelog: removed default audience; wrong claim → **401**). Adds **`iat`** via `setIssuedAt`. Treats **IPv6 loopback `::1`** (and `::ffff:127.*`) as local so **`clientIp` is not sent** on localhost (was mislabeled “public”).
+- `src/app/api/onramp/session/route.ts`: **Replaced hand-rolled JWT** with official `@coinbase/cdp-sdk/auth` `generateJwt()` -- the same function Coinbase's [onramp demo app](https://github.com/coinbase/onramp-demo-application) uses. Eliminates drift when Coinbase changes claim shapes (old code had `uri` string vs required `uris` array, stale `aud`).
+- `clientIp` **always sent** -- for localhost uses RFC 5737 TEST-NET `192.0.2.1` (matching Coinbase demo) instead of omitting. IPv6 loopback `::1` now correctly detected as local.
+- **Root cause of 401:** Coinbase account security lockout silently revoked the existing CDP API key; re-enabling + new key resolved it.
 
 ---
 
