@@ -1,8 +1,21 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import SaveProgressButton from './SaveProgressButton'
+import { StateSelect, normalizeState } from '@/components/ui/StateSelect'
+import { MonthYearPicker } from '@/components/ui/MonthYearPicker'
+
+/** Normalize saved values to MM/YYYY for MonthYearPicker (legacy text or ISO dates). */
+function normalizeConvictionMonthYear(raw: string): string {
+  if (!raw) return ''
+  const t = raw.trim()
+  const slash = t.match(/^(\d{1,2})\/(\d{4})$/)
+  if (slash) return `${String(parseInt(slash[1], 10)).padStart(2, '0')}/${slash[2]}`
+  const iso = t.match(/^(\d{4})-(\d{2})-\d{2}$/)
+  if (iso) return `${iso[2]}/${iso[1]}`
+  return ''
+}
 
 // 49 CFR 391.15 disqualifying offenses — shown as checkboxes when driver answers "yes"
 const CFR391_OFFENSES = [
@@ -174,7 +187,17 @@ export default function PersonalInfoForm2({
     if (hasHydratedRef.current) return
     if (initialData && Object.keys(initialData).length > 0) {
       hasHydratedRef.current = true
-      setFormData((prev) => ({ ...prev, ...initialData }))
+      setFormData((prev) => {
+        const merged = { ...prev, ...initialData }
+        if (Array.isArray(merged.convictions)) {
+          merged.convictions = merged.convictions.map((c: { stateOfViolation?: string; dateConvicted?: string; [k: string]: unknown }) => ({
+            ...c,
+            stateOfViolation: normalizeState(String(c.stateOfViolation ?? '')),
+            dateConvicted: normalizeConvictionMonthYear(String(c.dateConvicted ?? '')),
+          }))
+        }
+        return merged
+      })
     }
   }, [initialData])
 
@@ -221,6 +244,9 @@ export default function PersonalInfoForm2({
             newErrors[`conviction${index}Date`] = 'Conviction date is required'
           if (!conviction.violation?.trim())
             newErrors[`conviction${index}Violation`] = 'Violation description is required'
+          // State is always stored as 2-letter code via StateSelect; require selection when row is used
+          if (!conviction.stateOfViolation?.trim())
+            newErrors[`conviction${index}State`] = 'State of violation is required'
         }
       })
     }
@@ -770,6 +796,13 @@ export default function PersonalInfoForm2({
       : 'bg-white border-gray-200 text-gray-900'
   }`
 
+  // DOT asks for convictions in the past 3 years — disable months before this boundary
+  const convictionMinBoundary = useMemo(() => {
+    const d = new Date()
+    d.setFullYear(d.getFullYear() - 3)
+    return `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+  }, [])
+
   const renderSafetyCompliance = () => (
     <div className='space-y-10'>
 
@@ -941,23 +974,20 @@ export default function PersonalInfoForm2({
                   >
                     DATE CONVICTED
                   </label>
-                  <input
-                    type='text'
+                  <MonthYearPicker
                     value={conviction.dateConvicted}
-                    onChange={(e) =>
-                      handleInputChange(
-                        'convictions',
-                        { dateConvicted: e.target.value },
-                        index
-                      )
+                    onChange={(v) =>
+                      handleInputChange('convictions', { dateConvicted: v }, index)
                     }
-                    placeholder='MM/YYYY'
-                    className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                      theme === 'dark'
-                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    }`}
+                    placeholder='Select month & year'
+                    allowPresent={false}
+                    error={!!errors[`conviction${index}Date`]}
+                    theme={theme === 'dark' ? 'dark' : 'light'}
+                    minDate={convictionMinBoundary}
                   />
+                  {errors[`conviction${index}Date`] && (
+                    <p className='mt-1 text-sm text-red-500'>{errors[`conviction${index}Date`]}</p>
+                  )}
                 </div>
                 <div className='flex flex-col'>
                   <label
@@ -984,26 +1014,23 @@ export default function PersonalInfoForm2({
                 </div>
                 <div className='flex flex-col'>
                   <label
+                    htmlFor={`conviction-state-${index}`}
                     className={`block text-sm font-medium mb-2 min-h-10 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
                   >
                     STATE OF VIOLATION
                   </label>
-                  <input
-                    type='text'
+                  <StateSelect
+                    id={`conviction-state-${index}`}
+                    name={`conviction-state-${index}`}
                     value={conviction.stateOfViolation}
-                    onChange={(e) =>
-                      handleInputChange(
-                        'convictions',
-                        { stateOfViolation: e.target.value },
-                        index
-                      )
+                    onChange={(value) =>
+                      handleInputChange('convictions', { stateOfViolation: value }, index)
                     }
-                    className={`w-full px-4 py-3 border-2 rounded-md focus:outline-none focus:ring-2 focus:border-transparent ${
-                      theme === 'dark'
-                        ? 'bg-gray-700/50 border-gray-600 text-white focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                        : 'bg-white border-gray-200 text-gray-900 focus:ring-2 focus:ring-indigo-500 rounded-lg'
-                    }`}
+                    className={inputClass}
                   />
+                  {errors[`conviction${index}State`] && (
+                    <p className='mt-1 text-sm text-red-500'>{errors[`conviction${index}State`]}</p>
+                  )}
                 </div>
                 <div className='flex flex-col'>
                   <label

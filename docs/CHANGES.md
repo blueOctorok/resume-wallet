@@ -4,6 +4,28 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **DOT Form 2 -- state of violation dropdown** (March 2026)
+
+- [`PersonalInfoForm2.tsx`](src/components/driver-application/PersonalInfoForm2.tsx): Traffic convictions **State of violation** uses shared [`StateSelect`](src/components/ui/StateSelect.tsx) (2-letter codes + full names in the UI). Hydration runs [`normalizeState`](src/components/ui/StateSelect.tsx) so saved values like `Ohio` or `oh` map to `OH` when possible. Step validation requires state when a conviction row has date or violation filled.
+
+---
+
+## **Vercel `createPortal` fix (Modal + MonthYearPicker)** (March 2026)
+
+- **DOT Form 3 — Add history entry:** opens [`Modal`](src/components/ui/Modal.tsx) to pick Employment / Unemployment / School / etc. That path hit **`createPortal`** before any date picker mounted — same production issue as below.
+- [`Modal.tsx`](src/components/ui/Modal.tsx) and [`MonthYearPicker.tsx`](src/components/ui/MonthYearPicker.tsx): use **`import * as ReactDOM from 'react-dom'`** and **`ReactDOM.createPortal`** — Vercel/production bundles could throw **`ReferenceError: createPortal is not defined`** with a named `import { createPortal }`; namespace import keeps the binding stable.
+
+---
+
+## **DOT Forms 1--3 -- structured inputs (dates, SSN, ZIP)** (March 2026)
+
+- New shared [`MonthYearPicker.tsx`](src/components/ui/MonthYearPicker.tsx): month/year picker (value `MM/YYYY` or `Present`) with portal dropdown; exports [`parseDateToNumber`](src/components/ui/MonthYearPicker.tsx) for range checks.
+- [`PersonalInfoForm3.tsx`](src/components/driver-application/PersonalInfoForm3.tsx): uses shared picker (removed inline duplicate).
+- [`PersonalInfoForm2.tsx`](src/components/driver-application/PersonalInfoForm2.tsx): **Date convicted** uses `MonthYearPicker` (not free-text `MM/YYYY`); `minDate` = rolling **3 years** for DOT window; hydration normalizes legacy `MM/YYYY` and `YYYY-MM-DD` to `MM/YYYY`.
+- [`PersonalInfoForm1.tsx`](src/components/driver-application/PersonalInfoForm1.tsx): **SSN** uses [`SSNInput`](src/components/ui/MaskedInputs.tsx); **ZIP** (current + previous addresses) uses [`ZipCodeInput`](src/components/ui/MaskedInputs.tsx). Existing **type=date** fields and **StateSelect** for addresses/licenses unchanged.
+
+---
+
 ## **Coinbase Onramp -- official SDK + localhost fix** (March 2026)
 
 - `src/app/api/onramp/session/route.ts`: **Replaced hand-rolled JWT** with official `@coinbase/cdp-sdk/auth` `generateJwt()` -- the same function Coinbase's [onramp demo app](https://github.com/coinbase/onramp-demo-application) uses. Eliminates drift when Coinbase changes claim shapes (old code had `uri` string vs required `uris` array, stale `aud`).

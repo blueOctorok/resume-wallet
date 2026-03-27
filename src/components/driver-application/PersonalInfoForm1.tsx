@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
 import SaveProgressButton from './SaveProgressButton'
-import { PhoneInput } from '@/components/ui/MaskedInputs'
+import { PhoneInput, SSNInput, ZipCodeInput } from '@/components/ui/MaskedInputs'
 import { StateSelect } from '@/components/ui/StateSelect'
 import AskAvaButton from '@/components/ui/AskAvaButton'
 
@@ -744,13 +744,10 @@ export default function PersonalInfoForm1({
           >
             SOCIAL SECURITY #
           </label>
-          <input
-            type='text'
+          <SSNInput
             value={formData.socialSecurity}
-            onChange={(e) =>
-              handleInputChange('socialSecurity', e.target.value)
-            }
-            placeholder='XXX-XX-XXXX'
+            onChange={(value) => handleInputChange('socialSecurity', value)}
+            placeholder='000-00-0000'
             className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
           />
         </div>
@@ -919,16 +916,15 @@ export default function PersonalInfoForm1({
             >
               ZIP CODE
             </label>
-            <input
-              type='text'
+            <ZipCodeInput
               value={formData.currentMailing.zipCode}
-              onChange={(e) =>
+              onChange={(value) =>
                 handleInputChange('currentMailing', {
                   ...formData.currentMailing,
-                  zipCode: e.target.value,
+                  zipCode: value,
                 })
               }
-                          className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+              className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
             />
           </div>
         </div>
@@ -1091,17 +1087,12 @@ export default function PersonalInfoForm1({
               >
                 ZIP CODE
               </label>
-              <input
-                type='text'
+              <ZipCodeInput
                 value={address.zipCode}
-                onChange={(e) =>
-                  handleInputChange(
-                    'previousAddresses',
-                    { zipCode: e.target.value },
-                    index
-                  )
+                onChange={(value) =>
+                  handleInputChange('previousAddresses', { zipCode: value }, index)
                 }
-            className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
+                className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
               />
             </div>
           </div>

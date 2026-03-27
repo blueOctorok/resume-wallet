@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
+// Namespace import: production (e.g. Vercel) can drop named `createPortal` from `react-dom`.
+import * as ReactDOM from 'react-dom'
 import { X } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
@@ -113,7 +114,7 @@ export default function Modal({
   )
 
   // Portal to body so no parent stacking context interferes
-  return createPortal(content, document.body)
+  return ReactDOM.createPortal(content, document.body)
 }
 
 // ─── ModalHeader ────────────────────────────────────────────────────────────
