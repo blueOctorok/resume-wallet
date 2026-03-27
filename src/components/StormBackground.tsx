@@ -14,15 +14,17 @@ import { useTheme } from '@/contexts/ThemeContext'
  * - Rain-like particles falling
  *
  * Fits the StormChain brand — aggressive, dynamic, powerful
+ *
+ * Layering (back → front): body gradient → atmosphere (vignette + gloss) → cloud → rain → lightning.
  */
 
 export default function StormBackground() {
   const { theme } = useTheme()
   const [lightning, setLightning] = useState(false)
 
-  const particlesInit = useCallback(async (engine: any) => {
-    console.log('⛈️ Initializing StormChain particles')
-    await loadSlim(engine)
+  /** tsparticles passes its Engine instance; slim bundle has no stable exported type here */
+  const particlesInit = useCallback(async (engine: { addShape?: unknown }) => {
+    await loadSlim(engine as never)
   }, [])
 
   // Random lightning flashes - infrequent for accessibility
@@ -50,36 +52,57 @@ export default function StormBackground() {
   // Theme-aware colors
   const isDark = theme === 'dark'
 
-  // Rain color - subtle blue-gray tint
-  const rainColor = isDark ? '#a0aec0' : '#64748b'
+  // Rain — slightly higher contrast so it reads against the sharper base (still not loud)
+  const rainColor = isDark ? '#94a3b8' : '#475569'
+
+  const atmosphereBg = isDark
+    ? `
+      radial-gradient(ellipse 100% 55% at 50% -38%, rgba(45,212,191,0.08), transparent 58%),
+      radial-gradient(ellipse 72% 48% at 100% 100%, rgba(139,92,246,0.05), transparent 55%),
+      linear-gradient(to bottom, rgba(0,0,0,0.38) 0%, transparent 24%, transparent 70%, rgba(0,0,0,0.52) 100%)
+    `
+    : `
+      linear-gradient(to bottom, rgba(255,255,255,0.72) 0%, transparent 40%),
+      radial-gradient(ellipse 95% 52% at 50% -24%, rgba(20,184,166,0.11), transparent 54%),
+      linear-gradient(to bottom, transparent 62%, rgba(15,23,42,0.11) 100%)
+    `
 
   return (
     <>
+      {/* Vignette + brand gloss — tighter, more “studio” than a flat wash */}
+      <div
+        className='fixed inset-0 pointer-events-none z-[-4]'
+        style={{ background: atmosphereBg }}
+        aria-hidden
+      />
+
       {/* Static dark cloud — dark: screen (black bg gone). Light: invert + multiply so cloud is dark and visible */}
       <div
         className='fixed inset-0 pointer-events-none bg-cover bg-center'
         style={{
           zIndex: -3,
           backgroundImage: 'url(/dark_cloud.png)',
-          opacity: isDark ? 0.25 : 0.22,
+          opacity: isDark ? 0.36 : 0.3,
           mixBlendMode: isDark ? 'screen' : 'multiply',
-          filter: isDark ? undefined : 'invert(1)',
+          filter: isDark ? 'contrast(1.08) saturate(1.06)' : 'invert(1) contrast(1.08)',
         }}
+        aria-hidden
       />
 
-      {/* Lightning flash overlay - subtle glow from sky */}
+      {/* Lightning flash overlay — single brief pulse (accessibility) */}
       <div
         className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-100 ${
-          lightning ? 'opacity-15' : 'opacity-0'
+          lightning ? 'opacity-[0.22]' : 'opacity-0'
         }`}
         style={{
           background: isDark
-            ? 'radial-gradient(ellipse at 50% 0%, #e0e7ff 0%, transparent 60%)'
-            : 'radial-gradient(ellipse at 50% 0%, #1e293b 0%, transparent 60%)',
+            ? 'radial-gradient(ellipse at 50% 0%, #e2e8ff 0%, transparent 58%)'
+            : 'radial-gradient(ellipse at 50% 0%, #0f172a 0%, transparent 58%)',
         }}
+        aria-hidden
       />
 
-      {/* Rain layer - very subtle, gentle rain */}
+      {/* Rain */}
       <Particles
         id='storm-rain'
         init={particlesInit}
@@ -94,10 +117,10 @@ export default function StormBackground() {
           fpsLimit: 60,
           particles: {
             number: {
-              value: 50, // Fewer drops
+              value: 58,
               density: {
                 enable: true,
-                value_area: 1200,
+                value_area: 1100,
               },
             },
             shape: {
@@ -107,14 +130,14 @@ export default function StormBackground() {
               value: rainColor,
             },
             opacity: {
-              value: 0.3, // Very subtle
+              value: 0.52,
               random: true,
               anim: {
                 enable: false,
               },
             },
             size: {
-              value: 2.3,
+              value: 2,
               random: true,
               anim: {
                 enable: false,
@@ -122,7 +145,7 @@ export default function StormBackground() {
             },
             move: {
               enable: true,
-              speed: 12,
+              speed: 14,
               direction: 'bottom',
               random: false,
               straight: true,

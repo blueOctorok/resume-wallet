@@ -25,9 +25,27 @@ const STEPS = [
   {
     id: 3,
     title: 'License Information',
-    description: 'Current and previous driver licenses',
+    description: 'Licenses, med card, and disqualification disclosures',
   },
 ]
+
+/** Full shape matches `DotForm1Data.medicalQualification` so saves stay compatible with previews/mappers. */
+const EMPTY_MEDICAL_QUALIFICATION = {
+  hasValidMedicalCertificate: '',
+  medicalCertificateExpiration: '',
+  hasFiledWithState: '',
+  hasMedicalVariance: '',
+  medicalVarianceDetails: '',
+  hasChronicConditions: '',
+  chronicConditionsDetails: '',
+  visionHearingCompliance: '',
+  medicationDisclosure: '',
+  medicalExamDate: '',
+  medicalExaminerName: '',
+  medicalExaminerPhone: '',
+  medicalExaminerRegistryId: '',
+  medicalExaminerType: '',
+}
 
 interface PersonalInfoForm1Props {
   onNavigateToForm?: (formNumber: number) => void
@@ -84,6 +102,7 @@ export default function PersonalInfoForm1({
       },
     ],
     previousLicenses: [],
+    medicalQualification: { ...EMPTY_MEDICAL_QUALIFICATION },
     disqualificationHistory: {
       hasLicenseSuspension: '',
       licenseSuspensionDetails: '',
@@ -194,6 +213,7 @@ export default function PersonalInfoForm1({
           },
         ],
         previousLicenses: [],
+        medicalQualification: { ...EMPTY_MEDICAL_QUALIFICATION },
         disqualificationHistory: {
           hasLicenseSuspension: '',
           licenseSuspensionDetails: '',
@@ -361,6 +381,18 @@ export default function PersonalInfoForm1({
               'Expiration date is required'
         }
       })
+
+      const med = formData.medicalQualification || EMPTY_MEDICAL_QUALIFICATION
+      if (!med.hasValidMedicalCertificate) {
+        newErrors.hasValidMedicalCertificate =
+          'Please indicate whether you have a valid med card (medical examiner’s certificate)'
+      } else if (
+        med.hasValidMedicalCertificate === 'yes' &&
+        !med.medicalCertificateExpiration?.trim()
+      ) {
+        newErrors.medicalCertificateExpiration =
+          'Med card expiration date is required when you answer Yes'
+      }
 
       // DOT 49 CFR 391.15 disclosures
       const history = formData.disqualificationHistory || {}
@@ -582,6 +614,15 @@ export default function PersonalInfoForm1({
           prev.disqualificationHistory?.hasMobileDeviceViolation || 'no',
         mobileDeviceViolationDetails:
           prev.disqualificationHistory?.mobileDeviceViolationDetails || '',
+      },
+
+      medicalQualification: {
+        ...EMPTY_MEDICAL_QUALIFICATION,
+        ...prev.medicalQualification,
+        hasValidMedicalCertificate:
+          prev.medicalQualification?.hasValidMedicalCertificate || 'yes',
+        medicalCertificateExpiration:
+          prev.medicalQualification?.medicalCertificateExpiration || '2027-06-30',
       },
     }))
     setErrors({})
@@ -1428,6 +1469,92 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
         >
           + Add Previous License
         </button>
+      </div>
+
+      {/* Med card — uses DotForm1Data.medicalQualification (same fields as career card preview) */}
+      <div
+        className={`mt-10 pt-8 border-t space-y-4 ${
+          theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+        }`}
+      >
+        <div>
+          <h3
+            className={`text-xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
+          >
+            MED CARD (DOT MEDICAL CERTIFICATE)
+          </h3>
+          <p
+            className={`text-sm mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+          >
+            CDL holders operating in interstate commerce must have a valid medical examiner&rsquo;s
+            certificate. Answer below; if you have a current med card, enter its expiration date.
+          </p>
+        </div>
+        <div className='space-y-3'>
+          <span className={`block text-sm font-medium ${labelClass}`}>
+            Do you currently have a valid med card?
+          </span>
+          <div className='flex flex-wrap gap-6'>
+            {['yes', 'no'].map((value) => (
+              <label key={value} className='flex items-center gap-2 cursor-pointer'>
+                <input
+                  type='radio'
+                  name='hasValidMedicalCertificate'
+                  value={value}
+                  checked={
+                    (formData.medicalQualification || EMPTY_MEDICAL_QUALIFICATION)
+                      .hasValidMedicalCertificate === value
+                  }
+                  onChange={(e) =>
+                    handleInputChange('medicalQualification', {
+                      hasValidMedicalCertificate: e.target.value,
+                      medicalCertificateExpiration:
+                        e.target.value === 'no'
+                          ? ''
+                          : (formData.medicalQualification || EMPTY_MEDICAL_QUALIFICATION)
+                              .medicalCertificateExpiration,
+                    })
+                  }
+                  className={`accent-brand-mint ${
+                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  }`}
+                />
+                <span className={labelClass}>{value.toUpperCase()}</span>
+              </label>
+            ))}
+          </div>
+          {errors.hasValidMedicalCertificate && (
+            <p className='text-sm text-red-600 dark:text-red-400'>
+              {errors.hasValidMedicalCertificate}
+            </p>
+          )}
+        </div>
+        {(formData.medicalQualification || EMPTY_MEDICAL_QUALIFICATION).hasValidMedicalCertificate ===
+          'yes' && (
+          <div>
+            <label className={`block text-sm font-medium mb-2 ${labelClass}`}>
+              MED CARD EXPIRATION DATE
+            </label>
+            <input
+              type='date'
+              value={
+                (formData.medicalQualification || EMPTY_MEDICAL_QUALIFICATION)
+                  .medicalCertificateExpiration || ''
+              }
+              onChange={(e) =>
+                handleInputChange('medicalQualification', {
+                  medicalCertificateExpiration: e.target.value,
+                })
+              }
+              className={`w-full max-w-xs px-4 py-3 border rounded-lg ${inputBaseClass}`}
+            />
+            {errors.medicalCertificateExpiration && (
+              <p className='mt-2 text-sm text-red-600 dark:text-red-400'>
+                {errors.medicalCertificateExpiration}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <div className='space-y-6 mt-8'>

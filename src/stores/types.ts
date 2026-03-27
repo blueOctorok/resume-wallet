@@ -30,6 +30,7 @@ export type PageType =
   | 'career-card'
   | 'profile-setup'
   | 'messages'
+  | 'employment-verification'
   | null
 
 // Candidate encompasses all non-employer roles (driver, developer, pilot, etc.)

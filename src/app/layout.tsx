@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Montserrat } from 'next/font/google'
+import { Montserrat, Instrument_Serif } from 'next/font/google'
 import './globals.css'
 import AlchemyProvider from '@/components/AlchemyProvider'
 import { ThemeProvider } from '@/contexts/ThemeContext'
@@ -10,6 +10,14 @@ const montserrat = Montserrat({
   variable: '--font-montserrat',
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
+})
+
+/** Nav wordmark only — faded painted-sign / debossed storefront feel */
+const stormWordmark = Instrument_Serif({
+  variable: '--font-storm-wordmark',
+  subsets: ['latin'],
+  weight: '400',
+  display: 'swap',
 })
 
 export const metadata: Metadata = {
@@ -122,7 +130,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${montserrat.variable} antialiased`}>
+      <body className={`${montserrat.variable} ${stormWordmark.variable} antialiased`}>
         <ThemeProvider>
           <AlchemyProvider>
             {children}

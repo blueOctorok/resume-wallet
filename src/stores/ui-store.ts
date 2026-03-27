@@ -73,6 +73,8 @@ interface UIState {
 interface UIActions {
   // Navigation actions
   setCurrentPage: (page: PageType) => void
+  /** Prefer over setCurrentPage(null) when leaving a block view — pairs with history sync for candidates */
+  navigateToHub: () => void
   setShowDashboard: (show: boolean) => void
   
   // Driver journey actions
@@ -144,6 +146,16 @@ export const useUIStore = create<UIState & UIActions>()(
 
     // Navigation actions
     setCurrentPage: (page) => set({ currentPage: page }),
+    navigateToHub: () => {
+      if (typeof window !== 'undefined') {
+        const sc = (window.history.state as { sc?: { page: PageType } } | null)?.sc
+        if (sc?.page != null) {
+          window.history.back()
+          return
+        }
+      }
+      set({ currentPage: null })
+    },
     setShowDashboard: (show) => set({ showDashboard: show }),
     
     // Driver journey actions

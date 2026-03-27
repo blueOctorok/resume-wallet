@@ -47,7 +47,8 @@ export async function sendVerificationEmail(
   const bodyHtml = `
     <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
       A former employee has listed <strong>${claimedCompanyName}</strong> on their StormChain career profile and
-      requested that we verify their employment history with you.
+      asked us to reach out so you can <strong>confirm or correct their employment dates</strong> if you choose to.
+      This is a voluntary, job-agnostic check — not a government or DOT investigation.
     </p>
     ${detailsBox(`
       <p style="margin:0 0 12px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;">Employment Details Provided</p>

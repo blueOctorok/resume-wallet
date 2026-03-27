@@ -44,15 +44,15 @@ body {
 }
 
 
-/* Dark mode styles - deep storm, near-black with blue-gray undertones */
+/* Dark mode — deeper charcoal, directional gradient (less flat / “mushy” than before) */
 [data-theme='dark'] body {
-  background: linear-gradient(to bottom, #1e2530 0%, #0f1419 100%);
+  background: linear-gradient(165deg, #0f1419 0%, #080c11 45%, #040608 100%);
   color: #e2e8f0;
 }
 
-/* Light mode styles - overcast sky, grey storm clouds */
+/* Light mode — cooler slate steps + slight angle so it reads structured, not one soft wash */
 [data-theme='light'] body {
-  background: linear-gradient(to bottom, #d1d5db 0%, #9ca3af 100%);
+  background: linear-gradient(155deg, #f1f5f9 0%, #e2e8f0 42%, #cbd5e1 100%);
   color: #1e293b;
 }
 

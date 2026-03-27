@@ -17,6 +17,7 @@ import {
   Check,
   Link,
   GitBranch,
+  Mail,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -68,6 +69,16 @@ function MvrIllustration({ accentText }: IllustrationProps) {
       <div className='absolute -bottom-0.5 -right-1 bg-green-500 rounded-full p-0.5'>
         <Check className='w-2.5 h-2.5 text-white' />
       </div>
+    </div>
+  )
+}
+
+/** Voluntary employer date confirmation — distinct from MVR shield */
+function EmploymentVerificationIllustration({ accentText }: IllustrationProps) {
+  return (
+    <div className='relative flex flex-col items-center gap-0.5'>
+      <Mail className={cn('w-8 h-8', accentText)} />
+      <ClipboardCheck className={cn('w-5 h-5 -mt-1 opacity-80', accentText)} />
     </div>
   )
 }
@@ -140,6 +151,7 @@ const ILLUSTRATION_MAP: Record<string, IllustrationComponent> = {
   'developer-github':       GithubIllustration,
   'developer-projects':     ProjectsIllustration,
   'general-resume':         ResumeIllustration,
+  'general-employment-verification': EmploymentVerificationIllustration,
 }
 
 export function getBlockIllustration(blockType: string): IllustrationComponent {

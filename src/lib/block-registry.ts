@@ -165,6 +165,31 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     requestLabel: 'Resume',
     completionField: 'hasResume',
   },
+  {
+    id: 'general-employment-verification',
+    label: 'Employment Verification',
+    description:
+      'Optional: email past employers to confirm your work dates (from any resume or DOT history). Voluntary for them — boosts trust on your career card.',
+    icon: 'ShieldCheck',
+    categoryId: 'general',
+    suggestedFor: [
+      'verify',
+      'employment',
+      'work history',
+      'reference',
+      'background',
+      'career',
+      'employer',
+      'hr',
+    ],
+    complexity: 'simple',
+    appearsOnCareerCard: false,
+    pageRoute: 'employment-verification',
+    dataTables: null,
+    employerRequestable: false,
+    requestLabel: null,
+    completionField: null,
+  },
   // ── Drivers ────────────────────────────────────────────────────────────────
   {
     id: 'driver-resume',
@@ -370,6 +395,13 @@ export const BLOCK_COLORS: Record<string, BlockColorSet> = {
     borderHover: { dark: 'border-sky-500/40', light: 'border-sky-400/50' },
     glowColor:   'rgba(14,165,233,0.15)',
     badgeColor:  'bg-sky-500',
+  },
+  'general-employment-verification': {
+    iconBg:      { dark: 'bg-violet-500/15',   light: 'bg-violet-50' },
+    iconText:    { dark: 'text-violet-400',     light: 'text-violet-700' },
+    borderHover: { dark: 'border-violet-500/40', light: 'border-violet-400/50' },
+    glowColor:   'rgba(139,92,246,0.15)',
+    badgeColor:  'bg-violet-500',
   },
 }
 

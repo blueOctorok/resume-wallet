@@ -8,12 +8,15 @@ import {
 } from '@/lib/alchemy-token-api'
 import { useTheme } from '@/contexts/ThemeContext'
 import { RefreshCw, ExternalLink, FileText } from 'lucide-react'
+import BuyUSDCButton from '@/components/BuyUSDCButton'
 
 interface STORMBalanceProps {
   walletAddress: string
   refreshInterval?: number
   compact?: boolean
   onReadWhitepaper?: () => void
+  /** Hub only: fold “Add USDC” into this card so tokens + stablecoin live in one place */
+  showBuyUsdc?: boolean
 }
 
 export default function STORMBalance({
@@ -21,6 +24,7 @@ export default function STORMBalance({
   refreshInterval = 60000,
   compact = false,
   onReadWhitepaper,
+  showBuyUsdc = false,
 }: STORMBalanceProps) {
   const { theme } = useTheme()
   const [balanceSepolia, setBalanceSepolia] = useState<string>('0.00')
@@ -283,6 +287,30 @@ export default function STORMBalance({
           </span>
         </div>
       </div>
+
+      {showBuyUsdc && (
+        <div
+          className={`mt-3 pt-3 border-t ${
+            theme === 'dark' ? 'border-gray-700/50' : 'border-gray-200'
+          }`}
+        >
+          <h3
+            className={`text-sm font-semibold mb-1 ${
+              theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
+            }`}
+          >
+            Add USDC
+          </h3>
+          <p
+            className={`text-xs mb-3 ${
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            }`}
+          >
+            Card purchase settles on Base mainnet; this app runs on Base Sepolia — use Wallet → Send to move funds for testnet.
+          </p>
+          <BuyUSDCButton walletAddress={walletAddress} />
+        </div>
+      )}
 
       {/* Footer row: contract link + whitepaper */}
       <div className='mt-3 pt-3 border-t border-gray-700/50 flex items-center justify-between'>

@@ -2,7 +2,23 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { LayoutDashboard, Coins, ChevronDown, RefreshCw, Car, Code, Building2, Sparkles, HelpCircle, MessageSquare, User, Home, Briefcase } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import {
+  navShellClass,
+  navHairlineTopClass,
+  navControlButtonClass,
+  navTextLinkClass,
+  navAvAButtonClass,
+  navHubGradientRingClass,
+  navHubInnerButtonClass,
+  navRowDividerClass,
+  navDropdownPanelClass,
+  navDropdownItemClass,
+  navDropdownItemBorderClass,
+  navStormPillClass,
+} from '@/lib/navigation-styles'
 import ThemeToggle from './ThemeToggle'
+import Button from '@/components/ui/Button'
 import { useTheme } from '@/contexts/ThemeContext'
 import { usePreferencesStore, useJourneyStore, useUIStore } from '@/stores'
 import type { UserRole } from '@/stores/types'
@@ -56,6 +72,7 @@ export default function Navigation({
   const { openGuide } = useJourneyStore()
   const { navigateToMessages } = useUIStore()
   const { notifications } = useNotificationStore()
+  const isDark = theme === 'dark'
   // Derive unread message count from existing notification store — no extra fetch needed
   const unreadMessageCount = notifications.filter(n => n.type === 'new_message' && !n.read).length
 
@@ -75,85 +92,75 @@ export default function Navigation({
   }
 
   const handleNavigation = (page: NavPage) => {
-    console.log(`🔗 [NAVIGATION] handleNavigation called with page:`, page)
     setIsMenuOpen(false)
     onNavigate?.(page)
   }
-
-  // Same surface as employment verification: bg-gray-800/50 (dark) / bg-white/70 (light)
-  const navClasses =
-    theme === 'light'
-      ? 'max-w-2xl mx-auto bg-slate-100/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-300 relative'
-      : 'max-w-2xl mx-auto bg-gray-800/50 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-700 relative'
-
-  const innerShadowClasses =
-    theme === 'light'
-      ? 'absolute inset-0 rounded-3xl shadow-[inset_0_2px_20px_rgba(0,0,0,0.06)] pointer-events-none'
-      : 'absolute inset-0 rounded-3xl shadow-[inset_0_2px_20px_rgba(0,0,0,0.2)] pointer-events-none'
-
-  const glowClasses =
-    theme === 'light'
-      ? 'absolute -inset-[1px] rounded-3xl bg-gradient-to-b from-gray-400/10 to-transparent opacity-40 blur-sm -z-10'
-      : 'absolute -inset-[1px] rounded-3xl bg-gradient-to-b from-gray-500/20 to-transparent opacity-40 blur-sm -z-10'
 
   return (
     <header
       className='sticky top-4 z-50 px-4 sm:px-6 pointer-events-none'
       style={{ transform: 'translate3d(0,0,0)', backfaceVisibility: 'hidden' }}
     >
-      <nav className={`${navClasses} pointer-events-auto`}>
-        {/* Extra depth layer - inner shadow */}
-        <div className={innerShadowClasses} />
+      <nav className={navShellClass(isDark)}>
+        <div className={navHairlineTopClass()} aria-hidden />
 
-        {/* Outer glow effect */}
-        <div className={glowClasses} />
-
-        <div className='relative px-4 sm:px-8 py-3 sm:py-6'>
-          <div className='flex flex-col gap-3 sm:gap-4'>
+        <div className='relative z-[2] px-4 sm:px-6 py-3 sm:py-4'>
+          <div className='flex flex-col gap-3 sm:gap-3.5'>
             {/* Top Row: Logo and Controls */}
             <div className='flex items-center justify-between gap-3'>
               {/* Left side — Wallet (desktop) or Sign In */}
               <div className='hidden sm:flex flex-shrink-0 items-center gap-2'>
                 {isAuthenticated ? (
                   <button
+                    type='button'
                     onClick={(e) => {
                       e.stopPropagation()
                       onStatusClick?.()
                     }}
-                    className={`relative group flex flex-col items-center space-y-1.5 p-2.5 rounded-xl backdrop-blur-sm transition-all duration-300 border cursor-pointer ${
-                      theme === 'light'
-                        ? 'bg-slate-200/80 border-slate-300 hover:bg-slate-300/80 text-slate-800'
-                        : 'bg-gray-700/50 border-gray-600 hover:bg-gray-600/50 text-gray-200'
-                    }`}
+                    className={cn(
+                      'relative group flex flex-col items-center space-y-1.5 p-2.5 cursor-pointer',
+                      navControlButtonClass(isDark),
+                    )}
                     aria-label='View account status'
                   >
-                    <div className='w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50' />
-                    <span className='text-xs font-medium'>Wallet</span>
+                    <div className='w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_10px_rgba(52,211,153,0.45)]' />
+                    <span className='text-[11px] font-semibold uppercase tracking-wide'>Wallet</span>
                   </button>
                 ) : (
-                  <button
-                    onClick={() => handleNavigation('signin')}
-                    className={`px-4 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 cursor-pointer ${
-                      theme === 'light'
-                        ? 'text-white bg-indigo-600 hover:bg-indigo-700 border-indigo-600'
-                        : 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 border-indigo-500/40'
-                    }`}
-                  >
-                    Sign In
-                  </button>
+                  <Button type='button' variant='primary' size='sm' onClick={() => handleNavigation('signin')}>
+                    Sign in
+                  </Button>
                 )}
               </div>
 
-              {/* Center — Logo */}
-              <div className='flex-1 flex justify-center sm:-ml-12'>
+              {/* Center — Logo (Instrument Serif + debossed “ghost sign” — only place this font is used) */}
+              <div className='flex-1 flex justify-center sm:-ml-8 lg:-ml-12'>
                 <h1
-                  className={`text-2xl sm:text-4xl lg:text-5xl font-extralight tracking-wide ${
-                    theme === 'light'
-                      ? 'text-slate-800 drop-shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
-                      : 'text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]'
-                  }`}
+                  className={cn(
+                    'flex items-baseline gap-0.5 sm:gap-1 whitespace-nowrap',
+                    'font-[family-name:var(--font-storm-wordmark),ui-serif,Georgia,serif]',
+                    'text-[1.625rem] sm:text-[2.125rem] lg:text-[2.625rem] font-normal leading-none tracking-[0.04em]',
+                  )}
                 >
-                  StormChain
+                  <span
+                    className={cn(
+                      // Recessed letterpress: soft highlight on top edge, shadow in the “groove”
+                      isDark
+                        ? 'text-slate-500/90 [text-shadow:0_1px_0_rgba(255,255,255,0.07),0_-1px_3px_rgba(0,0,0,0.65),0_0.12em_0.35em_rgba(0,0,0,0.35)]'
+                        : 'text-slate-500/95 [text-shadow:0_1px_0_rgba(255,255,255,0.85),0_-1px_1px_rgba(15,23,42,0.14),0_0.08em_0.2em_rgba(15,23,42,0.06)]',
+                    )}
+                  >
+                    Storm
+                  </span>
+                  <span
+                    className={cn(
+                      isDark
+                        ? 'text-teal-500/55 [text-shadow:0_1px_0_rgba(255,255,255,0.06),0_-1px_3px_rgba(0,0,0,0.6),0_0.12em_0.35em_rgba(0,0,0,0.32)]'
+                        : 'text-teal-700/50 [text-shadow:0_1px_0_rgba(255,255,255,0.8),0_-1px_1px_rgba(15,118,110,0.2),0_0.08em_0.2em_rgba(15,23,42,0.05)]',
+                    )}
+                  >
+                    Chain
+                  </span>
                 </h1>
               </div>
 
@@ -162,17 +169,22 @@ export default function Navigation({
                 {/* Desktop-only controls */}
                 {isAuthenticated && (
                   <button
+                    type='button'
                     onClick={() => navigateToMessages()}
                     aria-label={`Messages${unreadMessageCount > 0 ? ` (${unreadMessageCount} unread)` : ''}`}
-                    className={`hidden sm:flex relative items-center justify-center w-9 h-9 rounded-xl border transition-all duration-200 cursor-pointer ${
-                      theme === 'light'
-                        ? 'bg-slate-200/80 border-slate-300 hover:bg-slate-300 text-slate-700'
-                        : 'bg-gray-700/50 border-gray-600 hover:bg-gray-600/50 text-gray-300'
-                    }`}
+                    className={cn(
+                      'hidden sm:flex relative items-center justify-center w-9 h-9 cursor-pointer',
+                      navControlButtonClass(isDark),
+                    )}
                   >
                     <MessageSquare className='w-4 h-4' />
                     {unreadMessageCount > 0 && (
-                      <span className='absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-blue-500 text-white text-[10px] font-bold rounded-full border-2 border-white'>
+                      <span
+                        className={cn(
+                          'absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-blue-500 text-white text-[10px] font-bold rounded-full border-2',
+                          isDark ? 'border-gray-950' : 'border-white',
+                        )}
+                      >
                         {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
                       </span>
                     )}
@@ -187,43 +199,69 @@ export default function Navigation({
 
                 {isAuthenticated && onTClick && (
                   <button
+                    type='button'
                     onClick={(e) => {
                       e.stopPropagation()
                       e.preventDefault()
                       onTClick?.()
                     }}
-                    className={`hidden md:flex relative group items-center justify-center px-4 py-2.5 rounded-2xl transition-all duration-300 border cursor-pointer ${
-                      theme === 'light'
-                        ? 'bg-indigo-500/20 text-indigo-700 border-indigo-300 hover:bg-indigo-500/30'
-                        : 'bg-indigo-500/20 text-indigo-400 border-indigo-500/40 hover:bg-indigo-500/30'
-                    } ${tHasUnread ? 'animate-pulse' : ''}`}
+                    className={cn(
+                      'hidden md:flex relative group items-center justify-center cursor-pointer',
+                      navAvAButtonClass(isDark),
+                      tHasUnread && 'animate-pulse',
+                    )}
                     aria-label='Open AvA Assistant'
                   >
                     <span className='text-sm font-bold tracking-wide'>AvA</span>
                     {tHasUnread && (
-                      <span className='absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-white shadow-lg' />
+                      <span
+                        className={cn(
+                          'absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 shadow-lg',
+                          isDark ? 'border-gray-950' : 'border-white',
+                        )}
+                      />
                     )}
                   </button>
                 )}
 
                 {/* Hamburger — mobile only */}
                 <button
+                  type='button'
                   onClick={toggleMenu}
-                  className={`relative sm:hidden p-2.5 rounded-xl backdrop-blur-sm transition-all duration-300 cursor-pointer ${
-                    theme === 'light'
-                      ? 'bg-gray-200 hover:bg-gray-300 text-gray-800'
-                      : 'bg-gray-600/50 hover:bg-gray-500/50 text-gray-200 border border-gray-500'
-                  }`}
+                  className={cn('relative sm:hidden p-2.5 cursor-pointer', navControlButtonClass(isDark))}
                   aria-label='Toggle menu'
                 >
                   {/* Badge dot when there are unread items */}
                   {isAuthenticated && (unreadMessageCount > 0 || notifications.some(n => !n.read)) && (
-                    <span className='absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-gray-800 z-10' />
+                    <span
+                      className={cn(
+                        'absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 z-10',
+                        isDark ? 'border-gray-950' : 'border-white',
+                      )}
+                    />
                   )}
                   <div className='w-5 h-5 flex flex-col justify-center items-center gap-1'>
-                    <div className={`w-full h-0.5 ${theme === 'light' ? 'bg-gray-700' : 'bg-gray-300'} transition-all duration-300 ${isMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
-                    <div className={`w-full h-0.5 ${theme === 'light' ? 'bg-gray-700' : 'bg-gray-300'} transition-all duration-300 ${isMenuOpen ? 'opacity-0' : ''}`} />
-                    <div className={`w-full h-0.5 ${theme === 'light' ? 'bg-gray-700' : 'bg-gray-300'} transition-all duration-300 ${isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`} />
+                    <div
+                      className={cn(
+                        'w-full h-0.5 transition-all duration-300',
+                        isDark ? 'bg-gray-300' : 'bg-gray-700',
+                        isMenuOpen && 'rotate-45 translate-y-1.5',
+                      )}
+                    />
+                    <div
+                      className={cn(
+                        'w-full h-0.5 transition-all duration-300',
+                        isDark ? 'bg-gray-300' : 'bg-gray-700',
+                        isMenuOpen && 'opacity-0',
+                      )}
+                    />
+                    <div
+                      className={cn(
+                        'w-full h-0.5 transition-all duration-300',
+                        isDark ? 'bg-gray-300' : 'bg-gray-700',
+                        isMenuOpen && '-rotate-45 -translate-y-1.5',
+                      )}
+                    />
                   </div>
                 </button>
               </div>
@@ -231,43 +269,42 @@ export default function Navigation({
 
             {/* Bottom Row: Navigation Links */}
             <div
-              className={`${
-                isMenuOpen ? 'flex' : 'hidden'
-              } sm:flex flex-col sm:flex-row items-center gap-2 sm:gap-3 pt-3 sm:pt-4 border-t ${
-                theme === 'light' ? 'border-slate-300' : 'border-gray-600'
-              } relative`}
+              className={cn(
+                isMenuOpen ? 'flex' : 'hidden',
+                'sm:flex flex-col sm:flex-row items-center gap-2 sm:gap-2.5 pt-3 sm:pt-3.5 relative',
+                navRowDividerClass(isDark),
+              )}
             >
               {/* Mobile-only quick actions row */}
               {isAuthenticated && (
-                <div className='sm:hidden w-full flex items-center justify-between gap-2 pb-2 border-b border-gray-700/50'>
+                <div
+                  className={cn(
+                    'sm:hidden w-full flex items-center justify-between gap-2 pb-2 border-b',
+                    isDark ? 'border-gray-700/80' : 'border-gray-200/80',
+                  )}
+                >
                   {/* Wallet */}
                   <button
+                    type='button'
                     onClick={(e) => {
                       e.stopPropagation()
                       onStatusClick?.()
                       setIsMenuOpen(false)
                     }}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
-                      theme === 'light'
-                        ? 'bg-slate-200/80 border-slate-300 text-slate-800'
-                        : 'bg-gray-700/50 border-gray-600 text-gray-200'
-                    }`}
+                    className={cn('flex items-center gap-2 px-3 py-2', navControlButtonClass(isDark))}
                   >
-                    <div className='w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse' />
-                    <span className='text-xs font-medium'>Wallet</span>
+                    <div className='w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.4)]' />
+                    <span className='text-xs font-semibold'>Wallet</span>
                   </button>
 
                   {/* Messages */}
                   <button
+                    type='button'
                     onClick={() => {
                       navigateToMessages()
                       setIsMenuOpen(false)
                     }}
-                    className={`relative flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
-                      theme === 'light'
-                        ? 'bg-slate-200/80 border-slate-300 text-slate-700'
-                        : 'bg-gray-700/50 border-gray-600 text-gray-300'
-                    }`}
+                    className={cn('relative flex items-center gap-2 px-3 py-2', navControlButtonClass(isDark))}
                   >
                     <MessageSquare className='w-4 h-4' />
                     <span className='text-xs font-medium'>Messages</span>
@@ -294,11 +331,7 @@ export default function Navigation({
                       handleNavigation('home')
                       setIsMenuOpen(false)
                     }}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ${
-                      theme === 'light'
-                        ? 'border-slate-300 text-slate-800 hover:bg-slate-200/80'
-                        : 'border-gray-600 text-gray-200 hover:bg-gray-700/50'
-                    }`}
+                    className={cn('flex items-center gap-2 px-4 py-2', navTextLinkClass(isDark))}
                   >
                     <Home className='w-4 h-4' />
                     Home
@@ -309,11 +342,7 @@ export default function Navigation({
                       handleNavigation('jobs')
                       setIsMenuOpen(false)
                     }}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ${
-                      theme === 'light'
-                        ? 'border-teal-500/50 text-teal-800 bg-teal-50/90 hover:bg-teal-100'
-                        : 'border-teal-500/40 text-teal-300 bg-teal-500/10 hover:bg-teal-500/20'
-                    }`}
+                    className={cn('flex items-center gap-2 px-4 py-2', navTextLinkClass(isDark, 'teal'))}
                   >
                     <Briefcase className='w-4 h-4' />
                     Browse jobs
@@ -331,15 +360,15 @@ export default function Navigation({
               {/* Mobile-only AvA Assistant access */}
               {isAuthenticated && onTClick && (
                 <button
+                  type='button'
                   onClick={() => {
                     onTClick()
                     setIsMenuOpen(false)
                   }}
-                  className={`sm:hidden w-full px-4 py-2.5 text-sm font-medium rounded-lg border transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer ${
-                    theme === 'light'
-                      ? 'text-indigo-700 bg-indigo-500/20 hover:bg-indigo-500/30 border-indigo-300'
-                      : 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30 border-indigo-500/40'
-                  }`}
+                  className={cn(
+                    'sm:hidden w-full px-4 py-2.5 text-sm font-medium flex items-center justify-center gap-2 cursor-pointer',
+                    navAvAButtonClass(isDark),
+                  )}
                 >
                   <Sparkles className='w-4 h-4' />
                   <span>{tHasUnread ? 'AvA has updates' : 'Chat with AvA'}</span>
@@ -351,15 +380,15 @@ export default function Navigation({
 
               {/* Hub Button with Dropdown - Center position with gold rotating border */}
               {userRole && isAuthenticated && (
-                <div 
+                <div
                   ref={hubDropdownRef}
-                  className='relative sm:absolute sm:left-1/2 sm:-translate-x-1/2 w-full sm:w-auto'
+                  className='relative z-[100] sm:absolute sm:left-1/2 sm:-translate-x-1/2 w-full sm:w-auto'
                 >
-                  <div className='rotating-gold-border w-full sm:w-auto'>
-                    {/* Single unified button - clicking opens dropdown */}
+                  <div className={navHubGradientRingClass()}>
                     <button
+                      type='button'
                       onClick={() => setIsHubDropdownOpen(!isHubDropdownOpen)}
-                      className='w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2 relative z-10 cursor-pointer text-white bg-gray-800 hover:bg-gray-700 transition-colors'
+                      className={cn(navHubInnerButtonClass(), 'cursor-pointer')}
                     >
                       {userRole === 'driver' && <Car className='w-4 h-4' />}
                       {userRole === 'employer' && <Building2 className='w-4 h-4' />}
@@ -375,38 +404,28 @@ export default function Navigation({
 
                   {/* Dropdown menu */}
                   {isHubDropdownOpen && (
-                    <div className={`absolute top-full left-1/2 -translate-x-1/2 min-w-[200px] mt-2 rounded-xl shadow-xl border overflow-hidden z-50 ${
-                      theme === 'dark'
-                        ? 'bg-gray-900 border-gray-700'
-                        : 'bg-slate-100 border-slate-300'
-                    }`}>
+                    <div className={navDropdownPanelClass(isDark)}>
                       <button
+                        type='button'
                         onClick={() => {
                           handleNavigation('hub')
                           setIsMenuOpen(false)
                           setIsHubDropdownOpen(false)
                         }}
-                        className={`w-full px-4 py-3 text-sm font-medium flex items-center gap-3 transition-colors ${
-                          theme === 'dark'
-                            ? 'text-white hover:bg-gray-800'
-                            : 'text-slate-800 hover:bg-slate-100'
-                        }`}
+                        className={navDropdownItemClass(isDark)}
                       >
                         <LayoutDashboard className='w-4 h-4' />
                         Go to Hub
                       </button>
                       {onSwitchRole && (
                         <button
+                          type='button'
                           onClick={() => {
                             onSwitchRole()
                             setIsMenuOpen(false)
                             setIsHubDropdownOpen(false)
                           }}
-                          className={`w-full px-4 py-3 text-sm font-medium flex items-center gap-3 border-t transition-colors ${
-                            theme === 'dark'
-                              ? 'text-gray-300 hover:bg-gray-800 border-gray-700'
-                              : 'text-slate-700 hover:bg-slate-100 border-slate-200'
-                          }`}
+                          className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}
                         >
                           <RefreshCw className='w-4 h-4' />
                           Switch Role
@@ -414,37 +433,46 @@ export default function Navigation({
                       )}
                       {/* Journey Tips Toggle */}
                       <button
+                        type='button'
                         onClick={() => setShowJourneyModals(!showJourneyModals)}
-                        className={`w-full px-4 py-3 text-sm font-medium flex items-center justify-between border-t transition-colors ${
-                          theme === 'dark'
-                            ? 'text-gray-300 hover:bg-gray-800 border-gray-700'
-                            : 'text-slate-700 hover:bg-slate-100 border-slate-200'
-                        }`}
+                        className={cn(
+                          navDropdownItemClass(isDark),
+                          navDropdownItemBorderClass(isDark),
+                          'justify-between',
+                        )}
                       >
                         <span className='flex items-center gap-3'>
                           <Sparkles className='w-4 h-4' />
                           Journey Tips
                         </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          showJourneyModals
-                            ? theme === 'dark' ? 'bg-teal-500/20 text-teal-400' : 'bg-teal-100 text-teal-700'
-                            : theme === 'dark' ? 'bg-gray-700 text-gray-400' : 'bg-slate-200 text-slate-600'
-                        }`}>
+                        <span
+                          className={cn(
+                            'text-xs px-2 py-0.5 rounded-full font-medium',
+                            showJourneyModals
+                              ? isDark
+                                ? 'bg-teal-500/20 text-teal-400'
+                                : 'bg-teal-100 text-teal-800'
+                              : isDark
+                                ? 'bg-gray-800 text-gray-400'
+                                : 'bg-slate-100 text-slate-600',
+                          )}
+                        >
                           {showJourneyModals ? 'On' : 'Off'}
                         </span>
                       </button>
                       {/* AvA Help Button */}
                       <button
+                        type='button'
                         onClick={() => {
                           openGuide()
                           setIsHubDropdownOpen(false)
                           setIsMenuOpen(false)
                         }}
-                        className={`w-full px-4 py-3 text-sm font-medium flex items-center gap-3 border-t transition-colors ${
-                          theme === 'dark'
-                            ? 'text-teal-400 hover:bg-gray-800 border-gray-700'
-                            : 'text-teal-600 hover:bg-slate-100 border-slate-200'
-                        }`}
+                        className={cn(
+                          navDropdownItemClass(isDark),
+                          navDropdownItemBorderClass(isDark),
+                          isDark ? 'text-teal-400' : 'text-teal-700',
+                        )}
                       >
                         <HelpCircle className='w-4 h-4' />
                         <span>AvA Journey Guide</span>
@@ -460,12 +488,9 @@ export default function Navigation({
                 {/* STORM token counter — all roles earn tokens */}
                 {userRole && (
                   <button
+                    type='button'
                     onClick={() => handleNavigation('stormchain')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-300 cursor-pointer ${
-                      theme === 'light'
-                        ? 'text-indigo-600 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-200'
-                        : 'text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30'
-                    }`}
+                    className={cn(navStormPillClass(isDark))}
                     title='View StormChain tokens'
                   >
                     <Coins className='w-3.5 h-3.5' />

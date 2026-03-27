@@ -140,6 +140,20 @@ const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
     } : null,
   },
 
+  'general-employment-verification': {
+    resolve: () => [
+      {
+        id: 'general-employment-verification',
+        label: 'Employment date verification',
+        description:
+          'Optional: invite past employers to confirm your work dates by email (voluntary for them)',
+        status: 'pending',
+        isOptional: true,
+        action: { label: 'Manage', target: 'employment-verification' },
+      },
+    ],
+  },
+
   'driver-dot-application': {
     resolve: (d) => {
       // Form submitted (DB is_complete) counts as done; on-chain verify is optional follow-up

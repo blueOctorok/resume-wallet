@@ -1,6 +1,6 @@
 'use client'
 
-import { MapPin, Calendar, Mail, Phone, Eye, Plus } from 'lucide-react'
+import { MapPin, Calendar, Mail, Phone, Eye, Plus, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import Avatar from '@/components/ui/Avatar'
@@ -70,18 +70,20 @@ export default function ProjectedCareerCard({
           <div className='flex items-end gap-4'>
             <div
               className={cn(
-                'rounded-full p-0.5',
-                'bg-gradient-to-br from-teal-400/80 via-cyan-400/50 to-violet-500/60 dark:from-teal-400/90 dark:via-teal-600/40 dark:to-violet-600/50',
-                'shadow-lg shadow-teal-900/20 dark:shadow-black/50',
+                'rounded-full p-[3px]',
+                'bg-gradient-to-br from-teal-400/85 via-cyan-400/55 to-violet-500/65 dark:from-teal-400/95 dark:via-teal-500/45 dark:to-violet-500/55',
+                'shadow-lg shadow-teal-900/25 dark:shadow-black/60',
+                'ring-1 ring-white/25 dark:ring-white/10',
               )}
             >
               <div
                 className={cn(
-                  'rounded-full border-[3px]',
+                  'rounded-full overflow-hidden border-[3px] shadow-inner',
                   isDark ? 'border-gray-950' : 'border-white',
                 )}
               >
-                <Avatar name={data.name} avatarUrl={data.avatarUrl} size='xl' color='teal' />
+                {/* round + 2xl: photo uses object-cover on a true circle so it fills the gradient ring */}
+                <Avatar name={data.name} avatarUrl={data.avatarUrl} size='2xl' color='teal' round />
               </div>
             </div>
             <div className='flex-1 min-w-0 pb-1 pt-1'>
@@ -149,6 +151,32 @@ export default function ProjectedCareerCard({
             <p className={cn('text-sm mt-4 leading-relaxed', isDark ? 'text-gray-300' : 'text-gray-700')}>
               {data.professionalSummary}
             </p>
+          )}
+
+          {/* Employer-confirmed employment — trust signal for shared / public card */}
+          {data.employerConfirmedEmploymentCount > 0 && (
+            <div
+              className={cn(
+                'mt-4 flex items-start gap-3 rounded-xl border px-4 py-3',
+                isDark
+                  ? 'border-emerald-500/35 bg-emerald-500/[0.08]'
+                  : 'border-emerald-200 bg-emerald-50/90',
+              )}
+            >
+              <ShieldCheck
+                className={cn('w-5 h-5 flex-shrink-0 mt-0.5', isDark ? 'text-emerald-400' : 'text-emerald-600')}
+                aria-hidden
+              />
+              <div className='min-w-0'>
+                <p className={cn('text-sm font-semibold', isDark ? 'text-emerald-100' : 'text-emerald-900')}>
+                  {data.employerConfirmedEmploymentCount} employer
+                  {data.employerConfirmedEmploymentCount === 1 ? '' : 's'} confirmed employment
+                </p>
+                <p className={cn('text-xs mt-0.5', isDark ? 'text-emerald-200/80' : 'text-emerald-800/80')}>
+                  Past employers verified roles and dates on file.
+                </p>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -231,7 +259,15 @@ function SectionRenderer({
     case 'driver-resume':
     case 'developer-resume':
     case 'general-resume':
-      return <ResumeSection data={section.data as ResumeData} mode={mode} isDark={isDark} onAction={onAction} />
+      return (
+        <ResumeSection
+          data={section.data as ResumeData}
+          mode={mode}
+          isDark={isDark}
+          onAction={onAction}
+          walletAddress={walletAddress}
+        />
+      )
     case 'driver-dot-application':
       return (
         <DotAppSection

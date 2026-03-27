@@ -63,7 +63,7 @@ export interface VerificationAnswers {
 // ===== INITIATOR TYPE =====
 
 export type InitiatedBy = 'applicant' | 'employer'
-export type ApplicantType = 'driver' | 'developer'
+export type ApplicantType = 'driver' | 'developer' | 'general'
 
 // ===== VERIFICATION REQUEST =====
 

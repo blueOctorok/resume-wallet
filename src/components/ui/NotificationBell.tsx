@@ -5,6 +5,8 @@ import { Bell, BriefcaseBusiness, UserCheck, ShieldCheck, Users, FileText, Clipb
 import { useNotificationStore, type AppNotification } from '@/stores/notification-store'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useUIStore } from '@/stores'
+import { cn } from '@/lib/utils'
+import { navControlButtonClass } from '@/lib/navigation-styles'
 
 interface NotificationBellProps {
   walletAddress: string
@@ -112,17 +114,22 @@ export default function NotificationBell({ walletAddress }: NotificationBellProp
     <div ref={dropdownRef} className='relative'>
       {/* Bell button */}
       <button
+        type='button'
         onClick={handleOpen}
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
-        className={`relative flex items-center justify-center w-9 h-9 rounded-xl border transition-all duration-200 cursor-pointer ${
-          isDark
-            ? 'bg-gray-700/50 border-gray-600 hover:bg-gray-600/50 text-gray-300'
-            : 'bg-gray-100 border-gray-200 hover:bg-gray-200 text-gray-700'
-        }`}
+        className={cn(
+          'relative flex items-center justify-center w-9 h-9 cursor-pointer',
+          navControlButtonClass(isDark),
+        )}
       >
         <Bell className='w-4 h-4' />
         {unreadCount > 0 && (
-          <span className='absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-teal-500 text-white text-[10px] font-bold rounded-full border-2 border-white'>
+          <span
+            className={cn(
+              'absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-teal-500 text-white text-[10px] font-bold rounded-full border-2',
+              isDark ? 'border-gray-950' : 'border-white',
+            )}
+          >
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}

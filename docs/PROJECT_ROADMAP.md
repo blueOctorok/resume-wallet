@@ -1,5 +1,12 @@
 # StormChain - Complete Project Roadmap
 
+## 🧭 **Candidate hub — refresh & navigation** (March 2026)
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Obvious **Refresh hub** control | ✅ Done | Strip under profile card; avoids burying refresh beside Block Hive |
+| Browser / OS **back** vs shell | ✅ Done | `useCandidateShellHistory` + `navigateToHub()` — cannot remove system back UI; history is synced so back returns to hub when possible |
+
 ## 🏢 **Employer Side Simplification** (March 2026 — Phase 1 Done)
 
 | Feature | Status | Description |

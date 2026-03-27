@@ -34,6 +34,7 @@ import {
   AlertCircle,
   User,
   Lock,
+  ShieldCheck,
 } from 'lucide-react'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import ResumePreviewModal from '@/components/ResumePreviewModal'
@@ -320,8 +321,37 @@ export default function CareerCard({
                 Profile completeness · {data.completenessScore}%
               </p>
               <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-gray-600')}>
-                {data.verifiedJobsCount} verified jobs · {data.workHistoryCount} work entries
+                {data.verifiedJobsCount > 0 ? (
+                  <>
+                    <span className={cn('font-medium', isDark ? 'text-emerald-400' : 'text-emerald-700')}>
+                      {data.verifiedJobsCount} employer{data.verifiedJobsCount === 1 ? '' : 's'} confirmed employment
+                    </span>
+                    <span className={isDark ? 'text-gray-500' : 'text-gray-500'}>
+                      {' · '}
+                      {data.workHistoryCount} work {data.workHistoryCount === 1 ? 'entry' : 'entries'}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    No employer confirmations yet
+                    <span className={isDark ? 'text-gray-500' : 'text-gray-500'}>
+                      {' · '}
+                      {data.workHistoryCount} work {data.workHistoryCount === 1 ? 'entry' : 'entries'}
+                    </span>
+                  </>
+                )}
               </p>
+              {data.verifiedJobsCount > 0 && (
+                <p
+                  className={cn(
+                    'text-xs mt-1.5 flex items-center gap-1.5',
+                    isDark ? 'text-emerald-300/90' : 'text-emerald-700/90',
+                  )}
+                >
+                  <ShieldCheck className='w-3.5 h-3.5 flex-shrink-0' aria-hidden />
+                  Confirmed by past employers — stronger than self-reported history alone.
+                </p>
+              )}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -641,7 +671,9 @@ export default function CareerCard({
         theme={theme}
         action={
           <span className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
-            {data.verifiedJobsCount} verified
+            {data.verifiedJobsCount > 0
+              ? `${data.verifiedJobsCount} employer-confirmed`
+              : 'No employer confirmations'}
           </span>
         }
       >
@@ -649,11 +681,13 @@ export default function CareerCard({
           <div className="space-y-3">
             {data.workHistory.slice(0, 5).map((job, i) => {
               const verification = data.verifications?.find(
-                v => v.employer === job.companyName && v.position === job.position
+                v =>
+                  normEmploymentField(v.employer) === normEmploymentField(job.companyName) &&
+                  normEmploymentField(v.position) === normEmploymentField(job.position),
               )
               return (
                 <div key={i} className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                         {job.position || 'Unknown Position'}
@@ -666,9 +700,15 @@ export default function CareerCard({
                       </p>
                     </div>
                     {verification?.status === 'VERIFIED' && (
-                      <span className="flex items-center gap-1 text-xs text-green-500">
-                        <Shield className="w-3 h-3" />
-                        Verified
+                      <span className="flex items-center gap-1 text-xs text-green-500 dark:text-green-400 flex-shrink-0">
+                        <ShieldCheck className="w-3 h-3" aria-hidden />
+                        Employer confirmed
+                      </span>
+                    )}
+                    {verification?.status === 'PARTIALLY_VERIFIED' && (
+                      <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 flex-shrink-0">
+                        <Shield className="w-3 h-3" aria-hidden />
+                        Employer confirmed (adjusted dates)
                       </span>
                     )}
                   </div>

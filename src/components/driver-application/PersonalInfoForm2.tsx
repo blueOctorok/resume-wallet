@@ -858,9 +858,26 @@ export default function PersonalInfoForm2({
         <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${theme === 'dark' ? 'text-red-400' : 'text-red-700'}`}>
           Disqualifying Convictions — 49 CFR 391.15 (Past 3 Years)
         </p>
-        <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-          In the past three (3) years, have you ever been convicted of any of the following offenses?
+        <p className={`text-sm mb-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+          In the past three (3) years, have you ever been convicted of any of the following offenses? Review the list, then answer Yes or No.
         </p>
+        {/* Show covered offenses before Yes/No so drivers know what the question means (hidden after "Yes" — same items appear as checkboxes below). */}
+        {formData.cfr391ConvictedYesNo !== 'yes' && (
+          <div
+            className={`mb-4 p-3 rounded-lg text-xs space-y-1.5 max-h-[min(50vh,22rem)] overflow-y-auto border ${
+              theme === 'dark' ? 'bg-gray-800/80 border-gray-700 text-gray-300' : 'bg-white border-red-200 text-gray-700'
+            }`}
+          >
+            <p className={`font-semibold text-sm mb-2 ${theme === 'dark' ? 'text-red-300' : 'text-red-800'}`}>
+              Covered offenses
+            </p>
+            {CFR391_OFFENSES.map((o) => (
+              <p key={o.key} className='leading-snug'>
+                • {o.label}
+              </p>
+            ))}
+          </div>
+        )}
         <div className='flex gap-6 mb-4'>
           {['yes', 'no'].map(val => (
             <label key={val} className='flex items-center gap-2 cursor-pointer'>
@@ -903,14 +920,6 @@ export default function PersonalInfoForm2({
                 className={inputClass}
               />
             </div>
-          </div>
-        )}
-
-        {/* Always show the offense list as reference when answering "no" */}
-        {formData.cfr391ConvictedYesNo === 'no' && (
-          <div className={`mt-3 p-3 rounded-lg text-xs space-y-1 ${theme === 'dark' ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500'}`}>
-            <p className='font-medium mb-2'>Covered offenses (for reference):</p>
-            {CFR391_OFFENSES.map(o => <p key={o.key}>• {o.label}</p>)}
           </div>
         )}
       </div>

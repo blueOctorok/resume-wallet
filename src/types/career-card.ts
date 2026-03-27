@@ -143,6 +143,8 @@ export interface ProjectedCareerCard {
   }
   /** Populated only on public view */
   viewCount?: number
+  /** Past employers who responded on-file (VERIFIED or PARTIALLY_VERIFIED) */
+  employerConfirmedEmploymentCount: number
 }
 
 /** Props mode for the career card component */

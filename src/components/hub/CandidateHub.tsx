@@ -20,7 +20,6 @@ import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import AvatarUpload from '@/components/ui/AvatarUpload'
 import STORMBalance from '@/components/STORMBalance'
-import BuyUSDCButton from '@/components/BuyUSDCButton'
 import CandidateRequestsSection from '@/components/CandidateRequestsSection'
 import HubOnboardingForm from './HubOnboardingForm'
 import BlockPickerModal from './BlockPickerModal'
@@ -38,6 +37,7 @@ import AvaChatPanel from '@/components/ava/AvaChatPanel'
 import HubSidebar from '@/components/hub/HubSidebar'
 import DeveloperResumePreviewModal from '@/components/DeveloperResumePreviewModal'
 import type { DeveloperResumeData } from '@/components/DeveloperResumeBuilder'
+import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
 import Atropos from 'atropos/react'
 import 'atropos/css'
 
@@ -683,7 +683,7 @@ function myFilesResumeCanView(doc: {
 }) {
   if (doc.type !== 'resume') return false
   const h = doc.ipfsHash
-  const ipfs = Boolean(h && !String(h).startsWith('built_'))
+  const ipfs = isLiveResumeIpfsHash(h ?? undefined)
   const sd = doc.structuredData
   const built = sd != null && typeof sd === 'object' && Object.keys(sd as object).length > 0
   return ipfs || built
@@ -691,7 +691,7 @@ function myFilesResumeCanView(doc: {
 
 interface HubDocument {
   id: string
-  type: 'resume' | 'dotapp' | 'mvr' | 'portfolio' | 'github'
+  type: 'resume' | 'dotapp' | 'mvr' | 'portfolio' | 'github' | 'employment_verifications'
   title: string
   subtitle?: string
   createdAt?: string
@@ -747,14 +747,23 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
   const hasMvrBlock = installedBlocks.some((b) => b.blockType === 'driver-mvr')
   const hasPortfolioBlock = installedBlocks.some((b) => b.blockType === 'developer-portfolio')
   const hasGithubBlock = installedBlocks.some((b) => b.blockType === 'developer-github')
+  const hasEmploymentVerificationBlock = installedBlocks.some(
+    (b) => b.blockType === 'general-employment-verification',
+  )
+  const needsHubData =
+    hasResumeBlock || hasDotAppBlock || hasMvrBlock || hasPortfolioBlock || hasGithubBlock
+  const hasAnyFileSectionBlock = needsHubData || hasEmploymentVerificationBlock
 
   const fetchDocuments = useCallback(async () => {
-    if (!walletAddress || (!hasResumeBlock && !hasDotAppBlock && !hasMvrBlock && !hasPortfolioBlock && !hasGithubBlock)) {
+    if (!walletAddress || !hasAnyFileSectionBlock) {
       setLoading(false)
       return
     }
 
     try {
+      const docs: HubDocument[] = []
+
+      if (needsHubData) {
       const response = await fetch('/api/driver/hub', {
         headers: { 'x-wallet-address': walletAddress },
       })
@@ -762,7 +771,6 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
 
       const data = await response.json()
       if (typeof data.userId === 'string') setHubUserId(data.userId)
-      const docs: HubDocument[] = []
 
       const hasDriverResumeBlock = installedBlocks.some((b) => b.blockType === 'driver-resume')
       const hasDeveloperResumeBlock = installedBlocks.some((b) => b.blockType === 'developer-resume')
@@ -871,6 +879,37 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
           githubUsername: username,
         })
       }
+      }
+
+      if (hasEmploymentVerificationBlock) {
+        const vr = await fetch('/api/candidate/verification/status?initiatedBy=applicant', {
+          headers: { 'x-wallet-address': walletAddress },
+        })
+        if (vr.ok) {
+          const j = (await vr.json()) as {
+            requests?: Array<{ status: string }>
+          }
+          const reqs = j.requests ?? []
+          const verified = reqs.filter(
+            (r) => r.status === 'VERIFIED' || r.status === 'PARTIALLY_VERIFIED',
+          ).length
+          const pending = reqs.filter((r) =>
+            ['VERIFICATION_REQUESTED', 'VERIFICATION_IN_PROGRESS'].includes(r.status),
+          ).length
+          docs.push({
+            id: 'employment-verifications',
+            type: 'employment_verifications',
+            title: 'Employment verifications',
+            subtitle: `${verified} verified · ${pending} pending`,
+            status: pending > 0 ? 'in-progress' : 'complete',
+            verified: false,
+            txHash: null,
+            canVerify: false,
+            canDelete: false,
+            editPage: 'employment-verification',
+          })
+        }
+      }
 
       setDocuments(docs)
     } catch (err) {
@@ -878,7 +917,18 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
     } finally {
       setLoading(false)
     }
-  }, [walletAddress, hasResumeBlock, hasDotAppBlock, hasMvrBlock, hasPortfolioBlock, hasGithubBlock, installedBlocks])
+  }, [
+    walletAddress,
+    hasResumeBlock,
+    hasDotAppBlock,
+    hasMvrBlock,
+    hasPortfolioBlock,
+    hasGithubBlock,
+    hasEmploymentVerificationBlock,
+    needsHubData,
+    hasAnyFileSectionBlock,
+    installedBlocks,
+  ])
 
   // `refreshKey` is incremented externally to trigger a manual re-fetch
   useEffect(() => { fetchDocuments() }, [fetchDocuments, refreshKey])
@@ -918,7 +968,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
   }
 
   const handleDelete = async (doc: HubDocument) => {
-    if (!walletAddress) return
+    if (!walletAddress || doc.type === 'employment_verifications') return
     setDeleting(doc.id)
     setConfirmDelete(null)
 
@@ -944,8 +994,6 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
     }
   }
 
-  const hasFileBlocks = hasResumeBlock || hasDotAppBlock || hasMvrBlock || hasPortfolioBlock || hasGithubBlock
-
   return (
     <>
     <div className={cn(
@@ -961,33 +1009,33 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
           </p>
         </div>
         <span className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
-          {hasFileBlocks ? `${documents.length} ${documents.length === 1 ? 'file' : 'files'}` : '—'}
+          {hasAnyFileSectionBlock ? `${documents.length} ${documents.length === 1 ? 'file' : 'files'}` : '—'}
         </span>
       </div>
 
       {/* Empty state: no file-related blocks installed */}
-      {!hasFileBlocks && (
+      {!hasAnyFileSectionBlock && (
         <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>
-          Install a Resume, DOT Application, or MVR block from the Block Hive below to manage your files here.
+          Install a Resume, DOT Application, MVR, or Employment Verification block from the Block Hive below to manage your files here.
         </p>
       )}
 
       {/* Loading: has blocks but still fetching */}
-      {hasFileBlocks && loading && (
+      {hasAnyFileSectionBlock && loading && (
         <div className='flex items-center justify-center py-8'>
           <Loader2 className={cn('w-6 h-6 animate-spin', isDark ? 'text-teal-400' : 'text-teal-600')} />
         </div>
       )}
 
       {/* Empty state: has blocks but no documents yet */}
-      {hasFileBlocks && !loading && documents.length === 0 && (
+      {hasAnyFileSectionBlock && !loading && documents.length === 0 && (
         <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>
-          Your files will appear here after you add a resume, start a DOT application, or order an MVR.
+          Your files will appear here after you add a resume, start a DOT application, order an MVR, or open employment verification.
         </p>
       )}
 
       {/* Status message and document list — only when we have docs to show */}
-      {hasFileBlocks && !loading && documents.length > 0 && (
+      {hasAnyFileSectionBlock && !loading && documents.length > 0 && (
         <>
       {message && (
         <div className={cn(
@@ -1028,6 +1076,8 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                   <Globe className={cn('w-4 h-4', doc.status === 'complete' ? (isDark ? 'text-teal-400' : 'text-teal-600') : isDark ? 'text-gray-400' : 'text-slate-600')} />
                 ) : doc.type === 'github' ? (
                   <Github className={cn('w-4 h-4', doc.status === 'complete' ? (isDark ? 'text-teal-400' : 'text-teal-600') : isDark ? 'text-gray-400' : 'text-slate-600')} />
+                ) : doc.type === 'employment_verifications' ? (
+                  <ShieldCheck className={cn('w-4 h-4', doc.status === 'in-progress' ? (isDark ? 'text-yellow-400' : 'text-yellow-600') : isDark ? 'text-violet-400' : 'text-violet-600')} />
                 ) : (
                   <ClipboardCheck className={cn('w-4 h-4', doc.verified ? 'text-green-400' : isDark ? 'text-gray-400' : 'text-slate-600')} />
                 )}
@@ -1140,12 +1190,23 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                     <Pencil className='w-3 h-3' /> Edit
                   </button>
                 )}
+                {doc.type === 'employment_verifications' && doc.editPage && (
+                  <button
+                    type='button'
+                    onClick={() => setCurrentPage(doc.editPage)}
+                    className={cn(
+                      'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
+                      isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200',
+                    )}
+                  >
+                    <Pencil className='w-3 h-3' /> Manage
+                  </button>
+                )}
                 {doc.status !== 'processing' && doc.type === 'resume' && myFilesResumeCanView(doc) && (
                   <button
                     type='button'
                     onClick={() => {
-                      const ipfs = doc.ipfsHash && !String(doc.ipfsHash).startsWith('built_')
-                      if (ipfs) {
+                      if (isLiveResumeIpfsHash(doc.ipfsHash)) {
                         setResumeFilePreview({
                           title: doc.title,
                           url: `https://gateway.pinata.cloud/ipfs/${doc.ipfsHash}`,
@@ -1403,6 +1464,11 @@ export default function CandidateHub() {
     if (walletAddress) fetchHubData(walletAddress)
   }, [walletAddress, fetchHubData])
 
+  const refreshHub = useCallback(() => {
+    if (walletAddress) fetchHubData(walletAddress)
+    setRefreshKey((k) => k + 1)
+  }, [walletAddress, fetchHubData])
+
   // Exit edit mode on Escape
   useEffect(() => {
     if (!isEditing) return
@@ -1486,6 +1552,49 @@ export default function CandidateHub() {
         <div className='flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:content-start lg:gap-x-8 lg:gap-y-0'>
           <div className='min-w-0 space-y-6 lg:col-start-1 lg:row-start-1 lg:self-start'>
             <HubProfileHeader />
+
+            {walletAddress && (
+              <div
+                className={cn(
+                  'flex flex-col gap-3 rounded-2xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4',
+                  isDark
+                    ? 'border-teal-500/25 bg-gray-800/70'
+                    : 'border-teal-200/80 bg-teal-50/90',
+                )}
+              >
+                <div className='min-w-0'>
+                  <p
+                    className={cn(
+                      'text-sm font-semibold',
+                      isDark ? 'text-gray-100' : 'text-slate-800',
+                    )}
+                  >
+                    Refresh the hub for the latest blocks and files
+                  </p>
+                  <p
+                    className={cn(
+                      'text-xs mt-0.5',
+                      isDark ? 'text-gray-400' : 'text-slate-600',
+                    )}
+                  >
+                    Avoid full page reloads. After opening a block, use <span className='font-medium'>Back to hub</span> (browser back returns to the hub when it can).
+                  </p>
+                </div>
+                <Button
+                  type='button'
+                  variant='primary'
+                  size='sm'
+                  onClick={refreshHub}
+                  disabled={isLoading}
+                  isLoading={isLoading}
+                  className='w-full shrink-0 sm:w-auto'
+                >
+                  {!isLoading ? <RefreshCw className='w-4 h-4' aria-hidden /> : null}
+                  Refresh hub
+                </Button>
+              </div>
+            )}
+
             <AvaChatPanel
               mode='candidate'
               walletAddress={walletAddress}
@@ -1516,21 +1625,6 @@ export default function CandidateHub() {
                   Drag to reorder · tap to open
                 </p>
               </div>
-              <button
-                onClick={() => {
-                  if (walletAddress) fetchHubData(walletAddress)
-                  setRefreshKey((k) => k + 1)
-                }}
-                disabled={isLoading}
-                title='Refresh hub'
-                className={cn(
-                  'p-1 rounded-lg transition-all',
-                  isLoading ? 'opacity-50 cursor-not-allowed' : '',
-                  isDark ? 'hover:bg-gray-700 text-gray-500 hover:text-gray-300' : 'hover:bg-slate-100 text-slate-500 hover:text-slate-700'
-                )}
-              >
-                <RefreshCw className={cn('w-3.5 h-3.5', isLoading && 'animate-spin')} />
-              </button>
             </div>
             <div className='flex items-center gap-2'>
               {installedBlocks.length > 0 && (
@@ -1631,35 +1725,15 @@ export default function CandidateHub() {
               />
             )}
 
-            {/* ── Buy USDC (was on floating WalletCard before composable hub; nav wallet modal still has this too) ── */}
+            {/* ── STORM + Add USDC (single card; mt-4 matches former separate USDC card spacing) ── */}
             {walletAddress && (
-              <Card variant='elevated' className='p-4 sm:p-5 mt-4'>
-                <h3
-                  className={cn(
-                    'text-sm font-semibold mb-1',
-                    isDark ? 'text-gray-100' : 'text-gray-900',
-                  )}
-                >
-                  Add USDC
-                </h3>
-                <p
-                  className={cn(
-                    'text-xs mb-3',
-                    isDark ? 'text-gray-400' : 'text-gray-600',
-                  )}
-                >
-                  Card purchase settles on Base mainnet; this app runs on Base Sepolia — use Wallet → Send to move funds for testnet.
-                </p>
-                <BuyUSDCButton walletAddress={walletAddress} />
-              </Card>
-            )}
-
-            {/* ── STORM Token ── */}
-            {walletAddress && (
-              <STORMBalance
-                walletAddress={walletAddress}
-                onReadWhitepaper={() => setCurrentPage('stormchain')}
-              />
+              <div className='mt-4'>
+                <STORMBalance
+                  walletAddress={walletAddress}
+                  showBuyUsdc
+                  onReadWhitepaper={() => setCurrentPage('stormchain')}
+                />
+              </div>
             )}
           </div>
 

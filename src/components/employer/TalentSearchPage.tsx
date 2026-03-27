@@ -679,9 +679,10 @@ function CandidateCard({
                   </span>
                 )}
                 {candidate.verifiedJobsCount > 0 && (
-                  <span className="flex items-center gap-1 text-xs text-green-500">
+                  <span className="flex items-center gap-1 text-xs text-green-500 dark:text-green-400">
                     <Shield className="w-3 h-3" />
-                    {candidate.verifiedJobsCount} Verified
+                    {candidate.verifiedJobsCount} employer
+                    {candidate.verifiedJobsCount === 1 ? '' : 's'} confirmed
                   </span>
                 )}
               </div>

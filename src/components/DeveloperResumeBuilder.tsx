@@ -278,10 +278,16 @@ export default function DeveloperResumeBuilder({
             headers: { 'x-wallet-address': userAddress },
           })
           if (res.ok) {
-            const { resume } = await res.json()
-            if (resume?.structured_data) {
-              setData(resume.structured_data)
-              setResumeId(resume.id)
+            // GET /api/resumes/[id] returns the row at the top level (not { resume })
+            const row = await res.json() as {
+              id: string
+              structured_data?: DeveloperResumeData | null
+            }
+            if (row.structured_data && typeof row.structured_data === 'object') {
+              setData(row.structured_data as DeveloperResumeData)
+              setResumeId(row.id)
+            } else if (row.id) {
+              setResumeId(row.id)
             }
           }
         } else {

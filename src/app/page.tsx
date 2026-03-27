@@ -22,6 +22,7 @@ import {
   useAuthStore,
   useUIStore,
 } from '@/stores'
+import { useCandidateShellHistory } from '@/hooks/use-candidate-shell-history'
 import type { PageType } from '@/stores'
 
 // Shell components — each role gets its own shell
@@ -85,6 +86,11 @@ const HomeContent = () => {
     setLatestResumeIpfsHash,
     handleResumeUploadEvent,
   } = uiStore
+
+  useCandidateShellHistory(
+    !!user && userRole === 'candidate' && !isRoleLoading,
+    currentPage,
+  )
 
   // Tracks whether the user explicitly signed out. Prevents the session-sync
   // effect from immediately re-logging them in while Alchemy's async cleanup runs.
@@ -215,7 +221,7 @@ const HomeContent = () => {
 
     // onboard param is the block's `pageRoute` from the registry (e.g. 'dotapp', 'resume', 'mvr').
     // Cast directly — these already match PageType values in CandidateShell.
-    const validOnboardPages: PageType[] = ['dotapp', 'resume', 'general-resume', 'developer-resume', 'mvr', 'portfolio', 'github', 'jobs', 'applications']
+    const validOnboardPages: PageType[] = ['dotapp', 'resume', 'general-resume', 'developer-resume', 'mvr', 'portfolio', 'github', 'jobs', 'applications', 'employment-verification']
     const target = onboardAction as PageType
     if (validOnboardPages.includes(target)) {
       setCurrentPage(target)

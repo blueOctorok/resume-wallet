@@ -26,6 +26,11 @@ const GeneralResumeBlock = dynamic(
   { ssr: false, loading: () => <LoadingScreen message='Loading resume builder…' fullScreen={false} /> }
 )
 
+const EmploymentVerificationBlock = dynamic(
+  () => import('@/components/blocks/EmploymentVerificationBlock'),
+  { ssr: false, loading: () => <LoadingScreen message='Loading…' fullScreen={false} /> }
+)
+
 const JobListings = dynamic(
   () => import('@/components/JobListings').then((mod) => mod.default),
   { ssr: false, loading: () => <LoadingScreen message='Loading jobs...' fullScreen={false} /> }
@@ -61,12 +66,13 @@ const GitHubPage = dynamic(
  */
 export default function CandidateShell() {
   const { user, walletAddress } = useAuthStore()
-  const { currentPage, setCurrentPage, initialThreadId, editingResumeId, setEditingResumeId } = useUIStore()
+  const { currentPage, setCurrentPage, navigateToHub, initialThreadId, editingResumeId, setEditingResumeId } =
+    useUIStore()
 
   const goBack = useCallback(() => {
     setEditingResumeId(undefined)
-    setCurrentPage(null)
-  }, [setCurrentPage, setEditingResumeId])
+    navigateToHub()
+  }, [navigateToHub, setEditingResumeId])
 
   if (currentPage === 'profile-setup') {
     return (
@@ -122,6 +128,10 @@ export default function CandidateShell() {
         onSave={goBack}
       />
     )
+  }
+
+  if (currentPage === 'employment-verification') {
+    return <EmploymentVerificationBlock />
   }
 
   if (currentPage === 'mvr') {

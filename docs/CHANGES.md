@@ -4,6 +4,110 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Navigation — StormChain wordmark (ghost sign + Instrument Serif)** (March 2026)
+
+- [`layout.tsx`](src/app/layout.tsx): load **Instrument Serif** as **`--font-storm-wordmark`** (body CSS variable only; rest of app stays Montserrat).
+- [`Navigation.tsx`](src/components/Navigation.tsx): larger title, **`font-normal`** (no bold), muted debossed **text-shadow** (“faded painted letters” / letterpress groove). **Chain** keeps a very soft teal tint instead of a loud gradient.
+
+---
+
+## **Candidate hub — prominent refresh + shell history sync** (March 2026)
+
+- [`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx): **Refresh hub** callout under the profile card (primary [`Button`](src/components/ui/Button.tsx) + short copy); removed the easy-to-miss icon-only control beside **Block Hive**.
+- [`use-candidate-shell-history.ts`](src/hooks/use-candidate-shell-history.ts) + [`page.tsx`](src/app/page.tsx): for **`userRole === 'candidate'`**, sync `history.state` with [`currentPage`](src/stores/ui-store.ts) so **browser / OS back** steps down in-app (hub ↔ block) instead of leaving the site in one tap when possible.
+- [`ui-store.ts`](src/stores/ui-store.ts) **`navigateToHub`**: uses `history.back()` when a shell entry exists, else `setCurrentPage(null)` — wired from [`CandidateShell`](src/components/app/CandidateShell.tsx) `goBack` and [`EmploymentVerificationBlock`](src/components/blocks/EmploymentVerificationBlock.tsx).
+
+---
+
+## **Candidate hub — USDC folded into STORM card** (March 2026)
+
+- [`STORMBalance.tsx`](src/components/STORMBalance.tsx): optional **`showBuyUsdc`** renders the same “Add USDC” copy + [`BuyUSDCButton`](src/components/BuyUSDCButton.tsx) inside the STORM card (between balance rows and footer).
+- [`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx): removed the separate **Add USDC** [`Card`](src/components/ui/Card.tsx); hub passes **`showBuyUsdc`** on `STORMBalance` so wallet tokens + USDC stay in one block.
+
+---
+
+## **App background — sharper storm (keep cloud / rain / lightning)** (March 2026)
+
+- [`globals.css`](src/app/globals.css): body gradients use **angled stops** and **deeper dark** / **cooler slate light** so the page feels less like one soft wash.
+- [`StormBackground.tsx`](src/components/StormBackground.tsx): new **atmosphere** layer (`z-[-4]`) — top **teal** + corner **violet** gloss and **edge vignette**; **cloud** slightly stronger opacity + **contrast**; **rain** a bit denser, higher opacity, crisper color; **lightning** flash slightly more visible; removed particles `console.log`.
+
+---
+
+## **Navigation — hub dropdown clipped** (March 2026)
+
+- [`navigation-styles.ts`](src/lib/navigation-styles.ts): nav shell **`overflow-hidden` → `overflow-visible`** so the My Hub menu (positioned below the button) is not clipped; dropdown panel **`z-[200]`** so it stacks above the bar.
+
+---
+
+## **Global navigation — hub / career card visual alignment** (March 2026)
+
+- New [`navigation-styles.ts`](src/lib/navigation-styles.ts): shell uses **`rounded-2xl`**, **`border-gray-200/90`** / **`border-gray-600/70`**, teal-tinted **shadow** + **ring**, top **hairline** (same language as [`HubSidebar`](src/components/hub/HubSidebar.tsx) / career card).
+- [`Navigation.tsx`](src/components/Navigation.tsx): removed soft **`rounded-3xl`** + heavy inner/glow layers; **Storm** + **Chain** wordmark (**Chain** in teal→cyan gradient); hub CTA uses **teal/violet gradient ring** + dark fill (replaces **`rotating-gold-border`**); controls use shared **chips**; **Sign in** uses [`Button`](src/components/ui/Button.tsx); removed debug `console.log`.
+- [`NotificationBell`](src/components/ui/NotificationBell.tsx) + [`ThemeToggle`](src/components/ThemeToggle.tsx): trigger buttons use **`navControlButtonClass`** so they match the nav chrome everywhere those components appear.
+
+---
+
+## **Career card header — avatar fills gradient ring** (March 2026)
+
+- [`Avatar`](src/components/ui/Avatar.tsx): optional **`round`** uses `rounded-full` instead of size-based `rounded-lg`/`2xl` so photos **`object-cover`** fill circular frames. New size **`2xl`** (88px) for hero use.
+- [`ProjectedCareerCard`](src/components/career-card/ProjectedCareerCard.tsx): avatar uses **`round` + `2xl`**, inner wrapper **`overflow-hidden`**, slightly richer gradient ring and **`shadow-inner`** on the photo well.
+
+---
+
+## **Projected career card — resume shown inline** (March 2026)
+
+- [`ResumeSection`](src/components/career-card/sections/ResumeSection.tsx): resume **snapshot** (headline/summary, skill chips, up to two roles) renders **above the fold** with gradient panels; **Full resume** opens the PDF/IPFS modal or full structured preview. Developer vs driver/general shapes use [`isDeveloperResumeStructured`](src/lib/career-card-resume-shape.ts); developer full view uses [`DeveloperResumePreviewModal`](src/components/DeveloperResumePreviewModal.tsx) (self mode keeps edit/verify/delete when wallet is present).
+- [`ProjectedCareerCard`](src/components/career-card/ProjectedCareerCard.tsx): passes `walletAddress` into `ResumeSection`.
+
+---
+
+## **Developer resume — View / IPFS preview (pending hash + Pinata iframe)** (March 2026)
+
+- **Cause:** New developer resumes store `ipfs_hash: 'pending'` until verify. My Files treated any non-`built_` hash as IPFS, opening `…/ipfs/pending` (403). Pinata’s gateway also sets **X-Frame-Options: sameorigin**, so embedding the gateway URL in an iframe failed even for real CIDs.
+- **Fix:** [`isLiveResumeIpfsHash`](src/lib/resume-ipfs-guards.ts) — denylist `pending`, `built_*`, `placeholder_ipfs_hash_*`. [`CandidateHub`](src/components/hub/CandidateHub.tsx) **View** then uses the developer structured preview when the hash is still a placeholder. [`ResumeFilePreviewModal`](src/components/hub/ResumeFilePreviewModal.tsx) loads the PDF with **fetch → blob URL** and iframes that (same-origin to the page). [`ResumeSection`](src/components/career-card/sections/ResumeSection.tsx) uses the same guard for career-card preview.
+
+---
+
+## **Developer resume — edit from Block Files loads empty form** (March 2026)
+
+- **Cause:** [`DeveloperResumeBuilder`](src/components/DeveloperResumeBuilder.tsx) parsed `GET /api/resumes/[id]` as `{ resume }`, but the route returns the resume row at the **root** (same shape as [`ResumeBuilder`](src/components/ResumeBuilder.tsx) / [`GeneralResumeBuilder`](src/components/GeneralResumeBuilder.tsx)).
+- **Fix:** Read `structured_data` from the JSON root so **Edit** / `existingResumeId` hydrates the form.
+
+---
+
+## **Candidate hub — optional Employment Verification block (merged work history)** (March 2026)
+
+- **Product:** Voluntary **date-focused** emails to past employers (same `employment_verification_requests` + `/verify/[token]` flow as legacy driver/dev hubs). Not a DOT-regulated investigation; copy in email and UI states that clearly.
+- **Composable hub:** New optional block **`general-employment-verification`** ([`block-registry.ts`](src/lib/block-registry.ts)) → full page [`employment-verification`](src/components/blocks/EmploymentVerificationBlock.tsx) with [`CandidateEmploymentVerificationSection`](src/components/verification/CandidateEmploymentVerificationSection.tsx). Install from Block Hive; **My Files** shows a summary row when the block is installed ([`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx)).
+- **Merged sources:** [`getMergedCandidateEmployments`](src/lib/candidate-employment-verification.ts) — `block_driver_employment` (driver resume + DOT), `block_dev_profile.employment_history`, and **general** built resumes (`resumes.source_role = general`, `structured_data.employments`). API: [`GET /api/candidate/verification/status`](src/app/api/candidate/verification/status/route.ts), [`POST /api/candidate/verification/initiate-self`](src/app/api/candidate/verification/initiate-self/route.ts) with `verificationKey` = `driver:id` | `developer:id` | `general:id`.
+- **DB:** [`063_employment_verification_general_applicant.sql`](supabase/migrations/063_employment_verification_general_applicant.sql) extends `applicant_type` with **`general`**. [`ApplicantType`](src/types/employment-verification.ts) updated.
+- **Routing:** [`PageType`](src/stores/types.ts) `employment-verification`, [`CandidateShell`](src/components/app/CandidateShell.tsx), [`validOnboardPages`](src/app/page.tsx), [`BLOCK_JOURNEY_MAP`](src/lib/journey-progress.ts) optional step, [`BlockIllustrations`](src/components/hub/BlockIllustrations.tsx).
+- **Email:** [`send-verification-email.ts`](src/lib/send-verification-email.ts) clarifies voluntary date confirmation vs DOT.
+- **Legacy:** [`DriverEmploymentVerificationSection`](src/components/verification/DriverEmploymentVerificationSection.tsx) / [`DeveloperEmploymentVerificationSection`](src/components/verification/DeveloperEmploymentVerificationSection.tsx) and their `/api/driver/verification/*` and `/api/developer/verification/*` routes stay unchanged.
+
+---
+
+## **Career card — employer-confirmed employment (trust signal)** (March 2026)
+
+- **DB:** [`064_career_cards_employer_confirmed_verifications.sql`](supabase/migrations/064_career_cards_employer_confirmed_verifications.sql) — `career_cards.verified_jobs_count` counts `employment_verification_requests` with **`VERIFIED` or `PARTIALLY_VERIFIED`** (past employer responded on-file). `search_talent` recreated; view keeps **`security_invoker`**.
+- **Projected card (hub / share link):** [`GET /api/career-card`](src/app/api/career-card/route.ts) adds **`employerConfirmedEmploymentCount`**; [`ProjectedCareerCard`](src/components/career-card/ProjectedCareerCard.tsx) shows a green **“X employers confirmed employment”** callout when the count is positive.
+- **Employer modal card:** [`CareerCard`](src/components/CareerCard.tsx) — completeness strip and Work History header use the same language; per-row badges for **full** vs **partial** confirmation; **case-insensitive** match between work rows and verification records.
+- **Talent search rows:** [`TalentSearchPage`](src/components/employer/TalentSearchPage.tsx) — credential chip text updated to **“X employer(s) confirmed”**.
+
+---
+
+## **DOT Form 1 — Med Card on step 3 (license)** (March 2026)
+
+- [`PersonalInfoForm1.tsx`](src/components/driver-application/PersonalInfoForm1.tsx): Step 3 (**License Information**) now includes **MED CARD (DOT MEDICAL CERTIFICATE)** between previous licenses and **Disqualification History**: Yes/No for a current med card and **expiration date** when Yes. Fields map to existing `form1.medicalQualification.hasValidMedicalCertificate` and `medicalCertificateExpiration` (`DotForm1Data` / career card preview). Step validation requires an answer; expiration is required if Yes. **Fill Test Data** sets a sample yes + date.
+
+---
+
+## **DOT Form 2 — 49 CFR 391.15 offenses visible before Yes/No** (March 2026)
+
+- [`PersonalInfoForm2.tsx`](src/components/driver-application/PersonalInfoForm2.tsx): **Covered offenses** list renders **above** the Yes/No radios whenever the answer is not **Yes** (empty or **No**), so drivers read definitions before answering. After **Yes**, the list is hidden and the same items appear only as **Select all that apply** checkboxes to avoid duplicate walls of text. Removed the old **No**-only reference box.
+
+---
+
 ## **DOT Form 2 -- state of violation dropdown** (March 2026)
 
 - [`PersonalInfoForm2.tsx`](src/components/driver-application/PersonalInfoForm2.tsx): Traffic convictions **State of violation** uses shared [`StateSelect`](src/components/ui/StateSelect.tsx) (2-letter codes + full names in the UI). Hydration runs [`normalizeState`](src/components/ui/StateSelect.tsx) so saved values like `Ohio` or `oh` map to `OH` when possible. Step validation requires state when a conviction row has date or violation filled.

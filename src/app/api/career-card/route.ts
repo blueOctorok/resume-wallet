@@ -131,6 +131,12 @@ export async function GET(request: NextRequest) {
 
     const installedTypes = (hubBlocks ?? []).map(b => b.block_type)
 
+    const { count: employerConfirmedEmploymentCount } = await supabase
+      .from('employment_verification_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('driver_id', userId)
+      .in('status', ['VERIFIED', 'PARTIALLY_VERIFIED'])
+
     // ── Build sections from installed blocks ──
     const sections: CareerCardSection[] = []
 
@@ -162,6 +168,7 @@ export async function GET(request: NextRequest) {
       settings: shareSettings,
       contact,
       viewCount: isPublicView ? viewCount : undefined,
+      employerConfirmedEmploymentCount: employerConfirmedEmploymentCount ?? 0,
     }
 
     return NextResponse.json({ success: true, card })

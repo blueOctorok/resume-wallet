@@ -9,6 +9,8 @@ const SIZE_MAP = {
   md:  { px: 40,  text: 'text-base', ring: 'rounded-xl' },
   lg:  { px: 56,  text: 'text-xl',   ring: 'rounded-2xl' },
   xl:  { px: 64,  text: 'text-2xl',  ring: 'rounded-2xl' },
+  /** Hero / career card — larger disk */
+  '2xl': { px: 88, text: 'text-3xl', ring: 'rounded-2xl' },
 } as const
 
 // Accent color token → Tailwind classes (bg + text)
@@ -32,6 +34,11 @@ export interface AvatarProps {
   color?:   AvatarColor
   /** Extra Tailwind classes applied to the outer wrapper */
   className?: string
+  /**
+   * True circle — use inside circular frames (e.g. career card gradient ring).
+   * Default keeps rounded-lg/xl/2xl per size so avatars match cards elsewhere.
+   */
+  round?: boolean
 }
 
 /**
@@ -50,13 +57,15 @@ export default function Avatar({
   size    = 'md',
   color   = 'teal',
   className = '',
+  round = false,
 }: AvatarProps) {
   const { px, text, ring } = SIZE_MAP[size]
   const { bg, text: textColor, border } = COLOR_MAP[color]
 
   const initial = (name || '?').charAt(0).toUpperCase()
 
-  const base = `flex-shrink-0 flex items-center justify-center overflow-hidden border ${ring} ${border}`
+  const shapeClass = round ? 'rounded-full' : ring
+  const base = `flex-shrink-0 flex items-center justify-center overflow-hidden border ${shapeClass} ${border}`
   const style = { width: px, height: px }
 
   if (avatarUrl) {
