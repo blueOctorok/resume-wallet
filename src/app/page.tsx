@@ -459,11 +459,7 @@ const Home = () => {
   useEffect(() => { setMounted(true) }, [])
 
   if (!mounted) {
-    return (
-      <div className='min-h-screen bg-gradient-to-br from-teal-700 to-teal-500 flex items-center justify-center'>
-        <div className='text-white text-xl'>Loading...</div>
-      </div>
-    )
+    return <LoadingScreen message='Starting StormChain…' fullScreen />
   }
 
   return <HomeContent />

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import LoadingScreen from '@/components/LoadingScreen'
 import ProfileSetup from '@/components/app/ProfileSetup'
@@ -10,6 +10,25 @@ import DotApplicationFlow from '@/components/app/DotApplicationFlow'
 import CareerCardView from '@/components/app/CareerCardView'
 import CandidateHub from '@/components/hub/CandidateHub'
 import { useAuthStore, useUIStore } from '@/stores'
+import type { PageType } from '@/stores/types'
+
+/** Routes this shell renders — anything else is reset to hub in an effect (never during render). */
+const CANDIDATE_SHELL_PAGES: readonly PageType[] = [
+  'profile-setup',
+  'dotapp',
+  'resume',
+  'developer-resume',
+  'general-resume',
+  'employment-verification',
+  'mvr',
+  'portfolio',
+  'github',
+  'jobs',
+  'applications',
+  'stormchain',
+  'career-card',
+  'messages',
+]
 
 const ResumeBuilder = dynamic(
   () => import('@/components/ResumeBuilder'),
@@ -69,10 +88,23 @@ export default function CandidateShell() {
   const { currentPage, setCurrentPage, navigateToHub, initialThreadId, editingResumeId, setEditingResumeId } =
     useUIStore()
 
+  const unknownCandidatePage =
+    currentPage !== null && !CANDIDATE_SHELL_PAGES.includes(currentPage)
+
+  useEffect(() => {
+    if (unknownCandidatePage) {
+      setCurrentPage(null)
+    }
+  }, [unknownCandidatePage, setCurrentPage])
+
   const goBack = useCallback(() => {
     setEditingResumeId(undefined)
     navigateToHub()
   }, [navigateToHub, setEditingResumeId])
+
+  if (unknownCandidatePage) {
+    return null
+  }
 
   if (currentPage === 'profile-setup') {
     return (
@@ -187,14 +219,5 @@ export default function CandidateShell() {
   }
 
   // Default: the composable hub
-  if (!currentPage) {
-    return <CandidateHub />
-  }
-
-  // Unknown page — fall back to hub rather than blank screen
-  if (currentPage) {
-    setCurrentPage(null)
-  }
-
-  return null
+  return <CandidateHub />
 }

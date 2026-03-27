@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useVisibilityRefresh } from '@/hooks/useVisibilityRefresh'
 import { useDriverHubStore } from '@/stores/driver-hub-store'
+import StormTokenMark from '@/components/ui/StormTokenMark'
 import ShareProfileCard from './ShareProfileCard'
 import AvatarUpload from './ui/AvatarUpload'
 import DriverVerificationSection from './verification/DriverVerificationSection'
@@ -1208,19 +1209,7 @@ export default function DriverHub({
       <div className={`${cardClass} p-6`}>
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-4'>
-            <div
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center overflow-hidden ${
-                theme === 'dark'
-                  ? 'bg-gradient-to-br from-indigo-500/20 to-indigo-500/10 border border-indigo-500/30'
-                  : 'bg-gradient-to-br from-indigo-500/10 to-indigo-50 border border-indigo-200'
-              }`}
-            >
-              <img
-                src='/favicon.svg'
-                alt='StormChain'
-                className='w-8 h-8 object-contain'
-              />
-            </div>
+            <StormTokenMark size='lg' />
             <div>
               <h2
                 className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}

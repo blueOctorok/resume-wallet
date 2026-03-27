@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { LayoutDashboard, Coins, ChevronDown, RefreshCw, Car, Code, Building2, Sparkles, HelpCircle, MessageSquare, User, Home, Briefcase } from 'lucide-react'
+import { LayoutDashboard, ChevronDown, RefreshCw, Car, Code, Building2, Sparkles, HelpCircle, MessageSquare, User, Home, Briefcase } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   navShellClass,
@@ -19,6 +19,7 @@ import {
   navStormPillClass,
 } from '@/lib/navigation-styles'
 import ThemeToggle from './ThemeToggle'
+import StormTokenMark from '@/components/ui/StormTokenMark'
 import Button from '@/components/ui/Button'
 import { useTheme } from '@/contexts/ThemeContext'
 import { usePreferencesStore, useJourneyStore, useUIStore } from '@/stores'
@@ -495,7 +496,7 @@ export default function Navigation({
                     className={cn(navStormPillClass(isDark))}
                     title='View StormChain tokens'
                   >
-                    <Coins className='w-3.5 h-3.5' />
+                    <StormTokenMark size='xs' className='scale-90' />
                     <span className='font-mono'>
                       {stormTokens.toLocaleString()}
                     </span>

@@ -4,6 +4,7 @@
 
 | Item | Status | Notes |
 |------|--------|-------|
+| **Unified LoadingScreen** | ✅ Done | Teal/violet orbits, storm icon, full-page + compact modes; replaces teal splash + generic spinner |
 | Obvious **Refresh hub** control | ✅ Done | Strip under profile card; avoids burying refresh beside Block Hive |
 | Browser / OS **back** vs shell | ✅ Done | `useCandidateShellHistory` + `navigateToHub()` — cannot remove system back UI; history is synced so back returns to hub when possible |
 | Nav **rounded shell + breathing glow** | ✅ Done | Backdrop layer (no clip-path chamfers); teal/violet animated `box-shadow` rim + drop-shadow; `prefers-reduced-motion` static glow |

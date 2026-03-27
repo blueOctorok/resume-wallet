@@ -4,6 +4,29 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **CandidateShell — fix setState during render** (March 2026)
+
+- [`CandidateShell.tsx`](src/components/app/CandidateShell.tsx): unknown `currentPage` values (e.g. employer-only routes left in UI store) no longer call **`setCurrentPage(null)` during render**; a **`useEffect`** resets to hub and render returns **`null`** for one frame — fixes React 19 “Cannot update Navigation while rendering CandidateShell”.
+
+---
+
+## **STORM token UI — shared orbit mark** (March 2026)
+
+- New [`StormTokenMark.tsx`](src/components/ui/StormTokenMark.tsx): teal/violet **counter-rotating rings** + **CloudLightning** (same as [`LoadingScreen`](src/components/LoadingScreen.tsx)); sizes **`xs`–`xl`**.
+- [`LoadingScreen.tsx`](src/components/LoadingScreen.tsx): uses **`StormTokenMark`** (no duplicated markup).
+- Replaced ⛈️ / favicon / generic coin in STORM surfaces: [`STORMBalance`](src/components/STORMBalance.tsx), [`Navigation`](src/components/Navigation.tsx) STORM pill, [`UserStatusModal`](src/components/UserStatusModal.tsx) send token row, [`SendSTORM`](src/components/wallet/SendSTORM.tsx), [`WalletInfo`](src/components/WalletInfo.tsx), legacy [`DriverHub`](src/components/DriverHub.tsx) tokens teaser.
+
+---
+
+## **Loading UI — unified StormChain screen** (March 2026)
+
+- [`LoadingScreen.tsx`](src/components/LoadingScreen.tsx): single branded experience — **teal + violet counter-rotating rings**, **CloudLightning** center (replaces generic **“S”**), body-matched **full-page atmosphere**, glass card, **shimmer progress bar**, **STORMCHAIN** wordmark in Instrument Serif. Props: **`fullScreen`**, **`compact`** (nested card, e.g. wallet init).
+- [`globals.css`](src/app/globals.css): **`loading-bar-sweep`** keyframes + reduced-motion handling.
+- [`page.tsx`](src/app/page.tsx): hydration bootstrap uses **`LoadingScreen`** instead of flat teal + “Loading…”.
+- [`AlchemyAuth.tsx`](src/components/AlchemyAuth.tsx): **`LoadingScreen` `compact`** inside the auth card for SDK init.
+
+---
+
 ## **Navigation — rounded shell + breathing glow** (March 2026)
 
 - **Follow-up:** Chamfered `clip-path` read as “missing corners”; reverted to **`border-radius: 1rem`** (rounded bar) on `.nav-shell-shape`.

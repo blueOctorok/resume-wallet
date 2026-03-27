@@ -9,6 +9,7 @@ import {
 import { useTheme } from '@/contexts/ThemeContext'
 import { RefreshCw, ExternalLink, FileText } from 'lucide-react'
 import BuyUSDCButton from '@/components/BuyUSDCButton'
+import StormTokenMark from '@/components/ui/StormTokenMark'
 
 interface STORMBalanceProps {
   walletAddress: string
@@ -87,8 +88,8 @@ export default function STORMBalance({
   if (compact) {
     if (loading) {
       return (
-        <div className='flex items-center gap-1'>
-          <span className='text-yellow-400'>⛈️</span>
+        <div className='flex items-center gap-2'>
+          <StormTokenMark size='xs' />
           <div
             className={`animate-pulse h-4 w-12 rounded ${
               theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
@@ -103,10 +104,10 @@ export default function STORMBalance({
 
     return (
       <div
-        className='flex items-center gap-1'
+        className='flex items-center gap-2'
         title={`STORM Token Balance: ${displayBalance}`}
       >
-        <span className='text-yellow-400'>⛈️</span>
+        <StormTokenMark size='xs' />
         <span
           className={`text-sm font-medium ${
             theme === 'dark' ? 'text-yellow-300' : 'text-yellow-600'
@@ -129,13 +130,7 @@ export default function STORMBalance({
     return (
       <div className={`${cardClass} p-4`}>
         <div className='flex items-center gap-3'>
-          <div
-            className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              theme === 'dark' ? 'bg-yellow-500/20' : 'bg-yellow-50'
-            }`}
-          >
-            <span className='text-lg'>⛈️</span>
-          </div>
+          <StormTokenMark size='md' />
           <div className='flex-1'>
             <div
               className={`h-4 w-20 rounded animate-pulse ${
@@ -190,13 +185,7 @@ export default function STORMBalance({
     <div className={`${cardClass} p-4`}>
       <div className='flex items-center justify-between mb-3'>
         <div className='flex items-center gap-3'>
-          <div
-            className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              theme === 'dark' ? 'bg-yellow-500/20' : 'bg-yellow-50'
-            }`}
-          >
-            <span className='text-lg'>⛈️</span>
-          </div>
+          <StormTokenMark size='md' />
           <div>
             <span
               className={`font-semibold ${

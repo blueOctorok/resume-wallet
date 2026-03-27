@@ -20,6 +20,7 @@ import {
   useLogout,
 } from '@account-kit/react'
 import { useTheme } from '@/contexts/ThemeContext'
+import LoadingScreen from '@/components/LoadingScreen'
 
 const checkWebCryptoSupport = () => {
   if (typeof window === 'undefined') return true
@@ -246,14 +247,7 @@ export default function AlchemyAuth({
   if (isInitializing) {
     return (
       <div className={`relative backdrop-blur-xl rounded-3xl shadow-2xl border p-8 ${cardClass}`}>
-        <div className='relative text-center'>
-          <div className={`animate-spin rounded-full h-10 w-10 border-b-2 mx-auto mb-4 ${
-            isDark ? 'border-teal-400' : 'border-teal-600'
-          }`}></div>
-          <p className={isDark ? 'text-gray-300' : 'text-gray-600'}>
-            Initializing authentication...
-          </p>
-        </div>
+        <LoadingScreen message='Initializing authentication…' fullScreen={false} compact />
       </div>
     )
   }

@@ -181,7 +181,26 @@ button:disabled,
   }
 }
 
+/* LoadingScreen — indeterminate bar sweep */
+.loading-bar-sweep {
+  animation: loading-bar-sweep 1.35s ease-in-out infinite;
+}
+
+@keyframes loading-bar-sweep {
+  0% {
+    transform: translateX(-130%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .loading-bar-sweep {
+    animation: none;
+    opacity: 0.75;
+  }
+
   .nav-shell-shape--light,
   .nav-shell-shape--dark {
     animation: none;

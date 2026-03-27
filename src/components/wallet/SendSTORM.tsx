@@ -14,6 +14,7 @@ import {
 } from '@/lib/alchemy-token-api'
 import { policyId } from '@/lib/alchemy-account-config'
 import { ExternalLink, AlertCircle, CheckCircle } from 'lucide-react'
+import StormTokenMark from '@/components/ui/StormTokenMark'
 
 interface SendSTORMProps {
   walletAddress: string
@@ -383,7 +384,14 @@ export default function SendSTORM({ walletAddress, onSuccess }: SendSTORMProps) 
               : 'bg-yellow-500 hover:bg-yellow-600 text-white'
         }`}
       >
-        {isLoading || isPending ? 'Sending...' : '⛈️ Send STORM'}
+        {isLoading || isPending ? (
+          'Sending...'
+        ) : (
+          <span className='flex items-center justify-center gap-2'>
+            <StormTokenMark size='xs' />
+            Send STORM
+          </span>
+        )}
       </button>
 
       <p

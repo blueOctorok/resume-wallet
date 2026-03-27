@@ -8,6 +8,7 @@ import {
   getSTORMBalanceSepolia,
 } from '@/lib/alchemy-token-api'
 import { useTheme } from '@/contexts/ThemeContext'
+import StormTokenMark from '@/components/ui/StormTokenMark'
 
 interface WalletInfoProps {
   walletAddress: string
@@ -251,7 +252,7 @@ export default function WalletInfo({
             
             {/* STORM Balance */}
             <div className='flex items-center gap-1.5'>
-              <span className='text-yellow-400 text-xs'>⛈️</span>
+              <StormTokenMark size='xs' />
               <span
                 className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
               >

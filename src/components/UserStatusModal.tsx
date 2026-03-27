@@ -10,6 +10,7 @@ import ReceiveUSDC from './wallet/ReceiveUSDC'
 import TransactionHistory from './TransactionHistory'
 import StormEarningsHistory from './StormEarningsHistory'
 import BuyUSDCButton from './BuyUSDCButton'
+import StormTokenMark from '@/components/ui/StormTokenMark'
 import { useTheme } from '@/contexts/ThemeContext'
 import type { UserRole } from '@/stores/types'
 import {
@@ -413,13 +414,7 @@ export default function UserStatusModal({
                       }`}
                     >
                       <div className='flex items-center gap-2'>
-                        <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                            theme === 'dark' ? 'bg-yellow-500/20' : 'bg-yellow-100'
-                          }`}
-                        >
-                          <span className='text-lg'>⛈️</span>
-                        </div>
+                        <StormTokenMark size='sm' />
                         <div className='text-left'>
                           <p
                             className={`text-sm font-semibold ${
