@@ -1,16 +1,15 @@
 import { cn } from '@/lib/utils'
 
-/** Main floating nav bar — matches hub sidebar / career card (crisp border, teal ring, depth shadow). */
-export function navShellClass(isDark: boolean) {
-  return cn(
-    // overflow-visible so hub dropdown (absolute below button) is not clipped — bg still respects rounded-2xl
-    'relative max-w-2xl mx-auto overflow-visible rounded-2xl backdrop-blur-xl pointer-events-auto',
-    isDark
-      ? 'border border-gray-600/70 bg-gradient-to-b from-gray-900/95 to-gray-950/98'
-      : 'border border-gray-200/90 bg-gradient-to-b from-white/98 to-slate-50/95',
-    'shadow-[0_16px_48px_-14px_rgba(13,148,136,0.2)] dark:shadow-[0_22px_56px_-12px_rgba(0,0,0,0.58)]',
-    'ring-1 ring-teal-500/[0.08] dark:ring-teal-400/[0.1]',
-  )
+/**
+ * Nav outer shell — layout only; chrome is on `navShellShapeClass` (rounded backdrop + glow).
+ */
+export function navShellClass() {
+  return cn('relative max-w-2xl mx-auto overflow-visible pointer-events-auto')
+}
+
+/** Backdrop: rounded-2xl glass + breathing teal/violet rim (see globals.css). */
+export function navShellShapeClass(isDark: boolean) {
+  return cn('nav-shell-shape pointer-events-none absolute inset-0 z-0', isDark ? 'nav-shell-shape--dark' : 'nav-shell-shape--light')
 }
 
 export function navHairlineTopClass() {

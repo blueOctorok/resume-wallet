@@ -4,6 +4,14 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Navigation — rounded shell + breathing glow** (March 2026)
+
+- **Follow-up:** Chamfered `clip-path` read as “missing corners”; reverted to **`border-radius: 1rem`** (rounded bar) on `.nav-shell-shape`.
+- [`globals.css`](src/app/globals.css): **stronger living rim** — animated **`box-shadow`** (1px teal-tinted stroke + teal/violet outer bloom) plus **`filter: drop-shadow`** for float; dark mode glow boosted so it reads on charcoal backgrounds; **`prefers-reduced-motion`** keeps a static mid glow.
+- [`navigation-styles.ts`](src/lib/navigation-styles.ts): hairline back to **`inset-x-0`** (full width on rounded top).
+
+---
+
 ## **Navigation — StormChain wordmark (ghost sign + Instrument Serif)** (March 2026)
 
 - [`layout.tsx`](src/app/layout.tsx): load **Instrument Serif** as **`--font-storm-wordmark`** (body CSS variable only; rest of app stays Montserrat).

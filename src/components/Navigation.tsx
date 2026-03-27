@@ -5,6 +5,7 @@ import { LayoutDashboard, Coins, ChevronDown, RefreshCw, Car, Code, Building2, S
 import { cn } from '@/lib/utils'
 import {
   navShellClass,
+  navShellShapeClass,
   navHairlineTopClass,
   navControlButtonClass,
   navTextLinkClass,
@@ -101,7 +102,8 @@ export default function Navigation({
       className='sticky top-4 z-50 px-4 sm:px-6 pointer-events-none'
       style={{ transform: 'translate3d(0,0,0)', backfaceVisibility: 'hidden' }}
     >
-      <nav className={navShellClass(isDark)}>
+      <nav className={navShellClass()}>
+        <div className={navShellShapeClass(isDark)} aria-hidden />
         <div className={navHairlineTopClass()} aria-hidden />
 
         <div className='relative z-[2] px-4 sm:px-6 py-3 sm:py-4'>
