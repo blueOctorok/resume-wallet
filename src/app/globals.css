@@ -17,11 +17,35 @@
 
 [data-theme='dark'] {
   color-scheme: dark;
-  --surface-card: #1f2937;
-  --surface-elevated: #111827;
-  --border-subtle: #374151;
-  --text-primary: #f3f4f6;
-  --text-secondary: #d1d5db;
+  /*
+   * Storm shell — same language as LoadingScreen + StormTokenMark:
+   * deep charcoal/navy void, teal + violet bloom, glass panels with teal rim.
+   */
+  --storm-void: #040608;
+  --storm-deep: #080c11;
+  --storm-surface: #0f1419;
+  --storm-body-gradient: linear-gradient(
+    165deg,
+    var(--storm-surface) 0%,
+    var(--storm-deep) 45%,
+    var(--storm-void) 100%
+  );
+  --storm-teal-soft: rgba(45, 212, 191, 0.1);
+  --storm-violet-soft: rgba(139, 92, 246, 0.08);
+  --storm-panel-bg: linear-gradient(
+    165deg,
+    rgba(22, 28, 38, 0.94) 0%,
+    rgba(12, 16, 24, 0.92) 55%,
+    rgba(8, 11, 16, 0.96) 100%
+  );
+  --storm-panel-border: rgba(148, 163, 184, 0.22);
+  --storm-panel-glow: 0 0 48px -12px rgba(45, 212, 191, 0.14), 0 24px 56px -28px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  --surface-card: #151922;
+  --surface-elevated: #10151e;
+  --border-subtle: #3d4a5c;
+  --text-primary: #f4f4f5;
+  --text-secondary: #a8b0bc;
 }
 
 [data-theme='light'] {
@@ -47,10 +71,13 @@ body {
 }
 
 
-/* Dark mode — deeper charcoal, directional gradient (less flat / “mushy” than before) */
+/* Dark mode — LoadingScreen-matched void + soft teal/violet blooms (same as full-page loader) */
 [data-theme='dark'] body {
-  background: linear-gradient(165deg, #0f1419 0%, #080c11 45%, #040608 100%);
-  color: #e2e8f0;
+  background:
+    radial-gradient(ellipse min(88vw, 36rem) min(88vw, 36rem) at 50% 16%, var(--storm-teal-soft), transparent 58%),
+    radial-gradient(ellipse min(72vw, 28rem) min(72vw, 28rem) at 96% 96%, var(--storm-violet-soft), transparent 52%),
+    var(--storm-body-gradient);
+  color: var(--text-primary);
 }
 
 /* Light mode — multi-stop canvas: slight dimensional shift (studio), still neutral vs white cards */
@@ -166,8 +193,24 @@ button:disabled,
 }
 
 .nav-shell-shape--dark {
-  background: linear-gradient(to bottom, rgb(17 24 39 / 0.96), rgb(3 7 18 / 0.98));
+  /* Same glass stack as loading card: lifted slate, not flat gray-900 */
+  background: linear-gradient(
+    180deg,
+    rgb(22 30 42 / 0.94) 0%,
+    rgb(12 16 24 / 0.97) 48%,
+    rgb(6 9 14 / 0.98) 100%
+  );
   animation: nav-shell-breathe-dark 4.5s ease-in-out infinite;
+}
+
+/*
+ * Dark “glass” panels — same DNA as LoadingScreen inner card (teal-violet rim glow).
+ * Pair with rounded-2xl + backdrop-blur-xl + ring-1 ring-teal-400/15 in components.
+ */
+[data-theme='dark'] .storm-glass-panel {
+  background: var(--storm-panel-bg);
+  border: 1px solid var(--storm-panel-border);
+  box-shadow: var(--storm-panel-glow);
 }
 
 @keyframes nav-shell-breathe-light {
@@ -411,18 +454,18 @@ button:disabled,
   width: 12px;
 }
 
-/* Dark mode scrollbar - storm theme */
+/* Dark mode scrollbar — void-adjacent, matches storm shell */
 [data-theme='dark'] ::-webkit-scrollbar-track {
-  background: #1e2530;
+  background: #0f1319;
 }
 
 [data-theme='dark'] ::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: #2a3444;
   border-radius: 6px;
 }
 
 [data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
-  background: #4b5563;
+  background: #3d4d62;
 }
 
 /* Light mode scrollbar - overcast theme */

@@ -19,6 +19,7 @@ import {
   navStormPillClass,
 } from '@/lib/navigation-styles'
 import ThemeToggle from './ThemeToggle'
+import StormChainWordmark from '@/components/ui/StormChainWordmark'
 import StormTokenMark from '@/components/ui/StormTokenMark'
 import Button from '@/components/ui/Button'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -136,34 +137,10 @@ export default function Navigation({
                 )}
               </div>
 
-              {/* Center — Logo (Instrument Serif + debossed “ghost sign” — only place this font is used) */}
-              <div className='flex-1 flex justify-center sm:-ml-8 lg:-ml-12'>
-                <h1
-                  className={cn(
-                    'flex items-baseline gap-0.5 sm:gap-1 whitespace-nowrap',
-                    'font-[family-name:var(--font-storm-wordmark),ui-serif,Georgia,serif]',
-                    'text-[1.625rem] sm:text-[2.125rem] lg:text-[2.625rem] font-normal leading-none tracking-[0.04em]',
-                  )}
-                >
-                  <span
-                    className={cn(
-                      // Recessed letterpress: soft highlight on top edge, shadow in the “groove”
-                      isDark
-                        ? 'text-slate-500/90 [text-shadow:0_1px_0_rgba(255,255,255,0.07),0_-1px_3px_rgba(0,0,0,0.65),0_0.12em_0.35em_rgba(0,0,0,0.35)]'
-                        : 'text-slate-500/95 [text-shadow:0_1px_0_rgba(255,255,255,0.85),0_-1px_1px_rgba(15,23,42,0.14),0_0.08em_0.2em_rgba(15,23,42,0.06)]',
-                    )}
-                  >
-                    Storm
-                  </span>
-                  <span
-                    className={cn(
-                      isDark
-                        ? 'text-teal-500/55 [text-shadow:0_1px_0_rgba(255,255,255,0.06),0_-1px_3px_rgba(0,0,0,0.6),0_0.12em_0.35em_rgba(0,0,0,0.32)]'
-                        : 'text-teal-700/50 [text-shadow:0_1px_0_rgba(255,255,255,0.8),0_-1px_1px_rgba(15,118,110,0.2),0_0.08em_0.2em_rgba(15,23,42,0.05)]',
-                    )}
-                  >
-                    Chain
-                  </span>
+              {/* Center — stacked Storm / StormTokenMark / Chain (matches LoadingScreen + whitepaper) */}
+              <div className='flex-1 flex justify-center sm:-ml-6 lg:-ml-10 pointer-events-none'>
+                <h1 className='pointer-events-none' aria-label='StormChain'>
+                  <StormChainWordmark size='nav' />
                 </h1>
               </div>
 

@@ -109,12 +109,12 @@ export default function StormTokenMark({
           'absolute flex items-center justify-center rounded-full',
           s.inner,
           isDark
-            ? 'bg-gradient-to-br from-teal-500/[0.22] to-violet-600/[0.18] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]'
+            ? 'bg-gradient-to-br from-teal-500/[0.2] to-violet-600/[0.16] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_20px_-8px_rgba(45,212,191,0.12)]'
             : 'bg-gradient-to-br from-teal-100/90 to-violet-100/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]',
         )}
       >
         <CloudLightning
-          className={cn(s.icon, 'text-teal-600 dark:text-teal-300')}
+          className={cn(s.icon, 'text-teal-600 dark:text-teal-200/90')}
           strokeWidth={s.stroke}
           aria-hidden
         />

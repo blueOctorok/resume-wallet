@@ -4,6 +4,29 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Brand — St[O]rm / Chain logo lockup + favicon** (March 2026)
+
+- [`StormOLogoMark.tsx`](src/components/ui/StormOLogoMark.tsx): **Static** “O” — **teal upper semicircle**, **violet lower semicircle**, **CloudLightning** centered (**no** `StormTokenMark` spin). Sized in **`em`** to sit in the word Storm.
+- [`StormChainWordmark.tsx`](src/components/ui/StormChainWordmark.tsx): **`ST` + `StormOLogoMark` + `RM`**, **`chain`** flush underneath (`-mt` / `leading-none`); **`nav`** / **`hero`**. **Nav** type scale **`1.375rem` / `1.625rem` / `1.875rem`** (was `1.125` / `1.35` / `1.5`).
+- [`Navigation.tsx`](src/components/Navigation.tsx): Center **`StormChainWordmark`**.
+- [`StormChainView.tsx`](src/components/StormChainView.tsx): Hero **`StormChainWordmark`** `hero`; **`useTheme`** fix; section icons **`CloudLightning`** where applicable.
+- [`public/favicon.svg`](public/favicon.svg): Same **StormOLogoMark** geometry: **split ring** (violet lower / teal upper arcs) + **Lucide `cloud-lightning` stroke paths** centered (replaces filled bolt); dark void circle for tab contrast; inner stroke **`#5eead4`** for readability on charcoal.
+- **Removed** (March 2026): whitepaper **SVG/PNG logo downloads**, **`storm-chain-wordmark.*`**, **`/brand/wordmark-capture`**, **`capture:wordmark`** script, **`playwright`** devDependency, **`forceLight`** on **`StormChainWordmark`**.
+
+---
+
+## **Dark theme — “storm shell” from LoadingScreen** (March 2026)
+
+- **Goal:** Dark mode matches **LoadingScreen** / **StormTokenMark** — deep charcoal void, teal + violet blooms, glass panels with teal rim (fintech / web3 polish).
+- [`globals.css`](src/app/globals.css): **`--storm-*` tokens** (`--storm-body-gradient`, `--storm-panel-bg`, `--storm-panel-glow`, teal/violet soft blooms); **`[data-theme='dark'] body`** layered like the loader; **`.storm-glass-panel`** utility; **nav** `.nav-shell-shape--dark` gradient aligned; dark **scrollbar** tones.
+- [`LoadingScreen.tsx`](src/components/LoadingScreen.tsx): Full-bleed uses **`var(--storm-body-gradient)`**; panels use **`storm-glass-panel`**; blooms tuned; **divider** above **STORMCHAIN**; wordmark **tracking** + muted teal; progress track **`bg-white/[0.08]`** in dark.
+- [`Card.tsx`](src/components/ui/Card.tsx): Dark **elevated** = **`storm-glass-panel`** + teal ring; dark **default** = storm-tinted surface + soft teal outer glow; elevated hairline **via-teal-400/25** in dark.
+- [`StormBackground.tsx`](src/components/StormBackground.tsx): Dark **atmosphere** blooms aligned with body/loader.
+- [`StormTokenMark.tsx`](src/components/ui/StormTokenMark.tsx): Dark center **glow** + icon **`teal-200/90`**.
+- [`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx): Hex **inner face** dark gradient + subtle ring (same family as glass panels).
+
+---
+
 ## **Block Hive — hex aspect ratio (wider tiles)** (March 2026)
 
 - **Issue:** Tile boxes were **taller than wide**, which fights flat-top hex geometry and squeezes titles.

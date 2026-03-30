@@ -55,10 +55,12 @@ export default function StormBackground() {
   /** Light bubbles: slightly cooler mist — reads finer than flat gray dots */
   const bubbleColor = '#8b9cb0'
 
+  /* Layered like body + LoadingScreen: teal/violet blooms, deep edge vignette */
   const stormAtmosphere = `
-      radial-gradient(ellipse 100% 55% at 50% -38%, rgba(45,212,191,0.08), transparent 58%),
-      radial-gradient(ellipse 72% 48% at 100% 100%, rgba(139,92,246,0.05), transparent 55%),
-      linear-gradient(to bottom, rgba(0,0,0,0.38) 0%, transparent 24%, transparent 70%, rgba(0,0,0,0.52) 100%)
+      radial-gradient(ellipse min(90vw, 38rem) min(90vw, 38rem) at 50% 12%, rgba(45,212,191,0.07), transparent 58%),
+      radial-gradient(ellipse 100% 55% at 50% -38%, rgba(45,212,191,0.06), transparent 58%),
+      radial-gradient(ellipse 72% 48% at 100% 100%, rgba(139,92,246,0.065), transparent 55%),
+      linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, transparent 26%, transparent 68%, rgba(0,0,0,0.48) 100%)
     `
 
   /* Light: layered “studio” depth — softbox + restrained brand blooms + corner anchors. No animation = not bootcamp. */

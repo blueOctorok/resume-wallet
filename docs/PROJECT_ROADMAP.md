@@ -14,6 +14,8 @@
 | **Light canvas polish** | ✅ Done | Multi-stop **body** gradient + layered light **atmosphere** (sheen, brand radials, bottom anchor) + **film grain** (`.storm-light-film-grain`); bubble tint/refinement |
 | **Block Hive tiles** | ✅ Done | Unified **light** chrome (slate ring, inner gradient, specular line); **slate** titles + colored accent bar; larger type; **Coming soon** state; tooltips; hover shadow stack (`CandidateHub` `BlockTile`) |
 | **Block Hive geometry** | ✅ Done | Flat-top hex **width > height** via `flatTopHexHeight()` — fixes wrong aspect + more room for labels (`hex-hive-geometry.ts`, hub + `HomePage` showcase) |
+| **Dark UI = LoadingScreen DNA** | ✅ Done | **`--storm-*` CSS vars**, body blooms, **`.storm-glass-panel`**, nav/scroll/cards/`StormBackground`/`StormTokenMark`/hive hex aligned to loader aesthetic |
+| **Brand lockup + favicon** | ✅ Done | **`StormChainWordmark`** in **nav + whitepaper**; **`favicon.svg`** (rings + lightning) |
 
 ## 🏢 **Employer Side Simplification** (March 2026 — Phase 1 Done)
 

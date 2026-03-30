@@ -1,9 +1,9 @@
 'use client'
 
+import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   Briefcase,
-  Coins,
   Users,
   Shield,
   TrendingUp,
@@ -15,8 +15,10 @@ import {
   Lock,
   TrendingDown,
   UserPlus,
+  CloudLightning,
 } from 'lucide-react'
 import BackToHubButton from '@/components/ui/BackToHubButton'
+import StormChainWordmark from '@/components/ui/StormChainWordmark'
 
 interface StormChainViewProps {
   onBack: () => void
@@ -24,7 +26,8 @@ interface StormChainViewProps {
 }
 
 export default function StormChainView({ onBack, backLabel }: StormChainViewProps) {
-  const { isDark } = useTheme()
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
 
   return (
     <div className='max-w-4xl mx-auto'>
@@ -33,26 +36,27 @@ export default function StormChainView({ onBack, backLabel }: StormChainViewProp
         <BackToHubButton onClick={onBack} label={backLabel} />
       </div>
 
-      {/* Hero Header */}
+      {/* Hero Header — stacked Storm / StormTokenMark / Chain (same identity as LoadingScreen) */}
       <div className='text-center mb-10'>
-        <div className='inline-flex items-center gap-3 mb-4'>
-          <div className={`w-20 h-20 rounded-full flex items-center justify-center shadow-xl ${
-            isDark
-              ? 'bg-gradient-to-br from-teal-400 to-teal-600'
-              : 'bg-gradient-to-br from-teal-500 to-teal-700'
-          }`}>
-            <Coins className='w-10 h-10 text-white' />
-          </div>
-        </div>
-        <h1
-          className='text-4xl sm:text-5xl font-bold mb-3 text-white'
-          style={{ textShadow: '0 2px 12px rgba(0,0,0,0.9), 0 1px 4px rgba(0,0,0,0.8)' }}
-        >
-          StormChain Token
+        <h1 className='mb-5' aria-label='StormChain token'>
+          <StormChainWordmark size='hero' />
         </h1>
         <p
-          className='text-xl text-gray-200'
-          style={{ textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}
+          className={cn(
+            'text-xl sm:text-2xl font-semibold mb-2',
+            isDark ? 'text-zinc-100' : 'text-slate-800',
+          )}
+          style={
+            isDark
+              ? { textShadow: '0 2px 10px rgba(0,0,0,0.75), 0 1px 3px rgba(0,0,0,0.6)' }
+              : undefined
+          }
+        >
+          Token whitepaper
+        </p>
+        <p
+          className={cn('text-lg', isDark ? 'text-zinc-300' : 'text-slate-600')}
+          style={isDark ? { textShadow: '0 1px 6px rgba(0,0,0,0.65)' } : undefined}
         >
           The reward token for verified professionals
         </p>
@@ -75,7 +79,7 @@ export default function StormChainView({ onBack, backLabel }: StormChainViewProp
       </div>
 
       {/* What is STORM */}
-      <Section isDark={isDark} title='What is STORM?' icon={<Coins className='w-5 h-5' />}>
+      <Section isDark={isDark} title='What is STORM?' icon={<CloudLightning className='w-5 h-5' />}>
         <p>
           STORM is a bonus token you earn when you spend USDC on the platform.
           The more you spend, the more tokens you earn—resume verification,
@@ -88,7 +92,7 @@ export default function StormChainView({ onBack, backLabel }: StormChainViewProp
       </Section>
 
       {/* How You Earn (USDC-based) */}
-      <Section isDark={isDark} title='How You Earn' icon={<Coins className='w-5 h-5' />}>
+      <Section isDark={isDark} title='How You Earn' icon={<CloudLightning className='w-5 h-5' />}>
         <p className='mb-4'>
           <strong>
             Tokens are based on how much USDC you spend, not which product you

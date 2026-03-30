@@ -156,7 +156,9 @@ function BlockTile({ block, index, isEditing, onRemove, onOpen }: BlockTileProps
       <div
         className={cn(
           'absolute inset-[2px]',
-          isDark ? 'bg-gray-900/80 backdrop-blur-md' : 'bg-gradient-to-b from-white to-slate-50/95 shadow-inner shadow-slate-900/[0.05]',
+          isDark
+            ? 'bg-gradient-to-b from-[rgb(20,26,34)]/92 to-[rgb(10,13,18)]/95 backdrop-blur-md ring-1 ring-white/[0.04]'
+            : 'bg-gradient-to-b from-white to-slate-50/95 shadow-inner shadow-slate-900/[0.05]',
         )}
         style={{ clipPath: HEX_CLIP }}
       >
