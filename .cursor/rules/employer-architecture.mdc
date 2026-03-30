@@ -122,7 +122,7 @@ These files/routes have been intentionally removed or marked dead:
 | Tier | Limits |
 |------|--------|
 | **Free** | 1 active job, blurred talent details, 5 messages/month |
-| **Pro** (~$49/mo USDC) | Unlimited jobs, full search, unlimited messaging, AvA, team |
+| **Pro** (~$49/mo USDC) | Unlimited jobs, full search, unlimited messaging, Stormi, team |
 | **Enterprise** | Custom |
 
 ### Per-Transaction
@@ -132,7 +132,7 @@ These files/routes have been intentionally removed or marked dead:
 | MVR order | Per-order USDC (existing) |
 | Sponsored job post | Future — pay to boost visibility |
 
-When implementing subscription gates, use the same USDC payment pattern as the candidate-side AvA credits. Subscription state should be stored per-company (not per-user), since team members share the subscription.
+When implementing subscription gates, use the same USDC payment pattern as the candidate-side Stormi credits. Subscription state should be stored per-company (not per-user), since team members share the subscription.
 
 ## Talent Search Filters
 

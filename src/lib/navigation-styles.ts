@@ -48,8 +48,8 @@ export function navTextLinkClass(isDark: boolean, accent?: 'teal' | 'neutral') {
   )
 }
 
-/** AvA — keep indigo family but same edge treatment as other controls. */
-export function navAvAButtonClass(isDark: boolean) {
+/** Stormi assistant — keep indigo family but same edge treatment as other controls. */
+export function navStormiButtonClass(isDark: boolean) {
   return cn(
     'rounded-lg border px-4 py-2 text-sm font-semibold tracking-wide transition-colors duration-200',
     isDark

@@ -32,7 +32,7 @@
 | Talent Search: registry filters | ✅ Done | Category + `getBlocksByCategory` checkboxes → `blockTypes` param |
 | Polish job posting flow | 🔲 Todo | UX pass |
 | Subscription system | 🔲 Todo | Free tier limits + Pro USDC |
-| AvA for employers | ✅ Done | Shared `AvaChatPanel` on employer hub; `buildEmployerAvaSystemPrompt` + `employerContext`; `/api/ai/chat` `audience: employer` + role gate |
+| Stormi for employers | ✅ Done | Shared `StormiChatPanel` on employer hub; `buildEmployerStormiSystemPrompt` + `employerContext`; `/api/ai/chat` `audience: employer` + role gate |
 | Sponsored job posts | 🔲 Future | Visibility boost |
 | Candidate match scoring | 🔲 Future | AvA + blocks |
 | **Career Card Easy Apply + AvA chat memory** | **✅ Done** | **External job apply uses `/api/career-card` (not driver profile); submit snapshot includes `installed_block_types` + profile fields; server-side eligibility before job row insert. AvA `/api/ai/chat` accepts `conversationHistory` (multi-turn).** |
@@ -51,7 +51,7 @@
 | Auth gate | ✅ Done | `x-wallet-address` required on all chat requests — no anonymous abuse |
 | Usage badge in UI | ✅ Done | "7/10 free today" or "200 credits" badge in AvA chat header |
 | Out-of-credits UX | ✅ Done | Inline refill prompt + disabled input when daily limit hit and no credits |
-| AvaCreditModal | ✅ Done | USDC payment modal (same pattern as MvrPaymentButton) |
+| StormiCreditModal | ✅ Done | USDC payment modal (same pattern as MvrPaymentButton) |
 | Dynamic career lanes | ✅ Done | System prompt auto-derives lane boundaries from block registry — scales to any future career category |
 | Content guardrails | ✅ Done | No medical/legal/financial advice; all other topics allowed |
 | Context-advantage pitch | ✅ Done | Welcome copy emphasizes "AvA already knows your career" vs generic AI |

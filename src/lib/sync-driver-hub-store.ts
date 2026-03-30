@@ -1,7 +1,7 @@
 import { useDriverHubStore } from '@/stores/driver-hub-store'
 
 /**
- * Pull /api/driver/hub into driver-hub-store so AvA journey (and anything else
+ * Pull /api/driver/hub into driver-hub-store so Stormi journey (and anything else
  * reading this store) sees resume / DOT / MVR truth — not just legacy DriverShell.
  */
 export async function syncDriverHubFromApi(walletAddress: string): Promise<void> {

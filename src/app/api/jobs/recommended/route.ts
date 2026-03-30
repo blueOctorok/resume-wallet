@@ -6,8 +6,8 @@ import {
   incrementJobMatchAiDaily,
   consumeCredit,
   saveJobMatchCache,
-  AVA_UNLIMITED_WALLETS,
-  AVA_JOB_MATCH_FREE_DAILY,
+  STORMI_UNLIMITED_WALLETS,
+  STORMI_JOB_MATCH_FREE_DAILY,
 } from '@/lib/ava-usage'
 import { searchAdzunaJobsServer } from '@/lib/adzuna-server'
 import { buildJobMatchCandidateBrief } from '@/lib/job-match-candidate-brief'
@@ -36,7 +36,7 @@ function parseCache(raw: unknown): CachedPayload | null {
 
 /**
  * GET /api/jobs/recommended
- * Personalized external jobs (Adzuna) scored by AvA. One free AI run per UTC day; same-day revisits use cache.
+ * Personalized external jobs (Adzuna) scored by Stormi. One free AI run per UTC day; same-day revisits use cache.
  * ?force=1 — new scoring run, costs 1 credit (unless unlimited wallet).
  */
 export async function GET(request: NextRequest) {
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 401 })
     }
 
-    const isUnlimited = AVA_UNLIMITED_WALLETS.has(normalizeWalletAddress(walletAddress))
+    const isUnlimited = STORMI_UNLIMITED_WALLETS.has(normalizeWalletAddress(walletAddress))
     let usage = await getOrCreateUsage(supabase, user.id)
 
     if (!force) {
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
           jobs: cached.jobs,
           generatedAt: cached.generatedAt,
           credits: usage.credits,
-          jobMatchFreeRemainingToday: Math.max(0, AVA_JOB_MATCH_FREE_DAILY - usage.jobMatchAiDailyUsed),
+          jobMatchFreeRemainingToday: Math.max(0, STORMI_JOB_MATCH_FREE_DAILY - usage.jobMatchAiDailyUsed),
         })
       }
     }
@@ -84,14 +84,14 @@ export async function GET(request: NextRequest) {
           return NextResponse.json(
             {
               error: 'out_of_credits',
-              message: 'Refresh costs 1 AvA credit. Purchase credits or try again tomorrow for a free match.',
+              message: 'Refresh costs 1 Stormi credit. Purchase credits or try again tomorrow for a free match.',
               credits: 0,
             },
             { status: 402 },
           )
         }
       } else {
-        const freeOk = usage.jobMatchAiDailyUsed < AVA_JOB_MATCH_FREE_DAILY
+        const freeOk = usage.jobMatchAiDailyUsed < STORMI_JOB_MATCH_FREE_DAILY
         if (!freeOk && usage.credits < 1) {
           return NextResponse.json(
             {
@@ -145,14 +145,14 @@ export async function GET(request: NextRequest) {
         jobs: [],
         generatedAt: new Date().toISOString(),
         credits: usage.credits,
-        jobMatchFreeRemainingToday: Math.max(0, AVA_JOB_MATCH_FREE_DAILY - usage.jobMatchAiDailyUsed),
+        jobMatchFreeRemainingToday: Math.max(0, STORMI_JOB_MATCH_FREE_DAILY - usage.jobMatchAiDailyUsed),
       })
     }
 
     const brief = await buildJobMatchCandidateBrief(supabase, user.id)
     let model: 'sonnet' | 'haiku' = 'haiku'
     if (isUnlimited) model = 'sonnet'
-    else if (!force && usage.jobMatchAiDailyUsed < AVA_JOB_MATCH_FREE_DAILY) model = 'sonnet'
+    else if (!force && usage.jobMatchAiDailyUsed < STORMI_JOB_MATCH_FREE_DAILY) model = 'sonnet'
 
     let scored: Awaited<ReturnType<typeof scoreJobsForCandidate>>
     try {
@@ -205,7 +205,7 @@ export async function GET(request: NextRequest) {
     if (!isUnlimited) {
       if (force) {
         await consumeCredit(supabase, user.id)
-      } else if (usage.jobMatchAiDailyUsed < AVA_JOB_MATCH_FREE_DAILY) {
+      } else if (usage.jobMatchAiDailyUsed < STORMI_JOB_MATCH_FREE_DAILY) {
         await incrementJobMatchAiDaily(supabase, user.id)
       } else {
         await consumeCredit(supabase, user.id)
@@ -221,7 +221,7 @@ export async function GET(request: NextRequest) {
       jobs: top,
       generatedAt,
       credits: usage.credits,
-      jobMatchFreeRemainingToday: Math.max(0, AVA_JOB_MATCH_FREE_DAILY - usage.jobMatchAiDailyUsed),
+      jobMatchFreeRemainingToday: Math.max(0, STORMI_JOB_MATCH_FREE_DAILY - usage.jobMatchAiDailyUsed),
     })
   } catch (e) {
     console.error('[JOB RECOMMENDED]', e)

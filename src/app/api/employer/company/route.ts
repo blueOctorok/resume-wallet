@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
 
     // Duplicate company name (case-insensitive). Another owner already has this name.
     // Most users hit this from Company onboarding after a failed access-request left role=employer
-    // with no company — they never went through AvA, so central admin had no row. We either
+    // with no company — they never went through Stormi eval, so central admin had no row. We either
     // auto-join (domain + name rules), or enqueue employer_access_requests for admin review.
     const { data: dupRows } = await supabase
       .from('companies')

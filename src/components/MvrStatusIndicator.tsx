@@ -113,7 +113,7 @@ export default function MvrStatusIndicator({
         : 'block md:hidden w-full'
 
   // Compact styling for nav, slightly larger for sidebar
-  // nav-mobile should match button styling (like Driver Options and AvA buttons)
+  // nav-mobile should match button styling (like Driver Options and Stormi buttons)
   const cardBaseClasses =
     placement === 'nav-desktop'
       ? 'cursor-pointer rounded-lg px-3.5 py-2.5 shadow-md border transition-all hover:shadow-lg hover:scale-105'

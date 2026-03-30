@@ -1,5 +1,5 @@
 /**
- * Candidate AvA chat with optional job tools (search + save alert).
+ * Candidate Stormi chat with optional job tools (search + save alert).
  * Tiered models: Haiku on the first turn (cheap routing + optional tool calls);
  * after any tool execution, Sonnet for follow-up tool rounds and final copy.
  */
@@ -7,9 +7,9 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { MessageParam, ToolResultBlockParam } from '@anthropic-ai/sdk/resources/messages/messages'
 import { buildAnthropicMessagesFromHistory } from '@/lib/ava-conversation'
-import { AVA_JOB_CHAT_TOOLS, executeAvaJobChatTool } from '@/lib/ava-job-chat-tools'
+import { STORMI_JOB_CHAT_TOOLS, executeStormiJobChatTool } from '@/lib/ava-job-chat-tools'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { AvaJobSuggestion } from '@/lib/ava-job-suggestions'
+import type { StormiJobSuggestion } from '@/lib/ava-job-suggestions'
 import { ANTHROPIC_MODEL_HAIKU, ANTHROPIC_MODEL_SONNET } from '@/lib/anthropic-models'
 
 const MAX_TOOL_ROUNDS = 6
@@ -24,14 +24,14 @@ function extractTextFromContent(content: Anthropic.Messages.ContentBlock[]): str
   return parts.join('\n').trim()
 }
 
-export async function runCandidateAvaChatWithJobTools(params: {
+export async function runCandidateStormiChatWithJobTools(params: {
   anthropic: Anthropic
   systemPrompt: string
   conversationHistory: unknown
   latestUserMessage: string
   supabase: SupabaseClient
   userId: string
-}): Promise<{ reply: string; jobSuggestions: AvaJobSuggestion[] }> {
+}): Promise<{ reply: string; jobSuggestions: StormiJobSuggestion[] }> {
   const { anthropic, systemPrompt, conversationHistory, latestUserMessage, supabase, userId } = params
 
   const initial = buildAnthropicMessagesFromHistory(conversationHistory, latestUserMessage)
@@ -41,7 +41,7 @@ export async function runCandidateAvaChatWithJobTools(params: {
   }))
 
   const flags = { searchUsed: false, saveAlertUsed: false }
-  let lastJobSuggestions: AvaJobSuggestion[] = []
+  let lastJobSuggestions: StormiJobSuggestion[] = []
   let rounds = 0
   /** After tools run, switch to Sonnet for synthesis and any further tool decisions */
   let useSonnet = false
@@ -54,7 +54,7 @@ export async function runCandidateAvaChatWithJobTools(params: {
       max_tokens: 2048,
       system: systemPrompt,
       messages,
-      tools: AVA_JOB_CHAT_TOOLS as Anthropic.Messages.ToolUnion[],
+      tools: STORMI_JOB_CHAT_TOOLS as Anthropic.Messages.ToolUnion[],
     })
 
     if (response.stop_reason === 'end_turn') {
@@ -69,7 +69,7 @@ export async function runCandidateAvaChatWithJobTools(params: {
       for (const block of response.content) {
         if (block.type !== 'tool_use') continue
         const { id, name, input } = block
-        const executed = await executeAvaJobChatTool({
+        const executed = await executeStormiJobChatTool({
           name,
           input,
           ctx: { supabase, userId },

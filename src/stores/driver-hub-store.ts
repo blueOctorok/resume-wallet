@@ -45,9 +45,9 @@ interface DriverHubState {
   dotApplications: DotApplicationRecord[]
   mvrRecords: MvrRecord[]
   jobApplications: JobApplication[]
-  /** Portfolio URL from block_dev_portfolio (for My Files + AvA journey) */
+  /** Portfolio URL from block_dev_portfolio (for My Files + Stormi journey) */
   portfolio: { portfolioUrl: string | null } | null
-  /** GitHub from block_dev_github (for My Files + AvA journey) */
+  /** GitHub from block_dev_github (for My Files + Stormi journey) */
   github: { username: string | null } | null
   
   // Statistics

@@ -2,22 +2,22 @@ import { useInstalledBlocks, useHubOnboarding } from '@/stores/hub-blocks-store'
 import { useDriverHubStore } from '@/stores/driver-hub-store'
 import { useAuthStore } from '@/stores'
 import type { HubContext, EmployerHubContext, BlockContext } from '@/lib/ava-context'
-import type { AvaJobSuggestion } from '@/lib/ava-job-suggestions'
-import type { AvaAutoWelcomeMode } from '@/lib/ava-auto-welcome'
-import type { AvaConversationTurn } from '@/lib/ava-conversation'
+import type { StormiJobSuggestion } from '@/lib/ava-job-suggestions'
+import type { StormiAutoWelcomeMode } from '@/lib/ava-auto-welcome'
+import type { StormiConversationTurn } from '@/lib/ava-conversation'
 
-export type { AvaConversationTurn } from '@/lib/ava-conversation'
+export type { StormiConversationTurn } from '@/lib/ava-conversation'
 
 export type { EmployerHubContext } from '@/lib/ava-context'
 
 export interface ChatMessage {
   role: 'user' | 'ava'
   text: string
-  /** External jobs AvA surfaced this turn (View listing + Apply with Career Card). */
-  jobSuggestions?: AvaJobSuggestion[]
+  /** External jobs Stormi surfaced this turn (View listing + Apply with Career Card). */
+  jobSuggestions?: StormiJobSuggestion[]
 }
 
-export interface AvaUsageInfo {
+export interface StormiUsageInfo {
   dailyRemaining: number
   credits: number
   totalMessages: number
@@ -26,18 +26,18 @@ export interface AvaUsageInfo {
 
 /** Thrown when the user is out of free messages and credits */
 export class OutOfCreditsError extends Error {
-  usage: AvaUsageInfo
-  constructor(message: string, usage: AvaUsageInfo) {
+  usage: StormiUsageInfo
+  constructor(message: string, usage: StormiUsageInfo) {
     super(message)
     this.name = 'OutOfCreditsError'
     this.usage = usage
   }
 }
 
-export interface AvaResponse {
+export interface StormiResponse {
   reply: string
-  usage: AvaUsageInfo
-  jobSuggestions?: AvaJobSuggestion[]
+  usage: StormiUsageInfo
+  jobSuggestions?: StormiJobSuggestion[]
 }
 
 /**
@@ -106,7 +106,7 @@ export function useHubContext(): HubContext {
   }
 }
 
-export type SendToAvaPayload =
+export type SendToStormiPayload =
   | {
       message: string
       walletAddress?: string | null
@@ -114,20 +114,20 @@ export type SendToAvaPayload =
       hubContext: HubContext
       blockContext?: BlockContext
       /** Prior turns only (excludes current `message`). Enables multi-turn memory. */
-      conversationHistory?: AvaConversationTurn[]
+      conversationHistory?: StormiConversationTurn[]
       /** Server records completion on `users` — cross-device idempotency */
-      autoWelcome?: AvaAutoWelcomeMode
+      autoWelcome?: StormiAutoWelcomeMode
     }
   | {
       message: string
       walletAddress?: string | null
       audience: 'employer'
       employerContext: EmployerHubContext
-      conversationHistory?: AvaConversationTurn[]
-      autoWelcome?: AvaAutoWelcomeMode
+      conversationHistory?: StormiConversationTurn[]
+      autoWelcome?: StormiAutoWelcomeMode
     }
 
-export async function sendToAva(payload: SendToAvaPayload): Promise<AvaResponse> {
+export async function sendToStormi(payload: SendToStormiPayload): Promise<StormiResponse> {
   const { message, walletAddress } = payload
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -178,7 +178,7 @@ export async function sendToAva(payload: SendToAvaPayload): Promise<AvaResponse>
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    throw new Error(err.error || 'Failed to reach AvA')
+    throw new Error(err.error || 'Failed to reach Stormi')
   }
 
   const data = await res.json()
@@ -186,12 +186,12 @@ export async function sendToAva(payload: SendToAvaPayload): Promise<AvaResponse>
     reply: data.reply,
     usage: data.usage ?? { dailyRemaining: 10, credits: 0, totalMessages: 0, model: 'sonnet' },
     ...(Array.isArray(data.jobSuggestions) && data.jobSuggestions.length > 0
-      ? { jobSuggestions: data.jobSuggestions as AvaJobSuggestion[] }
+      ? { jobSuggestions: data.jobSuggestions as StormiJobSuggestion[] }
       : {}),
   }
 }
 
-/** Hook to get the wallet address for AvA requests */
-export function useAvaWallet(): string | null {
+/** Hook to get the wallet address for Stormi requests */
+export function useStormiWallet(): string | null {
   return useAuthStore((s) => s.walletAddress)
 }

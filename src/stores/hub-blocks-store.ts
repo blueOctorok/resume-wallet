@@ -67,8 +67,8 @@ interface HubBlocksState {
 
   /** Whether the mandatory onboarding form needs to be shown */
   needsOnboarding: boolean
-  /** "Tell AvA more about you" modal open state */
-  isAvAContextModalOpen: boolean
+  /** "Tell Stormi more about you" modal open state */
+  isStormiContextModalOpen: boolean
 }
 
 interface HubBlocksActions {
@@ -91,12 +91,12 @@ interface HubBlocksActions {
     walletAddress: string,
     extraContext?: string | null
   ) => Promise<void>
-  /** Open the AvA context modal — edit hub onboarding answers anytime (wired in AvaChatPanel + HubProfileHeader) */
-  openAvAContextModal: () => void
-  closeAvAContextModal: () => void
+  /** Open the Stormi context modal — edit hub onboarding answers anytime (wired in StormiChatPanel + HubProfileHeader) */
+  openStormiContextModal: () => void
+  closeStormiContextModal: () => void
 
-  /** After AvA auto-welcome completes server-side (keeps UI in sync without full refetch) */
-  setAvaAutoWelcomeCandidateDone: (done: boolean) => void
+  /** After Stormi auto-welcome completes server-side (keeps UI in sync without full refetch); DB column names unchanged */
+  setStormiAutoWelcomeCandidateDone: (done: boolean) => void
 
   // Profile
   updateAvatarUrl: (url: string) => void
@@ -122,7 +122,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
   isEditMode: false,
   fetchError: null,
   needsOnboarding: false,
-  isAvAContextModalOpen: false,
+  isStormiContextModalOpen: false,
 
   // ── Fetch ───────────────────────────────────────────────────────────────────
   fetchHubData: async (walletAddress) => {
@@ -164,7 +164,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
         isLoading: false,
       })
 
-      // AvA journey reads driver-hub-store (resume / DOT / MVR) — candidates never hit legacy DriverHub
+      // Stormi journey reads driver-hub-store (resume / DOT / MVR) — candidates never hit legacy DriverHub
       await syncDriverHubFromApi(walletAddress)
     } catch (err) {
       set({
@@ -298,10 +298,10 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
     }
   },
 
-  openAvAContextModal: () => set({ isAvAContextModalOpen: true }),
-  closeAvAContextModal: () => set({ isAvAContextModalOpen: false }),
+  openStormiContextModal: () => set({ isStormiContextModalOpen: true }),
+  closeStormiContextModal: () => set({ isStormiContextModalOpen: false }),
 
-  setAvaAutoWelcomeCandidateDone: (done) => set({ avaAutoWelcomeCandidateDone: done }),
+  setStormiAutoWelcomeCandidateDone: (done) => set({ avaAutoWelcomeCandidateDone: done }),
 
   // ── Picker ──────────────────────────────────────────────────────────────────
   // ── Profile ─────────────────────────────────────────────────────────────────
@@ -345,7 +345,7 @@ export const useNeedsOnboarding = () =>
 export const useHubOnboarding = () =>
   useHubBlocksStore((s) => s.onboarding)
 
-export const useAvaAutoWelcomeCandidateDone = () =>
+export const useStormiAutoWelcomeCandidateDone = () =>
   useHubBlocksStore((s) => s.avaAutoWelcomeCandidateDone)
 
 /**

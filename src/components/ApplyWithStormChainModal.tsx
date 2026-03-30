@@ -6,9 +6,9 @@ import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import { Briefcase, CheckCircle, AlertCircle, User, X, Sparkles } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
-import type { AvaUsageInfo } from '@/lib/ava-chat'
+import type { StormiUsageInfo } from '@/lib/ava-chat'
 
-const AvaCreditModal = dynamic(() => import('@/components/AvaCreditModal'), { ssr: false })
+const StormiCreditModal = dynamic(() => import('@/components/StormiCreditModal'), { ssr: false })
 import {
   computeCareerApplyReadiness,
   canApplyWithCareerCard,
@@ -372,11 +372,11 @@ export default function ApplyWithStormChainModal({
                   isLoading={generatingLetter}
                 >
                   {!generatingLetter && <Sparkles className="w-3.5 h-3.5 shrink-0" />}
-                  Generate with AvA
+                  Generate with Stormi
                 </Button>
               </div>
               <p className={`text-xs mb-2 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                3 free per day (Sonnet), then uses your AvA credits (Haiku).
+                3 free per day (Sonnet), then uses your Stormi credits (Haiku).
               </p>
               <textarea
                 value={coverLetter}
@@ -422,10 +422,10 @@ export default function ApplyWithStormChainModal({
     </Modal>
 
       {showCreditModal && (
-        <AvaCreditModal
+        <StormiCreditModal
           walletAddress={userAddress}
           onClose={() => setShowCreditModal(false)}
-          onSuccess={(_usage: AvaUsageInfo) => {
+          onSuccess={(_usage: StormiUsageInfo) => {
             setShowCreditModal(false)
             void handleGenerateCoverLetter()
           }}

@@ -10,7 +10,7 @@ import {
   useInstalledBlocks,
   useNeedsOnboarding,
   useIsEditMode,
-  useAvaAutoWelcomeCandidateDone,
+  useStormiAutoWelcomeCandidateDone,
 } from '@/stores/hub-blocks-store'
 import type { InstalledBlock } from '@/stores/hub-blocks-store'
 import type { PageType } from '@/stores/types'
@@ -23,7 +23,7 @@ import STORMBalance from '@/components/STORMBalance'
 import CandidateRequestsSection from '@/components/CandidateRequestsSection'
 import HubOnboardingForm from './HubOnboardingForm'
 import BlockPickerModal from './BlockPickerModal'
-import AvaContextModal from './AvaContextModal'
+import StormiContextModal from './StormiContextModal'
 import MvrViewModal from '@/components/MvrViewModal'
 import DotAppPreviewModal from '@/components/career-card/DotAppPreviewModal'
 import ResumeFilePreviewModal from '@/components/hub/ResumeFilePreviewModal'
@@ -33,7 +33,7 @@ import { useHubContext } from '@/lib/ava-chat'
 import ResumePreviewModal from '@/components/ResumePreviewModal'
 import ReferralBanner from './ReferralBanner'
 import JobAlertsHubSection from './JobAlertsHubSection'
-import AvaChatPanel from '@/components/ava/AvaChatPanel'
+import StormiChatPanel from '@/components/stormi/StormiChatPanel'
 import HubSidebar from '@/components/hub/HubSidebar'
 import DeveloperResumePreviewModal from '@/components/DeveloperResumePreviewModal'
 import type { DeveloperResumeData } from '@/components/DeveloperResumeBuilder'
@@ -516,7 +516,7 @@ function HubProfileHeader() {
   const walletAddress = useAuthStore((s) => s.walletAddress)
   const userProfile = useHubBlocksStore((s) => s.userProfile)
   const onboarding = useHubBlocksStore((s) => s.onboarding)
-  const openAvAContextModal = useHubBlocksStore((s) => s.openAvAContextModal)
+  const openStormiContextModal = useHubBlocksStore((s) => s.openStormiContextModal)
   const updateAvatarUrl = useHubBlocksStore((s) => s.updateAvatarUrl)
   const updateUserProfile = useHubBlocksStore((s) => s.updateUserProfile)
   const installedBlocks = useInstalledBlocks()
@@ -679,17 +679,17 @@ function HubProfileHeader() {
               {!needsOnboarding && onboarding && (
                 <button
                   type='button'
-                  onClick={() => openAvAContextModal()}
+                  onClick={() => openStormiContextModal()}
                   className={cn(
                     'mt-2 inline-flex items-center gap-1.5 text-xs font-medium transition-colors',
                     isDark
                       ? 'text-teal-400/90 hover:text-teal-300'
                       : 'text-teal-700 hover:text-teal-800',
                   )}
-                  aria-label='Edit what you do and why you are here for AvA'
+                  aria-label='Edit what you do and why you are here for Stormi'
                 >
                   <Sparkles className='w-3.5 h-3.5 shrink-0' />
-                  Edit what you told AvA
+                  Edit what you told Stormi
                 </button>
               )}
             </div>
@@ -1516,9 +1516,9 @@ export default function CandidateHub() {
 
   const installedBlocks = useInstalledBlocks()
   const hubContext = useHubContext()
-  const avaAutoWelcomeCandidateDone = useAvaAutoWelcomeCandidateDone()
+  const stormiAutoWelcomeCandidateDone = useStormiAutoWelcomeCandidateDone()
   const needsOnboarding = useNeedsOnboarding()
-  const isAvAContextModalOpen = useHubBlocksStore((s) => s.isAvAContextModalOpen)
+  const isStormiContextModalOpen = useHubBlocksStore((s) => s.isStormiContextModalOpen)
   const isEditing = useIsEditMode()
 
   useEffect(() => {
@@ -1603,13 +1603,13 @@ export default function CandidateHub() {
     <>
       {needsOnboarding && <HubOnboardingForm />}
       <BlockPickerModal />
-      {isAvAContextModalOpen && <AvaContextModal />}
+      {isStormiContextModalOpen && <StormiContextModal />}
 
       {/* Full width of page content (`max-w-7xl` + px from page.tsx) — avoids double-centering so main column aligns with nav band and sidebar sits right */}
       <div className='w-full'>
         {/* lg: grid (not flex row) so the sticky sidebar shares one row with the main column and
             aligns to the top edge of the profile card — flex + sticky was leaving the rail visually
-            dropped next to AvA in some layouts */}
+            dropped next to Stormi in some layouts */}
         <div className='flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:content-start lg:gap-x-8 lg:gap-y-0'>
           <div className='min-w-0 space-y-6 lg:col-start-1 lg:row-start-1 lg:self-start'>
             <HubProfileHeader />
@@ -1656,13 +1656,13 @@ export default function CandidateHub() {
               </div>
             )}
 
-            <AvaChatPanel
+            <StormiChatPanel
               mode='candidate'
               walletAddress={walletAddress}
               hubContext={hubContext}
               candidateEmptyHub={installedBlocks.length === 0}
-              avaAutoWelcomeCandidateDone={avaAutoWelcomeCandidateDone}
-              onAvaAutoWelcomeSynced={undefined}
+              stormiAutoWelcomeCandidateDone={stormiAutoWelcomeCandidateDone}
+              onStormiAutoWelcomeSynced={undefined}
             />
 
             {/* ── Block Hive + Block Files (unified) ── */}
@@ -1801,7 +1801,7 @@ export default function CandidateHub() {
           <HubSidebar variant='sticky' id='candidate-hub-quest-sidebar' className='lg:col-start-2 lg:row-start-1 lg:self-start' />
         </div>
 
-        {/* Mobile: same sidebar content as slide-over (AvaJourneyGuide); FAB avoids hunting for Open Journey */}
+        {/* Mobile: same sidebar content as slide-over (StormiJourneyGuide); FAB avoids hunting for Open Journey */}
         <Button
           type='button'
           variant='primary'

@@ -416,7 +416,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
               }`}
             >
               <Bot className='w-3.5 h-3.5' />
-              AvA AI
+              Stormi AI
             </span>
             <span
               className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider border ${
@@ -448,7 +448,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
               isDark ? 'text-gray-400' : 'text-gray-600'
             }`}
           >
-            <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>AvA</strong> finds and ranks jobs
+            <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>Stormi</strong> finds and ranks jobs
             against your profile, helps you apply with one flow, runs smart alerts, and guides your hub. Your{' '}
             <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>Career Card</strong> is a composable,
             verifiable identity — not another static PDF lost in an ATS black hole.
@@ -490,7 +490,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
                 isDark ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-800'
               }`}
             >
-              See what AvA does ↓
+              See what Stormi does ↓
             </a>
           </div>
         </div>
@@ -505,7 +505,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
               <li className='flex gap-3'>
                 <Sparkles className={`w-5 h-5 shrink-0 mt-0.5 ${isDark ? 'text-violet-400' : 'text-violet-600'}`} />
                 <span>
-                  <strong className={isDark ? 'text-gray-200' : 'text-gray-900'}>Intelligence layer:</strong> AvA
+                  <strong className={isDark ? 'text-gray-200' : 'text-gray-900'}>Intelligence layer:</strong> Stormi
                   scores listings to <em>you</em>, drafts context-aware apply flows, and keeps nudging your hub — not
                   generic keyword spam.
                 </span>
@@ -531,7 +531,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
 
         <div className='flex flex-wrap justify-center gap-x-8 gap-y-3 sm:gap-x-12'>
           {[
-            { icon: Bot, text: 'AvA assistant' },
+            { icon: Bot, text: 'Stormi assistant' },
             { icon: CreditCard, text: 'Career Card + QR' },
             { icon: Layers, text: 'Composable blocks' },
             { icon: Shield, text: 'Verifiable credentials' },
@@ -547,12 +547,12 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
         </div>
       </section>
 
-      {/* AvA — product depth (was missing when homepage shipped) */}
+      {/* Stormi — product depth (was missing when homepage shipped) */}
       <section id='ava-intelligence' className='py-16 sm:py-24 scroll-mt-24'>
         <div data-reveal className='reveal-item text-center mb-12 max-w-3xl mx-auto'>
           <h2 className={`text-3xl sm:text-4xl md:text-5xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
             Meet{' '}
-            <span className='bg-gradient-to-r from-violet-400 to-teal-400 bg-clip-text text-transparent'>AvA</span>
+            <span className='bg-gradient-to-r from-violet-400 to-teal-400 bg-clip-text text-transparent'>Stormi</span>
           </h2>
           <p className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             Not a chatbot bolted onto a job board — a copilot wired to your hub, your career card, and live job data.
@@ -565,13 +565,13 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
             {
               icon: Radar,
               title: 'Ranked job matches',
-              body: 'AvA pulls real listings and scores them against your headline, skills, blocks, and goals — so you spend time on fits, not infinite scroll.',
+              body: 'Stormi pulls real listings and scores them against your headline, skills, blocks, and goals — so you spend time on fits, not infinite scroll.',
               accent: isDark ? 'from-teal-500/20 to-cyan-500/10' : 'from-teal-100 to-cyan-50',
             },
             {
               icon: FileText,
               title: 'Easy Apply + cover letters',
-              body: 'One guided flow ships your verified career card to employers. AvA can help draft tailored cover copy when you want backup.',
+              body: 'One guided flow ships your verified career card to employers. Stormi can help draft tailored cover copy when you want backup.',
               accent: isDark ? 'from-violet-500/20 to-indigo-500/10' : 'from-violet-100 to-indigo-50',
             },
             {
@@ -583,7 +583,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
             {
               icon: Sparkles,
               title: 'Journey guide',
-              body: 'AvA knows which blocks you’ve installed and what’s incomplete. It nudges the next best step so your hub doesn’t stall halfway.',
+              body: 'Stormi knows which blocks you’ve installed and what’s incomplete. It nudges the next best step so your hub doesn’t stall halfway.',
               accent: isDark ? 'from-emerald-500/20 to-teal-500/10' : 'from-emerald-50 to-teal-50',
             },
           ].map((cell) => (
@@ -631,7 +631,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
                 </h2>
                 <p className={`text-sm sm:text-base ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                   StormChain postings plus aggregated boards — same search experience as logged-in users. Applying,
-                  AvA match scores, and alerts stay tied to your wallet so we never mint empty profiles.
+                  Stormi match scores, and alerts stay tied to your wallet so we never mint empty profiles.
                 </p>
               </div>
               <div className='flex flex-col sm:flex-row gap-3 justify-center lg:justify-end shrink-0'>
@@ -764,8 +764,8 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
             },
             {
               step: '2',
-              title: 'Install blocks + let AvA help',
-              desc: 'Add the credentials that matter for your trade. AvA tracks progress and surfaces the next move.',
+              title: 'Install blocks + let Stormi help',
+              desc: 'Add the credentials that matter for your trade. Stormi tracks progress and surfaces the next move.',
               icon: Sparkles,
             },
             {
@@ -917,7 +917,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
           </h2>
           <p className={`text-lg mb-8 max-w-xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
             Peek at jobs without an account. Connect a wallet when you&apos;re ready to apply with your career card
-            and AvA.
+            and Stormi.
           </p>
 
           <div className='flex flex-col sm:flex-row gap-3 justify-center items-center mb-6'>

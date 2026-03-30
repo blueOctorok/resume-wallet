@@ -25,7 +25,7 @@ If you are tempted to create a "profiles" table for a new role, STOP. Create `bl
 
 # Building a New Block
 
-Blocks are the atomic unit of the composable hub. A block defines a candidate's capabilities and determines what employers see, what admin can filter, and what AvA recommends. Follow every step below when adding a new block.
+Blocks are the atomic unit of the composable hub. A block defines a candidate's capabilities and determines what employers see, what admin can filter, and what Stormi recommends. Follow every step below when adding a new block.
 
 ## 1. Block Registry
 
@@ -102,10 +102,10 @@ Admin is block-centric. Most things are automatic; dedicated admin tabs are the 
 - **Admin tab** — If the block has data admins need to manage (like DOT apps, MVR orders), add a dedicated tab in `AdminDashboardShell.tsx` with its own API route. Not every block needs this — only blocks with admin-reviewable artifacts.
 - **Data columns** — The candidates table has artifact-count columns (resume count, DOT app count) that are hardcoded. Add a count column if your block produces a countable artifact admins track.
 
-## 7. AvA Journey Integration
+## 7. Stormi Journey Integration
 
-- **`src/lib/journey-progress.ts`**: Add a `BLOCK_JOURNEY_MAP` entry so AvA can track progress for this block.
-- **`src/lib/ava-context.ts`**: The system prompt auto-detects block categories via prefix (`driver-*`, `developer-*`). No changes needed unless the block requires specialized AvA guidance.
+- **`src/lib/journey-progress.ts`**: Add a `BLOCK_JOURNEY_MAP` entry so Stormi can track progress for this block.
+- **`src/lib/ava-context.ts`**: The system prompt auto-detects block categories via prefix (`driver-*`, `developer-*`). No changes needed unless the block requires specialized Stormi guidance.
 
 ## 8. Stores
 
@@ -195,16 +195,16 @@ await saveCdlData(supabase, userId, { cdl_number: '...', cdl_state: 'OH' })
 - **`MyFilesSection`** in `CandidateHub.tsx` must handle the new block's document type (icon, actions, status badge, view/edit navigation).
 - **Do NOT skip My Files** when building a new block. If you are building a block and My Files doesn't show anything for it, the block is incomplete.
 
-## 11. AvA Journey Integration (MANDATORY)
+## 11. Stormi Journey Integration (MANDATORY)
 
-**Every block MUST have a corresponding AvA journey step** that is marked complete when the block's work is done, and AvA must have knowledge to track and guide the user.
+**Every block MUST have a corresponding Stormi journey step** that is marked complete when the block's work is done, and Stormi must have knowledge to track and guide the user.
 
 ### Rules
 
-- **When you build a block**, you must add it to **both** My Files (see section 10) **and** the AvA journey.
+- **When you build a block**, you must add it to **both** My Files (see section 10) **and** the Stormi journey.
 - **Journey step:** Add an entry to `BLOCK_JOURNEY_MAP` in `src/lib/journey-progress.ts` for the block's `blockType`. The step's `status` must be derived from real progress data (e.g. "complete" when the user has saved the main artifact: portfolio URL set, resume uploaded, DOT app submitted, etc.).
 - **Progress data:** Add any new completion signals to `BlockProgressData` in `journey-progress.ts` and populate them in `src/stores/journey-store.ts` from the hub store (or from the hub API response). The hub API is the source of truth; the driver hub store is synced from it via `syncDriverHubFromApi`.
-- **AvA knowledge:** Ensure AvA's context (e.g. `src/lib/ava-context.ts`) and any assistant templates (e.g. `developer-brain-templates.ts`) know about the block so AvA can reference it, nudge the user to complete it, and mark the journey step when done.
+- **Stormi knowledge:** Ensure Stormi's context (e.g. `src/lib/ava-context.ts`) and any assistant templates (e.g. `developer-brain-templates.ts`) know about the block so Stormi can reference it, nudge the user to complete it, and mark the journey step when done.
 - **Completion = done.** The journey step is "complete" when the user has finished the block's primary action (e.g. added portfolio URL, submitted DOT app, added first resume). Do not leave journey steps permanently pending for blocks that have a clear "done" state.
 
 ## 12. Employer Outreach Summary
@@ -255,7 +255,7 @@ These files contain per-block logic that is NOT driven by the registry. When add
 | `src/components/CareerCard.tsx` | `startsWith('driver-')` section gating | Only matters if adding a new **category** |
 | `src/components/career-card/ProjectedCareerCard.tsx` | `switch(blockType)` per-section rendering | Missing = projected career card shows nothing for this block |
 | `src/app/api/career-card/route.ts` | `switch` building career card sections | Missing = career card API omits block data |
-| `src/lib/ava-chat.ts` | Per-block switch for AvA conversation behavior | Missing = AvA has no block-specific guidance |
+| `src/lib/ava-chat.ts` | Per-block switch for Stormi conversation behavior | Missing = Stormi has no block-specific guidance |
 | `src/components/ShareProfileCard.tsx` | `sectionTypes.has('...')` badge checks | Missing = shared profile card omits block badge |
 | `src/components/HomePage.tsx` | Hero hex tile block IDs + labels | Missing = block not shown on marketing page |
 
@@ -279,10 +279,10 @@ These files contain per-block logic that is NOT driven by the registry. When add
 - **Blocks define capabilities.** Never use `users.role` as the source of truth for what a candidate can do. Read `hub_blocks` instead.
 - **`users.role` is only meaningful for `employer`** (gates employer features). All non-employer users are candidates regardless of installed blocks.
 - **No auto-role-setting from blocks.** Installing a driver block does not change `users.role`. Admin categorizes by block tags, not role.
-- **Block ID prefix = category.** `driver-*` = drivers, `developer-*` = developers, `general-*` = general. This convention is load-bearing — admin filtering, career card visibility, and AvA context all rely on it.
+- **Block ID prefix = category.** `driver-*` = drivers, `developer-*` = developers, `general-*` = general. This convention is load-bearing — admin filtering, career card visibility, and Stormi context all rely on it.
 - **All data goes through `block-data.ts`.** Each block owns its own `block_*` table. No monolithic profile tables.
 - **Block data is user-scoped.** Every `block_*` table has a `UNIQUE(user_id)` constraint. One row per user per block data type.
 - **Identity is separate.** Name, email, phone, address, avatar live in `user_profiles`, not in block tables. Block tables store role-specific data only.
 - **Every block must surface a file in My Files.** See "My Files Integration" section above. A block with no My Files entry is incomplete.
-- **Every block must have an AvA journey step** that completes when the block's work is done. See "AvA Journey Integration" section above. AvA must have knowledge to track and guide the user.
+- **Every block must have an Stormi journey step** that completes when the block's work is done. See "Stormi Journey Integration" section above. Stormi must have knowledge to track and guide the user.
 - **Outreach is automatic for requestable blocks.** Set `employerRequestable: true` + `requestLabel` on your `BlockDefinition`. The request button, auto-install, deep-link, and email all derive from the registry. See "Employer Outreach" (section 5 + 12).

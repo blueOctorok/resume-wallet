@@ -1,13 +1,13 @@
 /**
- * Ava Brain - Smart Event Router (Role-Aware)
+ * Stormi Brain (legacy file: ava-brain) — Smart Event Router (Role-Aware)
  *
- * This module makes Ava appear omniscient while minimizing AI costs.
+ * This module makes Stormi appear omniscient while minimizing AI costs.
  *
  * Architecture:
  * - User actions are tracked and categorized
  * - Most responses use pre-written templates (instant, free)
  * - Complex scenarios escalate to AI (smart, contextual)
- * - User always sees responses from "Ava" regardless of source
+ * - User always sees responses from "Stormi" regardless of source
  * - Role-aware: Different templates and AI prompts for drivers vs developers
  */
 
@@ -102,7 +102,7 @@ export function createInitialContext(): UserContext {
 
 // =====================================================
 // TEMPLATE LIBRARY
-// Pre-written Ava messages for common scenarios
+// Pre-written Stormi messages for common scenarios
 // =====================================================
 
 const TEMPLATES: Record<string, AvaResponse> = {
@@ -578,7 +578,7 @@ function buildAIPrompt(userQuestion: string, context: UserContext): string {
 Context:
 ${contextInfo}
 
-Provide a helpful, friendly response as Ava, the AI assistant for truck drivers. 
+Provide a helpful, friendly response as Stormi, the AI assistant for truck drivers. 
 Keep it concise (2-3 paragraphs max). 
 If this is about DOT regulations, be accurate but explain in plain English.
 If you don't know something specific, say so and suggest they verify with their employer or FMCSA.`

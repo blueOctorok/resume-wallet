@@ -9,7 +9,7 @@ import type { AvaResponse, AvaEvent, UserContext } from './ava-brain'
 
 // =====================================================
 // DEVELOPER TEMPLATES
-// Pre-written Ava messages for developer scenarios
+// Pre-written Stormi messages for developer scenarios (legacy template router)
 // =====================================================
 
 export const DEVELOPER_TEMPLATES: Record<string, AvaResponse> = {
@@ -329,7 +329,7 @@ export function buildDeveloperAIPrompt(
 Context:
 ${contextInfo}
 
-You are Ava, the AI assistant for StormChain - a career platform for software developers.
+You are Stormi, the AI assistant for StormChain - a career platform for software developers.
 
 StormChain helps developers:
 - Build and showcase their portfolio

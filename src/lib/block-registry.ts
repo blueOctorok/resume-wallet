@@ -20,7 +20,7 @@
  *   8.  Register PageType if block has a full-page route (stores/types.ts)
  *   9.  Add pageRoute to validOnboardPages in page.tsx for deep-link support
  *   10. Surface a file entry in MyFilesSection (CandidateHub.tsx)
- *   11. Add AvA journey step + context (journey-progress.ts, ava-context.ts)
+ *   11. Add Stormi journey step + context (journey-progress.ts, ava-context.ts)
  *   12. Admin: add a tab if block has admin-manageable data
  *   13. Data: create block_* table migration + block-data.ts helpers
  *
@@ -40,7 +40,7 @@ export interface BlockDefinition {
   /** Which category this block appears under in the picker */
   categoryId: string
   /**
-   * Keywords AvA matches against the user's occupation + seeking_reason
+   * Keywords Stormi matches against the user's occupation + seeking_reason
    * to suggest this block automatically.
    */
   suggestedFor: string[]
@@ -442,7 +442,7 @@ export function getBlocksByCategory(categoryId: string): BlockDefinition[] {
  * Suggest relevant block types based on free-text occupation and reason.
  * Returns block ids sorted by match score (most relevant first).
  *
- * This is a lightweight keyword match — AvA can use the full LLM path
+ * This is a lightweight keyword match — Stormi can use the full LLM path
  * for richer suggestions, but this covers the fast/offline path.
  */
 export function suggestBlocks(occupation: string, seekingReason: string): string[] {
@@ -463,7 +463,7 @@ export function suggestBlocks(occupation: string, seekingReason: string): string
 
 /**
  * Suggest relevant category ids based on free-text input.
- * Used to pre-filter the block picker when AvA populates suggested_categories.
+ * Used to pre-filter the block picker when Stormi populates suggested_categories.
  */
 export function suggestCategories(occupation: string, seekingReason: string): string[] {
   const suggestedBlockIds = suggestBlocks(occupation, seekingReason)

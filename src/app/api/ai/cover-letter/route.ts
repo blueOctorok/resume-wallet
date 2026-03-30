@@ -6,7 +6,7 @@ import {
   checkCoverLetterUsage,
   incrementCoverLetterDaily,
   consumeCredit,
-  AVA_UNLIMITED_WALLETS,
+  STORMI_UNLIMITED_WALLETS,
   getCoverLetterDailyRemaining,
 } from '@/lib/ava-usage'
 import { buildJobMatchCandidateBrief } from '@/lib/job-match-candidate-brief'
@@ -15,7 +15,7 @@ import { generateCoverLetter, stripHtmlToText } from '@/lib/cover-letter-ai'
 /**
  * POST /api/ai/cover-letter
  * Body: { jobTitle, company, location?, description? }
- * Uses 3 free generations/day (Sonnet), then 1 purchased credit (Haiku) — same pool as AvA chat.
+ * Uses 3 free generations/day (Sonnet), then 1 purchased credit (Haiku) — same pool as Stormi chat.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 401 })
     }
 
-    const isUnlimited = AVA_UNLIMITED_WALLETS.has(normalizeWalletAddress(walletAddress))
+    const isUnlimited = STORMI_UNLIMITED_WALLETS.has(normalizeWalletAddress(walletAddress))
     const usage = await getOrCreateUsage(supabase, user.id)
     const check = checkCoverLetterUsage(usage, isUnlimited)
 
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         {
           error: 'out_of_credits',
           message:
-            'You have used your free cover letters for today. Purchase AvA credits to generate more, or try again tomorrow.',
+            'You have used your free cover letters for today. Purchase Stormi credits to generate more, or try again tomorrow.',
           coverLettersDailyRemaining: 0,
           credits: usage.credits,
         },

@@ -223,7 +223,7 @@ export default function JobAlertsHubSection() {
               <p className={cn('text-xs mt-1 max-w-xl', isDark ? 'text-gray-400' : 'text-slate-600')}>
                 Use <span className='font-medium text-slate-700 dark:text-gray-300'>Browse jobs</span> for
                 StormChain + external listings and recommendations. Save alerts here — we scan daily, score
-                new matches with AvA, and notify in-app. Same job is never pinged twice.
+                new matches with Stormi, and notify in-app. Same job is never pinged twice.
               </p>
               <p className={cn('text-xs mt-2', isDark ? 'text-gray-500' : 'text-slate-500')}>
                 {activeCount} active · {preferences.length}/{maxAlerts} saved
@@ -231,7 +231,7 @@ export default function JobAlertsHubSection() {
                   <span className='text-teal-600 dark:text-teal-400'> (credits)</span>
                 )}
                 {maxAlerts === JOB_ALERTS_MAX_FREE && preferences.length >= JOB_ALERTS_MAX_FREE && (
-                  <span> · Add AvA credits for up to {JOB_ALERTS_MAX_WITH_CREDITS}</span>
+                  <span> · Add Stormi credits for up to {JOB_ALERTS_MAX_WITH_CREDITS}</span>
                 )}
               </p>
             </div>
@@ -336,7 +336,7 @@ export default function JobAlertsHubSection() {
         <Modal onClose={() => !saving && setFormOpen(false)} maxWidth='max-w-md'>
           <ModalHeader
             title={editing ? 'Edit job alert' : 'New job alert'}
-            subtitle="AvA compares new listings to your profile; you only get notified when the score clears your threshold."
+            subtitle="Stormi compares new listings to your profile; you only get notified when the score clears your threshold."
             onClose={() => !saving && setFormOpen(false)}
           />
           <div className='p-4 space-y-3'>

@@ -1,7 +1,7 @@
 /**
  * Block-Inferred Journey Progress
  *
- * Instead of hardcoded role-based checklists, AvA builds journey steps
+ * Instead of hardcoded role-based checklists, Stormi builds journey steps
  * dynamically from the blocks the user has installed. A user with only
  * general blocks sees generic guidance; adding a driver-dot-application
  * block automatically surfaces DOT-specific steps.
@@ -11,7 +11,7 @@
 
 import type { PageType, UserRole } from '@/stores/types'
 
-// ===== SHARED TYPES (unchanged — consumed by AvaJourneyGuide) =====
+// ===== SHARED TYPES (unchanged — consumed by StormiJourneyGuide) =====
 
 export type StepStatus = 'complete' | 'in_progress' | 'pending' | 'skipped'
 

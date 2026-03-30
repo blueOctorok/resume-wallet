@@ -158,7 +158,7 @@ export default function RoleSelectionModal({
 
       if (!res.ok) throw new Error(data.error || 'Failed to submit request')
 
-      // AvA auto-approved new company — skip straight to employer role + onboarding
+      // Stormi auto-approved new company — skip straight to employer role + onboarding
       if (data.autoApproved) {
         onSelectRole('employer', data.company?.name)
         return
@@ -170,7 +170,7 @@ export default function RoleSelectionModal({
         return
       }
 
-      // AvA blocked — show denial reason
+      // Stormi blocked — show denial reason
       if (data.blocked) {
         setRequestError(data.message || 'Your request could not be approved at this time.')
         return

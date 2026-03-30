@@ -121,7 +121,7 @@ export async function evaluateEmployerRequest(
       existingMatch: typeof parsed.existingMatch === 'string' ? parsed.existingMatch : null,
     }
   } catch (error) {
-    console.error('[AvA Employer Eval] Error:', error)
+    console.error('[Stormi Employer Eval] Error:', error)
     return {
       decision: 'flag',
       reason: 'AI evaluation unavailable — flagged for manual review',

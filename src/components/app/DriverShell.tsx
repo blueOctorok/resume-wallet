@@ -78,9 +78,9 @@ const WalletTransactions = dynamic(
 interface DriverShellProps {
   /** Called when AlchemyAuth succeeds (new login) */
   onAuthSuccess: (userData: unknown) => void
-  /** Called to report a resume upload event to AvA */
+  /** Called to report a resume upload event to Stormi journey tracking */
   onResumeUploadEvent: (event: ResumeUploadEvent) => void
-  /** Called to set the latest IPFS hash (for AvA prefill) */
+  /** Called to set the latest IPFS hash (for Stormi / form prefill) */
   onSetLatestResumeIpfsHash: (hash: string | null) => void
 }
 
@@ -88,7 +88,7 @@ interface DriverShellProps {
  * DriverShell - All driver-role pages and routing in one component.
  *
  * Reads navigation state from UIStore. Updates driver journey state in UIStore
- * so the AvA Journey Guide can track progress.
+ * so the Stormi Journey Guide can track progress.
  *
  * All DOT application logic lives in <DotApplicationFlow />.
  */
@@ -129,7 +129,7 @@ export default function DriverShell({
   } = hubStore
 
   // -------------------------------------------------------
-  // Journey state updates (for AvA Journey Guide via UIStore)
+  // Journey state updates (for Stormi Journey Guide via UIStore)
   // -------------------------------------------------------
   useEffect(() => {
     if (walletAddress) updateJourneyStep('wallet', 'complete')

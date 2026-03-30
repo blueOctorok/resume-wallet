@@ -19,12 +19,12 @@ import { useTheme } from '@/contexts/ThemeContext'
 import BackToHubButton from './ui/BackToHubButton'
 import Button from '@/components/ui/Button'
 import dynamic from 'next/dynamic'
-import type { AvaUsageInfo } from '@/lib/ava-chat'
+import type { StormiUsageInfo } from '@/lib/ava-chat'
 
 const ApplyWithStormChainModal = dynamic(() => import('./ApplyWithStormChainModal'), {
   ssr: false,
 })
-const AvaCreditModal = dynamic(() => import('@/components/AvaCreditModal'), { ssr: false })
+const StormiCreditModal = dynamic(() => import('@/components/StormiCreditModal'), { ssr: false })
 
 // ── Shared job shape (both sources normalize to this) ─────────────────────────
 
@@ -46,7 +46,7 @@ interface JobListing {
   jobType: string | null
   targetRole: string | null
   remoteAllowed: boolean | null
-  /** AvA job match (external recommended only) */
+  /** Stormi job match (external recommended only) */
   matchScore?: number
   matchReason?: string
 }
@@ -90,7 +90,7 @@ interface JobListingsProps {
   userAddress: string | null
   /**
    * Guest browse (Indeed-style): search StormChain + external listings without a wallet.
-   * Apply / AvA ranking require `onSignIn` → connect flow.
+   * Apply / Stormi ranking require `onSignIn` → connect flow.
    */
   publicBrowseMode?: boolean
   onSignIn?: () => void
@@ -246,7 +246,7 @@ export default function JobListings({
         const data = await res.json()
         if (res.status === 402) {
           setRecoCreditModal(true)
-          setRecoError(typeof data.message === 'string' ? data.message : 'AvA credits required.')
+          setRecoError(typeof data.message === 'string' ? data.message : 'Stormi credits required.')
           setRecoJobs([])
           return
         }
@@ -369,7 +369,7 @@ export default function JobListings({
           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             {publicBrowseMode
               ? totalCount > 0
-                ? `${totalCount.toLocaleString()} listings — connect your wallet to apply with your career card & AvA`
+                ? `${totalCount.toLocaleString()} listings — connect your wallet to apply with your career card & Stormi`
                 : 'Search StormChain and external boards. No account needed to look — wallet required to apply.'
               : totalCount > 0
                 ? `${totalCount.toLocaleString()} jobs found`
@@ -385,7 +385,7 @@ export default function JobListings({
           >
             <p className={`text-sm ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
               <span className='font-semibold'>Applying is wallet-gated.</span>{' '}
-              Easy Apply, AvA match scores, and cover letters use your on-chain career card.
+              Easy Apply, Stormi match scores, and cover letters use your on-chain career card.
             </p>
             <Button type='button' variant='primary' size='sm' className='shrink-0' onClick={onSignIn}>
               Connect wallet
@@ -467,7 +467,7 @@ export default function JobListings({
           {TABS.find((t) => t.id === activeTab)?.description}
         </p>
 
-        {/* AvA personalized external jobs */}
+        {/* Stormi personalized external jobs */}
         {activeTab === 'external' && userAddress && (
           <div
             className={`rounded-2xl p-5 mb-6 border ${
@@ -482,7 +482,7 @@ export default function JobListings({
                     Recommended for you
                   </h2>
                   <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    AvA scores listings against your career card. One free refresh per day; extra refreshes use 1
+                    Stormi scores listings against your career card. One free refresh per day; extra refreshes use 1
                     credit.
                     {recoKeywords ? ` Searching: “${recoKeywords}”.` : ''}
                   </p>
@@ -861,10 +861,10 @@ export default function JobListings({
       />
 
       {recoCreditModal && (
-        <AvaCreditModal
+        <StormiCreditModal
           walletAddress={userAddress}
           onClose={() => setRecoCreditModal(false)}
-          onSuccess={(_u: AvaUsageInfo) => {
+          onSuccess={(_u: StormiUsageInfo) => {
             setRecoCreditModal(false)
             void fetchRecommended(true)
           }}

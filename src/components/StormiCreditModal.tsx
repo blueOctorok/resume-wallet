@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * AvaCreditModal — USDC payment flow for AvA chat credit packs.
+ * StormiCreditModal — USDC payment flow for Stormi chat credit packs.
  * Follows the same Alchemy Smart Wallet pattern as MvrPaymentButton.
  */
 
@@ -11,13 +11,13 @@ import { encodeFunctionData, parseAbi } from 'viem'
 import { X, Coins, Loader2, Check, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
-import { AVA_CREDIT_PACKS, type AvaCreditPackId } from '@/lib/ava-usage'
-import type { AvaUsageInfo } from '@/lib/ava-chat'
+import { STORMI_CREDIT_PACKS, type StormiCreditPackId } from '@/lib/ava-usage'
+import type { StormiUsageInfo } from '@/lib/ava-chat'
 
-interface AvaCreditModalProps {
+interface StormiCreditModalProps {
   walletAddress: string | null
   onClose: () => void
-  onSuccess: (usage: AvaUsageInfo) => void
+  onSuccess: (usage: StormiUsageInfo) => void
 }
 
 interface PaymentConfig {
@@ -26,13 +26,13 @@ interface PaymentConfig {
   treasuryAddress: string
 }
 
-const PACK_META: Record<AvaCreditPackId, { label: string; badge: string | null }> = {
-  starter:  { label: 'Starter',  badge: null },
+const PACK_META: Record<StormiCreditPackId, { label: string; badge: string | null }> = {
+  starter: { label: 'Starter', badge: null },
   standard: { label: 'Standard', badge: 'Most Popular' },
-  pro:      { label: 'Pro',      badge: 'Best Value' },
+  pro: { label: 'Pro', badge: 'Best Value' },
 }
 
-export default function AvaCreditModal({ walletAddress, onClose, onSuccess }: AvaCreditModalProps) {
+export default function StormiCreditModal({ walletAddress, onClose, onSuccess }: StormiCreditModalProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const { isConnected } = useSignerStatus()
@@ -40,7 +40,7 @@ export default function AvaCreditModal({ walletAddress, onClose, onSuccess }: Av
   const { sendCallsAsync, isPending } = useSendCalls({ client })
 
   const [config, setConfig] = useState<PaymentConfig | null>(null)
-  const [selectedPack, setSelectedPack] = useState<AvaCreditPackId>('standard')
+  const [selectedPack, setSelectedPack] = useState<StormiCreditPackId>('standard')
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -48,7 +48,7 @@ export default function AvaCreditModal({ walletAddress, onClose, onSuccess }: Av
   // Reuse the MVR config endpoint — it returns USDC address + treasury
   useEffect(() => {
     fetch('/api/wallet/mvr-config')
-      .then((r) => r.ok ? r.json() : null)
+      .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data) setConfig({ usdcAddress: data.usdcAddress, decimals: data.decimals, treasuryAddress: data.treasuryAddress })
       })
@@ -60,7 +60,7 @@ export default function AvaCreditModal({ walletAddress, onClose, onSuccess }: Av
     setIsProcessing(true)
     setError(null)
 
-    const pack = AVA_CREDIT_PACKS[selectedPack]
+    const pack = STORMI_CREDIT_PACKS[selectedPack]
     const amountRaw = BigInt(Math.floor(parseFloat(pack.priceUsdc) * 10 ** config.decimals))
 
     try {
@@ -117,7 +117,7 @@ export default function AvaCreditModal({ walletAddress, onClose, onSuccess }: Av
     }
   }
 
-  const packEntries = (Object.keys(AVA_CREDIT_PACKS) as AvaCreditPackId[])
+  const packEntries = Object.keys(STORMI_CREDIT_PACKS) as StormiCreditPackId[]
 
   return (
     <div className='fixed inset-0 z-[10000] flex items-center justify-center p-4'>
@@ -125,10 +125,12 @@ export default function AvaCreditModal({ walletAddress, onClose, onSuccess }: Av
       <div className='absolute inset-0 bg-black/60 backdrop-blur-sm' onClick={onClose} />
 
       {/* Modal */}
-      <div className={cn(
-        'relative w-full max-w-md rounded-2xl border shadow-2xl',
-        isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200',
-      )}>
+      <div
+        className={cn(
+          'relative w-full max-w-md rounded-2xl border shadow-2xl',
+          isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200',
+        )}
+      >
         {/* Close button */}
         <button
           onClick={onClose}
@@ -143,18 +145,18 @@ export default function AvaCreditModal({ walletAddress, onClose, onSuccess }: Av
         {/* Header */}
         <div className='px-6 pt-6 pb-4'>
           <div className='flex items-center gap-3'>
-            <div className={cn(
-              'w-10 h-10 rounded-xl flex items-center justify-center',
-              isDark ? 'bg-amber-500/15' : 'bg-amber-50',
-            )}>
+            <div
+              className={cn(
+                'w-10 h-10 rounded-xl flex items-center justify-center',
+                isDark ? 'bg-amber-500/15' : 'bg-amber-50',
+              )}
+            >
               <Sparkles className={cn('w-5 h-5', isDark ? 'text-amber-400' : 'text-amber-500')} />
             </div>
             <div>
-              <h3 className={cn('text-lg font-bold', isDark ? 'text-white' : 'text-gray-900')}>
-                AvA Credits
-              </h3>
+              <h3 className={cn('text-lg font-bold', isDark ? 'text-white' : 'text-gray-900')}>Stormi credits</h3>
               <p className={cn('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
-                Keep chatting with AvA beyond your daily free messages
+                Keep chatting with Stormi beyond your daily free messages
               </p>
             </div>
           </div>
@@ -163,7 +165,7 @@ export default function AvaCreditModal({ walletAddress, onClose, onSuccess }: Av
         {/* Pack selection */}
         <div className='px-6 space-y-2'>
           {packEntries.map((packId) => {
-            const pack = AVA_CREDIT_PACKS[packId]
+            const pack = STORMI_CREDIT_PACKS[packId]
             const meta = PACK_META[packId]
             const isSelected = selectedPack === packId
             const costPerMsg = (parseFloat(pack.priceUsdc) / pack.messages * 100).toFixed(1)
@@ -177,8 +179,12 @@ export default function AvaCreditModal({ walletAddress, onClose, onSuccess }: Av
                 className={cn(
                   'w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left',
                   isSelected
-                    ? isDark ? 'border-amber-500 bg-amber-500/10' : 'border-amber-500 bg-amber-50'
-                    : isDark ? 'border-gray-700 hover:border-gray-600 bg-gray-800/50' : 'border-gray-200 hover:border-gray-300 bg-gray-50',
+                    ? isDark
+                      ? 'border-amber-500 bg-amber-500/10'
+                      : 'border-amber-500 bg-amber-50'
+                    : isDark
+                      ? 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
+                      : 'border-gray-200 hover:border-gray-300 bg-gray-50',
                   (isProcessing || success) && 'opacity-60 cursor-not-allowed',
                 )}
               >
@@ -208,9 +214,7 @@ export default function AvaCreditModal({ walletAddress, onClose, onSuccess }: Av
         {/* Action */}
         <div className='px-6 pt-4 pb-6'>
           {error && (
-            <p className={cn('text-xs mb-3 text-center', isDark ? 'text-red-400' : 'text-red-600')}>
-              {error}
-            </p>
+            <p className={cn('text-xs mb-3 text-center', isDark ? 'text-red-400' : 'text-red-600')}>{error}</p>
           )}
 
           <button
@@ -236,7 +240,8 @@ export default function AvaCreditModal({ walletAddress, onClose, onSuccess }: Av
             ) : (
               <>
                 <Coins className='w-4 h-4' />
-                Buy {AVA_CREDIT_PACKS[selectedPack].messages} Credits for ${AVA_CREDIT_PACKS[selectedPack].priceUsdc} USDC
+                Buy {STORMI_CREDIT_PACKS[selectedPack].messages} Credits for $
+                {STORMI_CREDIT_PACKS[selectedPack].priceUsdc} USDC
               </>
             )}
           </button>

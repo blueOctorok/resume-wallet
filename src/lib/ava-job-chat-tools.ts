@@ -1,5 +1,5 @@
 /**
- * AvA candidate chat: tools to search/score external jobs and save job alerts.
+ * Stormi candidate chat: tools to search/score external jobs and save job alerts.
  * Server-only.
  */
 
@@ -12,9 +12,9 @@ import {
   createJobAlertPreference,
   getMaxJobAlertsForUser,
 } from '@/lib/job-alert-data'
-import type { AvaJobSuggestion } from '@/lib/ava-job-suggestions'
+import type { StormiJobSuggestion } from '@/lib/ava-job-suggestions'
 
-export const AVA_JOB_CHAT_TOOLS = [
+export const STORMI_JOB_CHAT_TOOLS = [
   {
     name: 'search_ranked_jobs',
     description:
@@ -37,7 +37,7 @@ export const AVA_JOB_CHAT_TOOLS = [
   {
     name: 'save_job_alert',
     description:
-      'Create a daily email-style in-app job alert: StormChain will scan for new listings on a schedule and notify when AvA scores a strong match. Use when the user wants ongoing monitoring, alerts, or to "watch" a search. Respect limits (2 alerts free, 5 with AvA credits). At most one save per user message unless they explicitly ask for two different alerts.',
+      'Create a daily email-style in-app job alert: StormChain will scan for new listings on a schedule and notify when Stormi scores a strong match. Use when the user wants ongoing monitoring, alerts, or to "watch" a search. Respect limits (2 alerts free, 5 with Stormi credits). At most one save per user message unless they explicitly ask for two different alerts.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -54,7 +54,7 @@ export const AVA_JOB_CHAT_TOOLS = [
   },
 ]
 
-export interface AvaJobToolContext {
+export interface StormiJobToolContext {
   supabase: SupabaseClient
   userId: string
 }
@@ -66,12 +66,12 @@ function clampStr(s: string, max: number): string {
 /**
  * Returns Anthropic tool_result content (string) and optional structured jobs for the API response.
  */
-export async function executeAvaJobChatTool(params: {
+export async function executeStormiJobChatTool(params: {
   name: string
   input: unknown
-  ctx: AvaJobToolContext
+  ctx: StormiJobToolContext
   flags: { searchUsed: boolean; saveAlertUsed: boolean }
-}): Promise<{ toolResult: string; jobSuggestions?: AvaJobSuggestion[] }> {
+}): Promise<{ toolResult: string; jobSuggestions?: StormiJobSuggestion[] }> {
   const { name, input, ctx, flags } = params
 
   if (name === 'search_ranked_jobs') {
@@ -133,7 +133,7 @@ export async function executeAvaJobChatTool(params: {
       })
 
       const byId = new Map(scored.map((s) => [s.id, s]))
-      const merged: AvaJobSuggestion[] = []
+      const merged: StormiJobSuggestion[] = []
       for (const j of toScore) {
         const sid = String(j.id)
         const s = byId.get(sid)
@@ -169,7 +169,7 @@ export async function executeAvaJobChatTool(params: {
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
-      console.error('[AvA job tool] search_ranked_jobs:', msg)
+      console.error('[Stormi job tool] search_ranked_jobs:', msg)
       return { toolResult: JSON.stringify({ ok: false, error: 'Search failed. Try again in a moment.' }) }
     }
   }
@@ -207,7 +207,7 @@ export async function executeAvaJobChatTool(params: {
         return {
           toolResult: JSON.stringify({
             ok: false,
-            error: `At the ${maxAlerts} alert limit. They can remove one on the hub or add AvA credits for more.`,
+            error: `At the ${maxAlerts} alert limit. They can remove one on the hub or add Stormi credits for more.`,
           }),
         }
       }
@@ -229,7 +229,7 @@ export async function executeAvaJobChatTool(params: {
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
-      console.error('[AvA job tool] save_job_alert:', msg)
+      console.error('[Stormi job tool] save_job_alert:', msg)
       return { toolResult: JSON.stringify({ ok: false, error: 'Could not save alert.' }) }
     }
   }

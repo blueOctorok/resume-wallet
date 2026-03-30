@@ -13,7 +13,7 @@ import EmployerPathSidebar from '@/components/hub/EmployerPathSidebar'
  * Slide-over panel: same career/job path rail as desktop.
  * Cmd+/ toggles; used on mobile / when “Open Journey” opens the drawer.
  */
-export default function AvaJourneyGuide() {
+export default function StormiJourneyGuide() {
   const { isGuideOpen, closeGuide, toggleGuide } = useJourneyStore()
   const progress = useJourneyProgress()
   const userRole = useAuthStore((s) => s.userRole)
@@ -84,7 +84,7 @@ export default function AvaJourneyGuide() {
         )}
         role='dialog'
         aria-modal='true'
-        aria-label='AvA Journey Guide'
+        aria-label='Stormi Journey Guide'
       >
         <div className='flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-brand-mint/10 to-transparent'>
           <div className='flex items-start justify-between'>

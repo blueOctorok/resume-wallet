@@ -1,7 +1,7 @@
 const MAX_MESSAGES = 20
 const MAX_CONTENT_CHARS = 12_000
 
-export type AvaConversationTurn = { role: 'user' | 'assistant'; content: string }
+export type StormiConversationTurn = { role: 'user' | 'assistant'; content: string }
 
 /** Anthropic Messages API shape */
 export type AnthropicMessageParam = { role: 'user' | 'assistant'; content: string }
@@ -14,7 +14,7 @@ export function buildAnthropicMessagesFromHistory(
   prior: unknown,
   latestUserMessage: string,
 ): AnthropicMessageParam[] {
-  const raw: AvaConversationTurn[] = []
+  const raw: StormiConversationTurn[] = []
   if (Array.isArray(prior)) {
     for (const item of prior) {
       if (!item || typeof item !== 'object') continue
@@ -32,7 +32,7 @@ export function buildAnthropicMessagesFromHistory(
   const latest = latestUserMessage.trim().slice(0, MAX_CONTENT_CHARS)
   if (!latest) return []
 
-  const all: AvaConversationTurn[] = [...raw, { role: 'user', content: latest }]
+  const all: StormiConversationTurn[] = [...raw, { role: 'user', content: latest }]
 
   const merged: AnthropicMessageParam[] = []
   for (const m of all) {

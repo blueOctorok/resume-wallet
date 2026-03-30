@@ -195,7 +195,7 @@ export default function AccessRequestsTab({
                     </div>
                   )}
                   
-                  {/* AvA evaluation info */}
+                  {/* Stormi evaluation info */}
                   {req.ai_reason && (
                     <div className={`mt-2 p-2 rounded-lg text-xs flex items-start gap-2 ${
                       req.ai_decision === 'approve'
@@ -204,7 +204,7 @@ export default function AccessRequestsTab({
                           ? theme === 'dark' ? 'bg-orange-500/10 text-orange-400' : 'bg-orange-50 text-orange-700'
                           : theme === 'dark' ? 'bg-red-500/10 text-red-400' : 'bg-red-50 text-red-700'
                     }`}>
-                      <span className='font-medium shrink-0'>AvA:</span>
+                      <span className='font-medium shrink-0'>Stormi:</span>
                       <span>{req.ai_reason}</span>
                       {req.ai_confidence != null && (
                         <span className='shrink-0 opacity-60'>({Math.round(req.ai_confidence * 100)}%)</span>

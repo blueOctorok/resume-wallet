@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
-import { buildAvaSystemPrompt, buildEmployerAvaSystemPrompt } from '@/lib/ava-context'
+import { buildStormiSystemPrompt, buildEmployerStormiSystemPrompt } from '@/lib/ava-context'
 import type { HubContext, BlockContext, EmployerHubContext } from '@/lib/ava-context'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getUserByWallet } from '@/lib/user-by-wallet'
@@ -9,19 +9,19 @@ import {
   checkUsage,
   incrementDailyUsage,
   consumeCredit,
-  AVA_DAILY_FREE,
-  AVA_UNLIMITED_WALLETS,
+  STORMI_DAILY_FREE,
+  STORMI_UNLIMITED_WALLETS,
 } from '@/lib/ava-usage'
 import { normalizeWalletAddress } from '@/lib/user-by-wallet'
 import {
-  AVA_DUPLICATE_AUTO_WELCOME_REPLY,
-  type AvaAutoWelcomeMode,
-  hasCompletedAvaAutoWelcome,
-  markAvaAutoWelcomeComplete,
+  STORMI_DUPLICATE_AUTO_WELCOME_REPLY,
+  type StormiAutoWelcomeMode,
+  hasCompletedStormiAutoWelcome,
+  markStormiAutoWelcomeComplete,
 } from '@/lib/ava-auto-welcome'
 import { buildAnthropicMessagesFromHistory } from '@/lib/ava-conversation'
-import { runCandidateAvaChatWithJobTools } from '@/lib/ava-candidate-chat-with-tools'
-import type { AvaJobSuggestion } from '@/lib/ava-job-suggestions'
+import { runCandidateStormiChatWithJobTools } from '@/lib/ava-candidate-chat-with-tools'
+import type { StormiJobSuggestion } from '@/lib/ava-job-suggestions'
 import { ANTHROPIC_MODEL_HAIKU, ANTHROPIC_MODEL_SONNET } from '@/lib/anthropic-models'
 
 const MODEL_SONNET = ANTHROPIC_MODEL_SONNET
@@ -35,14 +35,14 @@ const anthropic = new Anthropic({
 /**
  * POST /api/ai/chat
  *
- * AvA's conversational endpoint.
+ * Stormi's conversational endpoint.
  * Free tier (10/day) uses Sonnet 4.6, paid credits use Haiku 4.5.
  * Requires x-wallet-address header for auth + usage tracking.
  */
 export async function POST(request: NextRequest) {
   try {
     if (!process.env.AVA_BRAIN) {
-      console.error('[AvA Chat] AVA_BRAIN (Anthropic API key) is not set')
+      console.error('[Stormi Chat] AVA_BRAIN (Anthropic API key) is not set')
       return NextResponse.json(
         { error: 'AI service is not configured.' },
         { status: 503 }
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
         conversationHistory?: unknown
       }
     const rawAutoWelcome = (body as { autoWelcome?: unknown }).autoWelcome
-    const autoWelcome: AvaAutoWelcomeMode | undefined =
+    const autoWelcome: StormiAutoWelcomeMode | undefined =
       rawAutoWelcome === 'candidate' || rawAutoWelcome === 'employer' ? rawAutoWelcome : undefined
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       supabase = await getAdminSupabaseClient()
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
-      console.error('[AvA Chat] Supabase init failed:', msg)
+      console.error('[Stormi Chat] Supabase init failed:', msg)
       return NextResponse.json(
         { error: 'Service temporarily unavailable.' },
         { status: 503 }
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     if (isEmployerChat) {
       if (user.role !== 'employer') {
         return NextResponse.json(
-          { error: 'Employer AvA chat is only available for employer accounts.' },
+          { error: 'Employer Stormi chat is only available for employer accounts.' },
           { status: 403 }
         )
       }
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (autoWelcome !== undefined) {
-      const expected: AvaAutoWelcomeMode = isEmployerChat ? 'employer' : 'candidate'
+      const expected: StormiAutoWelcomeMode = isEmployerChat ? 'employer' : 'candidate'
       if (autoWelcome !== expected) {
         return NextResponse.json(
           { error: 'autoWelcome does not match chat audience' },
@@ -127,16 +127,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Whitelisted wallets skip usage limits entirely (always Sonnet)
-    const isUnlimited = AVA_UNLIMITED_WALLETS.has(normalizeWalletAddress(walletAddress))
+    const isUnlimited = STORMI_UNLIMITED_WALLETS.has(normalizeWalletAddress(walletAddress))
 
     // Auto-welcome idempotency (DB) — no Anthropic call, no usage charge
     if (autoWelcome) {
-      const alreadyDone = await hasCompletedAvaAutoWelcome(supabase, user.id, autoWelcome)
+      const alreadyDone = await hasCompletedStormiAutoWelcome(supabase, user.id, autoWelcome)
       if (alreadyDone) {
         if (isUnlimited) {
           return NextResponse.json({
             success: true,
-            reply: AVA_DUPLICATE_AUTO_WELCOME_REPLY,
+            reply: STORMI_DUPLICATE_AUTO_WELCOME_REPLY,
             duplicateAutoWelcome: true,
             usage: {
               dailyRemaining: 999,
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
         const dupCheck = checkUsage(usageRow)
         return NextResponse.json({
           success: true,
-          reply: AVA_DUPLICATE_AUTO_WELCOME_REPLY,
+          reply: STORMI_DUPLICATE_AUTO_WELCOME_REPLY,
           duplicateAutoWelcome: true,
           usage: {
             dailyRemaining: dupCheck.dailyRemaining,
@@ -171,12 +171,12 @@ export async function POST(request: NextRequest) {
       if (!usageCheck.allowed) {
         // Stop auto-welcome from retrying on every refresh while at 0 quota (same as prior localStorage behavior)
         if (autoWelcome) {
-          await markAvaAutoWelcomeComplete(supabase, user.id, autoWelcome)
+          await markStormiAutoWelcomeComplete(supabase, user.id, autoWelcome)
         }
         return NextResponse.json(
           {
             error: 'out_of_credits',
-            message: `You've used your ${AVA_DAILY_FREE} free messages today. Purchase credits to keep chatting, or come back tomorrow.`,
+            message: `You've used your ${STORMI_DAILY_FREE} free messages today. Purchase credits to keep chatting, or come back tomorrow.`,
             usage: {
               dailyRemaining: 0,
               credits: 0,
@@ -195,8 +195,8 @@ export async function POST(request: NextRequest) {
       : usageCheck!.model === 'sonnet' ? MODEL_SONNET : MODEL_HAIKU
 
     const systemPrompt = isEmployerChat
-      ? buildEmployerAvaSystemPrompt(employerContext!)
-      : buildAvaSystemPrompt(hubContext, blockContext)
+      ? buildEmployerStormiSystemPrompt(employerContext!)
+      : buildStormiSystemPrompt(hubContext, blockContext)
 
     const messagesPayload = autoWelcome
       ? [{ role: 'user' as const, content: message.trim() }]
@@ -209,10 +209,10 @@ export async function POST(request: NextRequest) {
     const useJobTools = !isEmployerChat && !autoWelcome
 
     let reply: string
-    let jobSuggestions: AvaJobSuggestion[] | undefined
+    let jobSuggestions: StormiJobSuggestion[] | undefined
 
     if (useJobTools) {
-      const out = await runCandidateAvaChatWithJobTools({
+      const out = await runCandidateStormiChatWithJobTools({
         anthropic,
         systemPrompt,
         conversationHistory,
@@ -246,7 +246,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (autoWelcome) {
-      await markAvaAutoWelcomeComplete(supabase, user.id, autoWelcome)
+      await markStormiAutoWelcomeComplete(supabase, user.id, autoWelcome)
     }
 
     // Return usage info (unlimited wallets show effectively infinite)
@@ -280,7 +280,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     if (error instanceof Anthropic.APIError) {
-      console.error('[AvA Chat] Anthropic API error:', error.status, error.message)
+      console.error('[Stormi Chat] Anthropic API error:', error.status, error.message)
 
       if (error.status === 401) {
         return NextResponse.json(
@@ -301,9 +301,9 @@ export async function POST(request: NextRequest) {
     }
 
     const message = error instanceof Error ? error.message : String(error)
-    console.error('[AvA Chat] Unexpected error:', message)
+    console.error('[Stormi Chat] Unexpected error:', message)
     if (error instanceof Error && error.stack) {
-      console.error('[AvA Chat] Stack:', error.stack)
+      console.error('[Stormi Chat] Stack:', error.stack)
     }
     return NextResponse.json(
       { error: 'An unexpected error occurred.' },

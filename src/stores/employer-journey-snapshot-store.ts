@@ -4,7 +4,7 @@ import type { EmployerProgressData } from '@/lib/journey-progress'
 /**
  * `EmployerHub` pushes hiring context here so:
  * - `useJourneyProgress()` (employer) matches the loaded hub
- * - `EmployerPathSidebar` / `AvaJourneyGuide` drawer can show the same numbers without prop drilling
+ * - `EmployerPathSidebar` / `StormiJourneyGuide` drawer can show the same numbers without prop drilling
  */
 export interface EmployerHiringPathPayload {
   snapshot: EmployerProgressData

@@ -7,7 +7,7 @@ import { emailDomainAllowsEmployerJoin } from '@/lib/employer-domain-match'
  * POST /api/employer/access-request
  *
  * Submit a request to set up or join a company on StormChain.
- * AvA evaluates the request in real-time:
+ * Stormi evaluates the request in real-time:
  *   - approve (new company)        -> company + owner created instantly
  *   - approve (existing company)   -> domain-verified auto-join, or flag if mismatch
  *   - flag                         -> stored for human review
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // ── AvA evaluation ──────────────────────────────────────────
+    // ── Stormi evaluation ──────────────────────────────────────────
     const emailDomain = email.split('@')[1]?.toLowerCase() ?? null
 
     const { data: companies } = await supabase
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
       existingCompanyNames
     )
 
-    console.log(`[ACCESS REQUEST] AvA verdict for "${companyName}": ${evalResult.decision} (${evalResult.confidence}) — ${evalResult.reason} | existingMatch: ${evalResult.existingMatch ?? 'none'}`)
+    console.log(`[ACCESS REQUEST] Stormi verdict for "${companyName}": ${evalResult.decision} (${evalResult.confidence}) — ${evalResult.reason} | existingMatch: ${evalResult.existingMatch ?? 'none'}`)
 
     // Shared fields for audit trail inserts
     const auditFields = {
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Handle: EXISTING COMPANY MATCH ──────────────────────────
-    // AvA detected the requested company name matches one already on StormChain.
+    // Stormi detected the requested company name matches one already on StormChain.
     // We verify the email domain before auto-joining.
     if (evalResult.existingMatch && evalResult.decision !== 'block') {
       const { data: matchedCompany } = await supabase
@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
             ? (companyEmail.split('@')[1]?.toLowerCase() ?? 'none')
             : 'none on file'
 
-        // Domain mismatch -> flag for human review regardless of AvA decision
+        // Domain mismatch -> flag for human review regardless of Stormi decision
         await insertAuditRow({
           status: 'flagged',
           ai_reason: `Company "${matchedCompany.company_name}" already exists. Requester @${emailDomain ?? 'unknown'} could not be auto-verified (on-file domain: ${onFileDomain}).`,

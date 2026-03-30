@@ -39,30 +39,41 @@ const config: Config = withAccountKitUi(
     },
   },
   {
-    // Account Kit UI theme customizations
+    /**
+     * Account Kit (Alchemy) auth UI — must meet WCAG contrast on white / slate surfaces.
+     * Deprecated sage/mint/cream preset put cream `fg-primary` on light cards and washed-out
+     * primary buttons. This aligns with StormChain teal (`--storm-accent`) + slate neutrals.
+     *
+     * `.akui-btn-primary` uses `color: var(--akui-fg-invert)` — light mode needs white text on teal;
+     * dark mode uses a brighter teal fill + dark `fg-invert` (same pattern as Account Kit defaults).
+     */
     colors: {
-      // Button colors - our brand colors
-      'btn-primary': createColorSet('#c9d9c3', '#c9d9c3'), // mint for both light/dark
-      'btn-secondary': createColorSet('#adc2a9', '#adc2a9'), // sage-light for both
-      'btn-auth': createColorSet('#c9d9c3', '#c9d9c3'), // mint for auth buttons
+      active: createColorSet('#0d9488', '#2dd4bf'),
+      static: createColorSet('#cbd5e1', '#64748b'),
+      critical: createColorSet('#f87171', '#dc2626'),
 
-      // Text colors - cream for readability
-      'fg-primary': createColorSet('#fef5ed', '#fef5ed'), // cream for primary text
-      'fg-secondary': createColorSet('#fef5ed', '#fef5ed'), // cream for secondary text
-      'fg-tertiary': createColorSet('#adc2a9', '#adc2a9'), // sage-light for tertiary
-      'fg-invert': createColorSet('#697469', '#697469'), // sage for inverted text
-      'fg-accent-brand': createColorSet('#c9d9c3', '#c9d9c3'), // mint as brand accent
+      'btn-primary': createColorSet('#0d9488', '#2dd4bf'),
+      'btn-secondary': createColorSet('#f1f5f9', '#334155'),
+      'btn-auth': createColorSet('#ffffff', 'rgba(30, 41, 59, 0.92)'),
 
-      // Background colors - our sage theme
-      'bg-surface-default': createColorSet('#697469', '#697469'), // sage background
-      'bg-surface-subtle': createColorSet('#697469', '#697469'), // sage for subtle
-      'bg-surface-inset': createColorSet('#697469', '#697469'), // sage for inputs
+      'fg-primary': createColorSet('#0f172a', '#f1f5f9'),
+      'fg-secondary': createColorSet('#475569', '#cbd5e1'),
+      'fg-tertiary': createColorSet('#64748b', '#94a3b8'),
+      'fg-invert': createColorSet('#ffffff', '#0f172a'),
+      'fg-disabled': createColorSet('#94a3b8', '#475569'),
+      'fg-accent-brand': createColorSet('#0d9488', '#5eead4'),
+      'fg-critical': createColorSet('#b91c1c', '#f87171'),
+      'fg-success': createColorSet('#16a34a', '#86efac'),
 
-      // Border colors - mint for focus, sage-light for static
-      active: createColorSet('#c9d9c3', '#c9d9c3'), // mint for focused borders
-      static: createColorSet('#adc2a9', '#adc2a9'), // sage-light for static borders
+      'bg-surface-default': createColorSet('#ffffff', '#0f172a'),
+      'bg-surface-subtle': createColorSet('#f8fafc', '#1e293b'),
+      'bg-surface-inset': createColorSet('#f1f5f9', '#334155'),
+      'bg-surface-critical': createColorSet('#fef2f2', '#450a0a'),
+      'bg-surface-error': createColorSet('#dc2626', '#f87171'),
+      'bg-surface-success': createColorSet('#16a34a', '#86efac'),
+      'bg-surface-warning': createColorSet('#ea580c', '#fdba74'),
     },
-    borderRadius: 'md', // 16px border radius for modern look
+    borderRadius: 'md',
   }
 )
 

@@ -23,7 +23,7 @@ interface BlockPickerCategoryProps {
   category: BlockCategory
   blocks: BlockDefinition[]
   installedTypes: Set<string>
-  /** Category IDs suggested by AvA from onboarding — these start expanded */
+  /** Category IDs suggested by Stormi from onboarding — these start expanded */
   suggestedCategoryIds: string[]
   addingBlockType: string | null
   onAddBlock: (blockType: string) => void

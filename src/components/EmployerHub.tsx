@@ -47,7 +47,7 @@ import {
 import { cn } from '@/lib/utils'
 import { getDisplayRole } from '@/lib/employer-roles'
 import type { EmployerHubContext } from '@/lib/ava-context'
-import AvaChatPanel from '@/components/ava/AvaChatPanel'
+import StormiChatPanel from '@/components/stormi/StormiChatPanel'
 import STORMBalance from '@/components/STORMBalance'
 import { CompanyWalletContent } from '@/components/employer/CompanyWallet'
 import Button from '@/components/ui/Button'
@@ -145,9 +145,9 @@ interface HubData {
   success: boolean
   isNewUser: boolean
   needsCompanySetup?: boolean
-  /** Pending AvA / admin employer access — show waiting state instead of company-setup loop */
+  /** Pending Stormi / admin employer access — show waiting state instead of company-setup loop */
   employerAccessPending?: EmployerAccessPendingInfo | null
-  /** DB `users.ava_auto_welcome_employer_at` — cross-device AvA auto-welcome idempotency */
+  /** DB `users.ava_auto_welcome_employer_at` — cross-device Stormi auto-welcome idempotency */
   avaAutoWelcomeEmployerDone?: boolean
   company: HubCompany | null
   /** Current user's role in this company (owner, admin, recruiter, viewer, etc.) */
@@ -247,8 +247,8 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     })
   }
 
-  /** Snapshot for AvA system prompt (employer hiring context — not candidate blocks) */
-  const employerAvaContext = useMemo((): EmployerHubContext | null => {
+  /** Snapshot for Stormi system prompt (employer hiring context — not candidate blocks) */
+  const employerStormiContext = useMemo((): EmployerHubContext | null => {
     if (!data) return null
     return {
       needsCompanySetup: Boolean(data.needsCompanySetup) && !data.employerAccessPending,
@@ -262,7 +262,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     }
   }, [data])
 
-  /** Job-path sidebar + AvA drawer + `useJourneyProgress` (employer) */
+  /** Job-path sidebar + Stormi drawer + `useJourneyProgress` (employer) */
   const hiringPayload = useMemo(() => {
     if (!data?.company) return null
     const snapshot: EmployerProgressData = {
@@ -532,7 +532,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
     return null
   }
 
-  // Waiting on admin / AvA for employer access (row in employer_access_requests)
+  // Waiting on admin / Stormi for employer access (row in employer_access_requests)
   if (data.employerAccessPending && !data.company) {
     const p = data.employerAccessPending
     return (
@@ -773,15 +773,15 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
         </Button>
       </Card>
 
-      {/* Same AvA chat shell as candidate hub; server uses employer system prompt + context */}
-      {employerAvaContext && (
+      {/* Same Stormi chat shell as candidate hub; server uses employer system prompt + context */}
+      {employerStormiContext && (
         <div className='mb-8'>
-          <AvaChatPanel
+          <StormiChatPanel
             mode='employer'
             walletAddress={walletAddress}
-            employerContext={employerAvaContext}
-            avaAutoWelcomeEmployerDone={data.avaAutoWelcomeEmployerDone ?? false}
-            onAvaAutoWelcomeSynced={() =>
+            employerContext={employerStormiContext}
+            stormiAutoWelcomeEmployerDone={data.avaAutoWelcomeEmployerDone ?? false}
+            onStormiAutoWelcomeSynced={() =>
               setData((prev) => (prev ? { ...prev, avaAutoWelcomeEmployerDone: true } : null))
             }
           />

@@ -13,7 +13,7 @@ import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
  * - Loading indicators
  * - Tab states
  * - Component-specific UI state
- * - Driver journey state (for AvA Journey Guide progress tracking)
+ * - Driver journey state (for Stormi Journey Guide progress tracking)
  * 
  * This state is NOT persisted - it resets on page refresh.
  */
@@ -37,7 +37,7 @@ interface UIState {
   currentPage: PageType
   showDashboard: boolean
   
-  // Driver journey state (session-only, used by AvA Journey Guide)
+  // Driver journey state (session-only, used by Stormi Journey Guide)
   driverJourneyState: DriverJourneyState
   
   // Journey modal state - guided "what's next" prompts
@@ -248,7 +248,7 @@ export const useUIStore = create<UIState & UIActions>()(
       if (event.type === 'analysis_ready' && event.data?.ipfsHash) {
         set({ latestResumeIpfsHash: event.data.ipfsHash })
       }
-      // AvA journey reads driver-hub-store — refresh after upload pipeline milestones
+      // Stormi journey reads driver-hub-store — refresh after upload pipeline milestones
       if (event.type === 'upload_complete' || event.type === 'blockchain_complete') {
         const wa = useAuthStore.getState().walletAddress
         if (wa) void syncDriverHubFromApi(wa)

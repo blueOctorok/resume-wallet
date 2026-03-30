@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Shared AvA chat — clean empty state with robot avatar + prominent "Ask AvA" title.
+ * Shared Stormi chat — clean empty state with robot avatar + prominent "Ask Stormi" title.
  * No auto-welcome call. Suggested prompts as chips. Thread appears after first send.
  */
 
@@ -14,15 +14,15 @@ import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { cn } from '@/lib/utils'
 import type { HubContext } from '@/lib/ava-context'
 import {
-  sendToAva,
+  sendToStormi,
   OutOfCreditsError,
   type ChatMessage,
-  type AvaUsageInfo,
+  type StormiUsageInfo,
   type EmployerHubContext,
 } from '@/lib/ava-chat'
-import { loadAvaChatMessages, saveAvaChatMessages } from '@/lib/ava-chat-persistence'
-import type { AvaJobSuggestion } from '@/lib/ava-job-suggestions'
-import AvaCreditModal from '@/components/AvaCreditModal'
+import { loadStormiChatMessages, saveStormiChatMessages } from '@/lib/ava-chat-persistence'
+import type { StormiJobSuggestion } from '@/lib/ava-job-suggestions'
+import StormiCreditModal from '@/components/StormiCreditModal'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 
@@ -31,7 +31,7 @@ const ApplyWithStormChainModal = dynamic(() => import('@/components/ApplyWithSto
 })
 
 /** Shape expected by ApplyWithStormChainModal `job` prop */
-function toApplyModalJob(j: AvaJobSuggestion) {
+function toApplyModalJob(j: StormiJobSuggestion) {
   return {
     id: j.id,
     title: j.title,
@@ -43,13 +43,13 @@ function toApplyModalJob(j: AvaJobSuggestion) {
   }
 }
 
-/** Ranked job cards under an AvA turn — Yes/No + apply-to-#1 shortcut; skips are per-message local state */
-function AvaJobSuggestionCards(props: {
+/** Ranked job cards under a Stormi turn — Yes/No + apply-to-#1 shortcut; skips are per-message local state */
+function StormiJobSuggestionCards(props: {
   messageIndex: number
-  jobs: AvaJobSuggestion[]
+  jobs: StormiJobSuggestion[]
   dismissed: Record<string, true>
   onDismiss: (messageIndex: number, jobId: string) => void
-  onApply: (job: AvaJobSuggestion) => void
+  onApply: (job: StormiJobSuggestion) => void
   isDark: boolean
   /** Wider layout: 2-col grid for listings on md+ */
   expandedLayout: boolean
@@ -65,7 +65,7 @@ function AvaJobSuggestionCards(props: {
           isDark ? 'text-gray-500 border-gray-600 bg-gray-800/40' : 'text-slate-500 border-slate-200 bg-slate-50',
         )}
       >
-        You skipped these. Ask AvA for another search or tweak what you&apos;re looking for.
+        You skipped these. Ask Stormi for another search or tweak what you&apos;re looking for.
       </p>
     )
   }
@@ -160,27 +160,29 @@ function AvaJobSuggestionCards(props: {
   )
 }
 
-export type AvaChatPanelProps =
+export type StormiChatPanelProps =
   | {
       mode: 'candidate'
       walletAddress: string | null
       hubContext: HubContext
       candidateEmptyHub: boolean
-      avaAutoWelcomeCandidateDone: boolean
-      onAvaAutoWelcomeSynced?: () => void
+      /** From GET /api/hub/blocks `avaAutoWelcomeCandidateDone` */
+      stormiAutoWelcomeCandidateDone: boolean
+      onStormiAutoWelcomeSynced?: () => void
     }
   | {
       mode: 'employer'
       walletAddress: string | null
       employerContext: EmployerHubContext
-      avaAutoWelcomeEmployerDone: boolean
-      onAvaAutoWelcomeSynced?: () => void
+      /** From employer hub API `avaAutoWelcomeEmployerDone` */
+      stormiAutoWelcomeEmployerDone: boolean
+      onStormiAutoWelcomeSynced?: () => void
     }
 
-export default function AvaChatPanel(props: AvaChatPanelProps) {
+export default function StormiChatPanel(props: StormiChatPanelProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
-  const openAvAContextModal = useHubBlocksStore((s) => s.openAvAContextModal)
+  const openStormiContextModal = useHubBlocksStore((s) => s.openStormiContextModal)
   const walletAddress = props.walletAddress
   const persistenceMode = props.mode
 
@@ -191,10 +193,10 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
   const [chatError, setChatError] = useState<string | null>(null)
   const [outOfCredits, setOutOfCredits] = useState(false)
   const [showCreditModal, setShowCreditModal] = useState(false)
-  const [usage, setUsage] = useState<AvaUsageInfo | null>(null)
+  const [usage, setUsage] = useState<StormiUsageInfo | null>(null)
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
-  /** External job chosen from AvA-ranked cards — opens shared apply modal */
+  /** External job chosen from Stormi-ranked cards — opens shared apply modal */
   const [applyJob, setApplyJob] = useState<ReturnType<typeof toApplyModalJob> | null>(null)
   /** Per-message job dismissals (No, skip) — key `${msgIndex}-${jobId}` */
   const [dismissedJobKeys, setDismissedJobKeys] = useState<Record<string, true>>({})
@@ -213,13 +215,13 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
       setPersistReady(true)
       return
     }
-    setMessages(loadAvaChatMessages(persistenceMode, walletAddress))
+    setMessages(loadStormiChatMessages(persistenceMode, walletAddress))
     setPersistReady(true)
   }, [walletAddress, persistenceMode])
 
   useEffect(() => {
     if (!persistReady || !walletAddress) return
-    saveAvaChatMessages(persistenceMode, walletAddress, messages)
+    saveStormiChatMessages(persistenceMode, walletAddress, messages)
   }, [messages, walletAddress, persistenceMode, persistReady])
 
   useEffect(() => {
@@ -269,13 +271,13 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
     try {
       const res =
         props.mode === 'candidate'
-          ? await sendToAva({
+          ? await sendToStormi({
               message: trimmed,
               hubContext: props.hubContext,
               walletAddress,
               conversationHistory,
             })
-          : await sendToAva({
+          : await sendToStormi({
               message: trimmed,
               audience: 'employer',
               employerContext: props.employerContext,
@@ -326,7 +328,7 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
   return (
     <div
       className={cn(
-        'ava-glow-border transition-[box-shadow] duration-200',
+        'stormi-glow-border transition-[box-shadow] duration-200',
         chatExpanded && 'ring-2 ring-teal-500/35 dark:ring-teal-400/30 rounded-[16px]',
       )}
     >
@@ -346,7 +348,7 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
                 : 'Expand chat — taller thread & side-by-side job cards'
             }
             aria-expanded={chatExpanded}
-            aria-label={chatExpanded ? 'Shrink AvA chat' : 'Expand AvA chat'}
+            aria-label={chatExpanded ? 'Shrink Stormi chat' : 'Expand Stormi chat'}
             className={cn(
               'absolute top-2 right-2 z-20 p-2 rounded-xl border transition-colors',
               isDark
@@ -410,7 +412,7 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
                       msg.jobSuggestions &&
                       msg.jobSuggestions.length > 0 &&
                       props.mode === 'candidate' && (
-                        <AvaJobSuggestionCards
+                        <StormiJobSuggestionCards
                           messageIndex={i}
                           jobs={msg.jobSuggestions}
                           dismissed={dismissedJobKeys}
@@ -503,7 +505,7 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
                         isDark ? 'text-white' : 'text-slate-800',
                       )}
                     >
-                      Ask AvA
+                      Ask Stormi
                     </h2>
                     {usageBadge && (
                       <span
@@ -564,11 +566,11 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
             className='flex items-center gap-2'
           >
             <input
-              data-ava-chat-input
+              data-stormi-chat-input
               type='text'
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={outOfCredits ? 'Buy credits to continue...' : 'Ask AvA anything...'}
+              placeholder={outOfCredits ? 'Buy credits to continue...' : 'Ask Stormi anything...'}
               disabled={isLoading || outOfCredits}
               className={cn(
                 'flex-1 px-4 py-2.5 rounded-full text-sm border transition-colors',
@@ -624,14 +626,14 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
             {props.mode === 'candidate' && (
               <button
                 type='button'
-                onClick={() => openAvAContextModal()}
+                onClick={() => openStormiContextModal()}
                 className={cn(
                   'flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium transition-colors',
                   isDark
                     ? 'text-teal-400/90 hover:text-teal-300 hover:bg-gray-800'
                     : 'text-teal-700 hover:text-teal-800 hover:bg-teal-50',
                 )}
-                aria-label='Edit what you told AvA about your work and goals'
+                aria-label='Edit what you told Stormi about your work and goals'
               >
                 <Sparkles className='w-3 h-3' />
                 Edit intro
@@ -642,7 +644,7 @@ export default function AvaChatPanel(props: AvaChatPanelProps) {
       </div>
 
       {showCreditModal && (
-        <AvaCreditModal
+        <StormiCreditModal
           walletAddress={walletAddress}
           onClose={() => setShowCreditModal(false)}
           onSuccess={(newUsage) => {

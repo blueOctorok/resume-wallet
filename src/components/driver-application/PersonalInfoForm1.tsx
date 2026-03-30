@@ -6,7 +6,7 @@ import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
 import SaveProgressButton from './SaveProgressButton'
 import { PhoneInput, SSNInput, ZipCodeInput } from '@/components/ui/MaskedInputs'
 import { StateSelect } from '@/components/ui/StateSelect'
-import AskAvaButton from '@/components/ui/AskAvaButton'
+import AskStormiButton from '@/components/ui/AskStormiButton'
 
 // Motor carrier (employing carrier) is not collected here — it is injected by the
 // specific employer when a driver's application is linked to their company.
@@ -643,8 +643,8 @@ export default function PersonalInfoForm1({
 
   const renderApplicantInformation = () => (
     <div className='space-y-8'>
-      <AskAvaButton
-        label='Ask AvA about this section'
+      <AskStormiButton
+        label='Ask Stormi about this section'
         className='justify-end'
         onClick={() =>
           requestHelp({

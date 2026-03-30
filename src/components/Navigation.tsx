@@ -9,7 +9,7 @@ import {
   navHairlineTopClass,
   navControlButtonClass,
   navTextLinkClass,
-  navAvAButtonClass,
+  navStormiButtonClass,
   navHubGradientRingClass,
   navHubInnerButtonClass,
   navRowDividerClass,
@@ -144,7 +144,7 @@ export default function Navigation({
                 </h1>
               </div>
 
-              {/* Right side — Desktop: Messages, Notifications, AvA | Mobile: Hamburger only */}
+              {/* Right side — Desktop: Messages, Notifications, Stormi | Mobile: Hamburger only */}
               <div className='flex-shrink-0 flex items-center gap-2'>
                 {/* Desktop-only controls */}
                 {isAuthenticated && (
@@ -187,12 +187,12 @@ export default function Navigation({
                     }}
                     className={cn(
                       'hidden md:flex relative group items-center justify-center cursor-pointer',
-                      navAvAButtonClass(isDark),
+                      navStormiButtonClass(isDark),
                       tHasUnread && 'animate-pulse',
                     )}
-                    aria-label='Open AvA Assistant'
+                    aria-label='Open Stormi assistant'
                   >
-                    <span className='text-sm font-bold tracking-wide'>AvA</span>
+                    <span className='text-sm font-bold tracking-wide'>Stormi</span>
                     {tHasUnread && (
                       <span
                         className={cn(
@@ -337,7 +337,7 @@ export default function Navigation({
                 </div>
               )}
 
-              {/* Mobile-only AvA Assistant access */}
+              {/* Mobile-only Stormi assistant access */}
               {isAuthenticated && onTClick && (
                 <button
                   type='button'
@@ -347,11 +347,11 @@ export default function Navigation({
                   }}
                   className={cn(
                     'sm:hidden w-full px-4 py-2.5 text-sm font-medium flex items-center justify-center gap-2 cursor-pointer',
-                    navAvAButtonClass(isDark),
+                    navStormiButtonClass(isDark),
                   )}
                 >
                   <Sparkles className='w-4 h-4' />
-                  <span>{tHasUnread ? 'AvA has updates' : 'Chat with AvA'}</span>
+                  <span>{tHasUnread ? 'Stormi has updates' : 'Chat with Stormi'}</span>
                   {tHasUnread && (
                     <span className='w-2 h-2 rounded-full bg-red-500 animate-pulse' />
                   )}
@@ -440,7 +440,7 @@ export default function Navigation({
                           {showJourneyModals ? 'On' : 'Off'}
                         </span>
                       </button>
-                      {/* AvA Help Button */}
+                      {/* Stormi journey help */}
                       <button
                         type='button'
                         onClick={() => {
@@ -455,7 +455,7 @@ export default function Navigation({
                         )}
                       >
                         <HelpCircle className='w-4 h-4' />
-                        <span>AvA Journey Guide</span>
+                        <span>Stormi Journey Guide</span>
                         <span className='ml-auto text-xs opacity-60'>?</span>
                       </button>
                     </div>

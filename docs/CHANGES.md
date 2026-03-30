@@ -4,6 +4,23 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **AI assistant renamed AvA → Stormi** (March 2026)
+
+- **Product / UI:** All user-facing copy, nav (`Stormi`, `navStormiButtonClass`), homepage, job listings, apply modal, hub onboarding, journey drawer (`StormiJourneyGuide`), context modal (`StormiContextModal`), DOT **Ask Stormi** buttons (`AskStormiButton`), admin access-request labels, and system prompts (`buildStormiSystemPrompt` / `buildEmployerStormiSystemPrompt` in [`ava-context.ts`](src/lib/ava-context.ts)) now use **Stormi**.
+- **Components:** [`StormiChatPanel`](src/components/stormi/StormiChatPanel.tsx) (was `AvaChatPanel`), [`StormiCreditModal`](src/components/StormiCreditModal.tsx), shared glow class **`.stormi-glow-border`** (`.ava-glow-border` kept as CSS alias).
+- **Code symbols:** e.g. `sendToStormi`, `StormiUsageInfo`, `STORMI_*` usage constants in [`ava-usage.ts`](src/lib/ava-usage.ts), `openStormiContextModal` / `isStormiContextModalOpen` in [`hub-blocks-store.ts`](src/stores/hub-blocks-store.ts).
+- **Unchanged (on purpose):** Env **`AVA_BRAIN`**, DB tables/columns (`ava_chat_usage`, `users.ava_auto_welcome_*`), API JSON keys like `avaAutoWelcomeCandidateDone`, `ChatMessage.role: 'ava'`, localStorage key segment `ava-chat`, payment row type **`AVA_CREDITS`**.
+
+---
+
+## **Alchemy / Account Kit sign-in — contrast + teal theme** (March 2026)
+
+- **Cause:** `withAccountKitUi` in [`tailwind.config.ts`](tailwind.config.ts) used deprecated sage/mint/cream tokens (`fg-primary` cream on white cards, `fg-invert` sage on mint buttons) → illegible **Sign In** / **Continue with Email** / footer.
+- **Fix:** Account Kit color override → **teal-600 / teal-400** primary actions, **slate** text and surfaces, white **Google** row; full surface + state keys aligned with Account Kit defaults.
+- **Safety net:** [`globals.css`](src/app/globals.css) sets matching `--akui-*` on **`[data-theme='light'|'dark']`** so modals track **`ThemeContext`** even if Tailwind variant order differs; header/footer overrides use those variables.
+
+---
+
 ## **Brand — St[O]rm / Chain logo lockup + favicon** (March 2026)
 
 - [`StormOLogoMark.tsx`](src/components/ui/StormOLogoMark.tsx): **Static** “O” — **teal upper semicircle**, **violet lower semicircle**, **CloudLightning** centered (**no** `StormTokenMark` spin). Sized in **`em`** to sit in the word Storm.

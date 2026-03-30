@@ -1,6 +1,7 @@
 /**
- * Persist AvA hub thread in localStorage so refresh does not wipe the conversation.
+ * Persist Stormi hub thread in localStorage so refresh does not wipe the conversation.
  * Scoped per wallet + candidate/employer. Job suggestion payloads are included.
+ * Storage key still uses `ava-chat` segment for backward compatibility with existing threads.
  */
 
 import type { ChatMessage } from '@/lib/ava-chat'
@@ -8,9 +9,9 @@ import type { ChatMessage } from '@/lib/ava-chat'
 const STORAGE_VERSION = 1
 const MAX_MESSAGES = 120
 
-export type AvaChatPersistenceMode = 'candidate' | 'employer'
+export type StormiChatPersistenceMode = 'candidate' | 'employer'
 
-export function avaChatStorageKey(mode: AvaChatPersistenceMode, walletAddress: string): string {
+export function stormiChatStorageKey(mode: StormiChatPersistenceMode, walletAddress: string): string {
   const w = walletAddress.trim().toLowerCase()
   return `stormchain.ava-chat.v${STORAGE_VERSION}.${mode}.${w}`
 }
@@ -24,10 +25,10 @@ function isChatMessage(x: unknown): x is ChatMessage {
   return true
 }
 
-export function loadAvaChatMessages(mode: AvaChatPersistenceMode, walletAddress: string): ChatMessage[] {
+export function loadStormiChatMessages(mode: StormiChatPersistenceMode, walletAddress: string): ChatMessage[] {
   if (typeof window === 'undefined') return []
   try {
-    const raw = localStorage.getItem(avaChatStorageKey(mode, walletAddress))
+    const raw = localStorage.getItem(stormiChatStorageKey(mode, walletAddress))
     if (!raw) return []
     const parsed = JSON.parse(raw) as { messages?: unknown }
     const arr = parsed?.messages
@@ -42,14 +43,14 @@ export function loadAvaChatMessages(mode: AvaChatPersistenceMode, walletAddress:
   }
 }
 
-export function saveAvaChatMessages(
-  mode: AvaChatPersistenceMode,
+export function saveStormiChatMessages(
+  mode: StormiChatPersistenceMode,
   walletAddress: string,
   messages: ChatMessage[],
 ): void {
   if (typeof window === 'undefined') return
   try {
-    const key = avaChatStorageKey(mode, walletAddress)
+    const key = stormiChatStorageKey(mode, walletAddress)
     if (messages.length === 0) {
       localStorage.removeItem(key)
       return
@@ -57,6 +58,6 @@ export function saveAvaChatMessages(
     const payload = { v: STORAGE_VERSION, messages: messages.slice(-MAX_MESSAGES) }
     localStorage.setItem(key, JSON.stringify(payload))
   } catch (e) {
-    console.warn('[AvA persist] save failed:', e)
+    console.warn('[Stormi persist] save failed:', e)
   }
 }

@@ -6,15 +6,15 @@ import {
   checkUsage,
   addCredits,
   getCoverLetterDailyRemaining,
-  AVA_CREDIT_PACKS,
-  AVA_JOB_MATCH_FREE_DAILY,
-  type AvaCreditPackId,
+  STORMI_CREDIT_PACKS,
+  STORMI_JOB_MATCH_FREE_DAILY,
+  type StormiCreditPackId,
 } from '@/lib/ava-usage'
 
 /**
  * GET /api/ai/credits
  *
- * Returns the caller's AvA usage: daily free remaining, purchased credits, total messages.
+ * Returns the caller's Stormi usage: daily free remaining, purchased credits, total messages.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       supabase = await getAdminSupabaseClient()
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
-      console.error('[AvA Credits] GET Supabase init failed:', msg)
+      console.error('[Stormi Credits] GET Supabase init failed:', msg)
       return NextResponse.json({ error: 'Service temporarily unavailable.' }, { status: 503 })
     }
     const user = await getUserByWallet(supabase, walletAddress)
@@ -44,14 +44,14 @@ export async function GET(request: NextRequest) {
       credits: usageCheck.credits,
       totalMessages: usageCheck.totalMessages,
       coverLettersDailyRemaining: getCoverLetterDailyRemaining(usage),
-      jobMatchFreeRemainingToday: Math.max(0, AVA_JOB_MATCH_FREE_DAILY - usage.jobMatchAiDailyUsed),
-      packs: AVA_CREDIT_PACKS,
+      jobMatchFreeRemainingToday: Math.max(0, STORMI_JOB_MATCH_FREE_DAILY - usage.jobMatchAiDailyUsed),
+      packs: STORMI_CREDIT_PACKS,
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    console.error('[AvA Credits] GET error:', message)
+    console.error('[Stormi Credits] GET error:', message)
     if (error instanceof Error && error.stack) {
-      console.error('[AvA Credits] GET stack:', error.stack)
+      console.error('[Stormi Credits] GET stack:', error.stack)
     }
     return NextResponse.json({ error: 'Failed to fetch usage' }, { status: 500 })
   }
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/ai/credits
  *
- * Purchase AvA chat credits.
+ * Purchase Stormi chat credits.
  * Body: { pack: 'starter' | 'standard' | 'pro', txHash: string }
  *
  * The txHash is the on-chain USDC transfer tx. In production you'd verify
@@ -81,19 +81,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing pack or txHash' }, { status: 400 })
     }
 
-    if (!(pack in AVA_CREDIT_PACKS)) {
+    if (!(pack in STORMI_CREDIT_PACKS)) {
       return NextResponse.json({ error: `Invalid pack: ${pack}` }, { status: 400 })
     }
 
-    const packId = pack as AvaCreditPackId
-    const packInfo = AVA_CREDIT_PACKS[packId]
+    const packId = pack as StormiCreditPackId
+    const packInfo = STORMI_CREDIT_PACKS[packId]
 
     let supabase
     try {
       supabase = await getAdminSupabaseClient()
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
-      console.error('[AvA Credits] POST Supabase init failed:', msg)
+      console.error('[Stormi Credits] POST Supabase init failed:', msg)
       return NextResponse.json({ error: 'Service temporarily unavailable.' }, { status: 503 })
     }
     const user = await getUserByWallet(supabase, walletAddress)
@@ -126,9 +126,9 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    console.error('[AvA Credits] POST error:', message)
+    console.error('[Stormi Credits] POST error:', message)
     if (error instanceof Error && error.stack) {
-      console.error('[AvA Credits] POST stack:', error.stack)
+      console.error('[Stormi Credits] POST stack:', error.stack)
     }
     return NextResponse.json({ error: 'Failed to purchase credits' }, { status: 500 })
   }

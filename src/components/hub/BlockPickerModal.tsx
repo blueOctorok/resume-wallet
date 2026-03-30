@@ -18,7 +18,7 @@ import BlockPickerCategory from './BlockPickerCategory'
  * BlockPickerModal — the catalog where candidates browse and add blocks.
  *
  * Opens when `isPickerOpen` is true in the hub-blocks-store.
- * Categories render as accordions. Suggested categories (from AvA's
+ * Categories render as accordions. Suggested categories (from Stormi's
  * onboarding analysis) start expanded so users see relevant blocks first.
  */
 export default function BlockPickerModal() {

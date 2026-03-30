@@ -11,7 +11,7 @@ import MiniCareerCard from './MiniCareerCard'
 
 export interface HubSidebarProps {
   variant: 'sticky' | 'drawer'
-  /** lg+ sidebar: used with scrollIntoView from AvA “Open Journey” */
+  /** lg+ sidebar: used with scrollIntoView from Stormi “Open Journey” */
   id?: string
   onCloseDrawer?: () => void
   className?: string

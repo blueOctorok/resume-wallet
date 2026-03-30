@@ -32,7 +32,7 @@ import DeveloperShell from '@/components/app/DeveloperShell'
 import CandidateShell from '@/components/app/CandidateShell'
 import ErrorBoundary from '@/components/app/ErrorBoundary'
 import { JourneyModal } from '@/components/ui'
-import AvaJourneyGuide from '@/components/AvaJourneyGuide'
+import StormiJourneyGuide from '@/components/StormiJourneyGuide'
 
 const RoleSelectionModal = dynamic(
   () => import('@/components/RoleSelectionModal').then((mod) => mod.default),
@@ -395,8 +395,8 @@ const HomeContent = () => {
           />
         )}
 
-        {/* AvA Journey Guide — open from hub / nav; no floating launcher (keeps canvas clear) */}
-        {user && <AvaJourneyGuide />}
+        {/* Stormi Journey Guide — open from hub / nav; no floating launcher (keeps canvas clear) */}
+        {user && <StormiJourneyGuide />}
 
         {/* Journey Modal — guided "what's next" prompts after key actions */}
         <JourneyModal />

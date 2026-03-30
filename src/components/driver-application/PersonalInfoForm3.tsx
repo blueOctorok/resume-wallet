@@ -7,7 +7,7 @@ import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
 import SaveProgressButton from './SaveProgressButton'
 import { PhoneInput } from '@/components/ui/MaskedInputs'
 import { Briefcase, Clock, GraduationCap, Truck, Shield, X } from 'lucide-react'
-import AskAvaButton from '@/components/ui/AskAvaButton'
+import AskStormiButton from '@/components/ui/AskStormiButton'
 import { MonthYearPicker, parseDateToNumber } from '@/components/ui/MonthYearPicker'
 
 // History entry types
@@ -873,8 +873,8 @@ export default function PersonalInfoForm3({
         >
           EMPLOYMENT HISTORY
         </h2>
-        <AskAvaButton
-          label='Ask AvA about 10-year history'
+        <AskStormiButton
+          label='Ask Stormi about 10-year history'
           className='justify-end mb-4'
           onClick={() =>
             requestHelp({

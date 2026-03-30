@@ -1,21 +1,22 @@
 /**
- * AvA Chat + Job AI usage (daily free chat, credits, cover letters, job match cache).
+ * Stormi chat + Job AI usage (daily free chat, credits, cover letters, job match cache).
  * Daily counters self-reset on first request of each new UTC day.
+ * DB table remains `ava_chat_usage` (historical name).
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-export const AVA_DAILY_FREE = 10
+export const STORMI_DAILY_FREE = 10
 /** Free AI cover letters per UTC day before credits (same credit pool as chat). */
-export const AVA_COVER_LETTER_DAILY_FREE = 3
+export const STORMI_COVER_LETTER_DAILY_FREE = 3
 /** Free personalized job-list AI run per UTC day (cache reused until next day). */
-export const AVA_JOB_MATCH_FREE_DAILY = 1
+export const STORMI_JOB_MATCH_FREE_DAILY = 1
 
-export const AVA_UNLIMITED_WALLETS = new Set([
+export const STORMI_UNLIMITED_WALLETS = new Set([
   '0x9d17cf2ac64ea97be08e3319fe17d94bd1a0660a',
 ])
 
-export interface AvaUsage {
+export interface StormiUsage {
   dailyUsed: number
   credits: number
   totalMessages: number
@@ -25,7 +26,7 @@ export interface AvaUsage {
   jobMatchCacheAt: string | null
 }
 
-export interface AvaUsageCheck {
+export interface StormiUsageCheck {
   allowed: boolean
   model: 'sonnet' | 'haiku'
   usingCredits: boolean
@@ -34,7 +35,7 @@ export interface AvaUsageCheck {
   totalMessages: number
 }
 
-export interface AvaCoverLetterCheck {
+export interface StormiCoverLetterCheck {
   allowed: boolean
   model: 'sonnet' | 'haiku'
   usingCredits: boolean
@@ -42,19 +43,19 @@ export interface AvaCoverLetterCheck {
   credits: number
 }
 
-export const AVA_CREDIT_PACKS = {
+export const STORMI_CREDIT_PACKS = {
   starter: { messages: 50, priceUsdc: '1.00' },
   standard: { messages: 200, priceUsdc: '3.00' },
   pro: { messages: 500, priceUsdc: '5.00' },
 } as const
 
-export type AvaCreditPackId = keyof typeof AVA_CREDIT_PACKS
+export type StormiCreditPackId = keyof typeof STORMI_CREDIT_PACKS
 
 function todayUTC(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-function rowToUsage(data: Record<string, unknown>): AvaUsage {
+function rowToUsage(data: Record<string, unknown>): StormiUsage {
   return {
     dailyUsed: (data.daily_used as number) ?? 0,
     credits: (data.credits as number) ?? 0,
@@ -69,7 +70,7 @@ function rowToUsage(data: Record<string, unknown>): AvaUsage {
 /**
  * Get or create the usage row. Resets all daily counters (+ clears job match cache) on new UTC day.
  */
-export async function getOrCreateUsage(supabase: SupabaseClient, userId: string): Promise<AvaUsage> {
+export async function getOrCreateUsage(supabase: SupabaseClient, userId: string): Promise<StormiUsage> {
   const { data, error } = await supabase
     .from('ava_chat_usage')
     .select(
@@ -135,8 +136,8 @@ export async function getOrCreateUsage(supabase: SupabaseClient, userId: string)
   return rowToUsage(data as Record<string, unknown>)
 }
 
-export function checkUsage(usage: AvaUsage): AvaUsageCheck {
-  const dailyRemaining = Math.max(0, AVA_DAILY_FREE - usage.dailyUsed)
+export function checkUsage(usage: StormiUsage): StormiUsageCheck {
+  const dailyRemaining = Math.max(0, STORMI_DAILY_FREE - usage.dailyUsed)
 
   if (dailyRemaining > 0) {
     return {
@@ -171,7 +172,7 @@ export function checkUsage(usage: AvaUsage): AvaUsageCheck {
 }
 
 /** Cover letter: 3× Sonnet/day, then 1 credit → Haiku (same as post-quota chat). */
-export function checkCoverLetterUsage(usage: AvaUsage, isUnlimited: boolean): AvaCoverLetterCheck {
+export function checkCoverLetterUsage(usage: StormiUsage, isUnlimited: boolean): StormiCoverLetterCheck {
   if (isUnlimited) {
     return {
       allowed: true,
@@ -183,7 +184,7 @@ export function checkCoverLetterUsage(usage: AvaUsage, isUnlimited: boolean): Av
   }
 
   const used = usage.coverLettersDailyUsed
-  const remaining = Math.max(0, AVA_COVER_LETTER_DAILY_FREE - used)
+  const remaining = Math.max(0, STORMI_COVER_LETTER_DAILY_FREE - used)
 
   if (remaining > 0) {
     return {
@@ -306,10 +307,10 @@ export async function addCredits(supabase: SupabaseClient, userId: string, amoun
   if (error) throw new Error(`addCredits failed: ${error.message}`)
 }
 
-export function getDailyRemaining(usage: AvaUsage): number {
-  return Math.max(0, AVA_DAILY_FREE - usage.dailyUsed)
+export function getDailyRemaining(usage: StormiUsage): number {
+  return Math.max(0, STORMI_DAILY_FREE - usage.dailyUsed)
 }
 
-export function getCoverLetterDailyRemaining(usage: AvaUsage): number {
-  return Math.max(0, AVA_COVER_LETTER_DAILY_FREE - usage.coverLettersDailyUsed)
+export function getCoverLetterDailyRemaining(usage: StormiUsage): number {
+  return Math.max(0, STORMI_COVER_LETTER_DAILY_FREE - usage.coverLettersDailyUsed)
 }

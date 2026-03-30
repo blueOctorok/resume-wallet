@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     if (currentCount >= maxAlerts) {
       return NextResponse.json(
         {
-          error: `You can save up to ${maxAlerts} job alert${maxAlerts === 1 ? '' : 's'}. Remove one or add AvA credits for more.`,
+          error: `You can save up to ${maxAlerts} job alert${maxAlerts === 1 ? '' : 's'}. Remove one or add Stormi credits for more.`,
           maxAlerts,
         },
         { status: 403 },

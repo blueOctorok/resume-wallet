@@ -15,7 +15,7 @@ import {
 import { useEmployerHiringPathStore } from '@/stores/employer-journey-snapshot-store'
 
 /**
- * Journey Store - Manages AvA Journey Guide state
+ * Journey Store - Manages Stormi Journey Guide state
  *
  * Responsible for:
  * - Guide visibility (open/closed)
