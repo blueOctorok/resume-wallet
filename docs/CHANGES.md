@@ -4,6 +4,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Homepage — “signal not spam” vs mass auto-apply tools** (March 2026)
+
+- [`HomePage.tsx`](src/components/HomePage.tsx): **“Build the Career Card — the jobs will come”** hero; subtitle **blocks → verification → Stormi — in that order.** Body uses numbered **1 · Blocks / 2 · Verify / 3 · Stormi**; pills **Verify on-chain** before **Stormi helps**; footer strip **1·2·3** order; sidebar **The order that matters**; **`#signal-not-spam`** sequence line; Stormi section **third step, never stuck**; **How it works** → connect & stack blocks → verify on-chain → Stormi + share. Removed unused **`Users`** import.
+
+---
+
 ## **AI assistant renamed AvA → Stormi** (March 2026)
 
 - **Product / UI:** All user-facing copy, nav (`Stormi`, `navStormiButtonClass`), homepage, job listings, apply modal, hub onboarding, journey drawer (`StormiJourneyGuide`), context modal (`StormiContextModal`), DOT **Ask Stormi** buttons (`AskStormiButton`), admin access-request labels, and system prompts (`buildStormiSystemPrompt` / `buildEmployerStormiSystemPrompt` in [`ava-context.ts`](src/lib/ava-context.ts)) now use **Stormi**.
