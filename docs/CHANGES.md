@@ -21,6 +21,13 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **StormChain wordmark — O scale + “chain” de-emphasis** (March 2026)
+
+- [`StormOLogoMark`](src/components/ui/StormOLogoMark.tsx): Default **O** ~**1.08em** (was ~0.92em), slightly larger glyph; **CloudLightning** ~**44%** of ring.
+- [`StormChainWordmark`](src/components/ui/StormChainWordmark.tsx): **STORM** **font-medium**, slightly tighter tracking; **O** **nav** ~1.06em with **`-mx-[0.075em]`**, **hero** ~1.12em with **`-mx-[0.085em]`** so ST+O+RM reads as one word. **chain** smaller (**nav** ~13–17px, **hero** ~22–30px vs STORM), **lowercase**, wider tracking — linker under the hero name.
+
+---
+
 ## **Brand — St[O]rm / Chain logo lockup + favicon** (March 2026)
 
 - [`StormOLogoMark.tsx`](src/components/ui/StormOLogoMark.tsx): **Static** “O” — **teal upper semicircle**, **violet lower semicircle**, **CloudLightning** centered (**no** `StormTokenMark` spin). Sized in **`em`** to sit in the word Storm.

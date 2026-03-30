@@ -12,8 +12,8 @@ interface StormChainWordmarkProps {
 }
 
 /**
- * Logo lockup: **ST** + static **O** (split teal/violet ring + lightning) + **RM**, then **chain** flush underneath (no gap).
- * No rotating rings — only LoadingScreen keeps animated `StormTokenMark`.
+ * Logo lockup: **STORM** as the hero (ST + O-mark + RM), **chain** as a smaller linker underneath.
+ * O-mark is sized near cap-height with tight side margins so it reads as a true **O**, not “ST · icon · RM”.
  */
 export default function StormChainWordmark({
   size = 'nav',
@@ -24,7 +24,7 @@ export default function StormChainWordmark({
   const isHero = size === 'hero'
 
   const stormLine = cn(
-    'inline-flex items-center justify-center font-[family-name:var(--font-storm-wordmark),ui-serif,Georgia,serif] font-normal leading-none tracking-[0.06em] sm:tracking-[0.07em]',
+    'inline-flex items-center justify-center font-[family-name:var(--font-storm-wordmark),ui-serif,Georgia,serif] font-medium leading-none tracking-[0.045em] sm:tracking-[0.055em]',
     isHero
       ? cn(
           'text-[2.25rem] sm:text-[2.75rem] lg:text-[3.25rem]',
@@ -41,19 +41,19 @@ export default function StormChainWordmark({
   )
 
   const chainLine = cn(
-    'font-[family-name:var(--font-storm-wordmark),ui-serif,Georgia,serif] font-normal leading-none',
+    'font-[family-name:var(--font-storm-wordmark),ui-serif,Georgia,serif] font-normal leading-none lowercase',
     isHero
       ? cn(
-          'text-[2.25rem] sm:text-[2.75rem] lg:text-[3.25rem] tracking-[0.06em]',
+          'text-[1.375rem] sm:text-[1.625rem] lg:text-[1.875rem] tracking-[0.14em]',
           isDark
-            ? 'text-teal-400/75 [text-shadow:0_2px_0_rgba(0,0,0,0.4),0_0_20px_rgba(45,212,191,0.15)]'
-            : 'text-teal-700/60 [text-shadow:0_1px_0_rgba(255,255,255,0.8),0_-1px_1px_rgba(15,118,110,0.2)]',
+            ? 'text-teal-400/65 [text-shadow:0_2px_0_rgba(0,0,0,0.4),0_0_20px_rgba(45,212,191,0.12)]'
+            : 'text-teal-700/55 [text-shadow:0_1px_0_rgba(255,255,255,0.8),0_-1px_1px_rgba(15,118,110,0.18)]',
         )
       : cn(
-          'text-[1.375rem] sm:text-[1.625rem] lg:text-[1.875rem] tracking-[0.04em]',
+          'text-[0.8125rem] sm:text-[0.9375rem] lg:text-[1.0625rem] tracking-[0.12em]',
           isDark
-            ? 'text-teal-500/55 [text-shadow:0_1px_0_rgba(255,255,255,0.06),0_-1px_3px_rgba(0,0,0,0.6),0_0.12em_0.35em_rgba(0,0,0,0.32)]'
-            : 'text-teal-700/50 [text-shadow:0_1px_0_rgba(255,255,255,0.8),0_-1px_1px_rgba(15,118,110,0.2),0_0.08em_0.2em_rgba(15,23,42,0.05)]',
+            ? 'text-teal-500/50 [text-shadow:0_1px_0_rgba(255,255,255,0.06),0_-1px_3px_rgba(0,0,0,0.6),0_0.12em_0.35em_rgba(0,0,0,0.32)]'
+            : 'text-teal-700/45 [text-shadow:0_1px_0_rgba(255,255,255,0.8),0_-1px_1px_rgba(15,118,110,0.18),0_0.08em_0.2em_rgba(15,23,42,0.05)]',
         ),
   )
 
@@ -61,16 +61,23 @@ export default function StormChainWordmark({
     <div className={cn('flex flex-col items-center gap-0 leading-none', className)}>
       <div className={cn(stormLine, 'gap-0')}>
         <span className='select-none uppercase'>ST</span>
-        <StormOLogoMark className={isHero ? 'h-[0.9em] w-[0.9em]' : undefined} />
+        <StormOLogoMark
+          className={cn(
+            /* Negative horizontal margin: closes optical gap so O sits like a real letter */
+            isHero
+              ? 'h-[1.12em] w-[1.12em] -mx-[0.085em]'
+              : 'h-[1.06em] w-[1.06em] -mx-[0.075em]',
+          )}
+        />
         <span className='select-none uppercase'>RM</span>
       </div>
-      {/* Strong negative margin: line boxes leave a gap under caps — pull chain up until it visually meets STORM */}
+      {/* Pull linker up; amount scales with smaller “chain” type */}
       <div
         className={cn(
           chainLine,
           isHero
-            ? '-mt-[0.38em] sm:-mt-[0.36em] lg:-mt-[0.34em]'
-            : '-mt-[0.32em] sm:-mt-[0.30em] lg:-mt-[0.28em]',
+            ? '-mt-[0.30em] sm:-mt-[0.28em] lg:-mt-[0.26em]'
+            : '-mt-[0.22em] sm:-mt-[0.20em] lg:-mt-[0.18em]',
         )}
       >
         chain

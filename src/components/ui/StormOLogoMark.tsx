@@ -11,13 +11,14 @@ interface StormOLogoMarkProps {
 /**
  * Static logo “O” for **St[O]rm** — no animation.
  * Ring split **teal top / violet bottom**; **cloud + lightning** centered inside.
+ * Sized ~cap-height so it reads as the letter **O**, not a tiny icon between ST and RM.
  */
 export default function StormOLogoMark({ className }: StormOLogoMarkProps) {
   return (
     <span
       className={cn(
         'relative inline-grid shrink-0 place-items-center align-middle',
-        'h-[0.92em] w-[0.92em] min-h-[0.85rem] min-w-[0.85rem]',
+        'h-[1.08em] w-[1.08em] min-h-[0.9rem] min-w-[0.9rem]',
         className,
       )}
       aria-hidden
@@ -44,7 +45,7 @@ export default function StormOLogoMark({ className }: StormOLogoMarkProps) {
         />
       </svg>
       <CloudLightning
-        className='relative z-[1] h-[38%] w-[38%] text-teal-600 dark:text-teal-300'
+        className='relative z-[1] h-[44%] w-[44%] text-teal-600 dark:text-teal-300'
         strokeWidth={2.1}
         aria-hidden
       />
