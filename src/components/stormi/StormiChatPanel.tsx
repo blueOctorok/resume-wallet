@@ -8,7 +8,18 @@
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Bot, Coins, ExternalLink, Loader2, Maximize2, Minimize2, Send, Sparkles } from 'lucide-react'
+import {
+  Bot,
+  CheckCircle2,
+  Coins,
+  ExternalLink,
+  ListChecks,
+  Loader2,
+  Maximize2,
+  Minimize2,
+  Send,
+  Sparkles,
+} from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { cn } from '@/lib/utils'
@@ -20,11 +31,13 @@ import {
   type StormiUsageInfo,
   type EmployerHubContext,
 } from '@/lib/ava-chat'
+import type { StormiInterviewPrepPayload } from '@/lib/stormi-interactive-types'
 import { loadStormiChatMessages, saveStormiChatMessages } from '@/lib/ava-chat-persistence'
 import type { StormiJobSuggestion } from '@/lib/ava-job-suggestions'
 import StormiCreditModal from '@/components/StormiCreditModal'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
+import Modal, { ModalHeader } from '@/components/ui/Modal'
 
 const ApplyWithStormChainModal = dynamic(() => import('@/components/ApplyWithStormChainModal'), {
   ssr: false,
@@ -160,6 +173,75 @@ function StormiJobSuggestionCards(props: {
   )
 }
 
+/** Interactive interview prep — tap MCQ option to reveal coaching (practice only, not live cheating). */
+function StormiInterviewPrepBlock(props: {
+  prep: StormiInterviewPrepPayload
+  selectedId: string | undefined
+  isDark: boolean
+  onSelect: (choiceId: string) => void
+}) {
+  const { prep, selectedId, isDark, onSelect } = props
+  const selectedChoice = selectedId ? prep.choices.find((c) => c.id === selectedId) : undefined
+
+  return (
+    <Card
+      variant='elevated'
+      className={cn(
+        'p-3 border text-left',
+        isDark ? 'border-violet-500/30 bg-gray-900/60' : 'border-violet-200 bg-violet-50/40',
+      )}
+    >
+      <p className={cn('text-[10px] font-bold uppercase tracking-wider mb-1', isDark ? 'text-violet-300' : 'text-violet-800')}>
+        Practice question
+      </p>
+      <p className={cn('text-sm font-semibold mb-3', isDark ? 'text-white' : 'text-slate-900')}>{prep.question}</p>
+      <div className='flex flex-col gap-2'>
+        {prep.choices.map((c) => {
+          const isChosen = selectedId === c.id
+          const showStar = isChosen && c.id === prep.recommendedChoiceId
+          return (
+            <Button
+              key={c.id}
+              type='button'
+              variant={isChosen ? 'primary' : 'secondary'}
+              size='sm'
+              disabled={selectedId != null}
+              className='text-xs justify-start text-left h-auto py-2 min-h-0 whitespace-normal'
+              onClick={() => onSelect(c.id)}
+            >
+              <span className='font-mono text-[10px] opacity-70 mr-2'>{c.id.toUpperCase()}</span>
+              {c.text}
+              {showStar ? (
+                <CheckCircle2 className='w-3.5 h-3.5 ml-auto shrink-0 text-white dark:text-gray-900' />
+              ) : null}
+            </Button>
+          )
+        })}
+      </div>
+      {selectedChoice && (
+        <div
+          className={cn(
+            'mt-3 rounded-xl px-3 py-2.5 text-xs leading-relaxed border',
+            isDark ? 'bg-gray-800/80 border-gray-600 text-gray-300' : 'bg-white border-slate-200 text-slate-700',
+          )}
+        >
+          <p className='font-semibold mb-1'>Coaching</p>
+          <p>{selectedChoice.feedback}</p>
+          {selectedId === prep.recommendedChoiceId ? (
+            <p className={cn('mt-2 font-medium', isDark ? 'text-teal-300' : 'text-teal-700')}>
+              Strongest answer for most interviews — adapt with your real stories.
+            </p>
+          ) : (
+            <p className={cn('mt-2', isDark ? 'text-gray-500' : 'text-slate-500')}>
+              Review the other options above, or ask for another practice question in the chat.
+            </p>
+          )}
+        </div>
+      )}
+    </Card>
+  )
+}
+
 export type StormiChatPanelProps =
   | {
       mode: 'candidate'
@@ -202,6 +284,13 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
   const [dismissedJobKeys, setDismissedJobKeys] = useState<Record<string, true>>({})
   /** Larger thread + wider bubbles + 2-col job cards (candidate) */
   const [chatExpanded, setChatExpanded] = useState(false)
+
+  const [talkingPointsModalOpen, setTalkingPointsModalOpen] = useState(false)
+  const [tpJobTitle, setTpJobTitle] = useState('')
+  const [tpCompany, setTpCompany] = useState('')
+  const [tpDescription, setTpDescription] = useState('')
+  const [tpLoading, setTpLoading] = useState(false)
+  const [tpError, setTpError] = useState<string | null>(null)
 
   const dismissJobSuggestion = useCallback((messageIndex: number, jobId: string) => {
     const k = `${messageIndex}-${jobId}`
@@ -305,17 +394,150 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
     }
   }, [input, isLoading, outOfCredits, messages, props, walletAddress])
 
+  const selectInterviewPrepChoice = useCallback((messageIndex: number, choiceId: string) => {
+    setMessages((prev) =>
+      prev.map((m, idx) => (idx === messageIndex ? { ...m, interviewPrepSelectedId: choiceId } : m)),
+    )
+  }, [])
+
+  const runInterviewPrepQuiz = useCallback(async () => {
+    if (!walletAddress || isLoading || outOfCredits) return
+    setIsLoading(true)
+    setChatError(null)
+    setOutOfCredits(false)
+    try {
+      const res = await fetch('/api/ai/interview-prep-quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        body: JSON.stringify({}),
+      })
+      const data = (await res.json()) as {
+        error?: string
+        message?: string
+        interviewPrep?: StormiInterviewPrepPayload
+        usage?: { dailyRemaining: number; credits: number }
+      }
+      if (res.status === 402) {
+        setOutOfCredits(true)
+        setUsage((u) =>
+          data.usage
+            ? {
+                dailyRemaining: data.usage.dailyRemaining,
+                credits: data.usage.credits,
+                totalMessages: u?.totalMessages ?? 0,
+                model: null,
+              }
+            : u,
+        )
+        return
+      }
+      if (!res.ok || !data.interviewPrep) {
+        throw new Error(data.message || data.error || 'Could not generate practice question')
+      }
+      const topic = data.interviewPrep.topic ? ` (${data.interviewPrep.topic})` : ''
+      setMessages((prev) => [
+        ...prev,
+        { role: 'user', text: 'Interview practice question' },
+        {
+          role: 'ava',
+          text: `Here is a multiple-choice practice question${topic}. Tap an answer for coaching — for preparation only, not during a live interview.`,
+          interviewPrep: data.interviewPrep,
+        },
+      ])
+      if (data.usage) {
+        setUsage((u) => ({
+          dailyRemaining: data.usage!.dailyRemaining,
+          credits: data.usage!.credits,
+          totalMessages: u?.totalMessages ?? 0,
+          model: null,
+        }))
+      }
+    } catch (err) {
+      setChatError(err instanceof Error ? err.message : 'Interview prep failed')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [walletAddress, isLoading, outOfCredits])
+
+  const submitTalkingPoints = useCallback(async () => {
+    const title = tpJobTitle.trim()
+    const company = tpCompany.trim()
+    if (!walletAddress || !title || !company || tpLoading) return
+    setTpLoading(true)
+    setTpError(null)
+    try {
+      const res = await fetch('/api/ai/job-talking-points', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
+        body: JSON.stringify({
+          jobTitle: title,
+          company,
+          description: tpDescription.trim() || undefined,
+        }),
+      })
+      const data = (await res.json()) as {
+        error?: string
+        message?: string
+        talkingPoints?: string
+        usage?: { coverLettersDailyRemaining: number; credits: number }
+      }
+      if (res.status === 402) {
+        setTpError(data.message || data.error || 'Credits required')
+        return
+      }
+      if (!res.ok || !data.talkingPoints) {
+        throw new Error(data.error || 'Could not generate talking points')
+      }
+      setTalkingPointsModalOpen(false)
+      setTpJobTitle('')
+      setTpCompany('')
+      setTpDescription('')
+      setMessages((prev) => [
+        ...prev,
+        { role: 'user', text: `Talking points for ${title} at ${company}` },
+        {
+          role: 'ava',
+          text: `Honest talking points tied to your Career Card (not invented credentials):\n\n${data.talkingPoints}`,
+        },
+      ])
+      if (data.usage) {
+        setUsage((u) => ({
+          dailyRemaining: u?.dailyRemaining ?? 0,
+          credits: data.usage!.credits,
+          totalMessages: u?.totalMessages ?? 0,
+          model: null,
+        }))
+      }
+    } catch (e) {
+      setTpError(e instanceof Error ? e.message : 'Request failed')
+    } finally {
+      setTpLoading(false)
+    }
+  }, [walletAddress, tpJobTitle, tpCompany, tpDescription, tpLoading])
+
   const hasMessages = messages.length > 0 || isLoading
 
-  const suggestedPrompts =
+  type CandidateQuickAction =
+    | { type: 'chat'; label: string }
+    | { type: 'interview' }
+    | { type: 'talking' }
+
+  const candidateQuickActions: CandidateQuickAction[] =
     props.mode === 'candidate'
       ? [
-          'Find jobs that fit my profile',
-          'What blocks should I add?',
-          'What is my Career Card?',
-          'What should I do next?',
+          { type: 'chat', label: 'Find jobs that fit my profile' },
+          { type: 'interview' },
+          { type: 'talking' },
+          { type: 'chat', label: 'What blocks should I add?' },
+          { type: 'chat', label: 'What is my Career Card?' },
+          { type: 'chat', label: 'What should I do next?' },
         ]
-      : ['How does the hiring pipeline work?', 'How should I use Find Talent?', 'What should I do next?']
+      : []
+
+  const suggestedPromptsEmployer =
+    props.mode === 'employer'
+      ? ['How does the hiring pipeline work?', 'How should I use Find Talent?', 'What should I do next?']
+      : []
 
   const usageBadge = usage
     ? usage.dailyRemaining > 0
@@ -422,6 +644,14 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
                           expandedLayout={chatExpanded}
                         />
                       )}
+                    {msg.role === 'ava' && msg.interviewPrep && props.mode === 'candidate' && (
+                      <StormiInterviewPrepBlock
+                        prep={msg.interviewPrep}
+                        selectedId={msg.interviewPrepSelectedId}
+                        isDark={isDark}
+                        onSelect={(choiceId) => selectInterviewPrepChoice(i, choiceId)}
+                      />
+                    )}
                   </div>
                 </div>
               ))}
@@ -533,27 +763,87 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
                     )}
                   >
                     {props.mode === 'candidate'
-                      ? 'She knows your hub — find ranked jobs in chat, open listings in a new tab, apply with your Career Card here. After you start, use the corner expand icon for a taller thread and side-by-side job cards.'
+                      ? 'Build your card and prep here anytime; we emphasize hire tools — ranked jobs, tap-to-answer interview practice, talking points from your real Career Card. You choose every apply; nothing auto-fires.'
                       : 'She knows your company and pipeline — type or tap a suggestion. After you start, use the corner icon to expand the thread.'}
                   </p>
                 </div>
               </div>
               <div className='flex flex-wrap gap-2'>
-                {suggestedPrompts.map((label) => (
-                  <button
-                    key={label}
-                    type='button'
-                    onClick={() => handleSend(label)}
-                    className={cn(
-                      'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-                      isDark
-                        ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
-                        : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200',
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
+                {props.mode === 'candidate' &&
+                  candidateQuickActions.map((action, idx) => {
+                    if (action.type === 'chat') {
+                      return (
+                        <button
+                          key={`chat-${action.label}`}
+                          type='button'
+                          onClick={() => handleSend(action.label)}
+                          className={cn(
+                            'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                            isDark
+                              ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
+                              : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200',
+                          )}
+                        >
+                          {action.label}
+                        </button>
+                      )
+                    }
+                    if (action.type === 'interview') {
+                      return (
+                        <button
+                          key='interview-prep'
+                          type='button'
+                          onClick={() => void runInterviewPrepQuiz()}
+                          disabled={!walletAddress || isLoading || outOfCredits}
+                          className={cn(
+                            'rounded-full px-3 py-1.5 text-xs font-medium transition-colors inline-flex items-center gap-1.5',
+                            isDark
+                              ? 'bg-violet-500/20 text-violet-200 hover:bg-violet-500/30 border border-violet-500/40'
+                              : 'bg-violet-50 text-violet-900 hover:bg-violet-100 border border-violet-200',
+                          )}
+                        >
+                          <ListChecks className='w-3.5 h-3.5 shrink-0' />
+                          Interview practice (MCQ)
+                        </button>
+                      )
+                    }
+                    return (
+                      <button
+                        key='talking-points'
+                        type='button'
+                        onClick={() => {
+                          setTpError(null)
+                          setTalkingPointsModalOpen(true)
+                        }}
+                        disabled={!walletAddress || outOfCredits}
+                        className={cn(
+                          'rounded-full px-3 py-1.5 text-xs font-medium transition-colors inline-flex items-center gap-1.5',
+                          isDark
+                            ? 'bg-teal-500/15 text-teal-200 hover:bg-teal-500/25 border border-teal-500/35'
+                            : 'bg-teal-50 text-teal-900 hover:bg-teal-100 border border-teal-200',
+                        )}
+                      >
+                        <Sparkles className='w-3.5 h-3.5 shrink-0' />
+                        Job talking points
+                      </button>
+                    )
+                  })}
+                {props.mode === 'employer' &&
+                  suggestedPromptsEmployer.map((label) => (
+                    <button
+                      key={label}
+                      type='button'
+                      onClick={() => handleSend(label)}
+                      className={cn(
+                        'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                        isDark
+                          ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
+                          : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200',
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
               </div>
             </div>
           )}
@@ -642,6 +932,98 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
           </div>
         </div>
       </div>
+
+      {props.mode === 'candidate' && talkingPointsModalOpen && (
+        <Modal onClose={() => setTalkingPointsModalOpen(false)} maxWidth='max-w-md' zIndex={1100}>
+          <ModalHeader
+            title='Job talking points'
+            subtitle='Honest bullets from your Career Card for this role — edit before you send anything to an employer.'
+            onClose={() => setTalkingPointsModalOpen(false)}
+          />
+          <div className='p-4 sm:p-5 space-y-3'>
+            <div>
+              <label
+                className={cn('block text-xs font-semibold mb-1', isDark ? 'text-gray-400' : 'text-slate-600')}
+                htmlFor='tp-title'
+              >
+                Job title
+              </label>
+              <input
+                id='tp-title'
+                value={tpJobTitle}
+                onChange={(e) => setTpJobTitle(e.target.value)}
+                placeholder='e.g. CDL-A OTR Driver'
+                className={cn(
+                  'w-full px-3 py-2 rounded-lg border text-sm',
+                  isDark
+                    ? 'bg-gray-800 border-gray-600 text-white placeholder:text-gray-500'
+                    : 'bg-white border-slate-200 text-slate-900',
+                )}
+              />
+            </div>
+            <div>
+              <label
+                className={cn('block text-xs font-semibold mb-1', isDark ? 'text-gray-400' : 'text-slate-600')}
+                htmlFor='tp-co'
+              >
+                Company
+              </label>
+              <input
+                id='tp-co'
+                value={tpCompany}
+                onChange={(e) => setTpCompany(e.target.value)}
+                placeholder='Employer name'
+                className={cn(
+                  'w-full px-3 py-2 rounded-lg border text-sm',
+                  isDark
+                    ? 'bg-gray-800 border-gray-600 text-white placeholder:text-gray-500'
+                    : 'bg-white border-slate-200 text-slate-900',
+                )}
+              />
+            </div>
+            <div>
+              <label
+                className={cn('block text-xs font-semibold mb-1', isDark ? 'text-gray-400' : 'text-slate-600')}
+                htmlFor='tp-desc'
+              >
+                Job description (optional)
+              </label>
+              <textarea
+                id='tp-desc'
+                value={tpDescription}
+                onChange={(e) => setTpDescription(e.target.value)}
+                rows={3}
+                placeholder='Paste an excerpt for tighter points'
+                className={cn(
+                  'w-full px-3 py-2 rounded-lg border text-sm resize-y min-h-[72px]',
+                  isDark
+                    ? 'bg-gray-800 border-gray-600 text-white placeholder:text-gray-500'
+                    : 'bg-white border-slate-200 text-slate-900',
+                )}
+              />
+            </div>
+            {tpError && <p className='text-xs text-red-500'>{tpError}</p>}
+            <div className='flex flex-wrap gap-2 justify-end pt-1'>
+              <Button type='button' variant='secondary' size='sm' onClick={() => setTalkingPointsModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type='button'
+                variant='primary'
+                size='sm'
+                isLoading={tpLoading}
+                disabled={!tpJobTitle.trim() || !tpCompany.trim()}
+                onClick={() => void submitTalkingPoints()}
+              >
+                Generate in chat
+              </Button>
+            </div>
+            <p className={cn('text-[10px]', isDark ? 'text-gray-500' : 'text-slate-500')}>
+              Uses the same daily pool as cover-letter assists (then credits). You review every word.
+            </p>
+          </div>
+        </Modal>
+      )}
 
       {showCreditModal && (
         <StormiCreditModal

@@ -8,6 +8,7 @@ import type { PageType } from '@/stores/types'
 import PathGuidance from './PathGuidance'
 import CareerPathSteps from './CareerPathSteps'
 import MiniCareerCard from './MiniCareerCard'
+import HubExploreLinks from './HubExploreLinks'
 
 export interface HubSidebarProps {
   variant: 'sticky' | 'drawer'
@@ -45,6 +46,8 @@ export default function HubSidebar({ variant, id, onCloseDrawer, className }: Hu
       />
       <hr className='border-gray-200 dark:border-gray-700' />
       <CareerPathSteps onNavigate={handleNavigate} />
+      <hr className='border-gray-200 dark:border-gray-700' />
+      <HubExploreLinks onCloseDrawer={onCloseDrawer} />
       <hr className='border-gray-200 dark:border-gray-700' />
       <MiniCareerCard />
     </div>

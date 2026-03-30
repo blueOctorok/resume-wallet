@@ -5,16 +5,23 @@ import type { HubContext, EmployerHubContext, BlockContext } from '@/lib/ava-con
 import type { StormiJobSuggestion } from '@/lib/ava-job-suggestions'
 import type { StormiAutoWelcomeMode } from '@/lib/ava-auto-welcome'
 import type { StormiConversationTurn } from '@/lib/ava-conversation'
+import type { StormiInterviewPrepPayload } from '@/lib/stormi-interactive-types'
 
 export type { StormiConversationTurn } from '@/lib/ava-conversation'
 
 export type { EmployerHubContext } from '@/lib/ava-context'
+
+export type { StormiInterviewPrepPayload } from '@/lib/stormi-interactive-types'
 
 export interface ChatMessage {
   role: 'user' | 'ava'
   text: string
   /** External jobs Stormi surfaced this turn (View listing + Apply with Career Card). */
   jobSuggestions?: StormiJobSuggestion[]
+  /** Interactive practice (e.g. interview MCQ) — rendered as clickable UI in the thread. */
+  interviewPrep?: StormiInterviewPrepPayload
+  /** User picked this choice id for `interviewPrep` (shows feedback; optional follow-up line). */
+  interviewPrepSelectedId?: string
 }
 
 export interface StormiUsageInfo {

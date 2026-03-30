@@ -69,6 +69,9 @@ export {
   type EmployerHiringPathPayload,
 } from './employer-journey-snapshot-store'
 
+// Saved jobs shortlist (client persist — no auto-apply)
+export { useSavedJobsStore, type SavedJobEntry, type ShortlistLane } from './saved-jobs-store'
+
 // Hub Blocks Store (composable hub)
 export {
   useHubBlocksStore,

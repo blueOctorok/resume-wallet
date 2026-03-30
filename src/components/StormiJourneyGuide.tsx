@@ -101,10 +101,10 @@ export default function StormiJourneyGuide() {
               </div>
               <div>
                 <h2 className='text-lg font-bold text-gray-900 dark:text-white'>
-                  {userRole === 'employer' ? 'Your job path' : 'Your career path'}
+                  {userRole === 'employer' ? 'Your job path' : 'Your apply-ready path'}
                 </h2>
                 <p className='text-sm text-gray-500 dark:text-gray-400'>
-                  {userRole === 'employer' ? 'Simple steps to hire' : 'Simple steps to stand out'}
+                  {userRole === 'employer' ? 'Simple steps to hire' : 'Blocks employers actually see'}
                 </p>
               </div>
             </div>

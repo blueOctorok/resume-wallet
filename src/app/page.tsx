@@ -221,7 +221,7 @@ const HomeContent = () => {
 
     // onboard param is the block's `pageRoute` from the registry (e.g. 'dotapp', 'resume', 'mvr').
     // Cast directly — these already match PageType values in CandidateShell.
-    const validOnboardPages: PageType[] = ['dotapp', 'resume', 'general-resume', 'developer-resume', 'mvr', 'portfolio', 'github', 'jobs', 'applications', 'employment-verification']
+    const validOnboardPages: PageType[] = ['dotapp', 'resume', 'general-resume', 'developer-resume', 'mvr', 'portfolio', 'github', 'jobs', 'hunt-desk', 'applications', 'employment-verification']
     const target = onboardAction as PageType
     if (validOnboardPages.includes(target)) {
       setCurrentPage(target)

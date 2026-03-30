@@ -17,6 +17,21 @@
 | **Dark UI = LoadingScreen DNA** | ✅ Done | **`--storm-*` CSS vars**, body blooms, **`.storm-glass-panel`**, nav/scroll/cards/`StormBackground`/`StormTokenMark`/hive hex aligned to loader aesthetic |
 | **Brand lockup + favicon** | ✅ Done | **`StormChainWordmark`** in **nav + whitepaper**; **`favicon.svg`** (rings + lightning) |
 
+## 💼 **Stormi hiring tools + saved jobs** (March 2026)
+
+**Product principle:** **Anyone** can build a Career Card and use prep — no gate. **Focus** (features, copy, Stormi’s default guidance) stays on **hiring + early-career / new-role signal** (verified card, search, apply, prep). We do **not** position as a “grow in your current job” platform or full-life career OS — narrow emphasis, not exclusion of builders who are not searching yet.
+
+| Item | Status | Notes |
+|------|--------|-------|
+| In-chat **interview prep** (MCQ + feedback) | ✅ Done | For **new-role** interviews; ethical practice only; `/api/ai/interview-prep-quiz`; `interviewPrep` on `ChatMessage` |
+| **JD talking points** modal | ✅ Done | Application / new-role framing; `/api/ai/job-talking-points`; cover-letter usage pool |
+| **Saved jobs** tab + star (list + reco) | ✅ Done | `useSavedJobsStore` persist; `JobListings` Saved tab; hub links to jobs + Stormi panel |
+| **Hunt Desk** (shortlist mini-app) | ✅ Done | `hunt-desk` page: 3-lane drag staging + links; same store as stars; premium Stormi row TBD |
+| **Applications hub** first-class | 🔲 Next | Polish `MyApplications` + shell story (APIs exist) |
+| Follow-up draft assist | 🔲 Future | User-edited drafts only |
+| Match “why” everywhere | 🔲 Partial | Reco already has `matchReason`; extend if score shown elsewhere |
+| General “current job” coaching | ⛔ Not planned | Keeps brand sharp vs hiring competitors |
+
 ## 🏢 **Employer Side Simplification** (March 2026 — Phase 1 Done)
 
 | Feature | Status | Description |

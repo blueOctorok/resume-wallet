@@ -376,15 +376,15 @@ export function calculateBlockJourney(
   if (!data.isWalletConnected) {
     greeting = "Welcome to StormChain! Let's get you started."
   } else if (installedBlockTypes.length === 0) {
-    greeting = "Add blocks to your hub to build your professional profile."
+    greeting = 'Add blocks to your hub — each one is proof employers see on your Career Card.'
   } else if (overallProgress < 30) {
-    greeting = "Great start! Let's keep building your profile."
+    greeting = 'Great start — keep going so your card is credible when you apply.'
   } else if (overallProgress < 60) {
     greeting = "You're making solid progress!"
   } else if (overallProgress < 90) {
-    greeting = "Almost there — just a few more steps."
+    greeting = 'Almost there — a few more steps and you are apply-ready.'
   } else {
-    greeting = "Looking great! Your profile is ready to impress."
+    greeting = 'Looking great — your Career Card is in strong shape for applications.'
   }
 
   return {

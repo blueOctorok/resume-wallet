@@ -1656,14 +1656,16 @@ export default function CandidateHub() {
               </div>
             )}
 
-            <StormiChatPanel
-              mode='candidate'
-              walletAddress={walletAddress}
-              hubContext={hubContext}
-              candidateEmptyHub={installedBlocks.length === 0}
-              stormiAutoWelcomeCandidateDone={stormiAutoWelcomeCandidateDone}
-              onStormiAutoWelcomeSynced={undefined}
-            />
+            <div id='stormi-hub-panel' className='scroll-mt-24'>
+              <StormiChatPanel
+                mode='candidate'
+                walletAddress={walletAddress}
+                hubContext={hubContext}
+                candidateEmptyHub={installedBlocks.length === 0}
+                stormiAutoWelcomeCandidateDone={stormiAutoWelcomeCandidateDone}
+                onStormiAutoWelcomeSynced={undefined}
+              />
+            </div>
 
             {/* ── Block Hive + Block Files (unified) ── */}
             <div>

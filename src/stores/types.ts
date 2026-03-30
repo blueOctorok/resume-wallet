@@ -15,6 +15,7 @@ export type PageType =
   | 'developer-resume'
   | 'dotapp'
   | 'jobs'
+  | 'hunt-desk'
   | 'applications'
   | 'mvr'
   | 'hub'

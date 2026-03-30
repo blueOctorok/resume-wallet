@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Bell, Pencil, Trash2, Loader2, Search } from 'lucide-react'
+import { Bell, LayoutGrid, Pencil, Trash2, Loader2, Search } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore } from '@/stores'
 import { cn } from '@/lib/utils'
@@ -222,8 +222,10 @@ export default function JobAlertsHubSection() {
               </h3>
               <p className={cn('text-xs mt-1 max-w-xl', isDark ? 'text-gray-400' : 'text-slate-600')}>
                 Use <span className='font-medium text-slate-700 dark:text-gray-300'>Browse jobs</span> for
-                StormChain + external listings and recommendations. Save alerts here — we scan daily, score
-                new matches with Stormi, and notify in-app. Same job is never pinged twice.
+                StormChain + external listings and recommendations. Star roles to stage them on{' '}
+                <span className='font-medium text-slate-700 dark:text-gray-300'>Hunt Desk</span>. Save alerts
+                here — we scan daily, score new matches with Stormi, and notify in-app. Same job is never pinged
+                twice.
               </p>
               <p className={cn('text-xs mt-2', isDark ? 'text-gray-500' : 'text-slate-500')}>
                 {activeCount} active · {preferences.length}/{maxAlerts} saved
@@ -245,6 +247,15 @@ export default function JobAlertsHubSection() {
             >
               <Search className='w-3.5 h-3.5 shrink-0' />
               Browse jobs
+            </Button>
+            <Button
+              variant='secondary'
+              size='sm'
+              className='flex-1 sm:flex-initial min-w-0'
+              onClick={() => setCurrentPage('hunt-desk')}
+            >
+              <LayoutGrid className='w-3.5 h-3.5 shrink-0' />
+              Hunt Desk
             </Button>
             <Button
               variant='primary'

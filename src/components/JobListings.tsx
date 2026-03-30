@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Search,
   MapPin,
@@ -14,12 +14,15 @@ import {
   Building2,
   Loader2,
   Sparkles,
+  Star,
 } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import BackToHubButton from './ui/BackToHubButton'
 import Button from '@/components/ui/Button'
 import dynamic from 'next/dynamic'
 import type { StormiUsageInfo } from '@/lib/ava-chat'
+import { useSavedJobsStore, type SavedJobEntry } from '@/stores/saved-jobs-store'
+import { cn } from '@/lib/utils'
 
 const ApplyWithStormChainModal = dynamic(() => import('./ApplyWithStormChainModal'), {
   ssr: false,
@@ -51,7 +54,28 @@ interface JobListing {
   matchReason?: string
 }
 
-type TabId = 'stormchain' | 'external'
+type TabId = 'stormchain' | 'external' | 'saved'
+
+function savedEntryToListing(e: SavedJobEntry): JobListing {
+  return {
+    id: e.id,
+    title: e.title,
+    company: e.company,
+    location: e.location,
+    description: e.description,
+    salary: e.salary,
+    salaryMin: null,
+    salaryMax: null,
+    created: e.savedAt,
+    redirectUrl: e.redirectUrl,
+    category: null,
+    contractType: null,
+    isStormChain: e.isStormChain,
+    jobType: null,
+    targetRole: null,
+    remoteAllowed: null,
+  }
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -106,6 +130,10 @@ export default function JobListings({
 }: JobListingsProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
+
+  const savedJobs = useSavedJobsStore((s) => s.jobs)
+  const toggleSavedJob = useSavedJobsStore((s) => s.toggleSaved)
+  const jobIsSaved = useSavedJobsStore((s) => s.isSaved)
 
   const [activeTab, setActiveTab] = useState<TabId>(() =>
     publicBrowseMode ? 'external' : 'stormchain',
@@ -226,10 +254,31 @@ export default function JobListings({
     }
   }, [keywords, location, sortBy])
 
-  const fetchJobs = useCallback((page = 1) => {
-    if (activeTab === 'stormchain') return fetchStormChainJobs(page)
-    return fetchExternalJobs(page)
-  }, [activeTab, fetchStormChainJobs, fetchExternalJobs])
+  const fetchJobs = useCallback(
+    (page = 1) => {
+      if (activeTab === 'saved') return
+      if (activeTab === 'stormchain') return fetchStormChainJobs(page)
+      return fetchExternalJobs(page)
+    },
+    [activeTab, fetchStormChainJobs, fetchExternalJobs],
+  )
+
+  const savedListings = useMemo(() => savedJobs.map(savedEntryToListing), [savedJobs])
+  const displayJobs = activeTab === 'saved' ? savedListings : jobs
+  const listLoading = activeTab === 'saved' ? false : isLoading
+
+  const jobToSavedPayload = useCallback((job: JobListing): Omit<SavedJobEntry, 'savedAt'> => {
+    return {
+      id: job.id,
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      description: job.description,
+      salary: job.salary,
+      redirectUrl: job.redirectUrl,
+      isStormChain: job.isStormChain,
+    }
+  }, [])
 
   const fetchRecommended = useCallback(
     async (force: boolean) => {
@@ -286,8 +335,9 @@ export default function JobListings({
     [userAddress, activeTab, location],
   )
 
-  // Fetch on mount and when tab changes
+  // Fetch on mount and when tab changes (saved = local shortlist only)
   useEffect(() => {
+    if (activeTab === 'saved') return
     fetchJobs(1)
   }, [activeTab]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -300,6 +350,12 @@ export default function JobListings({
       setRecoError(null)
     }
   }, [activeTab, userAddress, fetchRecommended])
+
+  useEffect(() => {
+    if (!userAddress && activeTab === 'saved') {
+      setActiveTab('stormchain')
+    }
+  }, [userAddress, activeTab])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -321,41 +377,66 @@ export default function JobListings({
 
   const promptConnect = Boolean(publicBrowseMode && !userAddress && onSignIn)
 
-  // Guests: external first (most listings) + clearer labels. Logged-in: StormChain first (product default).
-  const TABS: { id: TabId; label: string; hint: string; icon: React.ReactNode; description: string }[] =
-    publicBrowseMode
-      ? [
-          {
-            id: 'external',
-            label: 'External job boards',
-            hint: 'Indeed-style aggregate — usually the most results',
-            icon: <Globe className='w-5 h-5 shrink-0' />,
-            description: 'Listings aggregated from major job boards. Search and open listings without an account.',
-          },
-          {
-            id: 'stormchain',
-            label: 'StormChain employers',
-            hint: 'Roles posted directly on StormChain',
-            icon: <Zap className='w-5 h-5 shrink-0' />,
-            description: 'Jobs from employers posting on StormChain — the list grows as companies join.',
-          },
-        ]
-      : [
-          {
-            id: 'stormchain',
-            label: 'StormChain',
-            hint: 'Employers on our network',
-            icon: <Zap className='w-5 h-5 shrink-0' />,
-            description: 'Jobs from verified employers on StormChain',
-          },
-          {
-            id: 'external',
-            label: 'External boards',
-            hint: 'Aggregated listings',
-            icon: <Globe className='w-5 h-5 shrink-0' />,
-            description: 'Aggregated listings from job boards',
-          },
-        ]
+  // Guests: external first. Logged-in: StormChain + external + optional Saved shortlist (no auto-apply).
+  const TABS = useMemo((): {
+    id: TabId
+    label: string
+    hint: string
+    icon: React.ReactNode
+    description: string
+  }[] => {
+    if (publicBrowseMode) {
+      return [
+        {
+          id: 'external',
+          label: 'External job boards',
+          hint: 'Indeed-style aggregate — usually the most results',
+          icon: <Globe className='w-5 h-5 shrink-0' />,
+          description: 'Listings aggregated from major job boards. Search and open listings without an account.',
+        },
+        {
+          id: 'stormchain',
+          label: 'StormChain employers',
+          hint: 'Roles posted directly on StormChain',
+          icon: <Zap className='w-5 h-5 shrink-0' />,
+          description: 'Jobs from employers posting on StormChain — the list grows as companies join.',
+        },
+      ]
+    }
+    const base: {
+      id: TabId
+      label: string
+      hint: string
+      icon: React.ReactNode
+      description: string
+    }[] = [
+      {
+        id: 'stormchain',
+        label: 'StormChain',
+        hint: 'Employers on our network',
+        icon: <Zap className='w-5 h-5 shrink-0' />,
+        description: 'Jobs from verified employers on StormChain',
+      },
+      {
+        id: 'external',
+        label: 'External boards',
+        hint: 'Aggregated listings',
+        icon: <Globe className='w-5 h-5 shrink-0' />,
+        description: 'Aggregated listings from job boards',
+      },
+    ]
+    if (userAddress) {
+      base.push({
+        id: 'saved',
+        label: 'Saved',
+        hint: 'Your shortlist — no auto-apply',
+        icon: <Star className='w-5 h-5 shrink-0' />,
+        description:
+          'Roles you starred from StormChain or external search. Revisit when your Career Card is ready — we never apply for you.',
+      })
+    }
+    return base
+  }, [publicBrowseMode, userAddress])
 
   return (
     <div className='w-full p-4 sm:p-6 lg:p-8'>
@@ -371,9 +452,11 @@ export default function JobListings({
               ? totalCount > 0
                 ? `${totalCount.toLocaleString()} listings — connect your wallet to apply with your career card & Stormi`
                 : 'Search StormChain and external boards. No account needed to look — wallet required to apply.'
-              : totalCount > 0
-                ? `${totalCount.toLocaleString()} jobs found`
-                : 'Search for your next opportunity'}
+              : activeTab === 'saved'
+                ? `${savedJobs.length} saved role${savedJobs.length === 1 ? '' : 's'} — stored on this device; star listings from StormChain or External tabs`
+                : totalCount > 0
+                  ? `${totalCount.toLocaleString()} jobs found`
+                  : 'Search for your next opportunity'}
           </p>
         </div>
 
@@ -525,6 +608,28 @@ export default function JobListings({
                         </span>
                       )}
                       <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>External</span>
+                      {userAddress && (
+                        <button
+                          type='button'
+                          aria-label={jobIsSaved(job.id) ? 'Remove from saved' : 'Save job to shortlist'}
+                          aria-pressed={jobIsSaved(job.id)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleSavedJob(jobToSavedPayload(job))
+                          }}
+                          className={cn(
+                            'ml-auto p-1 rounded-lg transition-colors',
+                            isDark ? 'hover:bg-gray-700/80 text-gray-400' : 'hover:bg-gray-100 text-gray-500',
+                          )}
+                        >
+                          <Star
+                            className={cn(
+                              'w-4 h-4',
+                              jobIsSaved(job.id) && 'fill-amber-400 text-amber-400',
+                            )}
+                          />
+                        </button>
+                      )}
                     </div>
                     <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{job.title}</h3>
                     <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -579,7 +684,8 @@ export default function JobListings({
           </div>
         )}
 
-        {/* Search Form */}
+        {/* Search Form — hidden on Saved tab */}
+        {activeTab !== 'saved' && (
         <form onSubmit={handleSearch} className='mb-6'>
           <div className={`rounded-2xl p-6 ${cardClass}`}>
             <div className='flex flex-col md:flex-row gap-3 mb-3'>
@@ -656,6 +762,18 @@ export default function JobListings({
             )}
           </div>
         </form>
+        )}
+
+        {activeTab === 'saved' && userAddress && (
+          <p
+            className={`text-sm mb-6 rounded-xl px-4 py-3 border ${
+              isDark ? 'bg-gray-800/50 border-gray-600 text-gray-300' : 'bg-amber-50/80 border-amber-200 text-amber-950'
+            }`}
+          >
+            <span className='font-semibold'>Shortlist only.</span> Saving does not notify employers or submit applications
+            — same high-signal rules as the rest of StormChain.
+          </p>
+        )}
 
         {/* Error */}
         {error && (
@@ -665,20 +783,20 @@ export default function JobListings({
         )}
 
         {/* Loading */}
-        {isLoading && (
+        {listLoading && (
           <div className='flex items-center justify-center py-16'>
             <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
           </div>
         )}
 
         {/* Job Cards */}
-        {!isLoading && jobs.length > 0 && (
+        {!listLoading && displayJobs.length > 0 && (
           <div className='space-y-4'>
-            {jobs.map((job) => (
+            {displayJobs.map((job) => (
               <div key={job.id} className={`rounded-2xl p-6 transition-all hover:shadow-lg ${cardClass}`}>
                 <div className='flex flex-col md:flex-row md:items-start md:justify-between gap-4'>
                   <div className='flex-1 min-w-0'>
-                    <div className='flex items-center gap-2 mb-1'>
+                    <div className='flex flex-wrap items-center gap-2 mb-1'>
                       {job.isStormChain && (
                         <span className='inline-flex items-center gap-1 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-teal-500/15 text-teal-500'>
                           <Zap className='w-3 h-3' /> StormChain
@@ -688,6 +806,28 @@ export default function JobListings({
                         <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${isDark ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-100 text-blue-700'}`}>
                           Remote OK
                         </span>
+                      )}
+                      {userAddress && (
+                        <button
+                          type='button'
+                          aria-label={jobIsSaved(job.id) ? 'Remove from saved' : 'Save job to shortlist'}
+                          aria-pressed={jobIsSaved(job.id)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleSavedJob(jobToSavedPayload(job))
+                          }}
+                          className={cn(
+                            'ml-auto p-1.5 rounded-lg transition-colors',
+                            isDark ? 'hover:bg-gray-700/80 text-gray-400' : 'hover:bg-gray-100 text-gray-500',
+                          )}
+                        >
+                          <Star
+                            className={cn(
+                              'w-5 h-5',
+                              jobIsSaved(job.id) && 'fill-amber-400 text-amber-400',
+                            )}
+                          />
+                        </button>
                       )}
                     </div>
 
@@ -789,22 +929,28 @@ export default function JobListings({
         )}
 
         {/* Empty */}
-        {!isLoading && jobs.length === 0 && !error && (
+        {!listLoading && displayJobs.length === 0 && !error && (
           <div className='text-center py-16'>
             <Briefcase className={`w-14 h-14 mx-auto mb-4 ${isDark ? 'text-gray-600' : 'text-gray-300'}`} />
             <h3 className={`text-lg font-semibold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              {activeTab === 'stormchain' ? 'No StormChain jobs yet' : 'No jobs found'}
+              {activeTab === 'saved'
+                ? 'No saved jobs yet'
+                : activeTab === 'stormchain'
+                  ? 'No StormChain jobs yet'
+                  : 'No jobs found'}
             </h3>
             <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              {activeTab === 'stormchain'
-                ? 'Employers are getting set up — check External listings or come back soon.'
-                : 'Try adjusting your search criteria'}
+              {activeTab === 'saved'
+                ? 'Open StormChain or External tabs and tap the star on roles you want to revisit.'
+                : activeTab === 'stormchain'
+                  ? 'Employers are getting set up — check External listings or come back soon.'
+                  : 'Try adjusting your search criteria'}
             </p>
           </div>
         )}
 
         {/* Pagination */}
-        {!isLoading && jobs.length > 0 && (
+        {!listLoading && displayJobs.length > 0 && activeTab !== 'saved' && (
           <div className='mt-8 flex justify-center gap-2'>
             <button
               onClick={() => fetchJobs(currentPage - 1)}

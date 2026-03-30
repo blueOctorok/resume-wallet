@@ -16,12 +16,29 @@ export function stormiChatStorageKey(mode: StormiChatPersistenceMode, walletAddr
   return `stormchain.ava-chat.v${STORAGE_VERSION}.${mode}.${w}`
 }
 
+function isInterviewPrepPayload(x: unknown): boolean {
+  if (!x || typeof x !== 'object') return false
+  const o = x as Record<string, unknown>
+  if (o.kind !== 'interview_prep_mcq') return false
+  if (typeof o.question !== 'string') return false
+  if (!Array.isArray(o.choices) || o.choices.length !== 4) return false
+  for (const c of o.choices) {
+    if (!c || typeof c !== 'object') return false
+    const ch = c as Record<string, unknown>
+    if (typeof ch.id !== 'string' || typeof ch.text !== 'string' || typeof ch.feedback !== 'string') return false
+  }
+  if (typeof o.recommendedChoiceId !== 'string') return false
+  return true
+}
+
 function isChatMessage(x: unknown): x is ChatMessage {
   if (!x || typeof x !== 'object') return false
   const o = x as Record<string, unknown>
   if (o.role !== 'user' && o.role !== 'ava') return false
   if (typeof o.text !== 'string') return false
   if (o.jobSuggestions !== undefined && !Array.isArray(o.jobSuggestions)) return false
+  if (o.interviewPrep !== undefined && !isInterviewPrepPayload(o.interviewPrep)) return false
+  if (o.interviewPrepSelectedId !== undefined && typeof o.interviewPrepSelectedId !== 'string') return false
   return true
 }
 

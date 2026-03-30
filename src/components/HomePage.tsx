@@ -37,6 +37,7 @@ import {
   UserCheck,
   MousePointerClick,
   Handshake,
+  UserPlus,
 } from 'lucide-react'
 import { getBlockColor } from '@/lib/block-registry'
 import { flatTopHexHeight } from '@/lib/hex-hive-geometry'
@@ -324,6 +325,15 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
     window.scrollTo({ top: 0 })
   }
 
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id)
+    if (!el) return
+    const reduce =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+  }
+
   if (showWhitepaper) {
     return <StormChainView onBack={closeWhitepaper} backLabel='Back to Home' />
   }
@@ -388,9 +398,70 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
       <div ref={revealRef} className='relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-hidden'>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          SECTION 1 — Hero
+          GATEWAY — two audiences (candidates vs employers)
           ═══════════════════════════════════════════════════════════════════════ */}
-      <section className='relative isolate pt-10 sm:pt-16 pb-12 sm:pb-20 overflow-x-hidden overflow-y-visible'>
+      <section
+        id='home-gateway'
+        className='relative isolate pt-10 sm:pt-14 pb-10 sm:pb-12 text-center max-w-4xl mx-auto scroll-mt-24'
+      >
+        <p
+          className={`flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm sm:text-base font-medium mb-4 ${
+            isDark ? 'text-gray-300' : 'text-gray-700'
+          }`}
+        >
+          <Handshake
+            className={`w-4 h-4 shrink-0 ${isDark ? 'text-teal-400' : 'text-teal-600'}`}
+            aria-hidden
+          />
+          <span>
+            Candidates and employers both belong on StormChain — same network, different jobs to be done.
+          </span>
+        </p>
+        <h1
+          className={`text-3xl sm:text-4xl md:text-5xl font-bold mb-3 leading-tight tracking-tight ${
+            isDark ? 'text-white' : 'text-gray-900'
+          }`}
+        >
+          Verified Career Cards for talent.
+          <br />
+          <span className={isDark ? 'text-gray-300' : 'text-gray-700'}>Hiring tools teams keep coming back to.</span>
+        </h1>
+        <p className={`text-base sm:text-lg mb-8 max-w-2xl mx-auto leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          We skipped the &ldquo;AI apply to 500 jobs&rdquo; bucket on purpose: high-signal cards for candidates, and
+          repeatable employer workflows — search, requests, compliance orders, pipeline — that are worth paying for every
+          hire cycle.
+        </p>
+        <div className='flex flex-col sm:flex-row flex-wrap gap-3 justify-center items-stretch sm:items-center'>
+          <Button
+            variant='primary'
+            size='lg'
+            type='button'
+            onClick={() => scrollToSection('for-candidates')}
+            className='text-base px-8 py-4 h-auto rounded-xl'
+          >
+            I&apos;m looking for my next role
+            <ArrowRight className='w-5 h-5' />
+          </Button>
+          <Button
+            variant='secondary'
+            size='lg'
+            type='button'
+            onClick={() => scrollToSection('for-employers')}
+            className='text-base px-8 py-4 h-auto rounded-xl border-2'
+          >
+            <Building2 className='w-5 h-5' />
+            I&apos;m hiring
+          </Button>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          SECTION 1 — Candidates: Hero + Career Card story
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <section
+        id='for-candidates'
+        className='relative isolate scroll-mt-24 pt-4 sm:pt-6 pb-12 sm:pb-20 overflow-x-hidden overflow-y-visible border-t border-gray-200 dark:border-gray-700'
+      >
         {/*
           Large blurred blooms + radial mask so color never ends in a sharp rectangle
           against StormBackground — avoids the obvious “overlay box” edge.
@@ -409,6 +480,13 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
         </div>
 
         <div className='text-center relative'>
+          <p
+            className={`text-xs sm:text-sm font-bold uppercase tracking-widest mb-6 ${
+              isDark ? 'text-teal-400' : 'text-teal-700'
+            }`}
+          >
+            For candidates
+          </p>
           <div className='mb-5 flex flex-wrap justify-center gap-2'>
             <span
               className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider border ${
@@ -452,21 +530,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
             </span>
           </div>
 
-          <p
-            className={`flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm sm:text-base font-medium mb-5 max-w-xl sm:max-w-2xl mx-auto px-2 ${
-              isDark ? 'text-gray-300' : 'text-gray-700'
-            }`}
-          >
-            <Handshake
-              className={`w-4 h-4 shrink-0 ${isDark ? 'text-teal-400' : 'text-teal-600'}`}
-              aria-hidden
-            />
-            <span>
-              Candidates and employers are both first-class here — we don&apos;t pick a side.
-            </span>
-          </p>
-
-          <h1
+          <h2
             className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 leading-[1.08] tracking-tight max-w-5xl mx-auto ${
               isDark ? 'text-white' : 'text-gray-900'
             }`}
@@ -482,7 +546,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
             >
               Career-specific blocks, then permanent verification, then AI so you&apos;re never stuck — in that order.
             </span>
-          </h1>
+          </h2>
 
           <p
             className={`text-base sm:text-lg md:text-xl mb-4 max-w-3xl mx-auto leading-relaxed ${
@@ -536,12 +600,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
               href='#composable-blocks'
               onClick={(e) => {
                 e.preventDefault()
-                const el = document.getElementById('composable-blocks')
-                if (!el) return
-                const reduce =
-                  typeof window !== 'undefined' &&
-                  window.matchMedia('(prefers-reduced-motion: reduce)').matches
-                el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+                scrollToSection('composable-blocks')
               }}
               className={`inline-flex items-center justify-center px-6 py-3.5 text-sm font-semibold rounded-xl transition-colors ${
                 isDark ? 'text-cyan-400 hover:text-cyan-300' : 'text-cyan-700 hover:text-cyan-800'
@@ -553,12 +612,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
               href='#signal-not-spam'
               onClick={(e) => {
                 e.preventDefault()
-                const el = document.getElementById('signal-not-spam')
-                if (!el) return
-                const reduce =
-                  typeof window !== 'undefined' &&
-                  window.matchMedia('(prefers-reduced-motion: reduce)').matches
-                el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+                scrollToSection('signal-not-spam')
               }}
               className={`inline-flex items-center justify-center px-6 py-3.5 text-sm font-semibold rounded-xl transition-colors ${
                 isDark ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-800'
@@ -570,12 +624,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
               href='#ava-intelligence'
               onClick={(e) => {
                 e.preventDefault()
-                const el = document.getElementById('ava-intelligence')
-                if (!el) return
-                const reduce =
-                  typeof window !== 'undefined' &&
-                  window.matchMedia('(prefers-reduced-motion: reduce)').matches
-                el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+                scrollToSection('ava-intelligence')
               }}
               className={`inline-flex items-center justify-center px-6 py-3.5 text-sm font-semibold rounded-xl transition-colors ${
                 isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-800'
@@ -583,6 +632,15 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
             >
               Meet Stormi ↓
             </a>
+            <button
+              type='button'
+              onClick={() => scrollToSection('for-employers')}
+              className={`inline-flex items-center justify-center px-6 py-3.5 text-sm font-semibold rounded-xl transition-colors ${
+                isDark ? 'text-cyan-400 hover:text-cyan-300' : 'text-cyan-700 hover:text-cyan-800'
+              }`}
+            >
+              For employers ↓
+            </button>
           </div>
         </div>
 
@@ -722,12 +780,14 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
             <span className='bg-gradient-to-r from-violet-400 to-teal-400 bg-clip-text text-transparent'>Stormi</span>
           </h2>
           <p className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Stormi comes <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>after</strong> you&apos;re building
-            with blocks and verification — the third step so you&apos;re <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>never stuck</strong>{' '}
-            on a form, a match, or what to say next. Wired to your hub and live job data; it never replaces your judgment
-            on <em>whether</em> to apply. Output ties to{' '}
-            <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>your real blocks and listings</strong> — useful
-            help, not generic slop. It gets smarter as you add blocks and as we ship more tools.
+            <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>Anyone</strong> can build a Career Card and use prep
+            here — that is the front door. StormChain just{' '}
+            <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>doubles down</strong> on job search, applications,
+            and what employers see, instead of trying to be a full-life career coach. Stormi comes{' '}
+            <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>after</strong> blocks and verification so you&apos;re{' '}
+            <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>never stuck</strong> on a match, a form, or what to
+            say when you apply. It never replaces your call on <em>whether</em> to apply — or <em>when</em> you are ready to
+            search.
           </p>
         </div>
 
@@ -736,7 +796,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
             {
               icon: Radar,
               title: 'Ranked job matches',
-              body: 'Stormi pulls real listings and scores them against your headline, skills, blocks, and goals — so you spend time on fits, not infinite scroll.',
+              body: 'Stormi pulls real listings and scores them against your headline, skills, and blocks — so you spend time on roles worth applying to, not infinite scroll.',
               accent: isDark ? 'from-teal-500/20 to-cyan-500/10' : 'from-teal-100 to-cyan-50',
             },
             {
@@ -754,7 +814,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
             {
               icon: Sparkles,
               title: 'Journey guide',
-              body: 'Stormi knows which blocks you’ve installed and what’s incomplete. It nudges the next best step so your hub doesn’t stall halfway.',
+              body: 'Stormi tracks which blocks employers see and what is still empty — nudges tied to your card, whether you are applying this week or still assembling proof.',
               accent: isDark ? 'from-emerald-500/20 to-teal-500/10' : 'from-emerald-50 to-teal-50',
             },
           ].map((cell) => (
@@ -858,15 +918,16 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
       <section id='composable-blocks' className='py-16 sm:py-24 scroll-mt-24'>
         <div data-reveal className='reveal-item text-center mb-12'>
           <h2 className={`text-3xl sm:text-4xl md:text-5xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Your career, assembled
+            Your hire story, assembled
             <br />
             <span className='bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent'>
               from blocks
             </span>
           </h2>
           <p className={`text-lg sm:text-xl max-w-2xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            Install the blocks your trade actually needs — the long applications and credentials you&apos;d otherwise redo
-            per employer. Each block adds real artifacts to one Career Card you keep.
+            Install the blocks your trade needs for <strong className={isDark ? 'text-gray-300' : 'text-gray-700'}>applications and employers</strong>{' '}
+            — DOT, CDL, portfolio, resume, skills — without refilling the same story for every posting. One verified Career
+            Card you bring to each hire.
           </p>
         </div>
 
@@ -970,28 +1031,78 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          SECTION 5 — For Employers & Companies
+          SECTION — Employers: recurring hiring stack (not an afterthought)
           ═══════════════════════════════════════════════════════════════════════ */}
-      <section className='py-16 sm:py-24'>
-        <div data-reveal className='reveal-item'>
-          <GlassCard isDark={isDark} className='p-8 sm:p-12 max-w-4xl mx-auto'>
-            <div className='text-center'>
-              <Building2 className={`w-10 h-10 mx-auto mb-4 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
-              <h2 className={`text-3xl sm:text-4xl font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                For those who hire
-              </h2>
-              <p className={`text-lg mb-8 max-w-2xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                You&apos;re not an afterthought — candidates and employers share one StormChain. Find verified talent,
-                request credentials, order background checks. The same Career Card candidates build is what you review,
-                so less noise and less guesswork.
-              </p>
+      <section
+        id='for-employers'
+        className='py-16 sm:py-24 scroll-mt-24 border-t-2 border-gray-200 dark:border-gray-600'
+      >
+        <div data-reveal className='reveal-item text-center mb-12 max-w-3xl mx-auto px-1'>
+          <p
+            className={`text-xs sm:text-sm font-bold uppercase tracking-widest mb-3 ${
+              isDark ? 'text-cyan-400' : 'text-cyan-700'
+            }`}
+          >
+            For employers
+          </p>
+          <h2 className={`text-3xl sm:text-4xl md:text-5xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            The other half of StormChain
+          </h2>
+          <p className={`text-lg sm:text-xl ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            Candidates build Career Cards once; you get <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>repeatable</strong>{' '}
+            hiring workflows — talent search, block requests, MVR and compliance orders, applicant pipeline — the kind of
+            work that runs <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>every hire cycle</strong>. That&apos;s
+            why we reject mass AI applications: your inbox isn&apos;t our growth hack; <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>your trust is.</strong>
+          </p>
+        </div>
 
-              {/* Feature pills */}
-              <div className='flex flex-wrap justify-center gap-3 mb-8'>
+        <div className='grid md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-14'>
+          {[
+            {
+              step: '1',
+              title: 'Find & request',
+              desc: 'Search talent, send invites, request the blocks you need — résumé, MVR, DOT, portfolio. Candidates already built the card; you ask for proof.',
+              icon: UserPlus,
+            },
+            {
+              step: '2',
+              title: 'Review verified signal',
+              desc: 'Same block-backed artifacts candidates verified on-chain — not a wall of generic AI cover letters. Less noise before you spend interview time.',
+              icon: FileCheck,
+            },
+            {
+              step: '3',
+              title: 'Compliance & pipeline',
+              desc: 'Order MVR and background checks, move people through stages, repeat next requisition. Tools your team logs back into — not a one-off job post.',
+              icon: Briefcase,
+            },
+          ].map((item, i) => (
+            <div key={item.step} data-reveal className='reveal-item' style={{ transitionDelay: `${i * 100}ms` }}>
+              <GlassCard isDark={isDark} className='p-6 sm:p-8 h-full text-left'>
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center mb-4 text-sm font-bold ${
+                    isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-100 text-cyan-800'
+                  }`}
+                >
+                  {item.step}
+                </div>
+                <item.icon className={`w-7 h-7 mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>{item.title}</h3>
+                <p className={`text-sm leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{item.desc}</p>
+              </GlassCard>
+            </div>
+          ))}
+        </div>
+
+        <div data-reveal className='reveal-item'>
+          <GlassCard isDark={isDark} className='p-8 sm:p-10 max-w-4xl mx-auto'>
+            <div className='text-center'>
+              <div className='flex flex-wrap justify-center gap-3 mb-6'>
                 {[
-                  { icon: FileCheck, text: 'Verified Career Cards' },
-                  { icon: Search,    text: 'MVR & Background Checks' },
-                  { icon: Sparkles,  text: 'Composable for your industry' },
+                  { icon: Search, text: 'Talent search & invites' },
+                  { icon: ClipboardList, text: 'Block & credential requests' },
+                  { icon: Shield, text: 'MVR & background orders' },
+                  { icon: Building2, text: 'Industry-specific blocks' },
                 ].map((pill) => (
                   <div
                     key={pill.text}
@@ -1006,10 +1117,15 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
                   </div>
                 ))}
               </div>
-
-              <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                Large organizations can build company-specific blocks for their workflows.
+              <p className={`text-sm mb-6 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                Large organizations can add company-specific blocks for their own workflows — same composable model as
+                candidates.
               </p>
+              <Button variant='primary' size='lg' onClick={onGetStarted} className='h-auto py-4 px-8 rounded-xl'>
+                <Building2 className='w-5 h-5' />
+                <span>{isAuthenticated ? 'Go to dashboard' : 'Connect wallet'}</span>
+                <ArrowRight className='w-5 h-5' />
+              </Button>
             </div>
           </GlassCard>
         </div>
@@ -1089,12 +1205,14 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
           <h2 className={`text-3xl sm:text-4xl md:text-5xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
             Ready when you are
           </h2>
-          <p className={`text-lg mb-8 max-w-xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            Peek at jobs without an account. Connect a wallet when you&apos;re ready to apply with your career card
-            and Stormi.
+          <p className={`text-lg mb-8 max-w-2xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            <strong className={isDark ? 'text-gray-300' : 'text-gray-700'}>Candidates:</strong> peek at jobs without an
+            account; connect when you&apos;re ready to apply with your Career Card and Stormi.{' '}
+            <strong className={isDark ? 'text-gray-300' : 'text-gray-700'}>Employers:</strong> same login — search,
+            request blocks, and run compliance on the people you actually want to talk to.
           </p>
 
-          <div className='flex flex-col sm:flex-row gap-3 justify-center items-center mb-6'>
+          <div className='flex flex-col sm:flex-row flex-wrap gap-3 justify-center items-center mb-6'>
             <Button
               variant='primary'
               size='lg'
@@ -1110,6 +1228,16 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
                 Browse jobs
               </Button>
             )}
+            <Button
+              variant='secondary'
+              size='lg'
+              type='button'
+              onClick={() => scrollToSection('for-employers')}
+              className='text-lg px-10 py-5 h-auto rounded-xl border-2'
+            >
+              <Building2 className='w-5 h-5' />
+              Employer product
+            </Button>
           </div>
 
           <button

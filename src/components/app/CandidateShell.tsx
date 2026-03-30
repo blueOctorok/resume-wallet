@@ -24,6 +24,7 @@ const CANDIDATE_SHELL_PAGES: readonly PageType[] = [
   'portfolio',
   'github',
   'jobs',
+  'hunt-desk',
   'applications',
   'stormchain',
   'career-card',
@@ -58,6 +59,11 @@ const JobListings = dynamic(
 const MyApplications = dynamic(
   () => import('@/components/MyApplications').then((mod) => mod.default),
   { ssr: false, loading: () => <LoadingScreen message='Loading applications...' fullScreen={false} /> }
+)
+
+const CandidateHuntDesk = dynamic(
+  () => import('@/components/CandidateHuntDesk').then((mod) => mod.default),
+  { ssr: false, loading: () => <LoadingScreen message='Opening Hunt Desk...' fullScreen={false} /> }
 )
 
 const MvrOrderForm = dynamic(
@@ -186,6 +192,14 @@ export default function CandidateShell() {
     return (
       <div className='max-w-7xl mx-auto relative z-0'>
         <JobListings onBack={goBack} userAddress={user?.address ?? null} />
+      </div>
+    )
+  }
+
+  if (currentPage === 'hunt-desk') {
+    return (
+      <div className='relative z-0'>
+        <CandidateHuntDesk onBack={goBack} userAddress={user?.address ?? null} />
       </div>
     )
   }

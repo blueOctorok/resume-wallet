@@ -4,9 +4,34 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Hunt Desk — candidate shortlist workspace** (March 2026)
+
+- [`CandidateHuntDesk.tsx`](src/components/CandidateHuntDesk.tsx): Full-page **mini-app** for starred jobs — three draggable lanes (**On the radar** / **In motion** / **Ready to apply**), glass/gradient header, quick links to job search + applications count, listing + unstar on cards. Native HTML5 DnD (same pattern as employer [`ApplicantKanban`](src/components/employer/ApplicantKanban.tsx)).
+- [`saved-jobs-store.ts`](src/stores/saved-jobs-store.ts): `ShortlistLane`, optional `lane` on `SavedJobEntry`, `moveJobToLane`, new saves default `watching`; legacy rows use `lane ?? 'watching'`.
+- Routing: `PageType` **`hunt-desk`**, [`CandidateShell`](src/components/app/CandidateShell.tsx), [`page.tsx`](src/app/page.tsx) `validOnboardPages`, [`HubExploreLinks`](src/components/hub/HubExploreLinks.tsx) **Hunt Desk** entry.
+- [`JobAlertsHubSection`](src/components/hub/JobAlertsHubSection.tsx): **Hunt Desk** secondary button + copy tying stars / staging to alerts.
+
+---
+
+## **Product focus: hiring + early career (not “current job coach”)** (March 2026)
+
+- **Positioning:** **Anyone** can build a Career Card and use prep; there is no “must be job searching” gate. **Emphasis** remains hire-first — verified card, search, apply, ethical prep — vs full-life career coaching or “current job” specialty. Stormi and marketing **prioritize** the apply path without rushing people who are only assembling proof for now.
+- **Copy / prompts:** [`ava-context.ts`](src/lib/ava-context.ts) — `STORMI_CANDIDATE_PRODUCT_FOCUS` + candidate persona; [`HomePage.tsx`](src/components/HomePage.tsx) gateway CTA, Stormi section, journey + blocks headings; [`StormiChatPanel.tsx`](src/components/stormi/StormiChatPanel.tsx) subtitle; [`HubExploreLinks.tsx`](src/components/hub/HubExploreLinks.tsx); [`interview-prep-ai.ts`](src/lib/interview-prep-ai.ts), [`job-talking-points-ai.ts`](src/lib/job-talking-points-ai.ts) (new-role framing).
+- **Nuance (same theme):** Open door for **anyone** building a card / using prep; **focus** = hire tools and employer-visible proof — clarified in persona, `STORMI_CANDIDATE_PRODUCT_FOCUS`, homepage Stormi blurb, panel subtitle, roadmap.
+
+---
+
+## **Stormi hiring tools + jobs shortlist** (March 2026)
+
+- **Interactive Stormi:** [`StormiChatPanel`](src/components/stormi/StormiChatPanel.tsx) — ethical **interview prep** as in-thread **multiple-choice** blocks (tap answer → feedback); **JD talking points** modal (honest bullets, not a second resume). APIs: [`/api/ai/interview-prep-quiz`](src/app/api/ai/interview-prep-quiz/route.ts) (Stormi daily/credit pool), [`/api/ai/job-talking-points`](src/app/api/ai/job-talking-points/route.ts) (cover-letter-style pool). Types/helpers: [`stormi-interactive-types.ts`](src/lib/stormi-interactive-types.ts), [`interview-prep-ai.ts`](src/lib/interview-prep-ai.ts), [`job-talking-points-ai.ts`](src/lib/job-talking-points-ai.ts). Chat persistence: [`ava-chat.ts`](src/lib/ava-chat.ts), [`ava-chat-persistence.ts`](src/lib/ava-chat-persistence.ts).
+- **Saved jobs (client shortlist):** [`saved-jobs-store.ts`](src/stores/saved-jobs-store.ts) (Zustand `persist`). [`JobListings.tsx`](src/components/JobListings.tsx) — **Saved** tab, star on main + recommended cards, empty state + no pagination on saved tab, reset tab if wallet disconnects; `cn` from [`utils`](src/lib/utils.ts).
+- **Hub:** [`HubExploreLinks`](src/components/hub/HubExploreLinks.tsx), [`HubSidebar`](src/components/hub/HubSidebar.tsx), [`CandidateHub`](src/components/hub/CandidateHub.tsx) — browse jobs, applications, scroll anchor `#stormi-hub-panel`.
+
+---
+
 ## **Homepage — “signal not spam” vs mass auto-apply tools** (March 2026)
 
-- [`HomePage.tsx`](src/components/HomePage.tsx): **“Build the Career Card — the jobs will come”** hero; subtitle **blocks → verification → Stormi — in that order.** Body uses numbered **1 · Blocks / 2 · Verify / 3 · Stormi**; pills **Verify on-chain** before **Stormi helps**; footer strip **1·2·3** order; sidebar **The order that matters**; **`#signal-not-spam`** sequence line; Stormi section **third step, never stuck**; **How it works** → connect & stack blocks → verify on-chain → Stormi + share. Removed unused **`Users`** import.
+- [`HomePage.tsx`](src/components/HomePage.tsx): **`#home-gateway`** at top — dual **Button** paths (**I’m building my career** → **`#for-candidates`**, **I’m hiring** → **`#for-employers`**), shared **h1**, copy on **repeatable employer workflows** vs AI-slop bucket. **`#for-candidates`** — bordered candidate hero (former hero as **h2** + **For candidates** label). **`#for-employers`** — full section: **For employers** label, **three-step** employer flow (find & request / verified signal / compliance & pipeline), feature pills, **Connect wallet** CTA; bottom CTA + **Employer product** button. **`scrollToSection`** helper; candidate jump links use it; **For employers ↓** in candidate link row. **`UserPlus`** import.
 
 ---
 
