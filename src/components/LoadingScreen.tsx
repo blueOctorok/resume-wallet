@@ -79,7 +79,7 @@ export default function LoadingScreen({
               'absolute inset-0',
               isDark
                 ? 'bg-[linear-gradient(165deg,#0f1419_0%,#080c11_45%,#040608_100%)]'
-                : 'bg-[linear-gradient(155deg,#f1f5f9_0%,#e2e8f0_42%,#cbd5e1_100%)]',
+                : 'bg-[linear-gradient(165deg,#e4e9f0_0%,#dde3ec_45%,#d3dae6_100%)]',
             )}
           />
           <div

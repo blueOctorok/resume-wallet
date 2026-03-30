@@ -12,15 +12,21 @@ export default function Card({ variant = 'default', className, children, ...prop
       className={cn(
         'rounded-2xl border transition-[box-shadow,border-color,background-color] duration-300',
         variant === 'default' &&
-          'bg-white/85 dark:bg-gray-800/55 border-gray-200/90 dark:border-gray-700/80 backdrop-blur-md shadow-sm dark:shadow-none',
+          cn(
+            /* Light: solid face + clear edge (no frosted white-on-slate = muddy contrast) */
+            'bg-white dark:bg-gray-800/55 border border-slate-300/90 dark:border-gray-700/80',
+            'shadow-sm shadow-slate-900/[0.04] dark:shadow-none',
+            'backdrop-blur-none dark:backdrop-blur-md',
+          ),
         variant === 'elevated' &&
           cn(
             'relative overflow-hidden',
-            'bg-gradient-to-br from-white via-white to-slate-50/90',
-            'dark:from-gray-900 dark:via-gray-900 dark:to-gray-800/95',
-            'border-gray-200/90 dark:border-gray-600/70',
-            'shadow-[0_12px_40px_-12px_rgba(13,148,136,0.18)] dark:shadow-[0_16px_48px_-16px_rgba(0,0,0,0.55)]',
-            'ring-1 ring-teal-500/[0.08] dark:ring-teal-400/[0.09]',
+            'bg-white dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-900 dark:to-gray-800/95',
+            'border border-slate-300/85 dark:border-gray-600/70',
+            /* Neutral lift in light; brand glow only in dark */
+            'shadow-[0_1px_2px_rgba(15,23,42,0.04),0_4px_16px_-4px_rgba(15,23,42,0.08)]',
+            'dark:shadow-[0_16px_48px_-16px_rgba(0,0,0,0.55)]',
+            'ring-1 ring-slate-200/90 dark:ring-teal-400/[0.09]',
           ),
         variant === 'flat' &&
           'bg-transparent border-gray-200 dark:border-gray-700',
@@ -31,7 +37,7 @@ export default function Card({ variant = 'default', className, children, ...prop
       {variant === 'elevated' && (
         <div
           aria-hidden
-          className='pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-400/45 to-transparent dark:via-teal-400/35'
+          className='pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-300/80 to-transparent dark:via-teal-400/35'
         />
       )}
       {children}

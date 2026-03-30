@@ -25,7 +25,7 @@ export function navControlButtonClass(isDark: boolean) {
     'rounded-lg border transition-colors duration-200',
     isDark
       ? 'border-gray-600/80 bg-gray-800/55 text-gray-200 hover:bg-gray-800/90 hover:border-gray-500/65'
-      : 'border-gray-200/90 bg-white/85 text-gray-800 hover:bg-white hover:border-gray-300',
+      : 'border-slate-300/95 bg-white text-slate-900 hover:bg-slate-50 hover:border-slate-400/90',
   )
 }
 
@@ -36,14 +36,14 @@ export function navTextLinkClass(isDark: boolean, accent?: 'teal' | 'neutral') {
       'rounded-lg border text-sm font-semibold transition-colors',
       isDark
         ? 'border-teal-500/35 bg-teal-500/[0.08] text-teal-300 hover:bg-teal-500/15 hover:border-teal-400/40'
-        : 'border-teal-200/90 bg-teal-50/95 text-teal-900 hover:bg-teal-100/95',
+        : 'border-teal-300/90 bg-teal-50 text-teal-900 hover:bg-teal-100/95 hover:border-teal-400/80',
     )
   }
   return cn(
     'rounded-lg border text-sm font-semibold transition-colors',
     isDark
       ? 'border-gray-600/80 text-gray-200 hover:bg-gray-800/70'
-      : 'border-gray-200/90 text-slate-800 hover:bg-slate-100/90',
+      : 'border-slate-300/90 text-slate-800 hover:bg-slate-100',
   )
 }
 

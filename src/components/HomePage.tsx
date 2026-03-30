@@ -37,6 +37,7 @@ import {
   IdCard,
 } from 'lucide-react'
 import { getBlockColor } from '@/lib/block-registry'
+import { flatTopHexHeight } from '@/lib/hex-hive-geometry'
 import StormChainView from '@/components/StormChainView'
 import Button from '@/components/ui/Button'
 
@@ -103,11 +104,15 @@ interface ShowcaseHiveProps {
   isDark: boolean
 }
 
-// Responsive hive sizes: phone (<400px) vs tablet/desktop
-const SHOWCASE_CENTER_XS = { w: 100, h: 115 }
-const SHOWCASE_RING_XS   = { w: 75,  h: 86 }
-const SHOWCASE_CENTER_LG = { w: 170, h: 195 }
-const SHOWCASE_RING_LG   = { w: 130, h: 150 }
+// Responsive hive sizes — same flat-top hex W:H as hub (`flatTopHexHeight`)
+const SHOWCASE_CENTER_XS_W = 108
+const SHOWCASE_RING_XS_W = 80
+const SHOWCASE_CENTER_LG_W = 192
+const SHOWCASE_RING_LG_W = 148
+const SHOWCASE_CENTER_XS = { w: SHOWCASE_CENTER_XS_W, h: flatTopHexHeight(SHOWCASE_CENTER_XS_W) }
+const SHOWCASE_RING_XS = { w: SHOWCASE_RING_XS_W, h: flatTopHexHeight(SHOWCASE_RING_XS_W) }
+const SHOWCASE_CENTER_LG = { w: SHOWCASE_CENTER_LG_W, h: flatTopHexHeight(SHOWCASE_CENTER_LG_W) }
+const SHOWCASE_RING_LG = { w: SHOWCASE_RING_LG_W, h: flatTopHexHeight(SHOWCASE_RING_LG_W) }
 
 function hiveShowcaseOffsets(centerW: number, centerH: number, ringW: number, ringH: number): [number, number][] {
   const dx = centerW / 2 + HIVE_GAP + ringW / 2
@@ -324,9 +329,9 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
   return (
     <>
       {/*
-        Iridescent film — sits above StormBackground (cloud z-[-3], particles z-[-1]) but below
-        this page’s content (z-10). Slow spin reads as shifting teal / indigo / violet without
-        competing with readability. prefers-reduced-motion: static wash, no spin.
+        Iridescent film — sits above StormBackground (dark: cloud z-[-3]; particles z-[-1]) but below
+        this page’s content (z-10). Light mode has bubbles only (no cloud). Slow spin reads as
+        shifting teal / indigo / violet without competing with readability. prefers-reduced-motion: static wash, no spin.
       */}
       <div
         aria-hidden

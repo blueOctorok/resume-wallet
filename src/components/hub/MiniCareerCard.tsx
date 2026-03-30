@@ -43,18 +43,18 @@ export default function MiniCareerCard() {
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-2xl border p-3 space-y-3 shadow-sm',
-        'ring-1 ring-teal-500/[0.06] dark:ring-teal-400/[0.08]',
+        'relative overflow-hidden rounded-2xl border p-3 space-y-3',
+        'ring-1 dark:ring-teal-400/[0.08]',
         isDark
-          ? 'border-gray-600/60 bg-gradient-to-b from-gray-900/90 to-gray-950/90'
-          : 'border-gray-200/90 bg-gradient-to-b from-white to-slate-50/90',
+          ? 'border-gray-600/60 bg-gradient-to-b from-gray-900/90 to-gray-950/90 ring-teal-500/[0.06]'
+          : 'border-slate-300/90 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_4px_14px_-4px_rgba(15,23,42,0.08)] ring-slate-200/80',
       )}
     >
       <div
         aria-hidden
-        className='pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-400/35 to-transparent dark:via-teal-400/25'
+        className='pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-300/65 to-transparent dark:via-teal-400/25'
       />
-      <p className='text-[10px] font-bold uppercase tracking-[0.18em] text-teal-700/80 dark:text-teal-400/80'>
+      <p className='text-[10px] font-bold uppercase tracking-[0.18em] text-teal-800 dark:text-teal-400/80'>
         Career card preview
       </p>
 

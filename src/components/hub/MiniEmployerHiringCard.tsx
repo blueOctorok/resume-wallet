@@ -34,7 +34,7 @@ export default function MiniEmployerHiringCard({
     <div
       className={cn(
         'rounded-xl border p-3 space-y-3',
-        isDark ? 'border-gray-700 bg-gray-800/40' : 'border-slate-200 bg-white/90',
+        isDark ? 'border-gray-700 bg-gray-800/40' : 'border-slate-300/90 bg-white shadow-sm shadow-slate-900/[0.04]',
       )}
     >
       <p className='text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400'>

@@ -8,6 +8,12 @@
 | Obvious **Refresh hub** control | ✅ Done | Strip under profile card; avoids burying refresh beside Block Hive |
 | Browser / OS **back** vs shell | ✅ Done | `useCandidateShellHistory` + `navigateToHub()` — cannot remove system back UI; history is synced so back returns to hub when possible |
 | Nav **rounded shell + breathing glow** | ✅ Done | Backdrop layer (no clip-path chamfers); teal/violet animated `box-shadow` rim + drop-shadow; `prefers-reduced-motion` static glow |
+| **Light mode readability** (canvas vs cards) | ✅ Done | Cooler light **body** gradient; **solid white** `Card` / hub rails / hex faces with **slate** borders + neutral shadows; less teal-on-white glow; nav chips aligned (`globals.css`, `Card`, `HubSidebar`, `CandidateHub` hive, `navigation-styles`) |
+| **Theme hydration** | ✅ Done | `ThemeProvider` no longer reads `localStorage` in `useState` initializer — SSR + first paint stay `light`, then `useEffect` applies saved theme; fixes `LoadingScreen` / `useTheme` mismatch when default is dark |
+| **Light background mood** | ✅ Done | `StormBackground`: light = calm **bubbles** only; dark = **cloud + rain + lightning** (feedback: storm read too moody on light fintech UI) |
+| **Light canvas polish** | ✅ Done | Multi-stop **body** gradient + layered light **atmosphere** (sheen, brand radials, bottom anchor) + **film grain** (`.storm-light-film-grain`); bubble tint/refinement |
+| **Block Hive tiles** | ✅ Done | Unified **light** chrome (slate ring, inner gradient, specular line); **slate** titles + colored accent bar; larger type; **Coming soon** state; tooltips; hover shadow stack (`CandidateHub` `BlockTile`) |
+| **Block Hive geometry** | ✅ Done | Flat-top hex **width > height** via `flatTopHexHeight()` — fixes wrong aspect + more room for labels (`hex-hive-geometry.ts`, hub + `HomePage` showcase) |
 
 ## 🏢 **Employer Side Simplification** (March 2026 — Phase 1 Done)
 

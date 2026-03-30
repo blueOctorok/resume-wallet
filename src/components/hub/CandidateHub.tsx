@@ -38,6 +38,7 @@ import HubSidebar from '@/components/hub/HubSidebar'
 import DeveloperResumePreviewModal from '@/components/DeveloperResumePreviewModal'
 import type { DeveloperResumeData } from '@/components/DeveloperResumeBuilder'
 import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
+import { flatTopHexHeight } from '@/lib/hex-hive-geometry'
 import Atropos from 'atropos/react'
 import 'atropos/css'
 
@@ -61,7 +62,7 @@ import { CSS } from '@dnd-kit/utilities'
 // Pointy-left/right hex: vertices at 0%/50%, 25%/0%, 75%/0%, 100%/50%, 75%/100%, 25%/100%
 const HEX_CLIP = 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'
 
-// ── Block Tile (glassmorphic hex + 3D tilt) ──────────────────────────────────
+// ── Block Tile — honeycomb cell: shared chrome in light mode, block color = icon + hover glow ──
 
 interface BlockTileProps {
   block: InstalledBlock
@@ -86,11 +87,17 @@ function BlockTile({ block, index, isEditing, onRemove, onOpen }: BlockTileProps
   const colors = getBlockColor(block.blockType)
   const hasRoute = !!block.definition?.pageRoute
   const Illustration = getBlockIllustration(block.blockType)
+  const label = block.definition?.label ?? block.blockType
+  const description = block.definition?.description
+  const tileTooltip = description ? `${label} — ${description}` : label
 
   const handleClick = () => {
     if (isEditing || !onOpen) return
     onOpen()
   }
+
+  const defaultLightShadow = 'drop-shadow(0 2px 10px rgba(15,23,42,0.07))'
+  const defaultDarkShadow = 'drop-shadow(0 2px 12px rgba(0,0,0,0.35))'
 
   const tileContent = (
     <div
@@ -105,61 +112,99 @@ function BlockTile({ block, index, isEditing, onRemove, onOpen }: BlockTileProps
       )}
       style={{
         clipPath: HEX_CLIP,
-        filter: (!isEditing && hasRoute)
-          ? `drop-shadow(0 0 0px ${colors.glowColor})`
-          : undefined,
+        filter:
+          !isEditing && hasRoute
+            ? isDark
+              ? defaultDarkShadow
+              : defaultLightShadow
+            : !isEditing && !hasRoute
+              ? isDark
+                ? defaultDarkShadow
+                : defaultLightShadow
+              : undefined,
       }}
       onMouseEnter={(e) => {
         if (!isEditing && hasRoute) {
-          (e.currentTarget as HTMLElement).style.filter = `drop-shadow(0 4px 16px ${colors.glowColor})`
+          const el = e.currentTarget as HTMLElement
+          el.style.filter = isDark
+            ? `drop-shadow(0 6px 22px ${colors.glowColor})`
+            : `${defaultLightShadow}, drop-shadow(0 4px 20px ${colors.glowColor})`
         }
       }}
       onMouseLeave={(e) => {
         if (!isEditing && hasRoute) {
-          (e.currentTarget as HTMLElement).style.filter = `drop-shadow(0 0 0px ${colors.glowColor})`
+          const el = e.currentTarget as HTMLElement
+          el.style.filter = isDark ? defaultDarkShadow : defaultLightShadow
         }
       }}
     >
-      {/* Hex border layer */}
+      {/* Outer ring: light = one hive-wide language (slate); dark = colored rim when interactive */}
       <div
         className={cn(
           'absolute inset-0',
-          isDark ? 'bg-white/[0.08]' : 'bg-white/40',
-          !isEditing && hasRoute && (isDark ? colors.borderHover.dark : colors.borderHover.light),
+          isDark ? 'bg-white/[0.08]' : 'bg-white/80',
+          isDark && !isEditing && hasRoute && colors.borderHover.dark,
+          !isDark &&
+            !isEditing &&
+            (hasRoute
+              ? 'ring-1 ring-inset ring-slate-300/90'
+              : 'ring-1 ring-inset ring-dashed ring-slate-300/65'),
         )}
         style={{ clipPath: HEX_CLIP }}
       />
-      {/* Inner hex fill (2px inset = visible border) */}
+      {/* Inner face */}
       <div
         className={cn(
           'absolute inset-[2px]',
-          isDark ? 'bg-gray-900/80 backdrop-blur-md' : 'bg-slate-100/90 backdrop-blur-md',
+          isDark ? 'bg-gray-900/80 backdrop-blur-md' : 'bg-gradient-to-b from-white to-slate-50/95 shadow-inner shadow-slate-900/[0.05]',
         )}
         style={{ clipPath: HEX_CLIP }}
-      />
+      >
+        {/* Shared specular top edge — reads as one product family in light mode */}
+        {!isDark && (
+          <div
+            aria-hidden
+            className='pointer-events-none absolute inset-x-[10%] top-[5%] h-px rounded-full bg-gradient-to-r from-transparent via-white to-transparent opacity-95 shadow-[0_1px_0_rgba(255,255,255,0.65)]'
+          />
+        )}
+      </div>
+
+      {/* Accent hairline (block identity) — subtle, not full rainbow titles */}
+      {!isDark && hasRoute && (
+        <div
+          aria-hidden
+          className='pointer-events-none absolute left-1/2 top-[3px] z-[2] h-[2px] w-[30%] max-w-[3.25rem] -translate-x-1/2 rounded-full opacity-90'
+          style={{
+            background: `linear-gradient(90deg, transparent, ${colors.glowColor}, transparent)`,
+          }}
+        />
+      )}
 
       {/* Remove badge (edit mode) */}
       {isEditing && (
         <button
           onClick={(e) => { e.stopPropagation(); onRemove() }}
           className='absolute top-2 left-1/2 -translate-x-1/2 z-10 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors'
-          aria-label={`Remove ${block.definition?.label ?? block.blockType}`}
+          aria-label={`Remove ${label}`}
         >
           <X className='w-3.5 h-3.5 text-white' />
         </button>
       )}
 
-      {/* Content — absolutely positioned + centered so it never affects hex size */}
-      <div className='absolute inset-0 z-[1] flex flex-col items-center justify-center text-center overflow-hidden px-[20%] py-[18%]'>
-        {/* Status badge */}
+      {/* Content — slightly more room for readable type */}
+      <div className='absolute inset-0 z-[1] flex flex-col items-center justify-center text-center overflow-hidden px-[11%] py-[14%] sm:px-[10%] sm:py-[13%]'>
+        {/* Status */}
         {!isEditing && (
-          <div className='flex-shrink-0'>
+          <div className='flex-shrink-0 min-h-[14px] flex items-center justify-center'>
             {!hasRoute ? (
-              <span className={cn(
-                'text-[7px] font-semibold px-1.5 py-0.5 rounded-full',
-                isDark ? 'bg-white/10 text-gray-500' : 'bg-slate-200/80 text-slate-500'
-              )}>
-                SOON
+              <span
+                className={cn(
+                  'text-[8px] sm:text-[9px] font-medium tracking-wide text-slate-500 dark:text-gray-500',
+                  'border border-dashed border-slate-300/80 dark:border-gray-600 rounded-md px-1.5 py-0.5',
+                  'bg-slate-50/90 dark:bg-white/[0.06]',
+                )}
+              >
+                Coming soon
               </span>
             ) : (
               <div
@@ -172,29 +217,35 @@ function BlockTile({ block, index, isEditing, onRemove, onOpen }: BlockTileProps
           </div>
         )}
 
-        {/* Illustration — fixed size, never grows */}
-        <div className='flex-shrink-0 my-1 [&_svg]:w-10 [&_svg]:h-10' data-atropos-offset='3'>
+        <div
+          className='flex-shrink-0 my-0.5 sm:my-1 [&_svg]:w-9 [&_svg]:h-9 sm:[&_svg]:w-[2.65rem] sm:[&_svg]:h-[2.65rem]'
+          data-atropos-offset='3'
+        >
           <Illustration
             accentText={isDark ? colors.iconText.dark : colors.iconText.light}
             isDark={isDark}
           />
         </div>
 
-        {/* Label — single line, truncate if long */}
-        <p className={cn(
-          'flex-shrink-0 text-[9px] font-bold tracking-wide uppercase leading-tight truncate w-full',
-          isDark ? colors.iconText.dark : colors.iconText.light,
-        )}>
-          {block.definition?.label ?? block.blockType}
+        <p
+          className={cn(
+            'flex-shrink-0 w-full truncate font-semibold leading-tight tracking-tight',
+            'text-[10px] sm:text-[11px]',
+            isDark ? colors.iconText.dark : 'text-slate-800',
+          )}
+        >
+          {label}
         </p>
 
-        {/* Description — clamp to 2 lines max */}
-        {block.definition?.description && (
-          <p className={cn(
-            'flex-shrink-0 text-[7px] leading-tight line-clamp-2 mt-0.5 w-full',
-            isDark ? 'text-gray-500' : 'text-gray-400',
-          )}>
-            {block.definition.description}
+        {description && (
+          <p
+            className={cn(
+              'flex-shrink-0 mt-0.5 w-full line-clamp-2 leading-snug',
+              'text-[8px] sm:text-[9px]',
+              isDark ? 'text-gray-500' : 'text-slate-600',
+            )}
+          >
+            {description}
           </p>
         )}
       </div>
@@ -209,6 +260,7 @@ function BlockTile({ block, index, isEditing, onRemove, onOpen }: BlockTileProps
         'w-full h-full',
         !isEditing && hasRoute && 'cursor-pointer',
       )}
+      title={!isEditing ? tileTooltip : undefined}
       onClick={handleClick}
       {...attributes}
       {...listeners}
@@ -247,12 +299,19 @@ const SLOTS_PER_PAGE_DESKTOP = 7 // full ring
 const HIVE_GAP = 10 // px between hex edges
 
 // Hex tile dimensions — three tiers: phone (<400), tablet (400–639), desktop (640+)
-const CENTER_W_XS = 120; const CENTER_H_XS = 138
-const CENTER_W_SM = 190; const CENTER_H_SM = 218
-const CENTER_W_LG = 220; const CENTER_H_LG = 253
-const RING_W_XS   = 90;  const RING_H_XS   = 104
-const RING_W_SM   = 150; const RING_H_SM   = 172
-const RING_W_LG   = 170; const RING_H_LG   = 195
+// Widths chosen for layout; heights = flat-top hex math (wider than tall — better for titles).
+const CENTER_W_XS = 132
+const CENTER_H_XS = flatTopHexHeight(CENTER_W_XS)
+const CENTER_W_SM = 216
+const CENTER_H_SM = flatTopHexHeight(CENTER_W_SM)
+const CENTER_W_LG = 258
+const CENTER_H_LG = flatTopHexHeight(CENTER_W_LG)
+const RING_W_XS = 102
+const RING_H_XS = flatTopHexHeight(RING_W_XS)
+const RING_W_SM = 168
+const RING_H_SM = flatTopHexHeight(RING_W_SM)
+const RING_W_LG = 200
+const RING_H_LG = flatTopHexHeight(RING_W_LG)
 
 interface HiveMetrics {
   centerW: number; centerH: number

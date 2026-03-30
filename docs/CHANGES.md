@@ -4,6 +4,53 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Block Hive — hex aspect ratio (wider tiles)** (March 2026)
+
+- **Issue:** Tile boxes were **taller than wide**, which fights flat-top hex geometry and squeezes titles.
+- New [`hex-hive-geometry.ts`](src/lib/hex-hive-geometry.ts): **`flatTopHexHeight(width)`** = `round(width * sqrt(3) / 2)` so bounding **width : height = 2 : sqrt(3)** (correct flat-top hex).
+- [`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx): center/ring **widths** bumped slightly; **heights** derived from helper — cells are **wider than tall**; content padding tweaked (`~10–11%` horizontal).
+- [`HomePage.tsx`](src/components/HomePage.tsx): showcase hive uses same geometry for parity.
+
+---
+
+## **Block Hive — tile polish (readability + unified chrome)** (March 2026)
+
+- [`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx) **`BlockTile`**: Light mode uses **shared** slate **inset ring** (solid) / **dashed** ring for no-route tiles; **inner face** `from-white` → `slate-50` + specular **top hairline**; **block color** as a slim **accent gradient** under the top point (not rainbow titles). **Titles** light = **`text-slate-800`**; dark keeps registry **iconText**; **descriptions** slightly larger (`8–9px` / `9–10px` sm). **Coming soon** replaces loud SOON pill (dashed border, muted). **Default drop-shadow** on tiles; hover **stacks** colored glow. **`title`** on wrapper = full label + description for truncated copy. Icons scale `w-9` → `sm` ~2.65rem.
+
+---
+
+## **Light canvas — studio depth + film grain** (March 2026)
+
+- **Goal:** Background “pops” in a **pro / editorial** way (layered light, subtle texture), not bootcamp rainbow blobs — still StormChain (teal / violet / sky hints at low alpha).
+- [`globals.css`](src/app/globals.css): Light **body** gradient → **five-stop** cool slate for dimensional canvas; new **`.storm-light-film-grain`** (SVG `feTurbulence` tile, `multiply`, ~3% opacity, `prefers-reduced-motion` slightly softer).
+- [`StormBackground.tsx`](src/components/StormBackground.tsx): Light **atmosphere** stack — upper **sheen**, softbox wash, **three** restrained brand radials, **bottom anchor** vignette; mounts grain layer **light only**. Bubbles: slightly **cooler** tint, modest count/opacity bump, gentler opacity pulse.
+
+---
+
+## **StormBackground — light mode bubbles, dark mode storm** (March 2026)
+
+- [`StormBackground.tsx`](src/components/StormBackground.tsx): **Light** uses soft **rising bubble** particles only (no cloud, rain, or lightning) and a **brighter atmosphere** (teal/violet hints, no heavy vignette). **Dark** keeps cloud texture, rain, and rare lightning. **Lightning** timers run only while `theme === 'dark'`. `Particles` remounts on theme change via `key`. Typed options with `ISourceOptions` from `tsparticles-engine`.
+
+---
+
+## **Theme — fix hydration mismatch (SSR vs localStorage)** (March 2026)
+
+- [`ThemeContext.tsx`](src/contexts/ThemeContext.tsx): Initial theme is always **`light`** on server and first client render; **`useEffect`** restores **`stormchain-theme`** from `localStorage` / `data-theme` after mount. Prevents React 19 hydration errors when saved theme is **dark** (e.g. `LoadingScreen` and any `useTheme()` branch). Persist-to-storage on user-driven `theme` changes skips the first `[theme]` effect run so the hydrate effect remains the single source of truth for the initial sync.
+
+---
+
+## **Light mode — fintech-style contrast (canvas vs cards)** (March 2026)
+
+- **Goal:** Light stays default but reads closer to Stripe/Robinhood clarity — page “canvas” slightly cooler than white surfaces; panels get solid faces and **slate borders** instead of frosted white-on-slate or heavy teal-tinted shadows.
+- [`globals.css`](src/app/globals.css): Light **body** gradient uses mid slate blues (`#e4e9f0` → `#d3dae6`); CSS variables **`--surface-card` / `--border-subtle` / `--text-primary`** tuned for white-on-gray separation; **nav** light shell + breathe animation use **slate-300** inset edge and **neutral** drop-shadow (less teal bloom on light).
+- [`Card.tsx`](src/components/ui/Card.tsx): Light **default** = solid white + `border-slate-300`, no light-mode backdrop blur; **elevated** = solid white, neutral layered shadow, **slate** ring + top hairline (teal accent kept for dark).
+- [`BlockCard.tsx`](src/components/ui/BlockCard.tsx): Stronger header divider and body text contrast (`slate-900` / `slate-600`).
+- Hub rails: [`HubSidebar.tsx`](src/components/hub/HubSidebar.tsx), [`EmployerPathSidebar.tsx`](src/components/hub/EmployerPathSidebar.tsx), [`MiniCareerCard.tsx`](src/components/hub/MiniCareerCard.tsx), [`MiniEmployerHiringCard.tsx`](src/components/hub/MiniEmployerHiringCard.tsx) aligned with the same light panel treatment.
+- [`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx): Block hive hex **light** inner face = **white** + subtle inner shadow (was gray wash); SOON chip and description text slightly stronger contrast.
+- [`navigation-styles.ts`](src/lib/navigation-styles.ts): Light control chips use **white** fills and **slate** borders for parity with cards.
+
+---
+
 ## **CandidateShell — fix setState during render** (March 2026)
 
 - [`CandidateShell.tsx`](src/components/app/CandidateShell.tsx): unknown `currentPage` values (e.g. employer-only routes left in UI store) no longer call **`setCurrentPage(null)` during render**; a **`useEffect`** resets to hub and render returns **`null`** for one frame — fixes React 19 “Cannot update Navigation while rendering CandidateShell”.

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 
 type Theme = 'light' | 'dark'
 
@@ -13,36 +13,31 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Determine initial theme: saved preference > DOM > default light (professional default)
-  const getInitialTheme = (): Theme => {
-    if (typeof window === 'undefined') return 'light'
-    
-    const savedTheme = localStorage.getItem('stormchain-theme') as Theme
-    if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
-      return savedTheme
-    }
-    
-    const existingTheme = document.documentElement.getAttribute('data-theme') as Theme
-    if (existingTheme && (existingTheme === 'light' || existingTheme === 'dark')) {
-      return existingTheme
-    }
-    
-    return 'light'
-  }
+  // Must match SSR/first client paint — never read localStorage in useState initializer
+  // (server is always 'light'; client with saved 'dark' would mismatch and break hydration).
+  const [theme, setThemeState] = useState<Theme>('light')
+  const skipThemePersist = useRef(true)
 
-  const [theme, setThemeState] = useState<Theme>(getInitialTheme)
-
-  // No longer need the separate useEffect for loading - handled in getInitialTheme
-  // But we still apply theme to document on changes
   useEffect(() => {
-    const savedTheme = localStorage.getItem('stormchain-theme') as Theme
-    if (!savedTheme && theme !== 'light') {
-      setThemeState('light')
+    const saved = localStorage.getItem('stormchain-theme') as Theme
+    let next: Theme = 'light'
+    if (saved === 'light' || saved === 'dark') {
+      next = saved
+    } else {
+      const fromDom = document.documentElement.getAttribute('data-theme') as Theme
+      if (fromDom === 'light' || fromDom === 'dark') next = fromDom
     }
+    setThemeState(next)
+    document.documentElement.setAttribute('data-theme', next)
+    localStorage.setItem('stormchain-theme', next)
   }, [])
 
-  // Apply theme to document and save to localStorage
   useEffect(() => {
+    // First run is the SSR-aligned 'light' paint — persist would clobber disk before hydrate runs.
+    if (skipThemePersist.current) {
+      skipThemePersist.current = false
+      return
+    }
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('stormchain-theme', theme)
   }, [theme])
