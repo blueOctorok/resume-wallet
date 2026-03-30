@@ -127,7 +127,7 @@ export default function Navigation({
                     )}
                     aria-label='View account status'
                   >
-                    <div className='w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_10px_rgba(52,211,153,0.45)]' />
+                    <div className='w-2.5 h-2.5 rounded-full bg-teal-500 shadow-[0_0_10px_rgb(13_148_136/0.45)]' />
                     <span className='text-[11px] font-semibold uppercase tracking-wide'>Wallet</span>
                   </button>
                 ) : (
@@ -273,7 +273,7 @@ export default function Navigation({
                     }}
                     className={cn('flex items-center gap-2 px-3 py-2', navControlButtonClass(isDark))}
                   >
-                    <div className='w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.4)]' />
+                    <div className='w-2.5 h-2.5 rounded-full bg-teal-500 shadow-[0_0_8px_rgb(13_148_136/0.4)]' />
                     <span className='text-xs font-semibold'>Wallet</span>
                   </button>
 

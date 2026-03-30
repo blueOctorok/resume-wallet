@@ -15,6 +15,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Light mode — glossy canvas + unified teal** (March 2026)
+
+- **Goal:** Light shell matches **LoadingScreen / O-mark** energy — **specular gloss**, **teal-600** (`#0d9488`) as the primary chrome accent (fewer mixed emerald / teal-400 / cyan reads; tighter fintech feel).
+- [`globals.css`](src/app/globals.css): **`[data-theme='light']`** **`--storm-accent`**, **`--storm-accent-rgb`**, bloom tokens; **layered `body`** (diagonal specular + teal/violet radials + cooler base); **`.storm-light-panel`** (frosted face, inset highlight, teal rim, depth shadow); **nav** light breathe + **resume** scrollbar use **`rgb(var(--storm-accent-rgb))`**.
+- [`StormBackground.tsx`](src/components/StormBackground.tsx): Light **atmosphere** — stronger **specular**, **teal-600** + **violet** blooms (**no** sky-cyan wedge); bubble color **slate-teal**.
+- [`navigation-styles.ts`](src/lib/navigation-styles.ts): Top hairline **teal-600**; **Hub** gradient ring **teal-600/500 → violet** (cyan removed); Storm text chip borders **teal-600**-tinted.
+- [`Navigation.tsx`](src/components/Navigation.tsx): Wallet **online** dot **teal** + glow (replaces **emerald**).
+- [`LoadingScreen.tsx`](src/components/LoadingScreen.tsx): Light panel **`storm-light-panel`**; blooms **`rgb(13 148 136)`** / violet; progress sweep **teal-600**; base gradient aligned with **body**.
+- [`Card.tsx`](src/components/ui/Card.tsx): **Elevated** light uses **`storm-light-panel`**; **default** light gets **inset top gloss** + crisper border; elevated hairline **via-teal-600** in light.
+
+---
+
 ## **Dark theme — “storm shell” from LoadingScreen** (March 2026)
 
 - **Goal:** Dark mode matches **LoadingScreen** / **StormTokenMark** — deep charcoal void, teal + violet blooms, glass panels with teal rim (fintech / web3 polish).

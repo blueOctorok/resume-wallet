@@ -9,7 +9,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 /**
  * Theme-split atmosphere:
  * - **Dark:** storm — cloud texture, rain particles, rare lightning (brand “power” read).
- * - **Light:** calm bubbles — soft rising dots, no cloud/rain/lightning (less moody; matches fintech light UI).
+ * - **Light:** calm bubbles + loader-aligned teal/violet atmosphere (specular gloss, single accent hue).
  *
  * Layering (dark, back → front): body gradient → atmosphere → cloud → rain → lightning.
  * Light: layered atmosphere (studio-style gradients, no animation) → optional film grain → bubbles.
@@ -52,8 +52,8 @@ export default function StormBackground() {
   }, [isDark])
 
   const rainColor = '#94a3b8'
-  /** Light bubbles: slightly cooler mist — reads finer than flat gray dots */
-  const bubbleColor = '#8b9cb0'
+  /** Light bubbles: cool slate with a hint of teal (same family as --storm-accent, not sage) */
+  const bubbleColor = '#7d8fa3'
 
   /* Layered like body + LoadingScreen: teal/violet blooms, deep edge vignette */
   const stormAtmosphere = `
@@ -63,18 +63,14 @@ export default function StormBackground() {
       linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, transparent 26%, transparent 68%, rgba(0,0,0,0.48) 100%)
     `
 
-  /* Light: layered “studio” depth — softbox + restrained brand blooms + corner anchors. No animation = not bootcamp. */
+  /* Light: loader-aligned blooms (teal-600 + violet), stronger specular gloss, no cyan wedge */
   const lightAtmosphere = [
-    /* Specular sheen (upper-left) — satin, kept faint */
-    'linear-gradient(128deg, rgba(255,255,255,0.52) 0%, rgba(255,255,255,0.08) 28%, transparent 52%)',
-    /* Top softbox wash */
-    'linear-gradient(to bottom, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.06) 36%, transparent 58%)',
-    /* Brand auroras — low chroma, large radius */
-    'radial-gradient(ellipse 115% 62% at 50% -12%, rgba(45,212,191,0.09), transparent 58%)',
-    'radial-gradient(ellipse 48% 38% at 94% 6%, rgba(139,92,246,0.055), transparent 55%)',
-    'radial-gradient(ellipse 52% 42% at 4% 88%, rgba(14,165,233,0.045), transparent 50%)',
-    /* Bottom anchor — grounds the canvas so it isn’t one flat slab */
-    'radial-gradient(ellipse 90% 52% at 50% 108%, rgba(15,23,42,0.055), transparent 55%)',
+    'linear-gradient(122deg, rgba(255,255,255,0.62) 0%, rgba(255,255,255,0.14) 26%, transparent 50%)',
+    'linear-gradient(to bottom, rgba(255,255,255,0.38) 0%, rgba(255,255,255,0.05) 34%, transparent 56%)',
+    'radial-gradient(ellipse 115% 62% at 50% -12%, rgba(13,148,136,0.088), transparent 58%)',
+    'radial-gradient(ellipse 48% 38% at 94% 6%, rgba(124,58,237,0.065), transparent 55%)',
+    'radial-gradient(ellipse 58% 44% at 6% 90%, rgba(15,23,42,0.04), transparent 52%)',
+    'radial-gradient(ellipse 90% 52% at 50% 108%, rgba(15,23,42,0.06), transparent 55%)',
   ].join(', ')
 
   const particleOptions = useMemo((): ISourceOptions => {

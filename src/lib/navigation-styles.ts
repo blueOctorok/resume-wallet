@@ -15,7 +15,8 @@ export function navShellShapeClass(isDark: boolean) {
 export function navHairlineTopClass() {
   return cn(
     'pointer-events-none absolute inset-x-0 top-0 z-[1] h-px',
-    'bg-gradient-to-r from-transparent via-teal-400/45 to-transparent dark:via-teal-400/32',
+    /* Light: teal-600 rim (matches --storm-accent); dark: brighter teal for void contrast */
+    'bg-gradient-to-r from-transparent via-teal-600/42 to-transparent dark:via-teal-400/32',
   )
 }
 
@@ -36,7 +37,7 @@ export function navTextLinkClass(isDark: boolean, accent?: 'teal' | 'neutral') {
       'rounded-lg border text-sm font-semibold transition-colors',
       isDark
         ? 'border-teal-500/35 bg-teal-500/[0.08] text-teal-300 hover:bg-teal-500/15 hover:border-teal-400/40'
-        : 'border-teal-300/90 bg-teal-50 text-teal-900 hover:bg-teal-100/95 hover:border-teal-400/80',
+        : 'border-teal-600/22 bg-teal-50/95 text-teal-900 hover:bg-teal-50 hover:border-teal-600/35',
     )
   }
   return cn(
@@ -61,9 +62,10 @@ export function navAvAButtonClass(isDark: boolean) {
 export function navHubGradientRingClass() {
   return cn(
     'rounded-xl p-[2px] w-full sm:w-auto shrink-0',
-    'bg-gradient-to-br from-teal-400/90 via-cyan-500/50 to-violet-500/65',
+    /* Light: teal-600 → teal-500 → violet (no cyan — single green family) */
+    'bg-gradient-to-br from-teal-600/88 via-teal-500/48 to-violet-500/58',
     'dark:from-teal-400/80 dark:via-teal-600/38 dark:to-violet-600/48',
-    'shadow-md shadow-teal-900/18 dark:shadow-black/45',
+    'shadow-md shadow-teal-900/16 dark:shadow-black/45',
   )
 }
 

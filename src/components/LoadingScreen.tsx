@@ -50,7 +50,7 @@ export default function LoadingScreen({
           )}
           aria-hidden
         >
-          <div className='loading-bar-sweep h-full w-[42%] rounded-full bg-gradient-to-r from-transparent via-teal-400/90 to-transparent dark:via-teal-300/85' />
+          <div className='loading-bar-sweep h-full w-[42%] rounded-full bg-gradient-to-r from-transparent via-teal-600/88 to-transparent dark:via-teal-300/85' />
         </div>
       )}
       {!compact && (
@@ -90,22 +90,23 @@ export default function LoadingScreen({
               isDark
                 ? undefined
                 : {
+                    /* Match [data-theme='light'] body base (blooms sit in StormBackground; loader stays coherent) */
                     background:
-                      'linear-gradient(165deg, #e4e9f0 0%, #dde3ec 45%, #d3dae6 100%)',
+                      'linear-gradient(165deg, #e8edf5 0%, #dfe7f1 42%, #d4dde8 100%)',
                   }
             }
           />
           <div
             className={cn(
               'absolute top-[18%] left-1/2 h-[min(85vw,36rem)] w-[min(85vw,36rem)] -translate-x-1/2 rounded-full blur-3xl motion-reduce:animate-none animate-pulse',
-              isDark ? 'bg-teal-400/[0.09]' : 'bg-teal-500/[0.11]',
+              isDark ? 'bg-teal-400/[0.09]' : 'bg-[rgb(13_148_136/0.1)]',
             )}
             style={{ animationDuration: '3.2s' }}
           />
           <div
             className={cn(
               'absolute bottom-[-5%] right-[-8%] h-[min(70vw,26rem)] w-[min(70vw,26rem)] rounded-full blur-3xl motion-reduce:animate-none animate-pulse',
-              isDark ? 'bg-violet-500/[0.085]' : 'bg-violet-500/[0.1]',
+              isDark ? 'bg-violet-500/[0.085]' : 'bg-[rgb(124_58_237/0.08)]',
             )}
             style={{ animationDuration: '4s', animationDelay: '0.4s' }}
           />
@@ -117,7 +118,7 @@ export default function LoadingScreen({
               'rounded-2xl p-8 sm:p-10 backdrop-blur-xl',
               isDark
                 ? 'storm-glass-panel ring-1 ring-teal-400/[0.16]'
-                : 'border border-gray-200/90 bg-white/82 ring-1 ring-teal-500/[0.1] shadow-[0_0_36px_-10px_rgba(13,148,136,0.14)]',
+                : 'storm-light-panel',
             )}
           >
             {orbit}
@@ -140,11 +141,11 @@ export default function LoadingScreen({
     >
       {!compact && (
         <div
-          className={cn(
+            className={cn(
             'w-full max-w-sm rounded-2xl px-8 py-10 backdrop-blur-xl',
             isDark
               ? 'storm-glass-panel ring-1 ring-teal-400/[0.14]'
-              : 'border border-gray-200/80 bg-white/70 ring-1 ring-teal-500/[0.08]',
+              : 'storm-light-panel',
           )}
         >
           {orbit}
