@@ -19,12 +19,12 @@ interface StormChainWordmarkProps {
 }
 
 const BAR_RIM_LIGHT =
-  'linear-gradient(135deg, rgba(13,148,136,0.32) 0%, rgba(45,212,191,0.1) 22%, transparent 54%, rgba(124,58,246,0.14) 100%)'
+  'linear-gradient(135deg, rgba(13,148,136,0.42) 0%, rgba(45,212,191,0.16) 20%, transparent 50%, rgba(91,33,182,0.16) 100%)'
 const BAR_RIM_DARK =
   'linear-gradient(135deg, rgba(45,212,191,0.34) 0%, transparent 48%, rgba(167,139,246,0.2) 100%)'
 
 const BAR_STRIP_LIGHT =
-  'linear-gradient(90deg, transparent, rgba(13,148,136,0.4), rgba(91,33,182,0.2), transparent)'
+  'linear-gradient(90deg, transparent, rgba(13,148,136,0.52), rgba(91,33,182,0.28), transparent)'
 const BAR_STRIP_DARK =
   'linear-gradient(90deg, transparent, rgba(45,212,191,0.4), rgba(139,92,246,0.28), transparent)'
 
@@ -60,7 +60,7 @@ export default function StormChainWordmark({
 
   const innerBg = isDark
     ? 'linear-gradient(175deg, rgba(24,30,40,0.97) 0%, rgba(10,13,18,0.99) 100%)'
-    : 'linear-gradient(175deg, rgba(255,255,255,0.91) 0%, rgba(252,252,253,0.87) 38%, rgba(248,250,252,0.84) 72%, rgba(241,245,249,0.89) 100%)'
+    : 'linear-gradient(175deg, rgba(252,254,255,0.96) 0%, rgba(236,248,250,0.9) 40%, rgba(228,238,245,0.92) 72%, rgba(220,232,242,0.94) 100%)'
 
   const clip = { clipPath: VAULT_CLIP_HORIZONTAL }
 
@@ -112,13 +112,13 @@ export default function StormChainWordmark({
             aria-hidden
             className={cn(
               'vault-conic-slow pointer-events-none absolute -inset-[22%] z-0 motion-reduce:opacity-0',
-              isDark ? 'mix-blend-plus-lighter opacity-[0.18]' : 'mix-blend-multiply opacity-[0.13]',
+              isDark ? 'mix-blend-plus-lighter opacity-[0.18]' : 'mix-blend-multiply opacity-[0.17]',
             )}
             style={{
               ...clip,
               background: isDark
                 ? 'conic-gradient(from 200deg at 85% 0%, transparent 0deg, rgba(45,212,191,0.3) 40deg, rgba(139,92,246,0.18) 100deg, transparent 220deg, rgba(45,212,191,0.22) 300deg, transparent 360deg)'
-                : 'conic-gradient(from 200deg at 85% 0%, transparent 0deg, rgba(13,148,136,0.32) 40deg, rgba(109,40,217,0.14) 100deg, transparent 220deg, rgba(15,118,110,0.22) 300deg, transparent 360deg)',
+                : 'conic-gradient(from 200deg at 85% 0%, transparent 0deg, rgba(13,148,136,0.38) 40deg, rgba(91,33,182,0.18) 100deg, transparent 220deg, rgba(15,118,110,0.28) 300deg, transparent 360deg)',
             }}
           />
         )}
@@ -129,7 +129,7 @@ export default function StormChainWordmark({
             'pointer-events-none absolute inset-[2px] z-[1] overflow-hidden dark:shadow-[inset_0_0_22px_rgba(0,0,0,0.4)]',
             isDark
               ? 'shadow-[inset_0_0_18px_rgba(0,0,0,0.05)]'
-              : 'backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_0_36px_rgba(15,23,42,0.05),inset_0_1px_0_rgba(255,255,255,0.98)] ring-1 ring-slate-200/95',
+              : 'backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_0_0_1px_rgba(13,148,136,0.11),inset_0_0_40px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.88)] ring-1 ring-slate-400/55',
           )}
           style={{ ...clip, background: innerBg }}
         >
@@ -139,7 +139,7 @@ export default function StormChainWordmark({
             <VaultLightFrostTexture variant='bar' />
           )}
           {!isDark && (
-            <span className='pointer-events-none absolute -left-[10%] top-0 h-[52%] w-[45%] rotate-[14deg] bg-gradient-to-br from-white/90 via-teal-50/12 to-transparent opacity-55' />
+            <span className='pointer-events-none absolute -left-[10%] top-0 h-[52%] w-[45%] rotate-[14deg] bg-gradient-to-br from-white/75 via-cyan-50/25 to-transparent opacity-60' />
           )}
           {isHero && (
             <span
@@ -147,7 +147,7 @@ export default function StormChainWordmark({
                 'vault-sheen-layer pointer-events-none absolute inset-y-0 left-0',
                 isDark
                   ? 'w-[36%] bg-gradient-to-r from-transparent via-white/08 to-transparent'
-                  : 'w-[54%] bg-gradient-to-r from-transparent via-white/34 to-transparent opacity-88 mix-blend-overlay',
+                  : 'w-[54%] bg-gradient-to-r from-transparent via-cyan-50/45 to-transparent opacity-90 mix-blend-multiply',
               )}
             />
           )}
@@ -159,7 +159,7 @@ export default function StormChainWordmark({
           style={{
             background: isDark
               ? 'radial-gradient(ellipse 80% 80% at 90% 10%, rgba(45,212,191,0.5) 0%, transparent 72%)'
-              : 'radial-gradient(ellipse 80% 80% at 90% 10%, rgba(13,148,136,0.36) 0%, rgba(45,212,191,0.12) 48%, transparent 74%)',
+              : 'radial-gradient(ellipse 80% 80% at 90% 10%, rgba(13,148,136,0.48) 0%, rgba(45,212,191,0.2) 48%, transparent 72%)',
             filter: 'blur(3px)',
           }}
         />
@@ -179,7 +179,7 @@ export default function StormChainWordmark({
                   'vault-strip-sweep-el pointer-events-none absolute inset-y-0 w-1/3 opacity-90',
                   isDark
                     ? 'bg-gradient-to-r from-transparent via-teal-200/22 to-transparent'
-                    : 'bg-gradient-to-r from-transparent via-teal-700/28 to-transparent',
+                    : 'bg-gradient-to-r from-transparent via-teal-600/36 to-transparent',
                 )}
               />
             )}

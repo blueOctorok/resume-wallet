@@ -13,9 +13,9 @@ export default function Card({ variant = 'default', className, children, ...prop
         'rounded-2xl border transition-[box-shadow,border-color,background-color] duration-300',
         variant === 'default' &&
           cn(
-            /* Light: crisp panel + hairline gloss (Stripe-like separation from canvas) */
-            'bg-white dark:bg-[rgb(21,25,34)]/85 border border-slate-300/95 dark:border-slate-600/35',
-            'shadow-[0_1px_2px_rgba(15,23,42,0.04),inset_0_1px_0_rgba(255,255,255,0.88)] dark:shadow-[0_0_32px_-14px_rgba(45,212,191,0.08)]',
+            /* Light: icy face + slate border so edges survive the brighter canvas */
+            'bg-gradient-to-b from-slate-50/98 to-slate-100/95 dark:bg-[rgb(21,25,34)]/85 border border-slate-400/45 dark:border-slate-600/35',
+            'shadow-[0_1px_2px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.75)] dark:shadow-[0_0_32px_-14px_rgba(45,212,191,0.08)]',
             'backdrop-blur-none dark:backdrop-blur-md',
           ),
         variant === 'elevated' &&
@@ -37,7 +37,7 @@ export default function Card({ variant = 'default', className, children, ...prop
       {variant === 'elevated' && (
         <div
           aria-hidden
-          className='pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-600/22 to-transparent dark:from-transparent dark:via-teal-400/25 dark:to-transparent'
+          className='pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-600/32 to-transparent dark:from-transparent dark:via-teal-400/25 dark:to-transparent'
         />
       )}
       {children}

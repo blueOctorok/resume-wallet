@@ -100,7 +100,7 @@ function BlockCardChrome({
       )}
       <div
         className={cn(
-          'flex items-start justify-between gap-3 border-b border-slate-200/95 dark:border-gray-700/50',
+          'flex items-start justify-between gap-3 border-b border-slate-300/90 dark:border-gray-700/50',
           embed
             ? 'px-5 py-4 sm:px-6 sm:py-5'
             : 'p-4 pl-5 sm:p-5 sm:pl-6',

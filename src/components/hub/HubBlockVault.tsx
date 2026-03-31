@@ -62,25 +62,25 @@ export function VaultCredentialChrome({
   onMouseLeave,
 }: VaultCredentialChromeProps) {
   const rimBg = hasRoute
-    ? `linear-gradient(135deg, ${glowColor} 0%, transparent 52%, ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.05)'} 100%)`
+    ? `linear-gradient(135deg, ${glowColor} 0%, transparent 52%, ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(30,58,90,0.08)'} 100%)`
     : isDark
       ? 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02))'
-      : 'linear-gradient(135deg, rgba(148,163,184,0.45), rgba(248,250,252,0.95))'
+      : 'linear-gradient(135deg, rgba(100,116,139,0.42), rgba(236,245,248,0.92))'
 
   const stripBg = hasRoute
     ? `linear-gradient(90deg, transparent 0%, ${glowColor} 42%, ${glowColor} 58%, transparent 100%)`
     : isDark
       ? 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)'
-      : 'linear-gradient(90deg, transparent, rgba(148,163,184,0.4), transparent)'
+      : 'linear-gradient(90deg, transparent, rgba(13,148,136,0.35), rgba(91,33,182,0.22), transparent)'
 
-  const sigilBorder = hasRoute ? glowColor : isDark ? 'rgba(255,255,255,0.22)' : 'rgba(100,116,139,0.45)'
+  const sigilBorder = hasRoute ? glowColor : isDark ? 'rgba(255,255,255,0.22)' : 'rgba(51,65,85,0.55)'
 
   /** Brighter accent for sweep / spark (rim color is often low-alpha rgba). */
   const accentVivid = hasRoute
     ? glowColor.replace(/[\d.]+\)$/, '0.45)')
     : isDark
       ? 'rgba(45,212,191,0.35)'
-      : 'rgba(13,148,136,0.4)'
+      : 'rgba(13,148,136,0.48)'
 
   return (
     <div
@@ -108,7 +108,7 @@ export function VaultCredentialChrome({
           aria-hidden
           className={cn(
             'vault-conic-slow pointer-events-none absolute -inset-[35%] z-0 motion-reduce:opacity-0',
-            isDark ? 'mix-blend-plus-lighter opacity-[0.2]' : 'mix-blend-multiply opacity-[0.13]',
+            isDark ? 'mix-blend-plus-lighter opacity-[0.2]' : 'mix-blend-multiply opacity-[0.18]',
           )}
           style={{
             clipPath: VAULT_CLIP,
@@ -135,7 +135,7 @@ export function VaultCredentialChrome({
           'absolute inset-[2px] z-0 overflow-hidden dark:shadow-[inset_0_0_28px_rgba(0,0,0,0.35)]',
           isDark
             ? 'bg-gradient-to-b from-[rgb(22,28,36)]/96 via-[rgb(14,18,24)]/98 to-[rgb(8,11,15)] ring-1 ring-white/[0.05] shadow-[inset_0_0_20px_rgba(0,0,0,0.04)]'
-            : 'bg-gradient-to-b from-white/91 via-slate-50/[0.88] to-slate-100/86 backdrop-blur-md backdrop-saturate-125 shadow-[inset_0_0_36px_rgba(15,23,42,0.052),inset_0_1px_0_rgba(255,255,255,0.98)] ring-1 ring-slate-200/95',
+            : 'bg-gradient-to-b from-[#f4fafb]/96 via-cyan-50/[0.28] to-slate-200/88 backdrop-blur-md backdrop-saturate-125 shadow-[inset_0_0_0_1px_rgba(13,148,136,0.1),inset_0_0_42px_rgba(15,23,42,0.065),inset_0_1px_0_rgba(255,255,255,0.88)] ring-1 ring-slate-400/50',
         )}
         style={{ clipPath: VAULT_CLIP }}
       >
@@ -152,7 +152,7 @@ export function VaultCredentialChrome({
         {!isDark && (
           <div
             aria-hidden
-            className='pointer-events-none absolute -left-1/4 top-0 h-[52%] w-[68%] rotate-[17deg] bg-gradient-to-br from-white/88 via-teal-50/10 to-transparent opacity-58'
+            className='pointer-events-none absolute -left-1/4 top-0 h-[52%] w-[68%] rotate-[17deg] bg-gradient-to-br from-white/72 via-cyan-100/22 to-transparent opacity-62'
           />
         )}
 
@@ -162,7 +162,7 @@ export function VaultCredentialChrome({
             'vault-sheen-layer pointer-events-none absolute inset-y-0 left-0',
             isDark
               ? 'w-[40%] bg-gradient-to-r from-transparent via-white/12 to-transparent'
-              : 'w-[54%] bg-gradient-to-r from-transparent via-white/32 to-transparent opacity-84 mix-blend-overlay',
+              : 'w-[54%] bg-gradient-to-r from-transparent via-cyan-100/40 to-transparent opacity-88 mix-blend-multiply',
           )}
         />
 
@@ -193,7 +193,7 @@ export function VaultCredentialChrome({
                 'vault-strip-sweep-el pointer-events-none absolute inset-y-0 w-2/5 opacity-85',
                 isDark
                   ? 'bg-gradient-to-r from-transparent via-teal-200/25 to-transparent'
-                  : 'bg-gradient-to-r from-transparent via-teal-700/26 to-transparent',
+                  : 'bg-gradient-to-r from-transparent via-teal-600/34 to-transparent',
               )}
             />
           )}
@@ -228,7 +228,7 @@ export function VaultMarketingTile({
   colors,
 }: VaultMarketingTileProps) {
   const defaultLight =
-    'drop-shadow(0 4px 14px rgba(15,23,42,0.1)) drop-shadow(0 0 20px rgba(13,148,136,0.12)) drop-shadow(0 0 36px rgba(124,58,237,0.08))'
+    'drop-shadow(0 6px 18px rgba(15,23,42,0.12)) drop-shadow(0 0 28px rgba(13,148,136,0.2)) drop-shadow(0 0 48px rgba(91,33,182,0.1))'
   const defaultDark = 'drop-shadow(0 4px 18px rgba(0,0,0,0.45))'
   const [filter, setFilter] = useState(() => (isDark ? defaultDark : defaultLight))
 

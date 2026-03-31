@@ -40,17 +40,18 @@ export default function StormBackground() {
       linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, transparent 26%, transparent 68%, rgba(0,0,0,0.48) 100%)
     `
 
+  /* Less pure-white wash than before — let body + vault grain read as icy depth */
   const lightAtmosphere = [
-    'linear-gradient(122deg, rgba(255,255,255,0.62) 0%, rgba(255,255,255,0.14) 26%, transparent 50%)',
-    'linear-gradient(to bottom, rgba(255,255,255,0.38) 0%, rgba(255,255,255,0.05) 34%, transparent 56%)',
-    'radial-gradient(ellipse 115% 62% at 50% -12%, rgba(13,148,136,0.088), transparent 58%)',
-    'radial-gradient(ellipse 48% 38% at 94% 6%, rgba(124,58,237,0.065), transparent 55%)',
-    'radial-gradient(ellipse 58% 44% at 6% 90%, rgba(15,23,42,0.04), transparent 52%)',
-    'radial-gradient(ellipse 90% 52% at 50% 108%, rgba(15,23,42,0.06), transparent 55%)',
+    'linear-gradient(122deg, rgba(224,242,242,0.35) 0%, rgba(255,255,255,0.2) 24%, transparent 48%)',
+    'linear-gradient(to bottom, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.04) 38%, transparent 58%)',
+    'radial-gradient(ellipse 115% 62% at 50% -12%, rgba(13,148,136,0.11), transparent 56%)',
+    'radial-gradient(ellipse 48% 38% at 94% 6%, rgba(91,33,182,0.08), transparent 54%)',
+    'radial-gradient(ellipse 58% 44% at 6% 90%, rgba(30,58,90,0.06), transparent 52%)',
+    'radial-gradient(ellipse 90% 52% at 50% 108%, rgba(15,23,42,0.07), transparent 54%)',
   ].join(', ')
 
   const particleOptions = useMemo((): ISourceOptions => {
-    const bubbleColor = isDark ? '#5c6d82' : '#7d8fa3'
+    const bubbleColor = isDark ? '#5c6d82' : '#5f7a8c'
     const base: ISourceOptions = {
       fullScreen: { enable: true, zIndex: -1 },
       background: { color: { value: '' } },
@@ -67,7 +68,7 @@ export default function StormBackground() {
 
     const count = reduceMotion ? 22 : isDark ? 48 : 44
     const speed = reduceMotion ? 0.22 : isDark ? 0.55 : 0.65
-    const opacityBase = isDark ? 0.32 : 0.26
+    const opacityBase = isDark ? 0.32 : 0.3
 
     return {
       ...base,

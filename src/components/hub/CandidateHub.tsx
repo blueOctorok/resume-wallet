@@ -101,7 +101,7 @@ function BlockTile({ block, index, isEditing, onRemove, onOpen, slotIsCenter }: 
   }
 
   const defaultLightShadow =
-    'drop-shadow(0 4px 14px rgba(15,23,42,0.1)) drop-shadow(0 0 20px rgba(13,148,136,0.12)) drop-shadow(0 0 36px rgba(124,58,237,0.08))'
+    'drop-shadow(0 6px 18px rgba(15,23,42,0.12)) drop-shadow(0 0 28px rgba(13,148,136,0.2)) drop-shadow(0 0 48px rgba(91,33,182,0.1))'
   const defaultDarkShadow = 'drop-shadow(0 4px 18px rgba(0,0,0,0.45))'
   const [tileFilter, setTileFilter] = useState<string | undefined>(() =>
     !isEditing ? (isDark ? defaultDarkShadow : defaultLightShadow) : undefined,
@@ -623,7 +623,8 @@ function HubProfileHeader({
             </span>
             <span className={cn(
               'text-lg font-bold',
-              completeness >= 75 ? 'text-green-500'
+              completeness >= 75
+                ? isDark ? 'text-green-500' : 'text-emerald-800'
                 : completeness >= 50 ? 'text-yellow-500'
                 : isDark ? 'text-gray-400' : 'text-slate-600'
             )}>
@@ -633,17 +634,24 @@ function HubProfileHeader({
           <div
             className={cn(
               'h-3 rounded-full overflow-hidden ring-1 ring-inset',
-              isDark ? 'bg-gray-800 ring-gray-600/50' : 'bg-gray-200/90 ring-gray-300/60',
+              isDark ? 'bg-gray-800 ring-gray-600/50' : 'bg-slate-200/95 ring-slate-400/55',
             )}
           >
             <div
               className={cn(
-                'h-full rounded-full transition-all duration-500 shadow-[0_0_12px_rgba(20,184,166,0.35)]',
+                'h-full rounded-full transition-all duration-500',
+                isDark ? 'shadow-[0_0_12px_rgba(20,184,166,0.35)]' : 'shadow-[0_0_10px_rgba(13,148,136,0.28)]',
                 completeness >= 75
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-400 dark:from-emerald-400 dark:to-teal-500'
+                  ? isDark
+                    ? 'bg-gradient-to-r from-emerald-400 to-teal-500'
+                    : 'bg-gradient-to-r from-emerald-600 to-teal-600'
                   : completeness >= 50
-                    ? 'bg-gradient-to-r from-amber-500 to-yellow-400 dark:from-amber-400 dark:to-yellow-500'
-                    : 'bg-gradient-to-r from-teal-500 to-cyan-400 dark:from-teal-400 dark:to-cyan-500',
+                    ? isDark
+                      ? 'bg-gradient-to-r from-amber-400 to-yellow-500'
+                      : 'bg-gradient-to-r from-amber-600 to-amber-500'
+                    : isDark
+                      ? 'bg-gradient-to-r from-teal-400 to-cyan-500'
+                      : 'bg-gradient-to-r from-teal-600 to-teal-500',
               )}
               style={{ width: `${completeness}%` }}
             />
@@ -1107,7 +1115,9 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
         <div className={cn(
           'mb-3 px-3 py-2 rounded-lg text-xs',
           message.type === 'success'
-            ? isDark ? 'bg-green-500/15 text-green-400' : 'bg-green-50 text-green-700'
+            ? isDark
+              ? 'bg-green-500/15 text-green-400'
+              : 'bg-emerald-50 text-emerald-900 ring-1 ring-emerald-800/20'
             : isDark ? 'bg-red-500/15 text-red-400' : 'bg-red-50 text-red-700',
         )}>
           {message.text}
@@ -1120,14 +1130,18 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
             <div className='flex items-start gap-4 py-5 first:pt-2 last:pb-2 sm:items-center sm:gap-5 sm:py-6'>
               {/* Icon + info */}
               <div className={cn(
-                'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl sm:h-12 sm:w-12',
-                doc.verified ? 'bg-green-500/20'
-                  : doc.status === 'complete' ? (isDark ? 'bg-teal-500/20' : 'bg-teal-100')
-                  : doc.status === 'processing' ? (isDark ? 'bg-blue-500/20' : 'bg-blue-100')
-                  : isDark ? 'bg-gray-700' : 'bg-gray-200',
+                'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset sm:h-12 sm:w-12',
+                doc.verified
+                  ? isDark ? 'bg-green-500/20 ring-transparent' : 'bg-emerald-100 ring-emerald-800/25'
+                  : doc.status === 'complete' ? (isDark ? 'bg-teal-500/20 ring-transparent' : 'bg-teal-100 ring-teal-700/20')
+                  : doc.status === 'processing' ? (isDark ? 'bg-blue-500/20 ring-transparent' : 'bg-blue-100 ring-blue-800/15')
+                  : isDark ? 'bg-gray-700 ring-transparent' : 'bg-slate-200 ring-slate-400/35',
               )}>
                 {doc.type === 'resume' ? (
-                  <FileText className={cn('w-4 h-4', doc.verified ? 'text-green-400' : isDark ? 'text-gray-400' : 'text-slate-600')} />
+                  <FileText className={cn(
+                    'w-4 h-4',
+                    doc.verified ? (isDark ? 'text-green-400' : 'text-emerald-800') : isDark ? 'text-gray-400' : 'text-slate-600',
+                  )} />
                 ) : doc.type === 'mvr' ? (
                   <Car className={cn(
                     'w-4 h-4',
@@ -1142,7 +1156,10 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                 ) : doc.type === 'employment_verifications' ? (
                   <ShieldCheck className={cn('w-4 h-4', doc.status === 'in-progress' ? (isDark ? 'text-yellow-400' : 'text-yellow-600') : isDark ? 'text-violet-400' : 'text-violet-600')} />
                 ) : (
-                  <ClipboardCheck className={cn('w-4 h-4', doc.verified ? 'text-green-400' : isDark ? 'text-gray-400' : 'text-slate-600')} />
+                  <ClipboardCheck className={cn(
+                    'w-4 h-4',
+                    doc.verified ? (isDark ? 'text-green-400' : 'text-emerald-800') : isDark ? 'text-gray-400' : 'text-slate-600',
+                  )} />
                 )}
               </div>
 
@@ -1168,7 +1185,10 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                     </span>
                   )}
                   {doc.verified && (
-                    <span className='flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium bg-green-500/15 text-green-500'>
+                    <span className={cn(
+                      'flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium',
+                      isDark ? 'bg-green-500/15 text-green-500' : 'bg-emerald-100 text-emerald-900 ring-1 ring-emerald-800/25',
+                    )}>
                       <Check className='w-2.5 h-2.5' /> On-Chain
                     </span>
                   )}

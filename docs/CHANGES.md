@@ -4,6 +4,29 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Homepage — candidate-first hero + vault chrome** (March 2026)
+
+- [`HomePage.tsx`](src/components/HomePage.tsx): **Product-first** fold — **“Build the Career Card — the jobs will come”** is now the primary **h1** with a short blocks → verify → Stormi paragraph; **no** employer-led “verified cards for talent” gateway headline.
+- **Vault tiles up front:** `VaultShowcase` sits inside **`VaultHorizontalVaultShell`** (panel) right under the hero copy — same credential language as hub / nav. Second hive in **Composable blocks** is wrapped the same way.
+- **Gateway** slimmed to a **one-line** network strip (inline jumps to candidates / employers).
+- **Copy:** Removed defensive “AI slop / not mass auto-apply” framing from the hero; **Stormi** and **employer** blurbs rewritten **positive-first**. **Signal** section moved **after How it works**, retitled **“Verification both sides can trust”** with calmer cards.
+- **`GlassCard`** uses **`storm-light-panel`** / **`storm-glass-panel`** so marketing cards match app frost / void panels.
+
+---
+
+## **Light theme — “icy vault” pass** (March 2026)
+
+- **Problem:** Light mode read as flat bright white — teal/violet glow and vault grain disappeared; greens bled at soft edges.
+- **Canvas:** [`globals.css`](src/app/globals.css) — cooler **blue-slate** body gradient (deeper base + extra blooms + bottom vignette), **cyan-tinted specular** (less pure white), stronger `--storm-teal-bloom*` / `--storm-violet-bloom`, icy **`--surface-*`** + **`--border-subtle`**. **`.storm-light-panel`** — cyan-slate frosted face, **slate-500-class border**, double hairline + stronger teal outer shadow.
+- **Full-viewport stack:** [`StormBackground.tsx`](src/components/StormBackground.tsx) — reduced white wash in `lightAtmosphere`; slightly stronger bubbles.
+- **Frost texture:** [`VaultLightFrostTexture.tsx`](src/components/ui/VaultLightFrostTexture.tsx) — **higher-opacity** grain/striae/wash; **blue-slate** dot pattern (readable on pale faces); striae use **multiply** for etched ice.
+- **Vault chrome (aligned):** [`VaultHorizontalVaultShell.tsx`](src/components/ui/VaultHorizontalVaultShell.tsx), [`HubBlockVault.tsx`](src/components/hub/HubBlockVault.tsx), [`StormChainWordmark.tsx`](src/components/ui/StormChainWordmark.tsx) — stronger **rim/strip/conic**, icy inner gradients, **teal inset hairline** + **ring-slate-400**, richer outer **teal/violet** drop-shadows, sheen via **cyan multiply** (not white overlay).
+- **Cards / blocks:** [`Card.tsx`](src/components/ui/Card.tsx) default variant — subtle **slate gradient** face + **slate-400** border; elevated hairline teal stronger. [`BlockCard.tsx`](src/components/ui/BlockCard.tsx) — header divider contrast.
+- **Hub:** [`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx) — tile drop-shadows match marketing; **profile completeness** + **My Files** success/verified states use **emerald-800 / rings** on light so greens don’t bloom.
+- **Auth kit tokens:** Light [`globals.css`](src/app/globals.css) `--akui-bg-*` nudged to match icy surfaces.
+
+---
+
 ## **Hub — Your blocks section** (March 2026)
 
 - **Section shell:** Hive uses **`BlockCard`** ([`CandidateHub`](src/components/hub/CandidateHub.tsx)) — same **vault accent bar**, **twin-ring** hint, **icon orb**, and header chrome as DOT / resume blocks. [`BlockCard`](src/components/ui/BlockCard.tsx) gains optional **`headerActions`** (hub **Edit** + **Add**). Empty hub uses a **dashed inner panel** inside `BlockCard` content. **My Files** stays below.
@@ -71,7 +94,7 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ## **Homepage — “signal not spam” vs mass auto-apply tools** (March 2026)
 
-- [`HomePage.tsx`](src/components/HomePage.tsx): **`#home-gateway`** at top — dual **Button** paths (**I’m building my career** → **`#for-candidates`**, **I’m hiring** → **`#for-employers`**), shared **h1**, copy on **repeatable employer workflows** vs AI-slop bucket. **`#for-candidates`** — bordered candidate hero (former hero as **h2** + **For candidates** label). **`#for-employers`** — full section: **For employers** label, **three-step** employer flow (find & request / verified signal / compliance & pipeline), feature pills, **Connect wallet** CTA; bottom CTA + **Employer product** button. **`scrollToSection`** helper; candidate jump links use it; **For employers ↓** in candidate link row. **`UserPlus`** import.
+- **Superseded by** **Homepage — candidate-first hero + vault chrome** (March 2026): gateway + hero + trust copy were reworked; this entry kept for history only.
 
 ---
 
