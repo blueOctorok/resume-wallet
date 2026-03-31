@@ -1,25 +1,5 @@
 import { cn } from '@/lib/utils'
 
-/**
- * Nav outer shell — layout only; chrome is on `navShellShapeClass` (rounded backdrop + glow).
- */
-export function navShellClass() {
-  return cn('relative max-w-2xl mx-auto overflow-visible pointer-events-auto')
-}
-
-/** Backdrop: rounded-2xl glass + breathing teal/violet rim (see globals.css). */
-export function navShellShapeClass(isDark: boolean) {
-  return cn('nav-shell-shape pointer-events-none absolute inset-0 z-0', isDark ? 'nav-shell-shape--dark' : 'nav-shell-shape--light')
-}
-
-export function navHairlineTopClass() {
-  return cn(
-    'pointer-events-none absolute inset-x-0 top-0 z-[1] h-px',
-    /* Light: teal-600 rim (matches --storm-accent); dark: brighter teal for void contrast */
-    'bg-gradient-to-r from-transparent via-teal-600/42 to-transparent dark:via-teal-400/32',
-  )
-}
-
 /** Compact control chips (wallet, messages, hamburger). */
 export function navControlButtonClass(isDark: boolean) {
   return cn(

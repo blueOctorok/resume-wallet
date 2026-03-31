@@ -199,7 +199,7 @@ export default function STORMBalance({
                 theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
               }`}
             >
-              StormChain Token
+              Storm Token
             </p>
           </div>
         </div>

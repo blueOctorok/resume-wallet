@@ -242,7 +242,7 @@ export async function POST(request: Request) {
         const { data: devCompany, error: createErr } = await supabase
           .from('companies')
           .insert({
-            company_name: 'StormChain Dev',
+            company_name: 'Storm Dev',
             employer_user_id: userToUpdate.id,
             status: 'active',
           })
@@ -257,7 +257,7 @@ export async function POST(request: Request) {
             accepted_at: new Date().toISOString(),
             is_active: true,
           })
-          console.log(`[SET ROLE] Created "StormChain Dev" company for admin`)
+          console.log(`[SET ROLE] Created "Storm Dev" company for admin`)
         }
       }
     }

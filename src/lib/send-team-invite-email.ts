@@ -42,7 +42,7 @@ export async function sendTeamInviteEmail(
 
   const bodyHtml = `
     <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
-      <strong>${inviterName}</strong> has invited you to join <strong>${companyName}</strong> on StormChain as a <strong>${roleDisplay}</strong>.
+      <strong>${inviterName}</strong> has invited you to join <strong>${companyName}</strong> on Storm as a <strong>${roleDisplay}</strong>.
     </p>
     ${detailsBox(`
       <p style="margin:0 0 12px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;">Invitation Details</p>
@@ -60,16 +60,16 @@ export async function sendTeamInviteEmail(
   `
 
   const html = buildEmail({
-    preheader: `${inviterName} has invited you to join ${companyName} on StormChain`,
+    preheader: `${inviterName} has invited you to join ${companyName} on Storm`,
     headerEyebrow: companyName,
     headerTitle: `You've been invited to join ${companyName}`,
     bodyHtml,
     ctaLabel: 'Accept Invitation',
     ctaUrl: inviteUrl,
-    footerNote: `This invitation was sent by ${inviterName} at ${companyName} through StormChain. If you weren't expecting this, you can safely ignore it.`,
+    footerNote: `This invitation was sent by ${inviterName} at ${companyName} through Storm. If you weren't expecting this, you can safely ignore it.`,
   })
 
-  const subject = `You're invited to join ${companyName} on StormChain`
+  const subject = `You're invited to join ${companyName} on Storm`
 
   try {
     console.log('[TEAM INVITE EMAIL] Sending to:', to, 'from:', FROM)

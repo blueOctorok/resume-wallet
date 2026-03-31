@@ -113,7 +113,7 @@ interface JobListingsProps {
   onBack: () => void
   userAddress: string | null
   /**
-   * Guest browse (Indeed-style): search StormChain + external listings without a wallet.
+   * Guest browse (Indeed-style): search Storm + external listings without a wallet.
    * Apply / Stormi ranking require `onSignIn` → connect flow.
    */
   publicBrowseMode?: boolean
@@ -173,7 +173,7 @@ export default function JobListings({
       if (location) params.set('location', location)
 
       const res = await fetch(`/api/jobs/search?${params}`)
-      if (!res.ok) throw new Error('Failed to fetch StormChain jobs')
+      if (!res.ok) throw new Error('Failed to fetch Storm jobs')
       const data = await res.json()
       if (!data.success) throw new Error(data.error || 'Failed to load jobs')
 
@@ -377,7 +377,7 @@ export default function JobListings({
 
   const promptConnect = Boolean(publicBrowseMode && !userAddress && onSignIn)
 
-  // Guests: external first. Logged-in: StormChain + external + optional Saved shortlist (no auto-apply).
+  // Guests: external first. Logged-in: Storm + external + optional Saved shortlist (no auto-apply).
   const TABS = useMemo((): {
     id: TabId
     label: string
@@ -396,10 +396,10 @@ export default function JobListings({
         },
         {
           id: 'stormchain',
-          label: 'StormChain employers',
-          hint: 'Roles posted directly on StormChain',
+          label: 'Storm employers',
+          hint: 'Roles posted directly on Storm',
           icon: <Zap className='w-5 h-5 shrink-0' />,
-          description: 'Jobs from employers posting on StormChain — the list grows as companies join.',
+          description: 'Jobs from employers posting on Storm — the list grows as companies join.',
         },
       ]
     }
@@ -412,10 +412,10 @@ export default function JobListings({
     }[] = [
       {
         id: 'stormchain',
-        label: 'StormChain',
+        label: 'Storm',
         hint: 'Employers on our network',
         icon: <Zap className='w-5 h-5 shrink-0' />,
-        description: 'Jobs from verified employers on StormChain',
+        description: 'Jobs from verified employers on Storm',
       },
       {
         id: 'external',
@@ -432,7 +432,7 @@ export default function JobListings({
         hint: 'Your shortlist — no auto-apply',
         icon: <Star className='w-5 h-5 shrink-0' />,
         description:
-          'Roles you starred from StormChain or external search. Revisit when your Career Card is ready — we never apply for you.',
+          'Roles you starred from Storm or external search. Revisit when your Career Card is ready — we never apply for you.',
       })
     }
     return base
@@ -451,9 +451,9 @@ export default function JobListings({
             {publicBrowseMode
               ? totalCount > 0
                 ? `${totalCount.toLocaleString()} listings — connect your wallet to apply with your career card & Stormi`
-                : 'Search StormChain and external boards. No account needed to look — wallet required to apply.'
+                : 'Search Storm and external boards. No account needed to look — wallet required to apply.'
               : activeTab === 'saved'
-                ? `${savedJobs.length} saved role${savedJobs.length === 1 ? '' : 's'} — stored on this device; star listings from StormChain or External tabs`
+                ? `${savedJobs.length} saved role${savedJobs.length === 1 ? '' : 's'} — stored on this device; star listings from Storm or External tabs`
                 : totalCount > 0
                   ? `${totalCount.toLocaleString()} jobs found`
                   : 'Search for your next opportunity'}
@@ -476,7 +476,7 @@ export default function JobListings({
           </div>
         )}
 
-        {/* Tab switcher — explicit “two sources” so guests don’t miss External vs StormChain */}
+        {/* Tab switcher — explicit “two sources” so guests don’t miss External vs Storm */}
         <div className='mb-2'>
           <p
             className={`text-xs font-bold uppercase tracking-wider mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
@@ -540,7 +540,7 @@ export default function JobListings({
           >
             <span className='font-semibold'>Browsing without an account?</span> We open{' '}
             <strong>External job boards</strong> first — that’s where most listings live. Use{' '}
-            <strong>StormChain employers</strong> to see roles posted only on StormChain (that list may be empty early
+            <strong>Storm employers</strong> to see roles posted only on Storm (that list may be empty early
             on).
           </p>
         )}
@@ -653,7 +653,7 @@ export default function JobListings({
                             setApplyModalOpen(true)
                           }}
                         >
-                          Apply with StormChain
+                          Apply with Storm
                         </Button>
                       )}
                       {job.redirectUrl && (
@@ -771,7 +771,7 @@ export default function JobListings({
             }`}
           >
             <span className='font-semibold'>Shortlist only.</span> Saving does not notify employers or submit applications
-            — same high-signal rules as the rest of StormChain.
+            — same high-signal rules as the rest of Storm.
           </p>
         )}
 
@@ -799,7 +799,7 @@ export default function JobListings({
                     <div className='flex flex-wrap items-center gap-2 mb-1'>
                       {job.isStormChain && (
                         <span className='inline-flex items-center gap-1 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-teal-500/15 text-teal-500'>
-                          <Zap className='w-3 h-3' /> StormChain
+                          <Zap className='w-3 h-3' /> Storm
                         </span>
                       )}
                       {job.remoteAllowed && (
@@ -901,7 +901,7 @@ export default function JobListings({
                             className='flex items-center gap-2 px-5 py-2.5 font-semibold rounded-lg bg-teal-600 hover:bg-teal-500 text-white whitespace-nowrap'
                           >
                             <FileText className='w-4 h-4' />
-                            Apply with StormChain
+                            Apply with Storm
                           </button>
                         ) : null}
                       </>
@@ -936,12 +936,12 @@ export default function JobListings({
               {activeTab === 'saved'
                 ? 'No saved jobs yet'
                 : activeTab === 'stormchain'
-                  ? 'No StormChain jobs yet'
+                  ? 'No Storm jobs yet'
                   : 'No jobs found'}
             </h3>
             <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
               {activeTab === 'saved'
-                ? 'Open StormChain or External tabs and tap the star on roles you want to revisit.'
+                ? 'Open Storm or External tabs and tap the star on roles you want to revisit.'
                 : activeTab === 'stormchain'
                   ? 'Employers are getting set up — check External listings or come back soon.'
                   : 'Try adjusting your search criteria'}

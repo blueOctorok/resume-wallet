@@ -515,7 +515,7 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress, orderId: 
         <div class="footer">
           <p>Report generated ${new Date().toLocaleString()}</p>
           <p>Data received ${new Date(mvrResult.receivedAt).toLocaleString()}</p>
-          <p class="brand" style="margin-top: 8px;">StormChain - Blockchain-Verified Career Platform</p>
+          <p class="brand" style="margin-top: 8px;">Storm - Blockchain-Verified Career Platform</p>
         </div>
 
         <script>

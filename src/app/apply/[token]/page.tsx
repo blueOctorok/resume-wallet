@@ -64,18 +64,18 @@ function buildLandingContent(block: BlockDefinition | null): LandingContent {
       accentLight: 'bg-slate-500/10 border-slate-500/30',
       accentText: 'text-slate-300',
       icon: <Users className="w-8 h-8 text-white" />,
-      label: 'Join StormChain',
-      headline: (company) => `${company} invited you to StormChain`,
+      label: 'Join Storm',
+      headline: (company) => `${company} invited you to Storm`,
       description: (company) =>
-        `StormChain is a blockchain-verified credential platform for professionals. ${company} is using it to find and verify top talent. Joining only takes a few minutes.`,
+        `Storm is a blockchain-verified credential platform for professionals. ${company} is using it to find and verify top talent. Joining only takes a few minutes.`,
       checklistTitle: "What you'll do:",
       checklist: [
-        'Create your free StormChain account',
+        'Create your free Storm account',
         'Set up your professional profile',
         'Add relevant credentials and documents',
       ],
       timeEstimate: '5–10 minutes',
-      ctaLabel: 'Join StormChain',
+      ctaLabel: 'Join Storm',
     }
   }
 
@@ -88,10 +88,10 @@ function buildLandingContent(block: BlockDefinition | null): LandingContent {
     label: block.label,
     headline: (company) => `${company} wants you on their team`,
     description: (company) =>
-      `${company} has invited you to complete a ${block.label} through StormChain — a secure, blockchain-verified platform. ${block.description}. Your data is stored safely and only shared with companies you authorize.`,
+      `${company} has invited you to complete a ${block.label} through Storm — a secure, blockchain-verified platform. ${block.description}. Your data is stored safely and only shared with companies you authorize.`,
     checklistTitle: "What you'll do:",
     checklist: [
-      'Create your free StormChain account',
+      'Create your free Storm account',
       `Complete your ${block.label}`,
       'Review and submit your information',
     ],
@@ -138,7 +138,7 @@ function InvalidScreen({
         onClick={onGoHome}
         className="mt-6 px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-xl transition-colors"
       >
-        Go to StormChain
+        Go to Storm
       </button>
     </StandaloneCard>
   )
@@ -218,7 +218,7 @@ export default function ApplyPage() {
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-teal-400" />
-            <span className="font-bold text-white tracking-tight">StormChain</span>
+            <span className="font-bold text-white tracking-tight">Storm</span>
           </div>
           <span className="text-xs text-gray-500">Blockchain-Verified Credentials</span>
         </div>

@@ -216,10 +216,10 @@ export default function OnboardPage() {
   const icon = blockDef
     ? <Package className="w-6 h-6" />
     : <Users className="w-6 h-6" />
-  const label = blockDef?.label ?? 'Join StormChain'
+  const label = blockDef?.label ?? 'Join Storm'
   const description = blockDef
     ? `Complete your ${blockDef.label} with blockchain-verified credentials.`
-    : 'Create your StormChain account and set up your professional profile.'
+    : 'Create your Storm account and set up your professional profile.'
 
   return (
     <div className="min-h-screen bg-gray-950">
@@ -228,7 +228,7 @@ export default function OnboardPage() {
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-teal-400" />
-            <span className="font-bold text-white tracking-tight">StormChain</span>
+            <span className="font-bold text-white tracking-tight">Storm</span>
           </div>
           <span className="text-xs text-gray-500">Secure Login</span>
         </div>
@@ -295,7 +295,7 @@ export default function OnboardPage() {
             onClick={() => router.push('/')}
             className="text-teal-400 hover:text-teal-300 underline"
           >
-            Go to StormChain
+            Go to Storm
           </button>
         </p>
       </main>
@@ -329,7 +329,7 @@ function ErrorScreen({
           onClick={onGoHome}
           className="mt-6 px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-xl transition-colors"
         >
-          Go to StormChain
+          Go to Storm
         </button>
       </div>
     </div>

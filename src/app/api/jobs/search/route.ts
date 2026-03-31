@@ -4,7 +4,7 @@ import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 /**
  * GET /api/jobs/search
  *
- * Searches employer-posted (StormChain) jobs. No auth required — these are
+ * Searches employer-posted (Storm) jobs. No auth required — these are
  * public listings. External/Adzuna jobs are handled by /api/jobs/external/search.
  *
  * Query params:

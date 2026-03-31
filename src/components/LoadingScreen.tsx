@@ -13,7 +13,7 @@ interface LoadingScreenProps {
 }
 
 /**
- * Unified StormChain loading UI — brand teal/violet, storm mark (no generic “S”),
+ * Unified Storm loading UI — brand teal/violet, storm mark (no generic “S”),
  * optional full-page atmosphere aligned with app body gradients.
  */
 export default function LoadingScreen({

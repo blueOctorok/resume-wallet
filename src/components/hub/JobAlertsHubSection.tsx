@@ -222,7 +222,7 @@ export default function JobAlertsHubSection() {
               </h3>
               <p className={cn('text-xs mt-1 max-w-xl', isDark ? 'text-gray-400' : 'text-slate-600')}>
                 Use <span className='font-medium text-slate-700 dark:text-gray-300'>Browse jobs</span> for
-                StormChain + external listings and recommendations. Star roles to stage them on{' '}
+                Storm + external listings and recommendations. Star roles to stage them on{' '}
                 <span className='font-medium text-slate-700 dark:text-gray-300'>Hunt Desk</span>. Save alerts
                 here — we scan daily, score new matches with Stormi, and notify in-app. Same job is never pinged
                 twice.

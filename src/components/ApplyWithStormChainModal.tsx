@@ -216,7 +216,7 @@ export default function ApplyWithStormChainModal({
                 Easy apply with Career Card
               </h2>
               <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
-                One submission — your StormChain profile snapshot
+                One submission — your Storm profile snapshot
               </p>
             </div>
           </div>
@@ -233,7 +233,7 @@ export default function ApplyWithStormChainModal({
                 Application Submitted!
               </h3>
               <p className="text-green-700 dark:text-green-300">
-                Your StormChain application has been sent to {job.company}
+                Your Storm application has been sent to {job.company}
               </p>
             </div>
           </div>
@@ -412,7 +412,7 @@ export default function ApplyWithStormChainModal({
             </div>
 
             <p className={`text-xs text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              By submitting, employers receive your StormChain application snapshot and link.
+              By submitting, employers receive your Storm application snapshot and link.
               <br />
               Track status in My Applications.
             </p>

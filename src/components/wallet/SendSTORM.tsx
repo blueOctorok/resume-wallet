@@ -246,7 +246,7 @@ export default function SendSTORM({ walletAddress, onSuccess }: SendSTORMProps) 
                 theme === 'dark' ? 'text-gray-500' : 'text-gray-500'
               }`}
             >
-              StormChain test tokens
+              Storm test tokens
             </p>
           </div>
         </div>

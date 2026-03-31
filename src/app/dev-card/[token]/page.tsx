@@ -247,7 +247,7 @@ export default function PublicDeveloperCard() {
             href='/'
             className='inline-flex items-center gap-2 px-6 py-3 bg-brand-mint text-gray-900 font-semibold rounded-xl hover:bg-brand-mint/90 transition-colors'
           >
-            Go to StormChain
+            Go to Storm
           </a>
         </div>
       </div>
@@ -274,7 +274,7 @@ export default function PublicDeveloperCard() {
             <div className='w-8 h-8 rounded-lg bg-gradient-to-br from-brand-mint to-teal-500 flex items-center justify-center shadow-lg shadow-brand-mint/20'>
               <span className='text-gray-900 font-bold text-sm'>S</span>
             </div>
-            <span className='text-white font-semibold'>StormChain</span>
+            <span className='text-white font-semibold'>Storm</span>
           </a>
           <div className='flex items-center gap-2'>
             <Sparkles className='w-4 h-4 text-brand-mint' />
@@ -1039,7 +1039,7 @@ export default function PublicDeveloperCard() {
               className='inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-brand-mint to-teal-400 text-gray-900 font-bold text-lg rounded-2xl hover:shadow-xl hover:shadow-brand-mint/30 transition-all hover:scale-105'
             >
               <Sparkles className='w-5 h-5' />
-              Hire with StormChain
+              Hire with Storm
             </a>
           </div>
         )}
@@ -1048,7 +1048,7 @@ export default function PublicDeveloperCard() {
           <p className='text-gray-500 text-sm'>
             Powered by{' '}
             <a href='/' className='text-brand-mint hover:underline'>
-              StormChain
+              Storm
             </a>{' '}
             • Career Card
           </p>

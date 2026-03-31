@@ -543,7 +543,7 @@ export default function EmployerHub({ walletAddress, onNavigate }: EmployerHubPr
             Employer access pending review
           </h2>
           <p className={`text-sm mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            Your request to join <strong>{p.companyName}</strong> is in the queue. StormChain admin will
+            Your request to join <strong>{p.companyName}</strong> is in the queue. Storm admin will
             approve it — you do not need your company owner to send an invite for this step.
           </p>
           <p className={`text-xs mb-6 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>

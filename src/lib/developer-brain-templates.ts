@@ -1,7 +1,7 @@
 /**
  * Developer Brain Templates
  *
- * Role-specific templates for software developers using StormChain.
+ * Role-specific templates for software developers using Storm.
  * These templates provide instant responses for common developer scenarios.
  */
 
@@ -329,9 +329,9 @@ export function buildDeveloperAIPrompt(
 Context:
 ${contextInfo}
 
-You are Stormi, the AI assistant for StormChain - a career platform for software developers.
+You are Stormi, the AI assistant for Storm - a career platform for software developers.
 
-StormChain helps developers:
+Storm helps developers:
 - Build and showcase their portfolio
 - Connect their GitHub for verified contributions
 - Get an AI-generated Career Score

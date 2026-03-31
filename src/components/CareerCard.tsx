@@ -3,14 +3,8 @@
 import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
-import {
-  careerCardShellClass,
-  careerCardHairlineTop,
-  careerCardAmbientBlobClass,
-  careerCardHeroClass,
-  careerCardHeroWashClass,
-  careerCardInsetPanelClass,
-} from '@/lib/career-card-styles'
+import VaultHorizontalVaultShell from '@/components/ui/VaultHorizontalVaultShell'
+import { careerCardInsetPanelClass } from '@/lib/career-card-styles'
 import {
   Mail,
   Phone,
@@ -261,39 +255,27 @@ export default function CareerCard({
   const isDark = theme === 'dark'
 
   return (
-    <div className={cn(careerCardShellClass(isDark))}>
-      <div className={careerCardHairlineTop()} aria-hidden />
-      <div className={careerCardAmbientBlobClass(isDark)} aria-hidden />
-
-      {/* Hero — document identity (name also appears in employer modal chrome; this anchors the card as an artifact) */}
-      <div className={careerCardHeroClass(isDark)}>
-        <div className={careerCardHeroWashClass(isDark)} aria-hidden />
-        <div
+    <VaultHorizontalVaultShell isDark={isDark} layout='panel' contentClassName='relative overflow-hidden'>
+      <div className="relative z-[1] p-6 sm:p-7 space-y-6">
+      {/* Title row — on vault face (no separate hero gradient band) */}
+      <div className="mb-1">
+        <p
           className={cn(
-            'absolute inset-x-6 sm:inset-x-8 bottom-3 flex flex-col gap-0.5',
-            'z-[1]',
+            'text-[10px] font-semibold uppercase tracking-[0.2em]',
+            isDark ? 'text-teal-300/80' : 'text-teal-800/70',
           )}
         >
-          <p
-            className={cn(
-              'text-[10px] font-semibold uppercase tracking-[0.2em]',
-              isDark ? 'text-teal-300/80' : 'text-teal-800/70',
-            )}
-          >
-            Career card
-          </p>
-          <p
-            className={cn(
-              'text-lg sm:text-xl font-bold tracking-tight truncate pr-4',
-              isDark ? 'text-white' : 'text-gray-900',
-            )}
-          >
-            {data.name}
-          </p>
-        </div>
+          Career card
+        </p>
+        <p
+          className={cn(
+            'text-lg sm:text-xl font-bold tracking-tight truncate pr-4',
+            isDark ? 'text-white' : 'text-gray-900',
+          )}
+        >
+          {data.name}
+        </p>
       </div>
-
-      <div className="relative z-[1] p-6 sm:p-7 space-y-6">
       {/* Profile Score Banner */}
       <div className={careerCardInsetPanelClass(isDark)}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -799,7 +781,7 @@ export default function CareerCard({
         </div>
       )}
       </div>
-    </div>
+    </VaultHorizontalVaultShell>
   )
 }
 

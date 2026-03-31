@@ -4,9 +4,6 @@ import { useState, useRef, useEffect } from 'react'
 import { LayoutDashboard, ChevronDown, RefreshCw, Car, Code, Building2, Sparkles, HelpCircle, MessageSquare, User, Home, Briefcase } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
-  navShellClass,
-  navShellShapeClass,
-  navHairlineTopClass,
   navControlButtonClass,
   navTextLinkClass,
   navStormiButtonClass,
@@ -20,6 +17,7 @@ import {
 } from '@/lib/navigation-styles'
 import ThemeToggle from './ThemeToggle'
 import StormChainWordmark from '@/components/ui/StormChainWordmark'
+import NavVaultShell from '@/components/ui/NavVaultShell'
 import StormTokenMark from '@/components/ui/StormTokenMark'
 import Button from '@/components/ui/Button'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -49,7 +47,7 @@ interface NavigationProps {
   walletAddress?: string | null
   tHasUnread?: boolean
   onTClick?: () => void
-  /** StormChain token balance for drivers - shown in nav */
+  /** Storm token balance for drivers - shown in nav */
   stormTokens?: number
   /** Callback to switch user role */
   onSwitchRole?: () => void
@@ -104,12 +102,8 @@ export default function Navigation({
       className='sticky top-4 z-50 px-4 sm:px-6 pointer-events-none'
       style={{ transform: 'translate3d(0,0,0)', backfaceVisibility: 'hidden' }}
     >
-      <nav className={navShellClass()}>
-        <div className={navShellShapeClass(isDark)} aria-hidden />
-        <div className={navHairlineTopClass()} aria-hidden />
-
-        <div className='relative z-[2] px-4 sm:px-6 py-3 sm:py-4'>
-          <div className='flex flex-col gap-3 sm:gap-3.5'>
+      <NavVaultShell isDark={isDark}>
+        <nav className='relative flex w-full flex-col gap-3 sm:gap-3.5' aria-label='Main navigation'>
             {/* Top Row: Logo and Controls */}
             <div className='flex items-center justify-between gap-3'>
               {/* Left side — Wallet (desktop) or Sign In */}
@@ -139,8 +133,8 @@ export default function Navigation({
 
               {/* Center — stacked Storm / StormTokenMark / Chain (matches LoadingScreen + whitepaper) */}
               <div className='flex-1 flex justify-center sm:-ml-6 lg:-ml-10 pointer-events-none'>
-                <h1 className='pointer-events-none' aria-label='StormChain'>
-                  <StormChainWordmark size='nav' />
+                <h1 className='pointer-events-none' aria-label='Storm'>
+                  <StormChainWordmark size='nav' vaultChrome={false} />
                 </h1>
               </div>
 
@@ -463,7 +457,7 @@ export default function Navigation({
                 </div>
               )}
 
-              {/* StormChain Token Counter & Theme Toggle - Bottom Right */}
+              {/* Storm Token Counter & Theme Toggle - Bottom Right */}
               <div className='w-full sm:w-auto flex items-center justify-end gap-3 sm:ml-auto'>
                 {/* STORM token counter — all roles earn tokens */}
                 {userRole && (
@@ -471,7 +465,7 @@ export default function Navigation({
                     type='button'
                     onClick={() => handleNavigation('stormchain')}
                     className={cn(navStormPillClass(isDark))}
-                    title='View StormChain tokens'
+                    title='View Storm tokens'
                   >
                     <StormTokenMark size='xs' className='scale-90' />
                     <span className='font-mono'>
@@ -485,9 +479,8 @@ export default function Navigation({
                 <ThemeToggle />
               </div>
             </div>
-          </div>
-        </div>
-      </nav>
+        </nav>
+      </NavVaultShell>
     </header>
   )
 }

@@ -42,7 +42,7 @@ const config: Config = withAccountKitUi(
     /**
      * Account Kit (Alchemy) auth UI — must meet WCAG contrast on white / slate surfaces.
      * Deprecated sage/mint/cream preset put cream `fg-primary` on light cards and washed-out
-     * primary buttons. This aligns with StormChain teal (`--storm-accent`) + slate neutrals.
+     * primary buttons. This aligns with Storm teal (`--storm-accent`) + slate neutrals.
      *
      * `.akui-btn-primary` uses `color: var(--akui-fg-invert)` — light mode needs white text on teal;
      * dark mode uses a brighter teal fill + dark `fg-invert` (same pattern as Account Kit defaults).

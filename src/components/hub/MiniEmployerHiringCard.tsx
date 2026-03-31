@@ -9,6 +9,8 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
 
 export interface MiniEmployerHiringCardProps {
+  /** Inside job-path vault rail — drop nested card chrome */
+  embedded?: boolean
   companyName: string | null
   activeJobs: number
   totalApplicants: number
@@ -19,6 +21,7 @@ export interface MiniEmployerHiringCardProps {
 }
 
 export default function MiniEmployerHiringCard({
+  embedded = false,
   companyName,
   activeJobs,
   totalApplicants,
@@ -33,8 +36,12 @@ export default function MiniEmployerHiringCard({
   return (
     <div
       className={cn(
-        'rounded-xl border p-3 space-y-3',
-        isDark ? 'border-gray-700 bg-gray-800/40' : 'border-slate-300/90 bg-white shadow-sm shadow-slate-900/[0.04]',
+        'space-y-3',
+        !embedded && [
+          'rounded-xl border p-3',
+          isDark ? 'border-gray-700 bg-gray-800/40' : 'border-slate-300/90 bg-white shadow-sm shadow-slate-900/[0.04]',
+        ],
+        embedded && 'pt-0.5',
       )}
     >
       <p className='text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400'>

@@ -93,7 +93,7 @@ export default function JobsTab({
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            {src === 'all' ? 'All Sources' : src === 'stormchain' ? 'StormChain' : 'External'}
+            {src === 'all' ? 'All Sources' : src === 'stormchain' ? 'Storm' : 'External'}
           </button>
         ))}
       </div>
@@ -136,7 +136,7 @@ export default function JobsTab({
                     ? 'bg-orange-500/20 text-orange-400'
                     : 'bg-teal-500/20 text-teal-400'
                 }`}>
-                  {job.isExternal ? (job.externalSource || 'External') : 'StormChain'}
+                  {job.isExternal ? (job.externalSource || 'External') : 'Storm'}
                 </span>
               </div>
             </div>

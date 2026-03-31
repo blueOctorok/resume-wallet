@@ -14,6 +14,10 @@ interface PreferencesState {
   
   // Track which "show once" steps have been shown (by step ID)
   completedJourneySteps: string[]
+
+  /** Candidate hub — large panels (persisted so scroll preferences stick) */
+  hubYourBlocksExpanded: boolean
+  hubBlockFilesExpanded: boolean
 }
 
 interface PreferencesActions {
@@ -21,11 +25,15 @@ interface PreferencesActions {
   markJourneyStepComplete: (stepId: string) => void
   hasCompletedJourneyStep: (stepId: string) => boolean
   resetCompletedJourneySteps: () => void
+  setHubYourBlocksExpanded: (expanded: boolean) => void
+  setHubBlockFilesExpanded: (expanded: boolean) => void
 }
 
 const initialState: PreferencesState = {
   showJourneyModals: true, // Enabled by default - help new users
   completedJourneySteps: [],
+  hubYourBlocksExpanded: true,
+  hubBlockFilesExpanded: true,
 }
 
 export const usePreferencesStore = create<PreferencesState & PreferencesActions>()(
@@ -48,12 +56,17 @@ export const usePreferencesStore = create<PreferencesState & PreferencesActions>
       },
 
       resetCompletedJourneySteps: () => set({ completedJourneySteps: [] }),
+
+      setHubYourBlocksExpanded: (expanded) => set({ hubYourBlocksExpanded: expanded }),
+      setHubBlockFilesExpanded: (expanded) => set({ hubBlockFilesExpanded: expanded }),
     }),
     {
       name: 'stormchain-preferences',
       partialize: (state) => ({
         showJourneyModals: state.showJourneyModals,
         completedJourneySteps: state.completedJourneySteps,
+        hubYourBlocksExpanded: state.hubYourBlocksExpanded,
+        hubBlockFilesExpanded: state.hubBlockFilesExpanded,
       }),
     }
   )

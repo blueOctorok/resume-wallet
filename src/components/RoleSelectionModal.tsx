@@ -261,7 +261,7 @@ export default function RoleSelectionModal({
               <span className='text-2xl sm:text-3xl'>⛈️</span>
             </div>
             <h2 className={`text-xl sm:text-3xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              Welcome to StormChain!
+              Welcome to Storm!
             </h2>
             <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
               Let's get you set up. What brings you here?
@@ -483,7 +483,7 @@ export default function RoleSelectionModal({
                   {showRequestForm && !pendingRequest && !requestSubmitted && (
                     <div className={`p-4 rounded-xl ${isDark ? 'bg-gray-800/50 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
                       <h4 className={`font-semibold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                        Set up your company on StormChain
+                        Set up your company on Storm
                       </h4>
                       <p className={`text-xs mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                         This request is for company owners, HR directors, or hiring managers.
@@ -560,7 +560,7 @@ export default function RoleSelectionModal({
                         </div>
 
                         <div className={`p-3 rounded-lg text-xs ${isDark ? 'bg-yellow-500/10 border border-yellow-500/30 text-yellow-400' : 'bg-yellow-50 border border-yellow-200 text-yellow-700'}`}>
-                          <strong>Important:</strong> If this company is new to StormChain, you will become its <strong>owner/admin</strong>. If it already exists, you&apos;ll be added to the team.
+                          <strong>Important:</strong> If this company is new to Storm, you will become its <strong>owner/admin</strong>. If it already exists, you&apos;ll be added to the team.
                         </div>
 
                         {requestError && <p className='text-sm text-red-500'>{requestError}</p>}
@@ -590,7 +590,7 @@ export default function RoleSelectionModal({
                       </div>
 
                       <p className={`text-xs mt-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                        <strong>Team members:</strong> If your company is already on StormChain, use your company email and you&apos;ll be added automatically.
+                        <strong>Team members:</strong> If your company is already on Storm, use your company email and you&apos;ll be added automatically.
                       </p>
                     </div>
                   )}

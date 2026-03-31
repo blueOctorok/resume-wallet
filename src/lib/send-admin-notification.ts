@@ -74,14 +74,14 @@ export async function sendNewCompanyNotification(
     bodyHtml,
     ctaLabel: 'Review in Admin Panel',
     ctaUrl: `${APP_URL}/admin`,
-    footerNote: 'This is an automated notification from StormChain admin systems.',
+    footerNote: 'This is an automated notification from Storm admin systems.',
   })
 
   try {
     const { data, error } = await resend.emails.send({
       from: FROM,
       to: ADMIN_EMAILS,
-      subject: `[StormChain Admin] New Company: ${companyName}`,
+      subject: `[Storm Admin] New Company: ${companyName}`,
       html,
     })
     if (error) {
@@ -116,19 +116,19 @@ function resolveLabel(requestType: string, params: CandidateRequestNotificationP
 
 const REQUEST_ACTION_TEXT: Record<string, (params: CandidateRequestNotificationParams) => string> = {
   mvr_order: () =>
-    'They would like to order your Motor Vehicle Record (MVR). Log in to StormChain to review and sign the required FCRA disclosure before the MVR can be ordered.',
+    'They would like to order your Motor Vehicle Record (MVR). Log in to Storm to review and sign the required FCRA disclosure before the MVR can be ordered.',
   document_upload: (p) =>
     p.documentType === 'resume'
-      ? 'They are requesting your resume. Log in to StormChain to upload or create one.'
+      ? 'They are requesting your resume. Log in to Storm to upload or create one.'
       : `They are requesting you upload your ${p.documentType || 'document'}.`,
   verification: () => 'They are requesting employment verification for your work history.',
   profile_completion: (p) =>
     p.documentType === 'dot_application'
-      ? 'They are requesting you complete your DOT Driver Application on StormChain. A completed application strengthens your profile and speeds up the hiring process.'
+      ? 'They are requesting you complete your DOT Driver Application on Storm. A completed application strengthens your profile and speeds up the hiring process.'
       : 'They are requesting you complete additional sections of your profile.',
   custom: (p) => p.message || 'They have a request for you.',
   block_request: (p) =>
-    `They are requesting your ${p.blockLabel || 'data'}. Log in to StormChain to complete it.`,
+    `They are requesting your ${p.blockLabel || 'data'}. Log in to Storm to complete it.`,
 }
 
 /**
@@ -157,19 +157,19 @@ export async function sendCandidateRequestNotification(
       ${message && requestType !== 'custom' ? `<p style="margin:10px 0 0;font-size:13px;font-style:italic;color:#64748b;">"${message}"</p>` : ''}
     `)}
     <p style="margin:0 0 4px;color:#64748b;font-size:14px;line-height:1.6;">
-      Log in to your StormChain account to view and respond to this request.
+      Log in to your Storm account to view and respond to this request.
     </p>
   `
 
   const html = buildEmail({
-    preheader: `${companyName} has a new request for you on StormChain`,
+    preheader: `${companyName} has a new request for you on Storm`,
     headerEyebrow: companyName,
     headerTitle: `You have a new request`,
     greeting: `Hi ${firstName},`,
     bodyHtml,
     ctaLabel: 'View Request',
     ctaUrl: APP_URL,
-    footerNote: `You're receiving this because an employer on StormChain is interested in your profile. Reply to this email with any questions.`,
+    footerNote: `You're receiving this because an employer on Storm is interested in your profile. Reply to this email with any questions.`,
   })
 
   try {
@@ -177,7 +177,7 @@ export async function sendCandidateRequestNotification(
     const { data, error } = await resend.emails.send({
       from: FROM,
       to: candidateEmail,
-      subject: `${companyName} has a request for you on StormChain`,
+      subject: `${companyName} has a request for you on Storm`,
       html,
     })
     if (error) {
@@ -204,7 +204,7 @@ const STATUS_CONFIG: Record<string, {
   contacted: {
     subject: 'Employer reached out',
     heading: "They've marked you as contacted",
-    body: "The employer has moved your application forward and marked you as contacted. Check StormChain for messages or follow up in your usual channels.",
+    body: "The employer has moved your application forward and marked you as contacted. Check Storm for messages or follow up in your usual channels.",
     accentColor: '#0d9488',
   },
 }
@@ -238,7 +238,7 @@ export async function sendApplicationStatusNotification(
       <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:${config.accentColor};">${config.heading}</p>
       <p style="margin:0;font-size:14px;color:#334155;line-height:1.6;">${config.body}</p>
     `, config.accentColor)}
-    <p style="margin:0;color:#64748b;font-size:14px;">Log in to your StormChain account to view your full application status.</p>
+    <p style="margin:0;color:#64748b;font-size:14px;">Log in to your Storm account to view your full application status.</p>
   `
 
   const html = buildEmail({
@@ -250,7 +250,7 @@ export async function sendApplicationStatusNotification(
     ctaLabel: 'View Application',
     ctaUrl: APP_URL,
     accentColor: config.accentColor,
-    footerNote: `You're receiving this because you applied to a job on StormChain. Reply to this email with any questions.`,
+    footerNote: `You're receiving this because you applied to a job on Storm. Reply to this email with any questions.`,
   })
 
   try {

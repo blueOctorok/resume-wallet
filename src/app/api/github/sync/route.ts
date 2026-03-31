@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     const headers: Record<string, string> = {
       Accept: 'application/vnd.github.v3+json',
-      'User-Agent': 'StormChain-GitHubSync',
+      'User-Agent': 'Storm-GitHubSync',
       Authorization: `Bearer ${github.access_token}`,
     }
 

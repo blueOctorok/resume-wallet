@@ -38,7 +38,7 @@ export default function StormChainView({ onBack, backLabel }: StormChainViewProp
 
       {/* Hero Header — stacked Storm / StormTokenMark / Chain (same identity as LoadingScreen) */}
       <div className='text-center mb-10'>
-        <h1 className='mb-5' aria-label='StormChain token'>
+        <h1 className='mb-5' aria-label='Storm — STORM wordmark'>
           <StormChainWordmark size='hero' />
         </h1>
         <p
@@ -470,7 +470,7 @@ export default function StormChainView({ onBack, backLabel }: StormChainViewProp
       {/* Referral Program */}
       <Section isDark={isDark} title='Referral Program' icon={<UserPlus className='w-5 h-5' />}>
         <p>
-          Invite friends to StormChain and <strong>both of you earn STORM tokens</strong> from
+          Invite friends to Storm and <strong>both of you earn STORM tokens</strong> from
           the treasury. Referral rewards are separate from the decay-based user rewards — they
           come from the 17M treasury allocation.
         </p>

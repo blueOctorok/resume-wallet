@@ -3,7 +3,10 @@
 import { useMemo } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useTheme } from '@/contexts/ThemeContext'
+import { getBlockColor } from '@/lib/block-registry'
 import Button from '@/components/ui/Button'
+import { VaultCredentialChrome } from '@/components/hub/HubBlockVault'
 import type { PageType } from '@/stores/types'
 import {
   calculateEmployerProgress,
@@ -64,6 +67,9 @@ export default function EmployerPathSidebar({
   className,
   onRequestCollapse,
 }: EmployerPathSidebarProps) {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  const pathVaultGlow = getBlockColor('general-resume').glowColor
   const hiring = useEmployerHiringPathStore((s) => s.hiring)
 
   const companyName = companyNameProp ?? hiring?.companyName ?? null
@@ -86,37 +92,78 @@ export default function EmployerPathSidebar({
     if (target) onNavigate(String(target))
   }
 
-  const body = (
-    <div className={cn('space-y-5', onRequestCollapse && 'pr-8')}>
-      <PathGuidance
-        audience='employer'
-        companyName={companyName}
-        companyProfileComplete={companyProfileComplete}
-        hasPostedJob={hasPostedJob}
-        overallProgress={progress.overallProgress}
-      />
-      <hr className='border-gray-200 dark:border-gray-700' />
-      <CareerPathSteps onNavigate={handleNavigate} progressOverride={progress} />
-      <hr className='border-gray-200 dark:border-gray-700' />
-      <MiniEmployerHiringCard
-        companyName={companyName}
-        activeJobs={activeJobs}
-        totalApplicants={totalApplicants}
-        pendingReview={pendingReview}
-        onPostJob={() => {
-          onCloseDrawer?.()
-          onNavigate('post-job')
-        }}
-        onApplicants={() => {
-          onCloseDrawer?.()
-          onNavigate('applicants')
-        }}
-        onFindTalent={() => {
-          onCloseDrawer?.()
-          onNavigate('talent-search')
-        }}
-      />
-    </div>
+  const divider = (
+    <div
+      aria-hidden
+      className='h-px shrink-0 bg-gradient-to-r from-transparent via-slate-300/55 to-transparent dark:via-teal-400/20'
+    />
+  )
+
+  const rail = (
+    <VaultCredentialChrome
+      isDark={isDark}
+      glowColor={pathVaultGlow}
+      hasRoute
+      showSigil={false}
+      className='w-full'
+      style={{
+        filter: isDark
+          ? 'drop-shadow(0 4px 22px rgba(0,0,0,0.5))'
+          : 'drop-shadow(0 4px 14px rgba(15,23,42,0.1))',
+      }}
+    >
+      <div
+        className={cn(
+          'relative flex min-h-0 flex-col gap-4 px-3.5 pb-[14px] pt-3.5',
+          onRequestCollapse && 'pr-11',
+        )}
+      >
+        {onRequestCollapse && (
+          <div className='absolute right-4 top-3 z-20'>
+            <Button
+              type='button'
+              variant='ghost'
+              size='sm'
+              className='!h-8 !w-8 !p-1.5 border border-gray-200/80 bg-white/90 text-gray-500 shadow-sm backdrop-blur-sm hover:text-gray-800 dark:border-gray-600/80 dark:bg-gray-900/90 dark:text-gray-400 dark:hover:text-gray-100'
+              onClick={onRequestCollapse}
+              aria-label='Collapse job path panel'
+              title='Collapse job path'
+            >
+              <ChevronRight className='h-4 w-4' aria-hidden />
+            </Button>
+          </div>
+        )}
+        <PathGuidance
+          audience='employer'
+          companyName={companyName}
+          companyProfileComplete={companyProfileComplete}
+          hasPostedJob={hasPostedJob}
+          overallProgress={progress.overallProgress}
+        />
+        {divider}
+        <CareerPathSteps onNavigate={handleNavigate} progressOverride={progress} />
+        {divider}
+        <MiniEmployerHiringCard
+          embedded
+          companyName={companyName}
+          activeJobs={activeJobs}
+          totalApplicants={totalApplicants}
+          pendingReview={pendingReview}
+          onPostJob={() => {
+            onCloseDrawer?.()
+            onNavigate('post-job')
+          }}
+          onApplicants={() => {
+            onCloseDrawer?.()
+            onNavigate('applicants')
+          }}
+          onFindTalent={() => {
+            onCloseDrawer?.()
+            onNavigate('talent-search')
+          }}
+        />
+      </div>
+    </VaultCredentialChrome>
   )
 
   if (variant === 'sticky') {
@@ -128,39 +175,10 @@ export default function EmployerPathSidebar({
           className,
         )}
       >
-        <div
-          className={cn(
-            'relative overflow-hidden rounded-2xl border border-slate-300/90 dark:border-gray-600/70',
-            'bg-white dark:bg-gradient-to-b dark:from-gray-900/95 dark:to-gray-950/90',
-            'p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_6px_20px_-6px_rgba(15,23,42,0.1)]',
-            'dark:shadow-[0_16px_48px_-12px_rgba(0,0,0,0.5)]',
-            'ring-1 ring-slate-200/80 dark:ring-teal-400/[0.08]',
-          )}
-        >
-          <div
-            aria-hidden
-            className='pointer-events-none absolute inset-x-0 top-0 z-[1] h-px bg-gradient-to-r from-transparent via-slate-300/70 to-transparent dark:via-teal-400/30'
-          />
-        {onRequestCollapse && (
-          <div className="absolute top-2 right-2 z-10">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="!p-1.5 h-8 w-8 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200/80 dark:border-gray-600/80 shadow-sm text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
-              onClick={onRequestCollapse}
-              aria-label="Collapse job path panel"
-              title="Collapse job path"
-            >
-              <ChevronRight className="w-4 h-4" aria-hidden />
-            </Button>
-          </div>
-        )}
-        {body}
-        </div>
+        {rail}
       </aside>
     )
   }
 
-  return <div className={cn('space-y-5', className)}>{body}</div>
+  return <div className={cn(className)}>{rail}</div>
 }

@@ -6,6 +6,7 @@
  */
 
 import { Check, Circle, Loader2, ChevronRight, IdCard } from 'lucide-react'
+import Button from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 import { useJourneyProgress } from '@/stores'
 import { useHubBlocksStore } from '@/stores/hub-blocks-store'
@@ -28,26 +29,19 @@ export default function CareerPathSteps({ onNavigate, progressOverride }: Career
     return (
       <div
         className={cn(
-          'rounded-xl border p-4 text-center',
-          'border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/40',
+          'rounded-lg p-4 text-center',
+          'bg-slate-900/[0.04] ring-1 ring-slate-900/[0.06] dark:bg-white/[0.04] dark:ring-white/[0.08]',
         )}
       >
-        <IdCard className='w-8 h-8 mx-auto mb-2 opacity-50 text-gray-500' />
+        <IdCard className='w-8 h-8 mx-auto mb-2 opacity-50 text-gray-500 dark:text-gray-400' />
         <p className='text-sm font-medium text-gray-800 dark:text-gray-200'>Nothing here yet</p>
         <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
           {isEmployer ? 'Load your hub to see your job path.' : 'Add blocks from the store to see your next steps.'}
         </p>
         {!isEmployer && (
-          <button
-            type='button'
-            onClick={() => openPicker()}
-            className={cn(
-              'mt-3 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors',
-              'bg-brand-mint text-gray-900 hover:bg-brand-mint/90',
-            )}
-          >
+          <Button type='button' variant='primary' size='sm' className='mt-3' onClick={() => openPicker()}>
             Open block store
-          </button>
+          </Button>
         )}
       </div>
     )

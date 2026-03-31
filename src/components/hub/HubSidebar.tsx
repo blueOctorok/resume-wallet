@@ -1,10 +1,13 @@
 'use client'
 
 import { cn } from '@/lib/utils'
+import { useTheme } from '@/contexts/ThemeContext'
+import { getBlockColor } from '@/lib/block-registry'
 import { useJourneyProgress } from '@/stores'
 import { useUIStore } from '@/stores'
 import { useHubBlocksStore, useInstalledBlocks } from '@/stores/hub-blocks-store'
 import type { PageType } from '@/stores/types'
+import { VaultCredentialChrome } from '@/components/hub/HubBlockVault'
 import PathGuidance from './PathGuidance'
 import CareerPathSteps from './CareerPathSteps'
 import MiniCareerCard from './MiniCareerCard'
@@ -19,6 +22,9 @@ export interface HubSidebarProps {
 }
 
 export default function HubSidebar({ variant, id, onCloseDrawer, className }: HubSidebarProps) {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  const pathVaultGlow = getBlockColor('general-resume').glowColor
   const { setCurrentPage } = useUIStore()
   const openPicker = useHubBlocksStore((s) => s.openPicker)
   const userProfile = useHubBlocksStore((s) => s.userProfile)
@@ -36,27 +42,46 @@ export default function HubSidebar({ variant, id, onCloseDrawer, className }: Hu
     onCloseDrawer?.()
   }
 
-  const body = (
-    <div className='space-y-5'>
-      <PathGuidance
-        audience='candidate'
-        firstName={userProfile?.firstName}
-        installedBlockCount={installedBlocks.length}
-        overallProgress={progress.overallProgress}
-      />
-      <hr className='border-gray-200 dark:border-gray-700' />
-      <CareerPathSteps onNavigate={handleNavigate} />
-      <hr className='border-gray-200 dark:border-gray-700' />
-      <HubExploreLinks onCloseDrawer={onCloseDrawer} />
-      <hr className='border-gray-200 dark:border-gray-700' />
-      <MiniCareerCard />
-    </div>
+  const divider = (
+    <div
+      aria-hidden
+      className='h-px shrink-0 bg-gradient-to-r from-transparent via-slate-300/55 to-transparent dark:via-teal-400/20'
+    />
+  )
+
+  /** One vault panel: path + steps + explore + preview — no outer rounded card */
+  const rail = (
+    <VaultCredentialChrome
+      isDark={isDark}
+      glowColor={pathVaultGlow}
+      hasRoute
+      showSigil={false}
+      className='w-full'
+      style={{
+        filter: isDark
+          ? 'drop-shadow(0 4px 22px rgba(0,0,0,0.5))'
+          : 'drop-shadow(0 4px 14px rgba(15,23,42,0.1))',
+      }}
+    >
+      <div className='flex min-h-0 flex-col gap-4 px-3.5 pb-[14px] pt-3.5'>
+        <PathGuidance
+          audience='candidate'
+          firstName={userProfile?.firstName}
+          installedBlockCount={installedBlocks.length}
+          overallProgress={progress.overallProgress}
+        />
+        {divider}
+        <CareerPathSteps onNavigate={handleNavigate} />
+        {divider}
+        <HubExploreLinks onCloseDrawer={onCloseDrawer} />
+        {divider}
+        <MiniCareerCard embedded />
+      </div>
+    </VaultCredentialChrome>
   )
 
   if (variant === 'sticky') {
-    // Sticky lives on the outer <aside> with NO overflow-hidden — overflow on a sticky ancestor
-    // breaks stickiness / alignment in WebKit and can make the rail sit “one block” lower visually.
-    // The chrome (blur, hairline, clip) stays on an inner wrapper.
+    // Sticky on <aside> only — no overflow-hidden here (breaks stickiness in WebKit).
     return (
       <aside
         id={id}
@@ -65,24 +90,10 @@ export default function HubSidebar({ variant, id, onCloseDrawer, className }: Hu
           className,
         )}
       >
-        <div
-          className={cn(
-            'relative overflow-hidden rounded-2xl border border-slate-300/90 dark:border-gray-600/70',
-            'bg-white dark:bg-gradient-to-b dark:from-gray-900/95 dark:to-gray-950/90',
-            'p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_6px_20px_-6px_rgba(15,23,42,0.1)]',
-            'dark:shadow-[0_16px_48px_-12px_rgba(0,0,0,0.5)]',
-            'ring-1 ring-slate-200/80 dark:ring-teal-400/[0.08]',
-          )}
-        >
-          <div
-            aria-hidden
-            className='pointer-events-none absolute inset-x-0 top-0 z-[1] h-px bg-gradient-to-r from-transparent via-slate-300/70 to-transparent dark:via-teal-400/30'
-          />
-          {body}
-        </div>
+        {rail}
       </aside>
     )
   }
 
-  return <div className={cn('space-y-5', className)}>{body}</div>
+  return <div className={cn(className)}>{rail}</div>
 }

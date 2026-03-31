@@ -1214,7 +1214,7 @@ export default function DriverHub({
               <h2
                 className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
               >
-                StormChain Tokens
+                Storm Tokens
               </h2>
               <div className='flex items-center gap-2 mt-1'>
                 <span

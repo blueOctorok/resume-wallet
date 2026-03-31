@@ -129,7 +129,7 @@ export default function ApplicantKanban({
           'Content-Type': 'application/json',
           'x-wallet-address': walletAddress,
         },
-        body: JSON.stringify({ requestType, documentType, message: 'Requested via StormChain Hiring Pipeline' }),
+        body: JSON.stringify({ requestType, documentType, message: 'Requested via Storm Hiring Pipeline' }),
       })
 
       if (res.status === 409) {

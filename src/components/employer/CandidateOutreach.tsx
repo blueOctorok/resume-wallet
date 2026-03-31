@@ -182,13 +182,13 @@ function QrModal({ url, name, onClose }: { url: string; name: string; onClose: (
         if (navigator.canShare?.({ files: [file] })) {
           await navigator.share({
             files: [file],
-            title: 'StormChain invite',
+            title: 'Storm invite',
             text: `Open or scan: ${url}`,
           })
           return
         }
       }
-      await navigator.share({ title: 'StormChain invite', text: url })
+      await navigator.share({ title: 'Storm invite', text: url })
     } catch (e: unknown) {
       if (e && typeof e === 'object' && 'name' in e && (e as Error).name === 'AbortError') return
       console.error('[QrModal] share failed', e)
@@ -690,7 +690,7 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
             {/* Profile search */}
             <div className="mb-3" ref={profileSearchRef}>
               <label className={label}>
-                Search existing StormChain profiles
+                Search existing Storm profiles
                 <span className={`ml-1 font-normal ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>
                   — connects invite for in-app notifications
                 </span>
@@ -709,7 +709,7 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
                         {selectedProfile.full_name || selectedProfile.email}
                       </p>
                       <p className={`text-xs ${theme === 'dark' ? 'text-teal-500' : 'text-teal-500'}`}>
-                        Connected to StormChain · In-app notification will fire when email is sent
+                        Connected to Storm · In-app notification will fire when email is sent
                       </p>
                     </div>
                   </div>
@@ -779,12 +779,12 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
                           <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
                             theme === 'dark' ? 'bg-teal-900/50 text-teal-400' : 'bg-teal-100 text-teal-700'
                           }`}>
-                            StormChain
+                            Storm
                           </span>
                         </button>
                       ))}
                       <div className={`px-3 py-2 text-xs ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>
-                        Or fill in name and email below for someone not on StormChain
+                        Or fill in name and email below for someone not on Storm
                       </div>
                     </div>
                   )}
@@ -793,7 +793,7 @@ export default function CandidateOutreach({ walletAddress, isCollapsed = false, 
                     <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl border shadow-xl z-50 px-3 py-3 text-xs ${
                       theme === 'dark' ? 'bg-gray-800 border-gray-700 text-gray-500' : 'bg-white border-gray-200 text-gray-400'
                     }`}>
-                      No StormChain profiles found — fill in name and email below for an email-only invite
+                      No Storm profiles found — fill in name and email below for an email-only invite
                     </div>
                   )}
                 </div>

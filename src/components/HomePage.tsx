@@ -39,9 +39,8 @@ import {
   Handshake,
   UserPlus,
 } from 'lucide-react'
-import { getBlockColor } from '@/lib/block-registry'
-import { flatTopHexHeight } from '@/lib/hex-hive-geometry'
 import StormChainView from '@/components/StormChainView'
+import { VaultShowcase } from '@/components/hub/HubBlockVault'
 import Button from '@/components/ui/Button'
 
 interface HomePageProps {
@@ -51,11 +50,7 @@ interface HomePageProps {
   onBrowseJobs?: () => void
 }
 
-// ── Hex clip-path (same constant used in the hub) ────────────────────────────
-const HEX_CLIP = 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'
-
-// ── Hive showcase blocks — used in hero and section 3 ────────────────────────
-// Seven entries = full ring (center + 6 around) — layout expects slice(0, 7).
+// ── Vault showcase blocks — hero + section 3 (same topology as in-app hub) ───
 const HIVE_BLOCKS = [
   { id: 'driver-dot-application', icon: ClipboardList, label: 'DOT App' },
   { id: 'driver-resume', icon: FileText, label: 'Resume' },
@@ -94,112 +89,6 @@ function useScrollReveal(reattachKey: unknown) {
   }, [reattachKey])
 
   return containerRef
-}
-
-// ── Decorative hive showcase ─────────────────────────────────────────────────
-// Same radial layout as the in-app Block Hive: center hex is larger, 6 ring
-// hexes spiral around it. Used in the hero and section 3 of the landing page.
-
-const HIVE_GAP = 8
-
-interface ShowcaseHiveProps {
-  blocks: typeof HIVE_BLOCKS
-  isDark: boolean
-}
-
-// Responsive hive sizes — same flat-top hex W:H as hub (`flatTopHexHeight`)
-const SHOWCASE_CENTER_XS_W = 108
-const SHOWCASE_RING_XS_W = 80
-const SHOWCASE_CENTER_LG_W = 192
-const SHOWCASE_RING_LG_W = 148
-const SHOWCASE_CENTER_XS = { w: SHOWCASE_CENTER_XS_W, h: flatTopHexHeight(SHOWCASE_CENTER_XS_W) }
-const SHOWCASE_RING_XS = { w: SHOWCASE_RING_XS_W, h: flatTopHexHeight(SHOWCASE_RING_XS_W) }
-const SHOWCASE_CENTER_LG = { w: SHOWCASE_CENTER_LG_W, h: flatTopHexHeight(SHOWCASE_CENTER_LG_W) }
-const SHOWCASE_RING_LG = { w: SHOWCASE_RING_LG_W, h: flatTopHexHeight(SHOWCASE_RING_LG_W) }
-
-function hiveShowcaseOffsets(centerW: number, centerH: number, ringW: number, ringH: number): [number, number][] {
-  const dx = centerW / 2 + HIVE_GAP + ringW / 2
-  const dy = (centerH / 2 + HIVE_GAP + ringH / 2) * 0.92
-  const halfDx = dx * 0.52
-  return [
-    [0, 0],
-    [-halfDx, -dy],
-    [halfDx,  -dy],
-    [-dx,      0],
-    [dx,       0],
-    [-halfDx,  dy],
-    [halfDx,   dy],
-  ]
-}
-
-function HiveShowcase({ blocks, isDark }: ShowcaseHiveProps) {
-  const [isSmall, setIsSmall] = useState(false)
-
-  useEffect(() => {
-    const check = () => setIsSmall(window.innerWidth < 500)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
-
-  const centerW = isSmall ? SHOWCASE_CENTER_XS.w : SHOWCASE_CENTER_LG.w
-  const centerH = isSmall ? SHOWCASE_CENTER_XS.h : SHOWCASE_CENTER_LG.h
-  const ringW   = isSmall ? SHOWCASE_RING_XS.w   : SHOWCASE_RING_LG.w
-  const ringH   = isSmall ? SHOWCASE_RING_XS.h   : SHOWCASE_RING_LG.h
-
-  const slots = hiveShowcaseOffsets(centerW, centerH, ringW, ringH)
-  const dx = centerW / 2 + HIVE_GAP + ringW / 2
-  const dy = (centerH / 2 + HIVE_GAP + ringH / 2) * 0.92
-  const containerW = 2 * (dx + ringW / 2) + 16
-  const containerH = 2 * (dy + ringH / 2) + 16
-
-  return (
-    <div className='relative mx-auto' style={{ width: containerW, height: containerH }}>
-      {blocks.slice(0, 7).map((block, i) => {
-        const isCenter = i === 0
-        const w = isCenter ? centerW : ringW
-        const h = isCenter ? centerH : ringH
-        const [offX, offY] = slots[i]
-        const left = containerW / 2 - w / 2 + offX
-        const top = containerH / 2 - h / 2 + offY
-        const colors = getBlockColor(block.id)
-        const delay = i * 0.3
-
-        return (
-          <div
-            key={block.id}
-            className='absolute'
-            style={{
-              width: w, height: h, left, top,
-              animation: `hex-float 4s ease-in-out ${delay}s infinite alternate`,
-              zIndex: isCenter ? 2 : 1,
-            }}
-          >
-            <div className='w-full h-full relative' style={{ clipPath: HEX_CLIP }}>
-              <div
-                className={`absolute inset-0 ${isDark ? 'bg-white/[0.06]' : 'bg-white/40'}`}
-                style={{ clipPath: HEX_CLIP }}
-              />
-              <div
-                className={`absolute inset-[2px] backdrop-blur-md ${isDark ? 'bg-gray-900/55' : 'bg-white/70'}`}
-                style={{ clipPath: HEX_CLIP }}
-              />
-              <div className='absolute inset-0 flex flex-col items-center justify-center z-[1] px-[12%]'>
-                <block.icon className={`mb-1 ${isCenter ? 'w-7 h-7 sm:w-11 sm:h-11' : 'w-5 h-5 sm:w-8 sm:h-8'} ${
-                  isDark ? colors.iconText.dark : colors.iconText.light
-                }`} />
-                <span className={`font-bold uppercase tracking-wide text-center leading-tight ${
-                  isCenter ? 'text-[8px] sm:text-xs' : 'text-[6px] sm:text-[10px]'
-                } ${isDark ? colors.iconText.dark : colors.iconText.light}`}>
-                  {block.label}
-                </span>
-              </div>
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
 }
 
 // ── Glass card wrapper ───────────────────────────────────────────────────────
@@ -298,7 +187,7 @@ function CareerCardMockup({ isDark }: { isDark: boolean }) {
         <div className='flex items-center justify-center gap-1.5 pt-1'>
           <Shield className={`w-3 h-3 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
           <span className={`text-[10px] font-medium ${isDark ? 'text-teal-400' : 'text-teal-600'}`}>
-            Verified on StormChain
+            Verified on Storm
           </span>
         </div>
       </div>
@@ -341,7 +230,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
   return (
     <>
       {/*
-        Iridescent film — sits above StormBackground (dark: cloud z-[-3]; particles z-[-1]) but below
+        Iridescent film — sits above StormBackground vault canvas (z-[-3]) + bubbles (z-[-1]) but below
         this page’s content (z-10). Light mode has bubbles only (no cloud). Slow spin reads as
         shifting teal / indigo / violet without competing with readability. prefers-reduced-motion: static wash, no spin.
       */}
@@ -414,7 +303,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
             aria-hidden
           />
           <span>
-            Candidates and employers both belong on StormChain — same network, different jobs to be done.
+            Candidates and employers both belong on Storm — same network, different jobs to be done.
           </span>
         </p>
         <h1
@@ -569,7 +458,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
             }`}
           >
             We are <strong className={isDark ? 'text-gray-300' : 'text-gray-800'}>not</strong> a “mass auto-apply”
-            product. StormChain never blasts employers with applications on your behalf —{' '}
+            product. Storm never blasts employers with applications on your behalf —{' '}
             <strong className={isDark ? 'text-gray-300' : 'text-gray-800'}>high signal for you and for hiring teams.</strong>
           </p>
 
@@ -719,7 +608,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
           <p className={`text-base sm:text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             A lot of “AI job” products optimize for <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>sheer volume</strong>{' '}
             (auto-applying to hundreds of postings). That trains recruiters to distrust AI — and it isn&apos;t how we work.
-            StormChain is the <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>opposite</strong>: invest in a
+            Storm is the <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>opposite</strong>: invest in a
             verified Career Card, then apply only when <em>you</em> decide — so candidates look serious and employers get
             fewer junk applications. Same product, no favorites.
           </p>
@@ -781,7 +670,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
           </h2>
           <p className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>Anyone</strong> can build a Career Card and use prep
-            here — that is the front door. StormChain just{' '}
+            here — that is the front door. Storm just{' '}
             <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>doubles down</strong> on job search, applications,
             and what employers see, instead of trying to be a full-life career coach. Stormi comes{' '}
             <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>after</strong> blocks and verification so you&apos;re{' '}
@@ -861,7 +750,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
                   Search real jobs before you connect
                 </h2>
                 <p className={`text-sm sm:text-base ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  StormChain postings plus aggregated boards — same search experience as logged-in users. Applying,
+                  Storm postings plus aggregated boards — same search experience as logged-in users. Applying,
                   Stormi match scores, and alerts stay tied to your wallet so we never mint empty profiles.
                 </p>
               </div>
@@ -936,7 +825,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
           data-reveal
           className='reveal-item mb-14 flex justify-center px-2 [mask-image:radial-gradient(ellipse_78%_72%_at_50%_50%,#000_52%,transparent_96%)] [-webkit-mask-image:radial-gradient(ellipse_78%_72%_at_50%_50%,#000_52%,transparent_96%)]'
         >
-          <HiveShowcase blocks={HIVE_BLOCKS} isDark={isDark} />
+          <VaultShowcase blocks={HIVE_BLOCKS} isDark={isDark} />
         </div>
 
         {/* Profession callouts */}
@@ -1046,7 +935,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
             For employers
           </p>
           <h2 className={`text-3xl sm:text-4xl md:text-5xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            The other half of StormChain
+            The other half of Storm
           </h2>
           <p className={`text-lg sm:text-xl ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             Candidates build Career Cards once; you get <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>repeatable</strong>{' '}
@@ -1155,7 +1044,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
               </h2>
 
               <p className={`text-lg mb-8 max-w-2xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                StormChain runs on its own token economy. Earn STORM for completing your profile,
+                Storm runs on its own token economy. Earn STORM for completing your profile,
                 installing blocks, and contributing verified credentials. Spend it on premium features.
               </p>
 
@@ -1263,10 +1152,6 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
         .reveal-item.revealed {
           opacity: 1;
           transform: translateY(0);
-        }
-        @keyframes hex-float {
-          0%   { transform: translateY(0); }
-          100% { transform: translateY(-8px); }
         }
         @keyframes card-float {
           0%   { transform: translateY(0) rotate(0deg); }

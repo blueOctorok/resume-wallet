@@ -678,7 +678,7 @@ export default function DeveloperHub({
         />
       </div>
 
-      {/* StormChain Tokens (Coming Soon) */}
+      {/* Storm Tokens (Coming Soon) */}
       <div
         className={`p-4 sm:p-6 rounded-xl border ${
           theme === 'dark'
@@ -695,7 +695,7 @@ export default function DeveloperHub({
               <p
                 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
               >
-                StormChain Tokens
+                Storm Tokens
               </p>
               <p
                 className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}

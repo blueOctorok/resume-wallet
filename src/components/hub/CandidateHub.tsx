@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useCallback, useState } from 'react'
-import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, ShieldCheck, ChevronLeft, ChevronRight, FileText, ClipboardCheck, Car, RefreshCw, Trash2, Globe, Github, Compass, Sparkles } from 'lucide-react'
+import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, ShieldCheck, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, FileText, ClipboardCheck, Car, RefreshCw, Trash2, Globe, Github, Compass, Sparkles, LayoutGrid } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useAuthStore, useUIStore, useJourneyStore } from '@/stores'
+import { useAuthStore, useUIStore, useJourneyStore, usePreferencesStore } from '@/stores'
 import {
   useHubBlocksStore,
   useInstalledBlocks,
@@ -17,7 +17,9 @@ import type { PageType } from '@/stores/types'
 import { getBlockColor, getBlockDefinition } from '@/lib/block-registry'
 import { getBlockIllustration } from './BlockIllustrations'
 import Button from '@/components/ui/Button'
+import BlockCard from '@/components/ui/BlockCard'
 import Card from '@/components/ui/Card'
+import VaultHorizontalVaultShell from '@/components/ui/VaultHorizontalVaultShell'
 import AvatarUpload from '@/components/ui/AvatarUpload'
 import STORMBalance from '@/components/STORMBalance'
 import CandidateRequestsSection from '@/components/CandidateRequestsSection'
@@ -38,8 +40,12 @@ import HubSidebar from '@/components/hub/HubSidebar'
 import DeveloperResumePreviewModal from '@/components/DeveloperResumePreviewModal'
 import type { DeveloperResumeData } from '@/components/DeveloperResumeBuilder'
 import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
-import { flatTopHexHeight } from '@/lib/hex-hive-geometry'
 import Atropos from 'atropos/react'
+import {
+  VaultCredentialChrome,
+  vaultSlotForIndex,
+  VAULT_SLOT_GRID_CLASS,
+} from '@/components/hub/HubBlockVault'
 import 'atropos/css'
 
 import {
@@ -58,11 +64,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
-// ── Hex clip-path for flat-top hexagon ────────────────────────────────────────
-// Pointy-left/right hex: vertices at 0%/50%, 25%/0%, 75%/0%, 100%/50%, 75%/100%, 25%/100%
-const HEX_CLIP = 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'
-
-// ── Block Tile — honeycomb cell: shared chrome in light mode, block color = icon + hover glow ──
+// ── Block Tile — vault credential silhouette (chamfer + rim + sigil); accent from block registry ──
 
 interface BlockTileProps {
   block: InstalledBlock
@@ -70,9 +72,11 @@ interface BlockTileProps {
   isEditing: boolean
   onRemove: () => void
   onOpen: (() => void) | null
+  /** Center grid cell is larger (visual hierarchy). */
+  slotIsCenter: boolean
 }
 
-function BlockTile({ block, index, isEditing, onRemove, onOpen }: BlockTileProps) {
+function BlockTile({ block, index, isEditing, onRemove, onOpen, slotIsCenter }: BlockTileProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -96,161 +100,125 @@ function BlockTile({ block, index, isEditing, onRemove, onOpen }: BlockTileProps
     onOpen()
   }
 
-  const defaultLightShadow = 'drop-shadow(0 2px 10px rgba(15,23,42,0.07))'
-  const defaultDarkShadow = 'drop-shadow(0 2px 12px rgba(0,0,0,0.35))'
+  const defaultLightShadow =
+    'drop-shadow(0 4px 14px rgba(15,23,42,0.1)) drop-shadow(0 0 20px rgba(13,148,136,0.12)) drop-shadow(0 0 36px rgba(124,58,237,0.08))'
+  const defaultDarkShadow = 'drop-shadow(0 4px 18px rgba(0,0,0,0.45))'
+  const [tileFilter, setTileFilter] = useState<string | undefined>(() =>
+    !isEditing ? (isDark ? defaultDarkShadow : defaultLightShadow) : undefined,
+  )
+
+  useEffect(() => {
+    if (!isEditing) setTileFilter(isDark ? defaultDarkShadow : defaultLightShadow)
+    else setTileFilter(undefined)
+  }, [isDark, isEditing])
 
   const tileContent = (
     <div
       className={cn(
-        'relative w-full h-full select-none transition-all duration-300',
-        isDragging && 'opacity-60 scale-105 z-20',
+        'relative h-full w-full min-h-0 transition-all duration-300',
+        isDragging && 'z-20 scale-105 opacity-60',
         isEditing && !isDragging && 'cursor-grab active:cursor-grabbing',
-        isEditing && !isDragging && (index % 2 === 0
-          ? '[animation:jiggle_0.3s_ease-in-out_infinite]'
-          : '[animation:jiggle-alt_0.28s_ease-in-out_infinite]'
-        ),
+        isEditing &&
+          !isDragging &&
+          (index % 2 === 0
+            ? '[animation:jiggle_0.3s_ease-in-out_infinite]'
+            : '[animation:jiggle-alt_0.28s_ease-in-out_infinite]'),
       )}
-      style={{
-        clipPath: HEX_CLIP,
-        filter:
-          !isEditing && hasRoute
-            ? isDark
-              ? defaultDarkShadow
-              : defaultLightShadow
-            : !isEditing && !hasRoute
-              ? isDark
-                ? defaultDarkShadow
-                : defaultLightShadow
-              : undefined,
-      }}
-      onMouseEnter={(e) => {
-        if (!isEditing && hasRoute) {
-          const el = e.currentTarget as HTMLElement
-          el.style.filter = isDark
-            ? `drop-shadow(0 6px 22px ${colors.glowColor})`
-            : `${defaultLightShadow}, drop-shadow(0 4px 20px ${colors.glowColor})`
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isEditing && hasRoute) {
-          const el = e.currentTarget as HTMLElement
-          el.style.filter = isDark ? defaultDarkShadow : defaultLightShadow
-        }
-      }}
     >
-      {/* Outer ring: light = one hive-wide language (slate); dark = colored rim when interactive */}
-      <div
-        className={cn(
-          'absolute inset-0',
-          isDark ? 'bg-white/[0.08]' : 'bg-white/80',
-          isDark && !isEditing && hasRoute && colors.borderHover.dark,
-          !isDark &&
-            !isEditing &&
-            (hasRoute
-              ? 'ring-1 ring-inset ring-slate-300/90'
-              : 'ring-1 ring-inset ring-dashed ring-slate-300/65'),
-        )}
-        style={{ clipPath: HEX_CLIP }}
-      />
-      {/* Inner face */}
-      <div
-        className={cn(
-          'absolute inset-[2px]',
-          isDark
-            ? 'bg-gradient-to-b from-[rgb(20,26,34)]/92 to-[rgb(10,13,18)]/95 backdrop-blur-md ring-1 ring-white/[0.04]'
-            : 'bg-gradient-to-b from-white to-slate-50/95 shadow-inner shadow-slate-900/[0.05]',
-        )}
-        style={{ clipPath: HEX_CLIP }}
+      <VaultCredentialChrome
+        isDark={isDark}
+        glowColor={colors.glowColor}
+        hasRoute={hasRoute}
+        className='h-full min-h-0'
+        style={{ filter: tileFilter }}
+        onMouseEnter={() => {
+          if (!isEditing && hasRoute) {
+            setTileFilter(
+              isDark
+                ? `drop-shadow(0 10px 28px ${colors.glowColor})`
+                : `${defaultLightShadow}, drop-shadow(0 8px 24px ${colors.glowColor})`,
+            )
+          }
+        }}
+        onMouseLeave={() => {
+          if (!isEditing) setTileFilter(isDark ? defaultDarkShadow : defaultLightShadow)
+        }}
       >
-        {/* Shared specular top edge — reads as one product family in light mode */}
-        {!isDark && (
-          <div
-            aria-hidden
-            className='pointer-events-none absolute inset-x-[10%] top-[5%] h-px rounded-full bg-gradient-to-r from-transparent via-white to-transparent opacity-95 shadow-[0_1px_0_rgba(255,255,255,0.65)]'
-          />
-        )}
-      </div>
-
-      {/* Accent hairline (block identity) — subtle, not full rainbow titles */}
-      {!isDark && hasRoute && (
-        <div
-          aria-hidden
-          className='pointer-events-none absolute left-1/2 top-[3px] z-[2] h-[2px] w-[30%] max-w-[3.25rem] -translate-x-1/2 rounded-full opacity-90'
-          style={{
-            background: `linear-gradient(90deg, transparent, ${colors.glowColor}, transparent)`,
-          }}
-        />
-      )}
-
-      {/* Remove badge (edit mode) */}
-      {isEditing && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onRemove() }}
-          className='absolute top-2 left-1/2 -translate-x-1/2 z-10 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors'
-          aria-label={`Remove ${label}`}
-        >
-          <X className='w-3.5 h-3.5 text-white' />
-        </button>
-      )}
-
-      {/* Content — slightly more room for readable type */}
-      <div className='absolute inset-0 z-[1] flex flex-col items-center justify-center text-center overflow-hidden px-[11%] py-[14%] sm:px-[10%] sm:py-[13%]'>
-        {/* Status */}
-        {!isEditing && (
-          <div className='flex-shrink-0 min-h-[14px] flex items-center justify-center'>
-            {!hasRoute ? (
-              <span
-                className={cn(
-                  'text-[8px] sm:text-[9px] font-medium tracking-wide text-slate-500 dark:text-gray-500',
-                  'border border-dashed border-slate-300/80 dark:border-gray-600 rounded-md px-1.5 py-0.5',
-                  'bg-slate-50/90 dark:bg-white/[0.06]',
-                )}
-              >
-                Coming soon
-              </span>
-            ) : (
-              <div
-                className={cn(
-                  'w-2 h-2 rounded-full mx-auto [animation:status-pulse_2s_ease-in-out_infinite]',
-                  colors.badgeColor,
-                )}
-              />
-            )}
-          </div>
+        {isEditing && (
+          <button
+            type='button'
+            onClick={(e) => {
+              e.stopPropagation()
+              onRemove()
+            }}
+            className='absolute top-2 left-1/2 z-20 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full bg-red-500 shadow-lg transition-colors hover:bg-red-600'
+            aria-label={`Remove ${label}`}
+          >
+            <X className='h-3.5 w-3.5 text-white' />
+          </button>
         )}
 
-        <div
-          className='flex-shrink-0 my-0.5 sm:my-1 [&_svg]:w-9 [&_svg]:h-9 sm:[&_svg]:w-[2.65rem] sm:[&_svg]:h-[2.65rem]'
-          data-atropos-offset='3'
-        >
-          <Illustration
-            accentText={isDark ? colors.iconText.dark : colors.iconText.light}
-            isDark={isDark}
-          />
-        </div>
-
-        <p
-          className={cn(
-            'flex-shrink-0 w-full truncate font-semibold leading-tight tracking-tight',
-            'text-[10px] sm:text-[11px]',
-            isDark ? colors.iconText.dark : 'text-slate-800',
+        <div className='flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden px-[10%] pb-[12%] pt-[18%] text-center sm:px-[9%] sm:pb-[11%] sm:pt-[16%]'>
+          {!isEditing && (
+            <div className='flex min-h-[14px] flex-shrink-0 items-center justify-center'>
+              {!hasRoute ? (
+                <span
+                  className={cn(
+                    'rounded-md border border-dashed border-slate-300/80 px-1.5 py-0.5 text-[8px] font-medium tracking-wide text-slate-500 dark:border-gray-600 dark:bg-white/[0.06] dark:text-gray-500',
+                    'bg-slate-50/90',
+                  )}
+                >
+                  Coming soon
+                </span>
+              ) : (
+                <div
+                  className={cn(
+                    'mx-auto h-2 w-2 rounded-full [animation:status-pulse_2s_ease-in-out_infinite]',
+                    colors.badgeColor,
+                  )}
+                />
+              )}
+            </div>
           )}
-        >
-          {label}
-        </p>
 
-        {description && (
+          <div
+            className={cn(
+              'my-0.5 flex-shrink-0 sm:my-1',
+              slotIsCenter
+                ? '[&_svg]:h-10 [&_svg]:w-10 sm:[&_svg]:h-[2.85rem] sm:[&_svg]:w-[2.85rem]'
+                : '[&_svg]:h-8 [&_svg]:w-8 sm:[&_svg]:h-9 sm:[&_svg]:w-9',
+            )}
+            data-atropos-offset='3'
+          >
+            <Illustration
+              accentText={isDark ? colors.iconText.dark : colors.iconText.light}
+              isDark={isDark}
+            />
+          </div>
+
           <p
             className={cn(
-              'flex-shrink-0 mt-0.5 w-full line-clamp-2 leading-snug',
-              'text-[8px] sm:text-[9px]',
-              isDark ? 'text-gray-500' : 'text-slate-600',
+              'w-full flex-shrink-0 truncate font-semibold leading-tight tracking-tight',
+              slotIsCenter ? 'text-[11px] sm:text-xs' : 'text-[10px] sm:text-[11px]',
+              isDark ? colors.iconText.dark : 'text-slate-800',
             )}
           >
-            {description}
+            {label}
           </p>
-        )}
-      </div>
+
+          {description && (
+            <p
+              className={cn(
+                'mt-0.5 line-clamp-2 w-full flex-shrink-0 leading-snug',
+                slotIsCenter ? 'text-[9px] sm:text-[10px]' : 'text-[8px] sm:text-[9px]',
+                isDark ? 'text-gray-500' : 'text-slate-600',
+              )}
+            >
+              {description}
+            </p>
+          )}
+        </div>
+      </VaultCredentialChrome>
     </div>
   )
 
@@ -286,110 +254,72 @@ function BlockTile({ block, index, isEditing, onRemove, onOpen }: BlockTileProps
   )
 }
 
-// ── Honeycomb Grid Layout ─────────────────────────────────────────────────────
-// ── Block Hive layout ────────────────────────────────────────────────────────
-// Radial honeycomb: slot 0 = center (larger), slots 1+ spiral around it.
-//
-// On mobile: 5 slots per page (no middle-left/right to avoid horizontal cutoff)
-// On tablet/desktop: 7 slots per page (full ring)
-//
-// Two hex sizes: the center hex is bigger to create visual hierarchy.
-// Ring hexes are spaced so edges never overlap.
+// ── Vault grid layout ─────────────────────────────────────────────────────────
+// Center tile + ring (7 slots desktop, 5 on narrow viewports — no mid-left/right).
+// Topology matches HomePage showcase so marketing and product feel like one system.
 
-const SLOTS_PER_PAGE_MOBILE = 5  // center + top pair + bottom pair
-const SLOTS_PER_PAGE_DESKTOP = 7 // full ring
-const HIVE_GAP = 10 // px between hex edges
+const SLOTS_PER_PAGE_MOBILE = 5
+const SLOTS_PER_PAGE_DESKTOP = 7
 
-// Hex tile dimensions — three tiers: phone (<400), tablet (400–639), desktop (640+)
-// Widths chosen for layout; heights = flat-top hex math (wider than tall — better for titles).
-const CENTER_W_XS = 132
-const CENTER_H_XS = flatTopHexHeight(CENTER_W_XS)
-const CENTER_W_SM = 216
-const CENTER_H_SM = flatTopHexHeight(CENTER_W_SM)
-const CENTER_W_LG = 258
-const CENTER_H_LG = flatTopHexHeight(CENTER_W_LG)
-const RING_W_XS = 102
-const RING_H_XS = flatTopHexHeight(RING_W_XS)
-const RING_W_SM = 168
-const RING_H_SM = flatTopHexHeight(RING_W_SM)
-const RING_W_LG = 200
-const RING_H_LG = flatTopHexHeight(RING_W_LG)
-
-interface HiveMetrics {
-  centerW: number; centerH: number
-  ringW: number;   ringH: number
+/** Dashed slot when the hive has room for more blocks on this page — opens block picker */
+function EmptyVaultSlot({
+  isCenter,
+  isDark,
+  onAdd,
+}: {
+  isCenter: boolean
+  isDark: boolean
+  onAdd: () => void
+}) {
+  return (
+    <Button
+      type='button'
+      variant='ghost'
+      size='sm'
+      onClick={onAdd}
+      aria-label='Add a block to this space'
+      className={cn(
+        'w-full flex-col gap-1.5 rounded-2xl border-2 border-dashed !px-2 !py-3 font-medium',
+        isCenter ? 'min-h-[9.25rem] sm:min-h-[10.75rem]' : 'min-h-[6.5rem] sm:min-h-[7.25rem]',
+        isDark
+          ? '!border-teal-400/22 bg-gray-800/20 hover:!bg-gray-800/50 hover:!border-teal-400/38 text-gray-400 hover:text-gray-200'
+          : '!border-slate-300/75 bg-slate-50/60 hover:!bg-teal-50/90 hover:!border-teal-500/35 text-slate-500 hover:text-slate-800',
+      )}
+    >
+      <Plus className={cn('opacity-50', isCenter ? 'h-6 w-6' : 'h-5 w-5')} aria-hidden />
+      <span className='text-[10px] font-semibold uppercase tracking-wider opacity-70'>Add block</span>
+    </Button>
+  )
 }
 
-// Returns slot offsets for all 7 positions (desktop) or 5 positions (mobile).
-// Mobile layout omits middle-left/right (indices 3,4) to fit narrow screens.
-function hiveSlotOffsets(m: HiveMetrics, isMobile: boolean): [number, number][] {
-  const dx = m.centerW / 2 + HIVE_GAP + m.ringW / 2
-  const dy = m.centerH / 2 + HIVE_GAP + m.ringH / 2
-  const halfDx = dx * 0.52
-
-  if (isMobile) {
-    // 5 slots: center, top-left, top-right, bottom-left, bottom-right
-    return [
-      [0, 0],                         // 0: center
-      [-halfDx, -dy * 0.92],         // 1: top-left
-      [halfDx,  -dy * 0.92],         // 2: top-right
-      [-halfDx,  dy * 0.92],         // 3: bottom-left
-      [halfDx,   dy * 0.92],         // 4: bottom-right
-    ]
-  }
-
-  // 7 slots: full ring including middle-left/right
-  return [
-    [0, 0],                         // 0: center
-    [-halfDx, -dy * 0.92],         // 1: top-left
-    [halfDx,  -dy * 0.92],         // 2: top-right
-    [-dx,      0],                  // 3: middle-left
-    [dx,       0],                  // 4: middle-right
-    [-halfDx,  dy * 0.92],         // 5: bottom-left
-    [halfDx,   dy * 0.92],         // 6: bottom-right
-  ]
-}
-
-function HoneycombGrid({
+function VaultHubGrid({
   blocks,
   isEditing,
+  isDark,
   walletAddress,
   removeBlock,
   setCurrentPage,
+  onAddBlock,
 }: {
   blocks: InstalledBlock[]
   isEditing: boolean
+  isDark: boolean
   walletAddress: string | null
   removeBlock: (id: string, wallet: string) => void
   setCurrentPage: (page: PageType) => void
+  onAddBlock: () => void
 }) {
   const [page, setPage] = useState(0)
-  // 'xs' = phone (<400px), 'sm' = tablet (400–639), 'lg' = desktop (640+)
-  const [sizeClass, setSizeClass] = useState<'xs' | 'sm' | 'lg'>('lg')
+  const [narrow, setNarrow] = useState(false)
 
   useEffect(() => {
-    const check = () => {
-      const w = window.innerWidth
-      setSizeClass(w < 400 ? 'xs' : w < 640 ? 'sm' : 'lg')
-    }
+    const check = () => setNarrow(window.innerWidth < 640)
     check()
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  // 5-slot layout for anything under 640px (all phones including Plus/Max models).
-  // Hex SIZE still uses three tiers (xs/sm/lg), but SLOT COUNT is a separate concern.
-  const useCompactLayout = sizeClass === 'xs' || sizeClass === 'sm'
-  const slotsPerPage = useCompactLayout ? SLOTS_PER_PAGE_MOBILE : SLOTS_PER_PAGE_DESKTOP
-
-  const metrics: HiveMetrics = sizeClass === 'xs'
-    ? { centerW: CENTER_W_XS, centerH: CENTER_H_XS, ringW: RING_W_XS, ringH: RING_H_XS }
-    : sizeClass === 'sm'
-      ? { centerW: CENTER_W_SM, centerH: CENTER_H_SM, ringW: RING_W_SM, ringH: RING_H_SM }
-      : { centerW: CENTER_W_LG, centerH: CENTER_H_LG, ringW: RING_W_LG, ringH: RING_H_LG }
-
-  const slots = hiveSlotOffsets(metrics, useCompactLayout)
-
+  const slotsPerPage = narrow ? SLOTS_PER_PAGE_MOBILE : SLOTS_PER_PAGE_DESKTOP
   const totalPages = Math.max(1, Math.ceil(blocks.length / slotsPerPage))
 
   useEffect(() => {
@@ -398,109 +328,93 @@ function HoneycombGrid({
 
   const pageBlocks = blocks.slice(page * slotsPerPage, (page + 1) * slotsPerPage)
 
-  // Container width: on mobile, only need to fit the top/bottom stagger (halfDx).
-  // On desktop, need to fit the full middle-left/right (dx).
-  const dx = metrics.centerW / 2 + HIVE_GAP + metrics.ringW / 2
-  const halfDx = dx * 0.52
-  const containerW = useCompactLayout
-    ? 2 * (halfDx + metrics.ringW / 2) + 16
-    : 2 * (dx + metrics.ringW / 2) + 16
-  const dy = (metrics.centerH / 2 + HIVE_GAP + metrics.ringH / 2) * 0.92
-  const containerH = 2 * (dy + metrics.ringH / 2) + 16
-
   return (
-    <div className='flex flex-col items-center'>
-      <div className='relative' style={{ width: containerW, height: containerH }}>
-        {pageBlocks.map((block, slotIdx) => {
-          const isCenter = slotIdx === 0
-          const w = isCenter ? metrics.centerW : metrics.ringW
-          const h = isCenter ? metrics.centerH : metrics.ringH
-          const [dx, dy] = slots[slotIdx]
-          const left = containerW / 2 - w / 2 + dx
-          const top = containerH / 2 - h / 2 + dy
-
-          // On XS screens, hexes are smaller than the content was designed for.
-          // Scale the tile visually to fit, keeping layout position unchanged.
-          const scaleRatio = sizeClass === 'xs'
-            ? (isCenter ? metrics.centerW / CENTER_W_SM : metrics.ringW / RING_W_SM)
-            : 1
-
+    <div className='flex w-full flex-col items-center'>
+      <div
+        className={cn(
+          'mx-auto grid w-full max-w-md grid-cols-2 grid-rows-[auto_auto_auto] gap-3 sm:max-w-xl sm:grid-cols-4 sm:grid-rows-3 sm:gap-4',
+        )}
+      >
+        {Array.from({ length: slotsPerPage }).map((_, slotIdx) => {
+          const slotId = vaultSlotForIndex(slotIdx, narrow)
+          if (!slotId) return null
+          const block = pageBlocks[slotIdx]
+          const isCenter = slotId === 'center'
+          const slotClass = cn(
+            VAULT_SLOT_GRID_CLASS[slotId],
+            isCenter ? 'min-h-[9.25rem] sm:min-h-[10.75rem]' : 'min-h-[6.5rem] sm:min-h-[7.25rem]',
+            'flex min-h-0 w-full flex-col',
+          )
           return (
             <div
-              key={block.id}
-              className='absolute'
-              style={{
-                width: w,
-                height: h,
-                left,
-                top,
-                transition: 'left 0.3s ease, top 0.3s ease',
-                zIndex: isCenter ? 2 : 1,
-              }}
+              key={block?.id ?? `hub-empty-slot-${page}-${slotIdx}`}
+              className={slotClass}
             >
-              <div className='w-full h-full' style={scaleRatio < 1 ? {
-                width: isCenter ? CENTER_W_SM : RING_W_SM,
-                height: isCenter ? CENTER_H_SM : RING_H_SM,
-                transform: `scale(${scaleRatio})`,
-                transformOrigin: 'top left',
-              } : undefined}>
+              {block ? (
                 <BlockTile
                   block={block}
                   index={page * slotsPerPage + slotIdx}
                   isEditing={isEditing}
+                  slotIsCenter={isCenter}
                   onRemove={() => walletAddress && removeBlock(block.id, walletAddress)}
-                  onOpen={block.definition?.pageRoute
-                    ? () => setCurrentPage(block.definition!.pageRoute as PageType)
-                    : null
+                  onOpen={
+                    block.definition?.pageRoute
+                      ? () => setCurrentPage(block.definition!.pageRoute as PageType)
+                      : null
                   }
                 />
-              </div>
+              ) : (
+                <EmptyVaultSlot isCenter={isCenter} isDark={isDark} onAdd={onAddBlock} />
+              )}
             </div>
           )
         })}
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
-        <div className='flex items-center gap-3 mt-4'>
+        <div className='mt-4 flex items-center gap-3'>
           <button
+            type='button'
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
             className={cn(
-              'p-1.5 rounded-lg transition-colors',
+              'rounded-lg p-1.5 transition-colors',
               page === 0
-                ? 'text-gray-600 cursor-not-allowed'
-                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                ? 'cursor-not-allowed text-gray-400 dark:text-gray-600'
+                : 'text-slate-600 hover:bg-slate-200 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white',
             )}
           >
-            <ChevronLeft className='w-5 h-5' />
+            <ChevronLeft className='h-5 w-5' />
           </button>
 
-          {/* Page dots */}
           <div className='flex gap-1.5'>
             {Array.from({ length: totalPages }).map((_, i) => (
               <button
                 key={i}
+                type='button'
                 onClick={() => setPage(i)}
                 className={cn(
-                  'w-2 h-2 rounded-full transition-colors',
-                  i === page ? 'bg-teal-400' : 'bg-gray-600 hover:bg-gray-500'
+                  'h-2 w-2 rounded-full transition-colors',
+                  i === page
+                    ? 'bg-teal-500 dark:bg-teal-400'
+                    : 'bg-slate-300 hover:bg-slate-400 dark:bg-gray-600 dark:hover:bg-gray-500',
                 )}
               />
             ))}
           </div>
 
           <button
+            type='button'
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={page === totalPages - 1}
             className={cn(
-              'p-1.5 rounded-lg transition-colors',
+              'rounded-lg p-1.5 transition-colors',
               page === totalPages - 1
-                ? 'text-gray-600 cursor-not-allowed'
-                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                ? 'cursor-not-allowed text-gray-400 dark:text-gray-600'
+                : 'text-slate-600 hover:bg-slate-200 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white',
             )}
           >
-            <ChevronRight className='w-5 h-5' />
+            <ChevronRight className='h-5 w-5' />
           </button>
         </div>
       )}
@@ -510,7 +424,13 @@ function HoneycombGrid({
 
 // ── Profile header ───────────────────────────────────────────────────────────
 
-function HubProfileHeader() {
+function HubProfileHeader({
+  onRefreshHub,
+  hubRefreshing = false,
+}: {
+  onRefreshHub?: () => void
+  hubRefreshing?: boolean
+} = {}) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const walletAddress = useAuthStore((s) => s.walletAddress)
@@ -593,7 +513,7 @@ function HubProfileHeader() {
   )
 
   return (
-    <Card variant='elevated' className='p-6 sm:p-7'>
+    <VaultHorizontalVaultShell isDark={isDark} layout='panel' contentClassName='p-6 sm:p-7'>
       <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6'>
         <div className='flex items-center gap-4'>
           <AvatarUpload
@@ -730,7 +650,62 @@ function HubProfileHeader() {
           </div>
         </div>
       </div>
-    </Card>
+
+      {walletAddress && onRefreshHub && (
+        <div
+          className={cn(
+            'mt-6 flex flex-col items-center gap-2 border-t pt-6',
+            isDark ? 'border-gray-600/50' : 'border-slate-200/90',
+          )}
+        >
+          <Button
+            type='button'
+            variant='primary'
+            size='md'
+            onClick={onRefreshHub}
+            disabled={hubRefreshing}
+            isLoading={hubRefreshing}
+            className='min-w-[12rem] text-base font-semibold'
+          >
+            {!hubRefreshing ? <RefreshCw className='h-4 w-4 shrink-0' aria-hidden /> : null}
+            Refresh hub
+          </Button>
+          <p className={cn('max-w-md text-center text-sm leading-snug', isDark ? 'text-gray-400' : 'text-slate-600')}>
+            Pull the latest blocks and files. No full page reload.
+          </p>
+        </div>
+      )}
+    </VaultHorizontalVaultShell>
+  )
+}
+
+/** Icon-only expand/collapse for hub BlockCard headers (preference lives in `usePreferencesStore`). */
+function HubSectionCollapseToggle({
+  expanded,
+  onToggle,
+  sectionLabel,
+  isDark,
+}: {
+  expanded: boolean
+  onToggle: () => void
+  sectionLabel: string
+  isDark: boolean
+}) {
+  return (
+    <Button
+      type='button'
+      variant='ghost'
+      size='sm'
+      className={cn(
+        'shrink-0 px-2',
+        isDark ? 'text-gray-400 hover:text-white' : 'text-slate-500 hover:text-slate-800',
+      )}
+      aria-expanded={expanded}
+      aria-label={expanded ? `Collapse ${sectionLabel}` : `Expand ${sectionLabel}`}
+      onClick={onToggle}
+    >
+      {expanded ? <ChevronUp className='h-4 w-4' aria-hidden /> : <ChevronDown className='h-4 w-4' aria-hidden />}
+    </Button>
   )
 }
 
@@ -778,6 +753,8 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const setEditingResumeId = useUIStore((s) => s.setEditingResumeId)
   const installedBlocks = useInstalledBlocks()
+  const hubBlockFilesExpanded = usePreferencesStore((s) => s.hubBlockFilesExpanded ?? true)
+  const setHubBlockFilesExpanded = usePreferencesStore((s) => s.setHubBlockFilesExpanded)
 
   const [documents, setDocuments] = useState<HubDocument[]>([])
   const [loading, setLoading] = useState(true)
@@ -1055,25 +1032,53 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
     }
   }
 
+  const inProgressCount = documents.filter(
+    (d) => d.status === 'in-progress' || d.status === 'processing',
+  ).length
+  const filesSummary =
+    !hasAnyFileSectionBlock
+      ? 'Add resume, DOT, MVR, or verification blocks below'
+      : loading
+        ? 'Loading your artifacts…'
+        : `${documents.length} ${documents.length === 1 ? 'file' : 'files'}${
+            inProgressCount > 0 ? ` · ${inProgressCount} in progress` : ''
+          }`
+
+  // Keep onboarding copy visible until user installs file-capable blocks; then respect collapse pref.
+  const showFilesPanel = !hasAnyFileSectionBlock || hubBlockFilesExpanded
+
   return (
     <>
-    <div className={cn(
-      'rounded-2xl border p-4',
-      isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-slate-100/95 border-slate-300',
-    )}>
-      {/* Header */}
-      <div className='flex items-center justify-between mb-3'>
-        <div className='flex items-center gap-2'>
-          <FileText className={cn('w-4 h-4', isDark ? 'text-teal-400' : 'text-teal-600')} />
-          <p className={cn('text-xs font-bold uppercase tracking-wide', isDark ? 'text-gray-300' : 'text-slate-700')}>
-            Block Files
-          </p>
-        </div>
-        <span className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
-          {hasAnyFileSectionBlock ? `${documents.length} ${documents.length === 1 ? 'file' : 'files'}` : '—'}
-        </span>
-      </div>
-
+    {/* Vault shell = block-style outer container; `variant='embed'` = BlockCard chrome without nested rounded Card */}
+    <VaultHorizontalVaultShell isDark={isDark} layout='panel' contentClassName='p-4 sm:p-5 lg:p-6'>
+      <BlockCard
+        variant='embed'
+        icon={FileText}
+        title='Block files'
+        description='Resume · DOT · MVR · portfolio · GitHub · verifications'
+        headerActions={
+          <>
+            <span
+              className={cn(
+                'text-xs font-medium tabular-nums',
+                isDark ? 'text-gray-400' : 'text-slate-500',
+              )}
+            >
+              {filesSummary}
+            </span>
+            {hasAnyFileSectionBlock && (
+              <HubSectionCollapseToggle
+                expanded={hubBlockFilesExpanded}
+                onToggle={() => setHubBlockFilesExpanded(!hubBlockFilesExpanded)}
+                sectionLabel='Block files'
+                isDark={isDark}
+              />
+            )}
+          </>
+        }
+      >
+      {showFilesPanel && (
+      <>
       {/* Empty state: no file-related blocks installed */}
       {!hasAnyFileSectionBlock && (
         <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>
@@ -1109,16 +1114,13 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
         </div>
       )}
 
-      <div className='space-y-2'>
+      <div className={cn('divide-y', isDark ? 'divide-gray-700/70' : 'divide-slate-200/90')}>
         {documents.map((doc) => (
           <div key={doc.id}>
-            <div className={cn(
-              'flex items-center gap-3 p-3 rounded-xl transition-colors',
-              isDark ? 'bg-gray-800/50' : 'bg-slate-100',
-            )}>
+            <div className='flex items-start gap-4 py-5 first:pt-2 last:pb-2 sm:items-center sm:gap-5 sm:py-6'>
               {/* Icon + info */}
               <div className={cn(
-                'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
+                'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl sm:h-12 sm:w-12',
                 doc.verified ? 'bg-green-500/20'
                   : doc.status === 'complete' ? (isDark ? 'bg-teal-500/20' : 'bg-teal-100')
                   : doc.status === 'processing' ? (isDark ? 'bg-blue-500/20' : 'bg-blue-100')
@@ -1144,9 +1146,9 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                 )}
               </div>
 
-              <div className='flex-1 min-w-0'>
-                <div className='flex items-center gap-2 flex-wrap'>
-                  <p className={cn('text-sm font-medium truncate', isDark ? 'text-white' : 'text-slate-800')}>
+              <div className='min-w-0 flex-1'>
+                <div className='flex flex-wrap items-center gap-2 sm:gap-2.5'>
+                  <p className={cn('text-base font-medium leading-snug', isDark ? 'text-white' : 'text-slate-800')}>
                     {doc.title}
                     {doc.subtitle && <span className={cn('ml-1 font-normal', isDark ? 'text-gray-500' : 'text-gray-400')}>({doc.subtitle})</span>}
                   </p>
@@ -1200,7 +1202,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
               </div>
 
               {/* Actions: View | Edit | Verify (until on-chain) | Delete */}
-              <div className='flex flex-wrap items-center justify-end gap-1 flex-shrink-0 max-w-[min(100%,14rem)] sm:max-w-none'>
+              <div className='flex max-w-none flex-shrink-0 flex-wrap items-stretch gap-2 sm:justify-end'>
                 {doc.type === 'portfolio' && doc.portfolioUrl && (
                   <a
                     href={doc.portfolioUrl}
@@ -1421,7 +1423,10 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
       </div>
         </>
       )}
-    </div>
+      </>
+      )}
+      </BlockCard>
+    </VaultHorizontalVaultShell>
     <MvrViewModal
                isOpen={mvrViewOrderId !== null}
                onClose={() => setMvrViewOrderId(null)}
@@ -1521,6 +1526,11 @@ export default function CandidateHub() {
   const isStormiContextModalOpen = useHubBlocksStore((s) => s.isStormiContextModalOpen)
   const isEditing = useIsEditMode()
 
+  const hubYourBlocksExpanded = usePreferencesStore((s) => s.hubYourBlocksExpanded ?? true)
+  const setHubYourBlocksExpanded = usePreferencesStore((s) => s.setHubYourBlocksExpanded)
+
+  const showYourBlocksPanel = installedBlocks.length === 0 || hubYourBlocksExpanded
+
   useEffect(() => {
     if (walletAddress) fetchHubData(walletAddress)
   }, [walletAddress, fetchHubData])
@@ -1612,49 +1622,10 @@ export default function CandidateHub() {
             dropped next to Stormi in some layouts */}
         <div className='flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:content-start lg:gap-x-8 lg:gap-y-0'>
           <div className='min-w-0 space-y-6 lg:col-start-1 lg:row-start-1 lg:self-start'>
-            <HubProfileHeader />
-
-            {walletAddress && (
-              <div
-                className={cn(
-                  'flex flex-col gap-3 rounded-2xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4',
-                  isDark
-                    ? 'border-teal-500/25 bg-gray-800/70'
-                    : 'border-teal-200/80 bg-teal-50/90',
-                )}
-              >
-                <div className='min-w-0'>
-                  <p
-                    className={cn(
-                      'text-sm font-semibold',
-                      isDark ? 'text-gray-100' : 'text-slate-800',
-                    )}
-                  >
-                    Refresh the hub for the latest blocks and files
-                  </p>
-                  <p
-                    className={cn(
-                      'text-xs mt-0.5',
-                      isDark ? 'text-gray-400' : 'text-slate-600',
-                    )}
-                  >
-                    Avoid full page reloads. After opening a block, use <span className='font-medium'>Back to hub</span> (browser back returns to the hub when it can).
-                  </p>
-                </div>
-                <Button
-                  type='button'
-                  variant='primary'
-                  size='sm'
-                  onClick={refreshHub}
-                  disabled={isLoading}
-                  isLoading={isLoading}
-                  className='w-full shrink-0 sm:w-auto'
-                >
-                  {!isLoading ? <RefreshCw className='w-4 h-4' aria-hidden /> : null}
-                  Refresh hub
-                </Button>
-              </div>
-            )}
+            <HubProfileHeader
+              onRefreshHub={walletAddress ? refreshHub : undefined}
+              hubRefreshing={isLoading}
+            />
 
             <div id='stormi-hub-panel' className='scroll-mt-24'>
               <StormiChatPanel
@@ -1667,59 +1638,55 @@ export default function CandidateHub() {
               />
             </div>
 
-            {/* ── Block Hive + Block Files (unified) ── */}
+            {/* ── Block Hive — same BlockCard shell as every hub block + Block Files below ── */}
             <div>
-          <div className='flex items-center justify-between mb-4'>
-            <div className='flex items-center gap-3 min-w-0'>
-              <span
-                aria-hidden
-                className='hidden sm:block w-1 h-9 shrink-0 rounded-full bg-gradient-to-b from-teal-400 via-cyan-400 to-violet-500/80 opacity-90'
-              />
-              <div className='min-w-0'>
-                <h2
-                  className={cn(
-                    'text-lg font-semibold tracking-tight',
-                    isDark ? 'text-white' : 'text-slate-800',
-                  )}
-                >
-                  Block Hive
-                </h2>
-                <p className={cn('text-xs mt-0.5', isDark ? 'text-gray-500' : 'text-slate-500')}>
-                  Drag to reorder · tap to open
-                </p>
-              </div>
-            </div>
-            <div className='flex items-center gap-2'>
-              {installedBlocks.length > 0 && (
-                <button
-                  onClick={() => setEditMode(!isEditing)}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
-                    isEditing
-                      ? 'bg-teal-500 text-white hover:bg-teal-600'
-                      : isDark
-                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  )}
-                >
-                  {isEditing ? <Check className='w-3.5 h-3.5' /> : <Pencil className='w-3.5 h-3.5' />}
-                  {isEditing ? 'Done' : 'Edit'}
-                </button>
-              )}
-              <Button variant='primary' size='sm' onClick={openPicker}>
-                <Plus className='w-4 h-4' />
-                Add
-              </Button>
-            </div>
-          </div>
-
+          <BlockCard
+            icon={LayoutGrid}
+            title='Your blocks'
+            description='Drag to reorder · tap to open · dashed = add'
+            headerActions={
+              <>
+                {installedBlocks.length > 0 && (
+                  <button
+                    type='button'
+                    onClick={() => setEditMode(!isEditing)}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                      isEditing
+                        ? 'bg-teal-500 text-white hover:bg-teal-600'
+                        : isDark
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+                    )}
+                  >
+                    {isEditing ? <Check className='w-3.5 h-3.5' /> : <Pencil className='w-3.5 h-3.5' />}
+                    {isEditing ? 'Done' : 'Edit'}
+                  </button>
+                )}
+                <Button variant='primary' size='sm' onClick={openPicker}>
+                  <Plus className='w-4 h-4' />
+                  Add
+                </Button>
+                {installedBlocks.length > 0 && (
+                  <HubSectionCollapseToggle
+                    expanded={hubYourBlocksExpanded}
+                    onToggle={() => setHubYourBlocksExpanded(!hubYourBlocksExpanded)}
+                    sectionLabel='Your blocks'
+                    isDark={isDark}
+                  />
+                )}
+              </>
+            }
+          >
+          {showYourBlocksPanel && (
+          <>
           {installedBlocks.length === 0 ? (
-            <Card
-              variant='elevated'
+            <div
               className={cn(
-                'relative p-10 sm:p-14 text-center overflow-hidden',
-                'border-2 border-dashed border-teal-500/25 dark:border-teal-400/20',
-                'ring-2 ring-dashed ring-teal-500/[0.12] dark:ring-teal-400/[0.1]',
+                'relative rounded-xl border-2 border-dashed p-10 sm:p-14 text-center overflow-hidden',
+                isDark
+                  ? 'border-teal-400/20 bg-gray-800/30'
+                  : 'border-teal-500/25 bg-teal-50/40',
               )}
             >
               <div
@@ -1739,7 +1706,7 @@ export default function CandidateHub() {
                 <Plus className='w-4 h-4' />
                 Browse blocks
               </Button>
-            </Card>
+            </div>
           ) : (
             <DndContext
               sensors={sensors}
@@ -1751,18 +1718,23 @@ export default function CandidateHub() {
                 items={installedBlocks.map((b) => b.id)}
                 strategy={rectSortingStrategy}
               >
-                <HoneycombGrid
+                <VaultHubGrid
                   blocks={installedBlocks}
                   isEditing={isEditing}
+                  isDark={isDark}
                   walletAddress={walletAddress}
                   removeBlock={removeBlock}
                   setCurrentPage={setCurrentPage}
+                  onAddBlock={openPicker}
                 />
               </SortableContext>
             </DndContext>
           )}
+          </>
+          )}
+          </BlockCard>
 
-          {/* Block Files — inside Block Hive */}
+          {/* Block Files — below hive section */}
           <div className='mt-6'>
             <MyFilesSection refreshKey={refreshKey} />
           </div>

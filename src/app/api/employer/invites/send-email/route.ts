@@ -125,13 +125,13 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', inviteId)
 
-    // If this invite is linked to an existing StormChain profile, also create
+    // If this invite is linked to an existing Storm profile, also create
     // an in-app notification so they see it in the notification bell immediately.
     const candidateUserId = (invite as { candidate_user_id?: string | null }).candidate_user_id
     if (candidateUserId) {
       const targetBlock = (invite as any).target_block_type as string | null
       const blockDef = targetBlock ? getBlockDefinition(targetBlock) : null
-      const inviteLabel = blockDef ? `${blockDef.label} Invite` : 'StormChain Invite'
+      const inviteLabel = blockDef ? `${blockDef.label} Invite` : 'Storm Invite'
       const companyDisplayName = company?.company_name || 'An employer'
 
       createNotification({

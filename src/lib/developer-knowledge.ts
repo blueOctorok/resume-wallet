@@ -2,7 +2,7 @@
  * Developer Knowledge Base
  *
  * Domain knowledge for the AI assistant when helping software developers.
- * This provides context about common topics, best practices, and StormChain features.
+ * This provides context about common topics, best practices, and Storm features.
  */
 
 // =====================================================

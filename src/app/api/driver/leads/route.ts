@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
         status: lead.status,
         createdAt: lead.created_at,
         contactedAt: lead.contacted_at,
-        isRegistered: !!lead.employer_user_id, // Whether employer has a StormChain account
+        isRegistered: !!lead.employer_user_id, // Whether employer has a Storm account
       }
     })
 

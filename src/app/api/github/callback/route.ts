@@ -15,7 +15,7 @@ async function syncGitHubData(
   try {
     const headers: Record<string, string> = {
       Accept: 'application/vnd.github.v3+json',
-      'User-Agent': 'StormChain-GitHubSync',
+      'User-Agent': 'Storm-GitHubSync',
       Authorization: `Bearer ${accessToken}`,
     }
 

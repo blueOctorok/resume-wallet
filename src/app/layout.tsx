@@ -23,13 +23,13 @@ const stormWordmark = Instrument_Serif({
 export const metadata: Metadata = {
   metadataBase: new URL('https://stormchain.ai'),
   title: {
-    default: 'StormChain | Blockchain-Verified Career Platform',
-    template: '%s | StormChain',
+    default: 'Storm | Blockchain-Verified Career Platform',
+    template: '%s | Storm',
   },
   description:
     'Build your Career Card, apply to jobs instantly, and get verified on-chain. The blockchain-verified career platform for drivers and software engineers.',
   keywords: [
-    'StormChain',
+    'Storm',
     'Career Card',
     'blockchain verification',
     'driver applications',
@@ -41,9 +41,9 @@ export const metadata: Metadata = {
     'CDL driver jobs',
     'software engineer portfolio',
   ],
-  authors: [{ name: 'StormChain' }],
-  creator: 'StormChain',
-  publisher: 'StormChain',
+  authors: [{ name: 'Storm' }],
+  creator: 'Storm',
+  publisher: 'Storm',
   icons: {
     icon: '/favicon.svg',
     apple: '/favicon.svg',
@@ -52,8 +52,8 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: 'https://stormchain.ai',
-    siteName: 'StormChain',
-    title: 'StormChain | Blockchain-Verified Career Platform',
+    siteName: 'Storm',
+    title: 'Storm | Blockchain-Verified Career Platform',
     description:
       'Build your Career Card, apply to jobs instantly, and get verified on-chain. For drivers and software engineers.',
     images: [
@@ -61,13 +61,13 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'StormChain - Your Career, One Verified Card',
+        alt: 'Storm - Your Career, One Verified Card',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'StormChain | Blockchain-Verified Career Platform',
+    title: 'Storm | Blockchain-Verified Career Platform',
     description:
       'Build your Career Card, apply to jobs instantly, and get verified on-chain.',
     images: ['/og-image.png'],

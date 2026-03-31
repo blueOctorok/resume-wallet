@@ -6,7 +6,7 @@ import { emailDomainAllowsEmployerJoin } from '@/lib/employer-domain-match'
 /**
  * POST /api/employer/access-request
  *
- * Submit a request to set up or join a company on StormChain.
+ * Submit a request to set up or join a company on Storm.
  * Stormi evaluates the request in real-time:
  *   - approve (new company)        -> company + owner created instantly
  *   - approve (existing company)   -> domain-verified auto-join, or flag if mismatch
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Handle: EXISTING COMPANY MATCH ──────────────────────────
-    // Stormi detected the requested company name matches one already on StormChain.
+    // Stormi detected the requested company name matches one already on Storm.
     // We verify the email domain before auto-joining.
     if (evalResult.existingMatch && evalResult.decision !== 'block') {
       const { data: matchedCompany } = await supabase
@@ -260,8 +260,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           reviewRequired: true,
-          message: `${matchedCompany.company_name} already exists on StormChain. Your request to join has been submitted for review.`,
-          reviewNote: `We could not automatically verify your work email against this company's record. A reviewer will verify before you are added. If your company email should qualify, ask the owner to set the company email in StormChain to your corporate domain.`,
+          message: `${matchedCompany.company_name} already exists on Storm. Your request to join has been submitted for review.`,
+          reviewNote: `We could not automatically verify your work email against this company's record. A reviewer will verify before you are added. If your company email should qualify, ask the owner to set the company email in Storm to your corporate domain.`,
           request: {
             companyName: matchedCompany.company_name,
             status: 'flagged',
@@ -369,7 +369,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       autoApproved: true,
-      message: `${companyName.trim()} has been approved. Welcome to StormChain!`,
+      message: `${companyName.trim()} has been approved. Welcome to Storm!`,
       company: { id: newCompany.id, name: companyName.trim() },
     })
 

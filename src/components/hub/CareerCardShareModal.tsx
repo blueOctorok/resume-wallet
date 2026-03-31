@@ -152,7 +152,7 @@ export default function CareerCardShareModal({
     <Modal onClose={onClose} maxWidth='max-w-md' zIndex={1100}>
       <ModalHeader
         title='Share your career card'
-        subtitle='Anyone with this link sees your public StormChain card — great for employers, networking, and resumes.'
+        subtitle='Anyone with this link sees your public Storm card — great for employers, networking, and resumes.'
         onClose={onClose}
       />
 

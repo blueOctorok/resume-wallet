@@ -264,7 +264,7 @@ export default function PublicDriverProfile() {
             href='/'
             className='inline-flex items-center gap-2 px-6 py-3 bg-brand-mint text-gray-900 font-semibold rounded-xl hover:bg-brand-mint/90 transition-colors'
           >
-            Go to StormChain
+            Go to Storm
           </a>
         </div>
       </div>
@@ -288,7 +288,7 @@ export default function PublicDriverProfile() {
             <div className='w-8 h-8 rounded-lg bg-gradient-to-br from-brand-mint to-teal-500 flex items-center justify-center shadow-lg shadow-brand-mint/20'>
               <span className='text-gray-900 font-bold text-sm'>S</span>
             </div>
-            <span className='text-white font-semibold'>StormChain</span>
+            <span className='text-white font-semibold'>Storm</span>
           </a>
           <div className='flex items-center gap-2'>
             <Sparkles className='w-4 h-4 text-brand-mint' />
@@ -889,7 +889,7 @@ export default function PublicDriverProfile() {
           <p className='text-gray-500 text-sm'>
             Powered by{' '}
             <a href='/' className='text-brand-mint hover:underline'>
-              StormChain
+              Storm
             </a>{' '}
             • Career Card
           </p>

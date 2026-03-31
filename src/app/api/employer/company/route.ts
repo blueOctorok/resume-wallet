@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
         success: true,
         reviewRequired: true,
         message:
-          `${companyName.trim()} is already on StormChain. We submitted your details to StormChain admin for review — you do not need the owner to invite you. You will get employer access after approval.`,
+          `${companyName.trim()} is already on Storm. We submitted your details to Storm admin for review — you do not need the owner to invite you. You will get employer access after approval.`,
       })
     }
 

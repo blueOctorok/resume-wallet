@@ -103,10 +103,10 @@ function PublicCardContent() {
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-8 px-4'>
-      {/* StormChain branding */}
+      {/* Storm branding */}
       <div className='text-center mb-8'>
         <h2 className='text-sm font-semibold text-teal-400 tracking-wider uppercase'>
-          StormChain Career Card
+          Storm Career Card
         </h2>
       </div>
 
@@ -185,7 +185,7 @@ function PublicCardContent() {
       <div className='text-center mt-8'>
         <p className='text-xs text-gray-500'>
           Powered by{' '}
-          <a href='/' className='text-teal-400 hover:text-teal-300'>StormChain</a>
+          <a href='/' className='text-teal-400 hover:text-teal-300'>Storm</a>
         </p>
       </div>
     </div>

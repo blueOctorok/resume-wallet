@@ -160,7 +160,7 @@ export default function CompanyOnboarding({ onComplete, showBackButton = false }
           </h2>
           <p className={`text-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             {reviewMessage ||
-              'StormChain admin will review your request. You do not need your company owner to invite you for this step.'}
+              'Storm admin will review your request. You do not need your company owner to invite you for this step.'}
           </p>
           <Button variant='primary' onClick={onComplete}>
             Continue to hub

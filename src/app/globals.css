@@ -56,7 +56,7 @@
   --text-primary: #0f172a;
   --text-secondary: #475569;
   /*
-   * Single accent hue (teal-600 family) — matches StormOLogoMark + LoadingScreen card ring.
+   * Single accent hue (teal-600 family) — matches STORM wordmark cloud + LoadingScreen card ring.
    * Use for rings, blooms, nav glows; avoids mixing emerald / teal-400 / cyan in light chrome.
    */
   --storm-accent: #0d9488;
@@ -125,28 +125,6 @@ body {
     0 20px 50px -18px rgb(15 23 42 / 0.07);
 }
 
-/*
- * Film grain on light canvas only — very low opacity + multiply reads as fine paper / pro photography,
- * not a noisy overlay. Scoped class; StormBackground mounts it in light mode.
- */
-[data-theme='light'] .storm-light-film-grain {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -3;
-  opacity: 0.032;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 160px 160px;
-  mix-blend-mode: multiply;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  [data-theme='light'] .storm-light-film-grain {
-    opacity: 0.024;
-  }
-}
-
 /* Global cursor-pointer for all clickable elements */
 button,
 [role='button'],
@@ -210,31 +188,6 @@ button:disabled,
   }
 }
 
-/* ── Navigation shell: rounded bar (no clip-path — chamfers read as “missing corners”) + breathing rim ──
-   Separate layer so <nav> stays overflow-visible for dropdowns. Glow uses box-shadow + filter so it’s obvious. */
-.nav-shell-shape {
-  border-radius: 1rem;
-  -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px);
-}
-
-.nav-shell-shape--light {
-  /* Slightly off-white vs body + crisp cards — reads as chrome, not a second “bright box” */
-  background: linear-gradient(to bottom, rgb(255 255 255 / 0.99), rgb(241 245 249 / 0.97));
-  animation: nav-shell-breathe-light 4.5s ease-in-out infinite;
-}
-
-.nav-shell-shape--dark {
-  /* Same glass stack as loading card: lifted slate, not flat gray-900 */
-  background: linear-gradient(
-    180deg,
-    rgb(22 30 42 / 0.94) 0%,
-    rgb(12 16 24 / 0.97) 48%,
-    rgb(6 9 14 / 0.98) 100%
-  );
-  animation: nav-shell-breathe-dark 4.5s ease-in-out infinite;
-}
-
 /*
  * Dark “glass” panels — same DNA as LoadingScreen inner card (teal-violet rim glow).
  * Pair with rounded-2xl + backdrop-blur-xl + ring-1 ring-teal-400/15 in components.
@@ -243,50 +196,6 @@ button:disabled,
   background: var(--storm-panel-bg);
   border: 1px solid var(--storm-panel-border);
   box-shadow: var(--storm-panel-glow);
-}
-
-@keyframes nav-shell-breathe-light {
-  0%,
-  100% {
-    box-shadow:
-      inset 0 0 0 1px rgb(203 213 225 / 0.95),
-      inset 0 1px 0 rgb(255 255 255 / 0.82),
-      0 0 0 1px rgb(var(--storm-accent-rgb) / 0.16),
-      0 0 22px rgb(var(--storm-accent-rgb) / 0.12),
-      0 0 40px rgb(139 92 246 / 0.07);
-    filter: drop-shadow(0 10px 24px rgb(15 23 42 / 0.06)) drop-shadow(0 4px 12px rgb(15 23 42 / 0.04));
-  }
-  50% {
-    box-shadow:
-      inset 0 0 0 1px rgb(203 213 225 / 0.95),
-      inset 0 1px 0 rgb(255 255 255 / 0.82),
-      0 0 0 1px rgb(var(--storm-accent-rgb) / 0.24),
-      0 0 32px rgb(var(--storm-accent-rgb) / 0.18),
-      0 0 52px rgb(139 92 246 / 0.1);
-    filter: drop-shadow(0 12px 30px rgb(15 23 42 / 0.07)) drop-shadow(0 4px 12px rgb(15 23 42 / 0.05));
-  }
-}
-
-@keyframes nav-shell-breathe-dark {
-  0%,
-  100% {
-    box-shadow:
-      inset 0 0 0 1px rgb(75 85 99 / 0.62),
-      inset 0 1px 0 rgb(255 255 255 / 0.05),
-      0 0 0 1px rgb(45 212 191 / 0.22),
-      0 0 28px rgb(45 212 191 / 0.2),
-      0 0 48px rgb(167 139 250 / 0.12);
-    filter: drop-shadow(0 16px 40px rgb(0 0 0 / 0.55));
-  }
-  50% {
-    box-shadow:
-      inset 0 0 0 1px rgb(75 85 99 / 0.62),
-      inset 0 1px 0 rgb(255 255 255 / 0.05),
-      0 0 0 1px rgb(45 212 191 / 0.42),
-      0 0 42px rgb(45 212 191 / 0.42),
-      0 0 72px rgb(167 139 250 / 0.26);
-    filter: drop-shadow(0 18px 48px rgb(0 0 0 / 0.62));
-  }
 }
 
 /* LoadingScreen — indeterminate bar sweep */
@@ -309,30 +218,6 @@ button:disabled,
     opacity: 0.75;
   }
 
-  .nav-shell-shape--light,
-  .nav-shell-shape--dark {
-    animation: none;
-  }
-
-  .nav-shell-shape--light {
-    box-shadow:
-      inset 0 0 0 1px rgb(203 213 225 / 0.95),
-      inset 0 1px 0 rgb(255 255 255 / 0.82),
-      0 0 0 1px rgb(var(--storm-accent-rgb) / 0.18),
-      0 0 28px rgb(var(--storm-accent-rgb) / 0.14),
-      0 0 44px rgb(139 92 246 / 0.08);
-    filter: drop-shadow(0 10px 24px rgb(15 23 42 / 0.06)) drop-shadow(0 4px 12px rgb(15 23 42 / 0.04));
-  }
-
-  .nav-shell-shape--dark {
-    box-shadow:
-      inset 0 0 0 1px rgb(75 85 99 / 0.62),
-      inset 0 1px 0 rgb(255 255 255 / 0.05),
-      0 0 0 1px rgb(45 212 191 / 0.3),
-      0 0 34px rgb(45 212 191 / 0.3),
-      0 0 58px rgb(167 139 250 / 0.18);
-    filter: drop-shadow(0 16px 40px rgb(0 0 0 / 0.55));
-  }
 }
 
 /* Silver/Platinum rotating border for Ask Stormi buttons */
@@ -519,7 +404,7 @@ button:disabled,
 /* ===== BRAND CUSTOMIZATIONS ===== */
 /* Minimal customizations - most styling handled by Alchemy Tailwind plugin */
 
-/* Force Montserrat font everywhere (StormChain — aggressive, punchy) */
+/* Force Montserrat font everywhere (Storm — aggressive, punchy) */
 * {
   font-family:
     var(--font-montserrat),
@@ -664,6 +549,88 @@ button:disabled,
 }
 
 /* Pulsing glow ring for block tile status badges */
+/* Hub + marketing: vault credential tiles gentle float */
+@keyframes vault-float {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-5px);
+  }
+}
+
+/* Storm vault tiles — brand motion (honors reduced motion below) */
+@keyframes vault-sheen-pass {
+  0% {
+    transform: translateX(-130%) skewX(-14deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.45;
+  }
+  55% {
+    opacity: 0.12;
+  }
+  100% {
+    transform: translateX(130%) skewX(-14deg);
+    opacity: 0;
+  }
+}
+
+@keyframes vault-strip-sweep {
+  0% {
+    transform: translateX(-60%);
+  }
+  100% {
+    transform: translateX(260%);
+  }
+}
+
+@keyframes vault-sigil-breathe {
+  0%,
+  100% {
+    opacity: 0.34;
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    opacity: 0.62;
+    transform: translateX(-50%) scale(1.08);
+  }
+}
+
+@keyframes vault-surface-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Vault tile motion hooks — durations tuned for “premium idle”, not distraction */
+.vault-sheen-layer {
+  animation: vault-sheen-pass 7.5s ease-in-out infinite;
+}
+
+.vault-strip-sweep-el {
+  animation: vault-strip-sweep 3.4s ease-in-out infinite;
+}
+
+.vault-sigil-breathe-el {
+  animation: vault-sigil-breathe 4.2s ease-in-out infinite;
+}
+
+.vault-conic-slow {
+  animation: vault-surface-spin 26s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vault-marketing-float,
+  .vault-sheen-layer,
+  .vault-strip-sweep-el,
+  .vault-sigil-breathe-el,
+  .vault-conic-slow {
+    animation: none !important;
+  }
+}
+
 @keyframes status-pulse {
   0%, 100% { box-shadow: 0 0 0 0 currentColor; }
   50% { box-shadow: 0 0 6px 2px currentColor; }

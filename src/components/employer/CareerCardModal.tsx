@@ -122,7 +122,7 @@ export default function CareerCardModal({
         body: JSON.stringify({
           requestType: 'block_request',
           targetBlockType: blockType,
-          message: 'Requested via StormChain Talent Search',
+          message: 'Requested via Storm Talent Search',
         }),
       })
       if (!response.ok) {
@@ -153,7 +153,7 @@ export default function CareerCardModal({
         body: JSON.stringify({
           requestType: 'block_request',
           targetBlockType: blockType,
-          message: 'Requested via StormChain Talent Search',
+          message: 'Requested via Storm Talent Search',
         }),
       })
       await fetchCareerCard()

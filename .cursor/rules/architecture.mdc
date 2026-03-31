@@ -1,9 +1,9 @@
 ---
-description: Core architecture standards for StormChain — component structure, state management, routing, and data layer
+description: Core architecture standards for Storm — component structure, state management, routing, and data layer
 alwaysApply: true
 ---
 
-# StormChain Architecture Rules
+# Storm Architecture Rules
 
 ## Shell Routing (page.tsx)
 

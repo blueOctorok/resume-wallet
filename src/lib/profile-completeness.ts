@@ -357,7 +357,7 @@ function hasCareerCardIdentity(card: ProjectedCareerCard): boolean {
 }
 
 /**
- * Readiness score for applying with a StormChain career card (keyword search apply flow).
+ * Readiness score for applying with a Storm career card (keyword search apply flow).
  * Separate from driver CDL completeness — use this in ApplyWithStormChainModal.
  */
 export function computeCareerApplyReadiness(card: ProjectedCareerCard): CareerApplyReadinessResult {

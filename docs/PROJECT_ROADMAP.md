@@ -1,19 +1,23 @@
-# StormChain - Complete Project Roadmap
+# Storm — Complete Project Roadmap
 
 ## 🧭 **Candidate hub — refresh & navigation** (March 2026)
 
 | Item | Status | Notes |
 |------|--------|-------|
 | **Unified LoadingScreen** | ✅ Done | Teal/violet orbits, storm icon, full-page + compact modes; replaces teal splash + generic spinner |
-| Obvious **Refresh hub** control | ✅ Done | Strip under profile card; avoids burying refresh beside Block Hive |
+| Obvious **Refresh hub** control | ✅ Done | **Inside** `HubProfileHeader` vault: **centered** **`primary`** **Refresh hub** + short helper line (`border-t` strip); re-fetches hub + `refreshKey` for **My Files** |
+| **Collapsible hub sections** | ✅ Done | **Your blocks** + **Block files** (chevron in `BlockCard` header when relevant); state in persisted **`usePreferencesStore`** — **Stormi** not collapsible |
 | Browser / OS **back** vs shell | ✅ Done | `useCandidateShellHistory` + `navigateToHub()` — cannot remove system back UI; history is synced so back returns to hub when possible |
-| Nav **rounded shell + breathing glow** | ✅ Done | Backdrop layer (no clip-path chamfers); teal/violet animated `box-shadow` rim + drop-shadow; `prefers-reduced-motion` static glow |
+| Nav **horizontal vault bar** | ✅ Done | `NavVaultShell` → shared [`VaultHorizontalVaultShell`](src/components/ui/VaultHorizontalVaultShell.tsx) (`layout='nav'`) + `VAULT_CLIP_HORIZONTAL`: rim, frost/tile texture, conic/sheen/strip (same family as wordmark + hub); clip on **decorative layer only** so hub dropdown isn’t cut off; removed `.nav-shell-shape` breathe keyframes |
+| Hub **profile header** vault | ✅ Done | `HubProfileHeader` uses **`VaultHorizontalVaultShell` `layout='panel'`** (full width, `VaultLightFrostTexture` tile variant) instead of **`Card` elevated** — matches nav vault language |
+| **Career card** vault shell | ✅ Done | `ProjectedCareerCard` + `CareerCard` wrapped in **`VaultHorizontalVaultShell`** (nav width vs full modal width); hero / ambient blob / inset panels unchanged |
+| Hub **Your blocks** panel | ✅ Done | **`BlockCard`** (+ **`headerActions`**) wraps hive — same shell as block pages; **dashed `EmptyVaultSlot`** for unused grid cells |
 | **Light mode readability** (canvas vs cards) | ✅ Done | Cooler light **body** gradient; **solid white** `Card` / hub rails / hex faces with **slate** borders + neutral shadows; less teal-on-white glow; nav chips aligned (`globals.css`, `Card`, `HubSidebar`, `CandidateHub` hive, `navigation-styles`) |
 | **Theme hydration** | ✅ Done | `ThemeProvider` no longer reads `localStorage` in `useState` initializer — SSR + first paint stay `light`, then `useEffect` applies saved theme; fixes `LoadingScreen` / `useTheme` mismatch when default is dark |
-| **Light background mood** | ✅ Done | `StormBackground`: light = **bubbles** + loader-aligned **teal-600 / violet** atmosphere (no cyan wedge); dark = **cloud + rain + lightning** |
-| **Light canvas polish** | ✅ Done | **`--storm-accent`** + **`--storm-accent-rgb`**; **layered `body`** (specular gloss + blooms); **`.storm-light-panel`** = LoadingScreen card DNA; **film grain**; nav breathe / hub ring / resume scrollbar **unified teal**; **Card** elevated glossy light |
+| **Light background mood** | ✅ Done | `StormBackground`: **bubbles** + atmosphere + **vault canvas** (`VaultLightFrostTexture` canvas / `VaultDarkCanvasTexture`); dark **no** cloud/rain/lightning — same bubble language as light |
+| **Light canvas polish** | ✅ Done | **`--storm-accent`** + **`--storm-accent-rgb`**; **layered `body`** (specular gloss + blooms); **`.storm-light-panel`** = LoadingScreen card DNA; full-page **vault frost** via `StormBackground`; nav / hub / resume scrollbar **unified teal**; **Card** elevated glossy light |
 | **Block Hive tiles** | ✅ Done | Unified **light** chrome (slate ring, inner gradient, specular line); **slate** titles + colored accent bar; larger type; **Coming soon** state; tooltips; hover shadow stack (`CandidateHub` `BlockTile`) |
-| **Block Hive geometry** | ✅ Done | Flat-top hex **width > height** via `flatTopHexHeight()` — fixes wrong aspect + more room for labels (`hex-hive-geometry.ts`, hub + `HomePage` showcase) |
+| **Hub block tiles (“vault”)** | ✅ Done | Chamfered credential silhouette, gradient rim, twin-ring sigil, foot strip — CSS grid layout (center + ring); shared with `HomePage` `VaultShowcase` (`HubBlockVault.tsx`) |
 | **Dark UI = LoadingScreen DNA** | ✅ Done | **`--storm-*` CSS vars**, body blooms, **`.storm-glass-panel`**, nav/scroll/cards/`StormBackground`/`StormTokenMark`/hive hex aligned to loader aesthetic |
 | **Brand lockup + favicon** | ✅ Done | **`StormChainWordmark`** in **nav + whitepaper**; **`favicon.svg`** (rings + lightning) |
 
@@ -53,7 +57,7 @@
 | **Career Card Easy Apply + AvA chat memory** | **✅ Done** | **External job apply uses `/api/career-card` (not driver profile); submit snapshot includes `installed_block_types` + profile fields; server-side eligibility before job row insert. AvA `/api/ai/chat` accepts `conversationHistory` (multi-turn).** |
 | **Phase 2 — AI cover letter + job recommendations** | **✅ Done** | **`POST /api/ai/cover-letter` (3 free/day + credits). `GET /api/jobs/recommended` (1 free AI/day + cache; `force=1` = 1 credit). Migration `061_ava_job_ai_usage.sql`. External jobs tab UI + shared `adzuna-server`.** |
 | **Phase 3 — AI job alerts** | **✅ Done** | **Hub saved searches + daily cron `/api/cron/job-alerts` + in-app notifications. Plus candidate AvA chat tools: `search_ranked_jobs` + `save_job_alert`; chat UI shows ranked job cards → new-tab listing + Apply with Career Card modal.** |
-| **Public guest job browse + homepage (AvA pitch)** | **✅ Done** | **Unauthenticated users: nav Home / Browse jobs; `JobListings` `publicBrowseMode` (StormChain + external search, connect CTA for apply). HomePage hero + AvA bento + pre-wallet job search band.** |
+| **Public guest job browse + homepage (AvA pitch)** | **✅ Done** | **Unauthenticated users: nav Home / Browse jobs; `JobListings` `publicBrowseMode` (Storm employers tab + external search, connect CTA for apply). HomePage hero + AvA bento + pre-wallet job search band.** |
 
 ## 💬 **AvA Chat Monetization** (March 2026 — Complete)
 
@@ -127,7 +131,7 @@ The career card becomes a pure read-only projection of the hub.
 | iPhone Home Screen Hub | ✅ Done | 2-col tile grid with jiggle-mode editing, long-press, status badges |
 | Premium Glass Tiles | ✅ Done | Glassmorphic tiles with per-block colors, illustrations, Atropos 3D tilt |
 | Hub layout pass | ✅ Done | Career Card banner + on-chain verification bar, removed old stats |
-| Hub career / job path | ✅ Done | `PathGuidance` + `CareerPathSteps` (“Next steps”); candidate **career path** + employer **job path** rails; `MiniEmployerHiringCard`; `useEmployerHiringPathStore`; AvA drawer role-aware; mobile FABs |
+| Hub career / job path | ✅ Done | Single **vault** rail (no outer rounded shell): `PathGuidance` + `CareerPathSteps` + explore / mini cards; candidate `HubSidebar` + employer `EmployerPathSidebar`; `useEmployerHiringPathStore`; Stormi drawer role-aware; mobile FABs |
 | Outreach auto-install + deep-link | ✅ Done | Fixed `?onboard=` deep-link mismatch; talent requests auto-install `targetBlockType` + `actionUrl` on notification; recruit creates in-app notification; `REQUEST_BLOCK_MAP`; new architecture rule §12 |
 | Employer Composable Hub Phase 1 | ✅ Done | Hybrid employer hub: permanent core + composable industry blocks, generic company setup |
 | Employer Composable Hub Phase 2 | ✅ Done | Role-agnostic polish: data-driven driver detection, 3-tier role badges, block-conditional quick actions, legacy cleanup |
@@ -210,7 +214,7 @@ The career card becomes a pure read-only projection of the hub.
 
 ### Architecture Overview
 
-StormChain is architected as a **two-sided marketplace** connecting drivers with employers. The platform has distinct experiences for each user type:
+Storm is architected as a **two-sided marketplace** connecting drivers with employers. The platform has distinct experiences for each user type:
 
 ```
 ┌─────────────────────────────────────────────────────────┐

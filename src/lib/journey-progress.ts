@@ -295,7 +295,7 @@ export function calculateBlockJourney(
   const jobStep: JourneyStep = {
     id: 'find-jobs',
     label: 'Browse & Apply to Jobs',
-    description: 'Search StormChain and external job listings',
+    description: 'Search Storm and external job listings',
     status: data.hasAppliedToJobs ? 'complete' : 'pending',
     action: !data.hasAppliedToJobs ? { label: 'Find Jobs', target: 'jobs' } : undefined,
   }
@@ -364,7 +364,7 @@ export function calculateBlockJourney(
     if (!data.hasAppliedToJobs) {
       nextActions.push({
         label: 'Find Jobs',
-        description: 'Search StormChain and external job listings',
+        description: 'Search Storm and external job listings',
         target: 'jobs',
         priority: 'low',
       })
@@ -374,7 +374,7 @@ export function calculateBlockJourney(
   // 6. Greeting
   let greeting: string
   if (!data.isWalletConnected) {
-    greeting = "Welcome to StormChain! Let's get you started."
+    greeting = "Welcome to Storm! Let's get you started."
   } else if (installedBlockTypes.length === 0) {
     greeting = 'Add blocks to your hub — each one is proof employers see on your Career Card.'
   } else if (overallProgress < 30) {

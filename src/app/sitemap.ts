@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 
 /**
- * Dynamic sitemap for StormChain
+ * Dynamic sitemap for Storm
  * Next.js automatically serves this at /sitemap.xml
  */
 export default function sitemap(): MetadataRoute.Sitemap {

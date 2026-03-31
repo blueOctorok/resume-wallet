@@ -459,7 +459,7 @@ const Home = () => {
   useEffect(() => { setMounted(true) }, [])
 
   if (!mounted) {
-    return <LoadingScreen message='Starting StormChain…' fullScreen />
+    return <LoadingScreen message='Starting Storm…' fullScreen />
   }
 
   return <HomeContent />

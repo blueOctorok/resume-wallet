@@ -5,19 +5,19 @@ import Particles from 'react-tsparticles'
 import { loadSlim } from 'tsparticles-slim'
 import type { ISourceOptions } from 'tsparticles-engine'
 import { useTheme } from '@/contexts/ThemeContext'
+import VaultLightFrostTexture from '@/components/ui/VaultLightFrostTexture'
+import VaultDarkCanvasTexture from '@/components/ui/VaultDarkCanvasTexture'
 
 /**
- * Theme-split atmosphere:
- * - **Dark:** storm — cloud texture, rain particles, rare lightning (brand “power” read).
- * - **Light:** calm bubbles + loader-aligned teal/violet atmosphere (specular gloss, single accent hue).
+ * App canvas — vault-aligned glossy texture on the full viewport (light + dark).
+ * Particles: **bubbles only** (calm upward drift); dark no longer uses cloud image, rain, or lightning.
  *
- * Layering (dark, back → front): body gradient → atmosphere → cloud → rain → lightning.
- * Light: layered atmosphere (studio-style gradients, no animation) → optional film grain → bubbles.
+ * Stack (back → front): atmosphere → vault canvas texture → bubbles (z-[-1]).
  */
 
 export default function StormBackground() {
   const { theme } = useTheme()
-  const [lightning, setLightning] = useState(false)
+  const [reduceMotion, setReduceMotion] = useState(false)
 
   const particlesInit = useCallback(async (engine: { addShape?: unknown }) => {
     await loadSlim(engine as never)
@@ -26,36 +26,13 @@ export default function StormBackground() {
   const isDark = theme === 'dark'
 
   useEffect(() => {
-    if (!isDark) {
-      setLightning(false)
-      return
-    }
-    let cancelled = false
-    let timeoutId: ReturnType<typeof setTimeout>
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const apply = () => setReduceMotion(mq.matches)
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
 
-    const schedule = () => {
-      if (cancelled) return
-      const nextFlash = 25000 + Math.random() * 25000
-      timeoutId = setTimeout(() => {
-        if (cancelled) return
-        setLightning(true)
-        setTimeout(() => setLightning(false), 150)
-        schedule()
-      }, nextFlash)
-    }
-
-    schedule()
-    return () => {
-      cancelled = true
-      clearTimeout(timeoutId)
-    }
-  }, [isDark])
-
-  const rainColor = '#94a3b8'
-  /** Light bubbles: cool slate with a hint of teal (same family as --storm-accent, not sage) */
-  const bubbleColor = '#7d8fa3'
-
-  /* Layered like body + LoadingScreen: teal/violet blooms, deep edge vignette */
   const stormAtmosphere = `
       radial-gradient(ellipse min(90vw, 38rem) min(90vw, 38rem) at 50% 12%, rgba(45,212,191,0.07), transparent 58%),
       radial-gradient(ellipse 100% 55% at 50% -38%, rgba(45,212,191,0.06), transparent 58%),
@@ -63,7 +40,6 @@ export default function StormBackground() {
       linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, transparent 26%, transparent 68%, rgba(0,0,0,0.48) 100%)
     `
 
-  /* Light: loader-aligned blooms (teal-600 + violet), stronger specular gloss, no cyan wedge */
   const lightAtmosphere = [
     'linear-gradient(122deg, rgba(255,255,255,0.62) 0%, rgba(255,255,255,0.14) 26%, transparent 50%)',
     'linear-gradient(to bottom, rgba(255,255,255,0.38) 0%, rgba(255,255,255,0.05) 34%, transparent 56%)',
@@ -74,6 +50,7 @@ export default function StormBackground() {
   ].join(', ')
 
   const particleOptions = useMemo((): ISourceOptions => {
+    const bubbleColor = isDark ? '#5c6d82' : '#7d8fa3'
     const base: ISourceOptions = {
       fullScreen: { enable: true, zIndex: -1 },
       background: { color: { value: '' } },
@@ -88,67 +65,37 @@ export default function StormBackground() {
       retina_detect: true,
     }
 
-    if (isDark) {
-      return {
-        ...base,
-        particles: {
-          number: {
-            value: 58,
-            density: { enable: true, value_area: 1100 },
-          },
-          shape: { type: 'circle' },
-          color: { value: rainColor },
-          opacity: {
-            value: 0.52,
-            random: true,
-            anim: { enable: false },
-          },
-          size: {
-            value: 2,
-            random: true,
-            anim: { enable: false },
-          },
-          move: {
-            enable: true,
-            speed: 14,
-            direction: 'bottom',
-            random: false,
-            straight: true,
-            out_mode: 'out',
-            bounce: false,
-            angle: { value: 85, offset: 0 },
-          },
-        },
-      }
-    }
+    const count = reduceMotion ? 22 : isDark ? 48 : 44
+    const speed = reduceMotion ? 0.22 : isDark ? 0.55 : 0.65
+    const opacityBase = isDark ? 0.32 : 0.26
 
     return {
       ...base,
       particles: {
         number: {
-          value: 44,
+          value: count,
           density: { enable: true, value_area: 1150 },
         },
         shape: { type: 'circle' },
         color: { value: bubbleColor },
         opacity: {
-          value: 0.26,
+          value: opacityBase,
           random: true,
           anim: {
-            enable: true,
+            enable: !reduceMotion,
             speed: 0.28,
-            minimumValue: 0.1,
+            minimumValue: 0.08,
             sync: false,
           },
         },
         size: {
-          value: 4,
-          random: { enable: true, minimumValue: 1.5 },
+          value: isDark ? 3.2 : 4,
+          random: { enable: true, minimumValue: isDark ? 1.2 : 1.5 },
           anim: { enable: false },
         },
         move: {
           enable: true,
-          speed: 0.65,
+          speed,
           direction: 'top',
           random: true,
           straight: false,
@@ -157,7 +104,7 @@ export default function StormBackground() {
         },
       },
     }
-  }, [isDark])
+  }, [isDark, reduceMotion])
 
   return (
     <>
@@ -167,38 +114,16 @@ export default function StormBackground() {
         aria-hidden
       />
 
-      {/* Fine grain + depth on light only; dark keeps storm texture from cloud/rain */}
-      {!isDark && <div className='storm-light-film-grain' aria-hidden />}
-
-      {isDark && (
-        <>
-          <div
-            className='fixed inset-0 pointer-events-none bg-cover bg-center'
-            style={{
-              zIndex: -3,
-              backgroundImage: 'url(/dark_cloud.png)',
-              opacity: 0.36,
-              mixBlendMode: 'screen',
-              filter: 'contrast(1.08) saturate(1.06)',
-            }}
-            aria-hidden
-          />
-
-          <div
-            className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-100 ${
-              lightning ? 'opacity-[0.22]' : 'opacity-0'
-            }`}
-            style={{
-              background: 'radial-gradient(ellipse at 50% 0%, #e2e8ff 0%, transparent 58%)',
-            }}
-            aria-hidden
-          />
-        </>
-      )}
+      <div
+        className='pointer-events-none fixed inset-0 z-[-3] overflow-hidden'
+        aria-hidden
+      >
+        {isDark ? <VaultDarkCanvasTexture /> : <VaultLightFrostTexture variant='canvas' />}
+      </div>
 
       <Particles
-        key={isDark ? 'storm-rain' : 'light-bubbles'}
-        id={isDark ? 'storm-rain' : 'light-bubbles'}
+        key={`bubbles-${theme}-${reduceMotion ? 'rm' : 'full'}`}
+        id='storm-canvas-bubbles'
         init={particlesInit}
         options={particleOptions}
       />

@@ -237,7 +237,7 @@ export async function GET(
       const hasToken = !!github?.access_token
       const headers: Record<string, string> = {
         Accept: 'application/vnd.github.v3+json',
-        'User-Agent': 'StormChain-CareerCard',
+        'User-Agent': 'Storm-CareerCard',
       }
 
       if (hasToken && github?.access_token) {

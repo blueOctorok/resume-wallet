@@ -5,13 +5,7 @@ import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import Avatar from '@/components/ui/Avatar'
 import Button from '@/components/ui/Button'
-import {
-  careerCardShellClass,
-  careerCardHairlineTop,
-  careerCardAmbientBlobClass,
-  careerCardHeroClass,
-  careerCardHeroWashClass,
-} from '@/lib/career-card-styles'
+import VaultHorizontalVaultShell from '@/components/ui/VaultHorizontalVaultShell'
 import type { ProjectedCareerCard as CardData, CareerCardMode, CareerCardSection, SectionBlockType } from '@/types/career-card'
 import type { ResumeData, DotAppData, MvrData, CdlData, PortfolioData, GitHubData, ProjectsData } from '@/types/career-card'
 
@@ -57,36 +51,27 @@ export default function ProjectedCareerCard({
   const isDark = theme === 'dark'
 
   return (
-    <div className={cn('max-w-2xl mx-auto', careerCardShellClass(isDark))}>
-      <div className={careerCardHairlineTop()} aria-hidden />
-      <div className={careerCardAmbientBlobClass(isDark)} aria-hidden />
-
-      {/* ── Profile Header ── */}
-      <div>
-        <div className={careerCardHeroClass(isDark)}>
-          <div className={careerCardHeroWashClass(isDark)} aria-hidden />
-        </div>
-        <div className='px-6 sm:px-8 pb-5 -mt-11 sm:-mt-12 relative z-[1]'>
-          <div className='flex items-end gap-4'>
+    <VaultHorizontalVaultShell isDark={isDark} layout='nav' contentClassName='relative overflow-hidden'>
+      {/* ── Profile header (no hero gradient — stays on vault face so block sections read as one surface) ── */}
+      <div className='px-6 sm:px-8 pt-6 sm:pt-7 pb-5 relative z-[1]'>
+          <div className='flex items-start gap-4'>
             <div
               className={cn(
-                'rounded-full p-[3px]',
-                'bg-gradient-to-br from-teal-400/85 via-cyan-400/55 to-violet-500/65 dark:from-teal-400/95 dark:via-teal-500/45 dark:to-violet-500/55',
-                'shadow-lg shadow-teal-900/25 dark:shadow-black/60',
-                'ring-1 ring-white/25 dark:ring-white/10',
+                'rounded-full p-[2px] shrink-0',
+                'bg-teal-500/15 dark:bg-teal-400/10',
+                'ring-1 ring-teal-500/35 dark:ring-teal-400/25',
               )}
             >
               <div
                 className={cn(
-                  'rounded-full overflow-hidden border-[3px] shadow-inner',
-                  isDark ? 'border-gray-950' : 'border-white',
+                  'rounded-full overflow-hidden border-[3px]',
+                  isDark ? 'border-gray-900/90' : 'border-white',
                 )}
               >
-                {/* round + 2xl: photo uses object-cover on a true circle so it fills the gradient ring */}
                 <Avatar name={data.name} avatarUrl={data.avatarUrl} size='2xl' color='teal' round />
               </div>
             </div>
-            <div className='flex-1 min-w-0 pb-1 pt-1'>
+            <div className='flex-1 min-w-0 pt-0.5'>
               <p
                 className={cn(
                   'text-[10px] font-semibold uppercase tracking-[0.2em] mb-0.5',
@@ -178,7 +163,6 @@ export default function ProjectedCareerCard({
               </div>
             </div>
           )}
-        </div>
       </div>
 
       {/* ── Dynamic Sections ── */}
@@ -232,7 +216,7 @@ export default function ProjectedCareerCard({
           </div>
         )}
       </div>
-    </div>
+    </VaultHorizontalVaultShell>
   )
 }
 

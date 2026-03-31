@@ -46,7 +46,7 @@ export async function sendVerificationEmail(
 
   const bodyHtml = `
     <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
-      A former employee has listed <strong>${claimedCompanyName}</strong> on their StormChain career profile and
+      A former employee has listed <strong>${claimedCompanyName}</strong> on their Storm career profile and
       asked us to reach out so you can <strong>confirm or correct their employment dates</strong> if you choose to.
       This is a voluntary, job-agnostic check — not a government or DOT investigation.
     </p>
@@ -75,7 +75,7 @@ export async function sendVerificationEmail(
     bodyHtml,
     ctaLabel: 'Verify Employment',
     ctaUrl: verificationLink,
-    footerNote: `This request was sent through StormChain on behalf of a former employee. If you weren't expecting this, you can safely ignore it.`,
+    footerNote: `This request was sent through Storm on behalf of a former employee. If you weren't expecting this, you can safely ignore it.`,
   })
 
   try {

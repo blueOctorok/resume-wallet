@@ -149,7 +149,7 @@ export default function PublicApplicationPage() {
                 {application.driver_name}
               </h1>
               <p className='text-gray-600 dark:text-gray-400'>
-                CDL Driver Application via StormChain
+                CDL Driver Application via Storm
               </p>
             </div>
           </div>
@@ -341,7 +341,7 @@ export default function PublicApplicationPage() {
           </div>
         </div>
 
-        {/* Powered by StormChain */}
+        {/* Powered by Storm */}
         <div className='text-center py-8'>
           <p
             className={`mb-2 ${
@@ -354,7 +354,7 @@ export default function PublicApplicationPage() {
                 theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
               }`}
             >
-              StormChain
+              Storm
             </span>
           </p>
           <p

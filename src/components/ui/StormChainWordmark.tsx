@@ -1,86 +1,190 @@
 'use client'
 
+import { CloudLightning } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
-import StormOLogoMark from '@/components/ui/StormOLogoMark'
+import { VAULT_CLIP_HORIZONTAL } from '@/lib/vault-credential-geometry'
+import VaultLightFrostTexture from '@/components/ui/VaultLightFrostTexture'
 
 export type StormChainWordmarkSize = 'nav' | 'hero'
 
 interface StormChainWordmarkProps {
   size?: StormChainWordmarkSize
   className?: string
+  /**
+   * Full horizontal vault bar (rim, face, strip). Set false in nav where `NavVaultShell` already
+   * provides the credential chrome — logo stays STORM + cloud mark only.
+   */
+  vaultChrome?: boolean
 }
 
+const BAR_RIM_LIGHT =
+  'linear-gradient(135deg, rgba(13,148,136,0.32) 0%, rgba(45,212,191,0.1) 22%, transparent 54%, rgba(124,58,246,0.14) 100%)'
+const BAR_RIM_DARK =
+  'linear-gradient(135deg, rgba(45,212,191,0.34) 0%, transparent 48%, rgba(167,139,246,0.2) 100%)'
+
+const BAR_STRIP_LIGHT =
+  'linear-gradient(90deg, transparent, rgba(13,148,136,0.4), rgba(91,33,182,0.2), transparent)'
+const BAR_STRIP_DARK =
+  'linear-gradient(90deg, transparent, rgba(45,212,191,0.4), rgba(139,92,246,0.28), transparent)'
+
 /**
- * Logo lockup: **STORM** as the hero (ST + O-mark + RM), **chain** as a smaller linker underneath.
- * O-mark is sized near cap-height with tight side margins so it reads as a true **O**, not “ST · icon · RM”.
+ * **STORM** with **O** = cloud + lightning. Default: full horizontal vault credential bar.
+ * Use `vaultChrome={false}` when the parent already supplies vault chrome (e.g. `NavVaultShell`).
  */
 export default function StormChainWordmark({
   size = 'nav',
   className,
+  vaultChrome = true,
 }: StormChainWordmarkProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const isHero = size === 'hero'
 
-  const stormLine = cn(
-    'inline-flex items-center justify-center font-[family-name:var(--font-storm-wordmark),ui-serif,Georgia,serif] font-medium leading-none tracking-[0.045em] sm:tracking-[0.055em]',
+  const typeStyles = cn(
+    'font-[family-name:var(--font-storm-wordmark),ui-serif,Georgia,serif] font-medium tracking-[0.045em] sm:tracking-[0.055em]',
     isHero
       ? cn(
           'text-[2.25rem] sm:text-[2.75rem] lg:text-[3.25rem]',
           isDark
-            ? 'text-slate-200/95 [text-shadow:0_2px_0_rgba(0,0,0,0.45),0_0_24px_rgba(0,0,0,0.5)]'
-            : 'text-slate-600 [text-shadow:0_1px_0_rgba(255,255,255,0.9),0_-1px_1px_rgba(15,23,42,0.12)]',
+            ? 'text-slate-100 [text-shadow:0_2px_0_rgba(0,0,0,0.45),0_0_20px_rgba(0,0,0,0.45)]'
+            : 'text-slate-700 [text-shadow:0_1px_0_rgba(255,255,255,0.9),0_-1px_1px_rgba(15,23,42,0.1)]',
         )
       : cn(
           'text-[1.375rem] sm:text-[1.625rem] lg:text-[1.875rem]',
           isDark
-            ? 'text-slate-500/90 [text-shadow:0_1px_0_rgba(255,255,255,0.07),0_-1px_3px_rgba(0,0,0,0.65),0_0.12em_0.35em_rgba(0,0,0,0.35)]'
-            : 'text-slate-500/95 [text-shadow:0_1px_0_rgba(255,255,255,0.85),0_-1px_1px_rgba(15,23,42,0.14),0_0.08em_0.2em_rgba(15,23,42,0.06)]',
+            ? 'text-slate-200/95 [text-shadow:0_1px_0_rgba(255,255,255,0.06),0_-1px_3px_rgba(0,0,0,0.6)]'
+            : 'text-slate-700 [text-shadow:0_1px_0_rgba(255,255,255,0.85),0_-1px_1px_rgba(15,23,42,0.12)]',
         ),
   )
 
-  const chainLine = cn(
-    'font-[family-name:var(--font-storm-wordmark),ui-serif,Georgia,serif] font-normal leading-none lowercase',
-    isHero
-      ? cn(
-          'text-[1.375rem] sm:text-[1.625rem] lg:text-[1.875rem] tracking-[0.14em]',
-          isDark
-            ? 'text-teal-400/65 [text-shadow:0_2px_0_rgba(0,0,0,0.4),0_0_20px_rgba(45,212,191,0.12)]'
-            : 'text-teal-700/55 [text-shadow:0_1px_0_rgba(255,255,255,0.8),0_-1px_1px_rgba(15,118,110,0.18)]',
-        )
-      : cn(
-          'text-[0.8125rem] sm:text-[0.9375rem] lg:text-[1.0625rem] tracking-[0.12em]',
-          isDark
-            ? 'text-teal-500/50 [text-shadow:0_1px_0_rgba(255,255,255,0.06),0_-1px_3px_rgba(0,0,0,0.6),0_0.12em_0.35em_rgba(0,0,0,0.32)]'
-            : 'text-teal-700/45 [text-shadow:0_1px_0_rgba(255,255,255,0.8),0_-1px_1px_rgba(15,118,110,0.18),0_0.08em_0.2em_rgba(15,23,42,0.05)]',
-        ),
+  const innerBg = isDark
+    ? 'linear-gradient(175deg, rgba(24,30,40,0.97) 0%, rgba(10,13,18,0.99) 100%)'
+    : 'linear-gradient(175deg, rgba(255,255,255,0.91) 0%, rgba(252,252,253,0.87) 38%, rgba(248,250,252,0.84) 72%, rgba(241,245,249,0.89) 100%)'
+
+  const clip = { clipPath: VAULT_CLIP_HORIZONTAL }
+
+  const stormMarkRow = (
+    <div
+      className={cn(
+        'flex items-center justify-center gap-[0.05em] sm:gap-[0.06em]',
+        vaultChrome
+          ? 'px-[0.38em] pb-[0.1em] pt-[0.14em] sm:px-[0.46em] sm:pb-[0.12em] sm:pt-[0.16em]'
+          : 'px-[0.12em] py-[0.06em] sm:px-[0.18em] sm:py-[0.08em]',
+      )}
+    >
+      <span className='select-none uppercase'>ST</span>
+      <CloudLightning
+        className={cn(
+          'shrink-0 text-teal-600 dark:text-teal-300',
+          'h-[1cap] w-[1cap]',
+          'drop-shadow-[0_0_12px_rgba(45,212,191,0.22)] dark:drop-shadow-[0_0_14px_rgba(45,212,191,0.18)]',
+        )}
+        strokeWidth={isHero ? 2.35 : 2.1}
+        aria-hidden
+      />
+      <span className='select-none uppercase'>RM</span>
+    </div>
   )
+
+  if (!vaultChrome) {
+    return (
+      <div className={cn('inline-flex leading-none', typeStyles, className)}>
+        <span className='sr-only'>Storm</span>
+        {stormMarkRow}
+      </div>
+    )
+  }
 
   return (
-    <div className={cn('flex flex-col items-center gap-0 leading-none', className)}>
-      <div className={cn(stormLine, 'gap-0')}>
-        <span className='select-none uppercase'>ST</span>
-        <StormOLogoMark
-          className={cn(
-            /* Negative horizontal margin: closes optical gap so O sits like a real letter */
-            isHero
-              ? 'h-[1.12em] w-[1.12em] -mx-[0.085em]'
-              : 'h-[1.06em] w-[1.06em] -mx-[0.075em]',
-          )}
+    <div className={cn('inline-flex leading-none', typeStyles, className)}>
+      <span className='sr-only'>Storm</span>
+      <div className='relative inline-block' style={clip}>
+        {/* Background stack — all absolute; size comes from in-flow column below */}
+        <span
+          aria-hidden
+          className='absolute inset-0 z-0'
+          style={{ ...clip, background: isDark ? BAR_RIM_DARK : BAR_RIM_LIGHT }}
         />
-        <span className='select-none uppercase'>RM</span>
-      </div>
-      {/* Pull linker up; amount scales with smaller “chain” type */}
-      <div
-        className={cn(
-          chainLine,
-          isHero
-            ? '-mt-[0.30em] sm:-mt-[0.28em] lg:-mt-[0.26em]'
-            : '-mt-[0.22em] sm:-mt-[0.20em] lg:-mt-[0.18em]',
+
+        {isHero && (
+          <span
+            aria-hidden
+            className={cn(
+              'vault-conic-slow pointer-events-none absolute -inset-[22%] z-0 motion-reduce:opacity-0',
+              isDark ? 'mix-blend-plus-lighter opacity-[0.18]' : 'mix-blend-multiply opacity-[0.13]',
+            )}
+            style={{
+              ...clip,
+              background: isDark
+                ? 'conic-gradient(from 200deg at 85% 0%, transparent 0deg, rgba(45,212,191,0.3) 40deg, rgba(139,92,246,0.18) 100deg, transparent 220deg, rgba(45,212,191,0.22) 300deg, transparent 360deg)'
+                : 'conic-gradient(from 200deg at 85% 0%, transparent 0deg, rgba(13,148,136,0.32) 40deg, rgba(109,40,217,0.14) 100deg, transparent 220deg, rgba(15,118,110,0.22) 300deg, transparent 360deg)',
+            }}
+          />
         )}
-      >
-        chain
+
+        <div
+          aria-hidden
+          className={cn(
+            'pointer-events-none absolute inset-[2px] z-[1] overflow-hidden dark:shadow-[inset_0_0_22px_rgba(0,0,0,0.4)]',
+            isDark
+              ? 'shadow-[inset_0_0_18px_rgba(0,0,0,0.05)]'
+              : 'backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_0_36px_rgba(15,23,42,0.05),inset_0_1px_0_rgba(255,255,255,0.98)] ring-1 ring-slate-200/95',
+          )}
+          style={{ ...clip, background: innerBg }}
+        >
+          {isDark ? (
+            <span className='pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.055)_1px,transparent_1.5px)] [background-size:6px_6px] opacity-[0.26]' />
+          ) : (
+            <VaultLightFrostTexture variant='bar' />
+          )}
+          {!isDark && (
+            <span className='pointer-events-none absolute -left-[10%] top-0 h-[52%] w-[45%] rotate-[14deg] bg-gradient-to-br from-white/90 via-teal-50/12 to-transparent opacity-55' />
+          )}
+          {isHero && (
+            <span
+              className={cn(
+                'vault-sheen-layer pointer-events-none absolute inset-y-0 left-0',
+                isDark
+                  ? 'w-[36%] bg-gradient-to-r from-transparent via-white/08 to-transparent'
+                  : 'w-[54%] bg-gradient-to-r from-transparent via-white/34 to-transparent opacity-88 mix-blend-overlay',
+              )}
+            />
+          )}
+        </div>
+
+        <span
+          aria-hidden
+          className='pointer-events-none absolute right-0 top-0 z-[4] h-6 w-10 max-w-[18%] translate-x-px -translate-y-px sm:h-7 sm:w-12'
+          style={{
+            background: isDark
+              ? 'radial-gradient(ellipse 80% 80% at 90% 10%, rgba(45,212,191,0.5) 0%, transparent 72%)'
+              : 'radial-gradient(ellipse 80% 80% at 90% 10%, rgba(13,148,136,0.36) 0%, rgba(45,212,191,0.12) 48%, transparent 74%)',
+            filter: 'blur(3px)',
+          }}
+        />
+
+        {/* In-flow: defines bar width/height (px-[2px] aligns type with inset-[2px] face) */}
+        <div className='relative z-[3] flex flex-col px-[2px]'>
+          {stormMarkRow}
+          <div className='relative h-[3px] min-h-[2px] w-full shrink-0 overflow-hidden'>
+            <span
+              aria-hidden
+              className='absolute inset-0'
+              style={{ background: isDark ? BAR_STRIP_DARK : BAR_STRIP_LIGHT }}
+            />
+            {isHero && (
+              <span
+                className={cn(
+                  'vault-strip-sweep-el pointer-events-none absolute inset-y-0 w-1/3 opacity-90',
+                  isDark
+                    ? 'bg-gradient-to-r from-transparent via-teal-200/22 to-transparent'
+                    : 'bg-gradient-to-r from-transparent via-teal-700/28 to-transparent',
+                )}
+              />
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -1,8 +1,8 @@
 /**
- * Shared StormChain email template builder.
+ * Shared Storm email template builder.
  *
  * Every outgoing email uses this function so they all have the same:
- *   - Logo badge (StormChain, teal pill)
+ *   - Logo badge (Storm, teal pill)
  *   - Teal gradient header band with title + subtitle
  *   - White card body with consistent typography
  *   - Teal CTA button
@@ -16,7 +16,7 @@ export interface EmailTemplateOptions {
   preheader?: string
   /** Bold text in the teal gradient header */
   headerTitle: string
-  /** Smaller text above the title (e.g. company name, "StormChain Notification") */
+  /** Smaller text above the title (e.g. company name, "Storm Notification") */
   headerEyebrow?: string
   /** First line of body (e.g. "Hi Leon,") */
   greeting?: string
@@ -42,7 +42,7 @@ export function buildEmail(opts: EmailTemplateOptions): string {
   const {
     preheader = '',
     headerTitle,
-    headerEyebrow = 'StormChain',
+    headerEyebrow = 'Storm',
     greeting,
     bodyHtml,
     ctaLabel,
@@ -75,7 +75,7 @@ export function buildEmail(opts: EmailTemplateOptions): string {
   const footerHtml = footerNote
     ? `<p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.6;text-align:center;">${footerNote}</p>`
     : `<p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.6;text-align:center;">
-         You're receiving this from StormChain. If you weren't expecting this email, you can safely ignore it.
+         You're receiving this from Storm. If you weren't expecting this email, you can safely ignore it.
        </p>`
 
   return `<!DOCTYPE html>
@@ -96,7 +96,7 @@ export function buildEmail(opts: EmailTemplateOptions): string {
             <table cellpadding="0" cellspacing="0" style="display:inline-table;">
               <tr>
                 <td style="background:${TEAL};border-radius:10px;padding:8px 18px;">
-                  <span style="color:#fff;font-size:18px;font-weight:800;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">StormChain</span>
+                  <span style="color:#fff;font-size:18px;font-weight:800;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">Storm</span>
                 </td>
               </tr>
             </table>
