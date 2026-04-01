@@ -1,8 +1,8 @@
 /**
  * Shared chamfer for “vault credential” silhouette (hub tiles + STORM wordmark O).
  *
- * Hub cells are large — a fixed px cut stays crisp. The wordmark O is ~1em tall; the same px
- * would swallow the tile, so we use a proportional clip there.
+ * Hub cells are large — a fixed px cut stays crisp. Small marks that need a chamfer to scale with
+ * size can use the proportional clip (not used by the current STORM wordmark O, which is a square block).
  */
 export const VAULT_CLIP =
   'polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 0 100%)'

@@ -4,6 +4,22 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **STORM wordmark — O as split neon block** (March 2026)
+
+- [`StormChainWordmark.tsx`](src/components/ui/StormChainWordmark.tsx): The **O** is a **square** (`1cap`): **violet** frame + glow; **dark foil interior** (hub-style **conic** wash, **dot grid** dark / **`VaultLightFrostTexture` tile** light, **sheen**, **chamfer spark**, **foot strip**). **Cloud** ~**scale 1.12–1.14**, **tighter teal** `drop-shadow` (less interior blow-out). **Inset** face `inset-[2px]` so foil sits inside the violet border.
+
+---
+
+## **Hub — vault + embed blocks for alerts, referral, requests, STORM** (March 2026)
+
+- **Shared pattern:** [`VaultHorizontalVaultShell`](src/components/ui/VaultHorizontalVaultShell.tsx) (`layout='panel'`) + [`BlockCard variant='embed'`](src/components/ui/BlockCard.tsx), with per-section accents from [`vault-accent-presets.ts`](src/lib/vault-accent-presets.ts) so each strip has its own rim/glow.
+- **AI job alerts:** [`JobAlertsHubSection`](src/components/hub/JobAlertsHubSection.tsx) — **`accent='sky'`**.
+- **Refer & earn:** [`ReferralBanner`](src/components/hub/ReferralBanner.tsx) — **`accent='violet'`**; **Copy link** uses shared **`Button`**.
+- **Employer requests:** [`CandidateRequestsSection`](src/components/CandidateRequestsSection.tsx) — **`accent='indigo'`**; loading/error use the same shell; request rows use indigo-tinted borders.
+- **STORM balance:** [`STORMBalance`](src/components/STORMBalance.tsx) (non-**`compact`**) — **`accent='amber'`**; refresh uses **`Button`** **`ghost`**; **`compact`** nav/header behavior unchanged.
+
+---
+
 ## **Homepage — candidate-first hero + vault chrome** (March 2026)
 
 - [`HomePage.tsx`](src/components/HomePage.tsx): **Product-first** fold — **“Build the Career Card — the jobs will come”** is now the primary **h1** with a short blocks → verify → Stormi paragraph; **no** employer-led “verified cards for talent” gateway headline.

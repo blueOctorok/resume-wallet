@@ -22,6 +22,8 @@ import {
 } from 'lucide-react'
 import BackgroundCheckDisclosure from '@/components/BackgroundCheckDisclosure'
 import MessagingButton from '@/components/messaging/MessagingButton'
+import BlockCard from '@/components/ui/BlockCard'
+import VaultHorizontalVaultShell from '@/components/ui/VaultHorizontalVaultShell'
 import { useUIStore } from '@/stores'
 interface CandidateRequest {
   id: string
@@ -190,37 +192,34 @@ export default function CandidateRequestsSection({
     return daysUntilExpiry <= 7 && daysUntilExpiry > 0
   }
 
-  // Style classes
-  const containerClass = theme === 'dark'
-    ? 'bg-gray-800/50 border-gray-700'
-    : 'bg-white border-gray-200'
-  
-  const cardClass = theme === 'dark'
-    ? 'bg-gray-900/50 border-gray-700 hover:border-gray-600'
-    : 'bg-gray-50 border-gray-200 hover:border-gray-300'
+  const isDark = theme === 'dark'
 
-  const textPrimary = theme === 'dark' ? 'text-white' : 'text-gray-900'
-  const textSecondary = theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+  const cardClass = isDark
+    ? 'bg-gray-900/40 border-indigo-500/20 hover:border-indigo-400/35'
+    : 'bg-slate-50/90 border-indigo-200/70 hover:border-indigo-300'
+
+  const textPrimary = isDark ? 'text-white' : 'text-gray-900'
+  const textSecondary = isDark ? 'text-gray-400' : 'text-gray-600'
 
   if (loading) {
     return (
-      <div className={`rounded-2xl border p-6 ${containerClass}`}>
+      <VaultHorizontalVaultShell isDark={isDark} layout='panel' accent='indigo' contentClassName='p-6'>
         <div className='flex items-center justify-center py-8'>
-          <Loader2 className='w-6 h-6 animate-spin text-teal-500' />
+          <Loader2 className='w-6 h-6 animate-spin text-indigo-400' />
           <span className={`ml-2 ${textSecondary}`}>Loading requests...</span>
         </div>
-      </div>
+      </VaultHorizontalVaultShell>
     )
   }
 
   if (error) {
     return (
-      <div className={`rounded-2xl border p-6 ${containerClass}`}>
+      <VaultHorizontalVaultShell isDark={isDark} layout='panel' accent='indigo' contentClassName='p-6'>
         <div className='flex items-center gap-2 text-red-500'>
           <AlertCircle className='w-5 h-5' />
           <span>{error}</span>
         </div>
-      </div>
+      </VaultHorizontalVaultShell>
     )
   }
 
@@ -229,35 +228,25 @@ export default function CandidateRequestsSection({
   const completedRequests = requests.filter(r => !['pending', 'viewed'].includes(r.status))
 
   return (
-    <div className={`rounded-2xl border shadow-lg transition-all duration-200 ${containerClass}`}>
-      {/* Header */}
-      <div className='p-6 border-b border-inherit'>
-        <div className='flex items-center justify-between'>
-          <div className='flex items-center gap-3'>
-            <div className={`p-2.5 rounded-xl ${theme === 'dark' ? 'bg-teal-500/20' : 'bg-teal-100'}`}>
-              <Inbox className='w-5 h-5 text-teal-500' />
-            </div>
-            <div>
-              <h2 className={`text-lg font-semibold ${textPrimary}`}>
-                Employer Requests
-              </h2>
-              <p className={`text-sm ${textSecondary}`}>
-                {pendingCount > 0
-                  ? `${pendingCount} pending request${pendingCount !== 1 ? 's' : ''}`
-                  : 'No pending requests'}
-              </p>
-            </div>
-          </div>
-          {pendingCount > 0 && (
-            <span className='px-3 py-1 text-sm font-medium rounded-full bg-teal-500 text-white'>
+    <>
+    <VaultHorizontalVaultShell isDark={isDark} layout='panel' accent='indigo' contentClassName='p-4 sm:p-5 lg:p-6'>
+      <BlockCard
+        variant='embed'
+        icon={Inbox}
+        title='Employer requests'
+        description={
+          pendingCount > 0
+            ? `${pendingCount} pending request${pendingCount !== 1 ? 's' : ''}`
+            : 'No pending requests — when employers reach out, they appear here.'
+        }
+        headerActions={
+          pendingCount > 0 ? (
+            <span className='px-3 py-1 text-xs font-semibold rounded-full bg-indigo-500 text-white dark:bg-indigo-400 dark:text-gray-900 shrink-0'>
               {pendingCount} new
             </span>
-          )}
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className='p-6'>
+          ) : null
+        }
+      >
         {requests.length === 0 ? (
           <div className='text-center py-8'>
             <Inbox className={`w-12 h-12 mx-auto mb-3 ${textSecondary}`} />
@@ -382,10 +371,11 @@ export default function CandidateRequestsSection({
             )}
           </div>
         )}
-      </div>
+      </BlockCard>
+    </VaultHorizontalVaultShell>
 
       {/* Request Detail Modal */}
-      {selectedRequest && (
+    {selectedRequest && (
         <Modal onClose={() => setSelectedRequest(null)} maxWidth="max-w-lg">
             {/* Modal Header */}
             <div className='p-6 border-b border-inherit'>
@@ -578,6 +568,6 @@ export default function CandidateRequestsSection({
           consentId={viewingConsent.consentId}
         />
       )}
-    </div>
+    </>
   )
 }

@@ -7,9 +7,12 @@ import {
   STORM_TOKEN_ADDRESS_SEPOLIA,
 } from '@/lib/alchemy-token-api'
 import { useTheme } from '@/contexts/ThemeContext'
-import { RefreshCw, ExternalLink, FileText } from 'lucide-react'
+import { RefreshCw, ExternalLink, FileText, Coins } from 'lucide-react'
 import BuyUSDCButton from '@/components/BuyUSDCButton'
 import StormTokenMark from '@/components/ui/StormTokenMark'
+import BlockCard from '@/components/ui/BlockCard'
+import Button from '@/components/ui/Button'
+import VaultHorizontalVaultShell from '@/components/ui/VaultHorizontalVaultShell'
 
 interface STORMBalanceProps {
   walletAddress: string
@@ -119,120 +122,96 @@ export default function STORMBalance({
     )
   }
 
-  // Card styling (matches hub)
-  const cardClass = `rounded-2xl border transition-all duration-200 ${
-    theme === 'dark'
-      ? 'bg-gray-800/50 border-gray-700'
-      : 'bg-white/70 border-gray-200'
-  }`
+  const isDark = theme === 'dark'
 
   if (loading) {
     return (
-      <div className={`${cardClass} p-4`}>
-        <div className='flex items-center gap-3'>
-          <StormTokenMark size='md' />
-          <div className='flex-1'>
-            <div
-              className={`h-4 w-20 rounded animate-pulse ${
-                theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
-              }`}
-            />
-            <div
-              className={`h-3 w-16 rounded animate-pulse mt-2 ${
-                theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
-              }`}
-            />
+      <VaultHorizontalVaultShell isDark={isDark} layout='panel' accent='amber' contentClassName='p-4 sm:p-5 lg:p-6'>
+        <BlockCard variant='embed' icon={Coins} title='STORM' description='Storm Token — loading balances'>
+          <div className='flex items-center gap-3'>
+            <StormTokenMark size='md' />
+            <div className='flex-1'>
+              <div
+                className={`h-4 w-20 rounded animate-pulse ${
+                  isDark ? 'bg-gray-700' : 'bg-gray-200'
+                }`}
+              />
+              <div
+                className={`h-3 w-16 rounded animate-pulse mt-2 ${
+                  isDark ? 'bg-gray-700' : 'bg-gray-200'
+                }`}
+              />
+            </div>
           </div>
-        </div>
-      </div>
+        </BlockCard>
+      </VaultHorizontalVaultShell>
     )
   }
 
   if (error) {
     return (
-      <div
-        className={`${cardClass} p-4 ${
-          theme === 'dark' ? 'border-red-500/30' : 'border-red-200'
-        }`}
-      >
-        <div className='flex items-center justify-between'>
-          <div className='flex items-center gap-2'>
-            <span className='text-red-500'>❌</span>
-            <span
-              className={`text-sm ${
-                theme === 'dark' ? 'text-red-300' : 'text-red-700'
-              }`}
+      <VaultHorizontalVaultShell isDark={isDark} layout='panel' accent='amber' contentClassName='p-4 sm:p-5 lg:p-6'>
+        <BlockCard
+          variant='embed'
+          icon={Coins}
+          title='STORM'
+          description='Could not load balance — try again.'
+          headerActions={
+            <Button
+              type='button'
+              variant='ghost'
+              size='sm'
+              className='shrink-0 text-amber-600 dark:text-amber-300'
+              onClick={handleRefresh}
+              title='Refresh balance'
             >
-              {error}
-            </span>
-          </div>
-          <button
-            onClick={handleRefresh}
-            className={`p-1.5 rounded-lg transition-colors ${
-              theme === 'dark'
-                ? 'hover:bg-gray-700 text-gray-400'
-                : 'hover:bg-gray-200 text-gray-500'
-            }`}
-          >
-            <RefreshCw className='w-4 h-4' />
-          </button>
-        </div>
-      </div>
+              <RefreshCw className='w-4 h-4' />
+            </Button>
+          }
+        >
+          <p className={`text-sm ${isDark ? 'text-red-300' : 'text-red-700'}`}>{error}</p>
+        </BlockCard>
+      </VaultHorizontalVaultShell>
     )
   }
 
   return (
-    <div className={`${cardClass} p-4`}>
-      <div className='flex items-center justify-between mb-3'>
-        <div className='flex items-center gap-3'>
-          <StormTokenMark size='md' />
-          <div>
-            <span
-              className={`font-semibold ${
-                theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
-              }`}
-            >
-              STORM
-            </span>
-            <p
-              className={`text-xs ${
-                theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-              }`}
-            >
-              Storm Token
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={handleRefresh}
-          className={`p-1.5 rounded-lg transition-colors ${
-            theme === 'dark'
-              ? 'hover:bg-gray-700 text-gray-400 hover:text-gray-200'
-              : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
-          }`}
-          title='Refresh balance'
-        >
-          <RefreshCw className='w-4 h-4' />
-        </button>
-      </div>
-
+    <VaultHorizontalVaultShell isDark={isDark} layout='panel' accent='amber' contentClassName='p-4 sm:p-5 lg:p-6'>
+      <BlockCard
+        variant='embed'
+        icon={Coins}
+        title='STORM'
+        description='Storm Token on Base — Sepolia and mainnet.'
+        headerActions={
+          <Button
+            type='button'
+            variant='ghost'
+            size='sm'
+            className='shrink-0 text-amber-700 dark:text-amber-300'
+            onClick={handleRefresh}
+            title='Refresh balance'
+          >
+            <RefreshCw className='w-4 h-4' />
+          </Button>
+        }
+      >
       {/* Balance rows */}
       <div className='space-y-2'>
         {/* Base Sepolia (currently active for testnet) */}
         <div
           className={`flex items-center justify-between p-2.5 rounded-xl ${
-            theme === 'dark' ? 'bg-yellow-500/10' : 'bg-yellow-50'
+            isDark ? 'bg-amber-500/15' : 'bg-amber-50 dark:bg-amber-500/10'
           }`}
         >
           <div className='flex items-center gap-2'>
             <div
-              className={`w-2 h-2 rounded-full ${
-                theme === 'dark' ? 'bg-yellow-400' : 'bg-yellow-500'
+              className={`w-2 h-2 rounded-full shrink-0 ${
+                isDark ? 'bg-amber-400' : 'bg-amber-500'
               }`}
             />
             <span
               className={`text-sm ${
-                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                isDark ? 'text-gray-300' : 'text-gray-600 dark:text-gray-300'
               }`}
             >
               Sepolia
@@ -240,7 +219,7 @@ export default function STORMBalance({
           </div>
           <span
             className={`text-sm font-bold ${
-              theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'
+              isDark ? 'text-amber-300' : 'text-amber-700 dark:text-amber-300'
             }`}
           >
             {balanceSepolia} STORM
@@ -250,18 +229,18 @@ export default function STORMBalance({
         {/* Base Mainnet (coming soon) */}
         <div
           className={`flex items-center justify-between p-2.5 rounded-xl ${
-            theme === 'dark' ? 'bg-gray-700/30' : 'bg-gray-100'
+            isDark ? 'bg-gray-700/30' : 'bg-gray-100 dark:bg-gray-700/30'
           }`}
         >
           <div className='flex items-center gap-2'>
             <div
               className={`w-2 h-2 rounded-full ${
-                theme === 'dark' ? 'bg-gray-500' : 'bg-gray-400'
+                isDark ? 'bg-gray-500' : 'bg-gray-400 dark:bg-gray-500'
               }`}
             />
             <span
               className={`text-sm ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                isDark ? 'text-gray-400' : 'text-gray-500 dark:text-gray-400'
               }`}
             >
               Mainnet
@@ -269,7 +248,7 @@ export default function STORMBalance({
           </div>
           <span
             className={`text-sm ${
-              theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+              isDark ? 'text-gray-500' : 'text-gray-400 dark:text-gray-500'
             }`}
           >
             {balanceMainnet !== '0.00' ? `${balanceMainnet} STORM` : 'Soon'}
@@ -279,20 +258,18 @@ export default function STORMBalance({
 
       {showBuyUsdc && (
         <div
-          className={`mt-3 pt-3 border-t ${
-            theme === 'dark' ? 'border-gray-700/50' : 'border-gray-200'
-          }`}
+          className={`mt-3 pt-3 border-t border-gray-200 dark:border-gray-700/50`}
         >
           <h3
             className={`text-sm font-semibold mb-1 ${
-              theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
+              isDark ? 'text-gray-100' : 'text-gray-900 dark:text-gray-100'
             }`}
           >
             Add USDC
           </h3>
           <p
             className={`text-xs mb-3 ${
-              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+              isDark ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'
             }`}
           >
             Card purchase settles on Base mainnet; this app runs on Base Sepolia — use Wallet → Send to move funds for testnet.
@@ -302,16 +279,16 @@ export default function STORMBalance({
       )}
 
       {/* Footer row: contract link + whitepaper */}
-      <div className='mt-3 pt-3 border-t border-gray-700/50 flex items-center justify-between'>
+      <div className='mt-3 pt-3 border-t border-gray-200 dark:border-gray-700/50 flex items-center justify-between gap-2 flex-wrap'>
         {STORM_TOKEN_ADDRESS_SEPOLIA && (
           <a
             href={`https://sepolia.basescan.org/address/${STORM_TOKEN_ADDRESS_SEPOLIA}`}
             target='_blank'
             rel='noopener noreferrer'
             className={`inline-flex items-center gap-1 text-xs ${
-              theme === 'dark'
+              isDark
                 ? 'text-gray-500 hover:text-gray-300'
-                : 'text-gray-400 hover:text-gray-600'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'
             }`}
           >
             <span className='font-mono'>
@@ -323,11 +300,12 @@ export default function STORMBalance({
         )}
         {onReadWhitepaper && (
           <button
+            type='button'
             onClick={onReadWhitepaper}
             className={`inline-flex items-center gap-1 text-xs font-medium transition-colors ${
-              theme === 'dark'
+              isDark
                 ? 'text-teal-400 hover:text-teal-300'
-                : 'text-teal-600 hover:text-teal-700'
+                : 'text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300'
             }`}
           >
             <FileText className='w-3 h-3' />
@@ -335,6 +313,7 @@ export default function STORMBalance({
           </button>
         )}
       </div>
-    </div>
+      </BlockCard>
+    </VaultHorizontalVaultShell>
   )
 }

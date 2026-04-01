@@ -29,7 +29,110 @@ const BAR_STRIP_DARK =
   'linear-gradient(90deg, transparent, rgba(45,212,191,0.4), rgba(139,92,246,0.28), transparent)'
 
 /**
- * **STORM** with **O** = cloud + lightning. Default: full horizontal vault credential bar.
+ * Letter **O**: violet frame + **dark foil face** (hub-style conic / grain / sheen / spark / strip).
+ * Teal is **only** the cloud stroke with a **tight** outer neon so the interior stays dim.
+ * Icon is scaled to sit **near** the inner edge of the frame.
+ */
+function StormWordmarkOBlock({ isDark, isHero }: { isDark: boolean; isHero: boolean }) {
+  const stroke = isHero ? 2.15 : 1.95
+  return (
+    <span className='relative inline-flex shrink-0 items-center justify-center' aria-hidden>
+      <span
+        className={cn(
+          'pointer-events-none absolute -inset-[3px] z-0 rounded-[3px] sm:-inset-[4px] sm:rounded-[4px]',
+          'bg-violet-500/55 dark:bg-violet-400/50',
+          'blur-[5px] sm:blur-[7px]',
+          isDark ? 'opacity-90' : 'opacity-85',
+        )}
+      />
+      <span
+        className={cn(
+          'relative z-[1] inline-flex h-[1cap] min-h-[0.82em] w-[1cap] min-w-[0.82em] overflow-hidden',
+          'rounded-[2px] sm:rounded-[3px]',
+          'border-2 border-violet-500/90 dark:border-violet-400/90',
+          isDark
+            ? 'shadow-[0_0_10px_rgba(167,139,250,0.55),0_0_18px_rgba(139,92,246,0.38),0_0_24px_rgba(167,139,250,0.18)]'
+            : 'shadow-[0_0_8px_rgba(124,58,237,0.45),0_0_16px_rgba(109,40,217,0.3),0_0_22px_rgba(139,92,246,0.16)]',
+        )}
+      >
+        {/* Credential “foil” — same language as HubBlockVault face, scaled to the O */}
+        <span className='pointer-events-none absolute inset-[2px] z-0 overflow-hidden rounded-[1px] sm:inset-[2.5px] sm:rounded-[2px]'>
+          <span
+            className={cn(
+              'absolute inset-0',
+              isDark
+                ? 'bg-gradient-to-b from-[rgb(12,14,18)] via-[rgb(8,10,14)] to-[rgb(4,5,9)] shadow-[inset_0_0_12px_rgba(0,0,0,0.55)]'
+                : 'bg-gradient-to-b from-slate-200/96 via-slate-100/92 to-slate-300/90 shadow-[inset_0_0_0_1px_rgba(13,148,136,0.08),inset_0_0_20px_rgba(15,23,42,0.06)]',
+            )}
+          />
+          <span
+            className={cn(
+              'pointer-events-none absolute -inset-[42%] motion-reduce:opacity-0',
+              isDark ? 'mix-blend-plus-lighter opacity-[0.16]' : 'mix-blend-multiply opacity-[0.14]',
+            )}
+            style={{
+              background: isDark
+                ? 'conic-gradient(from 205deg at 72% 4%, transparent 0deg, rgba(45,212,191,0.4) 46deg, rgba(167,139,250,0.28) 108deg, transparent 198deg, rgba(45,212,191,0.32) 276deg, transparent 360deg)'
+                : 'conic-gradient(from 205deg at 72% 4%, transparent 0deg, rgba(13,148,136,0.22) 46deg, rgba(109,40,217,0.14) 108deg, transparent 198deg, rgba(13,148,136,0.2) 276deg, transparent 360deg)',
+            }}
+          />
+          {isDark ? (
+            <span
+              aria-hidden
+              className='pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.042)_1px,transparent_1.5px)] [background-size:5px_5px] opacity-[0.42]'
+            />
+          ) : (
+            <VaultLightFrostTexture variant='tile' />
+          )}
+          <span
+            aria-hidden
+            className={cn(
+              'pointer-events-none absolute inset-y-0 left-0 w-[48%]',
+              isDark
+                ? 'bg-gradient-to-r from-transparent via-white/[0.07] to-transparent'
+                : 'bg-gradient-to-r from-transparent via-cyan-100/38 to-transparent opacity-85 mix-blend-multiply',
+            )}
+          />
+          <span
+            aria-hidden
+            className='pointer-events-none absolute right-0 top-0 z-[1] h-[38%] w-[38%] max-h-[11px] max-w-[11px] translate-x-px -translate-y-px sm:max-h-[13px] sm:max-w-[13px]'
+            style={{
+              background: isDark
+                ? 'radial-gradient(circle at 82% 18%, rgba(45,212,191,0.5) 0%, rgba(167,139,250,0.12) 42%, transparent 68%)'
+                : 'radial-gradient(circle at 82% 18%, rgba(13,148,136,0.42) 0%, rgba(109,40,217,0.1) 42%, transparent 68%)',
+              filter: 'blur(2px)',
+            }}
+          />
+          <span
+            aria-hidden
+            className='pointer-events-none absolute bottom-0 left-0 right-0 h-px sm:h-[2px]'
+            style={{
+              background: isDark
+                ? 'linear-gradient(90deg, transparent 0%, rgba(45,212,191,0.4) 38%, rgba(167,139,250,0.35) 62%, transparent 100%)'
+                : 'linear-gradient(90deg, transparent 0%, rgba(13,148,136,0.45) 38%, rgba(109,40,217,0.32) 62%, transparent 100%)',
+            }}
+          />
+        </span>
+
+        <span className='relative z-[2] flex h-full w-full items-center justify-center p-px sm:p-[1.5px]'>
+          <CloudLightning
+            className={cn(
+              'min-h-0 min-w-0 shrink-0 origin-center scale-[1.14] sm:scale-[1.12]',
+              'h-full w-full',
+              isDark
+                ? 'text-teal-300 drop-shadow-[0_0_4px_rgba(45,212,191,0.95),0_0_9px_rgba(45,212,191,0.55),0_0_14px_rgba(94,234,212,0.22)]'
+                : 'text-teal-600 drop-shadow-[0_0_3px_rgba(13,148,136,0.75),0_0_8px_rgba(20,184,166,0.4)]',
+            )}
+            strokeWidth={stroke}
+          />
+        </span>
+      </span>
+    </span>
+  )
+}
+
+/**
+ * **STORM** with **O** = violet frame + dark foil interior + scaled teal neon cloud. Default: full vault bar.
  * Use `vaultChrome={false}` when the parent already supplies vault chrome (e.g. `NavVaultShell`).
  */
 export default function StormChainWordmark({
@@ -74,15 +177,7 @@ export default function StormChainWordmark({
       )}
     >
       <span className='select-none uppercase'>ST</span>
-      <CloudLightning
-        className={cn(
-          'shrink-0 text-teal-600 dark:text-teal-300',
-          'h-[1cap] w-[1cap]',
-          'drop-shadow-[0_0_12px_rgba(45,212,191,0.22)] dark:drop-shadow-[0_0_14px_rgba(45,212,191,0.18)]',
-        )}
-        strokeWidth={isHero ? 2.35 : 2.1}
-        aria-hidden
-      />
+      <StormWordmarkOBlock isDark={isDark} isHero={isHero} />
       <span className='select-none uppercase'>RM</span>
     </div>
   )

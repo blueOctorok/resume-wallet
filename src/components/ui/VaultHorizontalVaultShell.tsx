@@ -8,16 +8,10 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { VAULT_CLIP_HORIZONTAL } from '@/lib/vault-credential-geometry'
 import VaultLightFrostTexture from '@/components/ui/VaultLightFrostTexture'
-
-const RIM_LIGHT =
-  'linear-gradient(135deg, rgba(13,148,136,0.42) 0%, rgba(45,212,191,0.16) 20%, transparent 50%, rgba(91,33,182,0.16) 100%)'
-const RIM_DARK =
-  'linear-gradient(135deg, rgba(45,212,191,0.36) 0%, transparent 50%, rgba(167,139,246,0.2) 100%)'
-
-const STRIP_LIGHT =
-  'linear-gradient(90deg, transparent, rgba(13,148,136,0.52), rgba(91,33,182,0.28), transparent)'
-const STRIP_DARK =
-  'linear-gradient(90deg, transparent, rgba(45,212,191,0.38), rgba(139,92,246,0.26), transparent)'
+import {
+  getVaultAccentLayers,
+  type VaultAccentPreset,
+} from '@/lib/vault-accent-presets'
 
 export type VaultHorizontalLayout = 'nav' | 'panel'
 
@@ -29,6 +23,8 @@ export interface VaultHorizontalVaultShellProps {
   contentClassName?: string
   /** `nav` = centered max width + stronger outer glow; `panel` = full width hub header */
   layout?: VaultHorizontalLayout
+  /** Rim, strip, conic, and glow tuned per hub section (default matches profile/nav teal) */
+  accent?: VaultAccentPreset
 }
 
 export default function VaultHorizontalVaultShell({
@@ -37,22 +33,22 @@ export default function VaultHorizontalVaultShell({
   className,
   contentClassName,
   layout = 'panel',
+  accent = 'teal',
 }: VaultHorizontalVaultShellProps) {
   const clip = { clipPath: VAULT_CLIP_HORIZONTAL }
   const isNav = layout === 'nav'
   const frostVariant = isNav ? 'bar' : 'tile'
+  const A = getVaultAccentLayers(accent)
 
-  const innerBg = isDark
-    ? 'linear-gradient(175deg, rgba(24,30,40,0.96) 0%, rgba(10,13,18,0.98) 100%)'
-    : 'linear-gradient(175deg, rgba(252,254,255,0.96) 0%, rgba(236,248,250,0.9) 40%, rgba(228,238,245,0.92) 72%, rgba(220,232,242,0.94) 100%)'
+  const innerBg = isDark ? A.innerBgDark : A.innerBgLight
 
   const outerFilter = isNav
     ? isDark
-      ? 'drop-shadow(0 12px 36px rgba(0,0,0,0.45)) drop-shadow(0 0 28px rgba(45,212,191,0.12))'
-      : 'drop-shadow(0 14px 36px rgba(15,23,42,0.12)) drop-shadow(0 4px 16px rgba(15,23,42,0.07)) drop-shadow(0 0 44px rgba(13,148,136,0.2)) drop-shadow(0 0 72px rgba(91,33,182,0.11))'
+      ? A.filterNavDark
+      : A.filterNavLight
     : isDark
-      ? 'drop-shadow(0 10px 32px rgba(0,0,0,0.42)) drop-shadow(0 0 32px rgba(45,212,191,0.14)) drop-shadow(0 0 48px rgba(139,92,246,0.1))'
-      : 'drop-shadow(0 12px 32px rgba(15,23,42,0.11)) drop-shadow(0 4px 14px rgba(15,23,42,0.06)) drop-shadow(0 0 40px rgba(13,148,136,0.22)) drop-shadow(0 0 60px rgba(91,33,182,0.12))'
+      ? A.filterPanelDark
+      : A.filterPanelLight
 
   return (
     <div
@@ -67,7 +63,7 @@ export default function VaultHorizontalVaultShell({
         <span
           aria-hidden
           className='absolute inset-0'
-          style={{ ...clip, background: isDark ? RIM_DARK : RIM_LIGHT }}
+          style={{ ...clip, background: isDark ? A.rimDark : A.rimLight }}
         />
 
         <span
@@ -78,9 +74,7 @@ export default function VaultHorizontalVaultShell({
           )}
           style={{
             ...clip,
-            background: isDark
-              ? 'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(45,212,191,0.28) 42deg, rgba(139,92,246,0.16) 100deg, transparent 220deg, rgba(45,212,191,0.2) 300deg, transparent 360deg)'
-              : 'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(13,148,136,0.38) 42deg, rgba(91,33,182,0.18) 100deg, transparent 220deg, rgba(15,118,110,0.28) 300deg, transparent 360deg)',
+            background: isDark ? A.conicDark : A.conicLight,
           }}
         />
 
@@ -88,9 +82,7 @@ export default function VaultHorizontalVaultShell({
           aria-hidden
           className='absolute right-0 top-0 z-[2] h-6 w-12 max-w-[20%] translate-x-px -translate-y-px sm:h-7 sm:w-14'
           style={{
-            background: isDark
-              ? 'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(45,212,191,0.48) 0%, transparent 70%)'
-              : 'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(13,148,136,0.48) 0%, rgba(45,212,191,0.2) 48%, transparent 72%)',
+            background: isDark ? A.chamferDark : A.chamferLight,
             filter: 'blur(3px)',
           }}
         />
@@ -120,20 +112,19 @@ export default function VaultHorizontalVaultShell({
               isDark
                 ? 'w-[40%] bg-gradient-to-r from-transparent via-white/[0.07] to-transparent'
                 : cn(
-                    'bg-gradient-to-r from-transparent via-cyan-50/45 to-transparent mix-blend-multiply',
+                    A.sheenLightClassName,
+                    'mix-blend-multiply',
                     isNav ? 'w-[58%] opacity-90' : 'w-[52%] opacity-86',
                   ),
             )}
           />
           <div aria-hidden className='absolute bottom-0 left-0 right-0 z-[1] h-[3px] overflow-hidden'>
-            <span className='absolute inset-0' style={{ background: isDark ? STRIP_DARK : STRIP_LIGHT }} />
+            <span className='absolute inset-0' style={{ background: isDark ? A.stripDark : A.stripLight }} />
             <span
-              className={cn(
-                'vault-strip-sweep-el pointer-events-none absolute inset-y-0 w-[30%] opacity-90',
-                isDark
-                  ? 'bg-gradient-to-r from-transparent via-teal-200/22 to-transparent'
-                  : 'bg-gradient-to-r from-transparent via-teal-600/36 to-transparent',
-              )}
+              className='vault-strip-sweep-el pointer-events-none absolute inset-y-0 w-[30%] opacity-90'
+              style={{
+                background: isDark ? A.sweepDark : A.sweepLight,
+              }}
             />
           </div>
         </div>

@@ -5,8 +5,9 @@ import { Bell, LayoutGrid, Pencil, Trash2, Loader2, Search } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore } from '@/stores'
 import { cn } from '@/lib/utils'
-import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
+import BlockCard from '@/components/ui/BlockCard'
+import VaultHorizontalVaultShell from '@/components/ui/VaultHorizontalVaultShell'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import {
   JOB_ALERTS_MAX_FREE,
@@ -205,92 +206,65 @@ export default function JobAlertsHubSection() {
 
   return (
     <>
-      <Card variant='elevated' className='p-5 border-sky-500/15 dark:border-sky-400/20'>
-        <div className='flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4'>
-          <div className='flex items-start gap-3'>
-            <div
-              className={cn(
-                'w-11 h-11 rounded-xl flex items-center justify-center shrink-0',
-                isDark ? 'bg-sky-500/20' : 'bg-sky-100',
-              )}
-            >
-              <Bell className={cn('w-5 h-5', isDark ? 'text-sky-400' : 'text-sky-600')} />
-            </div>
-            <div>
-              <h3 className={cn('text-sm font-bold', isDark ? 'text-white' : 'text-slate-900')}>
-                AI job alerts
-              </h3>
-              <p className={cn('text-xs mt-1 max-w-xl', isDark ? 'text-gray-400' : 'text-slate-600')}>
-                Use <span className='font-medium text-slate-700 dark:text-gray-300'>Browse jobs</span> for
-                Storm + external listings and recommendations. Star roles to stage them on{' '}
-                <span className='font-medium text-slate-700 dark:text-gray-300'>Hunt Desk</span>. Save alerts
-                here — we scan daily, score new matches with Stormi, and notify in-app. Same job is never pinged
-                twice.
-              </p>
-              <p className={cn('text-xs mt-2', isDark ? 'text-gray-500' : 'text-slate-500')}>
-                {activeCount} active · {preferences.length}/{maxAlerts} saved
-                {maxAlerts === JOB_ALERTS_MAX_WITH_CREDITS && (
-                  <span className='text-teal-600 dark:text-teal-400'> (credits)</span>
+      <VaultHorizontalVaultShell isDark={isDark} layout='panel' accent='sky' contentClassName='p-4 sm:p-5 lg:p-6'>
+        <BlockCard
+          variant='embed'
+          icon={Bell}
+          title='AI job alerts'
+          description='Browse Storm + external listings; star roles on Hunt Desk. Daily scans, Stormi-scored matches, in-app notifications — each job pings once.'
+          headerActions={
+            <div className='flex flex-wrap gap-2 justify-end max-w-[min(100%,22rem)] sm:max-w-none'>
+              <Button variant='secondary' size='sm' className='shrink-0' onClick={() => setCurrentPage('jobs')}>
+                <Search className='w-3.5 h-3.5 shrink-0' />
+                Browse jobs
+              </Button>
+              <Button variant='secondary' size='sm' className='shrink-0' onClick={() => setCurrentPage('hunt-desk')}>
+                <LayoutGrid className='w-3.5 h-3.5 shrink-0' />
+                Hunt Desk
+              </Button>
+              <Button
+                variant='primary'
+                size='sm'
+                className={cn(
+                  'shrink-0',
+                  'bg-sky-800 hover:bg-sky-700 text-white',
+                  'dark:bg-sky-300 dark:hover:bg-sky-200 dark:text-gray-900',
                 )}
-                {maxAlerts === JOB_ALERTS_MAX_FREE && preferences.length >= JOB_ALERTS_MAX_FREE && (
-                  <span> · Add Stormi credits for up to {JOB_ALERTS_MAX_WITH_CREDITS}</span>
-                )}
-              </p>
+                disabled={atCap}
+                onClick={openCreate}
+              >
+                Add alert
+              </Button>
             </div>
-          </div>
-          <div className='flex flex-wrap gap-2 shrink-0 w-full sm:w-auto sm:justify-end'>
-            <Button
-              variant='secondary'
-              size='sm'
-              className='flex-1 sm:flex-initial min-w-0'
-              onClick={() => setCurrentPage('jobs')}
-            >
-              <Search className='w-3.5 h-3.5 shrink-0' />
-              Browse jobs
-            </Button>
-            <Button
-              variant='secondary'
-              size='sm'
-              className='flex-1 sm:flex-initial min-w-0'
-              onClick={() => setCurrentPage('hunt-desk')}
-            >
-              <LayoutGrid className='w-3.5 h-3.5 shrink-0' />
-              Hunt Desk
-            </Button>
-            <Button
-              variant='primary'
-              size='sm'
-              className={cn(
-                'flex-1 sm:flex-initial min-w-0',
-                // High contrast: avoid light sage + white (illegible); solid sky / dark text in dark mode
-                'bg-sky-800 hover:bg-sky-700 text-white',
-                'dark:bg-sky-300 dark:hover:bg-sky-200 dark:text-gray-900',
-              )}
-              disabled={atCap}
-              onClick={openCreate}
-            >
-              Add alert
-            </Button>
-          </div>
-        </div>
+          }
+        >
+        <p className={cn('text-xs mb-3', isDark ? 'text-gray-500' : 'text-slate-500')}>
+          {activeCount} active · {preferences.length}/{maxAlerts} saved
+          {maxAlerts === JOB_ALERTS_MAX_WITH_CREDITS && (
+            <span className='text-teal-600 dark:text-teal-400'> (credits)</span>
+          )}
+          {maxAlerts === JOB_ALERTS_MAX_FREE && preferences.length >= JOB_ALERTS_MAX_FREE && (
+            <span> · Add Stormi credits for up to {JOB_ALERTS_MAX_WITH_CREDITS}</span>
+          )}
+        </p>
 
         {error && (
-          <p className='text-xs text-red-600 dark:text-red-400 mt-3'>{error}</p>
+          <p className='text-xs text-red-600 dark:text-red-400 mb-3'>{error}</p>
         )}
 
         {loading ? (
-          <div className='flex items-center gap-2 mt-4 text-xs text-gray-500 dark:text-gray-400'>
+          <div className='flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400'>
             <Loader2 className='w-4 h-4 animate-spin' />
             Loading alerts…
           </div>
         ) : preferences.length === 0 ? (
-          <div className='mt-4 text-center py-6 rounded-xl border border-dashed border-gray-200 dark:border-gray-600'>
+          <div className='text-center py-6 rounded-xl border border-dashed border-slate-300/80 dark:border-gray-600'>
             <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>
               No alerts yet — add keywords and we&apos;ll watch for new postings.
             </p>
           </div>
         ) : (
-          <ul className='mt-4 space-y-2'>
+          <ul className='space-y-2'>
             {preferences.map((p) => (
               <li
                 key={p.id}
@@ -341,7 +315,8 @@ export default function JobAlertsHubSection() {
             ))}
           </ul>
         )}
-      </Card>
+        </BlockCard>
+      </VaultHorizontalVaultShell>
 
       {formOpen && (
         <Modal onClose={() => !saving && setFormOpen(false)} maxWidth='max-w-md'>
