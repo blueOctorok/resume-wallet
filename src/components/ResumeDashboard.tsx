@@ -453,8 +453,8 @@ export default function ResumeDashboard({
       <div
         className={`max-w-4xl mx-auto p-6 rounded-2xl border ${
           theme === 'dark'
-            ? 'bg-brand-sage-light/20 border-brand-mint/30 text-brand-cream/80'
-            : 'bg-white/80 border-brand-sage/20 text-gray-700'
+            ? 'bg-teal-200/20 border-teal-500/30 text-brand-cream/80'
+            : 'bg-white/80 border-teal-700/20 text-gray-700'
         }`}
       >
         <p className='text-center text-sm sm:text-base'>
@@ -523,7 +523,7 @@ export default function ResumeDashboard({
                 disabled={isDeleting}
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                   theme === 'dark'
-                    ? 'bg-brand-sage/30 text-brand-cream hover:bg-brand-sage/50'
+                    ? 'bg-teal-700/30 text-brand-cream hover:bg-teal-700/50'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
@@ -554,8 +554,8 @@ export default function ResumeDashboard({
       <div
         className={`max-w-4xl mx-auto rounded-2xl border p-6 sm:p-8 shadow-2xl relative ${
           theme === 'dark'
-            ? 'bg-brand-sage-light/20 border-brand-mint/30'
-            : 'bg-white/80 border-brand-sage/20'
+            ? 'bg-teal-200/20 border-teal-500/30'
+            : 'bg-white/80 border-teal-700/20'
         }`}
       >
         <div className='flex flex-col gap-6'>
@@ -572,7 +572,7 @@ export default function ResumeDashboard({
                 className={`text-sm ${
                   theme === 'dark'
                     ? 'text-brand-cream/70'
-                    : 'text-brand-sage/80'
+                    : 'text-teal-800 dark:text-teal-300/80'
                 }`}
               >
                 Track your uploads, blockchain verification, and sharing status.
@@ -582,8 +582,8 @@ export default function ResumeDashboard({
               onClick={() => user.address && fetchResumes(user.address)}
               className={`inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 ${
                 theme === 'dark'
-                  ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-lg'
-                  : 'bg-brand-sage text-white hover:bg-brand-sage/90 shadow-lg'
+                  ? 'bg-teal-600 text-white hover:bg-teal-500 shadow-lg'
+                  : 'bg-teal-700 text-white hover:bg-teal-700/90 shadow-lg'
               }`}
               disabled={isLoading}
             >
@@ -594,8 +594,8 @@ export default function ResumeDashboard({
           <div
             className={`grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-xl border p-4 ${
               theme === 'dark'
-                ? 'bg-brand-sage/30 border-brand-mint/20'
-                : 'bg-brand-sage/10 border-brand-sage/20'
+                ? 'bg-teal-700/30 border-teal-500/20'
+                : 'bg-teal-700/10 border-teal-700/20'
             }`}
           >
             <StatItem
@@ -625,8 +625,8 @@ export default function ResumeDashboard({
                   onChange={(event) => setSearchTerm(event.target.value)}
                   className={`w-full rounded-xl border px-4 py-2 text-sm focus:outline-none focus:ring-2 ${
                     theme === 'dark'
-                      ? 'bg-brand-cream text-gray-900 border-transparent focus:ring-brand-mint'
-                      : 'bg-white text-gray-900 border-brand-sage/40 focus:ring-brand-sage'
+                      ? 'bg-brand-cream text-gray-900 border-transparent focus:ring-teal-500'
+                      : 'bg-white text-gray-900 border-teal-700/40 focus:ring-teal-500'
                   }`}
                 />
                 <div className='flex gap-2'>
@@ -638,11 +638,11 @@ export default function ResumeDashboard({
                         className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-all ${
                           statusFilter === status
                             ? theme === 'dark'
-                              ? 'bg-brand-mint text-gray-900 border-brand-mint'
-                              : 'bg-brand-sage text-white border-brand-sage'
+                              ? 'bg-teal-600 text-white border-teal-500'
+                              : 'bg-teal-700 text-white border-teal-700'
                             : theme === 'dark'
-                              ? 'bg-brand-sage/20 text-brand-cream/70 border-brand-mint/20 hover:bg-brand-sage/30'
-                              : 'bg-white text-brand-sage border-brand-sage/30 hover:bg-brand-sage/10'
+                              ? 'bg-teal-700/20 text-brand-cream/70 border-teal-500/20 hover:bg-teal-700/30'
+                              : 'bg-white text-teal-800 dark:text-teal-300 border-teal-700/30 hover:bg-teal-700/10'
                         }`}
                       >
                         {status === 'ALL'
@@ -657,8 +657,8 @@ export default function ResumeDashboard({
               <div
                 className={`rounded-xl border p-3 sm:p-4 overflow-hidden ${
                   theme === 'dark'
-                    ? 'bg-brand-sage/20 border-brand-mint/20'
-                    : 'bg-brand-cream/40 border-brand-sage/20'
+                    ? 'bg-teal-700/20 border-teal-500/20'
+                    : 'bg-brand-cream/40 border-teal-700/20'
                 }`}
               >
                 {error && (
@@ -681,8 +681,8 @@ export default function ResumeDashboard({
                   <div
                     className={`rounded-lg border px-4 py-6 text-center text-sm ${
                       theme === 'dark'
-                        ? 'border-brand-mint/20 text-brand-cream/60'
-                        : 'border-brand-sage/20 text-brand-sage/70'
+                        ? 'border-teal-500/20 text-brand-cream/60'
+                        : 'border-teal-700/20 text-teal-800 dark:text-teal-300/70'
                     }`}
                   >
                     {resumes.length === 0
@@ -702,11 +702,11 @@ export default function ResumeDashboard({
                           className={`w-full text-left rounded-xl border p-4 transition-all ${
                             selectedResume?.id === resume.id
                               ? theme === 'dark'
-                                ? 'bg-brand-mint/20 border-brand-mint/60 shadow-lg'
-                                : 'bg-white border-brand-sage/60 shadow-lg'
+                                ? 'bg-teal-600/20 border-teal-500/60 shadow-lg'
+                                : 'bg-white border-teal-700/60 shadow-lg'
                               : theme === 'dark'
-                                ? 'bg-brand-sage/30 border-brand-mint/10 hover:border-brand-mint/40 hover:bg-brand-sage/40'
-                                : 'bg-white/70 border-brand-sage/20 hover:border-brand-sage/40 hover:bg-white'
+                                ? 'bg-teal-700/30 border-teal-500/10 hover:border-teal-500/40 hover:bg-teal-700/40'
+                                : 'bg-white/70 border-teal-700/20 hover:border-teal-700/40 hover:bg-white'
                           }`}
                         >
                           <div className='flex items-start justify-between gap-2 sm:gap-3'>
@@ -716,7 +716,7 @@ export default function ResumeDashboard({
                                   className={`text-sm font-semibold truncate ${
                                     theme === 'dark'
                                       ? 'text-brand-cream'
-                                      : 'text-brand-sage'
+                                      : 'text-teal-800 dark:text-teal-300'
                                   }`}
                                 >
                                   {resume.title || resume.filename}
@@ -724,8 +724,8 @@ export default function ResumeDashboard({
                                 {resume.resume_type === 'built' && (
                                   <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium flex-shrink-0 ${
                                     theme === 'dark'
-                                      ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/30'
-                                      : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/20'
+                                      ? 'bg-teal-600/20 text-teal-600 dark:text-teal-400 border border-teal-500/30'
+                                      : 'bg-teal-700/10 text-teal-800 dark:text-teal-300 border border-teal-700/20'
                                   }`}>
                                     Built
                                   </span>
@@ -735,7 +735,7 @@ export default function ResumeDashboard({
                                 className={`text-xs mt-1 truncate ${
                                   theme === 'dark'
                                     ? 'text-brand-cream/60'
-                                    : 'text-brand-sage/70'
+                                    : 'text-teal-800 dark:text-teal-300/70'
                                 }`}
                               >
                                 {resume.filename}
@@ -751,7 +751,7 @@ export default function ResumeDashboard({
                             className={`mt-3 text-xs flex justify-between ${
                               theme === 'dark'
                                 ? 'text-brand-cream/60'
-                                : 'text-brand-sage/70'
+                                : 'text-teal-800 dark:text-teal-300/70'
                             }`}
                           >
                             <span>{formatDate(resume.created_at)}</span>
@@ -768,8 +768,8 @@ export default function ResumeDashboard({
             <div
               className={`rounded-2xl border p-4 sm:p-6 h-full ${
                 theme === 'dark'
-                  ? 'bg-brand-sage/25 border-brand-mint/20'
-                  : 'bg-white border-brand-sage/20'
+                  ? 'bg-teal-700/25 border-teal-500/20'
+                  : 'bg-white border-teal-700/20'
               }`}
             >
               {selectedResume ? (
@@ -789,7 +789,7 @@ export default function ResumeDashboard({
                   className={`h-full flex items-center justify-center text-sm ${
                     theme === 'dark'
                       ? 'text-brand-cream/60'
-                      : 'text-brand-sage/70'
+                      : 'text-teal-800 dark:text-teal-300/70'
                   }`}
                 >
                   Select a resume to see full details.
@@ -814,14 +814,14 @@ function StatItem({ label, value, theme }: StatItemProps) {
     <div className='flex flex-col gap-1'>
       <span
         className={`text-xs uppercase tracking-wide font-semibold ${
-          theme === 'dark' ? 'text-brand-cream/60' : 'text-brand-sage/70'
+          theme === 'dark' ? 'text-brand-cream/60' : 'text-teal-800 dark:text-teal-300/70'
         }`}
       >
         {label}
       </span>
       <span
         className={`text-2xl font-bold ${
-          theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'
+          theme === 'dark' ? 'text-brand-cream' : 'text-teal-800 dark:text-teal-300'
         }`}
       >
         {value}
@@ -870,7 +870,7 @@ function ResumeDetail({
     <div className='flex flex-col gap-1'>
       <span
         className={`text-xs font-semibold uppercase tracking-wide ${
-          theme === 'dark' ? 'text-brand-cream/50' : 'text-brand-sage/70'
+          theme === 'dark' ? 'text-brand-cream/50' : 'text-teal-800 dark:text-teal-300/70'
         }`}
       >
         {label}
@@ -888,14 +888,14 @@ function ResumeDetail({
   // Button styles
   const primaryButtonClass = `inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
     theme === 'dark'
-      ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-      : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+      ? 'bg-teal-600 text-white hover:bg-teal-500'
+      : 'bg-teal-700 text-white hover:bg-teal-700/90'
   }`
 
   const secondaryButtonClass = `inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
     theme === 'dark'
-      ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/40 hover:bg-brand-mint/30'
-      : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/30 hover:bg-brand-sage/20'
+      ? 'bg-teal-600/20 text-teal-600 dark:text-teal-400 border border-teal-500/40 hover:bg-teal-600/30'
+      : 'bg-teal-700/10 text-teal-800 dark:text-teal-300 border border-teal-700/30 hover:bg-teal-700/20'
   }`
 
   const dangerButtonClass = `inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
@@ -910,7 +910,7 @@ function ResumeDetail({
         <div>
           <h4
             className={`text-xl font-semibold ${
-              theme === 'dark' ? 'text-brand-cream' : 'text-brand-sage'
+              theme === 'dark' ? 'text-brand-cream' : 'text-teal-800 dark:text-teal-300'
             }`}
           >
             {resume.title || resume.filename}
@@ -919,15 +919,15 @@ function ResumeDetail({
             className={`text-sm ${
               theme === 'dark'
                 ? 'text-brand-cream/60'
-                : 'text-brand-sage/70'
+                : 'text-teal-800 dark:text-teal-300/70'
             }`}
           >
             {isBuilt ? 'Created' : 'Uploaded'} {formatDate(resume.created_at)}
             {isBuilt && (
               <span className={`ml-2 px-2 py-0.5 rounded text-xs ${
                 theme === 'dark'
-                  ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/30'
-                  : 'bg-brand-sage/10 text-brand-sage border border-brand-sage/20'
+                  ? 'bg-teal-600/20 text-teal-600 dark:text-teal-400 border border-teal-500/30'
+                  : 'bg-teal-700/10 text-teal-800 dark:text-teal-300 border border-teal-700/20'
               }`}>
                 Built Resume
               </span>
@@ -970,14 +970,14 @@ function ResumeDetail({
               <div className='mt-2'>
                 <span
                   className={`text-xs font-semibold uppercase tracking-wide ${
-                    theme === 'dark' ? 'text-brand-cream/50' : 'text-brand-sage/70'
+                    theme === 'dark' ? 'text-brand-cream/50' : 'text-teal-800 dark:text-teal-300/70'
                   }`}
                 >
                   Resume Sections
                 </span>
                 <div className={`mt-2 p-3 rounded-lg border ${
                   theme === 'dark'
-                    ? 'bg-brand-sage/20 border-brand-mint/20'
+                    ? 'bg-teal-700/20 border-teal-500/20'
                     : 'bg-gray-50 border-gray-200'
                 }`}>
                   <div className='grid grid-cols-2 gap-2 text-sm'>
@@ -1177,8 +1177,8 @@ function LoadingList({ theme }: { theme: string }) {
           key={index}
           className={`animate-pulse rounded-xl border p-4 ${
             theme === 'dark'
-              ? 'bg-brand-sage/30 border-brand-mint/10'
-              : 'bg-white border-brand-sage/20'
+              ? 'bg-teal-700/30 border-teal-500/10'
+              : 'bg-white border-teal-700/20'
           }`}
         >
           <div className='h-4 w-3/4 rounded bg-gray-300/60 dark:bg-brand-cream/20'></div>

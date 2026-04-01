@@ -86,22 +86,22 @@ export default function PathGuidance({
       </p>
       <p className={cn('text-sm font-semibold leading-snug', isDark ? 'text-white' : 'text-slate-900')}>
         Hey {who},{' '}
-        <span className={cn('font-bold', isDark ? 'text-brand-mint' : 'text-teal-700')}>{headline}</span>
+        <span className={cn('font-bold', isDark ? 'text-teal-300' : 'text-teal-700')}>{headline}</span>
       </p>
       <p className='text-xs text-gray-600 dark:text-gray-400 leading-relaxed'>{sub}</p>
 
-      <div className='flex items-stretch gap-1 pt-1'>
+      <div className='flex min-w-0 items-stretch gap-1 pt-1'>
         {steps.map(({ Icon, label, caption }, i) => {
           const active = i === activeStep
           return (
             <div
               key={label}
               className={cn(
-                'flex-1 rounded-lg border px-1.5 py-2 text-center transition-colors',
+                'min-w-0 flex-1 rounded-lg border px-1.5 py-2 text-center transition-colors',
                 active
                   ? isDark
-                    ? 'border-brand-mint/50 bg-brand-mint/15 ring-1 ring-brand-mint/30'
-                    : 'border-teal-300 bg-teal-50/90 ring-1 ring-teal-200'
+                    ? 'border-teal-400/45 bg-teal-500/15 ring-1 ring-teal-400/35'
+                    : 'border-teal-400 bg-teal-50/95 ring-1 ring-teal-300/80'
                   : isDark
                     ? 'border-gray-700 bg-gray-800/40'
                     : 'border-slate-200 bg-slate-50/80',
@@ -110,7 +110,7 @@ export default function PathGuidance({
               <Icon
                 className={cn(
                   'w-4 h-4 mx-auto mb-1',
-                  active ? 'text-brand-mint dark:text-brand-mint' : 'text-gray-400 dark:text-gray-500',
+                  active ? 'text-teal-700 dark:text-teal-300' : 'text-gray-400 dark:text-gray-500',
                 )}
               />
               <p className='text-[10px] font-semibold text-gray-800 dark:text-gray-200 leading-tight'>{label}</p>

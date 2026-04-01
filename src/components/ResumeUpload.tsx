@@ -185,7 +185,7 @@ export default function ResumeUpload({ user }: ResumeUploadProps) {
   }
 
   return (
-    <div className='w-full max-w-2xl mx-auto p-6 bg-brand-cream rounded-lg shadow-sm border border-brand-mint/20'>
+    <div className='w-full max-w-2xl mx-auto p-6 bg-brand-cream rounded-lg shadow-sm border border-teal-500/20'>
       <div className='mb-6'>
         <h2 className='text-2xl font-semibold text-gray-900 mb-2'>
           Upload Resume

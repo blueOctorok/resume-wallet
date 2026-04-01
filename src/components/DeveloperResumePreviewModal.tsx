@@ -173,7 +173,7 @@ export default function DeveloperResumePreviewModal({
           <button
             onClick={handleDownload}
             disabled={isDownloading}
-            className='flex items-center gap-2 px-4 py-2 bg-brand-mint text-gray-900 rounded-lg font-medium hover:bg-brand-mint/90 disabled:opacity-50'
+            className='flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-500 disabled:opacity-50'
           >
             {isDownloading ? (
               <Loader2 className='w-4 h-4 animate-spin' />
@@ -231,7 +231,7 @@ export default function DeveloperResumePreviewModal({
           {/* Personal Info */}
           <div className={sectionClass}>
             <h3 className={sectionTitleClass}>
-              <User className='w-5 h-5 text-brand-mint' /> Personal Information
+              <User className='w-5 h-5 text-teal-600 dark:text-teal-400' /> Personal Information
             </h3>
             <div className='space-y-2'>
               <p
@@ -240,7 +240,7 @@ export default function DeveloperResumePreviewModal({
                 {data.personalInfo.firstName} {data.personalInfo.lastName}
               </p>
               {data.personalInfo.headline && (
-                <p className='text-brand-mint'>{data.personalInfo.headline}</p>
+                <p className='text-teal-600 dark:text-teal-400'>{data.personalInfo.headline}</p>
               )}
               <div
                 className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
@@ -265,7 +265,7 @@ export default function DeveloperResumePreviewModal({
                     href={data.personalInfo.githubUrl}
                     target='_blank'
                     rel='noopener noreferrer'
-                    className='text-sm text-brand-mint hover:underline flex items-center gap-1'
+                    className='text-sm text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1'
                   >
                     <Github className='w-4 h-4' /> GitHub
                   </a>
@@ -275,7 +275,7 @@ export default function DeveloperResumePreviewModal({
                     href={data.personalInfo.linkedinUrl}
                     target='_blank'
                     rel='noopener noreferrer'
-                    className='text-sm text-brand-mint hover:underline flex items-center gap-1'
+                    className='text-sm text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1'
                   >
                     <ExternalLink className='w-4 h-4' /> LinkedIn
                   </a>
@@ -285,7 +285,7 @@ export default function DeveloperResumePreviewModal({
                     href={data.personalInfo.portfolioUrl}
                     target='_blank'
                     rel='noopener noreferrer'
-                    className='text-sm text-brand-mint hover:underline flex items-center gap-1'
+                    className='text-sm text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1'
                   >
                     <Folder className='w-4 h-4' /> Portfolio
                   </a>
@@ -298,7 +298,7 @@ export default function DeveloperResumePreviewModal({
           {data.skills.length > 0 && (
             <div className={sectionClass}>
               <h3 className={sectionTitleClass}>
-                <Code className='w-5 h-5 text-brand-mint' /> Technical Skills
+                <Code className='w-5 h-5 text-teal-600 dark:text-teal-400' /> Technical Skills
               </h3>
               <div className='flex flex-wrap gap-2'>
                 {data.skills.map((skill) => (
@@ -324,14 +324,14 @@ export default function DeveloperResumePreviewModal({
           {data.experience.length > 0 && (
             <div className={sectionClass}>
               <h3 className={sectionTitleClass}>
-                <Briefcase className='w-5 h-5 text-brand-mint' /> Work
+                <Briefcase className='w-5 h-5 text-teal-600 dark:text-teal-400' /> Work
                 Experience
               </h3>
               <div className='space-y-4'>
                 {data.experience.map((exp) => (
                   <div
                     key={exp.id}
-                    className='border-l-2 border-brand-mint/30 pl-4'
+                    className='border-l-2 border-teal-500/30 pl-4'
                   >
                     <p
                       className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
@@ -377,13 +377,13 @@ export default function DeveloperResumePreviewModal({
           {data.projects.length > 0 && (
             <div className={sectionClass}>
               <h3 className={sectionTitleClass}>
-                <Folder className='w-5 h-5 text-brand-mint' /> Projects
+                <Folder className='w-5 h-5 text-teal-600 dark:text-teal-400' /> Projects
               </h3>
               <div className='space-y-4'>
                 {data.projects.map((project) => (
                   <div
                     key={project.id}
-                    className='border-l-2 border-brand-mint/30 pl-4'
+                    className='border-l-2 border-teal-500/30 pl-4'
                   >
                     <p
                       className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
@@ -408,7 +408,7 @@ export default function DeveloperResumePreviewModal({
                           href={project.liveUrl}
                           target='_blank'
                           rel='noopener noreferrer'
-                          className='text-xs text-brand-mint hover:underline flex items-center gap-1'
+                          className='text-xs text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1'
                         >
                           <Globe className='w-3 h-3' /> Live
                         </a>
@@ -418,7 +418,7 @@ export default function DeveloperResumePreviewModal({
                           href={project.repoUrl}
                           target='_blank'
                           rel='noopener noreferrer'
-                          className='text-xs text-brand-mint hover:underline flex items-center gap-1'
+                          className='text-xs text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1'
                         >
                           <Github className='w-3 h-3' /> Repo
                         </a>
@@ -434,7 +434,7 @@ export default function DeveloperResumePreviewModal({
           {data.education.length > 0 && (
             <div className={sectionClass}>
               <h3 className={sectionTitleClass}>
-                <GraduationCap className='w-5 h-5 text-brand-mint' /> Education
+                <GraduationCap className='w-5 h-5 text-teal-600 dark:text-teal-400' /> Education
               </h3>
               <div className='space-y-3'>
                 {data.education.map((edu) => (
@@ -467,7 +467,7 @@ export default function DeveloperResumePreviewModal({
           {data.certifications.length > 0 && (
             <div className={sectionClass}>
               <h3 className={sectionTitleClass}>
-                <FileCheck className='w-5 h-5 text-brand-mint' /> Certifications
+                <FileCheck className='w-5 h-5 text-teal-600 dark:text-teal-400' /> Certifications
               </h3>
               <div className='space-y-2'>
                 {data.certifications.map((cert) => (
@@ -492,7 +492,7 @@ export default function DeveloperResumePreviewModal({
                         href={cert.url}
                         target='_blank'
                         rel='noopener noreferrer'
-                        className='text-sm text-brand-mint hover:underline'
+                        className='text-sm text-teal-600 dark:text-teal-400 hover:underline'
                       >
                         Verify
                       </a>

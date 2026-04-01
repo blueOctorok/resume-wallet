@@ -279,7 +279,7 @@ export default function MvrTab({
                         {selectedMvrDetail.order.orderXml && (
                           <button
                             onClick={() => setMvrDetailShowXml(mvrDetailShowXml === 'order' ? 'none' : 'order')}
-                            className={`px-3 py-1.5 rounded text-sm ${mvrDetailShowXml === 'order' ? 'bg-brand-mint text-gray-900' : theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`}
+                            className={`px-3 py-1.5 rounded text-sm ${mvrDetailShowXml === 'order' ? 'bg-teal-600 text-white' : theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`}
                           >
                             Order XML
                           </button>
@@ -287,7 +287,7 @@ export default function MvrTab({
                         {selectedMvrDetail.order.resultXml && (
                           <button
                             onClick={() => setMvrDetailShowXml(mvrDetailShowXml === 'result' ? 'none' : 'result')}
-                            className={`px-3 py-1.5 rounded text-sm ${mvrDetailShowXml === 'result' ? 'bg-brand-mint text-gray-900' : theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`}
+                            className={`px-3 py-1.5 rounded text-sm ${mvrDetailShowXml === 'result' ? 'bg-teal-600 text-white' : theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`}
                           >
                             Result XML
                           </button>

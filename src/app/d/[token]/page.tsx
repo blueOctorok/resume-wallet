@@ -262,7 +262,7 @@ export default function PublicDriverProfile() {
           </p>
           <a
             href='/'
-            className='inline-flex items-center gap-2 px-6 py-3 bg-brand-mint text-gray-900 font-semibold rounded-xl hover:bg-brand-mint/90 transition-colors'
+            className='inline-flex items-center gap-2 px-6 py-3 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-500 transition-colors'
           >
             Go to Storm
           </a>
@@ -278,20 +278,20 @@ export default function PublicDriverProfile() {
   return (
     <div className='min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'>
       <div className='fixed inset-0 overflow-hidden pointer-events-none'>
-        <div className='absolute top-0 right-0 w-96 h-96 bg-brand-mint/5 rounded-full blur-3xl' />
+        <div className='absolute top-0 right-0 w-96 h-96 bg-teal-600/5 rounded-full blur-3xl' />
         <div className='absolute bottom-0 left-0 w-96 h-96 bg-teal-500/5 rounded-full blur-3xl' />
       </div>
 
       <header className='border-b border-gray-700/50 bg-gray-900/80 backdrop-blur-xl sticky top-0 z-20'>
         <div className='max-w-4xl mx-auto px-4 py-4 flex items-center justify-between'>
           <a href='/' className='flex items-center gap-2'>
-            <div className='w-8 h-8 rounded-lg bg-gradient-to-br from-brand-mint to-teal-500 flex items-center justify-center shadow-lg shadow-brand-mint/20'>
+            <div className='w-8 h-8 rounded-lg bg-gradient-to-br from-teal-600 to-teal-500 flex items-center justify-center shadow-lg shadow-teal-600/20'>
               <span className='text-gray-900 font-bold text-sm'>S</span>
             </div>
             <span className='text-white font-semibold'>Storm</span>
           </a>
           <div className='flex items-center gap-2'>
-            <Sparkles className='w-4 h-4 text-brand-mint' />
+            <Sparkles className='w-4 h-4 text-teal-600 dark:text-teal-400' />
             <span className='text-xs text-gray-400'>Career Card</span>
           </div>
         </div>
@@ -300,12 +300,12 @@ export default function PublicDriverProfile() {
       <main className='max-w-4xl mx-auto px-4 py-8 relative z-10'>
         {/* Hero Profile Card */}
         <div className='bg-gradient-to-br from-gray-800/80 to-gray-800/40 backdrop-blur-xl rounded-3xl border border-gray-700/50 overflow-hidden mb-8 shadow-2xl'>
-          <div className='h-1 bg-gradient-to-r from-brand-mint via-teal-400 to-emerald-500' />
+          <div className='h-1 bg-gradient-to-r from-teal-600 via-teal-400 to-emerald-500' />
           <div className='p-8'>
             <div className='flex flex-col sm:flex-row items-start gap-6'>
               <div className='relative'>
-                <div className='absolute inset-0 bg-brand-mint/30 rounded-2xl blur-xl' />
-                <div className='relative w-24 h-24 rounded-2xl bg-gradient-to-br from-brand-mint via-teal-400 to-emerald-500 flex items-center justify-center shadow-xl'>
+                <div className='absolute inset-0 bg-teal-600/30 rounded-2xl blur-xl' />
+                <div className='relative w-24 h-24 rounded-2xl bg-gradient-to-br from-teal-600 via-teal-400 to-emerald-500 flex items-center justify-center shadow-xl'>
                   <span className='text-4xl font-bold text-gray-900'>
                     {profile.firstName?.[0] ?? 'D'}
                     {profile.lastName?.[0] ?? ''}
@@ -317,12 +317,12 @@ export default function PublicDriverProfile() {
                   <div>
                     <h1 className='text-3xl font-bold text-white'>{displayName}</h1>
                     {profile.summary && (
-                      <p className='text-lg text-brand-mint font-medium mt-1 line-clamp-2'>
+                      <p className='text-lg text-teal-600 dark:text-teal-400 font-medium mt-1 line-clamp-2'>
                         {profile.summary.split('\n')[0]?.slice(0, 80) || 'Professional Driver'}
                       </p>
                     )}
                     {!profile.summary && (
-                      <p className='text-lg text-brand-mint font-medium mt-1'>Professional Driver</p>
+                      <p className='text-lg text-teal-600 dark:text-teal-400 font-medium mt-1'>Professional Driver</p>
                     )}
                   </div>
                   <div className='flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-full text-sm border border-green-500/30'>
@@ -408,7 +408,7 @@ export default function PublicDriverProfile() {
                   </div>
                   <div className='min-w-0 flex-1'>
                     <p className='font-semibold text-white'>{job.position}</p>
-                    <p className='text-sm text-brand-mint font-medium'>{job.companyName}</p>
+                    <p className='text-sm text-teal-600 dark:text-teal-400 font-medium'>{job.companyName}</p>
                     <p className='mt-1 text-xs text-gray-500'>
                       {job.startDate
                         ? new Date(job.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
@@ -434,7 +434,7 @@ export default function PublicDriverProfile() {
         <div className='mb-8'>
           <div className='mb-4'>
             <h2 className='flex items-center gap-2 text-xl font-bold text-white'>
-              <Car className='w-5 h-5 text-brand-mint' />
+              <Car className='w-5 h-5 text-teal-600 dark:text-teal-400' />
               MVR & Driving Record
             </h2>
             <p className='text-sm text-gray-400 mt-1'>
@@ -487,7 +487,7 @@ export default function PublicDriverProfile() {
                       <div className='w-24 text-sm text-gray-400 truncate'>{endorsement}</div>
                       <div className='flex-1 h-2 bg-gray-700/50 rounded-full overflow-hidden'>
                         <div
-                          className='h-full bg-gradient-to-r from-brand-mint to-teal-400 rounded-full'
+                          className='h-full bg-gradient-to-r from-teal-600 to-teal-400 rounded-full'
                           style={{ width: '100%' }}
                         />
                       </div>
@@ -504,7 +504,7 @@ export default function PublicDriverProfile() {
                   <div className='w-28 text-sm text-gray-400'>Years driving</div>
                   <div className='flex-1 h-3 bg-gray-700/50 rounded-full overflow-hidden'>
                     <div
-                      className='h-full bg-gradient-to-r from-brand-mint to-teal-400 rounded-full'
+                      className='h-full bg-gradient-to-r from-teal-600 to-teal-400 rounded-full'
                       style={{ width: `${Math.min(100, (profile.experienceYears ?? 0) * 10)}%` }}
                     />
                   </div>
@@ -518,7 +518,7 @@ export default function PublicDriverProfile() {
         {/* CDL & Credentials summary card */}
         <div className='bg-gray-800/50 backdrop-blur-xl rounded-2xl border border-gray-700/50 p-6 mb-8'>
           <h2 className='flex items-center gap-2 text-lg font-semibold text-white mb-4'>
-            <Shield className='w-5 h-5 text-brand-mint' />
+            <Shield className='w-5 h-5 text-teal-600 dark:text-teal-400' />
             Credentials
           </h2>
           <div className='grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4'>
@@ -562,7 +562,7 @@ export default function PublicDriverProfile() {
             <div className='p-6 sm:p-8'>
               <div className='flex items-center justify-between mb-6 pb-4 border-b border-gray-700/50'>
                 <h2 className='flex items-center gap-2 text-xl font-bold text-white'>
-                  <FileText className='w-5 h-5 text-brand-mint' />
+                  <FileText className='w-5 h-5 text-teal-600 dark:text-teal-400' />
                   Resume
                 </h2>
                 <div className='flex items-center gap-3'>
@@ -577,7 +577,7 @@ export default function PublicDriverProfile() {
                       href={`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`}
                       target='_blank'
                       rel='noopener noreferrer'
-                      className='flex items-center gap-1 text-sm text-brand-mint hover:underline'
+                      className='flex items-center gap-1 text-sm text-teal-600 dark:text-teal-400 hover:underline'
                     >
                       View PDF <ExternalLink className='w-3 h-3' />
                     </a>
@@ -589,7 +589,7 @@ export default function PublicDriverProfile() {
                   {resume.structuredData.personalInfo && (
                     <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
                       <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
-                        <User className='w-5 h-5 text-brand-mint' /> Personal Information
+                        <User className='w-5 h-5 text-teal-600 dark:text-teal-400' /> Personal Information
                       </h3>
                       <p className='text-xl font-bold text-white'>
                         {resume.structuredData.personalInfo.firstName} {resume.structuredData.personalInfo.lastName}
@@ -614,7 +614,7 @@ export default function PublicDriverProfile() {
                   {resume.structuredData.cdlInfo && (resume.structuredData.cdlInfo.cdlClass || resume.structuredData.cdlInfo.endorsements?.length || resume.structuredData.cdlInfo.restrictions?.length) ? (
                     <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
                       <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
-                        <Award className='w-5 h-5 text-brand-mint' /> CDL
+                        <Award className='w-5 h-5 text-teal-600 dark:text-teal-400' /> CDL
                       </h3>
                       <p className='text-white'>
                         {resume.structuredData.cdlInfo.cdlClass} {resume.structuredData.cdlInfo.cdlState && `• ${resume.structuredData.cdlInfo.cdlState}`}
@@ -631,11 +631,11 @@ export default function PublicDriverProfile() {
                   {resume.structuredData.employments && resume.structuredData.employments.length > 0 && (
                     <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
                       <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
-                        <Briefcase className='w-5 h-5 text-brand-mint' /> Work Experience
+                        <Briefcase className='w-5 h-5 text-teal-600 dark:text-teal-400' /> Work Experience
                       </h3>
                       <div className='space-y-4'>
                         {resume.structuredData.employments.map((exp, i) => (
-                          <div key={i} className='border-l-2 border-brand-mint/30 pl-4'>
+                          <div key={i} className='border-l-2 border-teal-500/30 pl-4'>
                             <p className='font-semibold text-white'>{exp.position}</p>
                             <p className='text-gray-400'>{exp.companyName} {exp.location && `• ${exp.location}`}</p>
                             <p className='text-sm text-gray-500'>
@@ -671,7 +671,7 @@ export default function PublicDriverProfile() {
                   {resume.structuredData.educations && resume.structuredData.educations.length > 0 && (
                     <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
                       <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
-                        <GraduationCap className='w-5 h-5 text-brand-mint' /> Education
+                        <GraduationCap className='w-5 h-5 text-teal-600 dark:text-teal-400' /> Education
                       </h3>
                       <div className='space-y-2'>
                         {resume.structuredData.educations.map((edu, i) => (
@@ -687,11 +687,11 @@ export default function PublicDriverProfile() {
                   {resume.structuredData.references && resume.structuredData.references.length > 0 && (
                     <div className='p-4 rounded-xl bg-gray-800/50'>
                       <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
-                        <User className='w-5 h-5 text-brand-mint' /> References
+                        <User className='w-5 h-5 text-teal-600 dark:text-teal-400' /> References
                       </h3>
                       <div className='space-y-3'>
                         {resume.structuredData.references.map((ref, i) => (
-                          <div key={i} className='border-l-2 border-brand-mint/30 pl-4'>
+                          <div key={i} className='border-l-2 border-teal-500/30 pl-4'>
                             <p className='font-semibold text-white'>{ref.name}{ref.title && `, ${ref.title}`}</p>
                             {ref.company && <p className='text-gray-400 text-sm'>{ref.company}</p>}
                             {(ref.phone || ref.email) && (
@@ -715,7 +715,7 @@ export default function PublicDriverProfile() {
                       href={`https://gateway.pinata.cloud/ipfs/${resume.ipfsHash}`}
                       target='_blank'
                       rel='noopener noreferrer'
-                      className='text-brand-mint hover:underline flex items-center gap-1'
+                      className='text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1'
                     >
                       View resume document <ExternalLink className='w-3 h-3' />
                     </a>
@@ -736,7 +736,7 @@ export default function PublicDriverProfile() {
               {profile.contact.email && (
                 <a
                   href={`mailto:${profile.contact.email}`}
-                  className='flex items-center gap-2 px-5 py-3 bg-brand-mint/20 hover:bg-brand-mint/30 rounded-xl text-brand-mint transition-all hover:scale-105 border border-brand-mint/30'
+                  className='flex items-center gap-2 px-5 py-3 bg-teal-600/20 hover:bg-teal-600/30 rounded-xl text-teal-600 dark:text-teal-400 transition-all hover:scale-105 border border-teal-500/30'
                 >
                   <Mail className='w-5 h-5' />
                   {profile.contact.email}
@@ -761,7 +761,7 @@ export default function PublicDriverProfile() {
             {!showConnectForm ? (
               <button
                 onClick={() => setShowConnectForm(true)}
-                className='inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-brand-mint to-teal-400 text-gray-900 font-bold text-lg rounded-2xl hover:shadow-xl hover:shadow-brand-mint/30 transition-all hover:scale-105'
+                className='inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-teal-600 to-teal-400 text-gray-900 font-bold text-lg rounded-2xl hover:shadow-xl hover:shadow-teal-600/30 transition-all hover:scale-105'
               >
                 <Building2 className='w-5 h-5' />
                 I'm Hiring — Connect
@@ -783,7 +783,7 @@ export default function PublicDriverProfile() {
                           employerName: e.target.value,
                         })
                       }
-                      className='w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-brand-mint'
+                      className='w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-teal-500'
                     />
                     <input
                       type='text'
@@ -795,7 +795,7 @@ export default function PublicDriverProfile() {
                           employerCompanyName: e.target.value,
                         })
                       }
-                      className='w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-brand-mint'
+                      className='w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-teal-500'
                     />
                   </div>
                   <div className='grid sm:grid-cols-2 gap-4'>
@@ -809,7 +809,7 @@ export default function PublicDriverProfile() {
                           employerEmail: e.target.value,
                         })
                       }
-                      className='w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-brand-mint'
+                      className='w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-teal-500'
                     />
                     <PhoneInput
                       value={connectForm.employerPhone}
@@ -819,7 +819,7 @@ export default function PublicDriverProfile() {
                           employerPhone: value,
                         })
                       }
-                      className='w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-brand-mint'
+                      className='w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-teal-500'
                     />
                   </div>
                   <input
@@ -832,7 +832,7 @@ export default function PublicDriverProfile() {
                         eventName: e.target.value,
                       })
                     }
-                    className='w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-brand-mint'
+                    className='w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-teal-500'
                   />
                   <textarea
                     placeholder='Message (optional)'
@@ -841,7 +841,7 @@ export default function PublicDriverProfile() {
                     onChange={(e) =>
                       setConnectForm({ ...connectForm, notes: e.target.value })
                     }
-                    className='w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-brand-mint resize-none'
+                    className='w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-teal-500 resize-none'
                   />
                   <div className='flex gap-3'>
                     <button
@@ -854,7 +854,7 @@ export default function PublicDriverProfile() {
                     <button
                       type='submit'
                       disabled={connecting}
-                      className='flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-brand-mint text-gray-900 font-semibold rounded-xl hover:bg-brand-mint/90 transition-colors disabled:opacity-50'
+                      className='flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-500 transition-colors disabled:opacity-50'
                     >
                       {connecting ? (
                         <Loader2 className='w-5 h-5 animate-spin' />
@@ -888,7 +888,7 @@ export default function PublicDriverProfile() {
         <footer className='mt-12 text-center'>
           <p className='text-gray-500 text-sm'>
             Powered by{' '}
-            <a href='/' className='text-brand-mint hover:underline'>
+            <a href='/' className='text-teal-600 dark:text-teal-400 hover:underline'>
               Storm
             </a>{' '}
             • Career Card
@@ -914,7 +914,7 @@ function InfoBox({
     <div className='bg-gray-700/30 rounded-xl p-3'>
       <p className='text-xs text-gray-500 mb-1'>{label}</p>
       <p
-        className={`font-semibold ${highlight ? 'text-brand-mint text-lg' : 'text-white'}`}
+        className={`font-semibold ${highlight ? 'text-teal-600 dark:text-teal-400 text-lg' : 'text-white'}`}
       >
         {value}
       </p>

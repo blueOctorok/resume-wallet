@@ -256,7 +256,7 @@ export default function GitHubContributionGraph({
                     }}
                     className={`block w-full px-4 py-2 text-sm text-left hover:bg-gray-700 transition-colors ${
                       year === selectedYear
-                        ? 'text-brand-mint bg-gray-700/50'
+                        ? 'text-teal-600 dark:text-teal-400 bg-gray-700/50'
                         : 'text-gray-300'
                     }`}
                   >

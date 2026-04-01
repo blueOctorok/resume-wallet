@@ -132,7 +132,7 @@ export default function Navigation({
               </div>
 
               {/* Center — stacked Storm / StormTokenMark / Chain (matches LoadingScreen + whitepaper) */}
-              <div className='flex-1 flex justify-center sm:-ml-6 lg:-ml-10 pointer-events-none'>
+              <div className='pointer-events-none flex flex-1 justify-center py-1 sm:-ml-6 sm:py-1.5 lg:-ml-10'>
                 <h1 className='pointer-events-none' aria-label='Storm'>
                   <StormChainWordmark size='nav' vaultChrome={false} />
                 </h1>

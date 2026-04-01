@@ -245,7 +245,7 @@ export default function PublicDeveloperCard() {
           </p>
           <a
             href='/'
-            className='inline-flex items-center gap-2 px-6 py-3 bg-brand-mint text-gray-900 font-semibold rounded-xl hover:bg-brand-mint/90 transition-colors'
+            className='inline-flex items-center gap-2 px-6 py-3 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-500 transition-colors'
           >
             Go to Storm
           </a>
@@ -264,20 +264,20 @@ export default function PublicDeveloperCard() {
     <div className='min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'>
       {/* Decorative background elements */}
       <div className='fixed inset-0 overflow-hidden pointer-events-none'>
-        <div className='absolute top-0 right-0 w-96 h-96 bg-brand-mint/5 rounded-full blur-3xl' />
+        <div className='absolute top-0 right-0 w-96 h-96 bg-teal-600/5 rounded-full blur-3xl' />
         <div className='absolute bottom-0 left-0 w-96 h-96 bg-teal-500/5 rounded-full blur-3xl' />
       </div>
 
       <header className='border-b border-gray-700/50 bg-gray-900/80 backdrop-blur-xl sticky top-0 z-20'>
         <div className='max-w-4xl mx-auto px-4 py-4 flex items-center justify-between'>
           <a href='/' className='flex items-center gap-2'>
-            <div className='w-8 h-8 rounded-lg bg-gradient-to-br from-brand-mint to-teal-500 flex items-center justify-center shadow-lg shadow-brand-mint/20'>
+            <div className='w-8 h-8 rounded-lg bg-gradient-to-br from-teal-600 to-teal-500 flex items-center justify-center shadow-lg shadow-teal-600/20'>
               <span className='text-gray-900 font-bold text-sm'>S</span>
             </div>
             <span className='text-white font-semibold'>Storm</span>
           </a>
           <div className='flex items-center gap-2'>
-            <Sparkles className='w-4 h-4 text-brand-mint' />
+            <Sparkles className='w-4 h-4 text-teal-600 dark:text-teal-400' />
             <span className='text-xs text-gray-400'>Career Card</span>
           </div>
         </div>
@@ -287,14 +287,14 @@ export default function PublicDeveloperCard() {
         {/* Hero Profile Card */}
         <div className='bg-gradient-to-br from-gray-800/80 to-gray-800/40 backdrop-blur-xl rounded-3xl border border-gray-700/50 overflow-hidden mb-8 shadow-2xl'>
           {/* Gradient accent bar */}
-          <div className='h-1 bg-gradient-to-r from-brand-mint via-teal-400 to-emerald-500' />
+          <div className='h-1 bg-gradient-to-r from-teal-600 via-teal-400 to-emerald-500' />
 
           <div className='p-8'>
             <div className='flex flex-col sm:flex-row items-start gap-6'>
               {/* Avatar with glow */}
               <div className='relative'>
-                <div className='absolute inset-0 bg-brand-mint/30 rounded-2xl blur-xl' />
-                <div className='relative w-24 h-24 rounded-2xl bg-gradient-to-br from-brand-mint via-teal-400 to-emerald-500 flex items-center justify-center shadow-xl'>
+                <div className='absolute inset-0 bg-teal-600/30 rounded-2xl blur-xl' />
+                <div className='relative w-24 h-24 rounded-2xl bg-gradient-to-br from-teal-600 via-teal-400 to-emerald-500 flex items-center justify-center shadow-xl'>
                   <span className='text-4xl font-bold text-gray-900'>
                     {profile.firstName?.[0] ?? profile.displayName?.[0] ?? 'D'}
                     {profile.lastName?.[0] ?? ''}
@@ -309,7 +309,7 @@ export default function PublicDeveloperCard() {
                       {displayName}
                     </h1>
                     {profile.headline && (
-                      <p className='text-lg text-brand-mint font-medium mt-1'>
+                      <p className='text-lg text-teal-600 dark:text-teal-400 font-medium mt-1'>
                         {profile.headline}
                       </p>
                     )}
@@ -413,7 +413,7 @@ export default function PublicDeveloperCard() {
                     <p className='font-semibold text-white'>
                       {job.position}
                     </p>
-                    <p className='text-sm text-brand-mint font-medium'>
+                    <p className='text-sm text-teal-600 dark:text-teal-400 font-medium'>
                       {job.companyName}
                     </p>
                     <p className='mt-1 text-xs text-gray-500'>
@@ -448,14 +448,14 @@ export default function PublicDeveloperCard() {
           <div className='mb-8'>
             <div className='flex items-center justify-between mb-4'>
               <h2 className='flex items-center gap-2 text-xl font-bold text-white'>
-                <Globe className='w-5 h-5 text-brand-mint' />
+                <Globe className='w-5 h-5 text-teal-600 dark:text-teal-400' />
                 Portfolio
               </h2>
               <a
                 href={profile.portfolioUrl}
                 target='_blank'
                 rel='noopener noreferrer'
-                className='flex items-center gap-2 text-sm text-brand-mint hover:underline'
+                className='flex items-center gap-2 text-sm text-teal-600 dark:text-teal-400 hover:underline'
               >
                 Open in new tab <ExternalLink className='w-4 h-4' />
               </a>
@@ -507,14 +507,14 @@ export default function PublicDeveloperCard() {
           <div className='mb-8'>
             <div className='flex items-center justify-between mb-4'>
               <h2 className='flex items-center gap-2 text-xl font-bold text-white'>
-                <Github className='w-5 h-5 text-brand-mint' />
+                <Github className='w-5 h-5 text-teal-600 dark:text-teal-400' />
                 GitHub Assessment
               </h2>
               <a
                 href={`https://github.com/${profile.githubUsername}`}
                 target='_blank'
                 rel='noopener noreferrer'
-                className='flex items-center gap-1 text-sm text-brand-mint hover:underline'
+                className='flex items-center gap-1 text-sm text-teal-600 dark:text-teal-400 hover:underline'
               >
                 @{profile.githubUsername} <ExternalLink className='w-3 h-3' />
               </a>
@@ -613,7 +613,7 @@ export default function PublicDeveloperCard() {
                         </div>
                         <div className='flex-1 h-2 bg-gray-700/50 rounded-full overflow-hidden'>
                           <div
-                            className='h-full bg-gradient-to-r from-brand-mint to-teal-400 rounded-full'
+                            className='h-full bg-gradient-to-r from-teal-600 to-teal-400 rounded-full'
                             style={{ width: `${lang.percentage}%` }}
                           />
                         </div>
@@ -646,7 +646,7 @@ export default function PublicDeveloperCard() {
                         <div className='flex items-start justify-between gap-2'>
                           <div className='flex-1 min-w-0'>
                             <div className='flex items-center gap-2'>
-                              <p className='font-medium text-white group-hover:text-brand-mint transition-colors truncate'>
+                              <p className='font-medium text-white group-hover:text-teal-600 dark:text-teal-400 transition-colors truncate'>
                                 {repo.name}
                               </p>
                               {repo.isPrivate && (
@@ -661,12 +661,12 @@ export default function PublicDeveloperCard() {
                               </p>
                             )}
                           </div>
-                          <ExternalLink className='w-3 h-3 text-gray-600 group-hover:text-brand-mint flex-shrink-0 mt-1' />
+                          <ExternalLink className='w-3 h-3 text-gray-600 group-hover:text-teal-600 dark:text-teal-400 flex-shrink-0 mt-1' />
                         </div>
                         <div className='flex items-center gap-3 mt-2'>
                           {repo.language && (
                             <span className='flex items-center gap-1 text-xs text-gray-400'>
-                              <span className='w-2 h-2 rounded-full bg-brand-mint' />
+                              <span className='w-2 h-2 rounded-full bg-teal-600' />
                               {repo.language}
                             </span>
                           )}
@@ -707,7 +707,7 @@ export default function PublicDeveloperCard() {
         {profile.skills && profile.skills.length > 0 && (
           <div className='bg-gray-800/50 backdrop-blur-xl rounded-2xl border border-gray-700/50 p-6 mb-8'>
             <h2 className='flex items-center gap-2 text-lg font-semibold text-white mb-4'>
-              <Code className='w-5 h-5 text-brand-mint' />
+              <Code className='w-5 h-5 text-teal-600 dark:text-teal-400' />
               Tech Stack
             </h2>
             <div className='flex flex-wrap gap-2'>
@@ -719,7 +719,7 @@ export default function PublicDeveloperCard() {
                 return (
                   <span
                     key={i}
-                    className='px-3 py-1.5 bg-gradient-to-r from-gray-700/80 to-gray-700/40 text-gray-200 rounded-lg text-sm border border-gray-600/50 hover:border-brand-mint/50 transition-colors'
+                    className='px-3 py-1.5 bg-gradient-to-r from-gray-700/80 to-gray-700/40 text-gray-200 rounded-lg text-sm border border-gray-600/50 hover:border-teal-500/50 transition-colors'
                   >
                     {name}
                   </span>
@@ -736,7 +736,7 @@ export default function PublicDeveloperCard() {
               {/* Resume header badge */}
               <div className='flex items-center justify-between mb-6 pb-4 border-b border-gray-700/50'>
                 <h2 className='flex items-center gap-2 text-xl font-bold text-white'>
-                  <FileText className='w-5 h-5 text-brand-mint' />
+                  <FileText className='w-5 h-5 text-teal-600 dark:text-teal-400' />
                   Resume
                 </h2>
                 {resume.verified && (
@@ -750,7 +750,7 @@ export default function PublicDeveloperCard() {
               {/* Personal Info */}
               <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
                 <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
-                  <User className='w-5 h-5 text-brand-mint' /> Personal
+                  <User className='w-5 h-5 text-teal-600 dark:text-teal-400' /> Personal
                   Information
                 </h3>
                 <div className='space-y-2'>
@@ -759,7 +759,7 @@ export default function PublicDeveloperCard() {
                     {resume.structuredData.personalInfo.lastName}
                   </p>
                   {resume.structuredData.personalInfo.headline && (
-                    <p className='text-brand-mint'>
+                    <p className='text-teal-600 dark:text-teal-400'>
                       {resume.structuredData.personalInfo.headline}
                     </p>
                   )}
@@ -785,7 +785,7 @@ export default function PublicDeveloperCard() {
                         href={resume.structuredData.personalInfo.githubUrl}
                         target='_blank'
                         rel='noopener noreferrer'
-                        className='text-sm text-brand-mint hover:underline flex items-center gap-1'
+                        className='text-sm text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1'
                       >
                         <Github className='w-4 h-4' /> GitHub
                       </a>
@@ -795,7 +795,7 @@ export default function PublicDeveloperCard() {
                         href={resume.structuredData.personalInfo.linkedinUrl}
                         target='_blank'
                         rel='noopener noreferrer'
-                        className='text-sm text-brand-mint hover:underline flex items-center gap-1'
+                        className='text-sm text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1'
                       >
                         <ExternalLink className='w-4 h-4' /> LinkedIn
                       </a>
@@ -805,7 +805,7 @@ export default function PublicDeveloperCard() {
                         href={resume.structuredData.personalInfo.portfolioUrl}
                         target='_blank'
                         rel='noopener noreferrer'
-                        className='text-sm text-brand-mint hover:underline flex items-center gap-1'
+                        className='text-sm text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1'
                       >
                         <Folder className='w-4 h-4' /> Portfolio
                       </a>
@@ -818,7 +818,7 @@ export default function PublicDeveloperCard() {
               {resume.structuredData.skills.length > 0 && (
                 <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
                   <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
-                    <Code className='w-5 h-5 text-brand-mint' /> Technical
+                    <Code className='w-5 h-5 text-teal-600 dark:text-teal-400' /> Technical
                     Skills
                   </h3>
                   <div className='flex flex-wrap gap-2'>
@@ -841,14 +841,14 @@ export default function PublicDeveloperCard() {
               {resume.structuredData.experience.length > 0 && (
                 <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
                   <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
-                    <Briefcase className='w-5 h-5 text-brand-mint' /> Work
+                    <Briefcase className='w-5 h-5 text-teal-600 dark:text-teal-400' /> Work
                     Experience
                   </h3>
                   <div className='space-y-4'>
                     {resume.structuredData.experience.map((exp) => (
                       <div
                         key={exp.id}
-                        className='border-l-2 border-brand-mint/30 pl-4'
+                        className='border-l-2 border-teal-500/30 pl-4'
                       >
                         <p className='font-semibold text-white'>{exp.title}</p>
                         <p className='text-gray-400'>
@@ -885,13 +885,13 @@ export default function PublicDeveloperCard() {
               {resume.structuredData.projects.length > 0 && (
                 <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
                   <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
-                    <Folder className='w-5 h-5 text-brand-mint' /> Projects
+                    <Folder className='w-5 h-5 text-teal-600 dark:text-teal-400' /> Projects
                   </h3>
                   <div className='space-y-4'>
                     {resume.structuredData.projects.map((project) => (
                       <div
                         key={project.id}
-                        className='border-l-2 border-brand-mint/30 pl-4'
+                        className='border-l-2 border-teal-500/30 pl-4'
                       >
                         <p className='font-semibold text-white'>
                           {project.name}
@@ -912,7 +912,7 @@ export default function PublicDeveloperCard() {
                               href={project.liveUrl}
                               target='_blank'
                               rel='noopener noreferrer'
-                              className='text-xs text-brand-mint hover:underline flex items-center gap-1'
+                              className='text-xs text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1'
                             >
                               <Globe className='w-3 h-3' /> Live
                             </a>
@@ -922,7 +922,7 @@ export default function PublicDeveloperCard() {
                               href={project.repoUrl}
                               target='_blank'
                               rel='noopener noreferrer'
-                              className='text-xs text-brand-mint hover:underline flex items-center gap-1'
+                              className='text-xs text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1'
                             >
                               <Github className='w-3 h-3' /> Repo
                             </a>
@@ -943,7 +943,7 @@ export default function PublicDeveloperCard() {
               {resume.structuredData.education.length > 0 && (
                 <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
                   <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
-                    <GraduationCap className='w-5 h-5 text-brand-mint' />{' '}
+                    <GraduationCap className='w-5 h-5 text-teal-600 dark:text-teal-400' />{' '}
                     Education
                   </h3>
                   <div className='space-y-3'>
@@ -967,7 +967,7 @@ export default function PublicDeveloperCard() {
               {resume.structuredData.certifications.length > 0 && (
                 <div className='mb-6 p-4 rounded-xl bg-gray-800/50'>
                   <h3 className='text-lg font-semibold mb-3 flex items-center gap-2 text-white'>
-                    <CheckCircle className='w-5 h-5 text-brand-mint' />{' '}
+                    <CheckCircle className='w-5 h-5 text-teal-600 dark:text-teal-400' />{' '}
                     Certifications
                   </h3>
                   <div className='space-y-2'>
@@ -987,7 +987,7 @@ export default function PublicDeveloperCard() {
                             href={cert.url}
                             target='_blank'
                             rel='noopener noreferrer'
-                            className='text-sm text-brand-mint hover:underline'
+                            className='text-sm text-teal-600 dark:text-teal-400 hover:underline'
                           >
                             Verify
                           </a>
@@ -1012,7 +1012,7 @@ export default function PublicDeveloperCard() {
                 {profile.contact.email && (
                   <a
                     href={`mailto:${profile.contact.email}`}
-                    className='flex items-center gap-2 px-5 py-3 bg-brand-mint/20 hover:bg-brand-mint/30 rounded-xl text-brand-mint transition-all hover:scale-105 border border-brand-mint/30'
+                    className='flex items-center gap-2 px-5 py-3 bg-teal-600/20 hover:bg-teal-600/30 rounded-xl text-teal-600 dark:text-teal-400 transition-all hover:scale-105 border border-teal-500/30'
                   >
                     <Mail className='w-5 h-5' />
                     {profile.contact.email}
@@ -1036,7 +1036,7 @@ export default function PublicDeveloperCard() {
           <div className='text-center py-8'>
             <a
               href='/'
-              className='inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-brand-mint to-teal-400 text-gray-900 font-bold text-lg rounded-2xl hover:shadow-xl hover:shadow-brand-mint/30 transition-all hover:scale-105'
+              className='inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-teal-600 to-teal-400 text-gray-900 font-bold text-lg rounded-2xl hover:shadow-xl hover:shadow-teal-600/30 transition-all hover:scale-105'
             >
               <Sparkles className='w-5 h-5' />
               Hire with Storm
@@ -1047,7 +1047,7 @@ export default function PublicDeveloperCard() {
         <footer className='mt-12 text-center'>
           <p className='text-gray-500 text-sm'>
             Powered by{' '}
-            <a href='/' className='text-brand-mint hover:underline'>
+            <a href='/' className='text-teal-600 dark:text-teal-400 hover:underline'>
               Storm
             </a>{' '}
             • Career Card
@@ -1170,7 +1170,7 @@ function ProjectCard({
               href={project.liveUrl}
               target='_blank'
               rel='noopener noreferrer'
-              className='flex items-center gap-1.5 px-3 py-1.5 bg-brand-mint/20 hover:bg-brand-mint/30 text-brand-mint text-sm rounded-lg transition-colors'
+              className='flex items-center gap-1.5 px-3 py-1.5 bg-teal-600/20 hover:bg-teal-600/30 text-teal-600 dark:text-teal-400 text-sm rounded-lg transition-colors'
             >
               <ExternalLink className='w-3.5 h-3.5' />
               Live Site

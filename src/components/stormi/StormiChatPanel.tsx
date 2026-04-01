@@ -251,6 +251,11 @@ export type StormiChatPanelProps =
       /** From GET /api/hub/blocks `avaAutoWelcomeCandidateDone` */
       stormiAutoWelcomeCandidateDone: boolean
       onStormiAutoWelcomeSynced?: () => void
+      /**
+       * Candidate hub only: parent wraps this in `VaultHorizontalVaultShell` + `BlockCard variant="embed"`.
+       * Drops the standalone glow shell and duplicate empty-state title/copy (header lives on BlockCard).
+       */
+      hubEmbedSurface?: boolean
     }
   | {
       mode: 'employer'
@@ -264,6 +269,7 @@ export type StormiChatPanelProps =
 export default function StormiChatPanel(props: StormiChatPanelProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
+  const hubEmbedSurface = props.mode === 'candidate' && Boolean(props.hubEmbedSurface)
   const openStormiContextModal = useHubBlocksStore((s) => s.openStormiContextModal)
   const walletAddress = props.walletAddress
   const persistenceMode = props.mode
@@ -550,14 +556,21 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
   return (
     <div
       className={cn(
-        'stormi-glow-border transition-[box-shadow] duration-200',
-        chatExpanded && 'ring-2 ring-teal-500/35 dark:ring-teal-400/30 rounded-[16px]',
+        'relative',
+        !hubEmbedSurface && 'stormi-glow-border transition-[box-shadow] duration-200',
+        !hubEmbedSurface &&
+          chatExpanded &&
+          'ring-2 ring-teal-500/35 dark:ring-teal-400/30 rounded-[16px]',
+        hubEmbedSurface &&
+          chatExpanded &&
+          'rounded-xl ring-2 ring-teal-500/35 dark:ring-teal-400/30',
       )}
     >
       <div
         className={cn(
-          'rounded-[14px] flex flex-col overflow-hidden relative',
-          isDark ? 'bg-gray-900' : 'bg-slate-100/95',
+          'flex flex-col overflow-hidden relative',
+          hubEmbedSurface ? 'rounded-xl bg-transparent' : 'rounded-[14px]',
+          !hubEmbedSurface && (isDark ? 'bg-gray-900' : 'bg-slate-100/95'),
         )}
       >
         {hasMessages && (
@@ -603,8 +616,8 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
                   className={cn('flex gap-2', msg.role === 'user' ? 'justify-end' : 'justify-start')}
                 >
                   {msg.role === 'ava' && (
-                    <div className='flex-shrink-0 w-6 h-6 rounded-full bg-brand-mint/25 dark:bg-brand-mint/20 flex items-center justify-center mt-0.5'>
-                      <Bot className='w-3.5 h-3.5 text-brand-sage-dark dark:text-teal-300' />
+                    <div className='flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-teal-600/20 dark:bg-teal-400/15'>
+                      <Bot className='h-3.5 w-3.5 text-teal-800 dark:text-teal-300' />
                     </div>
                   )}
                   <div
@@ -625,7 +638,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
                               'rounded-tl-sm',
                               isDark ? 'bg-gray-800 text-gray-200' : 'bg-slate-200/80 text-slate-800',
                             )
-                          : 'bg-brand-mint text-gray-900 rounded-tr-sm',
+                          : 'rounded-tr-sm bg-teal-600 text-white dark:bg-teal-500',
                       )}
                     >
                       {msg.text}
@@ -658,8 +671,8 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
 
               {isLoading && (
                 <div className='flex gap-2 justify-start'>
-                  <div className='flex-shrink-0 w-6 h-6 rounded-full bg-brand-mint/25 dark:bg-brand-mint/20 flex items-center justify-center mt-0.5'>
-                    <Bot className='w-3.5 h-3.5 text-brand-sage-dark dark:text-teal-300' />
+                  <div className='flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-teal-600/20 dark:bg-teal-400/15'>
+                    <Bot className='h-3.5 w-3.5 text-teal-800 dark:text-teal-300' />
                   </div>
                   <div
                     className={cn(
@@ -706,68 +719,96 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
         )}
 
         {/* ── Input area ── */}
-        <div className={cn('px-5 pb-4', hasMessages ? 'pt-2' : 'pt-5')}>
+        <div
+          className={cn(
+            'px-5 pb-4',
+            hasMessages ? 'pt-2' : hubEmbedSurface ? 'pt-2' : 'pt-5',
+          )}
+        >
           {/* Empty-state: suggested prompts above the input */}
           {!hasMessages && (
             <div className='mb-5'>
-              <div className='flex items-center gap-4 mb-4'>
-                <div
-                  className={cn(
-                    'flex-shrink-0 w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] rounded-2xl flex items-center justify-center overflow-hidden shadow-lg',
-                    isDark
-                      ? 'bg-gradient-to-br from-brand-mint/30 to-brand-mint/10 ring-1 ring-brand-mint/20'
-                      : 'bg-gradient-to-br from-brand-mint/20 to-brand-mint/5 ring-1 ring-brand-mint/30',
-                  )}
-                >
-                  <Image
-                    src='/ava-robot.png'
-                    alt=''
-                    width={52}
-                    height={52}
-                    className={cn('object-contain', !isDark && 'invert')}
-                  />
-                </div>
-                <div className='min-w-0 flex-1 flex flex-col gap-1'>
-                  <div className='flex items-start justify-between gap-3'>
-                    <h2
+              {hubEmbedSurface && props.mode === 'candidate' ? (
+                usageBadge ? (
+                  <div className='mb-4 flex flex-wrap items-center gap-2'>
+                    <span
                       className={cn(
-                        'text-xl sm:text-2xl font-bold tracking-tight leading-tight',
-                        isDark ? 'text-white' : 'text-slate-800',
+                        'text-[10px] font-semibold px-2 py-1 rounded-full',
+                        usage && usage.dailyRemaining === 0 && usage.credits === 0
+                          ? 'bg-red-500/15 text-red-400'
+                          : usage && usage.dailyRemaining > 0
+                            ? isDark
+                              ? 'bg-teal-500/20 text-teal-200'
+                              : 'bg-teal-50 text-teal-800'
+                            : isDark
+                              ? 'bg-amber-500/15 text-amber-400'
+                              : 'bg-amber-50 text-amber-600',
                       )}
                     >
-                      Ask Stormi
-                    </h2>
-                    {usageBadge && (
-                      <span
-                        className={cn(
-                          'flex-shrink-0 text-[10px] font-semibold px-2 py-1 rounded-full',
-                          usage && usage.dailyRemaining === 0 && usage.credits === 0
-                            ? 'bg-red-500/15 text-red-400'
-                            : usage && usage.dailyRemaining > 0
-                              ? isDark
-                            ? 'bg-brand-mint/20 text-teal-200'
-                            : 'bg-teal-50 text-teal-800'
-                              : isDark
-                                ? 'bg-amber-500/15 text-amber-400'
-                                : 'bg-amber-50 text-amber-600',
-                        )}
-                      >
-                        {usageBadge}
-                      </span>
-                    )}
+                      {usageBadge}
+                    </span>
                   </div>
-                  <p
+                ) : null
+              ) : (
+                <div className='flex items-center gap-4 mb-4'>
+                  <div
                     className={cn(
-                      'text-sm leading-snug',
-                      isDark ? 'text-gray-400' : 'text-slate-600',
+                      'flex-shrink-0 w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] rounded-2xl flex items-center justify-center overflow-hidden shadow-lg',
+                      isDark
+                        ? 'bg-gradient-to-br from-teal-600/25 to-teal-500/10 ring-1 ring-teal-500/25'
+                        : 'bg-gradient-to-br from-teal-600/15 to-teal-500/5 ring-1 ring-teal-400/25',
                     )}
                   >
-                    {props.mode === 'candidate'
-                      ? 'Build your card and prep here anytime; we emphasize hire tools — ranked jobs, tap-to-answer interview practice, talking points from your real Career Card. You choose every apply; nothing auto-fires.'
-                      : 'She knows your company and pipeline — type or tap a suggestion. After you start, use the corner icon to expand the thread.'}
-                  </p>
+                    <Image
+                      src='/ava-robot.png'
+                      alt=''
+                      width={52}
+                      height={52}
+                      className={cn('object-contain', !isDark && 'invert')}
+                    />
+                  </div>
+                  <div className='min-w-0 flex-1 flex flex-col gap-1'>
+                    <div className='flex items-start justify-between gap-3'>
+                      <h2
+                        className={cn(
+                          'text-xl sm:text-2xl font-bold tracking-tight leading-tight',
+                          isDark ? 'text-white' : 'text-slate-800',
+                        )}
+                      >
+                        Ask Stormi
+                      </h2>
+                      {usageBadge && (
+                        <span
+                          className={cn(
+                            'flex-shrink-0 text-[10px] font-semibold px-2 py-1 rounded-full',
+                            usage && usage.dailyRemaining === 0 && usage.credits === 0
+                              ? 'bg-red-500/15 text-red-400'
+                              : usage && usage.dailyRemaining > 0
+                                ? isDark
+                                  ? 'bg-teal-500/20 text-teal-200'
+                                  : 'bg-teal-50 text-teal-800'
+                                : isDark
+                                  ? 'bg-amber-500/15 text-amber-400'
+                                  : 'bg-amber-50 text-amber-600',
+                          )}
+                        >
+                          {usageBadge}
+                        </span>
+                      )}
+                    </div>
+                    <p
+                      className={cn(
+                        'text-sm leading-snug',
+                        isDark ? 'text-gray-400' : 'text-slate-600',
+                      )}
+                    >
+                      {props.mode === 'candidate'
+                        ? 'Build your card and prep here anytime; we emphasize hire tools — ranked jobs, tap-to-answer interview practice, talking points from your real Career Card. You choose every apply; nothing auto-fires.'
+                        : 'She knows your company and pipeline — type or tap a suggestion. After you start, use the corner icon to expand the thread.'}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
               <div className='flex flex-wrap gap-2'>
                 {props.mode === 'candidate' &&
                   candidateQuickActions.map((action, idx) => {
@@ -877,7 +918,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
               className={cn(
                 'p-2.5 rounded-full transition-all',
                 input.trim() && !isLoading && !outOfCredits
-                  ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90 shadow-sm'
+                  ? 'bg-teal-600 text-white shadow-sm hover:bg-teal-500 dark:bg-teal-500 dark:hover:bg-teal-400'
                   : cn('cursor-not-allowed', isDark ? 'bg-gray-700 text-gray-500' : 'bg-slate-200 text-slate-400'),
               )}
               aria-label='Send message'

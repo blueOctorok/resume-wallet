@@ -7,7 +7,7 @@
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { getBlockColor } from '@/lib/block-registry'
-import { VAULT_CLIP } from '@/lib/vault-credential-geometry'
+import { VAULT_CLIP, VAULT_CLIP_HORIZONTAL } from '@/lib/vault-credential-geometry'
 import VaultLightFrostTexture from '@/components/ui/VaultLightFrostTexture'
 
 export { VAULT_CLIP } from '@/lib/vault-credential-geometry'
@@ -42,7 +42,9 @@ interface VaultCredentialChromeProps {
   glowColor: string
   hasRoute: boolean
   className?: string
-  /** Hub tiles show twin-ring sigil; dense panels (e.g. career path) omit it */
+  /** Hub hive tiles use chamfered `VAULT_CLIP`; wordmark bar uses shallow `VAULT_CLIP_HORIZONTAL`. */
+  clipVariant?: 'tile' | 'horizontal'
+  /** Hub tiles show twin-ring sigil; horizontal bar is too shallow — default false when `clipVariant="horizontal"`. */
   showSigil?: boolean
   /** Drop shadow / hover glow on the whole tile */
   style?: React.CSSProperties
@@ -56,11 +58,15 @@ export function VaultCredentialChrome({
   glowColor,
   hasRoute,
   className,
-  showSigil = true,
+  clipVariant = 'tile',
+  showSigil: showSigilProp,
   style,
   onMouseEnter,
   onMouseLeave,
 }: VaultCredentialChromeProps) {
+  const clip = clipVariant === 'horizontal' ? VAULT_CLIP_HORIZONTAL : VAULT_CLIP
+  const showSigil = showSigilProp ?? clipVariant !== 'horizontal'
+
   const rimBg = hasRoute
     ? `linear-gradient(135deg, ${glowColor} 0%, transparent 52%, ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(30,58,90,0.08)'} 100%)`
     : isDark
@@ -88,7 +94,7 @@ export function VaultCredentialChrome({
         'group/vault relative h-full w-full min-h-0 select-none',
         className,
       )}
-      style={{ clipPath: VAULT_CLIP, ...style }}
+      style={{ clipPath: clip, ...style }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
@@ -99,7 +105,7 @@ export function VaultCredentialChrome({
           'absolute inset-0 z-0 transition-opacity duration-300',
           hasRoute ? 'opacity-90 group-hover/vault:opacity-100' : 'opacity-95 group-hover/vault:opacity-100',
         )}
-        style={{ clipPath: VAULT_CLIP, background: rimBg }}
+        style={{ clipPath: clip, background: rimBg }}
       />
 
       {/* Slow conic wash (teal / block accent / violet) — “living” credential */}
@@ -111,7 +117,7 @@ export function VaultCredentialChrome({
             isDark ? 'mix-blend-plus-lighter opacity-[0.2]' : 'mix-blend-multiply opacity-[0.18]',
           )}
           style={{
-            clipPath: VAULT_CLIP,
+            clipPath: clip,
             background: isDark
               ? `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${glowColor} 52deg, rgba(139,92,246,0.22) 108deg, transparent 198deg, ${glowColor} 268deg, transparent 360deg)`
               : `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${glowColor} 52deg, rgba(109,40,217,0.14) 108deg, transparent 198deg, ${glowColor} 268deg, transparent 360deg)`,
@@ -137,7 +143,7 @@ export function VaultCredentialChrome({
             ? 'bg-gradient-to-b from-[rgb(22,28,36)]/96 via-[rgb(14,18,24)]/98 to-[rgb(8,11,15)] ring-1 ring-white/[0.05] shadow-[inset_0_0_20px_rgba(0,0,0,0.04)]'
             : 'bg-gradient-to-b from-[#f4fafb]/96 via-cyan-50/[0.28] to-slate-200/88 backdrop-blur-md backdrop-saturate-125 shadow-[inset_0_0_0_1px_rgba(13,148,136,0.1),inset_0_0_42px_rgba(15,23,42,0.065),inset_0_1px_0_rgba(255,255,255,0.88)] ring-1 ring-slate-400/50',
         )}
-        style={{ clipPath: VAULT_CLIP }}
+        style={{ clipPath: clip }}
       >
         {/* Dark: dot grid. Light: sparse grain + glass depth (avoid graph-paper read). */}
         {isDark ? (
@@ -200,7 +206,14 @@ export function VaultCredentialChrome({
         </div>
       </div>
 
-      <div className='relative z-[1] flex h-full w-full min-h-0 flex-col'>{children}</div>
+      <div
+        className={cn(
+          'relative z-[1] flex w-full min-h-0 flex-col',
+          clipVariant === 'horizontal' ? '' : 'h-full',
+        )}
+      >
+        {children}
+      </div>
     </div>
   )
 }

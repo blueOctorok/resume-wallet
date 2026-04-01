@@ -165,17 +165,17 @@ export default function ResumeUploadWithPrefill({
     <div
       className={`w-full max-w-2xl mx-auto p-6 rounded-lg shadow-lg border-2 ${
         theme === 'dark'
-          ? 'bg-brand-sage-light/20 backdrop-blur-xl border-brand-mint'
-          : 'bg-white/80 backdrop-blur-xl border-brand-sage/20'
+          ? 'bg-teal-200/20 backdrop-blur-xl border-teal-500'
+          : 'bg-white/80 backdrop-blur-xl border-teal-700/20'
       }`}
     >
       <div className='mb-6'>
         <div className='flex items-center gap-3 mb-2'>
           <Sparkles
-            className={`w-6 h-6 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'}`}
+            className={`w-6 h-6 ${theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'}`}
           />
           <h2
-            className={`text-2xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
+            className={`text-2xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-teal-800 dark:text-teal-300'}`}
           >
             AI Resume Prefill
           </h2>
@@ -215,10 +215,10 @@ export default function ResumeUploadWithPrefill({
                 ${
                   file
                     ? theme === 'dark'
-                      ? 'border-brand-mint bg-brand-mint/10'
+                      ? 'border-teal-500 bg-teal-600/10'
                       : 'border-green-400 bg-green-50'
                     : theme === 'dark'
-                      ? 'border-gray-600 hover:border-brand-mint/50 bg-gray-800/50'
+                      ? 'border-gray-600 hover:border-teal-500/50 bg-gray-800/50'
                       : 'border-gray-300 hover:border-gray-400 bg-gray-50'
                 }
                 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}
@@ -227,7 +227,7 @@ export default function ResumeUploadWithPrefill({
               {file ? (
                 <div
                   className={`flex flex-col items-center ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-green-700'
+                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-green-700'
                   }`}
                 >
                   <CheckCircle className='w-8 h-8 mb-2' />
@@ -243,7 +243,7 @@ export default function ResumeUploadWithPrefill({
               ) : (
                 <div
                   className={`flex flex-col items-center ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
                   }`}
                 >
                   <Upload className='w-8 h-8 mb-2' />
@@ -364,8 +364,8 @@ export default function ResumeUploadWithPrefill({
                 !file || isUploading
                   ? 'bg-gray-400 cursor-not-allowed'
                   : theme === 'dark'
-                    ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                    : 'bg-brand-sage hover:bg-brand-sage/90'
+                    ? 'bg-teal-600 text-white hover:bg-teal-500'
+                    : 'bg-teal-700 hover:bg-teal-700/90'
               }
             `}
           >
@@ -390,8 +390,8 @@ export default function ResumeUploadWithPrefill({
               onClick={resetForm}
               className={`px-4 py-3 border rounded-md shadow-sm text-sm font-medium transition-all duration-200 ${
                 theme === 'dark'
-                  ? 'border-brand-mint/30 text-brand-mint bg-transparent hover:bg-brand-mint/10'
-                  : 'border-brand-sage/30 text-brand-sage bg-white hover:bg-brand-sage/5'
+                  ? 'border-teal-500/30 text-teal-600 dark:text-teal-400 bg-transparent hover:bg-teal-600/10'
+                  : 'border-teal-700/30 text-teal-800 dark:text-teal-300 bg-white hover:bg-teal-700/5'
               }`}
             >
               Upload Another

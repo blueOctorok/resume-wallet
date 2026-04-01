@@ -144,12 +144,12 @@ export default function TransactionHistory({
     return (
       <div className={`p-6 rounded-lg ${
         theme === 'dark'
-          ? 'bg-brand-sage-light/10 border border-brand-cream/20'
+          ? 'bg-teal-200/10 border border-brand-cream/20'
           : 'bg-white border border-gray-200'
       }`}>
         <div className='flex items-center space-x-2'>
           <div className={`animate-spin rounded-full h-5 w-5 border-b-2 ${
-            theme === 'dark' ? 'border-brand-mint' : 'border-blue-600'
+            theme === 'dark' ? 'border-teal-500' : 'border-blue-600'
           }`}></div>
           <span className={theme === 'dark' ? 'text-brand-cream/70' : 'text-gray-600'}>
             Loading transaction history...
@@ -163,7 +163,7 @@ export default function TransactionHistory({
     return (
       <div className={`p-6 rounded-lg ${
         theme === 'dark'
-          ? 'bg-brand-sage-light/10 border border-brand-cream/20'
+          ? 'bg-teal-200/10 border border-brand-cream/20'
           : 'bg-white border border-gray-200'
       }`}>
         <div className={`mb-4 ${theme === 'dark' ? 'text-red-400' : 'text-red-600'}`}>
@@ -173,7 +173,7 @@ export default function TransactionHistory({
           onClick={handleRefresh}
           className={`px-4 py-2 rounded-md ${
             theme === 'dark'
-              ? 'bg-brand-mint hover:bg-brand-mint/80 text-brand-sage'
+              ? 'bg-teal-600 text-white hover:bg-teal-500'
               : 'bg-blue-600 hover:bg-blue-700 text-white'
           }`}
         >
@@ -192,7 +192,7 @@ export default function TransactionHistory({
       {/* Header */}
       {showFilters && (
         <div className={`p-4 border-b ${
-          theme === 'dark' ? 'border-brand-mint/20' : 'border-gray-200'
+          theme === 'dark' ? 'border-teal-500/20' : 'border-gray-200'
         }`}>
           <div className='flex items-center justify-between mb-4'>
             <h2 className={`text-xl font-bold ${
@@ -202,7 +202,7 @@ export default function TransactionHistory({
               onClick={handleRefresh}
               className={`text-sm underline ${
                 theme === 'dark'
-                  ? 'text-brand-mint hover:text-brand-cream'
+                  ? 'text-teal-600 dark:text-teal-400 hover:text-brand-cream'
                   : 'text-blue-600 hover:text-blue-800'
               }`}
             >
@@ -231,10 +231,10 @@ export default function TransactionHistory({
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                     filter === filterType
                       ? theme === 'dark'
-                        ? 'bg-brand-mint text-brand-sage'
+                        ? 'bg-teal-600 text-white'
                         : 'bg-blue-600 text-white'
                       : theme === 'dark'
-                        ? 'bg-brand-sage-light/20 text-brand-cream/70 hover:bg-brand-sage-light/30'
+                        ? 'bg-teal-200/20 text-brand-cream/70 hover:bg-teal-200/30'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
@@ -260,7 +260,7 @@ export default function TransactionHistory({
           </div>
         ) : (
           <div className={`divide-y ${
-            theme === 'dark' ? 'divide-brand-mint/20' : 'divide-gray-200'
+            theme === 'dark' ? 'divide-teal-600/20' : 'divide-gray-200'
           }`}>
             {transfers.map((transfer, index) => {
               const formatted = formatTransferForDisplay(transfer)
@@ -270,7 +270,7 @@ export default function TransactionHistory({
                   key={`${transfer.hash}-${index}`}
                   className={`p-4 transition-colors ${
                     theme === 'dark'
-                      ? 'hover:bg-brand-sage-light/10'
+                      ? 'hover:bg-teal-200/10'
                       : 'hover:bg-gray-50'
                   }`}
                 >
@@ -337,7 +337,7 @@ export default function TransactionHistory({
                       rel='noopener noreferrer'
                       className={`text-xs underline ${
                         theme === 'dark'
-                          ? 'text-brand-mint hover:text-brand-cream'
+                          ? 'text-teal-600 dark:text-teal-400 hover:text-brand-cream'
                           : 'text-blue-600 hover:text-blue-800'
                       }`}
                     >
@@ -354,7 +354,7 @@ export default function TransactionHistory({
       {/* Load More */}
       {pageKey && (
         <div className={`p-4 border-t text-center ${
-          theme === 'dark' ? 'border-brand-mint/20' : 'border-gray-200'
+          theme === 'dark' ? 'border-teal-500/20' : 'border-gray-200'
         }`}>
           <button
             onClick={handleLoadMore}
@@ -365,7 +365,7 @@ export default function TransactionHistory({
                   ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
                   : 'bg-gray-400 text-white cursor-not-allowed'
                 : theme === 'dark'
-                  ? 'bg-brand-mint hover:bg-brand-mint/80 text-brand-sage'
+                  ? 'bg-teal-600 text-white hover:bg-teal-500'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
             }`}
           >

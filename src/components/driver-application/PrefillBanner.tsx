@@ -82,8 +82,8 @@ export default function PrefillBanner({
     <div
       className={`mb-8 rounded-2xl border-2 p-6 shadow-xl backdrop-blur-sm ${
         theme === 'dark'
-          ? 'bg-gradient-to-br from-brand-mint/20 via-brand-sage-light/10 to-brand-cream/10 border-brand-mint/40'
-          : 'bg-gradient-to-br from-brand-sage/10 via-brand-cream/20 to-brand-mint/10 border-brand-sage/40'
+          ? 'bg-gradient-to-br from-teal-600/20 via-teal-200/10 to-brand-cream/10 border-teal-500/40'
+          : 'bg-gradient-to-br from-teal-700/10 via-brand-cream/20 to-teal-500/10 border-teal-700/40'
       }`}
     >
       {/* Header */}
@@ -92,8 +92,8 @@ export default function PrefillBanner({
           <div
             className={`w-12 h-12 rounded-full flex items-center justify-center ${
               theme === 'dark'
-                ? 'bg-brand-mint/20 text-brand-mint'
-                : 'bg-brand-sage/20 text-brand-sage'
+                ? 'bg-teal-600/20 text-teal-600 dark:text-teal-400'
+                : 'bg-teal-700/20 text-teal-800 dark:text-teal-300'
             }`}
           >
             <Sparkles className="w-6 h-6" />
@@ -126,10 +126,10 @@ export default function PrefillBanner({
           className={`group relative p-5 rounded-xl border-2 transition-all duration-300 text-left hover:scale-[1.02] hover:shadow-lg cursor-pointer ${
             theme === 'dark'
               ? hasResume
-                ? 'bg-brand-sage-light/10 border-brand-mint/30 hover:border-brand-mint/50'
+                ? 'bg-teal-200/10 border-teal-500/30 hover:border-teal-500/50'
                 : 'bg-gray-800/50 border-gray-700'
               : hasResume
-                ? 'bg-white border-brand-sage/30 hover:border-brand-sage/50'
+                ? 'bg-white border-teal-700/30 hover:border-teal-700/50'
                 : 'bg-gray-100 border-gray-300'
           }`}
         >
@@ -138,10 +138,10 @@ export default function PrefillBanner({
               className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
                 theme === 'dark'
                   ? hasResume
-                    ? 'bg-brand-mint/20 text-brand-mint'
+                    ? 'bg-teal-600/20 text-teal-600 dark:text-teal-400'
                     : 'bg-gray-700 text-gray-500'
                   : hasResume
-                    ? 'bg-brand-sage/20 text-brand-sage'
+                    ? 'bg-teal-700/20 text-teal-800 dark:text-teal-300'
                     : 'bg-gray-200 text-gray-400'
               }`}
             >
@@ -176,8 +176,8 @@ export default function PrefillBanner({
                 <div
                   className={`inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-lg ${
                     theme === 'dark'
-                      ? 'bg-brand-mint/20 text-brand-mint'
-                      : 'bg-brand-sage/20 text-brand-sage'
+                      ? 'bg-teal-600/20 text-teal-600 dark:text-teal-400'
+                      : 'bg-teal-700/20 text-teal-800 dark:text-teal-300'
                   }`}
                 >
                   <span>✓ Resume Available</span>
@@ -194,10 +194,10 @@ export default function PrefillBanner({
           className={`group relative p-5 rounded-xl border-2 transition-all duration-300 text-left hover:scale-[1.02] hover:shadow-lg cursor-pointer ${
             theme === 'dark'
               ? hasMvr
-                ? 'bg-brand-sage-light/10 border-brand-mint/30 hover:border-brand-mint/50'
+                ? 'bg-teal-200/10 border-teal-500/30 hover:border-teal-500/50'
                 : 'bg-gray-800/50 border-gray-700'
               : hasMvr
-                ? 'bg-white border-brand-sage/30 hover:border-brand-sage/50'
+                ? 'bg-white border-teal-700/30 hover:border-teal-700/50'
                 : 'bg-gray-100 border-gray-300'
           }`}
         >
@@ -206,10 +206,10 @@ export default function PrefillBanner({
               className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
                 theme === 'dark'
                   ? hasMvr
-                    ? 'bg-brand-mint/20 text-brand-mint'
+                    ? 'bg-teal-600/20 text-teal-600 dark:text-teal-400'
                     : 'bg-gray-700 text-gray-500'
                   : hasMvr
-                    ? 'bg-brand-sage/20 text-brand-sage'
+                    ? 'bg-teal-700/20 text-teal-800 dark:text-teal-300'
                     : 'bg-gray-200 text-gray-400'
               }`}
             >
@@ -244,8 +244,8 @@ export default function PrefillBanner({
                 <div
                   className={`inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-lg ${
                     theme === 'dark'
-                      ? 'bg-brand-mint/20 text-brand-mint'
-                      : 'bg-brand-sage/20 text-brand-sage'
+                      ? 'bg-teal-600/20 text-teal-600 dark:text-teal-400'
+                      : 'bg-teal-700/20 text-teal-800 dark:text-teal-300'
                   }`}
                 >
                   <span>✓ MVR Available</span>
@@ -260,8 +260,8 @@ export default function PrefillBanner({
       <div
         className={`p-4 rounded-lg ${
           theme === 'dark'
-            ? 'bg-brand-mint/10 border border-brand-mint/20'
-            : 'bg-brand-sage/10 border border-brand-sage/20'
+            ? 'bg-teal-600/10 border border-teal-500/20'
+            : 'bg-teal-700/10 border border-teal-700/20'
         }`}
       >
         <p

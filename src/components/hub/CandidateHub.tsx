@@ -1,10 +1,12 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useCallback, useState } from 'react'
-import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, ShieldCheck, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, FileText, ClipboardCheck, Car, RefreshCw, Trash2, Globe, Github, Compass, Sparkles, LayoutGrid } from 'lucide-react'
+import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, ShieldCheck, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, FileText, ClipboardCheck, Car, RefreshCw, Trash2, Globe, Github, Compass, Sparkles, LayoutGrid, CreditCard } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore, useJourneyStore, usePreferencesStore } from '@/stores'
+import type { PageType } from '@/stores/types'
 import {
   useHubBlocksStore,
   useInstalledBlocks,
@@ -13,7 +15,6 @@ import {
   useStormiAutoWelcomeCandidateDone,
 } from '@/stores/hub-blocks-store'
 import type { InstalledBlock } from '@/stores/hub-blocks-store'
-import type { PageType } from '@/stores/types'
 import { getBlockColor, getBlockDefinition } from '@/lib/block-registry'
 import { getBlockIllustration } from './BlockIllustrations'
 import Button from '@/components/ui/Button'
@@ -424,6 +425,106 @@ function VaultHubGrid({
 
 // ── Profile header ───────────────────────────────────────────────────────────
 
+function HubProfileCareerCardCallout({
+  isDark,
+  blockCount,
+}: {
+  isDark: boolean
+  blockCount: number
+}) {
+  const setCurrentPage = useUIStore((s) => s.setCurrentPage)
+  const openPicker = useHubBlocksStore((s) => s.openPicker)
+  const hasBlocks = blockCount > 0
+
+  return (
+    <div
+      className={cn(
+        'rounded-xl border p-4 transition-colors',
+        hasBlocks
+          ? isDark
+            ? 'border-teal-500/40 bg-teal-500/[0.07] shadow-[0_0_0_1px_rgba(20,184,166,0.12)]'
+            : 'border-teal-500/35 bg-teal-50/70 shadow-sm shadow-teal-900/5'
+          : isDark
+            ? 'border-gray-700/80 bg-gray-900/40'
+            : 'border-slate-200/95 bg-slate-50/90',
+      )}
+    >
+      <div className='flex gap-3'>
+        <div
+          className={cn(
+            'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset',
+            hasBlocks
+              ? isDark
+                ? 'bg-teal-500/15 ring-teal-400/25'
+                : 'bg-white ring-teal-600/15'
+              : isDark
+                ? 'bg-gray-800 ring-gray-600/50'
+                : 'bg-white ring-slate-200',
+          )}
+        >
+          <CreditCard
+            className={cn(
+              'h-5 w-5',
+              hasBlocks
+                ? isDark
+                  ? 'text-teal-300'
+                  : 'text-teal-700'
+                : isDark
+                  ? 'text-gray-500'
+                  : 'text-slate-500',
+            )}
+            aria-hidden
+          />
+        </div>
+        <div className='min-w-0 flex-1'>
+          <p
+            className={cn(
+              'text-[10px] font-bold uppercase tracking-[0.16em]',
+              hasBlocks
+                ? isDark
+                  ? 'text-teal-300/95'
+                  : 'text-teal-800'
+                : isDark
+                  ? 'text-gray-500'
+                  : 'text-slate-500',
+            )}
+          >
+            Career Card
+          </p>
+          <p
+            className={cn(
+              'mt-1.5 text-sm leading-snug',
+              isDark ? 'text-gray-200' : 'text-slate-800',
+            )}
+          >
+            {hasBlocks
+              ? `You’ve added ${blockCount} hub block${blockCount === 1 ? '' : 's'} — your Career Card is taking shape. See the live view employers get.`
+              : 'Your Career Card is built from the blocks you install below. Add your first block to get it started.'}
+          </p>
+          <div className='mt-3'>
+            {hasBlocks ? (
+              <Button
+                type='button'
+                variant='primary'
+                size='sm'
+                onClick={() => setCurrentPage('career-card' as PageType)}
+                className='w-full sm:w-auto'
+              >
+                View Career Card
+              </Button>
+            ) : (
+              <Button type='button' variant='primary' size='sm' onClick={openPicker} className='w-full sm:w-auto'>
+                <Plus className='h-4 w-4 shrink-0' />
+                Browse blocks
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function HubProfileHeader({
   onRefreshHub,
   hubRefreshing = false,
@@ -512,10 +613,41 @@ function HubProfileHeader({
     isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-slate-100 border-slate-300 text-slate-900'
   )
 
+  const showRefresh = Boolean(walletAddress && onRefreshHub)
+
   return (
     <VaultHorizontalVaultShell isDark={isDark} layout='panel' contentClassName='p-6 sm:p-7'>
-      <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6'>
-        <div className='flex items-center gap-4'>
+      {/*
+        Desktop: Refresh (left) | Profile (center) | Career Card CTA + completeness (right).
+        Mobile: Profile first, then Career + completeness, then refresh — so identity stays on top without a heavy preview.
+      */}
+      <div className='flex flex-col gap-6 lg:flex-row lg:items-stretch lg:gap-6 xl:gap-8'>
+        {showRefresh ? (
+          <div
+            className={cn(
+              'order-3 flex shrink-0 flex-col justify-start gap-2 border-t pt-5 lg:order-1 lg:max-w-[11rem] lg:min-h-0 lg:justify-center lg:border-t-0 lg:border-r lg:pr-6 lg:pt-0',
+              isDark ? 'border-gray-600/50 lg:border-gray-600/50' : 'border-slate-200/90 lg:border-slate-200/90',
+            )}
+          >
+            <Button
+              type='button'
+              variant='secondary'
+              size='sm'
+              onClick={onRefreshHub}
+              disabled={hubRefreshing}
+              isLoading={hubRefreshing}
+              className='w-full justify-center gap-2 lg:w-auto lg:justify-start'
+            >
+              {!hubRefreshing ? <RefreshCw className='h-4 w-4 shrink-0' aria-hidden /> : null}
+              Refresh hub
+            </Button>
+            <p className={cn('text-xs leading-snug', isDark ? 'text-gray-500' : 'text-slate-600')}>
+              Pull the latest blocks and files — no full page reload.
+            </p>
+          </div>
+        ) : null}
+
+        <div className='order-1 flex min-h-0 min-w-0 flex-1 items-center gap-4 lg:order-2 lg:self-stretch'>
           <AvatarUpload
             name={displayName}
             avatarUrl={userProfile?.avatarUrl ?? null}
@@ -527,7 +659,7 @@ function HubProfileHeader({
           />
 
           {isEditing ? (
-            <div className='flex flex-col gap-2 min-w-0'>
+            <div className='flex min-w-0 flex-col gap-2'>
               <div className='flex gap-2'>
                 <input
                   value={editFirst}
@@ -568,31 +700,34 @@ function HubProfileHeader({
               </div>
             </div>
           ) : (
-            <div>
+            <div className='min-w-0'>
               <div className='flex items-center gap-2'>
-                <h1 className={cn(
-                  'text-2xl sm:text-3xl font-bold',
-                  isDark ? 'text-white' : 'text-slate-800'
-                )}>
+                <h1
+                  className={cn(
+                    'text-2xl font-bold sm:text-3xl',
+                    isDark ? 'text-white' : 'text-slate-800',
+                  )}
+                >
                   {displayName}
                 </h1>
                 <button
+                  type='button'
                   onClick={startEditing}
                   className={cn(
-                    'p-1 rounded-lg transition-colors',
-                    isDark ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
+                    'rounded-lg p-1 transition-colors',
+                    isDark
+                      ? 'text-gray-400 hover:bg-gray-700 hover:text-white'
+                      : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700',
                   )}
                   title='Edit profile'
                 >
-                  <Pencil className='w-4 h-4' />
+                  <Pencil className='h-4 w-4' />
                 </button>
               </div>
               {headline ? (
-                <p className={cn('text-sm mt-1', isDark ? 'text-teal-400' : 'text-teal-600')}>
-                  {headline}
-                </p>
+                <p className={cn('mt-1 text-sm', isDark ? 'text-teal-400' : 'text-teal-600')}>{headline}</p>
               ) : (
-                <p className={cn('text-sm mt-1', isDark ? 'text-gray-400' : 'text-slate-600')}>
+                <p className={cn('mt-1 text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>
                   Complete onboarding to set your role
                 </p>
               )}
@@ -608,7 +743,7 @@ function HubProfileHeader({
                   )}
                   aria-label='Edit what you do and why you are here for Stormi'
                 >
-                  <Sparkles className='w-3.5 h-3.5 shrink-0' />
+                  <Sparkles className='h-3.5 w-3.5 shrink-0' />
                   Edit what you told Stormi
                 </button>
               )}
@@ -616,73 +751,59 @@ function HubProfileHeader({
           )}
         </div>
 
-        <div className='flex-shrink-0 w-full lg:w-72'>
-          <div className='flex items-center justify-between mb-2'>
-            <span className={cn('text-sm font-semibold', isDark ? 'text-gray-300' : 'text-slate-700')}>
-              Profile Completeness
-            </span>
-            <span className={cn(
-              'text-lg font-bold',
-              completeness >= 75
-                ? isDark ? 'text-green-500' : 'text-emerald-800'
-                : completeness >= 50 ? 'text-yellow-500'
-                : isDark ? 'text-gray-400' : 'text-slate-600'
-            )}>
-              {completeness}%
-            </span>
-          </div>
-          <div
-            className={cn(
-              'h-3 rounded-full overflow-hidden ring-1 ring-inset',
-              isDark ? 'bg-gray-800 ring-gray-600/50' : 'bg-slate-200/95 ring-slate-400/55',
-            )}
-          >
+        <div className='order-2 flex w-full shrink-0 flex-col justify-start gap-4 lg:order-3 lg:w-72 lg:min-h-0 lg:justify-center'>
+          <HubProfileCareerCardCallout isDark={isDark} blockCount={installedBlocks.length} />
+
+          <div>
+            <div className='mb-2 flex items-center justify-between'>
+              <span className={cn('text-sm font-semibold', isDark ? 'text-gray-300' : 'text-slate-700')}>
+                Profile completeness
+              </span>
+              <span
+                className={cn(
+                  'text-lg font-bold',
+                  completeness >= 75
+                    ? isDark
+                      ? 'text-green-500'
+                      : 'text-emerald-800'
+                    : completeness >= 50
+                      ? 'text-yellow-500'
+                      : isDark
+                        ? 'text-gray-400'
+                        : 'text-slate-600',
+                )}
+              >
+                {completeness}%
+              </span>
+            </div>
             <div
               className={cn(
-                'h-full rounded-full transition-all duration-500',
-                isDark ? 'shadow-[0_0_12px_rgba(20,184,166,0.35)]' : 'shadow-[0_0_10px_rgba(13,148,136,0.28)]',
-                completeness >= 75
-                  ? isDark
-                    ? 'bg-gradient-to-r from-emerald-400 to-teal-500'
-                    : 'bg-gradient-to-r from-emerald-600 to-teal-600'
-                  : completeness >= 50
-                    ? isDark
-                      ? 'bg-gradient-to-r from-amber-400 to-yellow-500'
-                      : 'bg-gradient-to-r from-amber-600 to-amber-500'
-                    : isDark
-                      ? 'bg-gradient-to-r from-teal-400 to-cyan-500'
-                      : 'bg-gradient-to-r from-teal-600 to-teal-500',
+                'h-3 overflow-hidden rounded-full ring-1 ring-inset',
+                isDark ? 'bg-gray-800 ring-gray-600/50' : 'bg-slate-200/95 ring-slate-400/55',
               )}
-              style={{ width: `${completeness}%` }}
-            />
+            >
+              <div
+                className={cn(
+                  'h-full rounded-full transition-all duration-500',
+                  isDark ? 'shadow-[0_0_12px_rgba(20,184,166,0.35)]' : 'shadow-[0_0_10px_rgba(13,148,136,0.28)]',
+                  completeness >= 75
+                    ? isDark
+                      ? 'bg-gradient-to-r from-emerald-400 to-teal-500'
+                      : 'bg-gradient-to-r from-emerald-600 to-teal-600'
+                    : completeness >= 50
+                      ? isDark
+                        ? 'bg-gradient-to-r from-amber-400 to-yellow-500'
+                        : 'bg-gradient-to-r from-amber-600 to-amber-500'
+                      : isDark
+                        ? 'bg-gradient-to-r from-teal-400 to-cyan-500'
+                        : 'bg-gradient-to-r from-teal-600 to-teal-500',
+                )}
+                style={{ width: `${completeness}%` }}
+              />
+            </div>
           </div>
         </div>
       </div>
-
-      {walletAddress && onRefreshHub && (
-        <div
-          className={cn(
-            'mt-6 flex flex-col items-center gap-2 border-t pt-6',
-            isDark ? 'border-gray-600/50' : 'border-slate-200/90',
-          )}
-        >
-          <Button
-            type='button'
-            variant='primary'
-            size='md'
-            onClick={onRefreshHub}
-            disabled={hubRefreshing}
-            isLoading={hubRefreshing}
-            className='min-w-[12rem] text-base font-semibold'
-          >
-            {!hubRefreshing ? <RefreshCw className='h-4 w-4 shrink-0' aria-hidden /> : null}
-            Refresh hub
-          </Button>
-          <p className={cn('max-w-md text-center text-sm leading-snug', isDark ? 'text-gray-400' : 'text-slate-600')}>
-            Pull the latest blocks and files. No full page reload.
-          </p>
-        </div>
-      )}
     </VaultHorizontalVaultShell>
   )
 }
@@ -1648,56 +1769,81 @@ export default function CandidateHub() {
             />
 
             <div id='stormi-hub-panel' className='scroll-mt-24'>
-              <StormiChatPanel
-                mode='candidate'
-                walletAddress={walletAddress}
-                hubContext={hubContext}
-                candidateEmptyHub={installedBlocks.length === 0}
-                stormiAutoWelcomeCandidateDone={stormiAutoWelcomeCandidateDone}
-                onStormiAutoWelcomeSynced={undefined}
-              />
+              <VaultHorizontalVaultShell
+                isDark={isDark}
+                layout='panel'
+                accent='violet'
+                contentClassName='p-4 sm:p-5 lg:p-6'
+              >
+                <BlockCard
+                  variant='embed'
+                  headerIconSlot={
+                    <Image
+                      src='/ava-robot.png'
+                      alt=''
+                      width={36}
+                      height={36}
+                      className={cn('object-contain', !isDark && 'invert')}
+                    />
+                  }
+                  title='Ask Stormi'
+                  description='Ranked jobs, interview practice, and talking points from your Career Card — you choose every apply.'
+                >
+                  <StormiChatPanel
+                    mode='candidate'
+                    walletAddress={walletAddress}
+                    hubContext={hubContext}
+                    candidateEmptyHub={installedBlocks.length === 0}
+                    stormiAutoWelcomeCandidateDone={stormiAutoWelcomeCandidateDone}
+                    onStormiAutoWelcomeSynced={undefined}
+                    hubEmbedSurface
+                  />
+                </BlockCard>
+              </VaultHorizontalVaultShell>
             </div>
 
-            {/* ── Block Hive — same BlockCard shell as every hub block + Block Files below ── */}
+            {/* ── Block Hive — vault shell matches Job alerts / Block files; Block Files section below ── */}
             <div>
-          <BlockCard
-            icon={LayoutGrid}
-            title='Your blocks'
-            description='Drag to reorder · tap to open · dashed = add'
-            headerActions={
-              <>
-                {installedBlocks.length > 0 && (
-                  <button
-                    type='button'
-                    onClick={() => setEditMode(!isEditing)}
-                    className={cn(
-                      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
-                      isEditing
-                        ? 'bg-teal-500 text-white hover:bg-teal-600'
-                        : isDark
-                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
-                    )}
-                  >
-                    {isEditing ? <Check className='w-3.5 h-3.5' /> : <Pencil className='w-3.5 h-3.5' />}
-                    {isEditing ? 'Done' : 'Edit'}
-                  </button>
-                )}
-                <Button variant='primary' size='sm' onClick={openPicker}>
-                  <Plus className='w-4 h-4' />
-                  Add
-                </Button>
-                {installedBlocks.length > 0 && (
-                  <HubSectionCollapseToggle
-                    expanded={hubYourBlocksExpanded}
-                    onToggle={() => setHubYourBlocksExpanded(!hubYourBlocksExpanded)}
-                    sectionLabel='Your blocks'
-                    isDark={isDark}
-                  />
-                )}
-              </>
-            }
-          >
+              <VaultHorizontalVaultShell
+                isDark={isDark}
+                layout='panel'
+                accent='teal'
+                contentClassName='p-4 sm:p-5 lg:p-6'
+              >
+                <BlockCard
+                  variant='embed'
+                  icon={LayoutGrid}
+                  title='Your blocks'
+                  description='Drag to reorder · tap to open · dashed = add'
+                  headerActions={
+                    <>
+                      {installedBlocks.length > 0 && (
+                        <Button
+                          type='button'
+                          variant={isEditing ? 'primary' : 'secondary'}
+                          size='sm'
+                          className='gap-1.5'
+                          onClick={() => setEditMode(!isEditing)}
+                        >
+                          {isEditing ? <Check className='w-3.5 h-3.5' /> : <Pencil className='w-3.5 h-3.5' />}
+                          {isEditing ? 'Done' : 'Edit'}
+                        </Button>
+                      )}
+                      <Button variant='primary' size='sm' onClick={openPicker}>
+                        <Plus className='w-4 h-4' />
+                        Add
+                      </Button>
+                      {installedBlocks.length > 0 && (
+                        <HubSectionCollapseToggle
+                          expanded={hubYourBlocksExpanded}
+                          onToggle={() => setHubYourBlocksExpanded(!hubYourBlocksExpanded)}
+                          sectionLabel='Your blocks'
+                          isDark={isDark}
+                        />
+                      )}
+                    </>
+                  }
+                >
           {showYourBlocksPanel && (
           <>
           {installedBlocks.length === 0 ? (
@@ -1752,12 +1898,13 @@ export default function CandidateHub() {
           )}
           </>
           )}
-          </BlockCard>
+                </BlockCard>
+              </VaultHorizontalVaultShell>
 
-          {/* Block Files — below hive section */}
-          <div className='mt-6'>
-            <MyFilesSection refreshKey={refreshKey} />
-          </div>
+              {/* Block Files — below hive vault */}
+              <div className='mt-6'>
+                <MyFilesSection refreshKey={refreshKey} />
+              </div>
             </div>
 
             <div className='mt-4'>

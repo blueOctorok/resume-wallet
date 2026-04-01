@@ -9,9 +9,12 @@ import Card from './Card'
 
 export type BlockStatus = 'complete' | 'in-progress' | 'empty'
 
-interface BlockCardProps {
-  /** Icon component from lucide-react — passed as a component, not a string */
-  icon: LucideIcon
+type BlockCardHeaderVisual =
+  | { icon: LucideIcon; headerIconSlot?: undefined }
+  /** Custom tile content (e.g. Stormi robot) instead of a Lucide icon */
+  | { headerIconSlot: ReactNode; icon?: undefined }
+
+export type BlockCardProps = BlockCardHeaderVisual & {
   title: string
   description?: string
   status?: BlockStatus
@@ -66,9 +69,11 @@ const statusConfig: Record<BlockStatus, {
  *   </BlockCard>
  *   <BlockCard icon={LayoutGrid} title="Your blocks" headerActions={...}>…hive…</BlockCard>
  *   <VaultHorizontalVaultShell><BlockCard variant="embed" … /></VaultHorizontalVaultShell> — hub files; no nested Card.
+ *   <BlockCard headerIconSlot={<Image … />} title="Ask Stormi" … /> — image in the icon tile.
  */
 function BlockCardChrome({
   icon: Icon,
+  headerIconSlot,
   title,
   description,
   status,
@@ -107,8 +112,12 @@ function BlockCardChrome({
         )}
       >
         <div className='flex min-w-0 items-center gap-3'>
-          <div className='flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500/20 via-cyan-500/12 to-violet-500/15 shadow-inner shadow-teal-900/5 ring-1 ring-teal-500/25 dark:from-teal-400/25 dark:via-teal-500/10 dark:to-violet-500/20 dark:ring-teal-400/30'>
-            <Icon className='h-5 w-5 text-teal-600 dark:text-teal-400' />
+          <div className='flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500/20 via-cyan-500/12 to-violet-500/15 shadow-inner shadow-teal-900/5 ring-1 ring-teal-500/25 dark:from-teal-400/25 dark:via-teal-500/10 dark:to-violet-500/20 dark:ring-teal-400/30 overflow-hidden'>
+            {headerIconSlot != null ? (
+              headerIconSlot
+            ) : Icon != null ? (
+              <Icon className='h-5 w-5 text-teal-600 dark:text-teal-400' />
+            ) : null}
           </div>
 
           <div className='min-w-0'>
@@ -153,28 +162,15 @@ function BlockCardChrome({
 }
 
 export default function BlockCard({
-  icon: Icon,
-  title,
-  description,
-  status,
-  onRemove,
-  headerActions,
   variant = 'default',
   className,
   children,
+  ...chromeProps
 }: BlockCardProps) {
   if (variant === 'embed') {
     return (
       <div className={cn('relative overflow-hidden', className)}>
-        <BlockCardChrome
-          embed
-          icon={Icon}
-          title={title}
-          description={description}
-          status={status}
-          onRemove={onRemove}
-          headerActions={headerActions}
-        >
+        <BlockCardChrome embed {...chromeProps}>
           {children}
         </BlockCardChrome>
       </div>
@@ -183,15 +179,7 @@ export default function BlockCard({
 
   return (
     <Card variant='elevated' className={cn('overflow-hidden relative', className)}>
-      <BlockCardChrome
-        embed={false}
-        icon={Icon}
-        title={title}
-        description={description}
-        status={status}
-        onRemove={onRemove}
-        headerActions={headerActions}
-      >
+      <BlockCardChrome embed={false} {...chromeProps}>
         {children}
       </BlockCardChrome>
     </Card>

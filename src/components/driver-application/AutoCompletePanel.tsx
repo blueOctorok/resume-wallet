@@ -117,7 +117,7 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
         onClick={onToggle}
         className={`fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg transition-colors z-50 ${
           theme === 'light'
-            ? 'bg-brand-sage hover:bg-brand-sage-dark text-white'
+            ? 'bg-teal-700 hover:bg-teal-900 text-white'
             : 'bg-purple-600 hover:bg-purple-700 text-white'
         }`}
         title='Show Auto-Complete Panel'
@@ -144,7 +144,7 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
       className={`fixed bottom-4 right-4 border rounded-lg shadow-xl p-4 w-80 z-50 ${
         theme === 'light'
           ? 'bg-white border-gray-200'
-          : 'bg-brand-sage-light/10 border-brand-mint/30'
+          : 'bg-teal-200/10 border-teal-500/30'
       }`}
     >
       <div className='flex items-center justify-between mb-4'>
@@ -194,7 +194,7 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
             onChange={(e) => setSelectedPreset(e.target.value as any)}
             className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
               theme === 'light'
-                ? 'border-gray-300 focus:ring-brand-sage'
+                ? 'border-gray-300 focus:ring-teal-500'
                 : 'border-gray-300 focus:ring-purple-500'
             }`}
           >
@@ -210,7 +210,7 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
             onClick={handleFillAll}
             className={`w-full px-4 py-2 text-white rounded-md transition-colors ${
               theme === 'light'
-                ? 'bg-brand-sage hover:bg-brand-sage-dark'
+                ? 'bg-teal-700 hover:bg-teal-900'
                 : 'bg-purple-600 hover:bg-purple-700'
             }`}
           >
@@ -221,8 +221,8 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
             onClick={handleFillCurrentStep}
             className={`w-full px-4 py-2 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl ${
               theme === 'light'
-                ? 'text-white bg-brand-sage hover:bg-brand-sage-dark'
-                : 'text-brand-sage bg-brand-mint hover:bg-brand-mint/80'
+                ? 'text-white bg-teal-700 hover:bg-teal-900'
+                : 'bg-teal-600 text-white hover:bg-teal-500'
             }`}
           >
             Fill Current Step ({getStepName(currentStep)})
@@ -250,7 +250,7 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
         {/* Current Step Info */}
         <div
           className={`rounded-md p-3 ${
-            theme === 'light' ? 'bg-gray-50' : 'bg-brand-sage/20'
+            theme === 'light' ? 'bg-gray-50' : 'bg-teal-700/20'
           }`}
         >
           <div

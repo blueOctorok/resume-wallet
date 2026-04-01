@@ -74,11 +74,12 @@ export default function StormiJourneyGuide() {
         ref={panelRef}
         className={cn(
           'fixed right-0 top-0 bottom-0 z-50',
+          // min-w-0 + overflow-x-hidden: iOS/WebKit won’t let vault drop-shadows / wide flex children widen the page
+          'flex min-w-0 max-w-full flex-col overflow-x-hidden',
           'w-full max-w-md',
           'bg-white dark:bg-gray-900',
           'border-l border-gray-200 dark:border-gray-700',
           'shadow-2xl',
-          'flex flex-col',
           'transform transition-transform duration-300 ease-out',
           isGuideOpen ? 'translate-x-0' : 'translate-x-full',
         )}
@@ -86,20 +87,19 @@ export default function StormiJourneyGuide() {
         aria-modal='true'
         aria-label='Stormi Journey Guide'
       >
-        <div className='flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-brand-mint/10 to-transparent'>
-          <div className='flex items-start justify-between'>
-            <div className='flex items-center gap-3'>
+        <div className='min-w-0 flex-shrink-0 border-b border-gray-200 bg-gradient-to-r from-teal-500/12 to-transparent p-6 dark:border-gray-700 dark:from-teal-400/10'>
+          <div className='flex items-start justify-between gap-2'>
+            <div className='flex min-w-0 items-center gap-3'>
               <div
                 className={cn(
-                  'w-12 h-12 rounded-full',
-                  'bg-gradient-to-br from-brand-mint to-brand-mint/70',
-                  'flex items-center justify-center',
-                  'shadow-lg shadow-brand-mint/25',
+                  'flex h-12 w-12 items-center justify-center rounded-full',
+                  'bg-gradient-to-br from-teal-600 to-cyan-600',
+                  'shadow-lg shadow-teal-600/30 dark:shadow-teal-400/20',
                 )}
               >
                 <Bot className='w-6 h-6 text-white' />
               </div>
-              <div>
+              <div className='min-w-0'>
                 <h2 className='text-lg font-bold text-gray-900 dark:text-white'>
                   {userRole === 'employer' ? 'Your job path' : 'Your apply-ready path'}
                 </h2>
@@ -124,10 +124,10 @@ export default function StormiJourneyGuide() {
             </button>
           </div>
 
-          <p className='mt-4 text-sm text-gray-600 dark:text-gray-300'>{progress.greeting}</p>
+          <p className='mt-4 break-words text-sm text-gray-600 dark:text-gray-300'>{progress.greeting}</p>
         </div>
 
-        <div className='flex-1 overflow-y-auto p-6'>
+        <div className='min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-6'>
           {userRole === 'employer' ? (
             <EmployerPathSidebar
               variant='drawer'

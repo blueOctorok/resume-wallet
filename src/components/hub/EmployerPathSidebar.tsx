@@ -105,16 +105,20 @@ export default function EmployerPathSidebar({
       glowColor={pathVaultGlow}
       hasRoute
       showSigil={false}
-      className='w-full'
-      style={{
-        filter: isDark
-          ? 'drop-shadow(0 4px 22px rgba(0,0,0,0.5))'
-          : 'drop-shadow(0 4px 14px rgba(15,23,42,0.1))',
-      }}
+      className='w-full max-w-full min-w-0'
+      style={
+        variant === 'sticky'
+          ? {
+              filter: isDark
+                ? 'drop-shadow(0 4px 22px rgba(0,0,0,0.5))'
+                : 'drop-shadow(0 4px 14px rgba(15,23,42,0.1))',
+            }
+          : undefined
+      }
     >
       <div
         className={cn(
-          'relative flex min-h-0 flex-col gap-4 px-3.5 pb-[14px] pt-3.5',
+          'relative flex min-h-0 min-w-0 flex-col gap-4 px-3.5 pb-[14px] pt-3.5',
           onRequestCollapse && 'pr-11',
         )}
       >
@@ -180,5 +184,5 @@ export default function EmployerPathSidebar({
     )
   }
 
-  return <div className={cn(className)}>{rail}</div>
+  return <div className={cn('min-w-0 max-w-full overflow-x-hidden', className)}>{rail}</div>
 }

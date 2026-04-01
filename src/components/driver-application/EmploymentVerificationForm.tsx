@@ -380,10 +380,10 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
     <div
       className={`max-w-4xl mx-auto p-6 ${
         theme === 'dark'
-          ? 'bg-brand-sage-light/20 backdrop-blur-xl'
+          ? 'bg-teal-200/20 backdrop-blur-xl'
           : 'bg-white/80 backdrop-blur-xl'
       } rounded-2xl shadow-2xl relative z-10 border-t-4 ${
-        theme === 'dark' ? 'border-brand-mint' : 'border-brand-sage'
+        theme === 'dark' ? 'border-teal-500' : 'border-teal-700'
       }`}
     >
       {/* Header */}
@@ -455,7 +455,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 theme === 'dark'
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
-              } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+              } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
             />
           </div>
 
@@ -475,7 +475,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 theme === 'dark'
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
-              } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+              } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
             />
           </div>
 
@@ -495,7 +495,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 theme === 'dark'
                   ? 'bg-brand-cream border-gray-300 text-gray-900 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                   : 'bg-white border-gray-300 text-gray-900'
-              } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+              } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
             />
           </div>
 
@@ -517,7 +517,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 theme === 'dark'
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
-              } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+              } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
             />
           </div>
         </div>
@@ -540,7 +540,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
               theme === 'dark'
                 ? 'bg-brand-cream border-gray-300 text-gray-900'
                 : 'bg-white border-gray-300 text-gray-900'
-            } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+            } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
           />
         </div>
 
@@ -563,7 +563,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 theme === 'dark'
                   ? 'bg-brand-cream border-gray-300 text-gray-900 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                   : 'bg-white border-gray-300 text-gray-900'
-              } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+              } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
             />
           </div>
 
@@ -585,7 +585,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 theme === 'dark'
                   ? 'bg-brand-cream border-gray-300 text-gray-900 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                   : 'bg-white border-gray-300 text-gray-900'
-              } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+              } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
             />
           </div>
 
@@ -607,7 +607,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 theme === 'dark'
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
-              } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+              } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
             />
           </div>
         </div>
@@ -650,7 +650,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 theme === 'dark'
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
-              } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+              } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
             />
           </div>
 
@@ -672,7 +672,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 theme === 'dark'
                   ? 'bg-brand-cream border-gray-300 text-gray-900 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                   : 'bg-white border-gray-300 text-gray-900'
-              } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+              } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
             />
           </div>
         </div>
@@ -705,7 +705,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 theme === 'dark'
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
-              } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+              } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
             />
           </div>
 
@@ -724,7 +724,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 theme === 'dark'
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
-              } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+              } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
             />
           </div>
         </div>
@@ -747,7 +747,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
               theme === 'dark'
                 ? 'bg-brand-cream border-gray-300 text-gray-900'
                 : 'bg-white border-gray-300 text-gray-900'
-            } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+            } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
           />
         </div>
 
@@ -770,7 +770,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 theme === 'dark'
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
-              } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+              } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
             />
           </div>
 
@@ -790,7 +790,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 theme === 'dark'
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
-              } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+              } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
             />
           </div>
 
@@ -812,7 +812,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 theme === 'dark'
                   ? 'bg-brand-cream border-gray-300 text-gray-900 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                   : 'bg-white border-gray-300 text-gray-900'
-              } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+              } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
             />
           </div>
         </div>
@@ -849,7 +849,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                   theme === 'dark'
                     ? 'bg-brand-cream border-gray-300 text-gray-900 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900'
-                } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+                } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
               />
             </div>
 
@@ -871,7 +871,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                   theme === 'dark'
                     ? 'bg-brand-cream border-gray-300 text-gray-900 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900'
-                } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+                } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
               />
             </div>
           </div>
@@ -894,7 +894,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 theme === 'dark'
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
-              } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+              } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
             />
           </div>
 
@@ -949,7 +949,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                 theme === 'dark'
                   ? 'bg-brand-cream border-gray-300 text-gray-900'
                   : 'bg-white border-gray-300 text-gray-900'
-              } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+              } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
             />
           </div>
         </div>
@@ -1165,8 +1165,8 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
               onClick={addAccident}
               className={`px-4 py-2 rounded-md font-medium ${
                 theme === 'dark'
-                  ? 'bg-brand-sage text-white hover:bg-brand-sage/90'
-                  : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+                  ? 'bg-teal-700 text-white hover:bg-teal-700/90'
+                  : 'bg-teal-700 text-white hover:bg-teal-700/90'
               }`}
             >
               Add Accident
@@ -1236,7 +1236,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                   theme === 'dark'
                     ? 'bg-brand-cream border-gray-300 text-gray-900'
                     : 'bg-white border-gray-300 text-gray-900'
-                } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+                } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
               />
             </div>
 
@@ -1258,7 +1258,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                   theme === 'dark'
                     ? 'bg-brand-cream border-gray-300 text-gray-900'
                     : 'bg-white border-gray-300 text-gray-900'
-                } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+                } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
               />
             </div>
 
@@ -1280,7 +1280,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                   theme === 'dark'
                     ? 'bg-brand-cream border-gray-300 text-gray-900'
                     : 'bg-white border-gray-300 text-gray-900'
-                } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+                } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
               />
             </div>
 
@@ -1302,7 +1302,7 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
                   theme === 'dark'
                     ? 'bg-brand-cream border-gray-300 text-gray-900 [&::-webkit-calendar-picker-indicator]:bg-gray-800 [&::-webkit-calendar-picker-indicator]:text-white [&::-webkit-calendar-picker-indicator]:rounded'
                     : 'bg-white border-gray-300 text-gray-900'
-                } focus:ring-2 focus:ring-brand-sage focus:border-transparent`}
+                } focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
               />
             </div>
           </div>
@@ -1468,8 +1468,8 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
             onClick={addAttempt}
             className={`px-4 py-2 rounded-md font-medium ${
               theme === 'dark'
-                ? 'bg-brand-sage text-white hover:bg-brand-sage/90'
-                : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+                ? 'bg-teal-700 text-white hover:bg-teal-700/90'
+                : 'bg-teal-700 text-white hover:bg-teal-700/90'
             }`}
           >
             Add Attempt
@@ -1509,8 +1509,8 @@ const EmploymentVerificationForm = ({ onComplete, userAddress }: EmploymentVerif
             disabled={submitting}
             className={`px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${
               theme === 'dark'
-                ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+                ? 'bg-teal-600 text-white hover:bg-teal-500'
+                : 'bg-teal-700 text-white hover:bg-teal-700/90'
             }`}
           >
             {submitting ? 'Submitting…' : 'Submit Verification Hash'}

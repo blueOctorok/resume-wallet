@@ -4,15 +4,65 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Hub profile header — vertical balance (lg+)** (March 2026)
+
+- [`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx) **`HubProfileHeader`**: Row uses **`lg:items-stretch`** so columns share the shell height; **Refresh** column **`lg:justify-center`**, **profile** (avatar + name) stays **`items-center`** in a stretched middle column, **Career Card + completeness** column **`lg:justify-center`** so all three bands use vertical space instead of hugging the top.
+
+## **STORM wordmark — breathing room top/bottom** (March 2026)
+
+- [`StormChainWordmark.tsx`](src/components/ui/StormChainWordmark.tsx): **Vault chrome** inner face uses larger **`pt`/`pb`** (base + hero); **nav** type-only row uses **`py-2` / `sm:py-2.5`** instead of tiny **`em`** padding.
+- [`Navigation.tsx`](src/components/Navigation.tsx): Center logo column adds **`py-1` / `sm:py-1.5`** so the wordmark sits with a bit more space within the nav band.
+
 ## **STORM wordmark — O as split neon block** (March 2026)
 
 - [`StormChainWordmark.tsx`](src/components/ui/StormChainWordmark.tsx): The **O** is a **square** (`1cap`): **violet** frame + glow; **dark foil interior** (hub-style **conic** wash, **dot grid** dark / **`VaultLightFrostTexture` tile** light, **sheen**, **chamfer spark**, **foot strip**). **Cloud** ~**scale 1.12–1.14**, **tighter teal** `drop-shadow` (less interior blow-out). **Inset** face `inset-[2px]` so foil sits inside the violet border.
+
+## **STORM wordmark — same chrome as hub blocks** (March 2026)
+
+- [`StormChainWordmark.tsx`](src/components/ui/StormChainWordmark.tsx): Full logo bar uses **`VaultCredentialChrome`** **`clipVariant="horizontal"`** — same stack as **My blocks** (rim, conic, spark, frosted face, sheen, strip + sweep, hover glow). **`getBlockColor('storm')`**; **sigil** off on bar; **droplets** behind type. **Tight** vertical padding + **`leading-none`**. **Type scale** bumped: nav **`1.5 / 1.75 / 2rem`**, hero **`2.5 / 3 / 3.5rem`**; vault pad nudged to match.
+- [`HubBlockVault.tsx`](src/components/hub/HubBlockVault.tsx): **`VaultCredentialChrome`** **`clipVariant`** + horizontal content wrapper **omits `h-full`** so height follows content (no empty flex stretch).
+
+## **STORM wordmark — water droplets on vault glass** (March 2026)
+
+- [`StormChainWordmark.tsx`](src/components/ui/StormChainWordmark.tsx): **`WordmarkDroplet` / `WordmarkDropletField`** — lens-like **radial gradients** (specular hit + teal body + bottom meniscus) + **inset shadows**, **elliptical** `rounded-full`, varied **rotation**. **Bar** variant: **14** larger beads, **~0.66–0.82** opacity (light), stronger gradients. **O-tile**: **5** beads, boosted size/opacity. **`motion-reduce`** hides the field.
+- **Light O tile:** **Bolder** `border-2` violet, **inset-only** violet wash (no outer colored glow bleed), **cooler teal-tint** face, **stronger** conic / sheen / spark / strip / micro-dot, **`text-teal-700`** cloud + **richer** clipped `drop-shadow` stack.
 
 ## **STORM wordmark — light-mode polish + controlled glow** (March 2026)
 
 - **O (light):** Removed the **outer violet blur** (was bleeding on the canvas). **Frame** = hairline **violet** border + **slate** inset ring + **inset-only** shadows (violet rim + contact shadow). **Cloud** uses a **stacked `filter: drop-shadow`** (emboss + **tight teal** bloom) and sits **inside** the **clipped foil** so glow stays in the credential. **Icy face** gradient, **extra micro-dot** layer, **softer conic**, **tighter** corner spark. **Dark** keeps the outer violet bloom.
 - **Letters (light):** **`WordmarkLetterGroup`** — **gradient** `bg-clip-text` + **controlled** `drop-shadow` emboss / teal whisper (hero vs nav). **`isolate`** on the type row so blends stay local.
 - **Vault bar (light):** Cooler **innerBg**, **lower-opacity** hero **conic**, **softer** chamfer **blur**, specular **mix-blend-soft-light**, sheen/strip **multiply** tuned, bottom strip **inset highlight**.
+
+---
+
+## **Brand colors — sage/mint → vault teal** (March 2026)
+
+- **Primary actions:** [`Button.tsx`](src/components/ui/Button.tsx) **`primary`** is **`teal-600` / white** (replaces light sage **`brand-mint`** fill used for View Career Card, Add block, etc.).
+- **Career path / journey:** [`CareerPathSteps.tsx`](src/components/hub/CareerPathSteps.tsx) — completed steps use **teal** fills and copy (no **green-500** check pills); progress bar **teal → cyan**. [`PathGuidance.tsx`](src/components/hub/PathGuidance.tsx) active step chips use **teal** borders/fills. [`StormiJourneyGuide.tsx`](src/components/StormiJourneyGuide.tsx) header uses **teal/cyan** gradient avatar.
+- **Stormi chat:** [`StormiChatPanel.tsx`](src/components/stormi/StormiChatPanel.tsx) — user bubbles, send, avatars, empty-state rings → **teal** (no **`brand-mint`** / **`brand-sage-dark`**).
+- **Widespread:** `brand-sage` / `brand-mint` Tailwind class strings in TSX replaced with **`teal-*`** (node script); [`tailwind.config.ts`](tailwind.config.ts) + [`globals.css`](src/app/globals.css) **`--brand-*`** values remapped to **teal** for any legacy/CSS use. Resume step scrollbar (dark) uses **teal-400** tints. [`MiniCareerCard.tsx`](src/components/hub/MiniCareerCard.tsx) **complete** pill → teal. [`TransactionHistory.tsx`](src/components/TransactionHistory.tsx) / [`AutoCompletePanel.tsx`](src/components/driver-application/AutoCompletePanel.tsx) dark CTA contrast fixes. [`MvrManagementModal.tsx`](src/components/MvrManagementModal.tsx) primary gradients drop **emerald** for **teal/cyan**. [`JourneyModal.tsx`](src/components/ui/JourneyModal.tsx) CTA **white** text on teal.
+
+---
+
+## **Career path drawer — fix iOS horizontal scroll** (March 2026)
+
+- [`StormiJourneyGuide.tsx`](src/components/StormiJourneyGuide.tsx): Panel + scroll region use **`min-w-0`**, **`overflow-x-hidden`**, **`max-w-full`**; header stack gets **`break-words`** on the greeting.
+- [`HubSidebar.tsx`](src/components/hub/HubSidebar.tsx) / [`EmployerPathSidebar.tsx`](src/components/hub/EmployerPathSidebar.tsx): **`VaultCredentialChrome` `drop-shadow` filter** only when **`variant='sticky'`** — in the slide-over drawer the filter was expanding paint bounds on WebKit (Vercel / iPhone body scroll). Drawer wrapper **`overflow-x-hidden`**.
+- [`PathGuidance.tsx`](src/components/hub/PathGuidance.tsx): 3-step strip row/cells **`min-w-0`** so flex children don’t force overflow.
+
+---
+
+## **Hub — profile header: refresh left, Career Card callout** (March 2026)
+
+- [`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx) **`HubProfileHeader`**: **Refresh hub** moves to the **left** column (secondary button + short caption); **right** column leads with a **Career Card** callout — copy + single CTA only (no mini preview): empty hub → explains blocks build the card + **Browse blocks**; once blocks exist → teal-accent panel + **View Career Card** (`career-card` page). **Profile completeness** sits under that callout. Mobile order: identity → career + completeness → refresh.
+
+---
+
+## **Hub — Ask Stormi + Your blocks vault shell** (March 2026)
+
+- [`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx): **Ask Stormi** uses **`VaultHorizontalVaultShell`** **`accent='violet'`** + **`BlockCard variant='embed'`** with **`headerIconSlot`** (**`/ava-robot.png`**) in the header tile (no Sparkles). **Your blocks** uses the same outer shell **`accent='teal'`** with **`variant='embed'`**; hive Edit control uses shared **`Button`**.
+- [`BlockCard.tsx`](src/components/ui/BlockCard.tsx): **`headerIconSlot`** optional prop (union with **`icon`**) for custom header tile content.
+- [`StormiChatPanel.tsx`](src/components/stormi/StormiChatPanel.tsx): Optional **`hubEmbedSurface`** for candidate hub — omits standalone **`.stormi-glow-border`** and trims empty-state title/body so **`BlockCard`** owns the headline; embed empty state shows **usage badge only** (robot lives in **`BlockCard`** header).
 
 ---
 

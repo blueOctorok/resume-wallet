@@ -197,8 +197,8 @@ export default function VerifyEmploymentPage() {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-mint/20 mb-4">
-            <ClipboardCheck className="w-8 h-8 text-brand-mint" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-teal-600/20 mb-4">
+            <ClipboardCheck className="w-8 h-8 text-teal-600 dark:text-teal-400" />
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Employment Verification Request</h1>
           <p className="text-gray-400">
@@ -209,7 +209,7 @@ export default function VerifyEmploymentPage() {
         {/* Applicant & Employment Info */}
         <div className="bg-gray-800 rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <User className="w-5 h-5 text-brand-mint" />
+            <User className="w-5 h-5 text-teal-600 dark:text-teal-400" />
             {applicantType === 'developer' ? 'Applicant Information' : 'Driver Information'}
           </h2>
           <div className="grid gap-4 md:grid-cols-2">
@@ -239,7 +239,7 @@ export default function VerifyEmploymentPage() {
         {/* Verifier Info */}
         <div className="bg-gray-800 rounded-2xl p-6 mb-6">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-brand-mint" />
+            <ShieldCheck className="w-5 h-5 text-teal-600 dark:text-teal-400" />
             Your Information
           </h2>
           <div className="grid gap-4 md:grid-cols-2">
@@ -249,7 +249,7 @@ export default function VerifyEmploymentPage() {
                 type="email"
                 value={verifierEmail}
                 onChange={(e) => setVerifierEmail(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-brand-mint"
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-teal-500"
                 placeholder="you@company.com"
                 required
               />
@@ -260,7 +260,7 @@ export default function VerifyEmploymentPage() {
                 type="text"
                 value={verifierName}
                 onChange={(e) => setVerifierName(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-brand-mint"
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-teal-500"
                 placeholder="John Smith"
                 required
               />
@@ -271,7 +271,7 @@ export default function VerifyEmploymentPage() {
                 type="text"
                 value={verifierTitle}
                 onChange={(e) => setVerifierTitle(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-brand-mint"
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-teal-500"
                 placeholder="HR Manager"
               />
             </div>
@@ -308,7 +308,7 @@ export default function VerifyEmploymentPage() {
                     type="date"
                     value={answers.correctedStartDate || ''}
                     onChange={(e) => setAnswers({ ...answers, correctedStartDate: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-brand-mint"
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-teal-500"
                   />
                 </div>
                 <div>
@@ -317,7 +317,7 @@ export default function VerifyEmploymentPage() {
                     type="date"
                     value={answers.correctedEndDate || ''}
                     onChange={(e) => setAnswers({ ...answers, correctedEndDate: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-brand-mint"
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-teal-500"
                   />
                 </div>
               </div>
@@ -341,7 +341,7 @@ export default function VerifyEmploymentPage() {
                   type="text"
                   value={answers.terminationReason || ''}
                   onChange={(e) => setAnswers({ ...answers, terminationReason: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-brand-mint"
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-teal-500"
                   placeholder="Reason for termination"
                 />
               </div>
@@ -379,7 +379,7 @@ export default function VerifyEmploymentPage() {
                     <textarea
                       value={answers.accidentDetails || ''}
                       onChange={(e) => setAnswers({ ...answers, accidentDetails: e.target.value })}
-                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-brand-mint"
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-teal-500"
                       placeholder="Brief description of accident(s)"
                       rows={2}
                     />
@@ -417,7 +417,7 @@ export default function VerifyEmploymentPage() {
                 <textarea
                   value={answers.drugTestDetails || ''}
                   onChange={(e) => setAnswers({ ...answers, drugTestDetails: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-brand-mint"
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-teal-500"
                   placeholder="Details about drug test"
                   rows={2}
                 />
@@ -430,7 +430,7 @@ export default function VerifyEmploymentPage() {
               <textarea
                 value={answers.additionalNotes || ''}
                 onChange={(e) => setAnswers({ ...answers, additionalNotes: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-brand-mint"
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-teal-500"
                 placeholder="Any additional information about this employee"
                 rows={3}
               />
@@ -492,7 +492,7 @@ function QuestionBlock({
   return (
     <div>
       <p className="text-white font-medium mb-3">
-        <span className="text-brand-mint mr-2">{number}.</span>
+        <span className="text-teal-600 dark:text-teal-400 mr-2">{number}.</span>
         {question}
       </p>
       <div className="flex flex-wrap gap-2 ml-6">
@@ -502,7 +502,7 @@ function QuestionBlock({
             onClick={() => onChange(opt.value)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               value === opt.value
-                ? 'bg-brand-mint text-gray-900'
+                ? 'bg-teal-600 text-white'
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >

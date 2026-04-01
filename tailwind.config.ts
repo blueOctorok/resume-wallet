@@ -13,14 +13,15 @@ const config: Config = withAccountKitUi(
       extend: {
         colors: {
           // Brand colors - Theme-aware palette
+          /** @deprecated Use `teal-*` / `cyan-*` — kept for rare legacy classnames; maps to vault teal */
           'brand-sage': {
-            DEFAULT: '#697469', // Original sage color
-            light: '#697469', // Light mode sage
-            dark: '#4a5249', // Darker sage for gradients
+            DEFAULT: '#0f766e',
+            light: '#115e59',
+            dark: '#134e4a',
           },
           'brand-mint': {
-            DEFAULT: '#c9d9c3', // Original mint color
-            light: '#697469', // Light mode uses sage for mint
+            DEFAULT: '#0d9488',
+            light: '#14b8a6',
           },
           'brand-cream': {
             DEFAULT: '#fef5ed', // Original cream color
@@ -29,8 +30,8 @@ const config: Config = withAccountKitUi(
           },
 
           // Legacy color support (will be replaced gradually)
-          'brand-sage-light': '#adc2a9',
-          'brand-sage-dark': '#4a5249',
+          'brand-sage-light': '#99f6e4',
+          'brand-sage-dark': '#134e4a',
         },
         fontFamily: {
           quicksand: ['Quicksand', 'system-ui', '-apple-system', 'sans-serif'],

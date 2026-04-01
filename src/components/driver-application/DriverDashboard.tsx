@@ -145,10 +145,10 @@ const DriverDashboard = ({
     <div
       className={`max-w-6xl mx-auto p-6 ${
         theme === 'dark'
-          ? 'bg-brand-sage-light/20 backdrop-blur-xl'
+          ? 'bg-teal-200/20 backdrop-blur-xl'
           : 'bg-white/80 backdrop-blur-xl'
       } rounded-2xl shadow-2xl relative z-10 border-t-4 ${
-        theme === 'dark' ? 'border-brand-mint' : 'border-brand-sage'
+        theme === 'dark' ? 'border-teal-500' : 'border-teal-700'
       }`}
     >
       {/* Header */}
@@ -264,7 +264,7 @@ const DriverDashboard = ({
               </p>
               <p
                 className={`font-mono text-sm ${
-                  theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
                 }`}
               >
                 {data.applicationId ? `#${data.applicationId}` : 'N/A'}
@@ -474,7 +474,7 @@ const DriverDashboard = ({
                   target='_blank'
                   rel='noopener noreferrer'
                   className={`font-mono text-sm hover:underline ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
                   }`}
                 >
                   {data.blockchainTxHash.slice(0, 10)}...
@@ -502,7 +502,7 @@ const DriverDashboard = ({
                 </span>
                 <span
                   className={`font-mono text-sm ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
                   }`}
                 >
                   {data.blockNumber.toLocaleString()}
@@ -521,7 +521,7 @@ const DriverDashboard = ({
                 </span>
                 <span
                   className={`font-mono text-sm ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
                   }`}
                 >
                   {data.ipfsHash.slice(0, 10)}...{data.ipfsHash.slice(-8)}
@@ -645,8 +645,8 @@ const DriverDashboard = ({
               onClick={onCompleteEmploymentVerification}
               className={`p-6 rounded-lg text-left transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 ${
                 theme === 'dark'
-                  ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                  : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+                  ? 'bg-teal-600 text-white hover:bg-teal-500'
+                  : 'bg-teal-700 text-white hover:bg-teal-700/90'
               }`}
             >
               <div className='text-3xl mb-2'>📝</div>
@@ -709,7 +709,7 @@ const DriverDashboard = ({
 
         {/* Share Link Modal */}
         {showShareLink && (
-          <div className='mt-4 p-4 rounded-lg bg-brand-sage/20 border border-brand-mint/30'>
+          <div className='mt-4 p-4 rounded-lg bg-teal-700/20 border border-teal-500/30'>
             <p
               className={`text-sm mb-2 ${
                 theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
@@ -733,8 +733,8 @@ const DriverDashboard = ({
                   onClick={() => navigator.clipboard.writeText(data.shareLink)}
                   className={`px-4 py-2 rounded-lg font-semibold ${
                     theme === 'dark'
-                      ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-                      : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+                      ? 'bg-teal-600 text-white hover:bg-teal-500'
+                      : 'bg-teal-700 text-white hover:bg-teal-700/90'
                   }`}
                 >
                   Copy

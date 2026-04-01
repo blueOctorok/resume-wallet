@@ -376,7 +376,7 @@ function SettingToggle({
         onClick={() => onChange(!enabled)}
         className={`relative w-10 h-6 rounded-full transition-colors ${
           enabled
-            ? 'bg-brand-mint'
+            ? 'bg-teal-600'
             : theme === 'dark' ? 'bg-gray-600' : 'bg-gray-300'
         }`}
       >

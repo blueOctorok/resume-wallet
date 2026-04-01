@@ -301,7 +301,7 @@ button:disabled,
 
 /* Dark mode scrollbar for step indicators */
 [data-theme='dark'] .resume-steps-scrollbar {
-  scrollbar-color: rgba(201, 217, 195, 0.3) transparent; /* brand-mint with opacity for Firefox */
+  scrollbar-color: rgb(45 212 191 / 0.35) transparent;
 }
 
 [data-theme='dark'] .resume-steps-scrollbar::-webkit-scrollbar {
@@ -316,28 +316,28 @@ button:disabled,
 [data-theme='dark'] .resume-steps-scrollbar::-webkit-scrollbar-thumb {
   background: linear-gradient(
     90deg,
-    rgba(201, 217, 195, 0.4) 0%,
-    rgba(201, 217, 195, 0.6) 50%,
-    rgba(201, 217, 195, 0.4) 100%
-  ); /* brand-mint gradient */
+    rgb(45 212 191 / 0.35) 0%,
+    rgb(45 212 191 / 0.55) 50%,
+    rgb(45 212 191 / 0.35) 100%
+  );
   border-radius: 10px;
-  border: 1px solid rgba(201, 217, 195, 0.2);
+  border: 1px solid rgb(45 212 191 / 0.2);
   transition: all 0.3s ease;
 }
 
 [data-theme='dark'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(
     90deg,
-    rgba(201, 217, 195, 0.5) 0%,
-    rgba(201, 217, 195, 0.8) 50%,
-    rgba(201, 217, 195, 0.5) 100%
+    rgb(45 212 191 / 0.45) 0%,
+    rgb(45 212 191 / 0.7) 50%,
+    rgb(45 212 191 / 0.45) 100%
   );
-  border-color: rgba(201, 217, 195, 0.4);
-  box-shadow: 0 0 8px rgba(201, 217, 195, 0.3);
+  border-color: rgb(45 212 191 / 0.35);
+  box-shadow: 0 0 8px rgb(45 212 191 / 0.25);
 }
 
 [data-theme='dark'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active {
-  background: rgba(201, 217, 195, 0.8);
+  background: rgb(45 212 191 / 0.65);
 }
 
 /* Light mode scrollbar for step indicators */
@@ -428,10 +428,11 @@ button:disabled,
 
 /* Ensure our brand colors are available */
 :root {
-  --brand-sage: #697469;
-  --brand-sage-dark: #4a5249;
-  --brand-sage-light: #adc2a9;
-  --brand-mint: #c9d9c3;
+  /* Legacy names — teal family (matches --storm-accent); avoid sage/mint in new UI */
+  --brand-sage: #0f766e;
+  --brand-sage-dark: #134e4a;
+  --brand-sage-light: #5eead4;
+  --brand-mint: #0d9488;
   --brand-cream: #fef5ed;
 }
 

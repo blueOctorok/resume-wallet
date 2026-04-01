@@ -110,10 +110,10 @@ export default function JourneyModal() {
           {/* Icon */}
           <div className={cn(
             'mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4',
-            'bg-gradient-to-br from-brand-mint/20 to-indigo-500/20',
-            'border-2 border-brand-mint/30'
+            'bg-gradient-to-br from-teal-600/20 to-indigo-500/20',
+            'border-2 border-teal-500/30'
           )}>
-            <IconComponent className="w-8 h-8 text-brand-mint" />
+            <IconComponent className="w-8 h-8 text-teal-600 dark:text-teal-400" />
           </div>
 
           {/* Title */}
@@ -139,7 +139,7 @@ export default function JourneyModal() {
                 onClick={handleNextStep}
                 className={cn(
                   'w-full px-6 py-3 rounded-xl font-semibold transition-all duration-200',
-                  'bg-brand-mint hover:bg-brand-mint/90 text-gray-900',
+                  'bg-teal-600 hover:bg-teal-500 text-white',
                   'shadow-lg hover:shadow-xl hover:scale-[1.02]'
                 )}
               >

@@ -242,7 +242,7 @@ export default function InvitePage() {
     return (
       <div className={`min-h-screen flex items-center justify-center p-4 ${bg}`}>
         <div className={`${cardClass} p-8 text-center max-w-md w-full`}>
-          <Loader2 className='w-12 h-12 animate-spin mx-auto text-brand-mint' />
+          <Loader2 className='w-12 h-12 animate-spin mx-auto text-teal-600 dark:text-teal-400' />
           <p className={`mt-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
             Loading invitation...
           </p>

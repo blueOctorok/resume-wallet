@@ -53,14 +53,14 @@ export default function CareerPathSteps({ onNavigate, progressOverride }: Career
         <span className='text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400'>
           Next steps
         </span>
-        <span className='text-xs font-bold text-brand-sage-dark dark:text-teal-300 tabular-nums'>
+        <span className='text-xs font-bold text-teal-800 dark:text-teal-300 tabular-nums'>
           {progress.completedSteps}/{progress.totalSteps}
         </span>
       </div>
 
       <div className='h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden'>
         <div
-          className='h-full rounded-full bg-gradient-to-r from-brand-mint to-brand-mint/80 transition-all duration-500'
+          className='h-full rounded-full bg-gradient-to-r from-teal-600 via-teal-500 to-cyan-500 transition-all duration-500 dark:from-teal-500 dark:via-teal-400 dark:to-cyan-400'
           style={{ width: `${progress.overallProgress}%` }}
         />
       </div>
@@ -94,8 +94,9 @@ function PathStepRow({
         disabled={!isClickable}
         className={cn(
           'w-full flex items-start gap-2 p-2 rounded-lg text-left transition-colors',
-          step.status === 'complete' && 'bg-green-50/80 dark:bg-green-900/15',
-          step.status === 'in_progress' && 'bg-brand-mint/10 dark:bg-brand-mint/15 ring-1 ring-brand-mint/25',
+          step.status === 'complete' &&
+            'bg-teal-50/95 ring-1 ring-teal-200/80 dark:bg-teal-950/35 dark:ring-teal-500/20',
+          step.status === 'in_progress' && 'bg-teal-500/10 ring-1 ring-teal-500/30 dark:bg-teal-500/15 dark:ring-teal-400/25',
           step.status === 'pending' && 'bg-gray-50 dark:bg-gray-800/50',
           isClickable && 'hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer',
           !isClickable && 'cursor-default',
@@ -104,8 +105,8 @@ function PathStepRow({
         <span
           className={cn(
             'flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-0.5',
-            step.status === 'complete' && 'bg-green-500 text-white',
-            step.status === 'in_progress' && 'bg-brand-mint text-gray-900',
+            step.status === 'complete' && 'bg-teal-600 text-white dark:bg-teal-500 dark:text-gray-950',
+            step.status === 'in_progress' && 'bg-teal-600 text-white dark:bg-teal-500 dark:text-gray-950',
             step.status === 'pending' && 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400',
           )}
         >
@@ -118,8 +119,8 @@ function PathStepRow({
             <span
               className={cn(
                 'text-xs font-semibold leading-tight',
-                step.status === 'complete' && 'text-green-800 dark:text-green-300',
-                step.status === 'in_progress' && 'text-brand-mint dark:text-brand-mint',
+                step.status === 'complete' && 'text-teal-900 dark:text-teal-200',
+                step.status === 'in_progress' && 'text-teal-800 dark:text-teal-300',
                 step.status === 'pending' && 'text-gray-600 dark:text-gray-400',
               )}
             >
@@ -138,7 +139,7 @@ function PathStepRow({
             <div className='mt-1 flex items-center gap-1.5'>
               <div className='h-1 flex-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden'>
                 <div
-                  className='h-full bg-brand-mint rounded-full transition-all'
+                  className='h-full rounded-full bg-gradient-to-r from-teal-600 to-teal-500 transition-all dark:from-teal-500 dark:to-cyan-400'
                   style={{ width: `${step.progress}%` }}
                 />
               </div>

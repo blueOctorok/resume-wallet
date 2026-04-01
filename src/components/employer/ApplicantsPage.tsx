@@ -187,8 +187,8 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
       {/* Filters */}
       <div className={`rounded-2xl p-4 mb-6 ${
         theme === 'dark'
-          ? 'bg-brand-sage-dark/50 border border-brand-mint/30'
-          : 'bg-white border border-brand-sage/20 shadow-xl'
+          ? 'bg-teal-900/50 border border-teal-500/30'
+          : 'bg-white border border-teal-700/20 shadow-xl'
       }`}>
         <div className="flex flex-wrap gap-4">
           {/* Search */}
@@ -207,7 +207,7 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
                     ? 'bg-gray-800 border-gray-700 text-white'
                     : 'bg-gray-100 border-gray-300 text-gray-900'
                 } border focus:outline-none focus:ring-2 ${
-                  theme === 'dark' ? 'focus:ring-brand-mint' : 'focus:ring-brand-sage'
+                  theme === 'dark' ? 'focus:ring-teal-500' : 'focus:ring-teal-500'
                 }`}
               />
             </div>
@@ -222,7 +222,7 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
                 ? 'bg-gray-800 border-gray-700 text-white'
                 : 'bg-white border-gray-300 text-gray-900'
             } focus:outline-none focus:ring-2 ${
-              theme === 'dark' ? 'focus:ring-brand-mint' : 'focus:ring-brand-sage'
+              theme === 'dark' ? 'focus:ring-teal-500' : 'focus:ring-teal-500'
             }`}
           >
             <option value="all">All Jobs</option>
@@ -240,7 +240,7 @@ export default function ApplicantsPage({ walletAddress, onBack }: ApplicantsPage
                 ? 'bg-gray-800 border-gray-700 text-white'
                 : 'bg-white border-gray-300 text-gray-900'
             } focus:outline-none focus:ring-2 ${
-              theme === 'dark' ? 'focus:ring-brand-mint' : 'focus:ring-brand-sage'
+              theme === 'dark' ? 'focus:ring-teal-500' : 'focus:ring-teal-500'
             }`}
           >
             <option value="all">All Status</option>
@@ -320,7 +320,7 @@ function StatCard({ label, value, theme, highlight, success }: {
   return (
     <div className={`rounded-xl p-4 ${
       theme === 'dark'
-        ? 'bg-brand-sage-dark/50 border border-brand-mint/20'
+        ? 'bg-teal-900/50 border border-teal-500/20'
         : 'bg-white border border-gray-200 shadow-sm'
     }`}>
       <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -353,17 +353,17 @@ function ApplicantCard({
       onClick={onClick}
       className={`w-full text-left p-4 rounded-xl transition-colors ${
         theme === 'dark'
-          ? 'bg-brand-sage-dark/50 border border-brand-mint/20 hover:bg-brand-sage-dark'
+          ? 'bg-teal-900/50 border border-teal-500/20 hover:bg-teal-900'
           : 'bg-white border border-gray-200 shadow-sm hover:bg-gray-50'
       }`}
     >
       <div className="flex items-start gap-4">
         {/* Avatar */}
         <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-          theme === 'dark' ? 'bg-brand-mint/20' : 'bg-brand-sage/10'
+          theme === 'dark' ? 'bg-teal-600/20' : 'bg-teal-700/10'
         }`}>
           <span className={`text-lg font-bold ${
-            theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+            theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
           }`}>
             {applicant.applicantName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
           </span>
@@ -539,7 +539,7 @@ function ApplicantDetailModal({
                     href={`https://gateway.pinata.cloud/ipfs/${applicant.resumeIpfsHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-brand-mint hover:underline"
+                    className="text-sm text-teal-600 dark:text-teal-400 hover:underline"
                   >
                     View <ExternalLink className="w-3 h-3 inline" />
                   </a>
@@ -575,8 +575,8 @@ function ApplicantDetailModal({
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     applicant.status === option.value
                       ? theme === 'dark'
-                        ? 'bg-brand-mint text-gray-900'
-                        : 'bg-brand-sage text-white'
+                        ? 'bg-teal-600 text-white'
+                        : 'bg-teal-700 text-white'
                       : theme === 'dark'
                         ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -603,7 +603,7 @@ function ApplicantDetailModal({
                   ? 'bg-gray-800 border-gray-700 text-white'
                   : 'bg-white border-gray-300 text-gray-900'
               } focus:outline-none focus:ring-2 ${
-                theme === 'dark' ? 'focus:ring-brand-mint' : 'focus:ring-brand-sage'
+                theme === 'dark' ? 'focus:ring-teal-500' : 'focus:ring-teal-500'
               }`}
               placeholder="Add private notes about this applicant..."
             />

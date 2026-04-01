@@ -599,9 +599,9 @@ export default function DeveloperResumeBuilder({
   // Styling helpers
   const inputClass = `w-full px-4 py-3 rounded-xl border transition-colors ${
     theme === 'dark'
-      ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-brand-mint'
-      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
-  } focus:outline-none focus:ring-2 focus:ring-brand-mint/20`
+      ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
+      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
+  } focus:outline-none focus:ring-2 focus:ring-teal-500/20`
 
   const labelClass = `block text-sm font-medium mb-2 ${
     theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
@@ -871,7 +871,7 @@ export default function DeveloperResumeBuilder({
                     onClick={() => !isAdded && addSkill(skill, value)}
                     className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
                       isAdded
-                        ? 'bg-brand-mint/20 text-brand-mint border border-brand-mint/50'
+                        ? 'bg-teal-600/20 text-teal-600 dark:text-teal-400 border border-teal-500/50'
                         : theme === 'dark'
                           ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                           : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -972,7 +972,7 @@ export default function DeveloperResumeBuilder({
                   input.value = ''
                 }
               }}
-              className='px-4 py-2 bg-brand-mint text-gray-900 rounded-xl font-medium hover:bg-brand-mint/90'
+              className='px-4 py-2 bg-teal-600 text-white rounded-xl font-medium hover:bg-teal-500'
             >
               <Plus className='w-5 h-5' />
             </button>
@@ -1114,7 +1114,7 @@ export default function DeveloperResumeBuilder({
                           endDate: e.target.checked ? '' : exp.endDate,
                         })
                       }
-                      className='w-4 h-4 rounded border-gray-600 text-brand-mint focus:ring-brand-mint'
+                      className='w-4 h-4 rounded border-gray-600 text-teal-600 dark:text-teal-400 focus:ring-teal-500'
                     />
                     <span
                       className={
@@ -1179,7 +1179,7 @@ export default function DeveloperResumeBuilder({
                       achievements: [...exp.achievements, ''],
                     })
                   }
-                  className='text-sm text-brand-mint hover:underline flex items-center gap-1'
+                  className='text-sm text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1'
                 >
                   <Plus className='w-4 h-4' /> Add Achievement
                 </button>
@@ -1210,8 +1210,8 @@ export default function DeveloperResumeBuilder({
           onClick={addExperience}
           className={`w-full p-4 rounded-xl border-2 border-dashed transition-colors flex items-center justify-center gap-2 ${
             theme === 'dark'
-              ? 'border-gray-700 text-gray-400 hover:border-brand-mint hover:text-brand-mint'
-              : 'border-gray-300 text-gray-500 hover:border-brand-mint hover:text-brand-mint'
+              ? 'border-gray-700 text-gray-400 hover:border-teal-500 hover:text-teal-600 dark:text-teal-400'
+              : 'border-gray-300 text-gray-500 hover:border-teal-500 hover:text-teal-600 dark:text-teal-400'
           }`}
         >
           <Plus className='w-5 h-5' />
@@ -1409,7 +1409,7 @@ export default function DeveloperResumeBuilder({
                       highlights: [...project.highlights, ''],
                     })
                   }
-                  className='text-sm text-brand-mint hover:underline flex items-center gap-1'
+                  className='text-sm text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1'
                 >
                   <Plus className='w-4 h-4' /> Add Highlight
                 </button>
@@ -1422,8 +1422,8 @@ export default function DeveloperResumeBuilder({
           onClick={addProject}
           className={`w-full p-4 rounded-xl border-2 border-dashed transition-colors flex items-center justify-center gap-2 ${
             theme === 'dark'
-              ? 'border-gray-700 text-gray-400 hover:border-brand-mint hover:text-brand-mint'
-              : 'border-gray-300 text-gray-500 hover:border-brand-mint hover:text-brand-mint'
+              ? 'border-gray-700 text-gray-400 hover:border-teal-500 hover:text-teal-600 dark:text-teal-400'
+              : 'border-gray-300 text-gray-500 hover:border-teal-500 hover:text-teal-600 dark:text-teal-400'
           }`}
         >
           <Plus className='w-5 h-5' />
@@ -1616,8 +1616,8 @@ export default function DeveloperResumeBuilder({
             onClick={addEducation}
             className={`w-full p-4 rounded-xl border-2 border-dashed transition-colors flex items-center justify-center gap-2 ${
               theme === 'dark'
-                ? 'border-gray-700 text-gray-400 hover:border-brand-mint hover:text-brand-mint'
-                : 'border-gray-300 text-gray-500 hover:border-brand-mint hover:text-brand-mint'
+                ? 'border-gray-700 text-gray-400 hover:border-teal-500 hover:text-teal-600 dark:text-teal-400'
+                : 'border-gray-300 text-gray-500 hover:border-teal-500 hover:text-teal-600 dark:text-teal-400'
             }`}
           >
             <Plus className='w-5 h-5' />
@@ -1724,8 +1724,8 @@ export default function DeveloperResumeBuilder({
             onClick={addCertification}
             className={`w-full p-4 rounded-xl border-2 border-dashed transition-colors flex items-center justify-center gap-2 ${
               theme === 'dark'
-                ? 'border-gray-700 text-gray-400 hover:border-brand-mint hover:text-brand-mint'
-                : 'border-gray-300 text-gray-500 hover:border-brand-mint hover:text-brand-mint'
+                ? 'border-gray-700 text-gray-400 hover:border-teal-500 hover:text-teal-600 dark:text-teal-400'
+                : 'border-gray-300 text-gray-500 hover:border-teal-500 hover:text-teal-600 dark:text-teal-400'
             }`}
           >
             <Plus className='w-5 h-5' />
@@ -1756,7 +1756,7 @@ export default function DeveloperResumeBuilder({
         {/* Personal Info */}
         <div className={sectionClass}>
           <h3 className={sectionTitleClass}>
-            <User className='w-5 h-5 text-brand-mint' /> Personal Information
+            <User className='w-5 h-5 text-teal-600 dark:text-teal-400' /> Personal Information
           </h3>
           <div className='space-y-2'>
             <p
@@ -1767,7 +1767,7 @@ export default function DeveloperResumeBuilder({
             {personalInfo.headline && (
               <p
                 className={
-                  theme === 'dark' ? 'text-brand-mint' : 'text-brand-mint'
+                  theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-600 dark:text-teal-400'
                 }
               >
                 {personalInfo.headline}
@@ -1794,7 +1794,7 @@ export default function DeveloperResumeBuilder({
                   href={personalInfo.githubUrl}
                   target='_blank'
                   rel='noopener noreferrer'
-                  className='text-sm text-brand-mint hover:underline flex items-center gap-1'
+                  className='text-sm text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1'
                 >
                   <Github className='w-4 h-4' /> GitHub
                 </a>
@@ -1804,7 +1804,7 @@ export default function DeveloperResumeBuilder({
                   href={personalInfo.linkedinUrl}
                   target='_blank'
                   rel='noopener noreferrer'
-                  className='text-sm text-brand-mint hover:underline flex items-center gap-1'
+                  className='text-sm text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1'
                 >
                   <ExternalLink className='w-4 h-4' /> LinkedIn
                 </a>
@@ -1814,7 +1814,7 @@ export default function DeveloperResumeBuilder({
                   href={personalInfo.portfolioUrl}
                   target='_blank'
                   rel='noopener noreferrer'
-                  className='text-sm text-brand-mint hover:underline flex items-center gap-1'
+                  className='text-sm text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1'
                 >
                   <Folder className='w-4 h-4' /> Portfolio
                 </a>
@@ -1827,7 +1827,7 @@ export default function DeveloperResumeBuilder({
         {skills.length > 0 && (
           <div className={sectionClass}>
             <h3 className={sectionTitleClass}>
-              <Code className='w-5 h-5 text-brand-mint' /> Technical Skills
+              <Code className='w-5 h-5 text-teal-600 dark:text-teal-400' /> Technical Skills
             </h3>
             <div className='flex flex-wrap gap-2'>
               {skills.map((skill) => (
@@ -1853,13 +1853,13 @@ export default function DeveloperResumeBuilder({
         {experience.length > 0 && (
           <div className={sectionClass}>
             <h3 className={sectionTitleClass}>
-              <Briefcase className='w-5 h-5 text-brand-mint' /> Work Experience
+              <Briefcase className='w-5 h-5 text-teal-600 dark:text-teal-400' /> Work Experience
             </h3>
             <div className='space-y-4'>
               {experience.map((exp) => (
                 <div
                   key={exp.id}
-                  className='border-l-2 border-brand-mint/30 pl-4'
+                  className='border-l-2 border-teal-500/30 pl-4'
                 >
                   <p
                     className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
@@ -1911,13 +1911,13 @@ export default function DeveloperResumeBuilder({
         {projects.length > 0 && (
           <div className={sectionClass}>
             <h3 className={sectionTitleClass}>
-              <Folder className='w-5 h-5 text-brand-mint' /> Projects
+              <Folder className='w-5 h-5 text-teal-600 dark:text-teal-400' /> Projects
             </h3>
             <div className='space-y-4'>
               {projects.map((project) => (
                 <div
                   key={project.id}
-                  className='border-l-2 border-brand-mint/30 pl-4'
+                  className='border-l-2 border-teal-500/30 pl-4'
                 >
                   <p
                     className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
@@ -1942,7 +1942,7 @@ export default function DeveloperResumeBuilder({
                         href={project.liveUrl}
                         target='_blank'
                         rel='noopener noreferrer'
-                        className='text-xs text-brand-mint hover:underline flex items-center gap-1'
+                        className='text-xs text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1'
                       >
                         <Globe className='w-3 h-3' /> Live
                       </a>
@@ -1952,7 +1952,7 @@ export default function DeveloperResumeBuilder({
                         href={project.repoUrl}
                         target='_blank'
                         rel='noopener noreferrer'
-                        className='text-xs text-brand-mint hover:underline flex items-center gap-1'
+                        className='text-xs text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1'
                       >
                         <Github className='w-3 h-3' /> Repo
                       </a>
@@ -1975,7 +1975,7 @@ export default function DeveloperResumeBuilder({
         {education.length > 0 && (
           <div className={sectionClass}>
             <h3 className={sectionTitleClass}>
-              <GraduationCap className='w-5 h-5 text-brand-mint' /> Education
+              <GraduationCap className='w-5 h-5 text-teal-600 dark:text-teal-400' /> Education
             </h3>
             <div className='space-y-3'>
               {education.map((edu) => (
@@ -2008,7 +2008,7 @@ export default function DeveloperResumeBuilder({
         {certifications.length > 0 && (
           <div className={sectionClass}>
             <h3 className={sectionTitleClass}>
-              <FileCheck className='w-5 h-5 text-brand-mint' /> Certifications
+              <FileCheck className='w-5 h-5 text-teal-600 dark:text-teal-400' /> Certifications
             </h3>
             <div className='space-y-2'>
               {certifications.map((cert) => (
@@ -2033,7 +2033,7 @@ export default function DeveloperResumeBuilder({
                       href={cert.url}
                       target='_blank'
                       rel='noopener noreferrer'
-                      className='text-sm text-brand-mint hover:underline'
+                      className='text-sm text-teal-600 dark:text-teal-400 hover:underline'
                     >
                       Verify
                     </a>
@@ -2114,7 +2114,7 @@ export default function DeveloperResumeBuilder({
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className='flex items-center gap-2 px-4 py-2 bg-brand-mint text-gray-900 rounded-xl font-medium hover:bg-brand-mint/90 disabled:opacity-50'
+                className='flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-xl font-medium hover:bg-teal-500 disabled:opacity-50'
               >
                 {isSaving ? (
                   <Loader2 className='w-4 h-4 animate-spin' />
@@ -2143,7 +2143,7 @@ export default function DeveloperResumeBuilder({
                   onClick={() => setCurrentStep(idx)}
                   className={`flex flex-col items-center min-w-[80px] ${
                     isActive
-                      ? 'text-brand-mint'
+                      ? 'text-teal-600 dark:text-teal-400'
                       : isCompleted
                         ? theme === 'dark'
                           ? 'text-gray-400'
@@ -2156,9 +2156,9 @@ export default function DeveloperResumeBuilder({
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
                       isActive
-                        ? 'bg-brand-mint/20 border-2 border-brand-mint'
+                        ? 'bg-teal-600/20 border-2 border-teal-500'
                         : isCompleted
-                          ? 'bg-brand-mint/10 border border-brand-mint/50'
+                          ? 'bg-teal-600/10 border border-teal-500/50'
                           : theme === 'dark'
                             ? 'bg-gray-800 border border-gray-700'
                             : 'bg-gray-100 border border-gray-300'
@@ -2215,7 +2215,7 @@ export default function DeveloperResumeBuilder({
             {currentStep < STEPS.length - 1 ? (
               <button
                 onClick={goNext}
-                className='flex items-center gap-2 px-6 py-3 bg-brand-mint text-gray-900 rounded-xl font-medium hover:bg-brand-mint/90'
+                className='flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-xl font-medium hover:bg-teal-500'
               >
                 Next
                 <ArrowRight className='w-5 h-5' />
@@ -2224,7 +2224,7 @@ export default function DeveloperResumeBuilder({
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className='flex items-center gap-2 px-6 py-3 bg-brand-mint text-gray-900 rounded-xl font-medium hover:bg-brand-mint/90 disabled:opacity-50'
+                className='flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-xl font-medium hover:bg-teal-500 disabled:opacity-50'
               >
                 {isSaving ? (
                   <Loader2 className='w-5 h-5 animate-spin' />

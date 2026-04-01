@@ -629,14 +629,14 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress, orderId: 
           isDark ? 'border-gray-700/50' : 'border-gray-200'
         }`}>
           {/* Accent line */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-sage via-brand-mint to-brand-sage-light" />
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-700 via-teal-500 to-teal-200" />
           
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={`p-2.5 rounded-xl ${
-                isDark ? 'bg-brand-sage/20' : 'bg-brand-sage/10'
+                isDark ? 'bg-teal-700/20' : 'bg-teal-700/10'
               }`}>
-                <FileText className="h-6 w-6 text-brand-mint" />
+                <FileText className="h-6 w-6 text-teal-600 dark:text-teal-400" />
               </div>
               <div>
                 <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -644,7 +644,7 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress, orderId: 
                 </h2>
                 {/* Show driver name prominently if available */}
                 {mvrResult && formatDriverName(mvrResult.subject) ? (
-                  <p className={`text-sm font-medium ${isDark ? 'text-brand-mint' : 'text-brand-sage'}`}>
+                  <p className={`text-sm font-medium ${isDark ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'}`}>
                     {formatDriverName(mvrResult.subject)}
                   </p>
                 ) : (
@@ -661,8 +661,8 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress, orderId: 
                   onClick={handleDownloadPDF}
                   className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all font-medium text-sm ${
                     isDark 
-                      ? 'bg-brand-sage/20 hover:bg-brand-sage/30 text-brand-mint' 
-                      : 'bg-brand-sage/10 hover:bg-brand-sage/20 text-brand-sage'
+                      ? 'bg-teal-700/20 hover:bg-teal-700/30 text-teal-600 dark:text-teal-400' 
+                      : 'bg-teal-700/10 hover:bg-teal-700/20 text-teal-800 dark:text-teal-300'
                   }`}
                   title="Download or Print Report"
                 >
@@ -719,12 +719,12 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress, orderId: 
                     } transition-colors`}
                   >
                     <div className="flex items-center gap-2">
-                      <CreditCard className={`h-4 w-4 ${isDark ? 'text-brand-mint' : 'text-brand-sage'}`} />
+                      <CreditCard className={`h-4 w-4 ${isDark ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'}`} />
                       <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
                         Payment History
                       </span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        isDark ? 'bg-brand-sage/20 text-brand-mint' : 'bg-brand-sage/10 text-brand-sage'
+                        isDark ? 'bg-teal-700/20 text-teal-600 dark:text-teal-400' : 'bg-teal-700/10 text-teal-800 dark:text-teal-300'
                       }`}>
                         {payments.length}
                       </span>
@@ -817,14 +817,14 @@ export default function MvrViewModal({ isOpen, onClose, walletAddress, orderId: 
                   {/* License Card - Hero Section */}
                   <div className={`rounded-xl overflow-hidden ${
                     isDark 
-                      ? 'bg-gradient-to-br from-brand-sage/20 via-gray-800 to-gray-800/50 border border-brand-sage/30' 
-                      : 'bg-gradient-to-br from-brand-cream to-white border border-brand-sage/20'
+                      ? 'bg-gradient-to-br from-teal-700/20 via-gray-800 to-gray-800/50 border border-teal-700/30' 
+                      : 'bg-gradient-to-br from-brand-cream to-white border border-teal-700/20'
                   }`}>
                     <div className={`px-5 py-4 border-b ${
-                      isDark ? 'border-brand-sage/20' : 'border-brand-sage/10'
+                      isDark ? 'border-teal-700/20' : 'border-teal-700/10'
                     }`}>
                       <div className="flex items-center gap-2">
-                        <Shield className="h-5 w-5 text-brand-mint" />
+                        <Shield className="h-5 w-5 text-teal-600 dark:text-teal-400" />
                         <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                           License Information
                         </h3>

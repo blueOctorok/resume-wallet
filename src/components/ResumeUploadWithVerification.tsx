@@ -409,10 +409,10 @@ export default function ResumeUploadWithVerification({
       <div
         className={`max-w-4xl mx-auto rounded-2xl border p-6 sm:p-8 shadow-2xl relative ${
           theme === 'dark'
-            ? 'bg-brand-sage-light/20 border-brand-mint/30 backdrop-blur-xl'
-            : 'bg-white/80 border-brand-sage/20 backdrop-blur-xl'
+            ? 'bg-teal-200/20 border-teal-500/30 backdrop-blur-xl'
+            : 'bg-white/80 border-teal-700/20 backdrop-blur-xl'
         } border-t-4 ${
-          theme === 'dark' ? 'border-brand-mint' : 'border-brand-sage'
+          theme === 'dark' ? 'border-teal-500' : 'border-teal-700'
         }`}
       >
         <div className='text-center py-8'>
@@ -464,10 +464,10 @@ export default function ResumeUploadWithVerification({
       <div
         className={`max-w-4xl mx-auto rounded-2xl border p-6 sm:p-8 shadow-2xl relative ${
           theme === 'dark'
-            ? 'bg-brand-sage-light/20 border-brand-mint/30 backdrop-blur-xl'
-            : 'bg-white/80 border-brand-sage/20 backdrop-blur-xl'
+            ? 'bg-teal-200/20 border-teal-500/30 backdrop-blur-xl'
+            : 'bg-white/80 border-teal-700/20 backdrop-blur-xl'
         } border-t-4 ${
-          theme === 'dark' ? 'border-brand-mint' : 'border-brand-sage'
+          theme === 'dark' ? 'border-teal-500' : 'border-teal-700'
         }`}
       >
           <div className='mb-6'>
@@ -512,14 +512,14 @@ export default function ResumeUploadWithVerification({
                   uploading
                     ? 'opacity-50 cursor-not-allowed'
                     : theme === 'dark'
-                    ? 'border-brand-mint/50 bg-brand-mint/5 hover:border-brand-mint hover:bg-brand-mint/10 text-white'
-                    : 'border-brand-sage/50 bg-brand-sage/5 hover:border-brand-sage hover:bg-brand-sage/10 text-gray-700'
+                    ? 'border-teal-500/50 bg-teal-600/5 hover:border-teal-500 hover:bg-teal-600/10 text-white'
+                    : 'border-teal-700/50 bg-teal-700/5 hover:border-teal-700 hover:bg-teal-700/10 text-gray-700'
                 }
               `}
             >
               <Paperclip
                 className={`w-5 h-5 ${
-                  theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
                 }`}
               />
               <span className='font-medium text-base'>
@@ -588,8 +588,8 @@ export default function ResumeUploadWithVerification({
         disabled={!file || !account?.address || uploading}
         className={`w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed mb-6 ${
           theme === 'dark'
-            ? 'bg-brand-mint text-gray-900 hover:bg-brand-mint/90'
-            : 'bg-brand-sage text-white hover:bg-brand-sage/90'
+            ? 'bg-teal-600 text-white hover:bg-teal-500'
+            : 'bg-teal-700 text-white hover:bg-teal-700/90'
         }`}
       >
         {uploading ? 'Uploading...' : 'Upload Resume (Hash-First Process)'}

@@ -130,16 +130,16 @@ export default function PublicApplicationPage() {
         <div
           className={`rounded-2xl shadow-2xl border-t-4 p-8 mb-6 ${
             theme === 'dark'
-              ? 'bg-brand-sage-light/20 backdrop-blur-xl border-brand-mint'
-              : 'bg-white/80 backdrop-blur-xl border-brand-sage'
+              ? 'bg-teal-200/20 backdrop-blur-xl border-teal-500'
+              : 'bg-white/80 backdrop-blur-xl border-teal-700'
           }`}
         >
           <div className='flex items-center gap-4 mb-4'>
             <div
               className={`w-16 h-16 rounded-xl flex items-center justify-center ${
                 theme === 'dark'
-                  ? 'bg-gradient-to-br from-brand-mint to-teal-600 shadow-lg shadow-brand-mint/50'
-                  : 'bg-gradient-to-br from-brand-sage to-brand-sage-dark shadow-lg shadow-brand-sage/50'
+                  ? 'bg-gradient-to-br from-teal-600 to-teal-600 shadow-lg shadow-teal-600/50'
+                  : 'bg-gradient-to-br from-teal-700 to-teal-950 shadow-lg shadow-teal-900/40'
               }`}
             >
               <Briefcase className='w-8 h-8 text-white' />
@@ -166,8 +166,8 @@ export default function PublicApplicationPage() {
         <div
           className={`rounded-2xl shadow-2xl border-t-4 p-8 mb-6 ${
             theme === 'dark'
-              ? 'bg-brand-sage-light/20 backdrop-blur-xl border-brand-mint'
-              : 'bg-white/80 backdrop-blur-xl border-brand-sage'
+              ? 'bg-teal-200/20 backdrop-blur-xl border-teal-500'
+              : 'bg-white/80 backdrop-blur-xl border-teal-700'
           }`}
         >
           <h2 className='text-xl font-bold text-gray-900 dark:text-white mb-4'>
@@ -214,8 +214,8 @@ export default function PublicApplicationPage() {
         <div
           className={`rounded-2xl shadow-2xl border-t-4 p-8 mb-6 ${
             theme === 'dark'
-              ? 'bg-brand-sage-light/20 backdrop-blur-xl border-brand-mint'
-              : 'bg-white/80 backdrop-blur-xl border-brand-sage'
+              ? 'bg-teal-200/20 backdrop-blur-xl border-teal-500'
+              : 'bg-white/80 backdrop-blur-xl border-teal-700'
           }`}
         >
           <h2 className='text-xl font-bold text-gray-900 dark:text-white mb-4'>
@@ -283,8 +283,8 @@ export default function PublicApplicationPage() {
           <div
             className={`rounded-2xl shadow-2xl border-t-4 p-8 mb-6 ${
               theme === 'dark'
-                ? 'bg-brand-sage-light/20 backdrop-blur-xl border-brand-mint'
-                : 'bg-white/80 backdrop-blur-xl border-brand-sage'
+                ? 'bg-teal-200/20 backdrop-blur-xl border-teal-500'
+                : 'bg-white/80 backdrop-blur-xl border-teal-700'
             }`}
           >
             <h2 className='text-xl font-bold text-gray-900 dark:text-white mb-4'>
@@ -300,8 +300,8 @@ export default function PublicApplicationPage() {
         <div
           className={`rounded-2xl shadow-2xl border-t-4 p-8 mb-6 ${
             theme === 'dark'
-              ? 'bg-brand-sage-light/20 backdrop-blur-xl border-brand-mint'
-              : 'bg-white/80 backdrop-blur-xl border-brand-sage'
+              ? 'bg-teal-200/20 backdrop-blur-xl border-teal-500'
+              : 'bg-white/80 backdrop-blur-xl border-teal-700'
           }`}
         >
           <h2 className='text-xl font-bold text-gray-900 dark:text-white mb-4'>
@@ -329,8 +329,8 @@ export default function PublicApplicationPage() {
                   rel='noopener noreferrer'
                   className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all ${
                     theme === 'dark'
-                      ? 'bg-gradient-to-r from-brand-mint to-teal-600 text-white'
-                      : 'bg-gradient-to-r from-brand-sage to-brand-sage-dark text-white'
+                      ? 'bg-gradient-to-r from-teal-600 to-teal-600 text-white'
+                      : 'bg-gradient-to-r from-teal-700 to-teal-950 text-white'
                   }`}
                 >
                   <Download className='w-4 h-4' />
@@ -351,7 +351,7 @@ export default function PublicApplicationPage() {
             Powered by{' '}
             <span
               className={`font-bold ${
-                theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
               }`}
             >
               Storm

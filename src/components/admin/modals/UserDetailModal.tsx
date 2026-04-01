@@ -335,7 +335,7 @@ export default function UserDetailModal({
                             href={`https://github.com/${user.devProfile.github_username}`}
                             target='_blank'
                             rel='noopener noreferrer'
-                            className='text-brand-mint hover:underline'
+                            className='text-teal-600 dark:text-teal-400 hover:underline'
                           >
                             @{user.devProfile.github_username}
                           </a>
@@ -440,7 +440,7 @@ export default function UserDetailModal({
                               href={project.live_url}
                               target='_blank'
                               rel='noopener noreferrer'
-                              className='text-brand-mint hover:underline'
+                              className='text-teal-600 dark:text-teal-400 hover:underline'
                             >
                               <ExternalLink className='w-4 h-4' />
                             </a>

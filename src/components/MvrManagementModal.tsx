@@ -125,8 +125,8 @@ export default function MvrManagementModal({
           }`}
         >
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${theme === 'light' ? 'bg-brand-sage/10' : 'bg-brand-mint/20'}`}>
-              <FileText className={`h-6 w-6 ${theme === 'light' ? 'text-brand-sage' : 'text-brand-mint'}`} />
+            <div className={`p-2 rounded-lg ${theme === 'light' ? 'bg-teal-700/10' : 'bg-teal-600/20'}`}>
+              <FileText className={`h-6 w-6 ${theme === 'light' ? 'text-teal-800 dark:text-teal-300' : 'text-teal-600 dark:text-teal-400'}`} />
             </div>
             <h2
               className={`text-2xl font-bold ${
@@ -141,7 +141,7 @@ export default function MvrManagementModal({
             className={`p-2 rounded-lg transition-colors ${
               theme === 'light'
                 ? 'hover:bg-gray-100 text-gray-500'
-                : 'hover:bg-brand-sage-light/50 text-gray-400'
+                : 'hover:bg-teal-200/50 text-gray-400'
             }`}
           >
             <X className="h-5 w-5" />
@@ -156,8 +156,8 @@ export default function MvrManagementModal({
               className={`flex-1 px-6 py-4 text-sm font-semibold transition-colors relative ${
                 activeTab === 'transactions'
                   ? theme === 'light'
-                    ? 'text-brand-sage border-b-2 border-brand-sage'
-                    : 'text-brand-mint border-b-2 border-brand-mint'
+                    ? 'text-teal-800 dark:text-teal-300 border-b-2 border-teal-700'
+                    : 'text-teal-600 dark:text-teal-400 border-b-2 border-teal-500'
                   : theme === 'light'
                     ? 'text-gray-500 hover:text-gray-700'
                     : 'text-gray-400 hover:text-gray-300'
@@ -170,8 +170,8 @@ export default function MvrManagementModal({
                   <span className={`text-xs px-2 py-0.5 rounded-full ${
                     activeTab === 'transactions'
                       ? theme === 'light'
-                        ? 'bg-brand-sage/20 text-brand-sage'
-                        : 'bg-brand-mint/20 text-brand-mint'
+                        ? 'bg-teal-700/20 text-teal-800 dark:text-teal-300'
+                        : 'bg-teal-600/20 text-teal-600 dark:text-teal-400'
                       : theme === 'light'
                         ? 'bg-gray-200 text-gray-600'
                         : 'bg-gray-700 text-gray-300'
@@ -186,8 +186,8 @@ export default function MvrManagementModal({
               className={`flex-1 px-6 py-4 text-sm font-semibold transition-colors relative ${
                 activeTab === 'orders'
                   ? theme === 'light'
-                    ? 'text-brand-sage border-b-2 border-brand-sage'
-                    : 'text-brand-mint border-b-2 border-brand-mint'
+                    ? 'text-teal-800 dark:text-teal-300 border-b-2 border-teal-700'
+                    : 'text-teal-600 dark:text-teal-400 border-b-2 border-teal-500'
                   : theme === 'light'
                     ? 'text-gray-500 hover:text-gray-700'
                     : 'text-gray-400 hover:text-gray-300'
@@ -200,8 +200,8 @@ export default function MvrManagementModal({
                   <span className={`text-xs px-2 py-0.5 rounded-full ${
                     activeTab === 'orders'
                       ? theme === 'light'
-                        ? 'bg-brand-sage/20 text-brand-sage'
-                        : 'bg-brand-mint/20 text-brand-mint'
+                        ? 'bg-teal-700/20 text-teal-800 dark:text-teal-300'
+                        : 'bg-teal-600/20 text-teal-600 dark:text-teal-400'
                       : theme === 'light'
                         ? 'bg-gray-200 text-gray-600'
                         : 'bg-gray-700 text-gray-300'
@@ -522,8 +522,8 @@ export default function MvrManagementModal({
                             }}
                             className={`px-6 py-3 rounded-lg font-bold transition-all hover:scale-105 shadow-lg flex items-center gap-2 ${
                               theme === 'light'
-                                ? 'bg-gradient-to-r from-brand-sage to-emerald-600 hover:from-brand-sage-dark hover:to-emerald-700 text-white'
-                                : 'bg-gradient-to-r from-brand-mint to-emerald-400 hover:from-brand-mint/90 hover:to-emerald-300 text-gray-900 shadow-emerald-500/50'
+                                ? 'bg-gradient-to-r from-teal-700 to-teal-600 hover:from-teal-800 hover:to-teal-500 text-white'
+                                : 'bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-gray-950 shadow-teal-500/30'
                             }`}
                           >
                             <FileText className="h-5 w-5" />
@@ -560,8 +560,8 @@ export default function MvrManagementModal({
                         }}
                         className={`px-8 py-4 rounded-lg font-bold transition-all hover:scale-105 shadow-xl ${
                           theme === 'light'
-                            ? 'bg-gradient-to-r from-brand-sage to-emerald-600 hover:from-brand-sage-dark hover:to-emerald-700 text-white'
-                            : 'bg-gradient-to-r from-brand-mint to-emerald-400 hover:from-brand-mint/90 hover:to-emerald-300 text-gray-900 shadow-emerald-500/50'
+                            ? 'bg-gradient-to-r from-teal-700 to-teal-600 hover:from-teal-800 hover:to-teal-500 text-white'
+                            : 'bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-gray-950 shadow-teal-500/30'
                         }`}
                       >
                         Order Your First MVR →

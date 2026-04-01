@@ -85,7 +85,7 @@ export default function DevProfilesTab({
                     href={`https://github.com/${profile.github_username}`}
                     target='_blank'
                     rel='noopener noreferrer'
-                    className='flex items-center gap-1 text-brand-mint hover:underline'
+                    className='flex items-center gap-1 text-teal-600 dark:text-teal-400 hover:underline'
                   >
                     <Github className='w-3 h-3 opacity-60' />
                     <span className='text-xs'>

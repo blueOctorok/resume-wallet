@@ -59,7 +59,7 @@ export default function ReceiveUSDC({ walletAddress }: ReceiveUSDCProps) {
         <div className='flex items-center gap-2'>
           <div className={`flex-1 px-4 py-3 rounded-lg border font-mono text-sm break-all ${
             theme === 'dark'
-              ? 'bg-brand-sage-light/10 border-brand-cream/30 text-brand-cream'
+              ? 'bg-teal-200/10 border-brand-cream/30 text-brand-cream'
               : 'bg-white border-gray-300 text-gray-900'
           }`}>
             {walletAddress}
@@ -68,7 +68,7 @@ export default function ReceiveUSDC({ walletAddress }: ReceiveUSDCProps) {
             onClick={copyToClipboard}
             className={`p-3 rounded-lg border transition-colors ${
               theme === 'dark'
-                ? 'bg-brand-sage-light/20 border-brand-cream/30 hover:bg-brand-sage-light/30 text-brand-cream'
+                ? 'bg-teal-200/20 border-brand-cream/30 hover:bg-teal-200/30 text-brand-cream'
                 : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-700'
             }`}
             aria-label='Copy address'
@@ -92,7 +92,7 @@ export default function ReceiveUSDC({ walletAddress }: ReceiveUSDCProps) {
       {/* Network Info */}
       <div className={`p-4 rounded-lg ${
         theme === 'dark'
-          ? 'bg-brand-sage/20 border border-brand-mint/30'
+          ? 'bg-teal-700/20 border border-teal-500/30'
           : 'bg-blue-50 border border-blue-200'
       }`}>
         <div className='space-y-2'>
@@ -130,7 +130,7 @@ export default function ReceiveUSDC({ walletAddress }: ReceiveUSDCProps) {
         rel='noopener noreferrer'
         className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all ${
           theme === 'dark'
-            ? 'bg-brand-sage-light/20 hover:bg-brand-sage-light/30 border border-brand-cream/30 text-brand-cream'
+            ? 'bg-teal-200/20 hover:bg-teal-200/30 border border-brand-cream/30 text-brand-cream'
             : 'bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700'
         }`}
       >

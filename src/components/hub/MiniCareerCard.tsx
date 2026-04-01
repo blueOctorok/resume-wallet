@@ -40,7 +40,7 @@ export default function MiniCareerCard({ embedded = false }: MiniCareerCardProps
   const [shareModalOpen, setShareModalOpen] = useState(false)
 
   const statusStyles = {
-    complete: 'bg-green-500/15 text-green-700 dark:text-green-300 border-green-500/30',
+    complete: 'border-teal-500/35 bg-teal-500/10 text-teal-800 dark:text-teal-300',
     'in-progress': 'bg-amber-500/15 text-amber-800 dark:text-amber-200 border-amber-500/25',
     empty: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600',
   } as const

@@ -692,8 +692,8 @@ export default function ResumeBuilder({
                 <span
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs ${
                     theme === 'dark'
-                      ? 'bg-brand-mint/10 text-brand-mint border border-brand-mint/30'
-                      : 'bg-brand-mint/10 text-gray-700 border border-brand-mint/30'
+                      ? 'bg-teal-600/10 text-teal-600 dark:text-teal-400 border border-teal-500/30'
+                      : 'bg-teal-600/10 text-gray-700 border border-teal-500/30'
                   }`}
                 >
                   <Sparkles className='w-3 h-3' />
@@ -740,7 +740,7 @@ export default function ResumeBuilder({
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className='flex items-center gap-2 px-4 py-2 bg-brand-mint text-gray-900 rounded-xl font-medium hover:bg-brand-mint/90 disabled:opacity-50'
+                className='flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-xl font-medium hover:bg-teal-500 disabled:opacity-50'
               >
                 {isSaving ? (
                   <Loader2 className='w-4 h-4 animate-spin' />
@@ -769,7 +769,7 @@ export default function ResumeBuilder({
                   onClick={() => goToStep(idx)}
                   className={`flex flex-col items-center min-w-[72px] ${
                     isActive
-                      ? 'text-brand-mint'
+                      ? 'text-teal-600 dark:text-teal-400'
                       : isCompleted
                         ? theme === 'dark'
                           ? 'text-gray-400'
@@ -782,9 +782,9 @@ export default function ResumeBuilder({
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
                       isActive
-                        ? 'bg-brand-mint/20 border-2 border-brand-mint'
+                        ? 'bg-teal-600/20 border-2 border-teal-500'
                         : isCompleted
-                          ? 'bg-brand-mint/10 border border-brand-mint/50'
+                          ? 'bg-teal-600/10 border border-teal-500/50'
                           : theme === 'dark'
                             ? 'bg-gray-800 border border-gray-700'
                             : 'bg-gray-100 border border-gray-300'
@@ -840,7 +840,7 @@ export default function ResumeBuilder({
             {currentStep < STEPS.length - 1 ? (
               <button
                 onClick={handleNext}
-                className='flex items-center gap-2 px-6 py-3 bg-brand-mint text-gray-900 rounded-xl font-medium hover:bg-brand-mint/90'
+                className='flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-xl font-medium hover:bg-teal-500'
               >
                 Next
                 <ArrowRight className='w-5 h-5' />
@@ -849,7 +849,7 @@ export default function ResumeBuilder({
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className='flex items-center gap-2 px-6 py-3 bg-brand-mint text-gray-900 rounded-xl font-medium hover:bg-brand-mint/90 disabled:opacity-50'
+                className='flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-xl font-medium hover:bg-teal-500 disabled:opacity-50'
               >
                 {isSaving ? (
                   <Loader2 className='w-5 h-5 animate-spin' />
@@ -1035,7 +1035,7 @@ function CDLInfoStep({ data, onChange, theme }: CDLInfoStepProps) {
               key={endorsement}
               className={`flex items-center gap-2 p-2 sm:p-3 rounded-xl cursor-pointer border transition-all text-xs sm:text-sm ${
                 data.endorsements.includes(endorsement)
-                  ? 'bg-brand-mint/20 border-brand-mint/50'
+                  ? 'bg-teal-600/20 border-teal-500/50'
                   : theme === 'dark'
                     ? 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
                     : 'bg-gray-50 border-gray-200 hover:border-gray-300'
@@ -1093,10 +1093,10 @@ function CDLInfoStep({ data, onChange, theme }: CDLInfoStepProps) {
               e.currentTarget.value = ''
             }
           }}
-          className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-brand-mint/20 ${
+          className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${
             theme === 'dark'
-              ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-brand-mint'
-              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
+              ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
+              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
           }`}
         />
       </div>
@@ -1170,7 +1170,7 @@ function EmploymentStep({ employments, onChange, theme }: EmploymentStepProps) {
         </h4>
         <button
           onClick={addEmployment}
-          className='inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-xl font-medium bg-brand-mint text-gray-900 hover:bg-brand-mint/90 transition-all'
+          className='inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-xl font-medium bg-teal-600 text-white hover:bg-teal-500 transition-all'
         >
           <Plus className='w-4 h-4' />
           <span>Add Employment</span>
@@ -1307,10 +1307,10 @@ function EmploymentStep({ employments, onChange, theme }: EmploymentStepProps) {
                       e.currentTarget.value = ''
                     }
                   }}
-                  className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-brand-mint/20 ${
+                  className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${
                     theme === 'dark'
-                      ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-brand-mint'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
+                      ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
                   }`}
                 />
               </div>
@@ -1385,7 +1385,7 @@ function EducationStep({
         </h4>
         <button
           onClick={addEducation}
-          className='inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-xl font-medium bg-brand-mint text-gray-900 hover:bg-brand-mint/90 transition-all'
+          className='inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-xl font-medium bg-teal-600 text-white hover:bg-teal-500 transition-all'
         >
           <Plus className='w-4 h-4' />
           <span>Add Education</span>
@@ -1501,10 +1501,10 @@ function EducationStep({
                       e.currentTarget.value = ''
                     }
                   }}
-                  className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-brand-mint/20 ${
+                  className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${
                     theme === 'dark'
-                      ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-brand-mint'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
+                      ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
                   }`}
                 />
               </div>
@@ -1596,10 +1596,10 @@ function SkillsStep({
                 }
               }}
               placeholder='e.g., Double/Triple Trailers, ELD Systems'
-              className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-brand-mint/20 ${
+              className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${
                 theme === 'dark'
-                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-brand-mint'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
+                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
               }`}
             />
           </div>
@@ -1616,7 +1616,7 @@ function SkillsStep({
         <button
           onClick={addSkill}
           disabled={!newSkillName.trim()}
-          className='mt-3 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-xl font-medium bg-brand-mint text-gray-900 hover:bg-brand-mint/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed'
+          className='mt-3 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-xl font-medium bg-teal-600 text-white hover:bg-teal-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed'
         >
           <Plus className='w-4 h-4' />
           Add Skill
@@ -1729,7 +1729,7 @@ function ReferencesStep({
         </h4>
         <button
           onClick={addReference}
-          className='inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-xl font-medium bg-brand-mint text-gray-900 hover:bg-brand-mint/90 transition-all'
+          className='inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-xl font-medium bg-teal-600 text-white hover:bg-teal-500 transition-all'
         >
           <Plus className='w-4 h-4' />
           <span>Add Reference</span>
@@ -2215,10 +2215,10 @@ function InputField({
         disabled={disabled}
         placeholder={placeholder}
         required={required}
-        className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-brand-mint/20 ${
+        className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${
           theme === 'dark'
-            ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-brand-mint'
-            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
+            ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
+            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
         } disabled:opacity-50 disabled:cursor-not-allowed`}
       />
     </div>
@@ -2253,10 +2253,10 @@ function PhoneField({
       <PhoneInput
         value={value}
         onChange={onChange}
-        className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-brand-mint/20 ${
+        className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${
           theme === 'dark'
-            ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-brand-mint'
-            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
+            ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
+            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
         }`}
       />
     </div>
@@ -2296,10 +2296,10 @@ function TextareaField({
         required={required}
         rows={rows}
         placeholder={placeholder}
-        className={`w-full px-4 py-3 rounded-xl border transition-colors resize-none focus:outline-none focus:ring-2 focus:ring-brand-mint/20 ${
+        className={`w-full px-4 py-3 rounded-xl border transition-colors resize-none focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${
           theme === 'dark'
-            ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-brand-mint'
-            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-brand-mint'
+            ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
+            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500'
         }`}
       />
     </div>
@@ -2335,10 +2335,10 @@ function SelectField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}
-        className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-brand-mint/20 ${
+        className={`w-full px-4 py-3 rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${
           theme === 'dark'
-            ? 'bg-gray-800 border-gray-700 text-white focus:border-brand-mint'
-            : 'bg-white border-gray-300 text-gray-900 focus:border-brand-mint'
+            ? 'bg-gray-800 border-gray-700 text-white focus:border-teal-500'
+            : 'bg-white border-gray-300 text-gray-900 focus:border-teal-500'
         }`}
       >
         {options.map((option) => (

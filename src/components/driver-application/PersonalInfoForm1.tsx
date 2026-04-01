@@ -845,7 +845,7 @@ export default function PersonalInfoForm1({
               onChange={(e) =>
                 handleInputChange('hasLegalRightToWork', e.target.value)
               }
-              className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
+              className={`mr-2 ${theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'} accent-teal-600`}
             />
             <span
               className={`${labelClass}`}
@@ -862,7 +862,7 @@ export default function PersonalInfoForm1({
               onChange={(e) =>
                 handleInputChange('hasLegalRightToWork', e.target.value)
               }
-              className={`mr-2 ${theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'} accent-brand-mint`}
+              className={`mr-2 ${theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'} accent-teal-600`}
             />
             <span
               className={`${labelClass}`}
@@ -1479,7 +1479,7 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
       >
         <div>
           <h3
-            className={`text-xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
+            className={`text-xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-teal-800 dark:text-teal-300'}`}
           >
             MED CARD (DOT MEDICAL CERTIFICATE)
           </h3>
@@ -1515,8 +1515,8 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
                               .medicalCertificateExpiration,
                     })
                   }
-                  className={`accent-brand-mint ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
+                  className={`accent-teal-600 ${
+                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
                   }`}
                 />
                 <span className={labelClass}>{value.toUpperCase()}</span>
@@ -1559,7 +1559,7 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
 
       <div className='space-y-6 mt-8'>
         <h3
-          className={`text-xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-brand-sage'}`}
+          className={`text-xl font-semibold ${theme === 'dark' ? 'text-white' : 'text-teal-800 dark:text-teal-300'}`}
         >
           DISQUALIFICATION HISTORY (49 CFR 391.15)
         </h3>
@@ -1596,8 +1596,8 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
                     })
                   }
                   className={`mr-1 ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
-                  } accent-brand-mint`}
+                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
+                  } accent-teal-600`}
                 />
                 <span className={`${labelClass}`}>
                   {value.toUpperCase()}
@@ -1660,8 +1660,8 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
                     })
                   }
                   className={`mr-1 ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
-                  } accent-brand-mint`}
+                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
+                  } accent-teal-600`}
                 />
                 <span className={`${labelClass}`}>
                   {value.toUpperCase()}
@@ -1724,8 +1724,8 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
                     })
                   }
                   className={`mr-1 ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
-                  } accent-brand-mint`}
+                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
+                  } accent-teal-600`}
                 />
                 <span className={`${labelClass}`}>
                   {value.toUpperCase()}
@@ -1788,8 +1788,8 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
                     })
                   }
                   className={`mr-1 ${
-                    theme === 'dark' ? 'text-brand-mint' : 'text-brand-sage'
-                  } accent-brand-mint`}
+                    theme === 'dark' ? 'text-teal-600 dark:text-teal-400' : 'text-teal-800 dark:text-teal-300'
+                  } accent-teal-600`}
                 />
                 <span className={`${labelClass}`}>
                   {value.toUpperCase()}
@@ -1907,14 +1907,14 @@ className={`w-full px-4 py-3 border rounded-lg ${inputBaseClass}`}
         <div className='flex items-center justify-between mb-4'>
           <div
             className={`text-sm font-medium ${
-              theme === 'dark' ? 'text-white' : 'text-brand-sage'
+              theme === 'dark' ? 'text-white' : 'text-teal-800 dark:text-teal-300'
             }`}
           >
             Step {currentStep} of {STEPS.length}
           </div>
           <div
             className={`text-sm ${
-              theme === 'dark' ? 'text-gray-300' : 'text-brand-sage/80'
+              theme === 'dark' ? 'text-gray-300' : 'text-teal-800 dark:text-teal-300/80'
             }`}
           >
             {Math.round((currentStep / STEPS.length) * 100)}% Complete
