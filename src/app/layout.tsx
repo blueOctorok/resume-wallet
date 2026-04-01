@@ -103,7 +103,7 @@ export default function RootLayout({
                 try {
                   // Check for saved preference first
                   const savedTheme = localStorage.getItem('stormchain-theme');
-                  if (savedTheme === 'light' || savedTheme === 'dark') {
+                  if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'paper') {
                     document.documentElement.setAttribute('data-theme', savedTheme);
                     return;
                   }

@@ -73,7 +73,7 @@ export default function WalletCard({
         <button
           onClick={onClick}
           className={`relative group flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 ${
-            theme === 'light'
+            theme !== 'dark'
               ? 'text-gray-800 bg-white/70 hover:bg-gray-100 border-gray-200'
               : 'bg-gray-800/50 text-gray-200 hover:bg-gray-700/50 border-gray-600'
           }`}
@@ -95,7 +95,7 @@ export default function WalletCard({
     <div
       onClick={onClick}
       className={`relative group cursor-pointer backdrop-blur-sm rounded-xl border transition-all duration-300 p-4 min-w-[280px] ${
-        theme === 'light'
+        theme !== 'dark'
           ? 'bg-white/70 border-gray-200 hover:border-gray-300'
           : 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
       }`}
@@ -116,7 +116,7 @@ export default function WalletCard({
           </div>
           <span
             className={`text-sm font-semibold ${
-              theme === 'light' ? 'text-gray-800' : 'text-gray-200'
+              theme !== 'dark' ? 'text-gray-800' : 'text-gray-200'
             }`}
           >
             Wallet
@@ -126,7 +126,7 @@ export default function WalletCard({
         <button
           onClick={toggleAddressVisibility}
           className={`p-1.5 rounded-lg transition-colors ${
-            theme === 'light'
+            theme !== 'dark'
               ? 'hover:bg-gray-200 text-gray-600'
               : 'hover:bg-gray-600/50 text-gray-400'
           }`}
@@ -147,7 +147,7 @@ export default function WalletCard({
         <div className='flex items-center gap-2'>
           <span
             className={`text-xs font-medium ${
-              theme === 'light' ? 'text-gray-600' : 'text-brand-cream/70'
+              theme !== 'dark' ? 'text-gray-600' : 'text-brand-cream/70'
             }`}
           >
             Address:
@@ -155,7 +155,7 @@ export default function WalletCard({
           <button
             onClick={copyToClipboard}
             className={`p-1 rounded transition-colors ${
-              theme === 'light'
+              theme !== 'dark'
                 ? 'bg-teal-600/20 hover:bg-teal-600/30'
                 : 'bg-teal-600/40 hover:bg-teal-600/60'
             }`}
@@ -166,7 +166,7 @@ export default function WalletCard({
             ) : (
               <Copy
                 className={`w-3 h-3 ${
-                  theme === 'light' ? 'text-gray-600' : 'text-gray-400'
+                  theme !== 'dark' ? 'text-gray-600' : 'text-gray-400'
                 }`}
               />
             )}
@@ -180,7 +180,7 @@ export default function WalletCard({
         >
           <code
             className={`text-xs font-mono break-all ${
-              theme === 'light' ? 'text-gray-700' : 'text-gray-300'
+              theme !== 'dark' ? 'text-gray-700' : 'text-gray-300'
             }`}
           >
             {formatAddress(user.address)}
@@ -191,20 +191,20 @@ export default function WalletCard({
       {/* Network Info */}
       <div
         className={`mt-3 pt-3 border-t ${
-          theme === 'light' ? 'border-gray-200' : 'border-gray-600'
+          theme !== 'dark' ? 'border-gray-200' : 'border-gray-600'
         }`}
       >
         <div className='flex items-center justify-between text-xs'>
           <span
             className={
-              theme === 'light' ? 'text-gray-600' : 'text-gray-400'
+              theme !== 'dark' ? 'text-gray-600' : 'text-gray-400'
             }
           >
             Network:
           </span>
           <span
             className={`font-medium ${
-              theme === 'light' ? 'text-gray-800' : 'text-indigo-400'
+              theme !== 'dark' ? 'text-gray-800' : 'text-indigo-400'
             }`}
           >
             Base Sepolia
@@ -215,14 +215,14 @@ export default function WalletCard({
           <div className='flex items-center justify-between text-xs mt-1'>
             <span
               className={
-                theme === 'light' ? 'text-gray-600' : 'text-gray-400'
+                theme !== 'dark' ? 'text-gray-600' : 'text-gray-400'
               }
             >
               Method:
             </span>
             <span
               className={`font-medium capitalize ${
-                theme === 'light' ? 'text-gray-800' : 'text-gray-300'
+                theme !== 'dark' ? 'text-gray-800' : 'text-gray-300'
               }`}
             >
               {user.method.replace('_', ' ')}
@@ -234,14 +234,14 @@ export default function WalletCard({
           <div className='flex items-center justify-between text-xs mt-1'>
             <span
               className={
-                theme === 'light' ? 'text-gray-600' : 'text-gray-400'
+                theme !== 'dark' ? 'text-gray-600' : 'text-gray-400'
               }
             >
               Role:
             </span>
             <span
               className={`font-medium capitalize ${
-                theme === 'light' ? 'text-gray-800' : 'text-gray-300'
+                theme !== 'dark' ? 'text-gray-800' : 'text-gray-300'
               }`}
             >
               {userRole === 'driver' ? '🚗 Driver' : '🏢 Employer'}
@@ -259,7 +259,7 @@ export default function WalletCard({
               onSwitchRole()
             }}
             className={`w-full inline-flex items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
-              theme === 'light'
+              theme !== 'dark'
                 ? 'text-indigo-600 border border-indigo-200 hover:bg-indigo-50'
                 : 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30'
             }`}
@@ -273,7 +273,7 @@ export default function WalletCard({
       {shouldShowBuyUSDC && user?.address && (
         <div
           className={`mt-4 pt-4 border-t ${
-            theme === 'light' ? 'border-gray-200' : 'border-gray-600'
+            theme !== 'dark' ? 'border-gray-200' : 'border-gray-600'
           }`}
           onClick={(e) => e.stopPropagation()}
         >
@@ -287,7 +287,7 @@ export default function WalletCard({
             href='/admin'
             onClick={(event) => event.stopPropagation()}
             className={`inline-flex items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
-              theme === 'light'
+              theme !== 'dark'
                 ? 'text-indigo-600 border border-indigo-200 hover:bg-indigo-50'
                 : 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30'
             }`}

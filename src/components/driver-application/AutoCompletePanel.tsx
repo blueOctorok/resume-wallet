@@ -116,7 +116,7 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
       <button
         onClick={onToggle}
         className={`fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg transition-colors z-50 ${
-          theme === 'light'
+          theme !== 'dark'
             ? 'bg-teal-700 hover:bg-teal-900 text-white'
             : 'bg-purple-600 hover:bg-purple-700 text-white'
         }`}
@@ -142,7 +142,7 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
   return (
     <div
       className={`fixed bottom-4 right-4 border rounded-lg shadow-xl p-4 w-80 z-50 ${
-        theme === 'light'
+        theme !== 'dark'
           ? 'bg-white border-gray-200'
           : 'bg-teal-200/10 border-teal-500/30'
       }`}
@@ -150,7 +150,7 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
       <div className='flex items-center justify-between mb-4'>
         <h3
           className={`text-lg font-semibold ${
-            theme === 'light' ? 'text-gray-900' : 'text-brand-cream'
+            theme !== 'dark' ? 'text-gray-900' : 'text-brand-cream'
           }`}
         >
           Auto-Complete
@@ -158,7 +158,7 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
         <button
           onClick={onToggle}
           className={`${
-            theme === 'light'
+            theme !== 'dark'
               ? 'text-gray-400 hover:text-gray-600'
               : 'text-brand-cream/70 hover:text-brand-cream'
           }`}
@@ -184,7 +184,7 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
         <div>
           <label
             className={`block text-sm font-medium mb-2 ${
-              theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+              theme !== 'dark' ? 'text-gray-700' : 'text-brand-cream/70'
             }`}
           >
             Test Data Preset
@@ -193,7 +193,7 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
             value={selectedPreset}
             onChange={(e) => setSelectedPreset(e.target.value as any)}
             className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
-              theme === 'light'
+              theme !== 'dark'
                 ? 'border-gray-300 focus:ring-teal-500'
                 : 'border-gray-300 focus:ring-purple-500'
             }`}
@@ -209,7 +209,7 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
           <button
             onClick={handleFillAll}
             className={`w-full px-4 py-2 text-white rounded-md transition-colors ${
-              theme === 'light'
+              theme !== 'dark'
                 ? 'bg-teal-700 hover:bg-teal-900'
                 : 'bg-purple-600 hover:bg-purple-700'
             }`}
@@ -220,7 +220,7 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
           <button
             onClick={handleFillCurrentStep}
             className={`w-full px-4 py-2 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl ${
-              theme === 'light'
+              theme !== 'dark'
                 ? 'text-white bg-teal-700 hover:bg-teal-900'
                 : 'bg-teal-600 text-white hover:bg-teal-500'
             }`}
@@ -232,7 +232,7 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
         {/* Preset Descriptions */}
         <div
           className={`text-xs space-y-1 ${
-            theme === 'light' ? 'text-gray-600' : 'text-brand-cream/60'
+            theme !== 'dark' ? 'text-gray-600' : 'text-brand-cream/60'
           }`}
         >
           <div>
@@ -250,12 +250,12 @@ export const AutoCompletePanel: React.FC<AutoCompletePanelProps> = ({
         {/* Current Step Info */}
         <div
           className={`rounded-md p-3 ${
-            theme === 'light' ? 'bg-gray-50' : 'bg-teal-700/20'
+            theme !== 'dark' ? 'bg-gray-50' : 'bg-teal-700/20'
           }`}
         >
           <div
             className={`text-sm ${
-              theme === 'light' ? 'text-gray-700' : 'text-brand-cream/70'
+              theme !== 'dark' ? 'text-gray-700' : 'text-brand-cream/70'
             }`}
           >
             <strong>Current Step:</strong> {currentStep}/10 -{' '}

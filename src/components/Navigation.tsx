@@ -15,7 +15,7 @@ import {
   navDropdownItemBorderClass,
   navStormPillClass,
 } from '@/lib/navigation-styles'
-import ThemeToggle from './ThemeToggle'
+import ThemePicker from './ThemePicker'
 import StormChainWordmark from '@/components/ui/StormChainWordmark'
 import NavVaultShell from '@/components/ui/NavVaultShell'
 import StormTokenMark from '@/components/ui/StormTokenMark'
@@ -358,7 +358,7 @@ export default function Navigation({
                   ref={hubDropdownRef}
                   className='relative z-[100] sm:absolute sm:left-1/2 sm:-translate-x-1/2 w-full sm:w-auto'
                 >
-                  <div className={navHubGradientRingClass()}>
+                  <div className={navHubGradientRingClass(theme)}>
                     <button
                       type='button'
                       onClick={() => setIsHubDropdownOpen(!isHubDropdownOpen)}
@@ -476,7 +476,7 @@ export default function Navigation({
                     </span>
                   </button>
                 )}
-                <ThemeToggle />
+                <ThemePicker />
               </div>
             </div>
         </nav>

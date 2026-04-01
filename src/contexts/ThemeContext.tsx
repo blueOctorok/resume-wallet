@@ -2,10 +2,19 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 
-type Theme = 'light' | 'dark'
+export type Theme = 'light' | 'dark' | 'paper'
+
+const STORAGE_KEY = 'stormchain-theme'
+/** When switching to dark, we remember which light look (icy vs paper) to restore. */
+const LIGHT_APPEARANCE_KEY = 'stormchain-light-appearance'
+
+function isValidTheme(v: string | null): v is Theme {
+  return v === 'light' || v === 'dark' || v === 'paper'
+}
 
 interface ThemeContextType {
   theme: Theme
+  /** Dark ↔ last icy/paper appearance (persists which light variant you had). */
   toggleTheme: () => void
   setTheme: (theme: Theme) => void
 }
@@ -13,37 +22,68 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Must match SSR/first client paint — never read localStorage in useState initializer
-  // (server is always 'light'; client with saved 'dark' would mismatch and break hydration).
   const [theme, setThemeState] = useState<Theme>('light')
   const skipThemePersist = useRef(true)
 
   useEffect(() => {
-    const saved = localStorage.getItem('stormchain-theme') as Theme
     let next: Theme = 'light'
-    if (saved === 'light' || saved === 'dark') {
-      next = saved
-    } else {
-      const fromDom = document.documentElement.getAttribute('data-theme') as Theme
-      if (fromDom === 'light' || fromDom === 'dark') next = fromDom
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (isValidTheme(saved)) {
+        next = saved
+      } else {
+        const fromDom = document.documentElement.getAttribute('data-theme')
+        if (isValidTheme(fromDom)) next = fromDom
+      }
+      if (next === 'light' || next === 'paper') {
+        localStorage.setItem(LIGHT_APPEARANCE_KEY, next)
+      }
+    } catch {
+      next = 'light'
     }
     setThemeState(next)
     document.documentElement.setAttribute('data-theme', next)
-    localStorage.setItem('stormchain-theme', next)
+    try {
+      localStorage.setItem(STORAGE_KEY, next)
+    } catch {
+      /* ignore */
+    }
   }, [])
 
   useEffect(() => {
-    // First run is the SSR-aligned 'light' paint — persist would clobber disk before hydrate runs.
     if (skipThemePersist.current) {
       skipThemePersist.current = false
       return
     }
     document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('stormchain-theme', theme)
+    try {
+      localStorage.setItem(STORAGE_KEY, theme)
+      if (theme === 'light' || theme === 'paper') {
+        localStorage.setItem(LIGHT_APPEARANCE_KEY, theme)
+      }
+    } catch {
+      /* ignore */
+    }
   }, [theme])
 
   const toggleTheme = () => {
-    setThemeState((prev) => (prev === 'light' ? 'dark' : 'light'))
+    setThemeState((prev) => {
+      if (prev === 'dark') {
+        try {
+          const back = localStorage.getItem(LIGHT_APPEARANCE_KEY)
+          if (back === 'light' || back === 'paper') return back
+        } catch {
+          /* fall through */
+        }
+        return 'light'
+      }
+      try {
+        localStorage.setItem(LIGHT_APPEARANCE_KEY, prev)
+      } catch {
+        /* ignore */
+      }
+      return 'dark'
+    })
   }
 
   const setTheme = (newTheme: Theme) => {
@@ -63,4 +103,9 @@ export function useTheme() {
     throw new Error('useTheme must be used within a ThemeProvider')
   }
   return context
+}
+
+/** True for both icy light and paper — anything that is not the dark void theme. */
+export function isLightAppearance(theme: Theme): boolean {
+  return theme === 'light' || theme === 'paper'
 }

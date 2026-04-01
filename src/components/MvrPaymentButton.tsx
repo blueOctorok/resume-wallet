@@ -362,14 +362,14 @@ function MvrPaymentButtonUI({
 }) {
   const buttonClasses = `w-full md:w-auto px-6 py-2.5 text-sm font-semibold rounded-xl border transition-all duration-300 ${
     isLoading || isPending
-      ? theme === 'light'
+      ? theme !== 'dark'
         ? 'text-gray-400 bg-gray-100 border-gray-200 cursor-not-allowed'
         : 'text-gray-500 bg-gray-800 border-gray-700 cursor-not-allowed'
       : success
-        ? theme === 'light'
+        ? theme !== 'dark'
           ? 'text-white bg-green-600 hover:bg-green-700 border-green-600 shadow-lg'
           : 'text-white bg-green-600/80 hover:bg-green-600 border-green-500 shadow-lg'
-        : theme === 'light'
+        : theme !== 'dark'
           ? 'text-white bg-teal-600 hover:bg-teal-700 border-teal-600 hover:border-teal-700 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
           : 'text-white bg-teal-600/80 hover:bg-teal-700 border-teal-500/50 hover:border-teal-500 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer'
   }`
@@ -389,7 +389,7 @@ function MvrPaymentButtonUI({
             : `💳 Order MVR (${config.priceUsdc} USDC)`}
       </button>
       {error && (
-        <p className={`text-xs ${theme === 'light' ? 'text-red-600' : 'text-red-400'}`}>
+        <p className={`text-xs ${theme !== 'dark' ? 'text-red-600' : 'text-red-400'}`}>
           {error}
         </p>
       )}

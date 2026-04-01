@@ -4,6 +4,18 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Appearance: Paper theme + theme picker** (March 2026)
+
+- **`data-theme='paper'`** — **Kindle-style paperback** (not saturated “brand” light): sepia cream **body**, warm **ink** text, **low chroma** — vault/nav chrome via **`PAPER_KINDLE_VAULT_SHELL`** + [`HubBlockVault.tsx`](src/components/hub/HubBlockVault.tsx) **`paperKindle`** (neutral rims, no teal/violet strip); [`Button`](src/components/ui/Button.tsx) primary/secondary/ghost use **dusty green-grey** + parchment fills; [`globals.css`](src/app/globals.css) **paper** utility overrides mute **`text-teal-*`**, **`border-teal-*`**, **`bg-teal-50/100`**, violet/indigo accents; `.storm-light-panel` **no teal rim**; **`akui-*`** sepia surfaces.
+- [`ThemeContext.tsx`](src/contexts/ThemeContext.tsx): `Theme = 'light' | 'dark' | 'paper'`; persistence + **`toggleTheme`** (dark ↔ last icy/paper); **`isLightAppearance()`**.
+- [`ThemePicker.tsx`](src/components/ThemePicker.tsx): Icy light / Paper / Dark menu.
+- [`VaultHorizontalVaultShell.tsx`](src/components/ui/VaultHorizontalVaultShell.tsx): **`getVaultAccentLayersForTheme`** → paper uses **PAPER_KINDLE_VAULT_SHELL**; softer inset ring + specular.
+- [`navigation-styles.ts`](src/lib/navigation-styles.ts): **`navHubGradientRingClass(theme)`** — paper uses **stone** gradient ring (not teal/violet).
+- [`VaultLightFrostTexture.tsx`](src/components/ui/VaultLightFrostTexture.tsx): Paper = **very soft** grain (esp. canvas), warm dots.
+- [`StormBackground.tsx`](src/components/StormBackground.tsx): Paper = **sepia haze only**, **fewer / fainter** bubbles.
+- [`layout.tsx`](src/app/layout.tsx): accepts **`paper`** in inline theme script.
+- **`theme !== 'dark'`** for non-void UI branches; admin maps paper → light tab styling.
+
 ## **Hub profile header — vertical balance (lg+)** (March 2026)
 
 - [`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx) **`HubProfileHeader`**: Row uses **`lg:items-stretch`** so columns share the shell height; **Refresh** column **`lg:justify-center`**, **profile** (avatar + name) stays **`items-center`** in a stretched middle column, **Career Card + completeness** column **`lg:justify-center`** so all three bands use vertical space instead of hugging the top.
@@ -346,7 +358,7 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 - New [`navigation-styles.ts`](src/lib/navigation-styles.ts): shell uses **`rounded-2xl`**, **`border-gray-200/90`** / **`border-gray-600/70`**, teal-tinted **shadow** + **ring**, top **hairline** (same language as [`HubSidebar`](src/components/hub/HubSidebar.tsx) / career card).
 - [`Navigation.tsx`](src/components/Navigation.tsx): removed soft **`rounded-3xl`** + heavy inner/glow layers; **Storm** + **Chain** wordmark (**Chain** in teal→cyan gradient); hub CTA uses **teal/violet gradient ring** + dark fill (replaces **`rotating-gold-border`**); controls use shared **chips**; **Sign in** uses [`Button`](src/components/ui/Button.tsx); removed debug `console.log`.
-- [`NotificationBell`](src/components/ui/NotificationBell.tsx) + [`ThemeToggle`](src/components/ThemeToggle.tsx): trigger buttons use **`navControlButtonClass`** so they match the nav chrome everywhere those components appear.
+- [`NotificationBell`](src/components/ui/NotificationBell.tsx) + [`ThemePicker`](src/components/ThemePicker.tsx): trigger buttons use **`navControlButtonClass`** so they match the nav chrome everywhere those components appear.
 
 ---
 

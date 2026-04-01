@@ -5,6 +5,7 @@
  * Used by CandidateHub (sortable) and HomePage (marketing).
  */
 import { useEffect, useState } from 'react'
+import { useTheme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
 import { getBlockColor } from '@/lib/block-registry'
 import { VAULT_CLIP, VAULT_CLIP_HORIZONTAL } from '@/lib/vault-credential-geometry'
@@ -64,29 +65,42 @@ export function VaultCredentialChrome({
   onMouseEnter,
   onMouseLeave,
 }: VaultCredentialChromeProps) {
+  const { theme } = useTheme()
+  const paperKindle = !isDark && theme === 'paper'
   const clip = clipVariant === 'horizontal' ? VAULT_CLIP_HORIZONTAL : VAULT_CLIP
   const showSigil = showSigilProp ?? clipVariant !== 'horizontal'
 
+  /** Kindle paperback: no saturated block rims — warm neutral “ink on stock” only */
+  const routeGlow = paperKindle ? 'rgba(132,122,108,0.38)' : glowColor
+
   const rimBg = hasRoute
-    ? `linear-gradient(135deg, ${glowColor} 0%, transparent 52%, ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(30,58,90,0.08)'} 100%)`
+    ? `linear-gradient(135deg, ${routeGlow} 0%, transparent 52%, ${isDark ? 'rgba(255,255,255,0.05)' : paperKindle ? 'rgba(92,82,72,0.06)' : 'rgba(30,58,90,0.08)'} 100%)`
     : isDark
       ? 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02))'
-      : 'linear-gradient(135deg, rgba(100,116,139,0.42), rgba(236,245,248,0.92))'
+      : paperKindle
+        ? 'linear-gradient(135deg, rgba(168,152,132,0.32), rgba(250,242,228,0.88))'
+        : 'linear-gradient(135deg, rgba(100,116,139,0.42), rgba(236,245,248,0.92))'
 
   const stripBg = hasRoute
-    ? `linear-gradient(90deg, transparent 0%, ${glowColor} 42%, ${glowColor} 58%, transparent 100%)`
+    ? `linear-gradient(90deg, transparent 0%, ${routeGlow} 42%, ${routeGlow} 58%, transparent 100%)`
     : isDark
       ? 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)'
-      : 'linear-gradient(90deg, transparent, rgba(13,148,136,0.35), rgba(91,33,182,0.22), transparent)'
+      : paperKindle
+        ? 'linear-gradient(90deg, transparent, rgba(140,128,112,0.2), transparent)'
+        : 'linear-gradient(90deg, transparent, rgba(13,148,136,0.35), rgba(91,33,182,0.22), transparent)'
 
-  const sigilBorder = hasRoute ? glowColor : isDark ? 'rgba(255,255,255,0.22)' : 'rgba(51,65,85,0.55)'
+  const sigilBorder = hasRoute ? routeGlow : isDark ? 'rgba(255,255,255,0.22)' : paperKindle ? 'rgba(120,108,96,0.42)' : 'rgba(51,65,85,0.55)'
 
   /** Brighter accent for sweep / spark (rim color is often low-alpha rgba). */
   const accentVivid = hasRoute
-    ? glowColor.replace(/[\d.]+\)$/, '0.45)')
+    ? paperKindle
+      ? 'rgba(118,108,98,0.32)'
+      : glowColor.replace(/[\d.]+\)$/, '0.45)')
     : isDark
       ? 'rgba(45,212,191,0.35)'
-      : 'rgba(13,148,136,0.48)'
+      : paperKindle
+        ? 'rgba(130,118,106,0.22)'
+        : 'rgba(13,148,136,0.48)'
 
   return (
     <div
@@ -114,13 +128,15 @@ export function VaultCredentialChrome({
           aria-hidden
           className={cn(
             'vault-conic-slow pointer-events-none absolute -inset-[35%] z-0 motion-reduce:opacity-0',
-            isDark ? 'mix-blend-plus-lighter opacity-[0.2]' : 'mix-blend-multiply opacity-[0.18]',
+            isDark ? 'mix-blend-plus-lighter opacity-[0.2]' : paperKindle ? 'mix-blend-multiply opacity-[0.09]' : 'mix-blend-multiply opacity-[0.18]',
           )}
           style={{
             clipPath: clip,
-            background: isDark
-              ? `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${glowColor} 52deg, rgba(139,92,246,0.22) 108deg, transparent 198deg, ${glowColor} 268deg, transparent 360deg)`
-              : `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${glowColor} 52deg, rgba(109,40,217,0.14) 108deg, transparent 198deg, ${glowColor} 268deg, transparent 360deg)`,
+            background: paperKindle
+              ? `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${routeGlow} 52deg, rgba(120,110,100,0.08) 108deg, transparent 198deg, ${routeGlow} 268deg, transparent 360deg)`
+              : isDark
+                ? `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${glowColor} 52deg, rgba(139,92,246,0.22) 108deg, transparent 198deg, ${glowColor} 268deg, transparent 360deg)`
+                : `conic-gradient(from 210deg at 70% 0%, transparent 0deg, ${glowColor} 52deg, rgba(109,40,217,0.14) 108deg, transparent 198deg, ${glowColor} 268deg, transparent 360deg)`,
           }}
         />
       )}
@@ -141,7 +157,9 @@ export function VaultCredentialChrome({
           'absolute inset-[2px] z-0 overflow-hidden dark:shadow-[inset_0_0_28px_rgba(0,0,0,0.35)]',
           isDark
             ? 'bg-gradient-to-b from-[rgb(22,28,36)]/96 via-[rgb(14,18,24)]/98 to-[rgb(8,11,15)] ring-1 ring-white/[0.05] shadow-[inset_0_0_20px_rgba(0,0,0,0.04)]'
-            : 'bg-gradient-to-b from-[#f4fafb]/96 via-cyan-50/[0.28] to-slate-200/88 backdrop-blur-md backdrop-saturate-125 shadow-[inset_0_0_0_1px_rgba(13,148,136,0.1),inset_0_0_42px_rgba(15,23,42,0.065),inset_0_1px_0_rgba(255,255,255,0.88)] ring-1 ring-slate-400/50',
+            : paperKindle
+              ? 'bg-gradient-to-b from-[#fcf7ee]/98 via-[#f5ebe0]/95 to-[#ebe0d2]/96 backdrop-blur-md backdrop-saturate-[0.95] shadow-[inset_0_0_0_1px_rgba(120,108,92,0.08),inset_0_0_38px_rgba(58,52,46,0.04),inset_0_1px_0_rgba(255,255,255,0.65)] ring-1 ring-amber-900/15'
+              : 'bg-gradient-to-b from-[#f4fafb]/96 via-cyan-50/[0.28] to-slate-200/88 backdrop-blur-md backdrop-saturate-125 shadow-[inset_0_0_0_1px_rgba(13,148,136,0.1),inset_0_0_42px_rgba(15,23,42,0.065),inset_0_1px_0_rgba(255,255,255,0.88)] ring-1 ring-slate-400/50',
         )}
         style={{ clipPath: clip }}
       >
@@ -155,7 +173,13 @@ export function VaultCredentialChrome({
           <VaultLightFrostTexture variant='tile' />
         )}
 
-        {!isDark && (
+        {!isDark && paperKindle && (
+          <div
+            aria-hidden
+            className='pointer-events-none absolute -left-1/4 top-0 h-[52%] w-[68%] rotate-[17deg] bg-gradient-to-br from-white/48 via-amber-50/12 to-transparent opacity-40'
+          />
+        )}
+        {!isDark && !paperKindle && (
           <div
             aria-hidden
             className='pointer-events-none absolute -left-1/4 top-0 h-[52%] w-[68%] rotate-[17deg] bg-gradient-to-br from-white/72 via-cyan-100/22 to-transparent opacity-62'
@@ -168,7 +192,9 @@ export function VaultCredentialChrome({
             'vault-sheen-layer pointer-events-none absolute inset-y-0 left-0',
             isDark
               ? 'w-[40%] bg-gradient-to-r from-transparent via-white/12 to-transparent'
-              : 'w-[54%] bg-gradient-to-r from-transparent via-cyan-100/40 to-transparent opacity-88 mix-blend-multiply',
+              : paperKindle
+                ? 'w-[54%] bg-gradient-to-r from-transparent via-amber-100/18 to-transparent opacity-70 mix-blend-multiply'
+                : 'w-[54%] bg-gradient-to-r from-transparent via-cyan-100/40 to-transparent opacity-88 mix-blend-multiply',
           )}
         />
 

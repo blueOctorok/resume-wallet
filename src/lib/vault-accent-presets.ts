@@ -206,3 +206,41 @@ const PRESETS: Record<VaultAccentPreset, VaultAccentLayers> = {
 export function getVaultAccentLayers(preset: VaultAccentPreset): VaultAccentLayers {
   return PRESETS[preset] ?? TEAL
 }
+
+/**
+ * Kindle-style paperback: sepia cream shell, no teal/violet rim glow — easy on the eyes.
+ * Used for nav + horizontal hub panels when `data-theme='paper'`.
+ */
+export const PAPER_KINDLE_VAULT_SHELL: VaultAccentLayers = {
+  rimLight:
+    'linear-gradient(135deg, rgba(188,170,148,0.28) 0%, rgba(250,243,230,0.55) 42%, transparent 62%, rgba(168,155,138,0.18) 100%)',
+  rimDark: TEAL.rimDark,
+  stripLight: 'linear-gradient(90deg, transparent, rgba(150,138,122,0.22), transparent)',
+  stripDark: TEAL.stripDark,
+  conicLight:
+    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(140,128,112,0.1) 90deg, transparent 220deg, rgba(130,118,104,0.06) 300deg, transparent 360deg)',
+  conicDark: TEAL.conicDark,
+  chamferLight:
+    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(148,136,120,0.22) 0%, transparent 72%)',
+  chamferDark: TEAL.chamferDark,
+  sweepLight: 'linear-gradient(to right, transparent, rgba(130,120,108,0.12), transparent)',
+  sweepDark: TEAL.sweepDark,
+  filterPanelLight:
+    'drop-shadow(0 10px 26px rgba(52,46,40,0.06)) drop-shadow(0 2px 8px rgba(52,46,40,0.035))',
+  filterPanelDark: TEAL.filterPanelDark,
+  filterNavLight:
+    'drop-shadow(0 12px 28px rgba(52,46,40,0.07)) drop-shadow(0 2px 10px rgba(52,46,40,0.04))',
+  filterNavDark: TEAL.filterNavDark,
+  innerBgLight:
+    'linear-gradient(175deg, rgba(252,247,236,0.99) 0%, rgba(244,234,218,0.98) 38%, rgba(238,226,208,0.97) 72%, rgba(232,220,198,0.98) 100%)',
+  innerBgDark: TEAL.innerBgDark,
+  sheenLightClassName: 'bg-gradient-to-r from-transparent via-amber-100/20 to-transparent',
+}
+
+export function getVaultAccentLayersForTheme(
+  preset: VaultAccentPreset,
+  theme: 'light' | 'dark' | 'paper',
+): VaultAccentLayers {
+  if (theme === 'paper') return PAPER_KINDLE_VAULT_SHELL
+  return getVaultAccentLayers(preset)
+}

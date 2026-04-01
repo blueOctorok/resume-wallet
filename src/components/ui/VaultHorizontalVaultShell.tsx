@@ -8,10 +8,8 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { VAULT_CLIP_HORIZONTAL } from '@/lib/vault-credential-geometry'
 import VaultLightFrostTexture from '@/components/ui/VaultLightFrostTexture'
-import {
-  getVaultAccentLayers,
-  type VaultAccentPreset,
-} from '@/lib/vault-accent-presets'
+import { getVaultAccentLayersForTheme, type VaultAccentPreset } from '@/lib/vault-accent-presets'
+import { useTheme } from '@/contexts/ThemeContext'
 
 export type VaultHorizontalLayout = 'nav' | 'panel'
 
@@ -35,10 +33,12 @@ export default function VaultHorizontalVaultShell({
   layout = 'panel',
   accent = 'teal',
 }: VaultHorizontalVaultShellProps) {
+  const { theme } = useTheme()
   const clip = { clipPath: VAULT_CLIP_HORIZONTAL }
   const isNav = layout === 'nav'
   const frostVariant = isNav ? 'bar' : 'tile'
-  const A = getVaultAccentLayers(accent)
+  const A = getVaultAccentLayersForTheme(accent, theme)
+  const paperKindle = theme === 'paper' && !isDark
 
   const innerBg = isDark ? A.innerBgDark : A.innerBgLight
 
@@ -94,7 +94,9 @@ export default function VaultHorizontalVaultShell({
             'shadow-[inset_0_0_22px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_26px_rgba(0,0,0,0.38)]',
             isDark
               ? 'backdrop-blur-xl ring-1 ring-white/[0.06]'
-              : 'backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_0_0_1px_rgba(13,148,136,0.11),inset_0_0_40px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.88)] ring-1 ring-slate-400/55',
+              : paperKindle
+                ? 'backdrop-blur-xl backdrop-saturate-[0.92] shadow-[inset_0_0_0_1px_rgba(120,108,92,0.07),inset_0_0_36px_rgba(58,52,46,0.035),inset_0_1px_0_rgba(255,255,255,0.55)] ring-1 ring-amber-900/12'
+                : 'backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_0_0_1px_rgba(13,148,136,0.11),inset_0_0_40px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.88)] ring-1 ring-slate-400/55',
           )}
           style={{ ...clip, background: innerBg }}
         >
@@ -103,7 +105,10 @@ export default function VaultHorizontalVaultShell({
           ) : (
             <VaultLightFrostTexture variant={frostVariant} />
           )}
-          {!isDark && (
+          {!isDark && paperKindle && (
+            <span className='pointer-events-none absolute -left-[6%] top-0 h-[48%] w-[44%] rotate-[11deg] bg-gradient-to-br from-white/45 via-amber-50/10 to-transparent opacity-45' />
+          )}
+          {!isDark && !paperKindle && (
             <span className='pointer-events-none absolute -left-[6%] top-0 h-[48%] w-[44%] rotate-[11deg] bg-gradient-to-br from-white/75 via-cyan-50/25 to-transparent opacity-60' />
           )}
           <span

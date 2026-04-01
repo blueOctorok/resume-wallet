@@ -108,7 +108,7 @@ export default function BuyUSDCButton({
           rounded-lg font-semibold text-sm
           transition-all duration-200
           ${
-            theme === 'light'
+            theme !== 'dark'
               ? 'bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-300 disabled:text-gray-500'
               : 'bg-blue-500 hover:bg-blue-600 text-white disabled:bg-gray-700 disabled:text-gray-500'
           }
@@ -133,7 +133,7 @@ export default function BuyUSDCButton({
       {error && (
         <div
           className={`flex items-center gap-1.5 text-xs ${
-            theme === 'light' ? 'text-amber-600' : 'text-amber-400'
+            theme !== 'dark' ? 'text-amber-600' : 'text-amber-400'
           }`}
         >
           <AlertCircle className='w-3 h-3' />
@@ -143,7 +143,7 @@ export default function BuyUSDCButton({
 
       <p
         className={`text-xs ${
-          theme === 'light' ? 'text-gray-500' : 'text-gray-400'
+          theme !== 'dark' ? 'text-gray-500' : 'text-gray-400'
         }`}
       >
         Buy with card via Coinbase

@@ -45,6 +45,8 @@ import CreateCompanyModal from './modals/CreateCompanyModal'
 
 function AdminDashboardContent() {
   const { theme } = useTheme()
+  /** Admin tabs/modals only branch on dark vs not-dark; paper uses the light styling path. */
+  const adminUiTheme: 'light' | 'dark' = theme === 'dark' ? 'dark' : 'light'
   const account = useAccount({ type: 'LightAccount' })
 
   const [walletAddress, setWalletAddress] = useState<string | undefined>(() => {
@@ -251,7 +253,7 @@ function AdminDashboardContent() {
   const totalPages = Math.ceil(totalCount / pageSize)
 
   const tabProps = {
-    theme: theme as 'light' | 'dark',
+    theme: adminUiTheme,
     walletAddress: walletAddress || '',
     searchQuery,
     currentPage,
@@ -295,7 +297,7 @@ function AdminDashboardContent() {
       case 'users':
         return <UsersTab key={refreshKey} {...tabProps} />
       case 'tools':
-        return <ToolsTab theme={theme as 'light' | 'dark'} walletAddress={walletAddress || ''} />
+        return <ToolsTab theme={adminUiTheme} walletAddress={walletAddress || ''} />
       default:
         return null
     }
@@ -447,7 +449,7 @@ function AdminDashboardContent() {
 
       {/* Shared Modals */}
       <DeleteConfirmModal
-        theme={theme as 'light' | 'dark'}
+        theme={adminUiTheme}
         target={deleteTarget}
         onClose={() => { setDeleteTarget(null); setDeleteError(null) }}
         onConfirm={handleDelete}
@@ -456,7 +458,7 @@ function AdminDashboardContent() {
       />
 
       <CreateCompanyModal
-        theme={theme as 'light' | 'dark'}
+        theme={adminUiTheme}
         walletAddress={walletAddress || ''}
         open={showCreateCompanyModal}
         onClose={() => setShowCreateCompanyModal(false)}

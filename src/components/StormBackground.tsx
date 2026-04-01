@@ -24,6 +24,7 @@ export default function StormBackground() {
   }, [])
 
   const isDark = theme === 'dark'
+  const isPaper = theme === 'paper'
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -50,8 +51,16 @@ export default function StormBackground() {
     'radial-gradient(ellipse 90% 52% at 50% 108%, rgba(15,23,42,0.07), transparent 54%)',
   ].join(', ')
 
+  /* Kindle paperback: sepia haze only — no teal/violet; texture layer does subtle grain */
+  const paperAtmosphere = [
+    'linear-gradient(125deg, rgba(255,248,236,0.5) 0%, rgba(245,235,218,0.22) 32%, transparent 52%)',
+    'linear-gradient(to bottom, rgba(255,255,255,0.12) 0%, transparent 45%)',
+    'radial-gradient(ellipse 120% 65% at 50% 0%, rgba(220,200,172,0.08), transparent 55%)',
+    'radial-gradient(ellipse 90% 55% at 50% 100%, rgba(100,88,72,0.04), transparent 50%)',
+  ].join(', ')
+
   const particleOptions = useMemo((): ISourceOptions => {
-    const bubbleColor = isDark ? '#5c6d82' : '#5f7a8c'
+    const bubbleColor = isDark ? '#5c6d82' : isPaper ? '#c4b5a0' : '#5f7a8c'
     const base: ISourceOptions = {
       fullScreen: { enable: true, zIndex: -1 },
       background: { color: { value: '' } },
@@ -66,9 +75,9 @@ export default function StormBackground() {
       retina_detect: true,
     }
 
-    const count = reduceMotion ? 22 : isDark ? 48 : 44
-    const speed = reduceMotion ? 0.22 : isDark ? 0.55 : 0.65
-    const opacityBase = isDark ? 0.32 : 0.3
+    const count = reduceMotion ? 14 : isDark ? 48 : isPaper ? 16 : 44
+    const speed = reduceMotion ? 0.18 : isDark ? 0.55 : isPaper ? 0.35 : 0.65
+    const opacityBase = isDark ? 0.32 : isPaper ? 0.07 : 0.3
 
     return {
       ...base,
@@ -105,13 +114,15 @@ export default function StormBackground() {
         },
       },
     }
-  }, [isDark, reduceMotion])
+  }, [isDark, isPaper, reduceMotion])
 
   return (
     <>
       <div
         className='fixed inset-0 pointer-events-none z-[-4]'
-        style={{ background: isDark ? stormAtmosphere : lightAtmosphere }}
+        style={{
+          background: isDark ? stormAtmosphere : isPaper ? paperAtmosphere : lightAtmosphere,
+        }}
         aria-hidden
       />
 

@@ -435,10 +435,10 @@ export default function DriverShell({
             <div className='relative text-center'>
               <div
                 className={`animate-spin rounded-full h-10 w-10 border-b-2 mx-auto mb-4 ${
-                  theme === 'light' ? 'border-indigo-600' : 'border-indigo-400'
+                  theme !== 'dark' ? 'border-indigo-600' : 'border-indigo-400'
                 }`}
               />
-              <p className={theme === 'light' ? 'text-gray-600' : 'text-gray-300'}>
+              <p className={theme !== 'dark' ? 'text-gray-600' : 'text-gray-300'}>
                 Checking for existing session...
               </p>
             </div>

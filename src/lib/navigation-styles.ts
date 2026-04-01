@@ -1,3 +1,4 @@
+import type { Theme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
 
 /** Compact control chips (wallet, messages, hamburger). */
@@ -38,8 +39,15 @@ export function navStormiButtonClass(isDark: boolean) {
   )
 }
 
-/** Hub primary CTA — teal/violet gradient ring, dark fill (readable on light + dark shells). */
-export function navHubGradientRingClass() {
+/** Hub primary CTA — teal/violet gradient ring; paper mode uses muted stone (Kindle shell). */
+export function navHubGradientRingClass(theme: Theme = 'light') {
+  if (theme === 'paper') {
+    return cn(
+      'rounded-xl p-[2px] w-full sm:w-auto shrink-0',
+      'bg-gradient-to-br from-stone-500/50 via-stone-400/32 to-stone-600/42',
+      'shadow-md shadow-stone-600/12',
+    )
+  }
   return cn(
     'rounded-xl p-[2px] w-full sm:w-auto shrink-0',
     /* Light: teal-600 → teal-500 → violet (no cyan — single green family) */
