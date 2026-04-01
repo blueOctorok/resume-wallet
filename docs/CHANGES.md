@@ -8,6 +8,12 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 - [`StormChainWordmark.tsx`](src/components/ui/StormChainWordmark.tsx): The **O** is a **square** (`1cap`): **violet** frame + glow; **dark foil interior** (hub-style **conic** wash, **dot grid** dark / **`VaultLightFrostTexture` tile** light, **sheen**, **chamfer spark**, **foot strip**). **Cloud** ~**scale 1.12–1.14**, **tighter teal** `drop-shadow` (less interior blow-out). **Inset** face `inset-[2px]` so foil sits inside the violet border.
 
+## **STORM wordmark — light-mode polish + controlled glow** (March 2026)
+
+- **O (light):** Removed the **outer violet blur** (was bleeding on the canvas). **Frame** = hairline **violet** border + **slate** inset ring + **inset-only** shadows (violet rim + contact shadow). **Cloud** uses a **stacked `filter: drop-shadow`** (emboss + **tight teal** bloom) and sits **inside** the **clipped foil** so glow stays in the credential. **Icy face** gradient, **extra micro-dot** layer, **softer conic**, **tighter** corner spark. **Dark** keeps the outer violet bloom.
+- **Letters (light):** **`WordmarkLetterGroup`** — **gradient** `bg-clip-text` + **controlled** `drop-shadow` emboss / teal whisper (hero vs nav). **`isolate`** on the type row so blends stay local.
+- **Vault bar (light):** Cooler **innerBg**, **lower-opacity** hero **conic**, **softer** chamfer **blur**, specular **mix-blend-soft-light**, sheen/strip **multiply** tuned, bottom strip **inset highlight**.
+
 ---
 
 ## **Hub — vault + embed blocks for alerts, referral, requests, STORM** (March 2026)
