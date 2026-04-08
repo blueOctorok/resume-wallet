@@ -145,6 +145,11 @@ export interface ProjectedCareerCard {
   viewCount?: number
   /** Past employers who responded on-file (VERIFIED or PARTIALLY_VERIFIED) */
   employerConfirmedEmploymentCount: number
+  /**
+   * Employer talent view only — this company's paid MVR (FCRA).
+   * Omitted for self/public; never shown to the candidate or other employers.
+   */
+  employerCompanyMvr?: MvrData | null
 }
 
 /** Props mode for the career card component */

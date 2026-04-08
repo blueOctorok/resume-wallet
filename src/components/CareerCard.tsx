@@ -36,9 +36,8 @@ import Avatar from '@/components/ui/Avatar'
 import type { DotForm1Data, DotForm2Data, DotForm3Data } from '@/lib/dot-form-mapper'
 
 // ─── Shared type ─────────────────────────────────────────────────────────────
-// Exported so CareerCardModal (employer view) and DriverCareerCardSection
-// (self view) both use the identical shape. The shape mirrors the response from
-// /api/employer/talent/[userId] and /api/driver/career-card.
+// Legacy shell: DriverCareerCardSection + /api/driver/career-card.
+// Employer modal uses ProjectedCareerCard + /api/employer/talent/[userId] (projected card).
 export interface CareerCardData {
   userId: string
   role: string

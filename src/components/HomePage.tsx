@@ -40,6 +40,7 @@ import {
   UserPlus,
 } from 'lucide-react'
 import StormChainView from '@/components/StormChainView'
+import StormChainWordmark from '@/components/ui/StormChainWordmark'
 import { VaultShowcase } from '@/components/hub/HubBlockVault'
 import VaultHorizontalVaultShell from '@/components/ui/VaultHorizontalVaultShell'
 import Button from '@/components/ui/Button'
@@ -343,6 +344,10 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
         </div>
 
         <div className='text-center relative'>
+          {/* Same lockup as token whitepaper (`StormChainView`), larger via `size="display"` */}
+          <div className='mb-8 sm:mb-10 flex justify-center px-2' data-reveal>
+            <StormChainWordmark size='display' />
+          </div>
           <p
             className={`text-xs sm:text-sm font-bold uppercase tracking-widest mb-6 ${
               isDark ? 'text-teal-400' : 'text-teal-700'

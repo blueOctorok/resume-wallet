@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Montserrat, Instrument_Serif } from 'next/font/google'
+import { Montserrat, Orbitron } from 'next/font/google'
 import './globals.css'
 import AlchemyProvider from '@/components/AlchemyProvider'
 import { ThemeProvider } from '@/contexts/ThemeContext'
@@ -12,11 +12,11 @@ const montserrat = Montserrat({
   weight: ['300', '400', '500', '600', '700'],
 })
 
-/** Nav wordmark only — faded painted-sign / debossed storefront feel */
-const stormWordmark = Instrument_Serif({
+/** STORM wordmark only — Orbitron semibold (600); softer than 900 black */
+const stormWordmark = Orbitron({
   variable: '--font-storm-wordmark',
   subsets: ['latin'],
-  weight: '400',
+  weight: '600',
   display: 'swap',
 })
 

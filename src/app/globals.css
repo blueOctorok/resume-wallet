@@ -538,13 +538,13 @@ button:disabled,
 /* ===== BRAND CUSTOMIZATIONS ===== */
 /* Minimal customizations - most styling handled by Alchemy Tailwind plugin */
 
-/* Force Montserrat font everywhere (Storm — aggressive, punchy) */
-* {
-  font-family:
-    var(--font-montserrat),
-    system-ui,
-    -apple-system,
-    sans-serif !important;
+/*
+ * Default type = Montserrat on `body` (above). Never use `* { font-family: … !important }`:
+ * it applies to every descendant, so nested wordmark spans get Montserrat directly and cannot
+ * inherit Orbitron from `.storm-wordmark-font` on a parent.
+ */
+.storm-wordmark-font {
+  font-family: var(--font-storm-wordmark), ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Ensure our brand colors are available */

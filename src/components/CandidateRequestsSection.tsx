@@ -19,7 +19,10 @@ import {
   Clock,
   ExternalLink,
   Shield,
+  Code2,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { getBlockDefinition } from '@/lib/block-registry'
 import BackgroundCheckDisclosure from '@/components/BackgroundCheckDisclosure'
 import MessagingButton from '@/components/messaging/MessagingButton'
 import BlockCard from '@/components/ui/BlockCard'
@@ -27,7 +30,13 @@ import VaultHorizontalVaultShell from '@/components/ui/VaultHorizontalVaultShell
 import { useUIStore } from '@/stores'
 interface CandidateRequest {
   id: string
-  requestType: 'mvr_order' | 'document_upload' | 'verification' | 'profile_completion' | 'custom'
+  requestType:
+    | 'mvr_order'
+    | 'document_upload'
+    | 'verification'
+    | 'profile_completion'
+    | 'custom'
+    | 'block_request'
   documentType?: string | null
   targetBlockType?: string | null
   message?: string | null
@@ -89,6 +98,17 @@ const REQUEST_TYPE_CONFIG = {
   },
 }
 
+type RequestVisualConfig = {
+  icon: LucideIcon
+  label: string
+  description: string
+  color: string
+  bgColor: string
+}
+
+/** Unknown `request_type` from DB or bad data — same as `custom`, explicit alias for fallbacks */
+const DEFAULT_REQUEST_VISUAL: RequestVisualConfig = REQUEST_TYPE_CONFIG.custom
+
 const STATUS_CONFIG = {
   pending: { label: 'New', color: 'bg-blue-500 text-white' },
   viewed: { label: 'Viewed', color: 'bg-gray-500 text-white' },
@@ -96,6 +116,52 @@ const STATUS_CONFIG = {
   declined: { label: 'Declined', color: 'bg-red-500 text-white' },
   expired: { label: 'Expired', color: 'bg-gray-400 text-white' },
   cancelled: { label: 'Cancelled', color: 'bg-gray-400 text-white' },
+}
+
+/** FCRA background-check / MVR consent flow (DB uses `mvr_order`, or legacy `block_request` + driver-mvr). */
+function isMvrConsentFlow(request: Pick<CandidateRequest, 'requestType' | 'targetBlockType'>): boolean {
+  return (
+    request.requestType === 'mvr_order' ||
+    (request.requestType === 'block_request' && request.targetBlockType === 'driver-mvr')
+  )
+}
+
+/** Registry-backed label for `block_request`; falls back so new API types never crash the UI */
+function getRequestVisualConfig(request: CandidateRequest): RequestVisualConfig {
+  if (!request?.requestType || typeof request.requestType !== 'string') {
+    return DEFAULT_REQUEST_VISUAL
+  }
+
+  if (isMvrConsentFlow(request)) {
+    return REQUEST_TYPE_CONFIG.mvr_order ?? DEFAULT_REQUEST_VISUAL
+  }
+
+  if (request.requestType === 'block_request') {
+    const def = request.targetBlockType ? getBlockDefinition(request.targetBlockType) : undefined
+    let icon: LucideIcon = MessageSquare
+    if (def?.categoryId === 'drivers') icon = Car
+    else if (def?.categoryId === 'developers') icon = Code2
+    else if (def?.categoryId === 'general') icon = FileText
+
+    return {
+      icon,
+      label: def?.requestLabel ? `Request: ${def.requestLabel}` : 'Employer block request',
+      description:
+        def?.description ??
+        'This employer is asking you to add or complete something on your career card.',
+      color: 'text-teal-500',
+      bgColor: 'bg-teal-500/10',
+    }
+  }
+
+  const base = REQUEST_TYPE_CONFIG[request.requestType as keyof typeof REQUEST_TYPE_CONFIG]
+  if (base?.icon) return base
+
+  return DEFAULT_REQUEST_VISUAL
+}
+
+function getStatusRowConfig(status: CandidateRequest['status']) {
+  return STATUS_CONFIG[status] ?? STATUS_CONFIG.pending
 }
 
 export default function CandidateRequestsSection({
@@ -261,8 +327,8 @@ export default function CandidateRequestsSection({
             {activeRequests.length > 0 && (
               <div className='space-y-3'>
                 {activeRequests.map(request => {
-                  const config = REQUEST_TYPE_CONFIG[request.requestType]
-                  const statusConfig = STATUS_CONFIG[request.status]
+                  const config = getRequestVisualConfig(request)
+                  const statusConfig = getStatusRowConfig(request.status)
                   const Icon = config.icon
 
                   return (
@@ -326,9 +392,9 @@ export default function CandidateRequestsSection({
                 </h3>
                 <div className='space-y-2'>
                   {completedRequests.slice(0, 5).map(request => {
-                    const config = REQUEST_TYPE_CONFIG[request.requestType]
-                    const statusConfig = STATUS_CONFIG[request.status]
-                    const canViewConsent = request.requestType === 'mvr_order' && request.consentId
+                    const config = getRequestVisualConfig(request)
+                    const statusConfig = getStatusRowConfig(request.status)
+                    const canViewConsent = isMvrConsentFlow(request) && request.consentId
 
                     return (
                       <div
@@ -379,20 +445,20 @@ export default function CandidateRequestsSection({
         <Modal onClose={() => setSelectedRequest(null)} maxWidth="max-w-lg">
             {/* Modal Header */}
             <div className='p-6 border-b border-inherit'>
-              <div className='flex items-start justify-between'>
+                <div className='flex items-start justify-between'>
                 <div className='flex items-center gap-3'>
                   {(() => {
-                    const config = REQUEST_TYPE_CONFIG[selectedRequest.requestType]
-                    const Icon = config.icon
+                    const detailConfig = getRequestVisualConfig(selectedRequest)
+                    const Icon = detailConfig.icon
                     return (
-                      <div className={`p-3 rounded-xl ${config.bgColor}`}>
-                        <Icon className={`w-6 h-6 ${config.color}`} />
+                      <div className={`p-3 rounded-xl ${detailConfig.bgColor}`}>
+                        <Icon className={`w-6 h-6 ${detailConfig.color}`} />
                       </div>
                     )
                   })()}
                   <div>
                     <h3 className={`text-lg font-semibold ${textPrimary}`}>
-                      {REQUEST_TYPE_CONFIG[selectedRequest.requestType].label}
+                      {getRequestVisualConfig(selectedRequest).label}
                     </h3>
                     <p className={`text-sm ${textSecondary}`}>
                       from {selectedRequest.company?.name || 'Unknown Company'}
@@ -411,7 +477,7 @@ export default function CandidateRequestsSection({
             {/* Modal Body */}
             <div className='p-6 space-y-4'>
               <p className={textSecondary}>
-                {REQUEST_TYPE_CONFIG[selectedRequest.requestType].description}
+                {getRequestVisualConfig(selectedRequest).description}
               </p>
 
               {selectedRequest.documentType && (
@@ -436,7 +502,7 @@ export default function CandidateRequestsSection({
                 </div>
               )}
 
-              {selectedRequest.requestType === 'mvr_order' && (
+              {isMvrConsentFlow(selectedRequest) && (
                 <div className={`p-4 rounded-xl border ${theme === 'dark' ? 'border-teal-500/30 bg-teal-500/10' : 'border-teal-200 bg-teal-50'}`}>
                   <p className={`text-sm font-medium mb-1 ${theme === 'dark' ? 'text-teal-300' : 'text-teal-800'}`}>
                     Your rights are protected
@@ -459,8 +525,12 @@ export default function CandidateRequestsSection({
             {['pending', 'viewed'].includes(selectedRequest.status) && (
               <div className='p-6 border-t border-inherit'>
                 <div className='flex gap-3'>
-                  {selectedRequest.requestType === 'document_upload' && onNavigateToResume && (
+                  {(selectedRequest.requestType === 'document_upload' ||
+                    (selectedRequest.requestType === 'block_request' &&
+                      !isMvrConsentFlow(selectedRequest))) &&
+                    onNavigateToResume && (
                     <button
+                      type='button'
                       onClick={() => {
                         onNavigateToResume(selectedRequest.targetBlockType ?? null)
                         setSelectedRequest(null)
@@ -468,7 +538,14 @@ export default function CandidateRequestsSection({
                       className='flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition-colors'
                     >
                       <ExternalLink className='w-4 h-4' />
-                      Go to Resume
+                      {selectedRequest.requestType === 'document_upload'
+                        ? 'Go to Resume'
+                        : (() => {
+                            const rl =
+                              selectedRequest.targetBlockType &&
+                              getBlockDefinition(selectedRequest.targetBlockType)?.requestLabel
+                            return rl ? `Open ${rl}` : 'Open requested block'
+                          })()}
                     </button>
                   )}
                   
@@ -485,8 +562,9 @@ export default function CandidateRequestsSection({
                     </button>
                   )}
 
-                  {selectedRequest.requestType === 'mvr_order' && (
+                  {isMvrConsentFlow(selectedRequest) && (
                     <button
+                      type='button'
                       onClick={() => setShowDisclosure(true)}
                       className='flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition-colors'
                     >
@@ -495,8 +573,13 @@ export default function CandidateRequestsSection({
                     </button>
                   )}
 
-                  {['verification', 'custom'].includes(selectedRequest.requestType) && (
+                  {(selectedRequest.requestType === 'verification' ||
+                    selectedRequest.requestType === 'custom' ||
+                    (selectedRequest.requestType === 'block_request' &&
+                      !selectedRequest.targetBlockType &&
+                      !isMvrConsentFlow(selectedRequest))) && (
                     <button
+                      type='button'
                       onClick={() => updateRequestStatus(selectedRequest.id, 'completed')}
                       disabled={updating}
                       className='flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition-colors disabled:opacity-50'
@@ -526,7 +609,7 @@ export default function CandidateRequestsSection({
                     <MessagingButton
                       otherUserId={selectedRequest.company.ownerUserId}
                       candidateRequestId={selectedRequest.id}
-                      subject={`Re: ${REQUEST_TYPE_CONFIG[selectedRequest.requestType].label} from ${selectedRequest.company.name}`}
+                      subject={`Re: ${getRequestVisualConfig(selectedRequest).label} from ${selectedRequest.company?.name ?? 'employer'}`}
                       walletAddress={userAddress}
                       onThreadOpen={(threadId) => {
                         setSelectedRequest(null)

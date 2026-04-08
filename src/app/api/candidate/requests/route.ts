@@ -63,7 +63,12 @@ export async function GET(request: NextRequest) {
 
     // Get consent IDs for completed MVR requests
     const completedMvrRequestIds = (requests || [])
-      .filter(r => r.request_type === 'mvr_order' && r.status === 'completed')
+      .filter(
+        r =>
+          r.status === 'completed' &&
+          (r.request_type === 'mvr_order' ||
+            (r.request_type === 'block_request' && r.target_block_type === 'driver-mvr')),
+      )
       .map(r => r.id)
 
     let consentMap: Map<string, string> = new Map()

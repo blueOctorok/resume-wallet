@@ -5,9 +5,8 @@ import { getCdlData, getDriverEmployment, getSkills, getEducation, getDevGithub,
 /**
  * GET /api/driver/career-card
  *
- * Returns the authenticated driver's own career card data in the exact same
- * shape as /api/employer/talent/[userId] so both views use the same
- * CareerCard component.
+ * Returns legacy **CareerCardData** for **DriverShell** self-view only.
+ * Employer talent and candidate hub use **ProjectedCareerCard** via `/api/career-card` and `/api/employer/talent/[userId]`.
  *
  * No company context is included — pendingRequests and existingApplication
  * are always empty since this is a self-view.

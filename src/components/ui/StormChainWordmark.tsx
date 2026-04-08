@@ -9,7 +9,7 @@ import { getBlockColor } from '@/lib/block-registry'
 import { VaultCredentialChrome } from '@/components/hub/HubBlockVault'
 import VaultLightFrostTexture from '@/components/ui/VaultLightFrostTexture'
 
-export type StormChainWordmarkSize = 'nav' | 'hero'
+export type StormChainWordmarkSize = 'nav' | 'hero' | 'display'
 
 interface StormChainWordmarkProps {
   size?: StormChainWordmarkSize
@@ -149,8 +149,16 @@ function WordmarkLetterGroup({
  * Letter **O**: violet frame + foil interior (hub language). Icon lives **inside** the foil clip so
  * light-mode teal “neon” cannot bleed past the credential. Dark keeps an outer violet bloom.
  */
-function StormWordmarkOBlock({ isDark, isHero }: { isDark: boolean; isHero: boolean }) {
-  const stroke = isHero ? 2.15 : 1.95
+function StormWordmarkOBlock({
+  isDark,
+  isHero,
+  isDisplay = false,
+}: {
+  isDark: boolean
+  isHero: boolean
+  isDisplay?: boolean
+}) {
+  const stroke = isDisplay ? 2.35 : isHero ? 2.15 : 1.95
 
   const iconFilterLight =
     'drop-shadow(0 1px 0 rgb(255 255 255 / 0.65)) drop-shadow(0 -0.5px 0 rgb(15 23 42 / 0.08)) drop-shadow(0 0 2px rgb(13 148 136 / 0.55)) drop-shadow(0 0 5px rgb(13 148 136 / 0.42)) drop-shadow(0 0 9px rgb(45 212 191 / 0.28))'
@@ -284,7 +292,9 @@ export default function StormChainWordmark({
 }: StormChainWordmarkProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
-  const isHero = size === 'hero'
+  /** Larger than nav: whitepaper hero + marketing homepage */
+  const isLarge = size === 'hero' || size === 'display'
+  const isDisplay = size === 'display'
 
   const tileColors = getBlockColor('storm')
 
@@ -297,20 +307,29 @@ export default function StormChainWordmark({
   }, [isDark])
 
   const typeStyles = cn(
-    'font-[family-name:var(--font-storm-wordmark),ui-serif,Georgia,serif] font-medium tracking-[0.045em] sm:tracking-[0.055em]',
-    isHero
+    /* Orbitron 600 via `.storm-wordmark-font`; font-semibold matches next/font weight */
+    'storm-wordmark-font font-semibold tracking-[0.04em] sm:tracking-[0.05em]',
+    isDisplay
       ? cn(
-          'text-[2.5rem] sm:text-[3rem] lg:text-[3.5rem]',
+          /* Homepage — larger than whitepaper `hero` */
+          'text-[3rem] sm:text-[3.75rem] md:text-[4.5rem] lg:text-[5.25rem]',
           isDark
             ? 'text-slate-100 [text-shadow:0_2px_0_rgba(0,0,0,0.45),0_0_20px_rgba(0,0,0,0.45)]'
             : 'text-slate-800',
         )
-      : cn(
-          'text-[1.5rem] sm:text-[1.75rem] lg:text-[2rem]',
-          isDark
-            ? 'text-slate-200/95 [text-shadow:0_1px_0_rgba(255,255,255,0.06),0_-1px_3px_rgba(0,0,0,0.6)]'
-            : 'text-slate-800',
-        ),
+      : isLarge
+        ? cn(
+            'text-[2.5rem] sm:text-[3rem] lg:text-[3.5rem]',
+            isDark
+              ? 'text-slate-100 [text-shadow:0_2px_0_rgba(0,0,0,0.45),0_0_20px_rgba(0,0,0,0.45)]'
+              : 'text-slate-800',
+          )
+        : cn(
+            'text-[1.5rem] sm:text-[1.75rem] lg:text-[2rem]',
+            isDark
+              ? 'text-slate-200/95 [text-shadow:0_1px_0_rgba(255,255,255,0.06),0_-1px_3px_rgba(0,0,0,0.6)]'
+              : 'text-slate-800',
+          ),
   )
 
   const stormMarkRow = (
@@ -323,11 +342,11 @@ export default function StormChainWordmark({
         !isDark && 'isolate',
       )}
     >
-      <WordmarkLetterGroup isDark={isDark} isHero={isHero}>
+      <WordmarkLetterGroup isDark={isDark} isHero={isLarge}>
         ST
       </WordmarkLetterGroup>
-      <StormWordmarkOBlock isDark={isDark} isHero={isHero} />
-      <WordmarkLetterGroup isDark={isDark} isHero={isHero}>
+      <StormWordmarkOBlock isDark={isDark} isHero={isLarge} isDisplay={isDisplay} />
+      <WordmarkLetterGroup isDark={isDark} isHero={isLarge}>
         RM
       </WordmarkLetterGroup>
     </div>
@@ -370,7 +389,8 @@ export default function StormChainWordmark({
               'relative z-[2] flex flex-col items-stretch leading-none',
               /* Room above/below type inside the vault face (foot strip still reads clearly below) */
               'px-[0.36em] pt-2 pb-2.5 sm:px-[0.44em] sm:pt-2.5 sm:pb-3',
-              isHero && 'sm:pt-3 sm:pb-3.5 lg:pt-3.5 lg:pb-4',
+              isLarge && 'sm:pt-3 sm:pb-3.5 lg:pt-3.5 lg:pb-4',
+              isDisplay && 'md:pt-4 md:pb-4 lg:pt-[1.15rem] lg:pb-[1.35rem]',
             )}
           >
             {stormMarkRow}

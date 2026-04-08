@@ -23,7 +23,7 @@ export async function DELETE(
 
     const { data: row, error: findError } = await supabase
       .from('candidate_requests')
-      .select('id, request_type, status')
+      .select('id, request_type, target_block_type, status')
       .eq('id', requestId)
       .single()
 
@@ -31,7 +31,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Request not found' }, { status: 404 })
     }
 
-    if (row.request_type !== 'mvr_order') {
+    const isBgcheckPipeline =
+      row.request_type === 'mvr_order' ||
+      (row.request_type === 'block_request' && row.target_block_type === 'driver-mvr')
+
+    if (!isBgcheckPipeline) {
       return NextResponse.json(
         { error: 'Only MVR/background check requests can be deleted here' },
         { status: 400 }

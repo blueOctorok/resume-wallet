@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   Loader2,
@@ -14,7 +14,8 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
-import CareerCard, { type CareerCardData } from '@/components/CareerCard'
+import ProjectedCareerCard from '@/components/career-card/ProjectedCareerCard'
+import type { ProjectedCareerCard as ProjectedCardData } from '@/types/career-card'
 import Avatar from '@/components/ui/Avatar'
 import Button from '@/components/ui/Button'
 import MessagingButton from '@/components/messaging/MessagingButton'
@@ -22,8 +23,24 @@ import MvrPaymentButton from '@/components/MvrPaymentButton'
 import { useUIStore } from '@/stores'
 import { getRequestableBlocks, getBlockDefinition } from '@/lib/block-registry'
 
-// Re-export for consumers that imported from here previously
-export type { CareerCardData }
+interface PendingCandidateRequest {
+  id: string
+  request_type: string
+  document_type: string | null
+  target_block_type: string | null
+  status: string
+  created_at: string
+}
+
+interface EmployerTalentExtras {
+  installedBlockTypes: string[]
+  pendingRequests: PendingCandidateRequest[]
+  existingApplication: { id: string; job_posting_id: string; status: string; created_at: string } | null
+  completionFlags: Record<string, boolean>
+  hasBgcheckConsent: boolean
+  bgcheckConsentSignedAt: string | null
+  bgcheckConsentFormData: Record<string, unknown> | null
+}
 
 interface CareerCardModalProps {
   candidateUserId: string
@@ -45,7 +62,8 @@ export default function CareerCardModal({
   const { theme } = useTheme()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [careerCard, setCareerCard] = useState<CareerCardData | null>(null)
+  const [card, setCard] = useState<ProjectedCardData | null>(null)
+  const [employerExtras, setEmployerExtras] = useState<EmployerTalentExtras | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   const [requestLoading, setRequestLoading] = useState<string | null>(null)
@@ -99,8 +117,17 @@ export default function CareerCardModal({
       }
 
       const data = await response.json()
-      setCareerCard(data.careerCard)
+      setCard(data.card ?? null)
       setEmployerCompany(data.employerCompany ?? null)
+      setEmployerExtras({
+        installedBlockTypes: data.installedBlockTypes ?? [],
+        pendingRequests: data.pendingRequests ?? [],
+        existingApplication: data.existingApplication ?? null,
+        completionFlags: data.completionFlags ?? {},
+        hasBgcheckConsent: Boolean(data.hasBgcheckConsent),
+        bgcheckConsentSignedAt: data.bgcheckConsentSignedAt ?? null,
+        bgcheckConsentFormData: (data.bgcheckConsentFormData ?? null) as Record<string, unknown> | null,
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load career card')
     } finally {
@@ -112,6 +139,25 @@ export default function CareerCardModal({
   // ── Registry-driven block request helpers ──────────────────────────────
   // The block registry is the source of truth. Any block with
   // employerRequestable: true automatically gets a request button.
+  //
+  // MVR uses request_type `mvr_order` (not `block_request`) so candidate inbox,
+  // bgcheck consent API, and FCRA disclosure stay on the same pipeline.
+
+  const buildEmployerRequestBody = (blockType: string) => {
+    const message = 'Requested via Storm Talent Search'
+    if (blockType === 'driver-mvr') {
+      return {
+        requestType: 'mvr_order' as const,
+        targetBlockType: 'driver-mvr',
+        message,
+      }
+    }
+    return {
+      requestType: 'block_request' as const,
+      targetBlockType: blockType,
+      message,
+    }
+  }
 
   const requestBlockById = async (blockType: string) => {
     try {
@@ -119,11 +165,7 @@ export default function CareerCardModal({
       const response = await fetch(`/api/employer/talent/${candidateUserId}/request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
-        body: JSON.stringify({
-          requestType: 'block_request',
-          targetBlockType: blockType,
-          message: 'Requested via Storm Talent Search',
-        }),
+        body: JSON.stringify(buildEmployerRequestBody(blockType)),
       })
       if (!response.ok) {
         const data = await response.json()
@@ -150,11 +192,7 @@ export default function CareerCardModal({
       await fetch(`/api/employer/talent/${candidateUserId}/request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-wallet-address': walletAddress },
-        body: JSON.stringify({
-          requestType: 'block_request',
-          targetBlockType: blockType,
-          message: 'Requested via Storm Talent Search',
-        }),
+        body: JSON.stringify(buildEmployerRequestBody(blockType)),
       })
       await fetchCareerCard()
     } catch (err) {
@@ -166,12 +204,12 @@ export default function CareerCardModal({
 
   /** Find a pending request that targets a specific block (new style) or matches legacy request types */
   const getPendingRequestForBlock = (blockType: string) =>
-    careerCard?.pendingRequests?.find(r =>
-      // New style: block_request with target_block_type stored in data
+    employerExtras?.pendingRequests?.find(r =>
       (r.target_block_type === blockType) ||
-      // Legacy compat: old request types
       (blockType === 'driver-resume' && r.request_type === 'document_upload' && r.document_type === 'resume') ||
-      (blockType === 'driver-mvr' && r.request_type === 'mvr_order') ||
+      (blockType === 'driver-mvr' &&
+        (r.request_type === 'mvr_order' ||
+          (r.request_type === 'block_request' && r.target_block_type === 'driver-mvr'))) ||
       (blockType === 'driver-dot-application' && r.request_type === 'profile_completion')
     ) || null
 
@@ -207,7 +245,7 @@ export default function CareerCardModal({
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Failed to create application')
-      alert(`Application created! ${careerCard?.name || 'The candidate'} has been notified.`)
+      alert(`Application created! ${card?.name || 'The candidate'} has been notified.`)
       setShowRecruitModal(false)
       await fetchCareerCard()
     } catch (err) {
@@ -255,22 +293,19 @@ export default function CareerCardModal({
   const requestableBlocks = getRequestableBlocks()
 
   /** Build an action node for a requestable block — returns null if not applicable */
-  const buildBlockAction = (blockId: string): React.ReactNode => {
+  const buildBlockAction = (blockId: string): ReactNode => {
     const def = getBlockDefinition(blockId)
     if (!def?.employerRequestable) return null
 
-    // Only show if candidate has the block installed
-    const installed = careerCard?.installedBlockTypes?.includes(blockId)
+    // Only show if candidate has the block installed (hub is source of truth)
+    const installed = employerExtras?.installedBlockTypes?.includes(blockId)
     if (!installed) return null
 
-    // Hide if the block's deliverable is already complete
-    if (def.completionField) {
-      const complete = (careerCard as Record<string, unknown>)?.[def.completionField]
-      if (complete) return null
-    }
+    // Hide if the block's deliverable is already complete (career_cards aggregates)
+    if (def.completionField && employerExtras?.completionFlags[def.completionField]) return null
 
-    // MVR has extra "Order MVR" button alongside the standard request
-    if (blockId === 'driver-mvr' && careerCard?.companyMvr) return null
+    // No duplicate "order" flow when this company already has a private MVR on file
+    if (blockId === 'driver-mvr' && card?.employerCompanyMvr) return null
 
     const pending = getPendingRequestForBlock(blockId)
 
@@ -288,7 +323,7 @@ export default function CareerCardModal({
 
     // MVR special case: add the paid "Order MVR" button
     if (blockId === 'driver-mvr') {
-      const consentReady = careerCard?.hasBgcheckConsent === true
+      const consentReady = employerExtras?.hasBgcheckConsent === true
       return (
         <div className="flex items-center gap-2">
           {actionButton}
@@ -321,46 +356,24 @@ export default function CareerCardModal({
     return actionButton
   }
 
-  // Map block IDs → CareerCard's named action props.
-  // CareerCard uses named slots; this bridge keeps both sides clean.
-  const BLOCK_TO_SLOT: Record<string, 'resumeAction' | 'mvrAction' | 'dotAppAction'> = {
-    'driver-resume': 'resumeAction',
-    'developer-resume': 'resumeAction',
-    'general-resume': 'resumeAction',
-    'driver-mvr': 'mvrAction',
-    'driver-dot-application': 'dotAppAction',
-  }
-
-  const actionSlots: Record<string, React.ReactNode> = {}
-  for (const block of requestableBlocks) {
-    const slotName = BLOCK_TO_SLOT[block.id]
-    if (slotName) {
-      actionSlots[slotName] = actionSlots[slotName] ?? buildBlockAction(block.id)
-    }
-  }
-
-  const resumeAction = actionSlots.resumeAction ?? null
-  const mvrAction = actionSlots.mvrAction ?? null
-  const dotAppAction = actionSlots.dotAppAction ?? null
-
-  // Messaging is available once there's an existing application or pending request
-  const messagingContext = careerCard?.existingApplication?.id
-    ? { applicationId: careerCard.existingApplication.id }
-    : careerCard?.pendingRequests?.[0]?.id
-      ? { candidateRequestId: careerCard.pendingRequests[0].id }
+  const messagingContext = employerExtras?.existingApplication?.id
+    ? { applicationId: employerExtras.existingApplication.id }
+    : employerExtras?.pendingRequests?.[0]?.id
+      ? { candidateRequestId: employerExtras.pendingRequests[0].id }
       : null
 
   const footerActions = (
     <>
-      {careerCard?.existingApplication ? (
+      {employerExtras?.existingApplication ? (
         <span className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm ${
           theme === 'dark' ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-700'
         }`}>
           <CheckCircle className="w-4 h-4" />
-          Already Applied ({careerCard.existingApplication.status})
+          Already Applied ({employerExtras.existingApplication.status})
         </span>
       ) : (
         <button
+          type="button"
           onClick={openRecruitModal}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm bg-teal-600 text-white hover:bg-teal-700 transition-colors"
         >
@@ -369,12 +382,11 @@ export default function CareerCardModal({
         </button>
       )}
 
-      {/* Message button — only visible once a relationship exists */}
-      {messagingContext && careerCard && (
+      {messagingContext && card && (
         <MessagingButton
           otherUserId={candidateUserId}
           {...messagingContext}
-          subject={`Re: ${careerCard.name}`}
+          subject={`Re: ${card.name}`}
           walletAddress={walletAddress}
           onThreadOpen={(threadId) => {
             onClose()
@@ -383,16 +395,26 @@ export default function CareerCardModal({
         />
       )}
 
-      {careerCard?.pendingRequests && careerCard.pendingRequests.length > 0 && (
+      {employerExtras && employerExtras.pendingRequests.length > 0 && (
         <span className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm ${
           theme === 'dark' ? 'bg-yellow-900/20 text-yellow-400' : 'bg-yellow-50 text-yellow-700'
         }`}>
           <Clock className="w-4 h-4" />
-          {careerCard.pendingRequests.length} pending request{careerCard.pendingRequests.length !== 1 ? 's' : ''}
+          {employerExtras.pendingRequests.length} pending request{employerExtras.pendingRequests.length !== 1 ? 's' : ''}
         </span>
       )}
     </>
   )
+
+  const requestActionNodes =
+    card && employerExtras
+      ? requestableBlocks
+          .map((block) => {
+            const node = buildBlockAction(block.id)
+            return node ? <span key={block.id}>{node}</span> : null
+          })
+          .filter(Boolean)
+      : []
 
   // ── Modal shell ───────────────────────────────────────────────────────────
 
@@ -420,8 +442,8 @@ export default function CareerCardModal({
             )}
           >
             <Avatar
-              name={careerCard?.name || '?'}
-              avatarUrl={careerCard?.avatarUrl}
+              name={card?.name || '?'}
+              avatarUrl={card?.avatarUrl}
               size="md"
               color="teal"
             />
@@ -441,7 +463,7 @@ export default function CareerCardModal({
                 theme === 'dark' ? 'text-white' : 'text-gray-900',
               )}
             >
-              {loading ? 'Loading…' : careerCard?.name || 'Career card'}
+              {loading ? 'Loading…' : card?.name || 'Career card'}
             </h3>
           </div>
         </div>
@@ -479,15 +501,33 @@ export default function CareerCardModal({
             <p>{error}</p>
           </div>
         )}
-        {!loading && !error && careerCard && (
-          <CareerCard
-            data={careerCard}
-            walletAddress={walletAddress}
-            resumeAction={resumeAction}
-            mvrAction={mvrAction}
-            dotAppAction={dotAppAction}
-            footerActions={footerActions}
-          />
+        {!loading && !error && card && employerExtras && (
+          <>
+            {requestActionNodes.length > 0 && (
+              <div
+                className={cn(
+                  'mb-4 rounded-xl border px-3 py-2.5',
+                  theme === 'dark' ? 'border-gray-700/80 bg-gray-900/40' : 'border-gray-200 bg-white/80',
+                )}
+              >
+                <p
+                  className={cn(
+                    'text-[10px] font-semibold uppercase tracking-wider mb-2',
+                    theme === 'dark' ? 'text-gray-500' : 'text-gray-500',
+                  )}
+                >
+                  Requests
+                </p>
+                <div className="flex flex-wrap items-center gap-2">{requestActionNodes}</div>
+              </div>
+            )}
+            <ProjectedCareerCard
+              data={card}
+              mode="employer"
+              walletAddress={walletAddress}
+              footerSlot={footerActions}
+            />
+          </>
         )}
       </div>
     </Modal>
@@ -499,7 +539,7 @@ export default function CareerCardModal({
     <Modal onClose={() => setShowRecruitModal(false)} maxWidth="max-w-md" zIndex={10001}>
       <ModalHeader
         title="Recruit Candidate"
-        subtitle={`Select a job for ${careerCard?.name || 'this candidate'}`}
+        subtitle={`Select a job for ${card?.name || 'this candidate'}`}
         onClose={() => setShowRecruitModal(false)}
       />
       <div className="p-6 space-y-4">
@@ -588,9 +628,10 @@ export default function CareerCardModal({
 
   const mvrOrderModalContent = showMvrOrderModal ? (
     <MvrOrderModal
-      candidateUserId={candidateUserId}
       walletAddress={walletAddress}
-      careerCard={careerCard}
+      employerCompany={employerCompany}
+      candidateName={card?.name}
+      bgcheckConsentFormData={employerExtras?.bgcheckConsentFormData ?? null}
       loading={mvrOrderLoading}
       error={mvrOrderError}
       success={mvrOrderSuccess}
@@ -631,7 +672,9 @@ interface MvrOrderFields {
 
 function MvrOrderModal({
   walletAddress,
-  careerCard,
+  employerCompany,
+  candidateName,
+  bgcheckConsentFormData,
   loading,
   error,
   success,
@@ -639,9 +682,10 @@ function MvrOrderModal({
   onClose,
   theme,
 }: {
-  candidateUserId: string
   walletAddress: string
-  careerCard: CareerCardData | null
+  employerCompany: { id: string; walletAddress: string | null } | null
+  candidateName?: string
+  bgcheckConsentFormData: Record<string, unknown> | null
   loading: boolean
   error: string | null
   success: boolean
@@ -649,7 +693,18 @@ function MvrOrderModal({
   onClose: () => void
   theme: string
 }) {
-  const fd = careerCard?.bgcheckConsentFormData
+  const fd = bgcheckConsentFormData as {
+    firstName?: string
+    lastName?: string
+    email?: string
+    dateOfBirth?: string
+    dlNumber?: string
+    dlState?: string
+    address?: string
+    city?: string
+    state?: string
+    zip?: string
+  } | null
 
   const [firstName, setFirstName] = useState(fd?.firstName || '')
   const [lastName, setLastName] = useState(fd?.lastName || '')
@@ -703,7 +758,7 @@ function MvrOrderModal({
     <Modal onClose={onClose} maxWidth="max-w-lg" zIndex={10001}>
       <ModalHeader
         title="Order MVR"
-        subtitle={careerCard?.name || 'Candidate'}
+        subtitle={candidateName || 'Candidate'}
         onClose={onClose}
       />
 

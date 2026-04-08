@@ -41,6 +41,42 @@ interface BackgroundCheckDisclosureProps {
   consentId?: string
 }
 
+/**
+ * html2canvas parses SVG styles separately; `currentColor` / inherited colors can still
+ * resolve to oklch() from the document. Strip classes and set explicit rgb() on the clone.
+ */
+function normalizeSvgsForHtml2Canvas(pdfRoot: Element) {
+  const headerEl = pdfRoot.firstElementChild
+
+  pdfRoot.querySelectorAll('svg').forEach(svg => {
+    const cls = svg.getAttribute('class') ?? ''
+    const inHeader = headerEl?.contains(svg) ?? false
+    const inGreenCallout = Boolean(svg.closest('.bg-green-50'))
+
+    let stroke = 'rgb(55, 65, 81)'
+    if (inHeader) stroke = 'rgb(255, 255, 255)'
+    else if (inGreenCallout || /\btext-green-(600|800)\b/.test(cls)) stroke = 'rgb(22, 101, 52)'
+    else if (/\btext-teal-/.test(cls) || Boolean(svg.closest('[class*="text-teal-"]'))) stroke = 'rgb(13, 148, 136)'
+    else if (/\btext-red-/.test(cls) || Boolean(svg.closest('[class*="text-red-"]'))) stroke = 'rgb(220, 38, 38)'
+
+    svg.removeAttribute('class')
+    // !important beats Tailwind on the clone; explicit rgb avoids oklch in SVG parse path
+    svg.setAttribute(
+      'style',
+      `color: ${stroke} !important; stroke: ${stroke} !important; fill: none !important;`,
+    )
+
+    svg.querySelectorAll('path, line, circle, polyline, polygon, rect').forEach(node => {
+      const el = node as SVGElement
+      const s = el.getAttribute('stroke')
+      if (s && s !== 'none') el.setAttribute('stroke', stroke)
+      const f = el.getAttribute('fill')
+      if (f === 'currentColor') el.setAttribute('fill', stroke)
+      else if (f && f !== 'none' && f !== 'transparent') el.setAttribute('fill', stroke)
+    })
+  })
+}
+
 const STATE_NOTICES = [
   {
     state: 'California',
@@ -119,6 +155,8 @@ export default function BackgroundCheckDisclosure({
   const [signed, setSigned] = useState(viewMode)
   const [error, setError] = useState<string | null>(null)
   const [generatingPdf, setGeneratingPdf] = useState(false)
+  /** Restore collapsible state after PDF capture */
+  const pdfOpenStateRef = useRef({ stateNotices: false, fcraRights: false })
 
   useEffect(() => {
     if (viewMode && consentId) {
@@ -217,6 +255,15 @@ export default function BackgroundCheckDisclosure({
     if (!printRef.current) return
     setGeneratingPdf(true)
 
+    // PDF is a flat image — collapsibles must be open or their body never renders.
+    pdfOpenStateRef.current = { stateNotices: stateNoticesOpen, fcraRights: fcraRightsOpen }
+    setStateNoticesOpen(true)
+    setFcraRightsOpen(true)
+    await new Promise<void>(resolve => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+    })
+    await new Promise(r => setTimeout(r, 120))
+
     try {
       // Dynamically import to keep bundle lean
       const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
@@ -225,9 +272,8 @@ export default function BackgroundCheckDisclosure({
       ])
 
       const el = printRef.current
-      // html2canvas defaults to the element's clientHeight (visible area).
-      // We must pass scrollHeight so the full document — not just what's
-      // currently visible in the scrollable modal — gets captured.
+      // html2canvas cannot parse modern CSS color functions (e.g. oklch) that
+      // Tailwind v4 emits. The cloned DOM gets a print-only stylesheet with sRGB.
       const canvas = await html2canvas(el, {
         scale: 2,
         useCORS: true,
@@ -236,6 +282,97 @@ export default function BackgroundCheckDisclosure({
         height: el.scrollHeight,
         windowHeight: el.scrollHeight,
         y: 0,
+        onclone: clonedDoc => {
+          const s = clonedDoc.createElement('style')
+          s.textContent = `
+            [data-bgcheck-pdf-root] {
+              background: #ffffff !important;
+              color: #374151 !important;
+              overflow: visible !important;
+            }
+            [data-bgcheck-pdf-root] * {
+              color: #374151 !important;
+              border-color: #e5e7eb !important;
+              background-color: #ffffff !important;
+              background-image: none !important;
+              box-shadow: none !important;
+              overflow: visible !important;
+              text-overflow: clip !important;
+              word-break: break-word !important;
+              overflow-wrap: anywhere !important;
+            }
+            /* Static doc: no chevron “dropdown” affordance in the capture */
+            [data-bgcheck-pdf-root] section > button[type="button"] svg {
+              display: none !important;
+            }
+            [data-bgcheck-pdf-root] section > button[type="button"] {
+              cursor: default !important;
+            }
+            [data-bgcheck-pdf-root] > div:first-child {
+              background: #0d9488 !important;
+              color: #ffffff !important;
+            }
+            [data-bgcheck-pdf-root] > div:first-child * {
+              color: #ffffff !important;
+              background-color: transparent !important;
+              opacity: 1 !important;
+            }
+            [data-bgcheck-pdf-root] .bg-gray-50,
+            [data-bgcheck-pdf-root] ul.bg-gray-50,
+            [data-bgcheck-pdf-root] .rounded-xl.p-4,
+            [data-bgcheck-pdf-root] .rounded-xl.p-5 {
+              background-color: #f9fafb !important;
+            }
+            [data-bgcheck-pdf-root] .bg-green-50,
+            [data-bgcheck-pdf-root] .border-green-200 {
+              background-color: #f0fdf4 !important;
+              border-color: #bbf7d0 !important;
+            }
+            [data-bgcheck-pdf-root] .text-green-600,
+            [data-bgcheck-pdf-root] .text-green-800 {
+              color: #166534 !important;
+            }
+            [data-bgcheck-pdf-root] .text-teal-600,
+            [data-bgcheck-pdf-root] .text-teal-700 {
+              color: #0f766e !important;
+            }
+            [data-bgcheck-pdf-root] .bg-teal-600,
+            [data-bgcheck-pdf-root] .rounded-full.bg-teal-600 {
+              background-color: #0d9488 !important;
+              color: #ffffff !important;
+            }
+            [data-bgcheck-pdf-root] .text-gray-900,
+            [data-bgcheck-pdf-root] strong {
+              color: #111827 !important;
+            }
+            [data-bgcheck-pdf-root] .text-gray-500,
+            [data-bgcheck-pdf-root] .text-gray-400 {
+              color: #6b7280 !important;
+            }
+            [data-bgcheck-pdf-root] .text-gray-700 {
+              color: #374151 !important;
+            }
+            [data-bgcheck-pdf-root] .text-gray-800 {
+              color: #1f2937 !important;
+            }
+            [data-bgcheck-pdf-root] .text-gray-300 {
+              color: #d1d5db !important;
+            }
+            [data-bgcheck-pdf-root] .border-gray-300 {
+              border-color: #d1d5db !important;
+            }
+            [data-bgcheck-pdf-root] .text-red-600 {
+              color: #dc2626 !important;
+            }
+            [data-bgcheck-pdf-root] input {
+              background-color: #f3f4f6 !important;
+              color: #111827 !important;
+            }
+          `
+          clonedDoc.head.appendChild(s)
+          const pdfRoot = clonedDoc.querySelector('[data-bgcheck-pdf-root]')
+          if (pdfRoot) normalizeSvgsForHtml2Canvas(pdfRoot)
+        },
       })
 
       const imgData = canvas.toDataURL('image/png')
@@ -244,26 +381,25 @@ export default function BackgroundCheckDisclosure({
       const pageW = pdf.internal.pageSize.getWidth()
       const pageH = pdf.internal.pageSize.getHeight()
       const margin = 10
-      const imgW = pageW - margin * 2
+      const usableW = pageW - margin * 2
+      const usableH = pageH - margin * 2
+
+      const imgW = usableW
       const imgH = (canvas.height * imgW) / canvas.width
 
-      let remaining = imgH
-      let yOffset = margin
-
-      pdf.addImage(imgData, 'PNG', margin, yOffset, imgW, imgH)
-      remaining -= pageH - yOffset - margin
-
-      // Add additional pages if needed for long documents
-      while (remaining > 0) {
-        pdf.addPage()
-        const yPos = -(imgH - remaining) - margin
-        pdf.addImage(imgData, 'PNG', margin, yPos, imgW, imgH)
-        remaining -= pageH
+      // Slice one tall image across pages by shifting Y (previous loop math clipped mid-lines).
+      let page = 0
+      while (page * usableH < imgH) {
+        if (page > 0) pdf.addPage()
+        pdf.addImage(imgData, 'PNG', margin, margin - page * usableH, imgW, imgH)
+        page += 1
       }
 
       const nameSlug = signedName.replace(/\s+/g, '_') || 'Driver'
       pdf.save(`Background_Check_Disclosure_${nameSlug}_${signedDate.replace(/\//g, '-')}.pdf`)
     } finally {
+      setStateNoticesOpen(pdfOpenStateRef.current.stateNotices)
+      setFcraRightsOpen(pdfOpenStateRef.current.fcraRights)
       setGeneratingPdf(false)
     }
   }
@@ -301,9 +437,11 @@ export default function BackgroundCheckDisclosure({
       <div className="flex-1 overflow-y-auto">
         {/* The white document area — always light for print clarity */}
         <div className="max-w-3xl mx-auto py-8 px-4">
+          {/* overflow-y-visible so tall disclosure isn’t clipped before capture; PDF clone also forces visible */}
           <div
             ref={printRef}
-            className="bg-white text-gray-900 rounded-2xl shadow-xl overflow-hidden"
+            data-bgcheck-pdf-root
+            className="bg-white text-gray-900 rounded-2xl shadow-xl overflow-x-hidden overflow-y-visible"
           >
             {/* Document Header */}
             <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-8 py-6 text-white">
@@ -550,8 +688,10 @@ export default function BackgroundCheckDisclosure({
               </div>
               <div className="flex-1" />
               <button
+                type="button"
                 onClick={handleDownloadPDF}
                 disabled={generatingPdf}
+                title="Printable PDF with all sections expanded. PDFs are static — no interactive controls."
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
                   isDark
                     ? 'border-teal-500/50 text-teal-400 hover:bg-teal-500/10'
@@ -586,8 +726,10 @@ export default function BackgroundCheckDisclosure({
               </button>
               <div className="flex-1" />
               <button
+                type="button"
                 onClick={handleDownloadPDF}
                 disabled={generatingPdf}
+                title="Printable PDF with all sections expanded. PDFs are static — no interactive controls."
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
                   isDark
                     ? 'border-gray-700 text-gray-400 hover:bg-gray-800'

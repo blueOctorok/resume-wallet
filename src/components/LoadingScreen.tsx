@@ -64,7 +64,7 @@ export default function LoadingScreen({
           />
           <p
             className={cn(
-              'pt-3 text-[0.65rem] font-[family-name:var(--font-storm-wordmark),ui-serif,Georgia,serif] font-normal tracking-[0.18em]',
+              'storm-wordmark-font pt-3 text-[0.65rem] font-semibold tracking-[0.14em]',
               'text-teal-700/70 dark:text-teal-400/45',
             )}
           >

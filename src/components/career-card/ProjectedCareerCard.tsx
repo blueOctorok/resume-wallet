@@ -1,6 +1,7 @@
 'use client'
 
-import { MapPin, Calendar, Mail, Phone, Eye, Plus, ShieldCheck } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { MapPin, Calendar, Mail, Phone, Eye, Plus, ShieldCheck, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import Avatar from '@/components/ui/Avatar'
@@ -30,6 +31,8 @@ interface ProjectedCareerCardProps {
   onConnect?: () => void
   /** Used by DotAppSection to fetch the full DOT preview (self mode only) */
   walletAddress?: string
+  /** Employer talent modal: recruit / messaging row below sections */
+  footerSlot?: ReactNode
 }
 
 /**
@@ -46,6 +49,7 @@ export default function ProjectedCareerCard({
   onAddBlock,
   onConnect,
   walletAddress,
+  footerSlot,
 }: ProjectedCareerCardProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
@@ -183,6 +187,49 @@ export default function ProjectedCareerCard({
           />
         ))}
 
+        {/* Employer-only: company-paid MVR (never on candidate/public card) */}
+        {mode === 'employer' && data.employerCompanyMvr && (
+          <div
+            className={cn(
+              'rounded-xl border p-4',
+              isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200',
+            )}
+          >
+            <div className='flex items-center gap-2 mb-3'>
+              <Lock className={cn('w-4 h-4', isDark ? 'text-amber-400' : 'text-amber-600')} aria-hidden />
+              <h3 className={cn('text-sm font-semibold', isDark ? 'text-amber-200' : 'text-amber-900')}>
+                MVR — private to your company
+              </h3>
+            </div>
+            <div className='grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm'>
+              <div>
+                <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Status</p>
+                <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                  {data.employerCompanyMvr.results?.licenseStatus || 'Pending'}
+                </p>
+              </div>
+              <div>
+                <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Class</p>
+                <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                  {data.employerCompanyMvr.results?.licenseClass || '—'}
+                </p>
+              </div>
+              <div>
+                <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Points</p>
+                <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                  {data.employerCompanyMvr.results?.totalPoints ?? '—'}
+                </p>
+              </div>
+              <div>
+                <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>Violations</p>
+                <p className={cn('font-medium', isDark ? 'text-white' : 'text-gray-900')}>
+                  {data.employerCompanyMvr.results?.violationCount ?? '—'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Empty state for self mode ── */}
         {mode === 'self' && data.sections.length === 0 && (
           <div
@@ -207,6 +254,23 @@ export default function ProjectedCareerCard({
           </div>
         )}
 
+        {/* ── Empty state: employer viewing candidate with no hub blocks on card ── */}
+        {mode === 'employer' && data.sections.length === 0 && !data.employerCompanyMvr && (
+          <div
+            className={cn(
+              'rounded-2xl border border-dashed p-8 text-center',
+              isDark ? 'border-gray-600/60 bg-gray-800/30 text-gray-400' : 'border-gray-300/80 bg-slate-50/80 text-gray-500',
+            )}
+          >
+            <p className={cn('text-sm font-medium', isDark ? 'text-gray-200' : 'text-gray-800')}>
+              No career card blocks yet
+            </p>
+            <p className='text-xs mt-1.5 max-w-sm mx-auto'>
+              This candidate has not added any blocks that appear on a shared career card.
+            </p>
+          </div>
+        )}
+
         {/* ── Connect CTA (public mode) ── */}
         {mode === 'public' && data.settings.allowConnect && onConnect && (
           <div className='pt-2 text-center'>
@@ -216,6 +280,21 @@ export default function ProjectedCareerCard({
           </div>
         )}
       </div>
+
+      {footerSlot ? (
+        <div
+          className={cn(
+            'px-6 sm:px-8 pb-7 pt-2 border-t relative z-[1]',
+            isDark ? 'border-gray-700/80' : 'border-gray-200/90',
+          )}
+        >
+          <div
+            className='h-px w-full mb-5 bg-gradient-to-r from-transparent via-teal-400/30 to-transparent dark:via-teal-400/20'
+            aria-hidden
+          />
+          <div className='flex flex-wrap gap-3'>{footerSlot}</div>
+        </div>
+      ) : null}
     </VaultHorizontalVaultShell>
   )
 }

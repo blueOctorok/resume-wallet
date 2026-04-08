@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
   const { data: candidateRequest } = await supabase
     .from('candidate_requests')
-    .select('id, company_id, candidate_user_id, request_type, status')
+    .select('id, company_id, candidate_user_id, request_type, target_block_type, status')
     .eq('id', requestId)
     .eq('candidate_user_id', user.id)
     .single()
@@ -56,8 +56,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Request not found' }, { status: 404 })
   }
 
-  if (candidateRequest.request_type !== 'mvr_order') {
-    return NextResponse.json({ error: 'Consent only applies to MVR order requests' }, { status: 400 })
+  const isMvrConsentRequest =
+    candidateRequest.request_type === 'mvr_order' ||
+    (candidateRequest.request_type === 'block_request' &&
+      candidateRequest.target_block_type === 'driver-mvr')
+
+  if (!isMvrConsentRequest) {
+    return NextResponse.json({ error: 'Consent only applies to MVR / background check requests' }, { status: 400 })
   }
 
   if (!['pending', 'viewed'].includes(candidateRequest.status)) {

@@ -4,6 +4,35 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Job match AI — parse reliability** (April 2026)
+
+- [`job-match-ai.ts`](src/lib/job-match-ai.ts): **`max_tokens` 4096 → 12000** so ~24 scored jobs are not cut mid-JSON (common cause of **`JOB_MATCH_PARSE`**). **`joinAssistantText`** uses all **`text`** blocks in the message. Extraction uses **stripCodeFences** + **balanced-bracket** array slice (not greedy `\[[\s\S]*\]`). On parse failure, logs a snippet and returns **neutral scores** instead of throwing (endpoint stays **200** with unranked reasons).
+
+## **Employer talent career card — same projection as candidate** (April 2026)
+
+- [`projected-career-card.ts`](src/lib/projected-career-card.ts): Shared **`buildProjectedCareerCard`** (+ section fetchers + **`toMvrDataFromOrderRow`**) — one code path for hub-block sections.
+- [`api/career-card/route.ts`](src/app/api/career-card/route.ts): Delegates to the shared builder (self + public token).
+- [`api/employer/talent/[userId]/route.ts`](src/app/api/employer/talent/[userId]/route.ts): Returns **`card`** (`ProjectedCareerCard`) instead of legacy **`CareerCardData`**; employer-only fields (**`installedBlockTypes`**, requests, bg check, **`completionFlags`**, company MVR) are top-level siblings. **`employerCompanyMvr`** is attached on **`card`** for FCRA private display.
+- [`CareerCardModal.tsx`](src/components/employer/CareerCardModal.tsx): Renders **`ProjectedCareerCard`** with **`mode="employer"`**; block requests only when the block is **installed** on the candidate hub (same rule as before, now aligned with visible sections).
+- [`ProjectedCareerCard.tsx`](src/components/career-card/ProjectedCareerCard.tsx): **`footerSlot`**, employer empty state, optional **`employerCompanyMvr`** panel.
+- [`types/career-card.ts`](src/types/career-card.ts): Optional **`employerCompanyMvr`** on **`ProjectedCareerCard`**.
+- [`CandidateRequestsSection.tsx`](src/components/CandidateRequestsSection.tsx): **`getRequestVisualConfig`** handles **`block_request`** (and unknown **`request_type`** → **`custom`**) so the inbox never reads **`config.icon`** from **`undefined`**.
+- **Employer MVR request → FCRA consent again:** Talent modal now POSTs **`request_type: mvr_order`** with **`target_block_type: driver-mvr`** (not **`block_request`**) so **`/api/candidate/bgcheck-consent`**, disclosure UI, and consent linking match the original pipeline. **`isMvrConsentFlow`** treats legacy **`block_request`+`driver-mvr`** the same. Duplicate detection and admin bgcheck list honor both shapes.
+- **FCRA disclosure “Download PDF”:** [`BackgroundCheckDisclosure.tsx`](src/components/BackgroundCheckDisclosure.tsx) — **`html2canvas`** **`onclone`** injects sRGB **`!important`** overrides on the cloned subtree; **`normalizeSvgsForHtml2Canvas`** strips Lucide **`class`** and sets explicit **`rgb()`** stroke/color on **`svg`/shapes** (SVG path still hit **`oklch`** via **`currentColor`** after the first fix). **Pagination:** **`jsPDF`** multi-page uses **`y = margin - page * usableH`** so the tall image isn’t mis-sliced (fixed cut-off text). **Content:** State + FCRA sections **open before capture** and restore after; clone CSS **`overflow-wrap`**, **`overflow: visible`**, hide section **chevron** SVGs; print root **`overflow-y-visible`**. Download buttons **`title`** explains PDFs are static.
+- **Candidate inbox:** [`CandidateRequestsSection.tsx`](src/components/CandidateRequestsSection.tsx) — **`getRequestVisualConfig`** guards missing/invalid **`request_type`**, uses **`base?.icon`**, and **`DEFAULT_REQUEST_VISUAL`** so the list never reads **`.icon`** off **`undefined`**.
+
+## **Homepage — STORM lockup (whitepaper identity, larger)** (March 2026)
+
+- [`StormChainWordmark.tsx`](src/components/ui/StormChainWordmark.tsx): New size **`display`** — same full **vault chrome** as **`hero`** (token whitepaper), with larger type (**`~3rem` → `~5.25rem`** at `lg`) + slightly roomier inner padding and **O** icon stroke.
+- [`HomePage.tsx`](src/components/HomePage.tsx): Candidate hero opens with **`StormChainWordmark size="display"`** (scroll-reveal) so the marketing page matches the whitepaper lockup at a bigger scale.
+
+## **STORM wordmark — Orbitron** (March 2026)
+
+- [`layout.tsx`](src/app/layout.tsx): **[Orbitron](https://fonts.google.com/specimen/Orbitron)** weight **600** (semibold) as **`--font-storm-wordmark`** — softer than **900** black; STORM logo / STORMCHAIN loader only; app body stays **Montserrat**.
+- [`globals.css`](src/app/globals.css): Removed **`* { font-family: Montserrat !important }`** — it matched **every** descendant, so wordmark **`<span>`s** got Montserrat directly and could not inherit **Orbitron** from a parent. Default type stays **`body { font-family: Montserrat }`**; **`.storm-wordmark-font`** sets Orbitron for the logo subtree.
+- [`StormChainWordmark.tsx`](src/components/ui/StormChainWordmark.tsx): **`storm-wordmark-font`** + **`font-semibold`** (matches loaded **600**); tracking for geometric caps + block **O**.
+- [`LoadingScreen.tsx`](src/components/LoadingScreen.tsx): **STORMCHAIN** uses **`storm-wordmark-font`**.
+
 ## **Appearance: Paper theme + theme picker** (March 2026)
 
 - **`data-theme='paper'`** — **Kindle-style paperback** (not saturated “brand” light): sepia cream **body**, warm **ink** text, **low chroma** — vault/nav chrome via **`PAPER_KINDLE_VAULT_SHELL`** + [`HubBlockVault.tsx`](src/components/hub/HubBlockVault.tsx) **`paperKindle`** (neutral rims, no teal/violet strip); [`Button`](src/components/ui/Button.tsx) primary/secondary/ghost use **dusty green-grey** + parchment fills; [`globals.css`](src/app/globals.css) **paper** utility overrides mute **`text-teal-*`**, **`border-teal-*`**, **`bg-teal-50/100`**, violet/indigo accents; `.storm-light-panel` **no teal rim**; **`akui-*`** sepia surfaces.

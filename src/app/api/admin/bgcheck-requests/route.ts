@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
         requested_by_user_id,
         candidate_user_id,
         request_type,
+        target_block_type,
         status,
         message,
         created_at,
@@ -36,7 +37,9 @@ export async function GET(request: NextRequest) {
         expires_at,
         completed_at
       `, { count: 'exact' })
-      .eq('request_type', 'mvr_order')
+      .or(
+        'request_type.eq.mvr_order,and(request_type.eq.block_request,target_block_type.eq.driver-mvr)',
+      )
       .order('created_at', { ascending: false })
 
     if (status === 'pending') {

@@ -160,7 +160,16 @@ export async function POST(
       .eq('candidate_user_id', candidateUserId)
       .in('status', ['pending', 'viewed'])
 
-    if (requestType === 'block_request' && targetBlockType) {
+    const isMvrConsentPipeline =
+      requestType === 'mvr_order' ||
+      (requestType === 'block_request' && targetBlockType === 'driver-mvr')
+
+    if (isMvrConsentPipeline) {
+      // `mvr_order` and legacy `block_request`+driver-mvr are the same FCRA inbox item
+      dupeQuery = dupeQuery.or(
+        'request_type.eq.mvr_order,and(request_type.eq.block_request,target_block_type.eq.driver-mvr)',
+      )
+    } else if (requestType === 'block_request' && targetBlockType) {
       dupeQuery = dupeQuery.eq('target_block_type', targetBlockType)
     } else {
       dupeQuery = dupeQuery.eq('request_type', requestType)
@@ -217,18 +226,18 @@ export async function POST(
         .maybeSingle()
 
       if (!existingBlock) {
-        const { data: maxOrder } = await supabase
+        const { data: maxPos } = await supabase
           .from('hub_blocks')
-          .select('display_order')
+          .select('position')
           .eq('user_id', candidateUserId)
-          .order('display_order', { ascending: false })
+          .order('position', { ascending: false })
           .limit(1)
           .maybeSingle()
 
         await supabase.from('hub_blocks').insert({
           user_id: candidateUserId,
           block_type: targetBlockType,
-          display_order: (maxOrder?.display_order ?? -1) + 1,
+          position: (maxPos?.position ?? -1) + 1,
         })
         console.log(`[CANDIDATE REQUEST] Auto-installed block ${targetBlockType} for candidate ${candidateUserId}`)
       }
