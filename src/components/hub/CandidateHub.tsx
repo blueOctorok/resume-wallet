@@ -1,8 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import { useEffect, useCallback, useState } from 'react'
-import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, ShieldCheck, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, FileText, ClipboardCheck, Car, RefreshCw, Trash2, Globe, Github, Compass, Sparkles, LayoutGrid, CreditCard } from 'lucide-react'
+import { useEffect, useCallback, useState, useRef, type ReactNode } from 'react'
+import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, ShieldCheck, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, FileText, ClipboardCheck, Car, Trash2, Globe, Github, Compass, Sparkles, LayoutGrid } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore, useJourneyStore, usePreferencesStore } from '@/stores'
@@ -22,6 +22,7 @@ import BlockCard from '@/components/ui/BlockCard'
 import Card from '@/components/ui/Card'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import AvatarUpload from '@/components/ui/AvatarUpload'
+import Avatar from '@/components/ui/Avatar'
 import STORMBalance from '@/components/STORMBalance'
 import CandidateRequestsSection from '@/components/CandidateRequestsSection'
 import HubOnboardingForm from './HubOnboardingForm'
@@ -333,7 +334,8 @@ function VaultHubGrid({
     <div className='flex w-full flex-col items-center'>
       <div
         className={cn(
-          'mx-auto grid w-full max-w-md grid-cols-2 grid-rows-[auto_auto_auto] gap-3 sm:max-w-xl sm:grid-cols-4 sm:grid-rows-3 sm:gap-4',
+          // sm+ was max-w-xl — ring tiles (1 col each) felt tight vs the 2-col center; 2xl gives outer tiles more title room.
+          'mx-auto grid w-full max-w-md grid-cols-2 grid-rows-[auto_auto_auto] gap-3 sm:max-w-2xl sm:grid-cols-4 sm:grid-rows-3 sm:gap-4',
         )}
       >
         {Array.from({ length: slotsPerPage }).map((_, slotIdx) => {
@@ -425,113 +427,164 @@ function VaultHubGrid({
 
 // ── Profile header ───────────────────────────────────────────────────────────
 
-function HubProfileCareerCardCallout({
+function HubMiniCredentialChip({
+  icon,
+  label,
+  done,
   isDark,
-  blockCount,
+}: {
+  icon: ReactNode
+  label: string
+  done: boolean
+  isDark: boolean
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium',
+        done
+          ? isDark
+            ? 'border-teal-500/45 bg-teal-500/15 text-teal-200'
+            : 'border-teal-500/35 bg-teal-50 text-teal-900'
+          : isDark
+            ? 'border-gray-600/80 bg-gray-800/50 text-gray-500'
+            : 'border-slate-200 bg-slate-100/90 text-slate-500',
+      )}
+    >
+      {icon}
+      {label}
+      {done ? <Check className='h-3 w-3 shrink-0 text-emerald-400' aria-hidden /> : null}
+    </span>
+  )
+}
+
+function CareerCardMiniPreview({
+  isDark,
+  displayName,
+  headline,
+  avatarUrl,
+  completeness,
+  installedBlocks,
 }: {
   isDark: boolean
-  blockCount: number
+  displayName: string
+  headline: string | null
+  avatarUrl: string | null
+  completeness: number
+  installedBlocks: InstalledBlock[]
 }) {
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const openPicker = useHubBlocksStore((s) => s.openPicker)
+  const types = installedBlocks.map((b) => b.blockType)
+  const hasResume = types.some((t) => t.includes('resume') || t === 'storm-resume')
+  const hasDot = types.includes('driver-dot-application')
+  const hasMvr = types.includes('driver-mvr')
+  const blockCount = installedBlocks.length
   const hasBlocks = blockCount > 0
 
   return (
-    <div
-      className={cn(
-        'rounded-xl border p-4 transition-colors',
-        hasBlocks
-          ? isDark
-            ? 'border-teal-500/40 bg-teal-500/[0.07] shadow-[0_0_0_1px_rgba(20,184,166,0.12)]'
-            : 'border-teal-500/35 bg-teal-50/70 shadow-sm shadow-teal-900/5'
-          : isDark
-            ? 'border-gray-700/80 bg-gray-900/40'
-            : 'border-slate-200/95 bg-slate-50/90',
-      )}
-    >
-      <div className='flex gap-3'>
+    <div className='flex w-full flex-col gap-4'>
+      <div
+        className={cn(
+          'relative overflow-hidden rounded-2xl border p-4 sm:p-5',
+          'shadow-[0_0_48px_-16px_rgba(20,184,166,0.55)]',
+          isDark
+            ? 'border-teal-500/40 bg-gradient-to-br from-gray-900/95 via-gray-900/80 to-teal-950/25'
+            : 'border-teal-400/35 bg-gradient-to-br from-white via-teal-50/50 to-slate-50/95 shadow-sm',
+        )}
+      >
         <div
+          className='pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-400/60 to-transparent dark:via-teal-400/40'
+          aria-hidden
+        />
+        <div
+          className='pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-teal-400/10 blur-2xl dark:bg-teal-500/15'
+          aria-hidden
+        />
+
+        <p
           className={cn(
-            'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset',
-            hasBlocks
-              ? isDark
-                ? 'bg-teal-500/15 ring-teal-400/25'
-                : 'bg-white ring-teal-600/15'
-              : isDark
-                ? 'bg-gray-800 ring-gray-600/50'
-                : 'bg-white ring-slate-200',
+            'mb-3 text-[10px] font-bold uppercase tracking-[0.2em]',
+            isDark ? 'text-teal-300/90' : 'text-teal-800',
           )}
         >
-          <CreditCard
-            className={cn(
-              'h-5 w-5',
-              hasBlocks
-                ? isDark
-                  ? 'text-teal-300'
-                  : 'text-teal-700'
-                : isDark
-                  ? 'text-gray-500'
-                  : 'text-slate-500',
-            )}
-            aria-hidden
-          />
-        </div>
-        <div className='min-w-0 flex-1'>
-          <p
-            className={cn(
-              'text-[10px] font-bold uppercase tracking-[0.16em]',
-              hasBlocks
-                ? isDark
-                  ? 'text-teal-300/95'
-                  : 'text-teal-800'
-                : isDark
-                  ? 'text-gray-500'
-                  : 'text-slate-500',
-            )}
-          >
-            Career Card
-          </p>
-          <p
-            className={cn(
-              'mt-1.5 text-sm leading-snug',
-              isDark ? 'text-gray-200' : 'text-slate-800',
-            )}
-          >
-            {hasBlocks
-              ? `You’ve added ${blockCount} hub block${blockCount === 1 ? '' : 's'} — your Career Card is taking shape. See the live view employers get.`
-              : 'Your Career Card is built from the blocks you install below. Add your first block to get it started.'}
-          </p>
-          <div className='mt-3'>
-            {hasBlocks ? (
-              <Button
-                type='button'
-                variant='primary'
-                size='sm'
-                onClick={() => setCurrentPage('career-card' as PageType)}
-                className='w-full sm:w-auto'
-              >
-                View Career Card
-              </Button>
-            ) : (
-              <Button type='button' variant='primary' size='sm' onClick={openPicker} className='w-full sm:w-auto'>
-                <Plus className='h-4 w-4 shrink-0' />
-                Browse blocks
-              </Button>
-            )}
+          Career card preview
+        </p>
+
+        <div className='flex items-start gap-3'>
+          <Avatar name={displayName} avatarUrl={avatarUrl} size='md' color='teal' />
+          <div className='min-w-0 flex-1'>
+            <p className={cn('truncate font-semibold', isDark ? 'text-white' : 'text-slate-900')}>{displayName}</p>
+            <p className={cn('truncate text-xs', isDark ? 'text-gray-400' : 'text-slate-600')}>
+              {headline || (hasBlocks ? 'Building your profile' : 'Add blocks to shape your card')}
+            </p>
+          </div>
+          <div className='shrink-0 text-right'>
+            <span
+              className={cn(
+                'text-lg font-bold tabular-nums',
+                completeness >= 75
+                  ? isDark
+                    ? 'text-emerald-400'
+                    : 'text-emerald-700'
+                  : completeness >= 50
+                    ? 'text-amber-500'
+                    : isDark
+                      ? 'text-gray-400'
+                      : 'text-slate-600',
+              )}
+            >
+              {completeness}%
+            </span>
+            <p className={cn('text-[10px]', isDark ? 'text-gray-500' : 'text-slate-500')}>complete</p>
           </div>
         </div>
+
+        <div className='mt-3 flex flex-wrap gap-2'>
+          <HubMiniCredentialChip
+            icon={<FileText className='h-3 w-3 shrink-0' />}
+            label='Resume'
+            done={hasResume}
+            isDark={isDark}
+          />
+          <HubMiniCredentialChip
+            icon={<ClipboardCheck className='h-3 w-3 shrink-0' />}
+            label='DOT'
+            done={hasDot}
+            isDark={isDark}
+          />
+          <HubMiniCredentialChip icon={<Car className='h-3 w-3 shrink-0' />} label='MVR' done={hasMvr} isDark={isDark} />
+        </div>
+
+        {!hasBlocks ? (
+          <p className={cn('mt-3 text-xs leading-snug', isDark ? 'text-gray-400' : 'text-slate-600')}>
+            Install blocks below — employers see this card when they view your profile.
+          </p>
+        ) : null}
       </div>
+
+      {hasBlocks ? (
+        <Button
+          type='button'
+          variant='primary'
+          size='sm'
+          onClick={() => setCurrentPage('career-card' as PageType)}
+          className='w-full sm:w-auto'
+        >
+          <Eye className='mr-1.5 h-4 w-4 shrink-0' />
+          View Career Card
+        </Button>
+      ) : (
+        <Button type='button' variant='primary' size='sm' onClick={openPicker} className='w-full sm:w-auto'>
+          <Plus className='mr-1.5 h-4 w-4 shrink-0' />
+          Browse blocks
+        </Button>
+      )}
     </div>
   )
 }
 
-function HubProfileHeader({
-  onRefreshHub,
-  hubRefreshing = false,
-}: {
-  onRefreshHub?: () => void
-  hubRefreshing?: boolean
-} = {}) {
+function HubProfileHeader() {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const walletAddress = useAuthStore((s) => s.walletAddress)
@@ -613,53 +666,26 @@ function HubProfileHeader({
     isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-slate-100 border-slate-300 text-slate-900'
   )
 
-  const showRefresh = Boolean(walletAddress && onRefreshHub)
-
   return (
     <HubSectionPanel isDark={isDark} contentClassName='p-6 sm:p-7'>
-      {/*
-        Desktop: Refresh (left) | Profile (center) | Career Card CTA + completeness (right).
-        Mobile: Profile first, then Career + completeness, then refresh — so identity stays on top without a heavy preview.
-      */}
       <div className='flex flex-col gap-6 lg:flex-row lg:items-stretch lg:gap-6 xl:gap-8'>
-        {showRefresh ? (
-          <div
-            className={cn(
-              'order-3 flex shrink-0 flex-col justify-start gap-2 border-t pt-5 lg:order-1 lg:max-w-[11rem] lg:min-h-0 lg:justify-center lg:border-t-0 lg:border-r lg:pr-6 lg:pt-0',
-              isDark ? 'border-gray-600/50 lg:border-gray-600/50' : 'border-slate-200/90 lg:border-slate-200/90',
-            )}
-          >
-            <Button
-              type='button'
-              variant='secondary'
-              size='sm'
-              onClick={onRefreshHub}
-              disabled={hubRefreshing}
-              isLoading={hubRefreshing}
-              className='w-full justify-center gap-2 lg:w-auto lg:justify-start'
-            >
-              {!hubRefreshing ? <RefreshCw className='h-4 w-4 shrink-0' aria-hidden /> : null}
-              Refresh hub
-            </Button>
-            <p className={cn('text-xs leading-snug', isDark ? 'text-gray-500' : 'text-slate-600')}>
-              Pull the latest blocks and files — no full page reload.
-            </p>
+        <div className='order-1 flex min-h-0 min-w-0 flex-1 flex-col items-center gap-5 text-center lg:order-1 lg:items-start lg:text-left lg:self-stretch'>
+          <div className='relative shrink-0'>
+            <AvatarUpload
+              name={displayName}
+              avatarUrl={userProfile?.avatarUrl ?? null}
+              size='2xl'
+              color='teal'
+              uploadEndpoint='/api/user/avatar'
+              walletAddress={walletAddress ?? ''}
+              onSuccess={updateAvatarUrl}
+              persistentUploadHint
+              className='shrink-0'
+            />
           </div>
-        ) : null}
-
-        <div className='order-1 flex min-h-0 min-w-0 flex-1 items-center gap-4 lg:order-2 lg:self-stretch'>
-          <AvatarUpload
-            name={displayName}
-            avatarUrl={userProfile?.avatarUrl ?? null}
-            size='xl'
-            color='teal'
-            uploadEndpoint='/api/user/avatar'
-            walletAddress={walletAddress ?? ''}
-            onSuccess={updateAvatarUrl}
-          />
 
           {isEditing ? (
-            <div className='flex min-w-0 flex-col gap-2'>
+            <div className='flex w-full min-w-0 max-w-md flex-col gap-2 lg:max-w-none'>
               <div className='flex gap-2'>
                 <input
                   value={editFirst}
@@ -700,11 +726,11 @@ function HubProfileHeader({
               </div>
             </div>
           ) : (
-            <div className='min-w-0'>
-              <div className='flex items-center gap-2'>
+            <div className='w-full min-w-0 max-w-md lg:max-w-none'>
+              <div className='flex items-center justify-center gap-2 lg:justify-start'>
                 <h1
                   className={cn(
-                    'text-2xl font-bold sm:text-3xl',
+                    'text-2xl font-bold sm:text-3xl lg:text-4xl',
                     isDark ? 'text-white' : 'text-slate-800',
                   )}
                 >
@@ -732,27 +758,36 @@ function HubProfileHeader({
                 </p>
               )}
               {!needsOnboarding && onboarding && (
-                <button
-                  type='button'
-                  onClick={() => openStormiContextModal()}
-                  className={cn(
-                    'mt-2 inline-flex items-center gap-1.5 text-xs font-medium transition-colors',
-                    isDark
-                      ? 'text-teal-400/90 hover:text-teal-300'
-                      : 'text-teal-700 hover:text-teal-800',
-                  )}
-                  aria-label='Edit what you do and why you are here for Stormi'
-                >
-                  <Sparkles className='h-3.5 w-3.5 shrink-0' />
-                  Edit what you told Stormi
-                </button>
+                <div className='mt-2 flex justify-center lg:justify-start'>
+                  <button
+                    type='button'
+                    onClick={() => openStormiContextModal()}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 text-xs font-medium transition-colors',
+                      isDark
+                        ? 'text-teal-400/90 hover:text-teal-300'
+                        : 'text-teal-700 hover:text-teal-800',
+                    )}
+                    aria-label='Edit what you do and why you are here for Stormi'
+                  >
+                    <Sparkles className='h-3.5 w-3.5 shrink-0' />
+                    Edit what you told Stormi
+                  </button>
+                </div>
               )}
             </div>
           )}
         </div>
 
-        <div className='order-2 flex w-full shrink-0 flex-col justify-start gap-4 lg:order-3 lg:w-72 lg:min-h-0 lg:justify-center'>
-          <HubProfileCareerCardCallout isDark={isDark} blockCount={installedBlocks.length} />
+        <div className='order-2 flex w-full min-w-0 shrink-0 flex-col justify-start gap-4 lg:order-2 lg:max-w-md lg:min-h-0 lg:flex-1 lg:justify-center xl:max-w-lg'>
+          <CareerCardMiniPreview
+            isDark={isDark}
+            displayName={displayName}
+            headline={headline}
+            avatarUrl={userProfile?.avatarUrl ?? null}
+            completeness={completeness}
+            installedBlocks={installedBlocks}
+          />
 
           <div>
             <div className='mb-2 flex items-center justify-between'>
@@ -1324,8 +1359,9 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
       <div className={cn('divide-y', isDark ? 'divide-gray-700/70' : 'divide-slate-200/90')}>
         {documents.map((doc) => (
           <div key={doc.id}>
-            <div className='flex items-start gap-4 py-5 first:pt-2 last:pb-2 sm:items-center sm:gap-5 sm:py-6'>
-              {/* Icon + info */}
+            <div className='flex flex-col gap-3 py-5 first:pt-2 last:pb-2 sm:flex-row sm:items-center sm:gap-5 sm:py-6'>
+              {/* Icon + info — full width row on mobile; actions stack below so they never overlap title text */}
+              <div className='flex min-w-0 flex-1 gap-4'>
               <div className={cn(
                 'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset sm:h-12 sm:w-12',
                 doc.verified
@@ -1362,7 +1398,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
 
               <div className='min-w-0 flex-1'>
                 <div className='flex flex-wrap items-center gap-2 sm:gap-2.5'>
-                  <p className={cn('text-base font-medium leading-snug', isDark ? 'text-white' : 'text-slate-800')}>
+                  <p className={cn('text-base font-medium leading-snug break-words', isDark ? 'text-white' : 'text-slate-800')}>
                     {doc.title}
                     {doc.subtitle && <span className={cn('ml-1 font-normal', isDark ? 'text-gray-500' : 'text-gray-400')}>({doc.subtitle})</span>}
                   </p>
@@ -1417,19 +1453,20 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                   </p>
                 )}
                 {doc.type === 'portfolio' && doc.portfolioUrl && (
-                  <p className={cn('text-[11px] truncate mt-0.5', isDark ? 'text-gray-400' : 'text-slate-600')}>
+                  <p className={cn('text-[11px] mt-0.5 break-all sm:truncate', isDark ? 'text-gray-400' : 'text-slate-600')}>
                     {doc.portfolioUrl}
                   </p>
                 )}
                 {doc.type === 'github' && doc.githubUsername && (
-                  <p className={cn('text-[11px] truncate mt-0.5', isDark ? 'text-gray-400' : 'text-slate-600')}>
+                  <p className={cn('text-[11px] mt-0.5 break-all sm:truncate', isDark ? 'text-gray-400' : 'text-slate-600')}>
                     @{doc.githubUsername}
                   </p>
                 )}
               </div>
+              </div>
 
               {/* Actions: View | Edit | Verify (until on-chain) | Delete */}
-              <div className='flex max-w-none flex-shrink-0 flex-wrap items-stretch gap-2 sm:justify-end'>
+              <div className='flex w-full max-w-none flex-shrink-0 flex-wrap items-stretch gap-2 sm:w-auto sm:justify-end'>
                 {doc.type === 'portfolio' && doc.portfolioUrl && (
                   <a
                     href={doc.portfolioUrl}
@@ -1759,9 +1796,11 @@ export default function CandidateHub() {
   const isDark = theme === 'dark'
   const walletAddress = useAuthStore((s) => s.walletAddress)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
+  const hubRefreshNonce = useUIStore((s) => s.hubRefreshNonce)
   const openJourneyGuide = useJourneyStore((s) => s.openGuide)
 
   const [refreshKey, setRefreshKey] = useState(0)
+  const lastHubRefreshNonce = useRef<number | null>(null)
 
   const isLoading = useHubBlocksStore((s) => s.isLoading)
   const fetchError = useHubBlocksStore((s) => s.fetchError)
@@ -1791,6 +1830,18 @@ export default function CandidateHub() {
     if (walletAddress) fetchHubData(walletAddress)
     setRefreshKey((k) => k + 1)
   }, [walletAddress, fetchHubData])
+
+  // Nav "Refresh hub" button bumps `hubRefreshNonce` — same behavior as the old title-card control
+  useEffect(() => {
+    if (lastHubRefreshNonce.current === null) {
+      lastHubRefreshNonce.current = hubRefreshNonce
+      return
+    }
+    if (hubRefreshNonce === lastHubRefreshNonce.current) return
+    lastHubRefreshNonce.current = hubRefreshNonce
+    if (!walletAddress) return
+    refreshHub()
+  }, [hubRefreshNonce, walletAddress, refreshHub])
 
   // Exit edit mode on Escape
   useEffect(() => {
@@ -1874,10 +1925,7 @@ export default function CandidateHub() {
             dropped next to Stormi in some layouts */}
         <div className='flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:content-start lg:gap-x-8 lg:gap-y-0'>
           <div className='min-w-0 space-y-6 lg:col-start-1 lg:row-start-1 lg:self-start'>
-            <HubProfileHeader
-              onRefreshHub={walletAddress ? refreshHub : undefined}
-              hubRefreshing={isLoading}
-            />
+            <HubProfileHeader />
 
             <div id='stormi-hub-panel' className='scroll-mt-24'>
               <HubSectionPanel isDark={isDark} accent='violet'>

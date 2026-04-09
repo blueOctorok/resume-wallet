@@ -105,13 +105,14 @@ function BlockCardChrome({
       )}
       <div
         className={cn(
-          'flex items-start justify-between gap-3 border-b border-slate-300/90 dark:border-gray-700/50',
+          // Stack on narrow viewports so titles wrap and actions don't squeeze the label column.
+          'flex flex-col gap-3 border-b border-slate-300/90 dark:border-gray-700/50 sm:flex-row sm:items-start sm:justify-between sm:gap-3',
           embed
             ? 'px-5 py-4 sm:px-6 sm:py-5'
             : 'p-4 pl-5 sm:p-5 sm:pl-6',
         )}
       >
-        <div className='flex min-w-0 items-center gap-3'>
+        <div className='flex min-w-0 w-full flex-1 items-center gap-3 sm:w-auto'>
           <div className='flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500/20 via-cyan-500/12 to-violet-500/15 shadow-inner shadow-teal-900/5 ring-1 ring-teal-500/25 dark:from-teal-400/25 dark:via-teal-500/10 dark:to-violet-500/20 dark:ring-teal-400/30 overflow-hidden'>
             {headerIconSlot != null ? (
               headerIconSlot
@@ -120,19 +121,19 @@ function BlockCardChrome({
             ) : null}
           </div>
 
-          <div className='min-w-0'>
-            <h3 className='text-sm font-semibold tracking-tight text-slate-900 dark:text-white truncate'>
+          <div className='min-w-0 flex-1'>
+            <h3 className='text-sm font-semibold tracking-tight text-slate-900 dark:text-white break-words sm:truncate'>
               {title}
             </h3>
             {description && (
-              <p className='text-xs text-slate-600 dark:text-gray-400 mt-0.5 truncate'>
+              <p className='mt-0.5 text-xs text-slate-600 dark:text-gray-400 break-words line-clamp-3 sm:line-clamp-none sm:truncate'>
                 {description}
               </p>
             )}
           </div>
         </div>
 
-        <div className='flex flex-wrap items-center justify-end gap-2 flex-shrink-0'>
+        <div className='flex w-full flex-shrink-0 flex-wrap items-center gap-2 justify-start sm:w-auto sm:justify-end'>
           {headerActions}
           {statusInfo && StatusIcon && (
             <span className={cn('flex items-center gap-1 text-xs font-medium', statusInfo.classes)}>

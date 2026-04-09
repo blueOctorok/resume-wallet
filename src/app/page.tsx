@@ -352,7 +352,6 @@ const HomeContent = () => {
           }}
           mvrWalletAddress={user?.address || null}
           walletAddress={walletAddress ?? null}
-          stormTokens={0}
           onSwitchRole={() => setShowRoleSelection(true)}
         />
 

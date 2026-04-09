@@ -14,6 +14,11 @@ interface AvatarUploadProps {
   walletAddress: string
   onSuccess?: (newUrl: string) => void
   className?: string
+  /**
+   * When true, show a small camera badge on the corner at all times (not only on hover).
+   * Use on hub hero avatars so new users see they can add a photo.
+   */
+  persistentUploadHint?: boolean
 }
 
 /**
@@ -34,6 +39,7 @@ export default function AvatarUpload({
   walletAddress,
   onSuccess,
   className = '',
+  persistentUploadHint = false,
 }: AvatarUploadProps) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
@@ -79,6 +85,15 @@ export default function AvatarUpload({
         size={size}
         color={color}
       />
+
+      {persistentUploadHint && !uploading ? (
+        <span
+          className='pointer-events-none absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-teal-500 text-white shadow-md dark:border-gray-950'
+          aria-hidden
+        >
+          <Camera className='h-4 w-4' />
+        </span>
+      ) : null}
 
       {/* Camera overlay — visible on hover or while uploading */}
       <div className={`absolute inset-0 flex items-center justify-center rounded-inherit transition-opacity ${

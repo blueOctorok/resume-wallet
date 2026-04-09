@@ -415,7 +415,7 @@ export function VaultShowcase({ blocks, isDark }: { blocks: VaultShowcaseBlock[]
       }))
 
   return (
-    <div className='mx-auto grid w-full max-w-md grid-cols-2 grid-rows-[auto_auto_auto] gap-3 sm:max-w-xl sm:grid-cols-4 sm:grid-rows-3 sm:gap-4'>
+    <div className='mx-auto grid w-full max-w-md grid-cols-2 grid-rows-[auto_auto_auto] gap-3 sm:max-w-2xl sm:grid-cols-4 sm:grid-rows-3 sm:gap-4'>
       {rows.map(({ block, slot }, i) => {
         const colors = getBlockColor(block.id)
         const isCenter = slot === 'center'

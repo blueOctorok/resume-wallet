@@ -72,6 +72,9 @@ interface UIState {
 
   // Messaging — thread to open when navigating to the messages page
   initialThreadId: string | null
+
+  /** Incremented by nav "Refresh hub" — CandidateHub reacts to refetch blocks + My Files */
+  hubRefreshNonce: number
 }
 
 interface UIActions {
@@ -121,6 +124,9 @@ interface UIActions {
   // Messaging
   navigateToMessages: (threadId?: string | null) => void
 
+  /** Nav refresh control — bumps nonce so CandidateHub runs the same refresh as the old title-card button */
+  requestHubRefresh: () => void
+
   // Reset
   resetUI: () => void
 }
@@ -143,6 +149,7 @@ const initialState: UIState = {
   latestResumeIpfsHash: null,
   resumeUploadEvent: null,
   initialThreadId: null,
+  hubRefreshNonce: 0,
 }
 
 export const useUIStore = create<UIState & UIActions>()(
@@ -263,6 +270,9 @@ export const useUIStore = create<UIState & UIActions>()(
       currentPage: 'messages',
       initialThreadId: threadId ?? null,
     }),
+
+    requestHubRefresh: () =>
+      set((s) => ({ hubRefreshNonce: s.hubRefreshNonce + 1 })),
 
     // Reset
     resetUI: () => set(initialState),

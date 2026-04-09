@@ -108,10 +108,63 @@ export function navHubInnerButtonClass(theme: Theme = 'light') {
       'transition-colors duration-200',
     )
   }
+  if (theme === 'sepia') {
+    return cn(
+      'w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2',
+      'bg-stone-100/95 text-stone-900 border border-stone-500/35',
+      'hover:bg-stone-200/90 hover:border-stone-600/40',
+      'transition-colors duration-200',
+    )
+  }
+  if (theme === 'paper') {
+    return cn(
+      'w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2',
+      'bg-white text-zinc-900 border border-zinc-300/90',
+      'hover:bg-zinc-50 hover:border-zinc-400/85',
+      'transition-colors duration-200',
+    )
+  }
   return cn(
     'w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2',
     'bg-gray-950 text-white border border-white/[0.08]',
     'hover:bg-gray-900 dark:hover:bg-gray-900',
+    'transition-colors duration-200',
+  )
+}
+
+/** Icon-only sibling to My Hub — same gradient ring + inner vault treatment, square control */
+export function navHubRefreshInnerButtonClass(theme: Theme = 'light') {
+  if (theme === 'business') {
+    return cn(
+      'p-2.5 rounded-[10px] flex items-center justify-center shrink-0 min-w-[2.75rem] min-h-[2.75rem]',
+      'bg-white text-blue-700 border border-blue-100/90',
+      'hover:bg-blue-50/95 disabled:opacity-45 disabled:cursor-not-allowed',
+      'transition-colors duration-200',
+    )
+  }
+  if (theme === 'sepia') {
+    return cn(
+      'p-2.5 rounded-[10px] flex items-center justify-center shrink-0 min-w-[2.75rem] min-h-[2.75rem]',
+      'bg-stone-100/95 text-stone-800 border border-stone-500/35',
+      'hover:bg-stone-200/90 hover:border-stone-600/40',
+      'disabled:opacity-45 disabled:cursor-not-allowed',
+      'transition-colors duration-200',
+    )
+  }
+  if (theme === 'paper') {
+    return cn(
+      'p-2.5 rounded-[10px] flex items-center justify-center shrink-0 min-w-[2.75rem] min-h-[2.75rem]',
+      'bg-white text-zinc-800 border border-zinc-300/90',
+      'hover:bg-zinc-50 hover:border-zinc-400/85',
+      'disabled:opacity-45 disabled:cursor-not-allowed',
+      'transition-colors duration-200',
+    )
+  }
+  return cn(
+    'p-2.5 rounded-[10px] flex items-center justify-center shrink-0 min-w-[2.75rem] min-h-[2.75rem]',
+    'bg-gray-950 text-white border border-white/[0.08]',
+    'hover:bg-gray-900 dark:hover:bg-gray-900',
+    'disabled:opacity-45 disabled:cursor-not-allowed',
     'transition-colors duration-200',
   )
 }

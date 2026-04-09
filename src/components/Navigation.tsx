@@ -1,7 +1,21 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { LayoutDashboard, ChevronDown, RefreshCw, Car, Code, Building2, Sparkles, HelpCircle, MessageSquare, User, Home, Briefcase } from 'lucide-react'
+import {
+  LayoutDashboard,
+  ChevronDown,
+  RefreshCw,
+  Car,
+  Code,
+  Building2,
+  Sparkles,
+  HelpCircle,
+  MessageSquare,
+  User,
+  Home,
+  Briefcase,
+  Loader2,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   navControlButtonClass,
@@ -9,6 +23,7 @@ import {
   navStormiButtonClass,
   navHubGradientRingClass,
   navHubInnerButtonClass,
+  navHubRefreshInnerButtonClass,
   navRowDividerClass,
   navDropdownPanelClass,
   navDropdownItemClass,
@@ -22,10 +37,12 @@ import StormTokenMark from '@/components/ui/StormTokenMark'
 import Button from '@/components/ui/Button'
 import { useTheme } from '@/contexts/ThemeContext'
 import { usePreferencesStore, useJourneyStore, useUIStore } from '@/stores'
+import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import type { UserRole } from '@/stores/types'
 import { useNotificationStore } from '@/stores/notification-store'
 import MvrStatusBadge from './MvrStatusBadge'
 import NotificationBell from './ui/NotificationBell'
+import { useStormTokenBalance } from '@/hooks/use-storm-token-balance'
 
 // Define the navigation page type
 type NavPage =
@@ -47,8 +64,6 @@ interface NavigationProps {
   walletAddress?: string | null
   tHasUnread?: boolean
   onTClick?: () => void
-  /** Storm token balance for drivers - shown in nav */
-  stormTokens?: number
   /** Callback to switch user role */
   onSwitchRole?: () => void
 }
@@ -62,7 +77,6 @@ export default function Navigation({
   walletAddress,
   tHasUnread = false,
   onTClick,
-  stormTokens = 0,
   onSwitchRole,
 }: NavigationProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -71,12 +85,18 @@ export default function Navigation({
   const { theme } = useTheme()
   const { showJourneyModals, setShowJourneyModals } = usePreferencesStore()
   const { openGuide } = useJourneyStore()
-  const { navigateToMessages } = useUIStore()
+  const { navigateToMessages, requestHubRefresh } = useUIStore()
+  const hubBlocksLoading = useHubBlocksStore((s) => s.isLoading)
   const { notifications } = useNotificationStore()
   const isDark = theme === 'dark'
   const isPaperLight = !isDark && theme === 'paper'
   // Derive unread message count from existing notification store — no extra fetch needed
   const unreadMessageCount = notifications.filter(n => n.type === 'new_message' && !n.read).length
+
+  // STORM pill only renders when userRole is set; fetch balance for that smart-account address only.
+  const { display: stormBalanceDisplay, loading: stormBalanceLoading } = useStormTokenBalance(
+    userRole ? walletAddress ?? null : null,
+  )
 
   // Close hub dropdown when clicking outside
   useEffect(() => {
@@ -380,136 +400,165 @@ export default function Navigation({
                 </button>
               )}
 
-              {/* Hub Button with Dropdown - Center position with gold rotating border */}
+              {/* Hub row: refresh (left) | My Hub (center) | STORM + theme (right) — balanced flex so hub stays centered */}
               {userRole && isAuthenticated && (
-                <div
-                  ref={hubDropdownRef}
-                  className='relative z-[100] sm:absolute sm:left-1/2 sm:-translate-x-1/2 w-full sm:w-auto'
-                >
-                  <div className={navHubGradientRingClass(theme)}>
-                    <button
-                      type='button'
-                      onClick={() => setIsHubDropdownOpen(!isHubDropdownOpen)}
-                      className={cn(navHubInnerButtonClass(theme), 'cursor-pointer')}
-                    >
-                      {userRole === 'driver' && <Car className='w-4 h-4' />}
-                      {userRole === 'employer' && <Building2 className='w-4 h-4' />}
-                      {userRole === 'developer' && <Code className='w-4 h-4' />}
-                      {userRole === 'candidate' && <User className='w-4 h-4' />}
-                      {userRole === 'driver' && 'Driver Hub'}
-                      {userRole === 'employer' && 'Employer Hub'}
-                      {userRole === 'developer' && 'Developer Hub'}
-                      {userRole === 'candidate' && 'My Hub'}
-                      <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${isHubDropdownOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                  </div>
-
-                  {/* Dropdown menu */}
-                  {isHubDropdownOpen && (
-                    <div className={navDropdownPanelClass(isDark)}>
-                      <button
-                        type='button'
-                        onClick={() => {
-                          handleNavigation('hub')
-                          setIsMenuOpen(false)
-                          setIsHubDropdownOpen(false)
-                        }}
-                        className={navDropdownItemClass(isDark)}
-                      >
-                        <LayoutDashboard className='w-4 h-4' />
-                        Go to Hub
-                      </button>
-                      {onSwitchRole && (
+                <div className='relative z-[100] flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:gap-3'>
+                  <div className='flex w-full min-w-0 flex-1 items-center justify-start'>
+                    {userRole === 'candidate' && walletAddress ? (
+                      <div className={navHubGradientRingClass(theme)}>
                         <button
                           type='button'
                           onClick={() => {
-                            onSwitchRole()
+                            requestHubRefresh()
+                            setIsMenuOpen(false)
+                          }}
+                          disabled={hubBlocksLoading}
+                          className={cn(navHubRefreshInnerButtonClass(theme), 'cursor-pointer')}
+                          title='Refresh hub — pull latest blocks and files'
+                          aria-label='Refresh hub — pull latest blocks and files'
+                        >
+                          {hubBlocksLoading ? (
+                            <Loader2 className='h-4 w-4 animate-spin shrink-0' aria-hidden />
+                          ) : (
+                            <RefreshCw className='h-4 w-4 shrink-0' aria-hidden />
+                          )}
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div
+                    ref={hubDropdownRef}
+                    className='relative flex w-full shrink-0 justify-center sm:w-auto'
+                  >
+                    <div className={navHubGradientRingClass(theme)}>
+                      <button
+                        type='button'
+                        onClick={() => setIsHubDropdownOpen(!isHubDropdownOpen)}
+                        className={cn(navHubInnerButtonClass(theme), 'cursor-pointer')}
+                      >
+                        {userRole === 'driver' && <Car className='w-4 h-4' />}
+                        {userRole === 'employer' && <Building2 className='w-4 h-4' />}
+                        {userRole === 'developer' && <Code className='w-4 h-4' />}
+                        {userRole === 'candidate' && <User className='w-4 h-4' />}
+                        {userRole === 'driver' && 'Driver Hub'}
+                        {userRole === 'employer' && 'Employer Hub'}
+                        {userRole === 'developer' && 'Developer Hub'}
+                        {userRole === 'candidate' && 'My Hub'}
+                        <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${isHubDropdownOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                    </div>
+
+                    {isHubDropdownOpen && (
+                      <div className={navDropdownPanelClass(isDark)}>
+                        <button
+                          type='button'
+                          onClick={() => {
+                            handleNavigation('hub')
                             setIsMenuOpen(false)
                             setIsHubDropdownOpen(false)
                           }}
-                          className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}
+                          className={navDropdownItemClass(isDark)}
                         >
-                          <RefreshCw className='w-4 h-4' />
-                          Switch Role
+                          <LayoutDashboard className='w-4 h-4' />
+                          Go to Hub
                         </button>
-                      )}
-                      {/* Journey Tips Toggle */}
-                      <button
-                        type='button'
-                        onClick={() => setShowJourneyModals(!showJourneyModals)}
-                        className={cn(
-                          navDropdownItemClass(isDark),
-                          navDropdownItemBorderClass(isDark),
-                          'justify-between',
+                        {onSwitchRole && (
+                          <button
+                            type='button'
+                            onClick={() => {
+                              onSwitchRole()
+                              setIsMenuOpen(false)
+                              setIsHubDropdownOpen(false)
+                            }}
+                            className={cn(navDropdownItemClass(isDark), navDropdownItemBorderClass(isDark))}
+                          >
+                            <RefreshCw className='w-4 h-4' />
+                            Switch Role
+                          </button>
                         )}
-                      >
-                        <span className='flex items-center gap-3'>
-                          <Sparkles className='w-4 h-4' />
-                          Journey Tips
-                        </span>
-                        <span
+                        <button
+                          type='button'
+                          onClick={() => setShowJourneyModals(!showJourneyModals)}
                           className={cn(
-                            'text-xs px-2 py-0.5 rounded-full font-medium',
-                            showJourneyModals
-                              ? isDark
-                                ? 'bg-teal-500/20 text-teal-400'
-                                : isPaperLight
-                                  ? 'bg-zinc-200 text-zinc-800'
-                                  : 'bg-teal-100 text-teal-800'
-                              : isDark
-                                ? 'bg-gray-800 text-gray-400'
-                                : isPaperLight
-                                  ? 'bg-zinc-100 text-zinc-600'
-                                  : 'bg-slate-100 text-slate-600',
+                            navDropdownItemClass(isDark),
+                            navDropdownItemBorderClass(isDark),
+                            'justify-between',
                           )}
                         >
-                          {showJourneyModals ? 'On' : 'Off'}
-                        </span>
-                      </button>
-                      {/* Stormi journey help */}
+                          <span className='flex items-center gap-3'>
+                            <Sparkles className='w-4 h-4' />
+                            Journey Tips
+                          </span>
+                          <span
+                            className={cn(
+                              'text-xs px-2 py-0.5 rounded-full font-medium',
+                              showJourneyModals
+                                ? isDark
+                                  ? 'bg-teal-500/20 text-teal-400'
+                                  : isPaperLight
+                                    ? 'bg-zinc-200 text-zinc-800'
+                                    : 'bg-teal-100 text-teal-800'
+                                : isDark
+                                  ? 'bg-gray-800 text-gray-400'
+                                  : isPaperLight
+                                    ? 'bg-zinc-100 text-zinc-600'
+                                    : 'bg-slate-100 text-slate-600',
+                            )}
+                          >
+                            {showJourneyModals ? 'On' : 'Off'}
+                          </span>
+                        </button>
+                        <button
+                          type='button'
+                          onClick={() => {
+                            openGuide()
+                            setIsHubDropdownOpen(false)
+                            setIsMenuOpen(false)
+                          }}
+                          className={cn(
+                            navDropdownItemClass(isDark),
+                            navDropdownItemBorderClass(isDark),
+                            isDark ? 'text-teal-400' : isPaperLight ? 'text-zinc-700' : 'text-teal-700',
+                          )}
+                        >
+                          <HelpCircle className='w-4 h-4' />
+                          <span>Stormi Journey Guide</span>
+                          <span className='ml-auto text-xs opacity-60'>?</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className='flex w-full min-w-0 flex-1 items-center justify-end gap-3'>
+                    {userRole && (
                       <button
                         type='button'
-                        onClick={() => {
-                          openGuide()
-                          setIsHubDropdownOpen(false)
-                          setIsMenuOpen(false)
-                        }}
-                        className={cn(
-                          navDropdownItemClass(isDark),
-                          navDropdownItemBorderClass(isDark),
-                          isDark ? 'text-teal-400' : isPaperLight ? 'text-zinc-700' : 'text-teal-700',
-                        )}
+                        onClick={() => handleNavigation('stormchain')}
+                        className={cn(navStormPillClass(isDark, theme))}
+                        title={`STORM balance: ${stormBalanceDisplay}`}
                       >
-                        <HelpCircle className='w-4 h-4' />
-                        <span>Stormi Journey Guide</span>
-                        <span className='ml-auto text-xs opacity-60'>?</span>
+                        <StormTokenMark size='xs' className='scale-90' />
+                        {stormBalanceLoading ? (
+                          <span
+                            className={cn(
+                              'inline-block h-4 w-10 animate-pulse rounded',
+                              isDark ? 'bg-gray-700' : isPaperLight ? 'bg-zinc-300' : 'bg-slate-200',
+                            )}
+                            aria-hidden
+                          />
+                        ) : (
+                          <span className='font-mono tabular-nums'>{stormBalanceDisplay}</span>
+                        )}
+                        <span className='hidden sm:inline text-[10px] opacity-70'>
+                          STORM
+                        </span>
                       </button>
-                    </div>
-                  )}
+                    )}
+                    <ThemePicker />
+                  </div>
                 </div>
               )}
-
-              {/* Storm Token Counter & Theme Toggle - Bottom Right */}
-              <div className='w-full sm:w-auto flex items-center justify-end gap-3 sm:ml-auto'>
-                {/* STORM token counter — all roles earn tokens */}
-                {userRole && (
-                  <button
-                    type='button'
-                    onClick={() => handleNavigation('stormchain')}
-                    className={cn(navStormPillClass(isDark, theme))}
-                    title='View Storm tokens'
-                  >
-                    <StormTokenMark size='xs' className='scale-90' />
-                    <span className='font-mono'>
-                      {stormTokens.toLocaleString()}
-                    </span>
-                    <span className='hidden sm:inline text-[10px] opacity-70'>
-                      STORM
-                    </span>
-                  </button>
-                )}
-                <ThemePicker />
-              </div>
             </div>
         </nav>
       </NavVaultShell>

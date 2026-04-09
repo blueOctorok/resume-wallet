@@ -213,7 +213,7 @@ export default function JobAlertsHubSection() {
           title='AI job alerts'
           description='Browse Storm + external listings; star roles on Hunt Desk. Daily scans, Stormi-scored matches, in-app notifications — each job pings once.'
           headerActions={
-            <div className='flex flex-wrap gap-2 justify-end max-w-[min(100%,22rem)] sm:max-w-none'>
+            <div className='flex w-full flex-wrap gap-2 justify-start sm:w-auto sm:justify-end'>
               <Button variant='secondary' size='sm' className='shrink-0' onClick={() => setCurrentPage('jobs')}>
                 <Search className='w-3.5 h-3.5 shrink-0' />
                 Browse jobs
@@ -275,11 +275,11 @@ export default function JobAlertsHubSection() {
                 )}
               >
                 <div className='min-w-0'>
-                  <p className={cn('text-sm font-semibold truncate', isDark ? 'text-white' : 'text-slate-900')}>
+                  <p className={cn('text-sm font-semibold break-words sm:truncate', isDark ? 'text-white' : 'text-slate-900')}>
                     {p.label?.trim() || p.keywords}
                   </p>
                   {p.label?.trim() && (
-                    <p className={cn('text-xs truncate', isDark ? 'text-gray-400' : 'text-slate-600')}>
+                    <p className={cn('text-xs break-words sm:truncate', isDark ? 'text-gray-400' : 'text-slate-600')}>
                       {p.keywords}
                       {p.location ? ` · ${p.location}` : ''}
                     </p>

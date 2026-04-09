@@ -4,6 +4,27 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Navigation — STORM balance from wallet** (April 2026)
+
+- **Cause:** [`page.tsx`](src/app/page.tsx) passed **`stormTokens={0}`** into [`Navigation`](src/components/Navigation.tsx), so the pill always showed zero.
+- **Fix:** Removed that prop. [`useStormTokenBalance`](src/hooks/use-storm-token-balance.ts) calls **`getSTORMBalanceSepolia`** + **`getSTORMBalanceMainnet`** (same rules as [`STORMBalance`](src/components/STORMBalance.tsx) compact: prefer Sepolia, else mainnet) using the **smart-account `walletAddress`** when **`userRole`** is set. Nav shows a short loading pulse, then the formatted balance.
+
+## **Candidate hub — hive ring tiles wider on desktop** (April 2026)
+
+- **[`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx)** / **[`HubBlockVault.tsx`](src/components/hub/HubBlockVault.tsx):** Vault grid max width **`sm:max-w-xl` → `sm:max-w-2xl`** so the six **ring** tiles (one column each) gain horizontal space next to the **2-column center** tile — fewer truncated block titles. Marketing **`VaultShowcase`** uses the same grid class so home and hub stay aligned.
+
+## **Candidate hub — mobile layout (BlockCard, Block files, Job alerts)** (April 2026)
+
+- **[`BlockCard.tsx`](src/components/ui/BlockCard.tsx):** Header stacks **vertically on small screens** (`flex-col` → `sm:flex-row`) so titles and descriptions **wrap** (`break-words`, description `line-clamp-3` on xs) instead of truncating beside crowded `headerActions`. Actions row is **full width** on mobile (`justify-start`) so Edit / Add / CTAs sit on their own row.
+- **[`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx) — My Files:** Each document row is **`flex-col` on mobile** (`sm:flex-row` from `sm` up): **icon + text** stay in one row, **View / Edit / …** actions move to a **second full-width row** (`w-full` actions) so buttons no longer overlap titles. Portfolio/GitHub lines use **`break-all`** on narrow viewports.
+- **[`JobAlertsHubSection.tsx`](src/components/hub/JobAlertsHubSection.tsx):** Removed the **22rem** cap on header action buttons; **`w-full` + wrap** on mobile so Browse / Hunt Desk / Add alert align with the new `BlockCard` header. Alert list rows use **`break-words`** for titles/lines instead of hard **`truncate`** on phones.
+
+## **Candidate hub — title card + nav refresh** (April 2026)
+
+- **Profile header** ([`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx)): Two-column layout — identity column stacks **large `2xl` avatar** above name/headline (centered on mobile, left on `lg`); **Career card preview** replaces the old text callout — mini card with gradient/glow, live **Resume / DOT / MVR** chips from installed blocks, completeness %, then **View Career Card** or **Browse blocks**; profile completeness bar unchanged below.
+- **Refresh hub:** Removed from title card. **Navigation** ([`Navigation.tsx`](src/components/Navigation.tsx)) shows a **gradient-ring icon button** for candidates (matches hub chrome via [`navHubRefreshInnerButtonClass`](src/lib/navigation-styles.ts)); bumps [`hubRefreshNonce`](src/stores/ui-store.ts) → [`CandidateHub`](src/components/hub/CandidateHub.tsx) runs the same refetch + My Files `refreshKey` as before. Bottom nav uses a **three-zone row** (`flex-1` left / hub `shrink-0` center / `flex-1` right) so refresh sits **flush left**, My Hub stays centered, STORM + theme stay right. **Sepia / paper:** [`navHubInnerButtonClass`](src/lib/navigation-styles.ts) + [`navHubRefreshInnerButtonClass`](src/lib/navigation-styles.ts) use **stone** and **zinc** light surfaces (not the default dark vault pill).
+- **Avatar:** [`AvatarUpload`](src/components/ui/AvatarUpload.tsx) optional **`persistentUploadHint`** — always-visible camera badge on the corner so upload is obvious.
+
 ## **Appearance: Business classic theme** (April 2026)
 
 - **`data-theme='business'`** — **Corporate light**: white cards, **#0a66c2** primary blue, slate borders, minimal grain (`VaultLightFrostTexture` **`corporate`** tone), flat glossy shadows; vault shell **`BUSINESS_CLASSIC_VAULT_SHELL`**; hub/nav chrome in [`HubBlockVault.tsx`](src/components/hub/HubBlockVault.tsx) / [`VaultHorizontalVaultShell.tsx`](src/components/ui/VaultHorizontalVaultShell.tsx); [`Button`](src/components/ui/Button.tsx) primary/secondary/ghost; [`globals.css`](src/app/globals.css) teal→blue utility remaps + **`akui-*`**; [`StormBackground`](src/components/StormBackground.tsx) flat off-white canvas.
