@@ -73,17 +73,13 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Verify payment exists and is completed
-    // Handle both full hash and truncated hash (66 chars) for matching
-    // Note: We need to find the MOST RECENT payment that matches the hash
-    const truncatedHash = paymentTxHash.length > 66 ? paymentTxHash.substring(0, 66) : paymentTxHash
-    
-    // Try to find the most recent payment by exact hash first, then by truncated hash
+    // Verify payment exists and is completed.
+    // New payments store the full tx hash; old ones may be truncated to 66 chars.
+    // Try exact match first, then fall back to the 66-char prefix for legacy rows.
     let payment = null
     let paymentError = null
-    
-    // First try exact match (order by created_at DESC to get the latest one)
-    let { data: exactPayment, error: exactError } = await supabaseService
+
+    const { data: exactPayment, error: exactError } = await supabaseService
       .from('payments')
       .select('id, status, amount_usdc, user_id, tx_hash, created_at')
       .eq('tx_hash', paymentTxHash)
@@ -91,22 +87,22 @@ export async function POST(request: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
-    
+
     if (exactPayment) {
       payment = exactPayment
-    } else if (truncatedHash !== paymentTxHash) {
-      // If no exact match and hash was truncated, try truncated version
-      const { data: truncatedPayment, error: truncError } = await supabaseService
+    } else if (paymentTxHash.length > 66) {
+      const legacyHash = paymentTxHash.substring(0, 66)
+      const { data: legacyPayment, error: legacyError } = await supabaseService
         .from('payments')
         .select('id, status, amount_usdc, user_id, tx_hash, created_at')
-        .eq('tx_hash', truncatedHash)
+        .eq('tx_hash', legacyHash)
         .eq('type', 'MVR_ORDER')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
-      
-      payment = truncatedPayment
-      paymentError = truncError
+
+      payment = legacyPayment
+      paymentError = legacyError
     } else {
       paymentError = exactError
     }
@@ -120,7 +116,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!payment) {
-      console.error('[MVR ORDER] Payment not found for txHash:', paymentTxHash, 'truncated:', truncatedHash)
+      console.error('[MVR ORDER] Payment not found for txHash:', paymentTxHash)
       return NextResponse.json(
         { error: 'Payment not found. Please complete payment before ordering.' },
         { status: 400 }
@@ -433,7 +429,7 @@ export async function POST(request: NextRequest) {
         driver_profile_id: null,
         driver_application_id: dotApplication?.id || null,
         payment_id: payment.id, // Link to the payment
-        payment_tx_hash: truncatedHash, // Store tx hash for reference
+        payment_tx_hash: paymentTxHash, // Column widened to TEXT in migration 065
         accio_order_number: orderNumber,
         accio_suborder_number: subOrderId,
         accio_remote_order_number: accioOrderId || null, // Accio's internal order number (from orderID in response)

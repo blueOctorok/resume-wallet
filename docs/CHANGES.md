@@ -51,6 +51,13 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 - [`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx) **`MyFilesSection`**: Installed **Resume**, **DOT**, or **MVR** blocks now get a **`Not started`** row as soon as the block exists (no resume row, no DOT app, or no MVR order yet), so users can open the flow from **Block files** without hunting the tile on another hub page. **`empty`** document status + **Order MVR** / **Start** (DOT) / resume **Edit**; in-flight MVRs get **Open** from My Files.
 
+## **MVR payment — fix tx-hash truncation causing false 409 collisions** (April 2026)
+
+- **Root cause:** `payments.tx_hash` is `VARCHAR` (unlimited), but the payment API truncated Alchemy bundler call-IDs to 66 chars. Two different call-IDs sharing the same first 66 characters matched the same row, triggering "already recorded for a different account" (409). The earlier error-handling fix (below) correctly surfaced this — the 409 was always happening but was silently swallowed.
+- **[`/api/mvr/payment`](src/app/api/mvr/payment/route.ts):** Removed truncation; stores the full tx hash / call-ID.
+- **[`/api/mvr/order`](src/app/api/mvr/order/route.ts):** Exact-match lookup first, legacy 66-char prefix fallback for old rows; stores full hash in `mvr_orders.payment_tx_hash`.
+- **Migration [`065`](supabase/migrations/065_widen_mvr_payment_tx_hash.sql):** Widens `mvr_orders.payment_tx_hash` from `VARCHAR(66)` to `TEXT`.
+
 ## **MVR self-order — CRA disclosure & consent copy** (April 2026)
 
 - [`MvrOrderForm.tsx`](src/components/MvrOrderForm.tsx): Vendor panel retitled **Your MVR and consumer reporting**; body text matches Key Background as **CRA**, secure ordering system vs Storm, and no independent MVR searches by Storm; **keybackground.com** link retained; checkbox uses express-consent language aligned with counsel-style wording (including **by checking this box and continuing** so pay/submit maps to **proceeding**).

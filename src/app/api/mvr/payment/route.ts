@@ -102,16 +102,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Record payment
-    // Truncate tx_hash to 66 characters (standard Ethereum hash length)
-    // If it's longer, it's likely a call ID, which we'll truncate
-    const truncatedTxHash = txHash.length > 66 ? txHash.substring(0, 66) : txHash
-    
+    // Store the full tx hash / call-ID — payments.tx_hash is VARCHAR (no limit).
+    // Previous code truncated to 66 chars which caused false collisions between
+    // different Alchemy bundler call-IDs that shared a prefix.
+    const normalizedTxHash = txHash.trim()
+
     // Check if payment with this tx_hash already exists (prevent duplicates)
     const { data: existingPayment } = await supabase
       .from('payments')
       .select('id, tx_hash, amount_usdc, user_id')
-      .eq('tx_hash', truncatedTxHash)
+      .eq('tx_hash', normalizedTxHash)
       .eq('type', 'MVR_ORDER')
       .maybeSingle()
 
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
           requestUserId: user.id,
           walletAddress,
           payerLookupAddress,
-          txHash: truncatedTxHash,
+          txHash: normalizedTxHash,
         })
         return NextResponse.json(
           {
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
         company_id: companyId,
         type: 'MVR_ORDER',
         amount_usdc: parseFloat(amountUsdc),
-        tx_hash: truncatedTxHash,
+        tx_hash: normalizedTxHash,
         status: 'COMPLETED',
       })
       .select()
