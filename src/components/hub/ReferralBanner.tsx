@@ -7,7 +7,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore } from '@/stores'
 import Button from '@/components/ui/Button'
 import BlockCard from '@/components/ui/BlockCard'
-import VaultHorizontalVaultShell from '@/components/ui/VaultHorizontalVaultShell'
+import HubSectionPanel from '@/components/hub/HubSectionPanel'
 
 interface ReferralStats {
   totalReferred: number
@@ -63,7 +63,7 @@ export default function ReferralBanner() {
   const stormEarned = (stats?.rewarded ?? 0) * 2.5
 
   return (
-    <VaultHorizontalVaultShell isDark={isDark} layout='panel' accent='violet' contentClassName='p-4 sm:p-5 lg:p-6'>
+    <HubSectionPanel isDark={isDark} accent='violet'>
       <BlockCard
         variant='embed'
         icon={Users}
@@ -107,6 +107,6 @@ export default function ReferralBanner() {
           </div>
         )}
       </BlockCard>
-    </VaultHorizontalVaultShell>
+    </HubSectionPanel>
   )
 }

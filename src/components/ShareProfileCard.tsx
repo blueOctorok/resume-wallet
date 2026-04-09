@@ -115,7 +115,11 @@ export default function ShareProfileCard({
             name: cc.name || driverName || 'Unknown',
             role: cc.occupation || 'Candidate',
             avatarUrl: cc.avatarUrl ?? null,
-            hasResume: sectionTypes.has('driver-resume') || sectionTypes.has('developer-resume'),
+            hasResume:
+              sectionTypes.has('storm-resume') ||
+              sectionTypes.has('driver-resume') ||
+              sectionTypes.has('developer-resume') ||
+              sectionTypes.has('general-resume'),
             hasDriverApp: sectionTypes.has('driver-dot-application'),
             hasMvr: sectionTypes.has('driver-mvr'),
             completenessScore: cc.sections?.length ?? 0,

@@ -1,24 +1,31 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Check, ChevronDown, Moon, Newspaper, Sun } from 'lucide-react'
+import { BookOpen, Check, ChevronDown, FileText, Moon, Sun } from 'lucide-react'
 import { useTheme, type Theme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
 import { navControlButtonClass, navDropdownItemBorderClass, navDropdownItemClass } from '@/lib/navigation-styles'
 
 const OPTIONS: { id: Theme; label: string; description: string; Icon: typeof Sun }[] = [
   { id: 'light', label: 'Icy light', description: 'Cool slate vault (default)', Icon: Sun },
-  { id: 'paper', label: 'Paper', description: 'Kindle-style sepia — soft & easy on the eyes', Icon: Newspaper },
+  { id: 'sepia', label: 'Sepia', description: 'Kindle-style warm cream — soft & easy on the eyes', Icon: BookOpen },
+  { id: 'paper', label: 'Paper', description: 'Newsprint grey — calm, low contrast, print-like', Icon: FileText },
   { id: 'dark', label: 'Dark', description: 'Storm void', Icon: Moon },
 ]
+
+function activeThemeIcon(theme: Theme) {
+  if (theme === 'dark') return Moon
+  if (theme === 'sepia') return BookOpen
+  if (theme === 'paper') return FileText
+  return Sun
+}
 
 export default function ThemePicker() {
   const { theme, setTheme } = useTheme()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const isDark = theme === 'dark'
-
-  const ActiveIcon = theme === 'paper' ? Newspaper : theme === 'dark' ? Moon : Sun
+  const ActiveIcon = activeThemeIcon(theme)
 
   useEffect(() => {
     if (!open) return
@@ -55,11 +62,11 @@ export default function ThemePicker() {
         )}
         aria-expanded={open}
         aria-haspopup='listbox'
-        aria-label='Appearance: icy light, paper, or dark'
+        aria-label='Appearance: theme picker'
         title='Theme'
       >
         <span className='flex h-5 w-5 items-center justify-center'>
-          <ActiveIcon className='h-4 w-4 transition-transform duration-300' />
+          <ActiveIcon className='h-4 w-4 transition-transform duration-300' aria-hidden />
         </span>
         <ChevronDown className={cn('h-3.5 w-3.5 opacity-70 transition-transform', open && 'rotate-180')} aria-hidden />
       </button>
@@ -67,7 +74,7 @@ export default function ThemePicker() {
       {open && (
         <div
           className={cn(
-            'absolute right-0 top-full z-[200] mt-2 min-w-[min(100vw-2rem,16rem)] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border shadow-xl ring-1',
+            'absolute right-0 top-full z-[200] mt-2 min-w-[min(100vw-2rem,17rem)] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border shadow-xl ring-1',
             isDark
               ? 'border-gray-600/80 bg-gray-950 ring-white/[0.04]'
               : 'border-stone-300/90 bg-white ring-stone-900/[0.04]',
@@ -104,6 +111,7 @@ export default function ThemePicker() {
                     'mt-0.5 h-4 w-4 shrink-0',
                     selected ? (isDark ? 'text-teal-400' : 'text-teal-600') : isDark ? 'text-gray-400' : 'text-stone-500',
                   )}
+                  aria-hidden
                 />
                 <span className='min-w-0 flex-1 text-left'>
                   <span className='block font-medium'>{opt.label}</span>

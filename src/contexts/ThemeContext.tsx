@@ -1,50 +1,41 @@
 'use client'
 
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import {
+  LIGHT_APPEARANCE_KEY,
+  parseStoredTheme,
+  persistThemeToStorage,
+  type StoredTheme,
+} from '@/lib/theme-storage'
 
-export type Theme = 'light' | 'dark' | 'paper'
-
-const STORAGE_KEY = 'stormchain-theme'
-/** When switching to dark, we remember which light look (icy vs paper) to restore. */
-const LIGHT_APPEARANCE_KEY = 'stormchain-light-appearance'
-
-function isValidTheme(v: string | null): v is Theme {
-  return v === 'light' || v === 'dark' || v === 'paper'
-}
+export type Theme = StoredTheme
 
 interface ThemeContextType {
   theme: Theme
-  /** Dark ↔ last icy/paper appearance (persists which light variant you had). */
+  /** Dark ↔ last icy / sepia / paper appearance (persists which light variant you had). */
   toggleTheme: () => void
   setTheme: (theme: Theme) => void
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
+function isLightVariant(t: Theme): boolean {
+  return t === 'light' || t === 'sepia' || t === 'paper'
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('light')
   const skipThemePersist = useRef(true)
 
   useEffect(() => {
-    let next: Theme = 'light'
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      if (isValidTheme(saved)) {
-        next = saved
-      } else {
-        const fromDom = document.documentElement.getAttribute('data-theme')
-        if (isValidTheme(fromDom)) next = fromDom
-      }
-      if (next === 'light' || next === 'paper') {
-        localStorage.setItem(LIGHT_APPEARANCE_KEY, next)
-      }
-    } catch {
-      next = 'light'
-    }
+    const next = parseStoredTheme()
     setThemeState(next)
     document.documentElement.setAttribute('data-theme', next)
+    persistThemeToStorage(next)
     try {
-      localStorage.setItem(STORAGE_KEY, next)
+      if (isLightVariant(next)) {
+        localStorage.setItem(LIGHT_APPEARANCE_KEY, next)
+      }
     } catch {
       /* ignore */
     }
@@ -56,9 +47,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       return
     }
     document.documentElement.setAttribute('data-theme', theme)
+    persistThemeToStorage(theme)
     try {
-      localStorage.setItem(STORAGE_KEY, theme)
-      if (theme === 'light' || theme === 'paper') {
+      if (isLightVariant(theme)) {
         localStorage.setItem(LIGHT_APPEARANCE_KEY, theme)
       }
     } catch {
@@ -71,7 +62,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (prev === 'dark') {
         try {
           const back = localStorage.getItem(LIGHT_APPEARANCE_KEY)
-          if (back === 'light' || back === 'paper') return back
+          if (back === 'light' || back === 'sepia' || back === 'paper') return back as Theme
         } catch {
           /* fall through */
         }
@@ -105,7 +96,7 @@ export function useTheme() {
   return context
 }
 
-/** True for both icy light and paper — anything that is not the dark void theme. */
+/** True for icy light, sepia, and paper — anything that is not the dark void theme. */
 export function isLightAppearance(theme: Theme): boolean {
-  return theme === 'light' || theme === 'paper'
+  return isLightVariant(theme)
 }

@@ -10,7 +10,7 @@ import {
   useInstalledBlocks,
   useHubOnboarding,
 } from '@/stores/hub-blocks-store'
-import { BLOCK_CATEGORIES, BLOCK_DEFINITIONS, getBlocksByCategory } from '@/lib/block-registry'
+import { BLOCK_CATEGORIES, getBlocksByCategory, getPickerBlockDefinitions } from '@/lib/block-registry'
 import { useAuthStore } from '@/stores'
 import BlockPickerCategory from './BlockPickerCategory'
 
@@ -36,7 +36,9 @@ export default function BlockPickerModal() {
 
   const installedTypes = new Set(installedBlocks.map((b) => b.blockType))
   const suggestedCategoryIds = onboarding?.suggestedCategories ?? []
-  const allAdded = installedBlocks.length >= BLOCK_DEFINITIONS.length
+  const pickerCatalog = getPickerBlockDefinitions()
+  const allAdded =
+    pickerCatalog.length > 0 && pickerCatalog.every((b) => installedTypes.has(b.id))
 
   // Sort categories: suggested first, then by defined order
   const sortedCategories = [...BLOCK_CATEGORIES].sort((a, b) => {

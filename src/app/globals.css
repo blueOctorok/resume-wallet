@@ -79,9 +79,9 @@
 }
 
 /*
- * Paper = Kindle paperback mode: sepia cream, low chroma, easy on the eyes (not icy/teal vault).
+ * Sepia = Kindle-style paperback: warm cream, low chroma (not icy/teal vault).
  */
-[data-theme='paper'] {
+[data-theme='sepia'] {
   color-scheme: light;
   --surface-card: #faf4e8;
   --surface-elevated: #f3eadc;
@@ -100,6 +100,30 @@
     rgb(255 250 240 / 0.45) 0%,
     rgb(245 232 212 / 0.25) 35%,
     transparent 55%
+  );
+}
+
+/*
+ * Paper = newsprint: soft white / zinc grey only — no brand teal or warm sepia.
+ */
+[data-theme='paper'] {
+  color-scheme: light;
+  --surface-card: #fafafa;
+  --surface-elevated: #f4f4f5;
+  --border-subtle: #d4d4d8;
+  --text-primary: #27272a;
+  --text-secondary: #52525b;
+  --storm-accent: #52525b;
+  --storm-accent-rgb: 82 82 91;
+  --storm-accent-mid: #71717a;
+  --storm-teal-bloom: rgb(var(--storm-accent-rgb) / 0.035);
+  --storm-teal-bloom-strong: rgb(var(--storm-accent-rgb) / 0.05);
+  --storm-violet-bloom: rgb(113 113 122 / 0.025);
+  --storm-light-specular: linear-gradient(
+    125deg,
+    rgb(255 255 255 / 0.55) 0%,
+    rgb(244 244 245 / 0.28) 38%,
+    transparent 56%
   );
 }
 
@@ -141,12 +165,21 @@ body {
   color: var(--text-primary);
 }
 
-/* Paper canvas — sepia page (no slate/teal base) */
-[data-theme='paper'] body {
+/* Sepia canvas — warm page (no slate/teal base) */
+[data-theme='sepia'] body {
   background:
     var(--storm-light-specular),
     radial-gradient(ellipse 130% 70% at 50% 0%, rgb(230 210 186 / 0.12), transparent 58%),
     linear-gradient(175deg, #e8dcc8 0%, #efe3d4 28%, #f5ebe0 55%, #faf4ea 82%, #fdf8f0 100%);
+  color: var(--text-primary);
+}
+
+/* Paper canvas — cool newsprint (grey stock, no chroma blooms) */
+[data-theme='paper'] body {
+  background:
+    var(--storm-light-specular),
+    radial-gradient(ellipse 125% 72% at 50% 0%, rgb(228 228 231 / 0.45), transparent 58%),
+    linear-gradient(178deg, #e4e4e7 0%, #ececed 30%, #f4f4f5 58%, #fafafa 100%);
   color: var(--text-primary);
 }
 
@@ -172,8 +205,8 @@ body {
     0 22px 56px -16px rgb(15 51 73 / 0.14);
 }
 
-/* Paper panels — cream card, warm shadow; no teal rim */
-[data-theme='paper'] .storm-light-panel {
+/* Sepia panels — cream card, warm shadow; no teal rim */
+[data-theme='sepia'] .storm-light-panel {
   background: linear-gradient(
     180deg,
     rgb(255 252 244 / 0.99) 0%,
@@ -191,51 +224,113 @@ body {
     0 18px 44px -14px rgb(92 82 72 / 0.08);
 }
 
+/* Paper panels — white stock, neutral shadow */
+[data-theme='paper'] .storm-light-panel {
+  background: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 0.995) 0%,
+    rgb(250 250 250 / 0.98) 50%,
+    rgb(244 244 245 / 0.99) 100%
+  );
+  -webkit-backdrop-filter: blur(14px) saturate(0.88);
+  backdrop-filter: blur(14px) saturate(0.88);
+  border: 1px solid rgb(212 212 216 / 0.55);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    inset 0 0 0 1px rgb(255 255 255 / 0.2),
+    0 1px 2px rgb(24 24 27 / 0.04),
+    0 10px 28px -10px rgb(24 24 27 / 0.06),
+    0 18px 44px -14px rgb(63 63 70 / 0.07);
+}
+
 /*
- * Paper: mute high-chroma Tailwind utilities (Kindle mode — most UI still uses these classes).
+ * Sepia + paper: mute high-chroma Tailwind utilities (most UI still uses teal/violet classes).
  * Primary actions use `Button` + muted fill; this catches links, badges, borders.
  */
+[data-theme='sepia'] .text-teal-300,
+[data-theme='sepia'] .text-teal-400,
+[data-theme='sepia'] .text-teal-500,
+[data-theme='sepia'] .text-teal-600,
+[data-theme='sepia'] .text-teal-700,
+[data-theme='sepia'] .text-teal-800 {
+  color: rgb(72 88 84) !important;
+}
+[data-theme='sepia'] .text-cyan-500,
+[data-theme='sepia'] .text-cyan-600,
+[data-theme='sepia'] .text-cyan-700 {
+  color: rgb(78 90 88) !important;
+}
+[data-theme='sepia'] .text-emerald-600,
+[data-theme='sepia'] .text-emerald-700,
+[data-theme='sepia'] .text-emerald-800 {
+  color: rgb(68 88 72) !important;
+}
+[data-theme='sepia'] .border-teal-200,
+[data-theme='sepia'] .border-teal-300,
+[data-theme='sepia'] .border-teal-500,
+[data-theme='sepia'] .border-teal-600 {
+  border-color: rgb(186 174 158) !important;
+}
+[data-theme='sepia'] .bg-teal-50,
+[data-theme='sepia'] .bg-teal-100 {
+  background-color: rgb(237 230 218) !important;
+}
+[data-theme='sepia'] .bg-teal-500\/20,
+[data-theme='sepia'] .bg-teal-500\/10 {
+  background-color: rgb(215 206 192 / 0.35) !important;
+}
+[data-theme='sepia'] .ring-teal-500,
+[data-theme='sepia'] .ring-teal-400 {
+  --tw-ring-color: rgb(140 130 118) !important;
+}
+[data-theme='sepia'] .text-violet-600,
+[data-theme='sepia'] .text-violet-700,
+[data-theme='sepia'] .text-indigo-600,
+[data-theme='sepia'] .text-indigo-700 {
+  color: rgb(88 80 98) !important;
+}
+
 [data-theme='paper'] .text-teal-300,
 [data-theme='paper'] .text-teal-400,
 [data-theme='paper'] .text-teal-500,
 [data-theme='paper'] .text-teal-600,
 [data-theme='paper'] .text-teal-700,
 [data-theme='paper'] .text-teal-800 {
-  color: rgb(72 88 84) !important;
+  color: rgb(63 63 70) !important;
 }
 [data-theme='paper'] .text-cyan-500,
 [data-theme='paper'] .text-cyan-600,
 [data-theme='paper'] .text-cyan-700 {
-  color: rgb(78 90 88) !important;
+  color: rgb(82 82 91) !important;
 }
 [data-theme='paper'] .text-emerald-600,
 [data-theme='paper'] .text-emerald-700,
 [data-theme='paper'] .text-emerald-800 {
-  color: rgb(68 88 72) !important;
+  color: rgb(68 68 76) !important;
 }
 [data-theme='paper'] .border-teal-200,
 [data-theme='paper'] .border-teal-300,
 [data-theme='paper'] .border-teal-500,
 [data-theme='paper'] .border-teal-600 {
-  border-color: rgb(186 174 158) !important;
+  border-color: rgb(212 212 216) !important;
 }
 [data-theme='paper'] .bg-teal-50,
 [data-theme='paper'] .bg-teal-100 {
-  background-color: rgb(237 230 218) !important;
+  background-color: rgb(244 244 245) !important;
 }
 [data-theme='paper'] .bg-teal-500\/20,
 [data-theme='paper'] .bg-teal-500\/10 {
-  background-color: rgb(215 206 192 / 0.35) !important;
+  background-color: rgb(228 228 231 / 0.55) !important;
 }
 [data-theme='paper'] .ring-teal-500,
 [data-theme='paper'] .ring-teal-400 {
-  --tw-ring-color: rgb(140 130 118) !important;
+  --tw-ring-color: rgb(161 161 170) !important;
 }
 [data-theme='paper'] .text-violet-600,
 [data-theme='paper'] .text-violet-700,
 [data-theme='paper'] .text-indigo-600,
 [data-theme='paper'] .text-indigo-700 {
-  color: rgb(88 80 98) !important;
+  color: rgb(63 63 70) !important;
 }
 
 /* Global cursor-pointer for all clickable elements */
@@ -440,24 +535,28 @@ button:disabled,
   background: rgb(45 212 191 / 0.65);
 }
 
-/* Light + paper — step indicator scrollbars (teal accent works on both canvases) */
+/* Light + sepia + paper — step indicator scrollbars (accent from CSS vars) */
 [data-theme='light'] .resume-steps-scrollbar,
+[data-theme='sepia'] .resume-steps-scrollbar,
 [data-theme='paper'] .resume-steps-scrollbar {
   scrollbar-color: rgb(var(--storm-accent-rgb) / 0.35) transparent;
 }
 
 [data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar,
+[data-theme='sepia'] .resume-steps-scrollbar::-webkit-scrollbar,
 [data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar {
   height: 8px; /* Horizontal scrollbar height */
 }
 
 [data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-track,
+[data-theme='sepia'] .resume-steps-scrollbar::-webkit-scrollbar-track,
 [data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-track {
   background: transparent;
   border-radius: 10px;
 }
 
 [data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-thumb,
+[data-theme='sepia'] .resume-steps-scrollbar::-webkit-scrollbar-thumb,
 [data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-thumb {
   background: linear-gradient(
     90deg,
@@ -471,6 +570,7 @@ button:disabled,
 }
 
 [data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover,
+[data-theme='sepia'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover,
 [data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(
     90deg,
@@ -483,6 +583,7 @@ button:disabled,
 }
 
 [data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active,
+[data-theme='sepia'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active,
 [data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active {
   background: rgb(var(--storm-accent-rgb) / 0.55);
 }
@@ -506,33 +607,48 @@ button:disabled,
   background: #3d4d62;
 }
 
-/* Light + paper scrollbars — paper track is warmer stone */
+/* Light + sepia + paper scrollbars */
 [data-theme='light'] ::-webkit-scrollbar-track,
+[data-theme='sepia'] ::-webkit-scrollbar-track,
 [data-theme='paper'] ::-webkit-scrollbar-track {
   background: #cbd5e1;
 }
 
-[data-theme='paper'] ::-webkit-scrollbar-track {
+[data-theme='sepia'] ::-webkit-scrollbar-track {
   background: #d6d3d1;
 }
 
+[data-theme='paper'] ::-webkit-scrollbar-track {
+  background: #e4e4e7;
+}
+
 [data-theme='light'] ::-webkit-scrollbar-thumb,
+[data-theme='sepia'] ::-webkit-scrollbar-thumb,
 [data-theme='paper'] ::-webkit-scrollbar-thumb {
   background: #94a3b8;
   border-radius: 6px;
 }
 
-[data-theme='paper'] ::-webkit-scrollbar-thumb {
+[data-theme='sepia'] ::-webkit-scrollbar-thumb {
   background: #78716c;
 }
 
+[data-theme='paper'] ::-webkit-scrollbar-thumb {
+  background: #a1a1aa;
+}
+
 [data-theme='light'] ::-webkit-scrollbar-thumb:hover,
+[data-theme='sepia'] ::-webkit-scrollbar-thumb:hover,
 [data-theme='paper'] ::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }
 
-[data-theme='paper'] ::-webkit-scrollbar-thumb:hover {
+[data-theme='sepia'] ::-webkit-scrollbar-thumb:hover {
   background: #57534e;
+}
+
+[data-theme='paper'] ::-webkit-scrollbar-thumb:hover {
+  background: #71717a;
 }
 
 /* ===== BRAND CUSTOMIZATIONS ===== */
@@ -579,7 +695,7 @@ button:disabled,
   --akui-active: #0d9488;
 }
 
-[data-theme='paper'] {
+[data-theme='sepia'] {
   --akui-btn-primary: #5f6f6b;
   --akui-btn-secondary: #ebe4d8;
   --akui-btn-auth: #faf4ea;
@@ -594,6 +710,23 @@ button:disabled,
   --akui-bg-surface-inset: #e8dcc8;
   --akui-static: #c9b8a4;
   --akui-active: #5f6f6b;
+}
+
+[data-theme='paper'] {
+  --akui-btn-primary: #52525b;
+  --akui-btn-secondary: #e4e4e7;
+  --akui-btn-auth: #fafafa;
+  --akui-fg-primary: #27272a;
+  --akui-fg-secondary: #52525b;
+  --akui-fg-tertiary: #71717a;
+  --akui-fg-invert: #fafafa;
+  --akui-fg-accent-brand: #3f3f46;
+  --akui-fg-disabled: #a1a1aa;
+  --akui-bg-surface-default: #fafafa;
+  --akui-bg-surface-subtle: #f4f4f5;
+  --akui-bg-surface-inset: #e4e4e7;
+  --akui-static: #d4d4d8;
+  --akui-active: #52525b;
 }
 
 [data-theme='dark'] {
@@ -619,6 +752,11 @@ button:disabled,
 [data-theme='light'] .akui-header h1,
 [data-theme='light'] .akui-header h2,
 [data-theme='light'] .akui-header h3,
+[data-theme='sepia'] .akui-header-title,
+[data-theme='sepia'] [data-testid='header-title'],
+[data-theme='sepia'] .akui-header h1,
+[data-theme='sepia'] .akui-header h2,
+[data-theme='sepia'] .akui-header h3,
 [data-theme='paper'] .akui-header-title,
 [data-theme='paper'] [data-testid='header-title'],
 [data-theme='paper'] .akui-header h1,
@@ -642,6 +780,12 @@ button:disabled,
 [data-theme='light'] .akui-footer *,
 [data-theme='light'] .akui-auth-footer,
 [data-theme='light'] .akui-auth-footer *,
+[data-theme='sepia'] .akui-text-tertiary,
+[data-theme='sepia'] .akui-text-tertiary *,
+[data-theme='sepia'] .akui-footer,
+[data-theme='sepia'] .akui-footer *,
+[data-theme='sepia'] .akui-auth-footer,
+[data-theme='sepia'] .akui-auth-footer *,
 [data-theme='paper'] .akui-text-tertiary,
 [data-theme='paper'] .akui-text-tertiary *,
 [data-theme='paper'] .akui-footer,
@@ -661,6 +805,7 @@ button:disabled,
 }
 
 [data-theme='light'] .akui-btn-primary:hover,
+[data-theme='sepia'] .akui-btn-primary:hover,
 [data-theme='paper'] .akui-btn-primary:hover {
   filter: brightness(1.06);
 }

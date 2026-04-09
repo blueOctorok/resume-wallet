@@ -39,13 +39,20 @@ export function navStormiButtonClass(isDark: boolean) {
   )
 }
 
-/** Hub primary CTA — teal/violet gradient ring; paper mode uses muted stone (Kindle shell). */
+/** Hub primary CTA — teal/violet gradient ring; sepia/paper use muted rings (no brand gradient). */
 export function navHubGradientRingClass(theme: Theme = 'light') {
-  if (theme === 'paper') {
+  if (theme === 'sepia') {
     return cn(
       'rounded-xl p-[2px] w-full sm:w-auto shrink-0',
       'bg-gradient-to-br from-stone-500/50 via-stone-400/32 to-stone-600/42',
       'shadow-md shadow-stone-600/12',
+    )
+  }
+  if (theme === 'paper') {
+    return cn(
+      'rounded-xl p-[2px] w-full sm:w-auto shrink-0',
+      'bg-gradient-to-br from-zinc-400/48 via-zinc-300/26 to-zinc-500/40',
+      'shadow-md shadow-zinc-500/10',
     )
   }
   return cn(

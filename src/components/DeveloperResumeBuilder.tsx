@@ -110,6 +110,7 @@ interface DeveloperResumeBuilderProps {
   onBack?: () => void
   onSave?: (resumeId: string) => void
   existingResumeId?: string
+  hideHubBackButton?: boolean
 }
 
 // ============================================================
@@ -250,6 +251,7 @@ export default function DeveloperResumeBuilder({
   onBack,
   onSave,
   existingResumeId,
+  hideHubBackButton = false,
 }: DeveloperResumeBuilderProps) {
   const { theme } = useTheme()
   const [currentStep, setCurrentStep] = useState(0)
@@ -2084,7 +2086,7 @@ export default function DeveloperResumeBuilder({
       >
         <div className='max-w-4xl mx-auto px-4 py-4'>
           <div className='flex items-center justify-between'>
-            <BackToHubButton onClick={onBack} />
+            {hideHubBackButton ? <span className='min-w-0' aria-hidden /> : <BackToHubButton onClick={onBack} />}
 
             <div className='flex items-center gap-3'>
               {saveMessage && (

@@ -101,14 +101,28 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
-                  // Check for saved preference first
-                  const savedTheme = localStorage.getItem('stormchain-theme');
-                  if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'paper') {
-                    document.documentElement.setAttribute('data-theme', savedTheme);
-                    return;
+                  var SK = 'stormchain-theme';
+                  var SCHEMA = 'stormchain-theme-schema';
+                  var VER = '2';
+                  var schema = localStorage.getItem(SCHEMA);
+                  var saved = localStorage.getItem(SK);
+                  var t = 'light';
+                  if (schema !== VER) {
+                    if (saved === 'paper') {
+                      localStorage.setItem(SCHEMA, VER);
+                      localStorage.setItem(SK, 'sepia');
+                      t = 'sepia';
+                    } else if (saved === 'light' || saved === 'dark') {
+                      localStorage.setItem(SCHEMA, VER);
+                      t = saved;
+                    } else {
+                      localStorage.setItem(SCHEMA, VER);
+                      t = 'light';
+                    }
+                  } else if (saved === 'light' || saved === 'dark' || saved === 'sepia' || saved === 'paper') {
+                    t = saved;
                   }
-                  // No saved preference - default to light (professional default)
-                  document.documentElement.setAttribute('data-theme', 'light');
+                  document.documentElement.setAttribute('data-theme', t);
                 } catch (e) {
                   document.documentElement.setAttribute('data-theme', 'light');
                 }

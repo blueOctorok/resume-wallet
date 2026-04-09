@@ -141,6 +141,7 @@ interface GeneralResumeBuilderProps {
   onBack?: () => void
   onSave?: (resumeId: string) => void
   existingResumeId?: string
+  hideHubBackButton?: boolean
 }
 
 export default function GeneralResumeBuilder({
@@ -148,6 +149,7 @@ export default function GeneralResumeBuilder({
   onBack,
   onSave,
   existingResumeId,
+  hideHubBackButton = false,
 }: GeneralResumeBuilderProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
@@ -415,7 +417,7 @@ export default function GeneralResumeBuilder({
   return (
     <div className='space-y-6'>
       <div className='flex items-center justify-between gap-4 flex-wrap'>
-        <BackToHubButton onClick={handleBack} />
+        {hideHubBackButton ? <span className='min-w-0' aria-hidden /> : <BackToHubButton onClick={handleBack} />}
         <div className='flex items-center gap-2'>
           {saveSuccess && (
             <span className={`text-sm flex items-center gap-1 ${isDark ? 'text-teal-400' : 'text-teal-600'}`}>

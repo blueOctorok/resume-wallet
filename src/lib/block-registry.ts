@@ -85,6 +85,11 @@ export interface BlockDefinition {
    * null means the button always shows (rely on block install status only).
    */
   completionField: string | null
+
+  /**
+   * Omit from Add Blocks picker (legacy aliases). Keeps registry + hub_rows working.
+   */
+  hiddenFromBlockPicker?: boolean
 }
 
 export interface BlockCategory {
@@ -125,13 +130,54 @@ export const BLOCK_CATEGORIES: BlockCategory[] = [
 
 // ── Block Definitions ─────────────────────────────────────────────────────────
 //
-// Resume is intentionally role-specific. A driver resume has CDL fields,
-// endorsements, and trucking experience sections. A developer resume has
-// skills, frameworks, and project links. They share the resume concept
-// but present completely different data — so they are separate block types.
+// STORM Resume is the single hub entry for upload + career-specific guided builders.
+// Legacy block ids (general-resume, driver-resume, developer-resume) remain defined
+// for existing installs and data routing; they are hidden from the picker only.
 
 export const BLOCK_DEFINITIONS: BlockDefinition[] = [
   // ── General ────────────────────────────────────────────────────────────────
+  {
+    id: 'storm-resume',
+    label: 'STORM Resume',
+    description:
+      'Upload your own file or build a Storm-style resume — Professional, Driver, or Developer paths in one place.',
+    icon: 'Sparkles',
+    categoryId: 'general',
+    suggestedFor: [
+      'resume',
+      'job',
+      'career',
+      'work',
+      'employment',
+      'apply',
+      'driver',
+      'cdl',
+      'trucking',
+      'developer',
+      'software',
+      'engineer',
+      'programmer',
+      'tech',
+      'professional',
+      'nurse',
+      'retail',
+      'warehouse',
+    ],
+    complexity: 'moderate',
+    appearsOnCareerCard: true,
+    pageRoute: 'storm-resume',
+    dataTables: [
+      'block_education',
+      'block_skills',
+      'block_references',
+      'block_driver_cdl',
+      'block_driver_employment',
+      'block_dev_profile',
+    ],
+    employerRequestable: true,
+    requestLabel: 'Resume',
+    completionField: 'hasResume',
+  },
   {
     id: 'general-resume',
     label: 'Professional Resume',
@@ -161,9 +207,10 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     appearsOnCareerCard: true,
     pageRoute: 'general-resume',
     dataTables: ['block_education', 'block_skills', 'block_references'],
-    employerRequestable: true,
-    requestLabel: 'Resume',
-    completionField: 'hasResume',
+    employerRequestable: false,
+    requestLabel: null,
+    completionField: null,
+    hiddenFromBlockPicker: true,
   },
   {
     id: 'general-employment-verification',
@@ -202,9 +249,10 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     appearsOnCareerCard: true,
     pageRoute: 'resume',
     dataTables: ['block_driver_cdl', 'block_driver_employment', 'block_education', 'block_skills', 'block_references'],
-    employerRequestable: true,
-    requestLabel: 'Resume',
-    completionField: 'hasResume',
+    employerRequestable: false,
+    requestLabel: null,
+    completionField: null,
+    hiddenFromBlockPicker: true,
   },
   {
     id: 'driver-dot-application',
@@ -264,9 +312,10 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     appearsOnCareerCard: true,
     pageRoute: 'developer-resume',
     dataTables: ['block_dev_profile'],
-    employerRequestable: true,
-    requestLabel: 'Resume',
-    completionField: 'hasResume',
+    employerRequestable: false,
+    requestLabel: null,
+    completionField: null,
+    hiddenFromBlockPicker: true,
   },
   {
     id: 'developer-portfolio',
@@ -333,6 +382,13 @@ export interface BlockColorSet {
 }
 
 export const BLOCK_COLORS: Record<string, BlockColorSet> = {
+  'storm-resume': {
+    iconBg:      { dark: 'bg-teal-500/15',   light: 'bg-teal-50' },
+    iconText:    { dark: 'text-teal-400',     light: 'text-teal-600' },
+    borderHover: { dark: 'border-teal-500/40', light: 'border-teal-400/50' },
+    glowColor:   'rgba(20,184,166,0.18)',
+    badgeColor:  'bg-teal-500',
+  },
   'driver-resume': {
     iconBg:      { dark: 'bg-blue-500/15',   light: 'bg-blue-50' },
     iconText:    { dark: 'text-blue-400',     light: 'text-blue-600' },
@@ -430,11 +486,16 @@ export function getRequestableBlocks(): BlockDefinition[] {
   return BLOCK_DEFINITIONS.filter((b) => b.employerRequestable)
 }
 
+/** Blocks shown in Add Blocks (excludes legacy aliases). */
+export function getPickerBlockDefinitions(): BlockDefinition[] {
+  return BLOCK_DEFINITIONS.filter((b) => !b.hiddenFromBlockPicker)
+}
+
 /** Get all block definitions for a category, sorted by complexity (simple first). */
 export function getBlocksByCategory(categoryId: string): BlockDefinition[] {
   const order = { simple: 0, moderate: 1, complex: 2 }
   return BLOCK_DEFINITIONS
-    .filter((b) => b.categoryId === categoryId)
+    .filter((b) => b.categoryId === categoryId && !b.hiddenFromBlockPicker)
     .sort((a, b) => order[a.complexity] - order[b.complexity])
 }
 
@@ -448,7 +509,7 @@ export function getBlocksByCategory(categoryId: string): BlockDefinition[] {
 export function suggestBlocks(occupation: string, seekingReason: string): string[] {
   const input = `${occupation} ${seekingReason}`.toLowerCase()
 
-  const scored = BLOCK_DEFINITIONS.map((block) => {
+  const scored = BLOCK_DEFINITIONS.filter((b) => !b.hiddenFromBlockPicker).map((block) => {
     const score = block.suggestedFor.filter((keyword) =>
       input.includes(keyword.toLowerCase())
     ).length

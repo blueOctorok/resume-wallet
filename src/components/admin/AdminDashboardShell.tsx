@@ -45,7 +45,7 @@ import CreateCompanyModal from './modals/CreateCompanyModal'
 
 function AdminDashboardContent() {
   const { theme } = useTheme()
-  /** Admin tabs/modals only branch on dark vs not-dark; paper uses the light styling path. */
+  /** Admin tabs/modals only branch on dark vs not-dark; sepia/paper/icy use the light styling path. */
   const adminUiTheme: 'light' | 'dark' = theme === 'dark' ? 'dark' : 'light'
   const account = useAccount({ type: 'LightAccount' })
 
@@ -169,7 +169,7 @@ function AdminDashboardContent() {
     }
   }
 
-  const cardClass = getCardClass(theme)
+  const cardClass = getCardClass(adminUiTheme)
 
   const sidebarSections: SidebarSection[] = [
     {

@@ -17,6 +17,7 @@ const CANDIDATE_SHELL_PAGES: readonly PageType[] = [
   'profile-setup',
   'dotapp',
   'resume',
+  'storm-resume',
   'developer-resume',
   'general-resume',
   'employment-verification',
@@ -44,6 +45,11 @@ const DeveloperResumeBlock = dynamic(
 const GeneralResumeBlock = dynamic(
   () => import('@/components/blocks/GeneralResumeBlock'),
   { ssr: false, loading: () => <LoadingScreen message='Loading resume builder…' fullScreen={false} /> }
+)
+
+const StormResumeBlock = dynamic(
+  () => import('@/components/blocks/StormResumeBlock'),
+  { ssr: false, loading: () => <LoadingScreen message='Loading STORM Resume…' fullScreen={false} /> }
 )
 
 const EmploymentVerificationBlock = dynamic(
@@ -144,6 +150,10 @@ export default function CandidateShell() {
         />
       </div>
     )
+  }
+
+  if (currentPage === 'storm-resume') {
+    return <StormResumeBlock user={user} onBack={goBack} />
   }
 
   if (currentPage === 'developer-resume') {

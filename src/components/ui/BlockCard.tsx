@@ -23,7 +23,7 @@ export type BlockCardProps = BlockCardHeaderVisual & {
   /** Extra controls in the header row (e.g. hub hive Edit + Add) */
   headerActions?: ReactNode
   /**
-   * `embed` — header + content only (no rounded `Card`); no left accent/sigil (outer vault frames the block); extra padding. Use inside `VaultHorizontalVaultShell`.
+   * `embed` — header + content only (no rounded `Card`); no left accent/sigil (outer vault frames the block); extra padding. Use inside `HubSectionPanel` (hub) or `VaultHorizontalVaultShell`.
    */
   variant?: 'default' | 'embed'
   className?: string
@@ -68,7 +68,7 @@ const statusConfig: Record<BlockStatus, {
  *     <DotApplicationContent />
  *   </BlockCard>
  *   <BlockCard icon={LayoutGrid} title="Your blocks" headerActions={...}>…hive…</BlockCard>
- *   <VaultHorizontalVaultShell><BlockCard variant="embed" … /></VaultHorizontalVaultShell> — hub files; no nested Card.
+ *   <HubSectionPanel><BlockCard variant="embed" … /></HubSectionPanel> — candidate hub sections; no nested Card.
  *   <BlockCard headerIconSlot={<Image … />} title="Ask Stormi" … /> — image in the icon tile.
  */
 function BlockCardChrome({

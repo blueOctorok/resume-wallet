@@ -252,7 +252,7 @@ export type StormiChatPanelProps =
       stormiAutoWelcomeCandidateDone: boolean
       onStormiAutoWelcomeSynced?: () => void
       /**
-       * Candidate hub only: parent wraps this in `VaultHorizontalVaultShell` + `BlockCard variant="embed"`.
+       * Candidate hub only: parent wraps this in `HubSectionPanel` + `BlockCard variant="embed"`.
        * Drops the standalone glow shell and duplicate empty-state title/copy (header lives on BlockCard).
        */
       hubEmbedSurface?: boolean

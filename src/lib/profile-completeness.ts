@@ -343,6 +343,7 @@ export interface CareerApplyReadinessResult {
 }
 
 const RESUME_BLOCK_TYPES = new Set([
+  'storm-resume',
   'driver-resume',
   'developer-resume',
   'general-resume',

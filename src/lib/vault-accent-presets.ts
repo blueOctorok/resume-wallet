@@ -208,10 +208,10 @@ export function getVaultAccentLayers(preset: VaultAccentPreset): VaultAccentLaye
 }
 
 /**
- * Kindle-style paperback: sepia cream shell, no teal/violet rim glow — easy on the eyes.
- * Used for nav + horizontal hub panels when `data-theme='paper'`.
+ * Kindle-style sepia cream shell, no teal/violet rim glow — easy on the eyes.
+ * Used when `data-theme='sepia'`.
  */
-export const PAPER_KINDLE_VAULT_SHELL: VaultAccentLayers = {
+export const SEPIA_KINDLE_VAULT_SHELL: VaultAccentLayers = {
   rimLight:
     'linear-gradient(135deg, rgba(188,170,148,0.28) 0%, rgba(250,243,230,0.55) 42%, transparent 62%, rgba(168,155,138,0.18) 100%)',
   rimDark: TEAL.rimDark,
@@ -237,10 +237,38 @@ export const PAPER_KINDLE_VAULT_SHELL: VaultAccentLayers = {
   sheenLightClassName: 'bg-gradient-to-r from-transparent via-amber-100/20 to-transparent',
 }
 
+/** Grey newsprint hub shell — no teal/violet; cool neutral ink on stock. */
+export const PAPER_NEWSPRINT_VAULT_SHELL: VaultAccentLayers = {
+  rimLight:
+    'linear-gradient(135deg, rgba(148,148,156,0.22) 0%, rgba(252,252,252,0.55) 42%, transparent 62%, rgba(120,120,128,0.14) 100%)',
+  rimDark: TEAL.rimDark,
+  stripLight: 'linear-gradient(90deg, transparent, rgba(100,116,128,0.18), transparent)',
+  stripDark: TEAL.stripDark,
+  conicLight:
+    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(100,116,128,0.08) 90deg, transparent 220deg, rgba(90,98,108,0.05) 300deg, transparent 360deg)',
+  conicDark: TEAL.conicDark,
+  chamferLight:
+    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(110,118,128,0.18) 0%, transparent 72%)',
+  chamferDark: TEAL.chamferDark,
+  sweepLight: 'linear-gradient(to right, transparent, rgba(100,108,118,0.1), transparent)',
+  sweepDark: TEAL.sweepDark,
+  filterPanelLight:
+    'drop-shadow(0 10px 26px rgba(15,23,42,0.05)) drop-shadow(0 2px 8px rgba(15,23,42,0.03))',
+  filterPanelDark: TEAL.filterPanelDark,
+  filterNavLight:
+    'drop-shadow(0 12px 28px rgba(15,23,42,0.06)) drop-shadow(0 2px 10px rgba(15,23,42,0.035))',
+  filterNavDark: TEAL.filterNavDark,
+  innerBgLight:
+    'linear-gradient(175deg, rgba(252,252,252,0.995) 0%, rgba(244,244,246,0.98) 38%, rgba(236,236,240,0.97) 72%, rgba(230,230,234,0.98) 100%)',
+  innerBgDark: TEAL.innerBgDark,
+  sheenLightClassName: 'bg-gradient-to-r from-transparent via-zinc-200/25 to-transparent',
+}
+
 export function getVaultAccentLayersForTheme(
   preset: VaultAccentPreset,
-  theme: 'light' | 'dark' | 'paper',
+  theme: 'light' | 'dark' | 'sepia' | 'paper',
 ): VaultAccentLayers {
-  if (theme === 'paper') return PAPER_KINDLE_VAULT_SHELL
+  if (theme === 'sepia') return SEPIA_KINDLE_VAULT_SHELL
+  if (theme === 'paper') return PAPER_NEWSPRINT_VAULT_SHELL
   return getVaultAccentLayers(preset)
 }

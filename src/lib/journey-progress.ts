@@ -92,6 +92,22 @@ interface BlockJourneyEntry {
 }
 
 const BLOCK_JOURNEY_MAP: Record<string, BlockJourneyEntry> = {
+  'storm-resume': {
+    resolve: (d) => [{
+      id: 'storm-resume',
+      label: 'STORM Resume',
+      description: 'Upload a file or build a Storm-style resume for your career path',
+      status: d.hasResume ? 'complete' : 'pending',
+      action: !d.hasResume ? { label: 'Open STORM Resume', target: 'storm-resume' } : undefined,
+    }],
+    nextAction: (d) => !d.hasResume ? {
+      label: 'Complete Your Resume',
+      description: 'Upload a PDF/DOC or use a guided builder',
+      target: 'storm-resume',
+      priority: 'high',
+    } : null,
+  },
+
   'driver-resume': {
     resolve: (d) => [{
       id: 'driver-resume',
@@ -269,7 +285,11 @@ export function calculateBlockJourney(
   const blockSteps: JourneyStep[] = []
   const blockActions: NextAction[] = []
 
+  const legacyResumeBlocks = new Set(['driver-resume', 'developer-resume', 'general-resume'])
+  const useStormResumeJourney = installedBlockTypes.includes('storm-resume')
+
   for (const blockType of installedBlockTypes) {
+    if (useStormResumeJourney && legacyResumeBlocks.has(blockType)) continue
     const entry = BLOCK_JOURNEY_MAP[blockType]
     if (!entry) continue
     blockSteps.push(...entry.resolve(data))

@@ -63,6 +63,8 @@ function deriveBlockStatus(
   },
 ): 'complete' | 'in-progress' | 'empty' {
   switch (blockType) {
+    case 'storm-resume':
+      return hubStore.resumes.length > 0 ? 'complete' : 'empty'
     case 'driver-resume':
       return hubStore.resumes.some((r) => r.sourceRole === 'driver') ? 'complete' : 'empty'
     case 'developer-resume':

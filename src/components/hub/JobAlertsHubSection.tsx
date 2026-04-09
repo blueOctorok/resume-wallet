@@ -7,7 +7,7 @@ import { useAuthStore, useUIStore } from '@/stores'
 import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import BlockCard from '@/components/ui/BlockCard'
-import VaultHorizontalVaultShell from '@/components/ui/VaultHorizontalVaultShell'
+import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import {
   JOB_ALERTS_MAX_FREE,
@@ -206,7 +206,7 @@ export default function JobAlertsHubSection() {
 
   return (
     <>
-      <VaultHorizontalVaultShell isDark={isDark} layout='panel' accent='sky' contentClassName='p-4 sm:p-5 lg:p-6'>
+      <HubSectionPanel isDark={isDark} accent='sky'>
         <BlockCard
           variant='embed'
           icon={Bell}
@@ -316,7 +316,7 @@ export default function JobAlertsHubSection() {
           </ul>
         )}
         </BlockCard>
-      </VaultHorizontalVaultShell>
+      </HubSectionPanel>
 
       {formOpen && (
         <Modal onClose={() => !saving && setFormOpen(false)} maxWidth='max-w-md'>

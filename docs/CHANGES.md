@@ -4,6 +4,44 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Appearance: Sepia + Paper (newsprint) themes** (April 2026)
+
+- **Rename:** Former Kindle-style **`paper`** appearance is now **`sepia`** (`data-theme='sepia'`). New **`paper`** is a **grey newsprint** look (`data-theme='paper'`) — soft white/zinc, no teal or warm sepia.
+- **Migration:** `localStorage` **`stormchain-theme-schema`** = **`2`**. First load after upgrade: if stored theme was **`paper`**, it becomes **`sepia`** (one-time). New saves of **`paper`** mean newsprint. Inline script in [`layout.tsx`](src/app/layout.tsx) matches [`parseStoredTheme`](src/lib/theme-storage.ts) for no-flash paint.
+- **Theme type:** [`ThemeContext.tsx`](src/contexts/ThemeContext.tsx) / [`theme-storage.ts`](src/lib/theme-storage.ts) — **`'light' | 'dark' | 'sepia' | 'paper'`**; **`toggleTheme`** still restores last non-dark variant (**`stormchain-light-appearance`**).
+- **Picker:** [`ThemePicker.tsx`](src/components/ThemePicker.tsx) — Icy light, Sepia, Paper, Dark.
+- **CSS:** [`globals.css`](src/app/globals.css) — separate token blocks, body, `.storm-light-panel`, chroma mutes, scrollbars, **`akui-*`** for sepia vs paper.
+- **Vault / hub:** [`vault-accent-presets.ts`](src/lib/vault-accent-presets.ts) **`SEPIA_KINDLE_VAULT_SHELL`**, **`PAPER_NEWSPRINT_VAULT_SHELL`**; [`HubBlockVault.tsx`](src/components/hub/HubBlockVault.tsx), [`VaultHorizontalVaultShell.tsx`](src/components/ui/VaultHorizontalVaultShell.tsx), [`VaultLightFrostTexture.tsx`](src/components/ui/VaultLightFrostTexture.tsx) (`sepia` / `newsprint` tones), [`StormBackground.tsx`](src/components/StormBackground.tsx).
+- **Buttons / nav ring:** [`Button.tsx`](src/components/ui/Button.tsx), [`navigation-styles.ts`](src/lib/navigation-styles.ts).
+
+## **STORM Resume — unified block + legacy picker aliases** (April 2026)
+
+- **New hub block** [`storm-resume`](src/lib/block-registry.ts): single **STORM Resume** experience — **Upload** (PDF/DOC via [`ResumeUploadWithVerification`](src/components/ResumeUploadWithVerification.tsx)) plus **General**, **Driver**, and **Developer** guided builders in [`StormResumeBlock.tsx`](src/components/blocks/StormResumeBlock.tsx). Extensible by adding entries to `CAREER_TABS` and matching panel content.
+- **Picker**: [`general-resume`](src/lib/block-registry.ts), [`driver-resume`](src/lib/block-registry.ts), and [`developer-resume`](src/lib/block-registry.ts) use **`hiddenFromBlockPicker: true`** (definitions kept for existing `hub_blocks` rows). [`getBlocksByCategory`](src/lib/block-registry.ts) / [`suggestBlocks`](src/lib/block-registry.ts) / [`BlockPickerModal`](src/components/hub/BlockPickerModal.tsx) use picker-visible definitions only (`getPickerBlockDefinitions`).
+- **Employer requests**: only **`storm-resume`** remains **`employerRequestable`** for resume-shaped asks (legacy resume blocks no longer duplicate “Request Resume”).
+- **Routing**: [`PageType`](src/stores/types.ts) **`storm-resume`**, [`CandidateShell`](src/components/app/CandidateShell.tsx), [`page.tsx` `validOnboardPages`](src/app/page.tsx).
+- **My Files / inbox**: [`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx) treats **`storm-resume`** like a resume hub; **`setStormResumeInitialPanel`** ([`ui-store`](src/stores/ui-store.ts)) opens the right tab from **Edit**; default **Upload** tab for empty placeholder.
+- **Career card / employer projection**: [`projected-career-card.ts`](src/lib/projected-career-card.ts) adds **`storm-resume`** (latest resume any `source_role`) and skips duplicate legacy resume sections when Storm is installed; [`types/career-card.ts`](src/types/career-card.ts) + [`ProjectedCareerCard.tsx`](src/components/career-card/ProjectedCareerCard.tsx).
+- **Journey**: [`journey-progress.ts`](src/lib/journey-progress.ts) **`storm-resume`** step + suppress legacy resume journey steps when Storm is installed.
+- **Builders**: optional **`hideHubBackButton`** on [`ResumeBuilder`](src/components/ResumeBuilder.tsx), [`GeneralResumeBuilder`](src/components/GeneralResumeBuilder.tsx), [`DeveloperResumeBuilder`](src/components/DeveloperResumeBuilder.tsx) so STORM shell owns **Back to hub**.
+- **Marketing**: [`HomePage.tsx`](src/components/HomePage.tsx) hive tile uses **`storm-resume`** instead of separate driver/general resume tiles.
+
+### STORM Resume — tab naming (April 2026)
+
+- The universal builder tab is labeled **General** (store panel id **`general`**, was “Professional”) so it is clearly **one path among** Driver and Developer, not a separate “pro” layer.
+
+### STORM Resume — BlockCard chrome (April 2026)
+
+- [`StormResumeBlock.tsx`](src/components/blocks/StormResumeBlock.tsx): Full-page view uses the **same hub section chrome** as the candidate hub: [`HubSectionPanel`](src/components/hub/HubSectionPanel.tsx) + [`BlockCard variant="embed"`](src/components/ui/BlockCard.tsx) (Sparkles, status from `useResumes`). Upload uses [`embedInParent`](src/components/ResumeUploadWithVerification.tsx). Driver/Developer builders bleed with embed padding.
+
+### Hub — `HubSectionPanel` (April 2026)
+
+- New [`HubSectionPanel.tsx`](src/components/hub/HubSectionPanel.tsx): shared **`VaultHorizontalVaultShell` `layout="panel"`** + default padding (`p-4 sm:p-5 lg:p-6`) for hub sections. Used by [`CandidateHub`](src/components/hub/CandidateHub.tsx) (profile header, Block files, Ask Stormi, Your blocks), [`JobAlertsHubSection`](src/components/hub/JobAlertsHubSection.tsx), [`ReferralBanner`](src/components/hub/ReferralBanner.tsx), and [`StormResumeBlock`](src/components/blocks/StormResumeBlock.tsx).
+
+## **Hub — My Files rows when block is new** (April 2026)
+
+- [`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx) **`MyFilesSection`**: Installed **Resume**, **DOT**, or **MVR** blocks now get a **`Not started`** row as soon as the block exists (no resume row, no DOT app, or no MVR order yet), so users can open the flow from **Block files** without hunting the tile on another hub page. **`empty`** document status + **Order MVR** / **Start** (DOT) / resume **Edit**; in-flight MVRs get **Open** from My Files.
+
 ## **MVR self-order — Key Background notice** (April 2026)
 
 - [`MvrOrderForm.tsx`](src/components/MvrOrderForm.tsx): Short **“Who processes your MVR”** copy (Key Background Screening, Inc. / keybackground.com, not Storm-only) plus a **required checkbox** before **Pay** and **Submit** — transparency for driver self-orders without the employer FCRA disclosure flow.

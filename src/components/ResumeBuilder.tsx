@@ -95,6 +95,8 @@ interface ResumeBuilderProps {
   onBack?: () => void
   onSave?: (resumeId: string) => void
   existingResumeId?: string
+  /** STORM Resume shell provides the hub back control */
+  hideHubBackButton?: boolean
 }
 
 const STEPS = [
@@ -132,6 +134,7 @@ export default function ResumeBuilder({
   onBack,
   onSave,
   existingResumeId,
+  hideHubBackButton = false,
 }: ResumeBuilderProps) {
   const { theme } = useTheme()
   const walletAddress = useAuthStore((s) => s.walletAddress)
@@ -667,10 +670,12 @@ export default function ResumeBuilder({
       >
         <div className='max-w-4xl mx-auto px-4 py-4'>
           <div className='flex items-center justify-between flex-wrap gap-2'>
-            <BackToHubButton
-              onClick={handleBack}
-              label={onBack ? 'Back to Hub' : 'Back'}
-            />
+            {!hideHubBackButton && (
+              <BackToHubButton
+                onClick={handleBack}
+                label={onBack ? 'Back to Hub' : 'Back'}
+              />
+            )}
 
             {isUploadedResumeFallback && (
               <p

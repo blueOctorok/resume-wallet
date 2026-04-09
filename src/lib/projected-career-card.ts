@@ -84,6 +84,8 @@ export async function buildProjectedCareerCard(
     .order('position', { ascending: true })
 
   const installedTypes = (hubBlocks ?? []).map((b) => b.block_type)
+  const hasStormResume = installedTypes.includes('storm-resume')
+  const legacyResumeBlockTypes = new Set(['driver-resume', 'developer-resume', 'general-resume'])
 
   const { count: employerConfirmedEmploymentCount } = await supabase
     .from('employment_verification_requests')
@@ -94,6 +96,7 @@ export async function buildProjectedCareerCard(
   const sections: CareerCardSection[] = []
 
   for (const blockType of installedTypes) {
+    if (hasStormResume && legacyResumeBlockTypes.has(blockType)) continue
     const def = getBlockDefinition(blockType)
     if (!def || !def.appearsOnCareerCard) continue
 
@@ -134,6 +137,8 @@ async function fetchSectionData(
   ResumeData | DotAppData | MvrData | CdlData | PortfolioData | GitHubData | ProjectsData | null
 > {
   switch (blockType) {
+    case 'storm-resume':
+      return fetchLatestResumeForUser(supabase, userId)
     case 'driver-resume':
     case 'developer-resume':
     case 'general-resume':
@@ -152,6 +157,31 @@ async function fetchSectionData(
       return fetchProjectsData(supabase, userId)
     default:
       return null
+  }
+}
+
+/** Latest resume row for any source_role — used by STORM Resume block on the career card */
+async function fetchLatestResumeForUser(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<ResumeData | null> {
+  const { data } = await supabase
+    .from('resumes')
+    .select('id, title, filename, ipfs_hash, verification_status, structured_data, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!data) return null
+  return {
+    id: data.id,
+    title: data.title,
+    filename: data.filename,
+    ipfsHash: data.ipfs_hash,
+    verificationStatus: data.verification_status,
+    structuredData: data.structured_data,
+    createdAt: data.created_at,
   }
 }
 

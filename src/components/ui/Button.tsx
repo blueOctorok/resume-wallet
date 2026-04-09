@@ -15,19 +15,26 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const primaryIcy =
   'bg-teal-600 hover:bg-teal-500 text-white shadow-sm dark:bg-teal-500 dark:hover:bg-teal-400'
-/** Kindle paperback: dusty green-grey — readable, not neon */
-const primaryPaper =
+/** Sepia: dusty green-grey — readable, not neon */
+const primarySepia =
   'bg-[#5f6f6b] hover:bg-[#535f5c] text-[#faf6ef] shadow-sm dark:bg-teal-500 dark:hover:bg-teal-400'
+/** Newsprint: neutral zinc — no teal */
+const primaryPaper =
+  'bg-zinc-600 hover:bg-zinc-500 text-zinc-50 shadow-sm dark:bg-teal-500 dark:hover:bg-teal-400'
 
 const secondaryClasses =
   'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white border border-gray-300 dark:border-gray-600'
-const secondaryPaperClasses =
+const secondarySepiaClasses =
   'bg-[#ebe4d8] hover:bg-[#e0d8ca] text-[#3a342c] border border-[#cfc4b4] dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white dark:border-gray-600'
+const secondaryPaperClasses =
+  'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white dark:border-gray-600'
 
 const ghostClasses =
   'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-const ghostPaperClasses =
+const ghostSepiaClasses =
   'bg-transparent hover:bg-[#ebe4d8]/80 text-[#575049] hover:text-[#3a342c] dark:hover:bg-gray-800 dark:text-gray-400 dark:hover:text-white'
+const ghostPaperClasses =
+  'bg-transparent hover:bg-zinc-200/80 text-zinc-600 hover:text-zinc-900 dark:hover:bg-gray-800 dark:text-gray-400 dark:hover:text-white'
 
 const dangerClasses = 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white shadow-sm'
 
@@ -51,21 +58,26 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref,
   ) => {
     const { theme } = useTheme()
-    const paper = theme === 'paper'
 
     const variantClass =
       variant === 'primary'
-        ? paper
-          ? primaryPaper
-          : primaryIcy
+        ? theme === 'sepia'
+          ? primarySepia
+          : theme === 'paper'
+            ? primaryPaper
+            : primaryIcy
         : variant === 'secondary'
-          ? paper
-            ? secondaryPaperClasses
-            : secondaryClasses
+          ? theme === 'sepia'
+            ? secondarySepiaClasses
+            : theme === 'paper'
+              ? secondaryPaperClasses
+              : secondaryClasses
           : variant === 'ghost'
-            ? paper
-              ? ghostPaperClasses
-              : ghostClasses
+            ? theme === 'sepia'
+              ? ghostSepiaClasses
+              : theme === 'paper'
+                ? ghostPaperClasses
+                : ghostClasses
             : dangerClasses
 
     return (

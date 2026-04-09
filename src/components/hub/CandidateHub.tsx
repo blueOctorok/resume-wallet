@@ -20,7 +20,7 @@ import { getBlockIllustration } from './BlockIllustrations'
 import Button from '@/components/ui/Button'
 import BlockCard from '@/components/ui/BlockCard'
 import Card from '@/components/ui/Card'
-import VaultHorizontalVaultShell from '@/components/ui/VaultHorizontalVaultShell'
+import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import AvatarUpload from '@/components/ui/AvatarUpload'
 import STORMBalance from '@/components/STORMBalance'
 import CandidateRequestsSection from '@/components/CandidateRequestsSection'
@@ -616,7 +616,7 @@ function HubProfileHeader({
   const showRefresh = Boolean(walletAddress && onRefreshHub)
 
   return (
-    <VaultHorizontalVaultShell isDark={isDark} layout='panel' contentClassName='p-6 sm:p-7'>
+    <HubSectionPanel isDark={isDark} contentClassName='p-6 sm:p-7'>
       {/*
         Desktop: Refresh (left) | Profile (center) | Career Card CTA + completeness (right).
         Mobile: Profile first, then Career + completeness, then refresh — so identity stays on top without a heavy preview.
@@ -804,7 +804,7 @@ function HubProfileHeader({
           </div>
         </div>
       </div>
-    </VaultHorizontalVaultShell>
+    </HubSectionPanel>
   )
 }
 
@@ -860,7 +860,8 @@ interface HubDocument {
   title: string
   subtitle?: string
   createdAt?: string
-  status: 'complete' | 'in-progress' | 'processing'
+  /** `empty` = block installed but no artifact yet (show in My Files immediately) */
+  status: 'complete' | 'in-progress' | 'processing' | 'empty'
   verified: boolean
   txHash: string | null
   canVerify: boolean
@@ -873,6 +874,8 @@ interface HubDocument {
   portfolioUrl?: string | null
   /** Set when type === 'github' — link to profile */
   githubUsername?: string | null
+  /** When opening STORM Resume from My Files — default tab */
+  stormResumeInitialPanel?: 'upload' | 'general' | 'driver' | 'developer'
 }
 
 function MyFilesSection({ refreshKey }: { refreshKey: number }) {
@@ -881,6 +884,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
   const walletAddress = useAuthStore((s) => s.walletAddress)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const setEditingResumeId = useUIStore((s) => s.setEditingResumeId)
+  const setStormResumeInitialPanel = useUIStore((s) => s.setStormResumeInitialPanel)
   const installedBlocks = useInstalledBlocks()
   const hubBlockFilesExpanded = usePreferencesStore((s) => s.hubBlockFilesExpanded ?? true)
   const setHubBlockFilesExpanded = usePreferencesStore((s) => s.setHubBlockFilesExpanded)
@@ -906,6 +910,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
   const [resumePdfLoading, setResumePdfLoading] = useState(false)
 
   const hasResumeBlock = installedBlocks.some((b) =>
+    b.blockType === 'storm-resume' ||
     b.blockType === 'driver-resume' ||
     b.blockType === 'developer-resume' ||
     b.blockType === 'general-resume'
@@ -939,16 +944,20 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
       const data = await response.json()
       if (typeof data.userId === 'string') setHubUserId(data.userId)
 
+      const hasStormResumeBlock = installedBlocks.some((b) => b.blockType === 'storm-resume')
       const hasDriverResumeBlock = installedBlocks.some((b) => b.blockType === 'driver-resume')
       const hasDeveloperResumeBlock = installedBlocks.some((b) => b.blockType === 'developer-resume')
       const hasGeneralResumeBlock = installedBlocks.some((b) => b.blockType === 'general-resume')
+      const allowDriverResume = hasDriverResumeBlock || hasStormResumeBlock
+      const allowDeveloperResume = hasDeveloperResumeBlock || hasStormResumeBlock
+      const allowGeneralResume = hasGeneralResumeBlock || hasStormResumeBlock
 
       if (hasResumeBlock && data.resumes) {
         for (const resume of data.resumes) {
           const role = resume.sourceRole as 'driver' | 'developer' | 'general' | undefined
-          if (role === 'driver' && !hasDriverResumeBlock) continue
-          if (role === 'developer' && !hasDeveloperResumeBlock) continue
-          if (role === 'general' && !hasGeneralResumeBlock) continue
+          if (role === 'driver' && !allowDriverResume) continue
+          if (role === 'developer' && !allowDeveloperResume) continue
+          if (role === 'general' && !allowGeneralResume) continue
           if (role !== 'driver' && role !== 'developer' && role !== 'general') continue
           const isBuilt =
             resume.resumeType === 'built' || resume.resumeType === 'developer_built'
@@ -962,8 +971,9 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
             txHash: resume.blockchainTxHash,
             canVerify: Boolean(isBuilt && resume.structuredData && !resume.blockchainTxHash),
             canDelete: true,
-            editPage:
-              role === 'developer'
+            editPage: hasStormResumeBlock
+              ? 'storm-resume'
+              : role === 'developer'
                 ? 'developer-resume'
                 : role === 'general'
                   ? 'general-resume'
@@ -973,6 +983,40 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
             resumeSourceRole: role,
           })
         }
+      }
+
+      // Resume block installed but no resume row yet — same pattern as portfolio/GitHub placeholders
+      const resumeRows = docs.filter((d) => d.type === 'resume').length
+      if (hasResumeBlock && resumeRows === 0) {
+        const editPage: PageType = hasStormResumeBlock
+          ? 'storm-resume'
+          : hasDriverResumeBlock
+            ? 'resume'
+            : hasGeneralResumeBlock
+              ? 'general-resume'
+              : 'developer-resume'
+        const resumeSourceRole: 'driver' | 'developer' | 'general' = hasStormResumeBlock
+          ? 'general'
+          : hasDriverResumeBlock
+            ? 'driver'
+            : hasGeneralResumeBlock
+              ? 'general'
+              : 'developer'
+        docs.push({
+          id: 'resume-hub-placeholder',
+          type: 'resume',
+          title: 'Resume',
+          status: 'empty',
+          verified: false,
+          txHash: null,
+          canVerify: false,
+          canDelete: false,
+          editPage,
+          ipfsHash: null,
+          structuredData: null,
+          resumeSourceRole,
+          stormResumeInitialPanel: hasStormResumeBlock ? 'upload' : undefined,
+        })
       }
 
       if (hasDotAppBlock && data.dotApplications) {
@@ -993,6 +1037,20 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
         }
       }
 
+      if (hasDotAppBlock && (!data.dotApplications || data.dotApplications.length === 0)) {
+        docs.push({
+          id: 'dotapp-hub-placeholder',
+          type: 'dotapp',
+          title: 'DOT Application',
+          status: 'empty',
+          verified: false,
+          txHash: null,
+          canVerify: false,
+          canDelete: false,
+          editPage: 'dotapp',
+        })
+      }
+
       // MVR orders — processing until completed
       if (hasMvrBlock && data.mvrRecords) {
         for (const mvr of data.mvrRecords) {
@@ -1011,6 +1069,21 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
             editPage: isComplete ? null : 'mvr',
           })
         }
+      }
+
+      if (hasMvrBlock && (!data.mvrRecords || data.mvrRecords.length === 0)) {
+        docs.push({
+          id: 'mvr-hub-placeholder',
+          type: 'mvr',
+          title: 'Motor Vehicle Record',
+          subtitle: 'Not ordered yet',
+          status: 'empty',
+          verified: false,
+          txHash: null,
+          canVerify: false,
+          canDelete: false,
+          editPage: 'mvr',
+        })
       }
 
       // Portfolio block — one row when user has the block (URL set = complete, else in-progress)
@@ -1162,7 +1235,10 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
   }
 
   const inProgressCount = documents.filter(
-    (d) => d.status === 'in-progress' || d.status === 'processing',
+    (d) =>
+      d.status === 'in-progress' ||
+      d.status === 'processing' ||
+      d.status === 'empty',
   ).length
   const filesSummary =
     !hasAnyFileSectionBlock
@@ -1178,8 +1254,8 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
 
   return (
     <>
-    {/* Vault shell = block-style outer container; `variant='embed'` = BlockCard chrome without nested rounded Card */}
-    <VaultHorizontalVaultShell isDark={isDark} layout='panel' contentClassName='p-4 sm:p-5 lg:p-6'>
+    {/* Same chrome as Block Hive — `HubSectionPanel` + `BlockCard variant='embed'` */}
+    <HubSectionPanel isDark={isDark}>
       <BlockCard
         variant='embed'
         icon={FileText}
@@ -1225,7 +1301,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
       {/* Empty state: has blocks but no documents yet */}
       {hasAnyFileSectionBlock && !loading && documents.length === 0 && (
         <p className={cn('text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>
-          Your files will appear here after you add a resume, start a DOT application, order an MVR, or open employment verification.
+          Nothing to list yet — try refreshing. Installed blocks normally show a row here right away (Not started until you open the block).
         </p>
       )}
 
@@ -1290,6 +1366,16 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                     {doc.title}
                     {doc.subtitle && <span className={cn('ml-1 font-normal', isDark ? 'text-gray-500' : 'text-gray-400')}>({doc.subtitle})</span>}
                   </p>
+                  {doc.status === 'empty' && (
+                    <span
+                      className={cn(
+                        'text-[10px] px-1.5 py-0.5 rounded font-medium',
+                        isDark ? 'bg-gray-600/35 text-gray-300' : 'bg-slate-200 text-slate-700',
+                      )}
+                    >
+                      Not started
+                    </span>
+                  )}
                   {doc.status === 'in-progress' && (
                     <span className={cn('text-[10px] px-1.5 py-0.5 rounded font-medium', isDark ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-50 text-yellow-700')}>
                       In Progress
@@ -1441,7 +1527,18 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                   <button
                     type='button'
                     onClick={() => {
-                      setEditingResumeId(doc.id)
+                      if (doc.id !== 'resume-hub-placeholder') setEditingResumeId(doc.id)
+                      else setEditingResumeId(undefined)
+                      if (doc.editPage === 'storm-resume') {
+                        const p =
+                          doc.stormResumeInitialPanel ??
+                          (doc.resumeSourceRole === 'driver'
+                            ? 'driver'
+                            : doc.resumeSourceRole === 'developer'
+                              ? 'developer'
+                              : 'general')
+                        setStormResumeInitialPanel(p)
+                      }
                       setCurrentPage(doc.editPage)
                     }}
                     className={cn(
@@ -1475,7 +1572,21 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
                       isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200',
                     )}
                   >
-                    <Pencil className='w-3 h-3' /> {doc.status === 'complete' ? 'Edit' : 'Continue'}
+                    <Pencil className='w-3 h-3' />{' '}
+                    {doc.status === 'complete' ? 'Edit' : doc.status === 'empty' ? 'Start' : 'Continue'}
+                  </button>
+                )}
+
+                {doc.type === 'mvr' && doc.editPage && doc.status !== 'complete' && (
+                  <button
+                    type='button'
+                    onClick={() => setCurrentPage('mvr')}
+                    className={cn(
+                      'inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors',
+                      isDark ? 'bg-teal-500/20 text-teal-300 hover:bg-teal-500/30' : 'bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100',
+                    )}
+                  >
+                    {doc.status === 'empty' ? 'Order MVR' : 'Open'}
                   </button>
                 )}
 
@@ -1567,7 +1678,7 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
       </>
       )}
       </BlockCard>
-    </VaultHorizontalVaultShell>
+    </HubSectionPanel>
     <MvrViewModal
                isOpen={mvrViewOrderId !== null}
                onClose={() => setMvrViewOrderId(null)}
@@ -1769,12 +1880,7 @@ export default function CandidateHub() {
             />
 
             <div id='stormi-hub-panel' className='scroll-mt-24'>
-              <VaultHorizontalVaultShell
-                isDark={isDark}
-                layout='panel'
-                accent='violet'
-                contentClassName='p-4 sm:p-5 lg:p-6'
-              >
+              <HubSectionPanel isDark={isDark} accent='violet'>
                 <BlockCard
                   variant='embed'
                   headerIconSlot={
@@ -1799,17 +1905,12 @@ export default function CandidateHub() {
                     hubEmbedSurface
                   />
                 </BlockCard>
-              </VaultHorizontalVaultShell>
+              </HubSectionPanel>
             </div>
 
             {/* ── Block Hive — vault shell matches Job alerts / Block files; Block Files section below ── */}
             <div>
-              <VaultHorizontalVaultShell
-                isDark={isDark}
-                layout='panel'
-                accent='teal'
-                contentClassName='p-4 sm:p-5 lg:p-6'
-              >
+              <HubSectionPanel isDark={isDark} accent='teal'>
                 <BlockCard
                   variant='embed'
                   icon={LayoutGrid}
@@ -1899,7 +2000,7 @@ export default function CandidateHub() {
           </>
           )}
                 </BlockCard>
-              </VaultHorizontalVaultShell>
+              </HubSectionPanel>
 
               {/* Block Files — below hive vault */}
               <div className='mt-6'>
@@ -1921,7 +2022,7 @@ export default function CandidateHub() {
                     ? getBlockDefinition(targetBlockType)?.pageRoute
                     : null
                   if (route) setCurrentPage(route as PageType)
-                  else setCurrentPage('resume')
+                  else setCurrentPage('storm-resume')
                 }}
                 onNavigateToDotApp={() => setCurrentPage('dotapp')}
               />

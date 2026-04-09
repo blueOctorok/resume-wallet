@@ -20,6 +20,10 @@ interface UploadStep {
 interface ResumeUploadWithVerificationProps {
   user?: any
   onBack?: () => void
+  /**
+   * When true, skip outer card chrome — parent uses BlockCard (e.g. STORM Resume).
+   */
+  embedInParent?: boolean
   onUploadComplete?: (payload: {
     resume: any
     finalResult: {
@@ -37,6 +41,7 @@ interface ResumeUploadWithVerificationProps {
 export default function ResumeUploadWithVerification({
   user,
   onBack,
+  embedInParent = false,
   onUploadComplete,
 }: ResumeUploadWithVerificationProps) {
   const { theme } = useTheme()
@@ -456,29 +461,33 @@ export default function ResumeUploadWithVerification({
     )
   }
 
+  const outerClass = embedInParent
+    ? 'space-y-6'
+    : `max-w-4xl mx-auto rounded-2xl border p-6 sm:p-8 shadow-2xl relative ${
+        theme === 'dark'
+          ? 'bg-teal-200/20 border-teal-500/30 backdrop-blur-xl'
+          : 'bg-white/80 border-teal-700/20 backdrop-blur-xl'
+      } border-t-4 ${
+        theme === 'dark' ? 'border-teal-500' : 'border-teal-700'
+      }`
+
   return (
     <>
-      {onBack && (
+      {onBack && !embedInParent && (
         <BackToHubButton onClick={onBack} className="mb-4" />
       )}
-      <div
-        className={`max-w-4xl mx-auto rounded-2xl border p-6 sm:p-8 shadow-2xl relative ${
-          theme === 'dark'
-            ? 'bg-teal-200/20 border-teal-500/30 backdrop-blur-xl'
-            : 'bg-white/80 border-teal-700/20 backdrop-blur-xl'
-        } border-t-4 ${
-          theme === 'dark' ? 'border-teal-500' : 'border-teal-700'
-        }`}
-      >
-          <div className='mb-6'>
-            <h3
-              className={`text-xl sm:text-2xl md:text-3xl font-bold ${
-                theme === 'dark' ? 'text-white' : 'text-gray-900'
-              }`}
-            >
-              📄 Resume Upload
-            </h3>
-          </div>
+      <div className={outerClass}>
+          {!embedInParent && (
+            <div className='mb-6'>
+              <h3
+                className={`text-xl sm:text-2xl md:text-3xl font-bold ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`}
+              >
+                📄 Resume Upload
+              </h3>
+            </div>
+          )}
 
       {/* File Selection */}
       <div className='mb-6'>

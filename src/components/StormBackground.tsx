@@ -24,6 +24,7 @@ export default function StormBackground() {
   }, [])
 
   const isDark = theme === 'dark'
+  const isSepia = theme === 'sepia'
   const isPaper = theme === 'paper'
 
   useEffect(() => {
@@ -51,16 +52,24 @@ export default function StormBackground() {
     'radial-gradient(ellipse 90% 52% at 50% 108%, rgba(15,23,42,0.07), transparent 54%)',
   ].join(', ')
 
-  /* Kindle paperback: sepia haze only — no teal/violet; texture layer does subtle grain */
-  const paperAtmosphere = [
+  /* Sepia: warm haze only — no teal/violet */
+  const sepiaAtmosphere = [
     'linear-gradient(125deg, rgba(255,248,236,0.5) 0%, rgba(245,235,218,0.22) 32%, transparent 52%)',
     'linear-gradient(to bottom, rgba(255,255,255,0.12) 0%, transparent 45%)',
     'radial-gradient(ellipse 120% 65% at 50% 0%, rgba(220,200,172,0.08), transparent 55%)',
     'radial-gradient(ellipse 90% 55% at 50% 100%, rgba(100,88,72,0.04), transparent 50%)',
   ].join(', ')
 
+  /* Newsprint: cool grey air — no chroma */
+  const newsprintAtmosphere = [
+    'linear-gradient(125deg, rgba(255,255,255,0.42) 0%, rgba(244,244,246,0.18) 34%, transparent 54%)',
+    'linear-gradient(to bottom, rgba(255,255,255,0.1) 0%, transparent 48%)',
+    'radial-gradient(ellipse 118% 62% at 50% 0%, rgba(228,228,231,0.2), transparent 56%)',
+    'radial-gradient(ellipse 88% 52% at 50% 100%, rgba(82,82,91,0.03), transparent 52%)',
+  ].join(', ')
+
   const particleOptions = useMemo((): ISourceOptions => {
-    const bubbleColor = isDark ? '#5c6d82' : isPaper ? '#c4b5a0' : '#5f7a8c'
+    const bubbleColor = isDark ? '#5c6d82' : isSepia ? '#c4b5a0' : isPaper ? '#a1a1aa' : '#5f7a8c'
     const base: ISourceOptions = {
       fullScreen: { enable: true, zIndex: -1 },
       background: { color: { value: '' } },
@@ -75,9 +84,9 @@ export default function StormBackground() {
       retina_detect: true,
     }
 
-    const count = reduceMotion ? 14 : isDark ? 48 : isPaper ? 16 : 44
-    const speed = reduceMotion ? 0.18 : isDark ? 0.55 : isPaper ? 0.35 : 0.65
-    const opacityBase = isDark ? 0.32 : isPaper ? 0.07 : 0.3
+    const count = reduceMotion ? 14 : isDark ? 48 : isSepia || isPaper ? 16 : 44
+    const speed = reduceMotion ? 0.18 : isDark ? 0.55 : isSepia || isPaper ? 0.32 : 0.65
+    const opacityBase = isDark ? 0.32 : isSepia || isPaper ? 0.06 : 0.3
 
     return {
       ...base,
@@ -114,14 +123,20 @@ export default function StormBackground() {
         },
       },
     }
-  }, [isDark, isPaper, reduceMotion])
+  }, [isDark, isPaper, isSepia, reduceMotion])
 
   return (
     <>
       <div
         className='fixed inset-0 pointer-events-none z-[-4]'
         style={{
-          background: isDark ? stormAtmosphere : isPaper ? paperAtmosphere : lightAtmosphere,
+          background: isDark
+            ? stormAtmosphere
+            : isSepia
+              ? sepiaAtmosphere
+              : isPaper
+                ? newsprintAtmosphere
+                : lightAtmosphere,
         }}
         aria-hidden
       />

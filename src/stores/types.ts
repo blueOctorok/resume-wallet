@@ -11,6 +11,7 @@
 export type PageType =
   | 'signin'
   | 'resume'
+  | 'storm-resume'
   | 'general-resume'
   | 'developer-resume'
   | 'dotapp'

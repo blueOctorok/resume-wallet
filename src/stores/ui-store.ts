@@ -32,6 +32,9 @@ const createInitialJourneyState = (): DriverJourneyState => {
 
 type JourneyStageKey = 'wallet' | 'resume' | 'forms' | 'submission'
 
+/** Initial tab when opening STORM Resume from My Files or notifications */
+export type StormResumePanel = 'upload' | 'general' | 'driver' | 'developer'
+
 interface UIState {
   // Navigation
   currentPage: PageType
@@ -51,7 +54,8 @@ interface UIState {
   // Resume section
   resumeTab: 'upload' | 'create'
   editingResumeId: string | undefined
-  
+  stormResumeInitialPanel: StormResumePanel | null
+
   // Employment verification
   showEmploymentVerification: boolean
   
@@ -81,7 +85,6 @@ interface UIActions {
   updateJourneyStep: (step: JourneyStageKey, status: JourneyStatus) => void
   setDriverJourneyState: (state: DriverJourneyState) => void
   resetDriverJourneyState: () => void
-  navigateToHub: () => void
   navigateToDotApp: () => void
   navigateToResume: () => void
   navigateToJobs: () => void
@@ -99,7 +102,8 @@ interface UIActions {
   // Resume section actions
   setResumeTab: (tab: 'upload' | 'create') => void
   setEditingResumeId: (id: string | undefined) => void
-  
+  setStormResumeInitialPanel: (panel: StormResumePanel | null) => void
+
   // Employment verification
   setShowEmploymentVerification: (show: boolean) => void
   
@@ -131,6 +135,7 @@ const initialState: UIState = {
   modalType: null,
   resumeTab: 'upload',
   editingResumeId: undefined,
+  stormResumeInitialPanel: null,
   showEmploymentVerification: false,
   isGlobalLoading: false,
   globalLoadingMessage: null,
@@ -154,7 +159,7 @@ export const useUIStore = create<UIState & UIActions>()(
           return
         }
       }
-      set({ currentPage: null })
+      set({ currentPage: null, showDashboard: false, stormResumeInitialPanel: null })
     },
     setShowDashboard: (show) => set({ showDashboard: show }),
     
@@ -171,12 +176,7 @@ export const useUIStore = create<UIState & UIActions>()(
       }),
     setDriverJourneyState: (journeyState) => set({ driverJourneyState: journeyState }),
     resetDriverJourneyState: () => set({ driverJourneyState: createInitialJourneyState() }),
-    
-    navigateToHub: () => set({ 
-      currentPage: 'hub', 
-      showDashboard: false,
-    }),
-    
+
     navigateToDotApp: () => set({ 
       currentPage: 'dotapp',
       showDashboard: false,
@@ -227,6 +227,7 @@ export const useUIStore = create<UIState & UIActions>()(
     // Resume section actions
     setResumeTab: (tab) => set({ resumeTab: tab }),
     setEditingResumeId: (id) => set({ editingResumeId: id }),
+    setStormResumeInitialPanel: (panel) => set({ stormResumeInitialPanel: panel }),
 
     // Employment verification
     setShowEmploymentVerification: (show) => set({ showEmploymentVerification: show }),

@@ -319,6 +319,7 @@ function SectionRenderer({
   shareToken?: string | null
 }) {
   switch (section.blockType as SectionBlockType) {
+    case 'storm-resume':
     case 'driver-resume':
     case 'developer-resume':
     case 'general-resume':

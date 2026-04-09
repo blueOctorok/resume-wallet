@@ -100,6 +100,7 @@ export interface WorkHistoryData {
 // ── Section union ────────────────────────────────────────────────────────────
 
 export type SectionDataMap = {
+  'storm-resume': ResumeData
   'driver-resume': ResumeData
   'developer-resume': ResumeData
   'general-resume': ResumeData

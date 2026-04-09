@@ -206,6 +206,9 @@ export default function CareerCardModal({
   const getPendingRequestForBlock = (blockType: string) =>
     employerExtras?.pendingRequests?.find(r =>
       (r.target_block_type === blockType) ||
+      (blockType === 'storm-resume' &&
+        (r.target_block_type === 'storm-resume' ||
+          (r.request_type === 'document_upload' && r.document_type === 'resume'))) ||
       (blockType === 'driver-resume' && r.request_type === 'document_upload' && r.document_type === 'resume') ||
       (blockType === 'driver-mvr' &&
         (r.request_type === 'mvr_order' ||

@@ -190,6 +190,7 @@ function DefaultIllustration({ accentText, isDark }: IllustrationProps) {
 type IllustrationComponent = (props: IllustrationProps) => React.ReactElement
 
 const ILLUSTRATION_MAP: Record<string, IllustrationComponent> = {
+  'storm-resume':             ResumeIllustration,
   'driver-resume':          ResumeIllustration,
   'developer-resume':       ResumeIllustration,
   'driver-dot-application': DotAppIllustration,
