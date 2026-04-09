@@ -1,4 +1,4 @@
--- Widen payment_tx_hash from VARCHAR(66) to TEXT.
+-- Widen tx_hash columns from VARCHAR(66) to TEXT in both payments and mvr_orders.
 -- Alchemy bundler call-IDs can exceed 66 chars; the old truncation
 -- caused false duplicate-payment collisions (409 errors).
 --
@@ -9,7 +9,10 @@
 DROP FUNCTION IF EXISTS search_talent(TEXT, TEXT[], TEXT, INT, BOOLEAN, BOOLEAN, TEXT[], TEXT, INT, INT);
 DROP VIEW IF EXISTS career_cards;
 
--- 2. Widen the column
+-- 2. Widen both columns
+ALTER TABLE payments
+  ALTER COLUMN tx_hash TYPE TEXT;
+
 ALTER TABLE mvr_orders
   ALTER COLUMN payment_tx_hash TYPE TEXT;
 
