@@ -322,6 +322,14 @@ async function executeMvrPayment({
           ...(paidByWalletAddress ? { paidByWalletAddress } : {}),
         }),
       })
+      if (paymentResponse.status === 409) {
+        const errBody = await paymentResponse.json().catch(() => ({}))
+        const msg =
+          typeof errBody.message === 'string'
+            ? errBody.message
+            : 'This payment was already linked to another account. Try again with a fresh transaction or contact support.'
+        throw new Error(msg)
+      }
       if (paymentResponse.ok) {
         const paymentData = await paymentResponse.json()
         savedPaymentTxHash = paymentData.payment?.txHash || txHash

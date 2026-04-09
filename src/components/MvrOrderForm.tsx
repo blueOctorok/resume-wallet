@@ -38,21 +38,25 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
   // Payment state
   const [paymentTxHash, setPaymentTxHash] = useState<string | null>(null)
   const [isPaymentComplete, setIsPaymentComplete] = useState(false)
+  /** Self-order: user acknowledges MVR is fulfilled by Key Background (Accio), not Storm alone */
+  const [vendorProcessingAck, setVendorProcessingAck] = useState(false)
 
   // Check if required form fields are filled
   const isFormValid = Boolean(
     firstName.trim() &&
-    lastName.trim() &&
-    email.trim() &&
-    ssn.trim() &&
-    dob.trim() &&
-    address.trim() &&
-    city.trim() &&
-    state.trim() &&
-    zip.trim() &&
-    dlNumber.trim() &&
-    dlState.trim()
+      lastName.trim() &&
+      email.trim() &&
+      ssn.trim() &&
+      dob.trim() &&
+      address.trim() &&
+      city.trim() &&
+      state.trim() &&
+      zip.trim() &&
+      dlNumber.trim() &&
+      dlState.trim()
   )
+
+  const canPay = isFormValid && vendorProcessingAck
 
   // Check for pending payment on mount
   useEffect(() => {
@@ -82,6 +86,11 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
 
     if (!isPaymentComplete || !paymentTxHash) {
       setError('Please complete payment before submitting order')
+      return
+    }
+
+    if (!vendorProcessingAck) {
+      setError('Please confirm you understand who processes your MVR request.')
       return
     }
 
@@ -431,6 +440,52 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
               </div>
             </div>
 
+            {/* Vendor processing notice — self-order is not employer FCRA flow; transparency only */}
+            <div
+              className={`rounded-2xl border p-5 ${
+                theme === 'dark'
+                  ? 'bg-gray-800/40 border-gray-600'
+                  : 'bg-slate-50 border-slate-200'
+              }`}
+            >
+              <p
+                className={`text-sm font-medium mb-2 ${
+                  theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
+                }`}
+              >
+                Who processes your MVR
+              </p>
+              <p
+                className={`text-xs leading-relaxed mb-4 ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                }`}
+              >
+                Your motor vehicle record is ordered through{' '}
+                <span className='font-medium text-gray-800 dark:text-gray-200'>
+                  Key Background Screening, Inc.
+                </span>{' '}
+                (keybackground.com) using their secure order system—not by Storm alone. The
+                details you enter here are transmitted so they can retrieve your state driving
+                record. Storm does not run the DMV search itself.
+              </p>
+              <label
+                className={`flex items-start gap-3 cursor-pointer text-sm ${
+                  theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                }`}
+              >
+                <input
+                  type='checkbox'
+                  checked={vendorProcessingAck}
+                  onChange={(e) => setVendorProcessingAck(e.target.checked)}
+                  className='mt-1 h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 dark:bg-gray-900'
+                />
+                <span>
+                  I understand my information will be sent to Key Background Screening, Inc. to
+                  process this MVR request.
+                </span>
+              </label>
+            </div>
+
             {/* Payment Section */}
             <div className={`${cardClass} p-5`}>
               <div className={sectionHeaderClass}>
@@ -449,15 +504,17 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
                       theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
                     }`}
                   >
-                    {isFormValid 
-                      ? 'Complete payment to proceed with your MVR order.'
-                      : 'Fill out all required fields above before paying.'}
+                    {!isFormValid
+                      ? 'Fill out all required fields above before paying.'
+                      : !vendorProcessingAck
+                        ? 'Confirm who processes your MVR (checkbox above), then pay.'
+                        : 'Complete payment to proceed with your MVR order.'}
                   </p>
                   <MvrPaymentButton
                     userAddress={userAddress}
                     onPaymentSuccess={handlePaymentSuccess}
                     onPaymentError={handlePaymentError}
-                    disabled={isLoading || !isFormValid}
+                    disabled={isLoading || !canPay}
                   />
                 </div>
               ) : (
@@ -520,9 +577,9 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
             {/* Submit Button */}
             <button
               type='submit'
-              disabled={isLoading || !isPaymentComplete}
+              disabled={isLoading || !isPaymentComplete || !vendorProcessingAck}
               className={`w-full px-6 py-4 rounded-xl font-semibold transition-all duration-200 ${
-                isLoading || !isPaymentComplete
+                isLoading || !isPaymentComplete || !vendorProcessingAck
                   ? theme === 'dark'
                     ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -533,9 +590,11 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
             >
               {isLoading
                 ? 'Ordering MVR...'
-                : !isPaymentComplete
-                  ? 'Complete Payment First'
-                  : 'Submit MVR Order'}
+                : !vendorProcessingAck
+                  ? 'Confirm vendor notice above'
+                  : !isPaymentComplete
+                    ? 'Complete Payment First'
+                    : 'Submit MVR Order'}
             </button>
           </form>
         )}

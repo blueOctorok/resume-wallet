@@ -116,22 +116,26 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
 
     if (existingPayment) {
-      // Verify the existing payment belongs to the same user
       if (existingPayment.user_id !== user.id) {
-        console.warn('[MVR PAYMENT] ⚠️ Duplicate tx_hash with different user:', {
+        console.error('[MVR PAYMENT] Duplicate tx_hash already tied to another user — refusing:', {
           existingUserId: existingPayment.user_id,
           requestUserId: user.id,
+          walletAddress,
+          payerLookupAddress,
           txHash: truncatedTxHash,
         })
-        // Still return it - the order route will verify ownership
+        return NextResponse.json(
+          {
+            error: 'payment_tx_already_recorded',
+            message:
+              'This transaction was already recorded for a different account. If you use a smart wallet, ensure the app shows the same address you paid with, or contact support.',
+          },
+          { status: 409 },
+        )
       }
-      
+
       console.log('[MVR PAYMENT] ✅ Payment already exists, returning existing:', existingPayment.id)
-      
-      // Always distribute STORM for every successful payment call.
-      // The user paid real money — they deserve tokens. Previous logic skipped
-      // distribution if the payment_id had a prior distribution, but that
-      // unfairly penalized users when tx_hash was reused across purchases.
+
       console.log('[MVR PAYMENT] ⛈️ Distributing STORM for existing payment (user paid, user gets rewarded)')
       try {
         await triggerStormReward(
@@ -145,7 +149,7 @@ export async function POST(request: NextRequest) {
       } catch (stormError) {
         console.error('[MVR PAYMENT] STORM reward failed for existing payment (non-fatal):', stormError)
       }
-      
+
       return NextResponse.json({
         success: true,
         payment: {

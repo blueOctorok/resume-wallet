@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { buildAccioMvrOrderXml, generateOrderNumber, generateWebhookGuid } from '@/lib/accio-xml-builder'
-import { getOrCreateUserByWallet } from '@/lib/user-by-wallet'
+import { getOrCreateUserByWallet, getUserByWallet, normalizeWalletAddress } from '@/lib/user-by-wallet'
 
 /**
  * API Route: Order MVR from Accio
@@ -144,52 +143,55 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify payment belongs to this user
-    // Look up the user by wallet address (same way payment route does) to ensure consistency
-    const { data: walletUser, error: walletUserError } = await supabaseService
+    // Verify payment belongs to this wallet (same canonical lookup as payment route + duplicate rows)
+    const walletNorm = normalizeWalletAddress(walletAddress)
+    let walletUser: { id: string; wallet_address?: string | null }
+    try {
+      const row = await getUserByWallet(supabaseService, walletAddress)
+      if (!row?.id) {
+        console.error('[MVR ORDER] No user found for wallet address:', walletAddress)
+        return NextResponse.json(
+          { error: 'No user account found for this wallet.' },
+          { status: 404 }
+        )
+      }
+      walletUser = { id: row.id, wallet_address: row.wallet_address as string | undefined }
+    } catch (e) {
+      console.error('[MVR ORDER] Error looking up user by wallet:', e)
+      return NextResponse.json({ error: 'Failed to verify user.' }, { status: 500 })
+    }
+
+    const { data: sameWalletRows, error: sameWalletErr } = await supabaseService
       .from('users')
       .select('id, wallet_address')
-      .ilike('wallet_address', walletAddress)
-      .maybeSingle()
+      .ilike('wallet_address', walletNorm)
 
-    if (walletUserError) {
-      console.error('[MVR ORDER] Error looking up user by wallet:', walletUserError)
-      return NextResponse.json(
-        { error: 'Failed to verify user.' },
-        { status: 500 }
-      )
+    if (sameWalletErr) {
+      console.error('[MVR ORDER] Error listing users for wallet:', sameWalletErr)
+      return NextResponse.json({ error: 'Failed to verify user.' }, { status: 500 })
     }
 
-    // If no user found with this wallet address, that's a problem
-    if (!walletUser) {
-      console.error('[MVR ORDER] No user found for wallet address:', walletAddress)
-      return NextResponse.json(
-        { error: 'No user account found for this wallet.' },
-        { status: 404 }
-      )
-    }
+    const userIdsForWallet = new Set((sameWalletRows ?? []).map((r) => r.id))
+    const paymentBelongsToWallet = userIdsForWallet.has(payment.user_id)
 
-    // Verify the payment belongs to this user (by user_id, not wallet address comparison)
-    // This is more reliable since payment stores user_id at creation time
-    if (walletUser.id !== payment.user_id) {
-      console.error('[MVR ORDER] Payment user mismatch:', {
-        paymentUserId: payment.user_id,
-        walletUserId: walletUser.id,
-        walletAddress: walletAddress
-      })
-      
-      // Check if this might be a duplicate user issue (same wallet, different user records)
+    if (!paymentBelongsToWallet) {
       const { data: paymentUserRecord } = await supabaseService
         .from('users')
         .select('id, wallet_address')
         .eq('id', payment.user_id)
         .maybeSingle()
-      
-      // If the payment's user has the same wallet (case-insensitive), allow it
-      // This handles the case where duplicate users exist for the same wallet
-      if (paymentUserRecord?.wallet_address?.toLowerCase() === walletAddress.toLowerCase()) {
-        console.log('[MVR ORDER] Payment user wallet matches, proceeding despite user ID mismatch')
-        // Continue with paymentUserRecord instead
+      const payWalletNorm = paymentUserRecord?.wallet_address
+        ? normalizeWalletAddress(paymentUserRecord.wallet_address)
+        : ''
+      console.error('[MVR ORDER] Payment user mismatch:', {
+        paymentUserId: payment.user_id,
+        walletUserId: walletUser.id,
+        walletAddress,
+        paymentUserWallet: paymentUserRecord?.wallet_address ?? null,
+        userIdsForWallet: [...userIdsForWallet],
+      })
+      if (payWalletNorm && payWalletNorm === walletNorm) {
+        console.log('[MVR ORDER] Payment row user_id wallet matches request (Set miss); allowing')
       } else {
         return NextResponse.json(
           { error: 'Payment does not belong to this wallet address.' },

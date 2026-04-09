@@ -4,6 +4,16 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **MVR self-order — Key Background notice** (April 2026)
+
+- [`MvrOrderForm.tsx`](src/components/MvrOrderForm.tsx): Short **“Who processes your MVR”** copy (Key Background Screening, Inc. / keybackground.com, not Storm-only) plus a **required checkbox** before **Pay** and **Submit** — transparency for driver self-orders without the employer FCRA disclosure flow.
+
+## **MVR order — payment / wallet user alignment** (April 2026)
+
+- [`api/mvr/payment/route.ts`](src/app/api/mvr/payment/route.ts): If **`payments.tx_hash`** already exists for **`MVR_ORDER`** but **`user_id`** differs from the current **`getOrCreateUserByWallet(payerLookupAddress)`**, return **409** `payment_tx_already_recorded` instead of returning the other user’s row (was causing **403 Payment user mismatch** on `/api/mvr/order` when a synthetic/colliding hash reused a payment).
+- [`api/mvr/order/route.ts`](src/app/api/mvr/order/route.ts): Resolve wallet with **`getUserByWallet`**; treat payment as owned if **`payment.user_id`** is **any** `users` row whose **`wallet_address`** matches the request (normalized), plus fallback if payment row wallet normalizes equal (covers duplicate rows / ilike edge cases).
+- [`MvrPaymentButton.tsx`](src/components/MvrPaymentButton.tsx): Surfaces **409** body message to the user instead of silently continuing.
+
 ## **Job match AI — parse reliability** (April 2026)
 
 - [`job-match-ai.ts`](src/lib/job-match-ai.ts): **`max_tokens` 4096 → 12000** so ~24 scored jobs are not cut mid-JSON (common cause of **`JOB_MATCH_PARSE`**). **`joinAssistantText`** uses all **`text`** blocks in the message. Extraction uses **stripCodeFences** + **balanced-bracket** array slice (not greedy `\[[\s\S]*\]`). On parse failure, logs a snippet and returns **neutral scores** instead of throwing (endpoint stays **200** with unranked reasons).
