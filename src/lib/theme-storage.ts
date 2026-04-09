@@ -1,10 +1,10 @@
 /**
- * Persisted appearance: `light` (icy), `sepia` (Kindle-style cream), `paper` (grey newsprint), `dark`.
+ * Persisted appearance: `light` (icy), `sepia`, `paper` (newsprint), `business` (corporate blue/white), `dark`.
  *
  * Schema v2: historically `paper` meant sepia. On first read after upgrade, migrate that value to `sepia`
  * so the id `paper` can mean the new neutral newspaper theme.
  */
-export type StoredTheme = 'light' | 'dark' | 'sepia' | 'paper'
+export type StoredTheme = 'light' | 'dark' | 'sepia' | 'paper' | 'business'
 
 export const THEME_STORAGE_KEY = 'stormchain-theme'
 export const THEME_SCHEMA_KEY = 'stormchain-theme-schema'
@@ -12,7 +12,7 @@ export const THEME_SCHEMA_VERSION = '2'
 export const LIGHT_APPEARANCE_KEY = 'stormchain-light-appearance'
 
 export function isStoredTheme(v: string | null): v is StoredTheme {
-  return v === 'light' || v === 'dark' || v === 'sepia' || v === 'paper'
+  return v === 'light' || v === 'dark' || v === 'sepia' || v === 'paper' || v === 'business'
 }
 
 /** Run on load (and in root layout inline script) before paint to avoid flash. */
@@ -27,7 +27,7 @@ export function parseStoredTheme(): StoredTheme {
         localStorage.setItem(THEME_STORAGE_KEY, 'sepia')
         return 'sepia'
       }
-      if (saved === 'light' || saved === 'dark') {
+      if (saved === 'light' || saved === 'dark' || saved === 'sepia' || saved === 'business') {
         localStorage.setItem(THEME_SCHEMA_KEY, THEME_SCHEMA_VERSION)
         return saved
       }

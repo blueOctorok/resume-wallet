@@ -1,8 +1,18 @@
 import type { Theme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
 
+function paperLight(isDark: boolean, theme?: Theme) {
+  return !isDark && theme === 'paper'
+}
+
 /** Compact control chips (wallet, messages, hamburger). */
-export function navControlButtonClass(isDark: boolean) {
+export function navControlButtonClass(isDark: boolean, theme?: Theme) {
+  if (paperLight(isDark, theme)) {
+    return cn(
+      'rounded-lg border transition-colors duration-200',
+      'border-zinc-300/95 bg-white text-zinc-900 hover:bg-zinc-50 hover:border-zinc-400/90',
+    )
+  }
   return cn(
     'rounded-lg border transition-colors duration-200',
     isDark
@@ -12,13 +22,25 @@ export function navControlButtonClass(isDark: boolean) {
 }
 
 /** Secondary text buttons in link row. */
-export function navTextLinkClass(isDark: boolean, accent?: 'teal' | 'neutral') {
+export function navTextLinkClass(isDark: boolean, accent?: 'teal' | 'neutral', theme?: Theme) {
   if (accent === 'teal') {
+    if (paperLight(isDark, theme)) {
+      return cn(
+        'rounded-lg border text-sm font-semibold transition-colors',
+        'border-zinc-400/55 bg-zinc-100/95 text-zinc-800 hover:bg-zinc-200/90 hover:border-zinc-500/45',
+      )
+    }
     return cn(
       'rounded-lg border text-sm font-semibold transition-colors',
       isDark
         ? 'border-teal-500/35 bg-teal-500/[0.08] text-teal-300 hover:bg-teal-500/15 hover:border-teal-400/40'
         : 'border-teal-600/22 bg-teal-50/95 text-teal-900 hover:bg-teal-50 hover:border-teal-600/35',
+    )
+  }
+  if (paperLight(isDark, theme)) {
+    return cn(
+      'rounded-lg border text-sm font-semibold transition-colors',
+      'border-zinc-300/90 text-zinc-800 hover:bg-zinc-100',
     )
   }
   return cn(
@@ -29,8 +51,14 @@ export function navTextLinkClass(isDark: boolean, accent?: 'teal' | 'neutral') {
   )
 }
 
-/** Stormi assistant — keep indigo family but same edge treatment as other controls. */
-export function navStormiButtonClass(isDark: boolean) {
+/** Stormi assistant — indigo on default light; paper uses neutral zinc for monochrome newsprint. */
+export function navStormiButtonClass(isDark: boolean, theme?: Theme) {
+  if (paperLight(isDark, theme)) {
+    return cn(
+      'rounded-lg border px-4 py-2 text-sm font-semibold tracking-wide transition-colors duration-200',
+      'border-zinc-300/90 bg-zinc-50/98 text-zinc-800 hover:bg-zinc-100 hover:border-zinc-400/85',
+    )
+  }
   return cn(
     'rounded-lg border px-4 py-2 text-sm font-semibold tracking-wide transition-colors duration-200',
     isDark
@@ -39,7 +67,7 @@ export function navStormiButtonClass(isDark: boolean) {
   )
 }
 
-/** Hub primary CTA — teal/violet gradient ring; sepia/paper use muted rings (no brand gradient). */
+/** Hub primary CTA — teal/violet gradient ring; sepia/paper/business use alternate rings. */
 export function navHubGradientRingClass(theme: Theme = 'light') {
   if (theme === 'sepia') {
     return cn(
@@ -55,6 +83,13 @@ export function navHubGradientRingClass(theme: Theme = 'light') {
       'shadow-md shadow-zinc-500/10',
     )
   }
+  if (theme === 'business') {
+    return cn(
+      'rounded-xl p-[2px] w-full sm:w-auto shrink-0',
+      'bg-gradient-to-br from-blue-700/90 via-blue-600/75 to-slate-600/55',
+      'shadow-md shadow-slate-400/20',
+    )
+  }
   return cn(
     'rounded-xl p-[2px] w-full sm:w-auto shrink-0',
     /* Light: teal-600 → teal-500 → violet (no cyan — single green family) */
@@ -64,7 +99,15 @@ export function navHubGradientRingClass(theme: Theme = 'light') {
   )
 }
 
-export function navHubInnerButtonClass() {
+export function navHubInnerButtonClass(theme: Theme = 'light') {
+  if (theme === 'business') {
+    return cn(
+      'w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2',
+      'bg-white text-blue-700 border border-blue-100/90',
+      'hover:bg-blue-50/95',
+      'transition-colors duration-200',
+    )
+  }
   return cn(
     'w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-[10px] flex items-center justify-center gap-2',
     'bg-gray-950 text-white border border-white/[0.08]',
@@ -97,7 +140,13 @@ export function navDropdownItemBorderClass(isDark: boolean) {
   return cn('border-t', isDark ? 'border-gray-800' : 'border-gray-100')
 }
 
-export function navStormPillClass(isDark: boolean) {
+export function navStormPillClass(isDark: boolean, theme?: Theme) {
+  if (paperLight(isDark, theme)) {
+    return cn(
+      'flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors duration-200 cursor-pointer',
+      'text-zinc-700 bg-zinc-100/95 hover:bg-zinc-200/95 border-zinc-300/90',
+    )
+  }
   return cn(
     'flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors duration-200 cursor-pointer',
     isDark

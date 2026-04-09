@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BookOpen, Check, ChevronDown, FileText, Moon, Sun } from 'lucide-react'
+import { BookOpen, Briefcase, Check, ChevronDown, FileText, Moon, Sun } from 'lucide-react'
 import { useTheme, type Theme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
 import { navControlButtonClass, navDropdownItemBorderClass, navDropdownItemClass } from '@/lib/navigation-styles'
@@ -10,6 +10,12 @@ const OPTIONS: { id: Theme; label: string; description: string; Icon: typeof Sun
   { id: 'light', label: 'Icy light', description: 'Cool slate vault (default)', Icon: Sun },
   { id: 'sepia', label: 'Sepia', description: 'Kindle-style warm cream — soft & easy on the eyes', Icon: BookOpen },
   { id: 'paper', label: 'Paper', description: 'Newsprint grey — calm, low contrast, print-like', Icon: FileText },
+  {
+    id: 'business',
+    label: 'Business classic',
+    description: 'Clean white, professional blue accent, flat corporate chrome',
+    Icon: Briefcase,
+  },
   { id: 'dark', label: 'Dark', description: 'Storm void', Icon: Moon },
 ]
 
@@ -17,7 +23,17 @@ function activeThemeIcon(theme: Theme) {
   if (theme === 'dark') return Moon
   if (theme === 'sepia') return BookOpen
   if (theme === 'paper') return FileText
+  if (theme === 'business') return Briefcase
   return Sun
+}
+
+/** Selected-row icon/check: teal default light, blue for business, zinc for monochrome paper. */
+function rowAccent(isDark: boolean, selected: boolean, appTheme: Theme) {
+  if (!selected) return isDark ? 'text-gray-400' : 'text-stone-500'
+  if (isDark) return 'text-teal-400'
+  if (appTheme === 'business') return 'text-blue-700'
+  if (appTheme === 'paper') return 'text-zinc-700'
+  return 'text-teal-600'
 }
 
 export default function ThemePicker() {
@@ -58,7 +74,7 @@ export default function ThemePicker() {
         onClick={() => setOpen((o) => !o)}
         className={cn(
           'relative flex cursor-pointer items-center gap-1.5 rounded-lg p-2.5 pr-2',
-          navControlButtonClass(isDark),
+          navControlButtonClass(isDark, theme),
         )}
         aria-expanded={open}
         aria-haspopup='listbox'
@@ -92,6 +108,7 @@ export default function ThemePicker() {
           </p>
           {OPTIONS.map((opt, i) => {
             const selected = theme === opt.id
+            const accent = rowAccent(isDark, selected, theme)
             return (
               <button
                 key={opt.id}
@@ -106,22 +123,14 @@ export default function ThemePicker() {
                   selected && (isDark ? 'bg-gray-900/80' : 'bg-stone-50'),
                 )}
               >
-                <opt.Icon
-                  className={cn(
-                    'mt-0.5 h-4 w-4 shrink-0',
-                    selected ? (isDark ? 'text-teal-400' : 'text-teal-600') : isDark ? 'text-gray-400' : 'text-stone-500',
-                  )}
-                  aria-hidden
-                />
+                <opt.Icon className={cn('mt-0.5 h-4 w-4 shrink-0', accent)} aria-hidden />
                 <span className='min-w-0 flex-1 text-left'>
                   <span className='block font-medium'>{opt.label}</span>
                   <span className={cn('mt-0.5 block text-xs font-normal', isDark ? 'text-gray-500' : 'text-stone-500')}>
                     {opt.description}
                   </span>
                 </span>
-                {selected ? (
-                  <Check className={cn('h-4 w-4 shrink-0', isDark ? 'text-teal-400' : 'text-teal-600')} aria-hidden />
-                ) : null}
+                {selected ? <Check className={cn('h-4 w-4 shrink-0', accent)} aria-hidden /> : null}
               </button>
             )
           })}

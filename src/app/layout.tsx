@@ -112,14 +112,14 @@ export default function RootLayout({
                       localStorage.setItem(SCHEMA, VER);
                       localStorage.setItem(SK, 'sepia');
                       t = 'sepia';
-                    } else if (saved === 'light' || saved === 'dark') {
+                    } else if (saved === 'light' || saved === 'dark' || saved === 'sepia' || saved === 'business') {
                       localStorage.setItem(SCHEMA, VER);
                       t = saved;
                     } else {
                       localStorage.setItem(SCHEMA, VER);
                       t = 'light';
                     }
-                  } else if (saved === 'light' || saved === 'dark' || saved === 'sepia' || saved === 'paper') {
+                  } else if (saved === 'light' || saved === 'dark' || saved === 'sepia' || saved === 'paper' || saved === 'business') {
                     t = saved;
                   }
                   document.documentElement.setAttribute('data-theme', t);

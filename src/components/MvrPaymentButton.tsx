@@ -308,35 +308,41 @@ async function executeMvrPayment({
       txHash = callId
     }
 
-    let savedPaymentTxHash = txHash
-    try {
-      const paymentResponse = await fetch('/api/mvr/payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          txHash,
-          amountUsdc: config.priceUsdc,
-          walletAddress: walletAddressForRecord,
-          userType,
-          ...(companyId ? { companyId } : {}),
-          ...(paidByWalletAddress ? { paidByWalletAddress } : {}),
-        }),
-      })
-      if (paymentResponse.status === 409) {
-        const errBody = await paymentResponse.json().catch(() => ({}))
-        const msg =
-          typeof errBody.message === 'string'
-            ? errBody.message
-            : 'This payment was already linked to another account. Try again with a fresh transaction or contact support.'
-        throw new Error(msg)
-      }
-      if (paymentResponse.ok) {
-        const paymentData = await paymentResponse.json()
-        savedPaymentTxHash = paymentData.payment?.txHash || txHash
-      }
-    } catch (err) {
-      console.error('⚠️ Error recording payment:', err)
+    const paymentResponse = await fetch('/api/mvr/payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        txHash,
+        amountUsdc: config.priceUsdc,
+        walletAddress: walletAddressForRecord,
+        userType,
+        ...(companyId ? { companyId } : {}),
+        ...(paidByWalletAddress ? { paidByWalletAddress } : {}),
+      }),
+    })
+
+    if (paymentResponse.status === 409) {
+      const errBody = await paymentResponse.json().catch(() => ({}))
+      const msg =
+        typeof errBody.message === 'string'
+          ? errBody.message
+          : 'This payment was already linked to another account. Try again with a fresh transaction or contact support.'
+      throw new Error(msg)
     }
+
+    if (!paymentResponse.ok) {
+      const errBody = await paymentResponse.json().catch(() => ({}))
+      const msg =
+        typeof errBody.message === 'string'
+          ? errBody.message
+          : typeof errBody.error === 'string'
+            ? errBody.error
+            : `Could not record payment (${paymentResponse.status}). Your wallet may have sent USDC — contact support with your tx hash.`
+      throw new Error(msg)
+    }
+
+    const paymentData = await paymentResponse.json()
+    const savedPaymentTxHash = paymentData.payment?.txHash || txHash
 
     setSuccess(true)
     onPaymentSuccess?.(savedPaymentTxHash)

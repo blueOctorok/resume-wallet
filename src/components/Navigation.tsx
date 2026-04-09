@@ -74,6 +74,7 @@ export default function Navigation({
   const { navigateToMessages } = useUIStore()
   const { notifications } = useNotificationStore()
   const isDark = theme === 'dark'
+  const isPaperLight = !isDark && theme === 'paper'
   // Derive unread message count from existing notification store — no extra fetch needed
   const unreadMessageCount = notifications.filter(n => n.type === 'new_message' && !n.read).length
 
@@ -117,11 +118,18 @@ export default function Navigation({
                     }}
                     className={cn(
                       'relative group flex flex-col items-center space-y-1.5 p-2.5 cursor-pointer',
-                      navControlButtonClass(isDark),
+                      navControlButtonClass(isDark, theme),
                     )}
                     aria-label='View account status'
                   >
-                    <div className='w-2.5 h-2.5 rounded-full bg-teal-500 shadow-[0_0_10px_rgb(13_148_136/0.45)]' />
+                    <div
+                      className={cn(
+                        'w-2.5 h-2.5 rounded-full',
+                        isPaperLight
+                          ? 'bg-zinc-500 shadow-[0_0_10px_rgb(63_63_70/0.35)]'
+                          : 'bg-teal-500 shadow-[0_0_10px_rgb(13_148_136/0.45)]',
+                      )}
+                    />
                     <span className='text-[11px] font-semibold uppercase tracking-wide'>Wallet</span>
                   </button>
                 ) : (
@@ -148,14 +156,15 @@ export default function Navigation({
                     aria-label={`Messages${unreadMessageCount > 0 ? ` (${unreadMessageCount} unread)` : ''}`}
                     className={cn(
                       'hidden sm:flex relative items-center justify-center w-9 h-9 cursor-pointer',
-                      navControlButtonClass(isDark),
+                      navControlButtonClass(isDark, theme),
                     )}
                   >
                     <MessageSquare className='w-4 h-4' />
                     {unreadMessageCount > 0 && (
                       <span
                         className={cn(
-                          'absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-blue-500 text-white text-[10px] font-bold rounded-full border-2',
+                          'absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-white text-[10px] font-bold rounded-full border-2',
+                          isPaperLight ? 'bg-zinc-700' : 'bg-blue-500',
                           isDark ? 'border-gray-950' : 'border-white',
                         )}
                       >
@@ -181,7 +190,7 @@ export default function Navigation({
                     }}
                     className={cn(
                       'hidden md:flex relative group items-center justify-center cursor-pointer',
-                      navStormiButtonClass(isDark),
+                      navStormiButtonClass(isDark, theme),
                       tHasUnread && 'animate-pulse',
                     )}
                     aria-label='Open Stormi assistant'
@@ -190,7 +199,8 @@ export default function Navigation({
                     {tHasUnread && (
                       <span
                         className={cn(
-                          'absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 shadow-lg',
+                          'absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse border-2 shadow-lg',
+                          isPaperLight ? 'bg-zinc-700' : 'bg-red-500',
                           isDark ? 'border-gray-950' : 'border-white',
                         )}
                       />
@@ -202,14 +212,15 @@ export default function Navigation({
                 <button
                   type='button'
                   onClick={toggleMenu}
-                  className={cn('relative sm:hidden p-2.5 cursor-pointer', navControlButtonClass(isDark))}
+                  className={cn('relative sm:hidden p-2.5 cursor-pointer', navControlButtonClass(isDark, theme))}
                   aria-label='Toggle menu'
                 >
                   {/* Badge dot when there are unread items */}
                   {isAuthenticated && (unreadMessageCount > 0 || notifications.some(n => !n.read)) && (
                     <span
                       className={cn(
-                        'absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 z-10',
+                        'absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 z-10',
+                        isPaperLight ? 'bg-zinc-700' : 'bg-red-500',
                         isDark ? 'border-gray-950' : 'border-white',
                       )}
                     />
@@ -265,9 +276,16 @@ export default function Navigation({
                       onStatusClick?.()
                       setIsMenuOpen(false)
                     }}
-                    className={cn('flex items-center gap-2 px-3 py-2', navControlButtonClass(isDark))}
+                    className={cn('flex items-center gap-2 px-3 py-2', navControlButtonClass(isDark, theme))}
                   >
-                    <div className='w-2.5 h-2.5 rounded-full bg-teal-500 shadow-[0_0_8px_rgb(13_148_136/0.4)]' />
+                    <div
+                      className={cn(
+                        'w-2.5 h-2.5 rounded-full',
+                        isPaperLight
+                          ? 'bg-zinc-500 shadow-[0_0_8px_rgb(63_63_70/0.3)]'
+                          : 'bg-teal-500 shadow-[0_0_8px_rgb(13_148_136/0.4)]',
+                      )}
+                    />
                     <span className='text-xs font-semibold'>Wallet</span>
                   </button>
 
@@ -278,12 +296,17 @@ export default function Navigation({
                       navigateToMessages()
                       setIsMenuOpen(false)
                     }}
-                    className={cn('relative flex items-center gap-2 px-3 py-2', navControlButtonClass(isDark))}
+                    className={cn('relative flex items-center gap-2 px-3 py-2', navControlButtonClass(isDark, theme))}
                   >
                     <MessageSquare className='w-4 h-4' />
                     <span className='text-xs font-medium'>Messages</span>
                     {unreadMessageCount > 0 && (
-                      <span className='flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-blue-500 text-white text-[10px] font-bold rounded-full'>
+                      <span
+                        className={cn(
+                          'flex items-center justify-center min-w-[18px] h-[18px] px-1 text-white text-[10px] font-bold rounded-full',
+                          isPaperLight ? 'bg-zinc-700' : 'bg-blue-500',
+                        )}
+                      >
                         {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
                       </span>
                     )}
@@ -305,7 +328,7 @@ export default function Navigation({
                       handleNavigation('home')
                       setIsMenuOpen(false)
                     }}
-                    className={cn('flex items-center gap-2 px-4 py-2', navTextLinkClass(isDark))}
+                    className={cn('flex items-center gap-2 px-4 py-2', navTextLinkClass(isDark, undefined, theme))}
                   >
                     <Home className='w-4 h-4' />
                     Home
@@ -316,7 +339,7 @@ export default function Navigation({
                       handleNavigation('jobs')
                       setIsMenuOpen(false)
                     }}
-                    className={cn('flex items-center gap-2 px-4 py-2', navTextLinkClass(isDark, 'teal'))}
+                    className={cn('flex items-center gap-2 px-4 py-2', navTextLinkClass(isDark, 'teal', theme))}
                   >
                     <Briefcase className='w-4 h-4' />
                     Browse jobs
@@ -341,13 +364,18 @@ export default function Navigation({
                   }}
                   className={cn(
                     'sm:hidden w-full px-4 py-2.5 text-sm font-medium flex items-center justify-center gap-2 cursor-pointer',
-                    navStormiButtonClass(isDark),
+                    navStormiButtonClass(isDark, theme),
                   )}
                 >
                   <Sparkles className='w-4 h-4' />
                   <span>{tHasUnread ? 'Stormi has updates' : 'Chat with Stormi'}</span>
                   {tHasUnread && (
-                    <span className='w-2 h-2 rounded-full bg-red-500 animate-pulse' />
+                    <span
+                      className={cn(
+                        'w-2 h-2 rounded-full animate-pulse',
+                        isPaperLight ? 'bg-zinc-600' : 'bg-red-500',
+                      )}
+                    />
                   )}
                 </button>
               )}
@@ -362,7 +390,7 @@ export default function Navigation({
                     <button
                       type='button'
                       onClick={() => setIsHubDropdownOpen(!isHubDropdownOpen)}
-                      className={cn(navHubInnerButtonClass(), 'cursor-pointer')}
+                      className={cn(navHubInnerButtonClass(theme), 'cursor-pointer')}
                     >
                       {userRole === 'driver' && <Car className='w-4 h-4' />}
                       {userRole === 'employer' && <Building2 className='w-4 h-4' />}
@@ -425,10 +453,14 @@ export default function Navigation({
                             showJourneyModals
                               ? isDark
                                 ? 'bg-teal-500/20 text-teal-400'
-                                : 'bg-teal-100 text-teal-800'
+                                : isPaperLight
+                                  ? 'bg-zinc-200 text-zinc-800'
+                                  : 'bg-teal-100 text-teal-800'
                               : isDark
                                 ? 'bg-gray-800 text-gray-400'
-                                : 'bg-slate-100 text-slate-600',
+                                : isPaperLight
+                                  ? 'bg-zinc-100 text-zinc-600'
+                                  : 'bg-slate-100 text-slate-600',
                           )}
                         >
                           {showJourneyModals ? 'On' : 'Off'}
@@ -445,7 +477,7 @@ export default function Navigation({
                         className={cn(
                           navDropdownItemClass(isDark),
                           navDropdownItemBorderClass(isDark),
-                          isDark ? 'text-teal-400' : 'text-teal-700',
+                          isDark ? 'text-teal-400' : isPaperLight ? 'text-zinc-700' : 'text-teal-700',
                         )}
                       >
                         <HelpCircle className='w-4 h-4' />
@@ -464,7 +496,7 @@ export default function Navigation({
                   <button
                     type='button'
                     onClick={() => handleNavigation('stormchain')}
-                    className={cn(navStormPillClass(isDark))}
+                    className={cn(navStormPillClass(isDark, theme))}
                     title='View Storm tokens'
                   >
                     <StormTokenMark size='xs' className='scale-90' />

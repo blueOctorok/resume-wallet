@@ -26,6 +26,7 @@ export default function StormBackground() {
   const isDark = theme === 'dark'
   const isSepia = theme === 'sepia'
   const isPaper = theme === 'paper'
+  const isBusiness = theme === 'business'
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -68,8 +69,23 @@ export default function StormBackground() {
     'radial-gradient(ellipse 88% 52% at 50% 100%, rgba(82,82,91,0.03), transparent 52%)',
   ].join(', ')
 
+  /* Business classic: flat off-white canvas, barely-there cool tint */
+  const corporateAtmosphere = [
+    'linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(243,244,246,0.35) 45%, transparent 62%)',
+    'radial-gradient(ellipse 120% 70% at 50% 0%, rgba(219,234,254,0.14), transparent 58%)',
+    'linear-gradient(178deg, #f3f4f6 0%, #f9fafb 55%, #ffffff 100%)',
+  ].join(', ')
+
   const particleOptions = useMemo((): ISourceOptions => {
-    const bubbleColor = isDark ? '#5c6d82' : isSepia ? '#c4b5a0' : isPaper ? '#a1a1aa' : '#5f7a8c'
+    const bubbleColor = isDark
+      ? '#5c6d82'
+      : isSepia
+        ? '#c4b5a0'
+        : isPaper
+          ? '#a1a1aa'
+          : isBusiness
+            ? '#cbd5e1'
+            : '#5f7a8c'
     const base: ISourceOptions = {
       fullScreen: { enable: true, zIndex: -1 },
       background: { color: { value: '' } },
@@ -84,9 +100,9 @@ export default function StormBackground() {
       retina_detect: true,
     }
 
-    const count = reduceMotion ? 14 : isDark ? 48 : isSepia || isPaper ? 16 : 44
-    const speed = reduceMotion ? 0.18 : isDark ? 0.55 : isSepia || isPaper ? 0.32 : 0.65
-    const opacityBase = isDark ? 0.32 : isSepia || isPaper ? 0.06 : 0.3
+    const count = reduceMotion ? 14 : isDark ? 48 : isSepia || isPaper || isBusiness ? 14 : 44
+    const speed = reduceMotion ? 0.18 : isDark ? 0.55 : isSepia || isPaper || isBusiness ? 0.28 : 0.65
+    const opacityBase = isDark ? 0.32 : isSepia || isPaper || isBusiness ? 0.05 : 0.3
 
     return {
       ...base,
@@ -123,7 +139,7 @@ export default function StormBackground() {
         },
       },
     }
-  }, [isDark, isPaper, isSepia, reduceMotion])
+  }, [isBusiness, isDark, isPaper, isSepia, reduceMotion])
 
   return (
     <>
@@ -136,7 +152,9 @@ export default function StormBackground() {
               ? sepiaAtmosphere
               : isPaper
                 ? newsprintAtmosphere
-                : lightAtmosphere,
+                : isBusiness
+                  ? corporateAtmosphere
+                  : lightAtmosphere,
         }}
         aria-hidden
       />

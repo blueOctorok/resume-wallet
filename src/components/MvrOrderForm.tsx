@@ -38,7 +38,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
   // Payment state
   const [paymentTxHash, setPaymentTxHash] = useState<string | null>(null)
   const [isPaymentComplete, setIsPaymentComplete] = useState(false)
-  /** Self-order: user acknowledges MVR is fulfilled by Key Background (Accio), not Storm alone */
+  /** Self-order: CRA disclosure + express consent before pay (Key Background / FCRA transparency) */
   const [vendorProcessingAck, setVendorProcessingAck] = useState(false)
 
   // Check if required form fields are filled
@@ -90,7 +90,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
     }
 
     if (!vendorProcessingAck) {
-      setError('Please confirm you understand who processes your MVR request.')
+      setError('Please read the disclosure and check the consent box before submitting.')
       return
     }
 
@@ -440,7 +440,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
               </div>
             </div>
 
-            {/* Vendor processing notice — self-order is not employer FCRA flow; transparency only */}
+            {/* Vendor / CRA disclosure — self-order; express consent required before pay */}
             <div
               className={`rounded-2xl border p-5 ${
                 theme === 'dark'
@@ -453,20 +453,33 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
                   theme === 'dark' ? 'text-gray-200' : 'text-gray-800'
                 }`}
               >
-                Who processes your MVR
+                Your MVR and consumer reporting
+              </p>
+              <p
+                className={`text-xs leading-relaxed mb-3 ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                }`}
+              >
+                {
+                  'Your motor vehicle record ("MVR") is obtained through Key Background Screening, Inc. ("Key Background"), a consumer reporting agency ("CRA"), via its secure ordering system, and not directly by Storm. The information you provide will be transmitted to Key Background for the purpose of retrieving your official state driving record. Storm does not independently conduct motor vehicle record searches.'
+                }
               </p>
               <p
                 className={`text-xs leading-relaxed mb-4 ${
                   theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
                 }`}
               >
-                Your motor vehicle record is ordered through{' '}
-                <span className='font-medium text-gray-800 dark:text-gray-200'>
-                  Key Background Screening, Inc.
-                </span>{' '}
-                (keybackground.com) using their secure order system—not by Storm alone. The
-                details you enter here are transmitted so they can retrieve your state driving
-                record. Storm does not run the DMV search itself.
+                Learn more:{' '}
+                <a
+                  href='https://keybackground.com'
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  className={`font-medium underline underline-offset-2 ${
+                    theme === 'dark' ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-800'
+                  }`}
+                >
+                  keybackground.com
+                </a>
               </p>
               <label
                 className={`flex items-start gap-3 cursor-pointer text-sm ${
@@ -477,11 +490,12 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
                   type='checkbox'
                   checked={vendorProcessingAck}
                   onChange={(e) => setVendorProcessingAck(e.target.checked)}
-                  className='mt-1 h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 dark:bg-gray-900'
+                  className='mt-1 h-4 w-4 shrink-0 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 dark:bg-gray-900'
                 />
-                <span>
-                  I understand my information will be sent to Key Background Screening, Inc. to
-                  process this MVR request.
+                <span className='leading-snug'>
+                  By checking this box and continuing, I acknowledge and provide my express consent to
+                  the transmission of my information to Key Background Screening, Inc., a consumer
+                  reporting agency, for the purpose of processing this MVR request.
                 </span>
               </label>
             </div>
@@ -507,7 +521,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
                     {!isFormValid
                       ? 'Fill out all required fields above before paying.'
                       : !vendorProcessingAck
-                        ? 'Confirm who processes your MVR (checkbox above), then pay.'
+                        ? 'Read the disclosure and check the consent box, then pay.'
                         : 'Complete payment to proceed with your MVR order.'}
                   </p>
                   <MvrPaymentButton
@@ -591,7 +605,7 @@ export default function MvrOrderForm({ userAddress, onBack }: MvrOrderFormProps)
               {isLoading
                 ? 'Ordering MVR...'
                 : !vendorProcessingAck
-                  ? 'Confirm vendor notice above'
+                  ? 'Confirm consent above'
                   : !isPaymentComplete
                     ? 'Complete Payment First'
                     : 'Submit MVR Order'}

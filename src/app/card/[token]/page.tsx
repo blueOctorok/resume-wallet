@@ -4,13 +4,12 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { Loader2, AlertCircle, Send, CheckCircle } from 'lucide-react'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
-import { ThemeProvider, useTheme } from '@/contexts/ThemeContext'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 import ProjectedCareerCard from '@/components/career-card/ProjectedCareerCard'
 import type { ProjectedCareerCard as CardData } from '@/types/career-card'
 
 function PublicCardContent() {
   const { token } = useParams<{ token: string }>()
-  const { isDark } = useTheme()
 
   const [data, setData] = useState<CardData | null>(null)
   const [loading, setLoading] = useState(true)

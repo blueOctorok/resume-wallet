@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Bell, BriefcaseBusiness, UserCheck, ShieldCheck, Users, FileText, ClipboardCheck, MessageSquare, X, CheckCheck, Sparkles } from 'lucide-react'
 import { useNotificationStore, type AppNotification } from '@/stores/notification-store'
-import { useTheme } from '@/contexts/ThemeContext'
+import { useTheme, type Theme } from '@/contexts/ThemeContext'
 import { useUIStore } from '@/stores'
 import { cn } from '@/lib/utils'
 import { navControlButtonClass } from '@/lib/navigation-styles'
@@ -32,6 +32,13 @@ const TYPE_COLOR: Record<string, string> = {
   consent_signed:          'bg-teal-500/20 text-teal-400',
   new_message:             'bg-blue-500/20 text-blue-400',
   job_match:               'bg-sky-500/20 text-sky-400',
+}
+
+const TYPE_COLOR_PAPER = 'bg-zinc-200/90 text-zinc-700'
+
+function typeChipClass(type: string, isDark: boolean, appTheme: Theme) {
+  if (!isDark && appTheme === 'paper') return TYPE_COLOR_PAPER
+  return TYPE_COLOR[type] ?? 'bg-gray-500/20 text-gray-400'
 }
 
 function timeAgo(dateString: string): string {
@@ -109,6 +116,7 @@ export default function NotificationBell({ walletAddress }: NotificationBellProp
 
   const { navigateToMessages } = useUIStore()
   const isDark = theme === 'dark'
+  const isPaperLight = !isDark && theme === 'paper'
 
   return (
     <div ref={dropdownRef} className='relative'>
@@ -119,14 +127,15 @@ export default function NotificationBell({ walletAddress }: NotificationBellProp
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
         className={cn(
           'relative flex items-center justify-center w-9 h-9 cursor-pointer',
-          navControlButtonClass(isDark),
+          navControlButtonClass(isDark, theme),
         )}
       >
         <Bell className='w-4 h-4' />
         {unreadCount > 0 && (
           <span
             className={cn(
-              'absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-teal-500 text-white text-[10px] font-bold rounded-full border-2',
+              'absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-white text-[10px] font-bold rounded-full border-2',
+              isPaperLight ? 'bg-zinc-700' : 'bg-teal-500',
               isDark ? 'border-gray-950' : 'border-white',
             )}
           >
@@ -154,7 +163,11 @@ export default function NotificationBell({ walletAddress }: NotificationBellProp
                 <button
                   onClick={() => markAllRead(walletAddress)}
                   className={`flex items-center gap-1 text-xs font-medium transition-colors cursor-pointer ${
-                    isDark ? 'text-teal-400 hover:text-teal-300' : 'text-teal-600 hover:text-teal-700'
+                    isDark
+                      ? 'text-teal-400 hover:text-teal-300'
+                      : isPaperLight
+                        ? 'text-zinc-600 hover:text-zinc-900'
+                        : 'text-teal-600 hover:text-teal-700'
                   }`}
                   title='Mark all as read'
                 >
@@ -190,13 +203,19 @@ export default function NotificationBell({ walletAddress }: NotificationBellProp
                   className={`w-full text-left px-4 py-3 flex gap-3 border-b transition-colors cursor-pointer ${
                     isDark
                       ? `border-gray-800 hover:bg-gray-800 ${!n.read ? 'bg-gray-800/60' : ''}`
-                      : `border-gray-50 hover:bg-gray-50 ${!n.read ? 'bg-teal-50/60' : ''}`
+                      : isPaperLight
+                        ? `border-zinc-100 hover:bg-zinc-50 ${!n.read ? 'bg-zinc-100/80' : ''}`
+                        : `border-gray-50 hover:bg-gray-50 ${!n.read ? 'bg-teal-50/60' : ''}`
                   }`}
                 >
                   {/* Type icon */}
-                  <div className={`flex-shrink-0 mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center ${
-                    TYPE_COLOR[n.type] ?? 'bg-gray-500/20 text-gray-400'
-                  }`}>
+                  <div
+                    className={`flex-shrink-0 mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center ${typeChipClass(
+                      n.type,
+                      isDark,
+                      theme,
+                    )}`}
+                  >
                     {TYPE_ICON[n.type] ?? <Bell className='w-4 h-4' />}
                   </div>
 
@@ -209,7 +228,11 @@ export default function NotificationBell({ walletAddress }: NotificationBellProp
                         {n.title}
                       </p>
                       {!n.read && (
-                        <span className='flex-shrink-0 w-1.5 h-1.5 mt-1 rounded-full bg-teal-500' />
+                        <span
+                          className={`flex-shrink-0 w-1.5 h-1.5 mt-1 rounded-full ${
+                            isPaperLight ? 'bg-zinc-500' : 'bg-teal-500'
+                          }`}
+                        />
                       )}
                     </div>
                     <p className={`text-xs mt-0.5 line-clamp-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>

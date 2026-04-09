@@ -12,7 +12,7 @@ export type Theme = StoredTheme
 
 interface ThemeContextType {
   theme: Theme
-  /** Dark ↔ last icy / sepia / paper appearance (persists which light variant you had). */
+  /** Dark ↔ last non-dark appearance (persists which light variant you had). */
   toggleTheme: () => void
   setTheme: (theme: Theme) => void
 }
@@ -20,7 +20,7 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 function isLightVariant(t: Theme): boolean {
-  return t === 'light' || t === 'sepia' || t === 'paper'
+  return t === 'light' || t === 'sepia' || t === 'paper' || t === 'business'
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
@@ -62,7 +62,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (prev === 'dark') {
         try {
           const back = localStorage.getItem(LIGHT_APPEARANCE_KEY)
-          if (back === 'light' || back === 'sepia' || back === 'paper') return back as Theme
+          if (back === 'light' || back === 'sepia' || back === 'paper' || back === 'business') return back as Theme
         } catch {
           /* fall through */
         }
@@ -96,7 +96,7 @@ export function useTheme() {
   return context
 }
 
-/** True for icy light, sepia, and paper — anything that is not the dark void theme. */
+/** True for all non-dark themes (icy, sepia, paper, business). */
 export function isLightAppearance(theme: Theme): boolean {
   return isLightVariant(theme)
 }

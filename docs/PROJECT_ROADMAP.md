@@ -20,7 +20,7 @@
 | **Block Hive tiles** | ✅ Done | Unified **light** chrome (slate ring, inner gradient, specular line); **slate** titles + colored accent bar; larger type; **Coming soon** state; tooltips; hover shadow stack (`CandidateHub` `BlockTile`) |
 | **Hub block tiles (“vault”)** | ✅ Done | Chamfered credential silhouette, gradient rim, twin-ring sigil, foot strip — CSS grid layout (center + ring); shared with `HomePage` `VaultShowcase` (`HubBlockVault.tsx`) |
 | **Dark UI = LoadingScreen DNA** | ✅ Done | **`--storm-*` CSS vars**, body blooms, **`.storm-glass-panel`**, nav/scroll/cards/`StormBackground`/`StormTokenMark`/hive hex aligned to loader aesthetic |
-| **Light appearances** (`sepia` + `paper`) | ✅ Done | **`sepia`** = Kindle-style cream (was legacy `paper`). **`paper`** = grey **newsprint** (zinc neutrals). Schema v2 migration; `SEPIA_KINDLE_VAULT_SHELL` / `PAPER_NEWSPRINT_VAULT_SHELL`; **`ThemePicker`** (icy / sepia / paper / dark); `toggleTheme` restores last non-dark variant |
+| **Light appearances** (`sepia`, `paper`, `business`) | ✅ Done | **`sepia`** / **`paper`** (newsprint, monochrome chrome) / **`business`** (professional blue + white). Schema v2 migration; vault presets per theme; **`ThemePicker`** (icy / sepia / paper / business / dark); `toggleTheme` restores last non-dark variant |
 | **Brand lockup + favicon** | ✅ Done | **`StormChainWordmark`** in **nav + whitepaper + homepage** (`size="display"` larger than whitepaper `hero`); **`favicon.svg`** (rings + lightning) |
 
 ## 💼 **Stormi hiring tools + saved jobs** (March 2026)

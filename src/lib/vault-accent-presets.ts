@@ -264,11 +264,39 @@ export const PAPER_NEWSPRINT_VAULT_SHELL: VaultAccentLayers = {
   sheenLightClassName: 'bg-gradient-to-r from-transparent via-zinc-200/25 to-transparent',
 }
 
+/** Business classic: flat white, subtle slate rim, professional blue hint — no teal/violet. */
+export const BUSINESS_CLASSIC_VAULT_SHELL: VaultAccentLayers = {
+  rimLight:
+    'linear-gradient(135deg, rgba(59,130,246,0.14) 0%, rgba(255,255,255,0.72) 40%, transparent 58%, rgba(148,163,184,0.2) 100%)',
+  rimDark: TEAL.rimDark,
+  stripLight: 'linear-gradient(90deg, transparent, rgba(59,130,246,0.2), rgba(148,163,184,0.12), transparent)',
+  stripDark: TEAL.stripDark,
+  conicLight:
+    'conic-gradient(from 200deg at 88% 0%, transparent 0deg, rgba(59,130,246,0.06) 90deg, transparent 220deg, rgba(148,163,184,0.05) 300deg, transparent 360deg)',
+  conicDark: TEAL.conicDark,
+  chamferLight:
+    'radial-gradient(ellipse 75% 75% at 88% 12%, rgba(59,130,246,0.16) 0%, transparent 72%)',
+  chamferDark: TEAL.chamferDark,
+  sweepLight: 'linear-gradient(to right, transparent, rgba(59,130,246,0.08), transparent)',
+  sweepDark: TEAL.sweepDark,
+  filterPanelLight:
+    'drop-shadow(0 8px 24px rgba(15,23,42,0.06)) drop-shadow(0 2px 6px rgba(15,23,42,0.04))',
+  filterPanelDark: TEAL.filterPanelDark,
+  filterNavLight:
+    'drop-shadow(0 10px 26px rgba(15,23,42,0.07)) drop-shadow(0 2px 8px rgba(15,23,42,0.045))',
+  filterNavDark: TEAL.filterNavDark,
+  innerBgLight:
+    'linear-gradient(180deg, rgba(255,255,255,0.998) 0%, rgba(248,250,252,0.99) 45%, rgba(241,245,249,0.985) 100%)',
+  innerBgDark: TEAL.innerBgDark,
+  sheenLightClassName: 'bg-gradient-to-r from-transparent via-slate-100/35 to-transparent',
+}
+
 export function getVaultAccentLayersForTheme(
   preset: VaultAccentPreset,
-  theme: 'light' | 'dark' | 'sepia' | 'paper',
+  theme: 'light' | 'dark' | 'sepia' | 'paper' | 'business',
 ): VaultAccentLayers {
   if (theme === 'sepia') return SEPIA_KINDLE_VAULT_SHELL
   if (theme === 'paper') return PAPER_NEWSPRINT_VAULT_SHELL
+  if (theme === 'business') return BUSINESS_CLASSIC_VAULT_SHELL
   return getVaultAccentLayers(preset)
 }

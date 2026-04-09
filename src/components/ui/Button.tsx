@@ -21,6 +21,9 @@ const primarySepia =
 /** Newsprint: neutral zinc — no teal */
 const primaryPaper =
   'bg-zinc-600 hover:bg-zinc-500 text-zinc-50 shadow-sm dark:bg-teal-500 dark:hover:bg-teal-400'
+/** Business classic: professional blue */
+const primaryBusiness =
+  'bg-[#0a66c2] hover:bg-[#004182] text-white shadow-sm dark:bg-teal-500 dark:hover:bg-teal-400'
 
 const secondaryClasses =
   'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white border border-gray-300 dark:border-gray-600'
@@ -28,6 +31,8 @@ const secondarySepiaClasses =
   'bg-[#ebe4d8] hover:bg-[#e0d8ca] text-[#3a342c] border border-[#cfc4b4] dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white dark:border-gray-600'
 const secondaryPaperClasses =
   'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white dark:border-gray-600'
+const secondaryBusinessClasses =
+  'bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white dark:border-gray-600'
 
 const ghostClasses =
   'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
@@ -35,8 +40,13 @@ const ghostSepiaClasses =
   'bg-transparent hover:bg-[#ebe4d8]/80 text-[#575049] hover:text-[#3a342c] dark:hover:bg-gray-800 dark:text-gray-400 dark:hover:text-white'
 const ghostPaperClasses =
   'bg-transparent hover:bg-zinc-200/80 text-zinc-600 hover:text-zinc-900 dark:hover:bg-gray-800 dark:text-gray-400 dark:hover:text-white'
+const ghostBusinessClasses =
+  'bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900 dark:hover:bg-gray-800 dark:text-gray-400 dark:hover:text-white'
 
 const dangerClasses = 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white shadow-sm'
+/** Paper: keep destructive affordance without red (monochrome newsprint). */
+const dangerPaperClasses =
+  'bg-zinc-800 hover:bg-zinc-900 text-zinc-50 shadow-sm dark:bg-red-700 dark:hover:bg-red-800'
 
 const sizeClasses: Record<ButtonSize, string> = {
   sm: 'px-3 py-1.5 text-sm rounded-md',
@@ -65,20 +75,28 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           ? primarySepia
           : theme === 'paper'
             ? primaryPaper
-            : primaryIcy
+            : theme === 'business'
+              ? primaryBusiness
+              : primaryIcy
         : variant === 'secondary'
           ? theme === 'sepia'
             ? secondarySepiaClasses
             : theme === 'paper'
               ? secondaryPaperClasses
-              : secondaryClasses
+              : theme === 'business'
+                ? secondaryBusinessClasses
+                : secondaryClasses
           : variant === 'ghost'
             ? theme === 'sepia'
               ? ghostSepiaClasses
               : theme === 'paper'
                 ? ghostPaperClasses
-                : ghostClasses
-            : dangerClasses
+                : theme === 'business'
+                  ? ghostBusinessClasses
+                  : ghostClasses
+            : theme === 'paper'
+              ? dangerPaperClasses
+              : dangerClasses
 
     return (
       <button

@@ -127,6 +127,30 @@
   );
 }
 
+/*
+ * Business classic — white cards, slate chrome, professional blue accent (not teal).
+ */
+[data-theme='business'] {
+  color-scheme: light;
+  --surface-card: #ffffff;
+  --surface-elevated: #f8fafc;
+  --border-subtle: #cbd5e1;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --storm-accent: #0a66c2;
+  --storm-accent-rgb: 10 102 194;
+  --storm-accent-mid: #2563eb;
+  --storm-teal-bloom: rgb(var(--storm-accent-rgb) / 0.07);
+  --storm-teal-bloom-strong: rgb(var(--storm-accent-rgb) / 0.095);
+  --storm-violet-bloom: rgb(59 130 246 / 0.05);
+  --storm-light-specular: linear-gradient(
+    125deg,
+    rgb(255 255 255 / 0.52) 0%,
+    rgb(239 246 255 / 0.28) 38%,
+    transparent 56%
+  );
+}
+
 body {
   font-family:
     var(--font-montserrat),
@@ -180,6 +204,14 @@ body {
     var(--storm-light-specular),
     radial-gradient(ellipse 125% 72% at 50% 0%, rgb(228 228 231 / 0.45), transparent 58%),
     linear-gradient(178deg, #e4e4e7 0%, #ececed 30%, #f4f4f5 58%, #fafafa 100%);
+  color: var(--text-primary);
+}
+
+[data-theme='business'] body {
+  background:
+    var(--storm-light-specular),
+    radial-gradient(ellipse 120% 68% at 50% 0%, rgb(219 234 254 / 0.4), transparent 58%),
+    linear-gradient(178deg, #e8ecf1 0%, #f1f5f9 32%, #f8fafc 62%, #ffffff 100%);
   color: var(--text-primary);
 }
 
@@ -241,6 +273,19 @@ body {
     0 1px 2px rgb(24 24 27 / 0.04),
     0 10px 28px -10px rgb(24 24 27 / 0.06),
     0 18px 44px -14px rgb(63 63 70 / 0.07);
+}
+
+/* Business panels — crisp white card, slate border, flat glossy shadow (no teal rim) */
+[data-theme='business'] .storm-light-panel {
+  background: linear-gradient(180deg, rgb(255 255 255 / 1) 0%, rgb(252 252 252 / 0.99) 50%, rgb(248 250 252 / 1) 100%);
+  -webkit-backdrop-filter: blur(12px) saturate(1.02);
+  backdrop-filter: blur(12px) saturate(1.02);
+  border: 1px solid rgb(226 232 240 / 0.95);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 1),
+    0 1px 2px rgb(15 23 42 / 0.05),
+    0 4px 12px rgb(15 23 42 / 0.06),
+    0 16px 40px -12px rgb(15 23 42 / 0.08);
 }
 
 /*
@@ -331,6 +376,50 @@ body {
 [data-theme='paper'] .text-indigo-600,
 [data-theme='paper'] .text-indigo-700 {
   color: rgb(63 63 70) !important;
+}
+
+/* Business: remap teal/violet utilities → professional blue + slate */
+[data-theme='business'] .text-teal-300,
+[data-theme='business'] .text-teal-400,
+[data-theme='business'] .text-teal-500,
+[data-theme='business'] .text-teal-600,
+[data-theme='business'] .text-teal-700,
+[data-theme='business'] .text-teal-800 {
+  color: rgb(29 78 216) !important;
+}
+[data-theme='business'] .text-cyan-500,
+[data-theme='business'] .text-cyan-600,
+[data-theme='business'] .text-cyan-700 {
+  color: rgb(37 99 235) !important;
+}
+[data-theme='business'] .text-emerald-600,
+[data-theme='business'] .text-emerald-700,
+[data-theme='business'] .text-emerald-800 {
+  color: rgb(22 101 52) !important;
+}
+[data-theme='business'] .border-teal-200,
+[data-theme='business'] .border-teal-300,
+[data-theme='business'] .border-teal-500,
+[data-theme='business'] .border-teal-600 {
+  border-color: rgb(191 219 254) !important;
+}
+[data-theme='business'] .bg-teal-50,
+[data-theme='business'] .bg-teal-100 {
+  background-color: rgb(239 246 255) !important;
+}
+[data-theme='business'] .bg-teal-500\/20,
+[data-theme='business'] .bg-teal-500\/10 {
+  background-color: rgb(219 234 254 / 0.55) !important;
+}
+[data-theme='business'] .ring-teal-500,
+[data-theme='business'] .ring-teal-400 {
+  --tw-ring-color: rgb(59 130 246) !important;
+}
+[data-theme='business'] .text-violet-600,
+[data-theme='business'] .text-violet-700,
+[data-theme='business'] .text-indigo-600,
+[data-theme='business'] .text-indigo-700 {
+  color: rgb(51 65 85) !important;
 }
 
 /* Global cursor-pointer for all clickable elements */
@@ -535,29 +624,33 @@ button:disabled,
   background: rgb(45 212 191 / 0.65);
 }
 
-/* Light + sepia + paper — step indicator scrollbars (accent from CSS vars) */
+/* Light + sepia + paper + business — step indicator scrollbars (accent from CSS vars) */
 [data-theme='light'] .resume-steps-scrollbar,
 [data-theme='sepia'] .resume-steps-scrollbar,
-[data-theme='paper'] .resume-steps-scrollbar {
+[data-theme='paper'] .resume-steps-scrollbar,
+[data-theme='business'] .resume-steps-scrollbar {
   scrollbar-color: rgb(var(--storm-accent-rgb) / 0.35) transparent;
 }
 
 [data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar,
 [data-theme='sepia'] .resume-steps-scrollbar::-webkit-scrollbar,
-[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar {
+[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar,
+[data-theme='business'] .resume-steps-scrollbar::-webkit-scrollbar {
   height: 8px; /* Horizontal scrollbar height */
 }
 
 [data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-track,
 [data-theme='sepia'] .resume-steps-scrollbar::-webkit-scrollbar-track,
-[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-track {
+[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-track,
+[data-theme='business'] .resume-steps-scrollbar::-webkit-scrollbar-track {
   background: transparent;
   border-radius: 10px;
 }
 
 [data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-thumb,
 [data-theme='sepia'] .resume-steps-scrollbar::-webkit-scrollbar-thumb,
-[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-thumb {
+[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-thumb,
+[data-theme='business'] .resume-steps-scrollbar::-webkit-scrollbar-thumb {
   background: linear-gradient(
     90deg,
     rgb(var(--storm-accent-rgb) / 0.28) 0%,
@@ -571,7 +664,8 @@ button:disabled,
 
 [data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover,
 [data-theme='sepia'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover,
-[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover {
+[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover,
+[data-theme='business'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(
     90deg,
     rgb(var(--storm-accent-rgb) / 0.38) 0%,
@@ -584,7 +678,8 @@ button:disabled,
 
 [data-theme='light'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active,
 [data-theme='sepia'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active,
-[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active {
+[data-theme='paper'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active,
+[data-theme='business'] .resume-steps-scrollbar::-webkit-scrollbar-thumb:active {
   background: rgb(var(--storm-accent-rgb) / 0.55);
 }
 
@@ -607,10 +702,11 @@ button:disabled,
   background: #3d4d62;
 }
 
-/* Light + sepia + paper scrollbars */
+/* Light + sepia + paper + business scrollbars */
 [data-theme='light'] ::-webkit-scrollbar-track,
 [data-theme='sepia'] ::-webkit-scrollbar-track,
-[data-theme='paper'] ::-webkit-scrollbar-track {
+[data-theme='paper'] ::-webkit-scrollbar-track,
+[data-theme='business'] ::-webkit-scrollbar-track {
   background: #cbd5e1;
 }
 
@@ -622,9 +718,14 @@ button:disabled,
   background: #e4e4e7;
 }
 
+[data-theme='business'] ::-webkit-scrollbar-track {
+  background: #e2e8f0;
+}
+
 [data-theme='light'] ::-webkit-scrollbar-thumb,
 [data-theme='sepia'] ::-webkit-scrollbar-thumb,
-[data-theme='paper'] ::-webkit-scrollbar-thumb {
+[data-theme='paper'] ::-webkit-scrollbar-thumb,
+[data-theme='business'] ::-webkit-scrollbar-thumb {
   background: #94a3b8;
   border-radius: 6px;
 }
@@ -637,9 +738,14 @@ button:disabled,
   background: #a1a1aa;
 }
 
+[data-theme='business'] ::-webkit-scrollbar-thumb {
+  background: #64748b;
+}
+
 [data-theme='light'] ::-webkit-scrollbar-thumb:hover,
 [data-theme='sepia'] ::-webkit-scrollbar-thumb:hover,
-[data-theme='paper'] ::-webkit-scrollbar-thumb:hover {
+[data-theme='paper'] ::-webkit-scrollbar-thumb:hover,
+[data-theme='business'] ::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }
 
@@ -649,6 +755,10 @@ button:disabled,
 
 [data-theme='paper'] ::-webkit-scrollbar-thumb:hover {
   background: #71717a;
+}
+
+[data-theme='business'] ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
 
 /* ===== BRAND CUSTOMIZATIONS ===== */
@@ -729,6 +839,23 @@ button:disabled,
   --akui-active: #52525b;
 }
 
+[data-theme='business'] {
+  --akui-btn-primary: #0a66c2;
+  --akui-btn-secondary: #f1f5f9;
+  --akui-btn-auth: #ffffff;
+  --akui-fg-primary: #0f172a;
+  --akui-fg-secondary: #475569;
+  --akui-fg-tertiary: #64748b;
+  --akui-fg-invert: #ffffff;
+  --akui-fg-accent-brand: #0a66c2;
+  --akui-fg-disabled: #94a3b8;
+  --akui-bg-surface-default: #ffffff;
+  --akui-bg-surface-subtle: #f8fafc;
+  --akui-bg-surface-inset: #f1f5f9;
+  --akui-static: #cbd5e1;
+  --akui-active: #0a66c2;
+}
+
 [data-theme='dark'] {
   --akui-btn-primary: #2dd4bf;
   --akui-btn-secondary: #334155;
@@ -761,7 +888,12 @@ button:disabled,
 [data-theme='paper'] [data-testid='header-title'],
 [data-theme='paper'] .akui-header h1,
 [data-theme='paper'] .akui-header h2,
-[data-theme='paper'] .akui-header h3 {
+[data-theme='paper'] .akui-header h3,
+[data-theme='business'] .akui-header-title,
+[data-theme='business'] [data-testid='header-title'],
+[data-theme='business'] .akui-header h1,
+[data-theme='business'] .akui-header h2,
+[data-theme='business'] .akui-header h3 {
   color: var(--akui-fg-primary) !important;
 }
 
@@ -791,7 +923,13 @@ button:disabled,
 [data-theme='paper'] .akui-footer,
 [data-theme='paper'] .akui-footer *,
 [data-theme='paper'] .akui-auth-footer,
-[data-theme='paper'] .akui-auth-footer * {
+[data-theme='paper'] .akui-auth-footer *,
+[data-theme='business'] .akui-text-tertiary,
+[data-theme='business'] .akui-text-tertiary *,
+[data-theme='business'] .akui-footer,
+[data-theme='business'] .akui-footer *,
+[data-theme='business'] .akui-auth-footer,
+[data-theme='business'] .akui-auth-footer * {
   color: var(--akui-fg-secondary) !important;
 }
 
@@ -806,7 +944,8 @@ button:disabled,
 
 [data-theme='light'] .akui-btn-primary:hover,
 [data-theme='sepia'] .akui-btn-primary:hover,
-[data-theme='paper'] .akui-btn-primary:hover {
+[data-theme='paper'] .akui-btn-primary:hover,
+[data-theme='business'] .akui-btn-primary:hover {
   filter: brightness(1.06);
 }
 

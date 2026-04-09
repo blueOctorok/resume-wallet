@@ -10,40 +10,54 @@ import { cn } from '@/lib/utils'
  * **icy** — blue-slate grain + teal/violet wash (vault frost).
  * **sepia** — Kindle-style warm grain; no cool wash.
  * **newsprint** — neutral zinc/grey grain (newspaper theme).
+ * **corporate** — almost flat; faint slate-blue grain (business classic theme).
  */
 export type VaultLightFrostVariant = 'bar' | 'tile' | 'canvas'
-export type VaultLightFrostTone = 'icy' | 'sepia' | 'newsprint'
+export type VaultLightFrostTone = 'icy' | 'sepia' | 'newsprint' | 'corporate'
 
 export default function VaultLightFrostTexture({
   variant = 'bar',
   tone: toneProp,
 }: {
   variant?: VaultLightFrostVariant
-  /** When omitted, follows global appearance (sepia / paper / icy light). */
+  /** When omitted, follows global appearance (sepia / paper / business / icy light). */
   tone?: VaultLightFrostTone
 }) {
   const { theme } = useTheme()
   const tone: VaultLightFrostTone =
     toneProp ??
-    (theme === 'paper' ? 'newsprint' : theme === 'sepia' ? 'sepia' : 'icy')
+    (theme === 'business'
+      ? 'corporate'
+      : theme === 'paper'
+        ? 'newsprint'
+        : theme === 'sepia'
+          ? 'sepia'
+          : 'icy')
   const isBar = variant === 'bar'
   const isCanvas = variant === 'canvas'
   const isSepia = tone === 'sepia'
   const isNewsprint = tone === 'newsprint'
-  const isMuted = isSepia || isNewsprint
+  const isCorporate = tone === 'corporate'
+  const isMuted = isSepia || isNewsprint || isCorporate
 
   const grainA = isMuted
     ? isCanvas
-      ? isNewsprint
-        ? 'opacity-[0.14]'
-        : 'opacity-[0.2]'
-      : isBar
-        ? isNewsprint
-          ? 'opacity-[0.28]'
-          : 'opacity-[0.38]'
+      ? isCorporate
+        ? 'opacity-[0.09]'
         : isNewsprint
-          ? 'opacity-[0.26]'
-          : 'opacity-[0.36]'
+          ? 'opacity-[0.14]'
+          : 'opacity-[0.2]'
+      : isBar
+        ? isCorporate
+          ? 'opacity-[0.18]'
+          : isNewsprint
+            ? 'opacity-[0.28]'
+            : 'opacity-[0.38]'
+        : isCorporate
+          ? 'opacity-[0.17]'
+          : isNewsprint
+            ? 'opacity-[0.26]'
+            : 'opacity-[0.36]'
     : isCanvas
       ? 'opacity-[0.48]'
       : isBar
@@ -51,16 +65,22 @@ export default function VaultLightFrostTexture({
         : 'opacity-[0.58]'
   const grainB = isMuted
     ? isCanvas
-      ? isNewsprint
-        ? 'opacity-[0.08]'
-        : 'opacity-[0.12]'
-      : isBar
-        ? isNewsprint
-          ? 'opacity-[0.18]'
-          : 'opacity-[0.26]'
+      ? isCorporate
+        ? 'opacity-[0.05]'
         : isNewsprint
-          ? 'opacity-[0.16]'
-          : 'opacity-[0.24]'
+          ? 'opacity-[0.08]'
+          : 'opacity-[0.12]'
+      : isBar
+        ? isCorporate
+          ? 'opacity-[0.11]'
+          : isNewsprint
+            ? 'opacity-[0.18]'
+            : 'opacity-[0.26]'
+        : isCorporate
+          ? 'opacity-[0.1]'
+          : isNewsprint
+            ? 'opacity-[0.16]'
+            : 'opacity-[0.24]'
     : isCanvas
       ? 'opacity-[0.3]'
       : isBar
@@ -68,16 +88,22 @@ export default function VaultLightFrostTexture({
         : 'opacity-[0.4]'
   const brush = isMuted
     ? isCanvas
-      ? isNewsprint
-        ? 'opacity-[0.1]'
-        : 'opacity-[0.14]'
-      : isBar
-        ? isNewsprint
-          ? 'opacity-[0.22]'
-          : 'opacity-[0.32]'
+      ? isCorporate
+        ? 'opacity-[0.06]'
         : isNewsprint
-          ? 'opacity-[0.2]'
-          : 'opacity-[0.3]'
+          ? 'opacity-[0.1]'
+          : 'opacity-[0.14]'
+      : isBar
+        ? isCorporate
+          ? 'opacity-[0.14]'
+          : isNewsprint
+            ? 'opacity-[0.22]'
+            : 'opacity-[0.32]'
+        : isCorporate
+          ? 'opacity-[0.13]'
+          : isNewsprint
+            ? 'opacity-[0.2]'
+            : 'opacity-[0.3]'
     : isCanvas
       ? 'opacity-[0.34]'
       : isBar
@@ -85,27 +111,35 @@ export default function VaultLightFrostTexture({
         : 'opacity-[0.44]'
   const striae = isMuted
     ? isCanvas
-      ? isNewsprint
-        ? 'opacity-[0.07]'
-        : 'opacity-[0.1]'
-      : isNewsprint
-        ? 'opacity-[0.2]'
-        : 'opacity-[0.28]'
+      ? isCorporate
+        ? 'opacity-[0.04]'
+        : isNewsprint
+          ? 'opacity-[0.07]'
+          : 'opacity-[0.1]'
+      : isCorporate
+        ? 'opacity-[0.12]'
+        : isNewsprint
+          ? 'opacity-[0.2]'
+          : 'opacity-[0.28]'
     : isCanvas
       ? 'opacity-[0.32]'
       : 'opacity-[0.46]'
 
-  const washClass = isNewsprint
+  const washClass = isCorporate
     ? isCanvas
-      ? 'from-zinc-200/[0.22] via-transparent to-zinc-300/[0.08]'
-      : 'from-zinc-200/[0.26] via-transparent to-zinc-400/[0.1]'
-    : isSepia
+      ? 'from-blue-50/[0.14] via-transparent to-slate-200/[0.06]'
+      : 'from-blue-50/[0.16] via-transparent to-slate-200/[0.08]'
+    : isNewsprint
       ? isCanvas
-        ? 'from-stone-200/[0.35] via-transparent to-stone-300/[0.12]'
-        : 'from-stone-200/[0.4] via-transparent to-stone-400/[0.14]'
-      : isCanvas
-        ? 'from-teal-100/[0.22] via-transparent to-violet-100/[0.12]'
-        : 'from-teal-100/[0.28] via-transparent to-violet-100/[0.16]'
+        ? 'from-zinc-200/[0.22] via-transparent to-zinc-300/[0.08]'
+        : 'from-zinc-200/[0.26] via-transparent to-zinc-400/[0.1]'
+      : isSepia
+        ? isCanvas
+          ? 'from-stone-200/[0.35] via-transparent to-stone-300/[0.12]'
+          : 'from-stone-200/[0.4] via-transparent to-stone-400/[0.14]'
+        : isCanvas
+          ? 'from-teal-100/[0.22] via-transparent to-violet-100/[0.12]'
+          : 'from-teal-100/[0.28] via-transparent to-violet-100/[0.16]'
 
   const depthClass = isMuted
     ? isCanvas
@@ -115,51 +149,73 @@ export default function VaultLightFrostTexture({
       ? 'from-white/38'
       : 'from-white/52'
 
-  const bloom = isNewsprint
+  const bloom = isCorporate
     ? isCanvas
-      ? 'rgba(250,250,250,0.48)'
-      : 'rgba(252,252,252,0.65)'
-    : isSepia
+      ? 'rgba(255,255,255,0.52)'
+      : 'rgba(255,255,255,0.68)'
+    : isNewsprint
       ? isCanvas
-        ? 'rgba(255,252,248,0.52)'
-        : 'rgba(255,252,248,0.68)'
-      : isCanvas
-        ? 'rgba(255,255,255,0.58)'
-        : 'rgba(255,255,255,0.72)'
+        ? 'rgba(250,250,250,0.48)'
+        : 'rgba(252,252,252,0.65)'
+      : isSepia
+        ? isCanvas
+          ? 'rgba(255,252,248,0.52)'
+          : 'rgba(255,252,248,0.68)'
+        : isCanvas
+          ? 'rgba(255,255,255,0.58)'
+          : 'rgba(255,255,255,0.72)'
 
-  const corner = isNewsprint
+  const corner = isCorporate
     ? isCanvas
-      ? 'rgba(63,63,70,0.04)'
-      : 'rgba(63,63,70,0.055)'
-    : isSepia
+      ? 'rgba(59,130,246,0.03)'
+      : 'rgba(59,130,246,0.04)'
+    : isNewsprint
       ? isCanvas
-        ? 'rgba(68,64,60,0.05)'
-        : 'rgba(68,64,60,0.07)'
-      : isCanvas
-        ? 'rgba(13,148,136,0.065)'
-        : 'rgba(13,148,136,0.1)'
+        ? 'rgba(63,63,70,0.04)'
+        : 'rgba(63,63,70,0.055)'
+      : isSepia
+        ? isCanvas
+          ? 'rgba(68,64,60,0.05)'
+          : 'rgba(68,64,60,0.07)'
+        : isCanvas
+          ? 'rgba(13,148,136,0.065)'
+          : 'rgba(13,148,136,0.1)'
 
-  const grainDotA = isNewsprint
-    ? 'rgba(82,82,91,0.035)'
-    : isSepia
-      ? 'rgba(120,108,92,0.04)'
-      : 'rgba(51,85,110,0.055)'
-  const grainDotB = isNewsprint
-    ? 'rgba(82,82,91,0.022)'
-    : isSepia
-      ? 'rgba(120,108,92,0.028)'
-      : 'rgba(51,85,110,0.04)'
-  const brushLine = isNewsprint
-    ? 'rgba(113,113,122,0.022)'
-    : isSepia
-      ? 'rgba(130,118,102,0.028)'
-      : 'rgba(51,85,110,0.038)'
-  const striaeLine = isNewsprint
-    ? 'rgba(82,82,91,0.04)'
-    : isSepia
-      ? 'rgba(110,100,88,0.05)'
-      : 'rgba(71,95,120,0.09)'
-  const depthTo = isNewsprint ? 'to-zinc-500/[0.08]' : isSepia ? 'to-stone-500/[0.12]' : 'to-slate-400/[0.14]'
+  const grainDotA = isCorporate
+    ? 'rgba(148,163,184,0.022)'
+    : isNewsprint
+      ? 'rgba(82,82,91,0.035)'
+      : isSepia
+        ? 'rgba(120,108,92,0.04)'
+        : 'rgba(51,85,110,0.055)'
+  const grainDotB = isCorporate
+    ? 'rgba(148,163,184,0.014)'
+    : isNewsprint
+      ? 'rgba(82,82,91,0.022)'
+      : isSepia
+        ? 'rgba(120,108,92,0.028)'
+        : 'rgba(51,85,110,0.04)'
+  const brushLine = isCorporate
+    ? 'rgba(148,163,184,0.014)'
+    : isNewsprint
+      ? 'rgba(113,113,122,0.022)'
+      : isSepia
+        ? 'rgba(130,118,102,0.028)'
+        : 'rgba(51,85,110,0.038)'
+  const striaeLine = isCorporate
+    ? 'rgba(148,163,184,0.028)'
+    : isNewsprint
+      ? 'rgba(82,82,91,0.04)'
+      : isSepia
+        ? 'rgba(110,100,88,0.05)'
+        : 'rgba(71,95,120,0.09)'
+  const depthTo = isCorporate
+    ? 'to-slate-300/[0.05]'
+    : isNewsprint
+      ? 'to-zinc-500/[0.08]'
+      : isSepia
+        ? 'to-stone-500/[0.12]'
+        : 'to-slate-400/[0.14]'
 
   return (
     <>

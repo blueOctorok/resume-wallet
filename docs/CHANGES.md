@@ -4,6 +4,15 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Appearance: Business classic theme** (April 2026)
+
+- **`data-theme='business'`** — **Corporate light**: white cards, **#0a66c2** primary blue, slate borders, minimal grain (`VaultLightFrostTexture` **`corporate`** tone), flat glossy shadows; vault shell **`BUSINESS_CLASSIC_VAULT_SHELL`**; hub/nav chrome in [`HubBlockVault.tsx`](src/components/hub/HubBlockVault.tsx) / [`VaultHorizontalVaultShell.tsx`](src/components/ui/VaultHorizontalVaultShell.tsx); [`Button`](src/components/ui/Button.tsx) primary/secondary/ghost; [`globals.css`](src/app/globals.css) teal→blue utility remaps + **`akui-*`**; [`StormBackground`](src/components/StormBackground.tsx) flat off-white canvas.
+- **Persistence:** [`StoredTheme`](src/lib/theme-storage.ts) adds **`business`**; [`layout.tsx`](src/app/layout.tsx) inline script + schema migration accepts **`sepia`** / **`business`** when upgrading from missing schema.
+- **Picker:** [`ThemePicker`](src/components/ThemePicker.tsx) — **Business classic** (Briefcase) before Dark; selected accent **blue** when app theme is business.
+- **Nav hub CTA:** [`navigation-styles.ts`](src/lib/navigation-styles.ts) blue gradient ring + [`navHubInnerButtonClass(theme)`](src/lib/navigation-styles.ts) white/blue inner for business; [`Navigation.tsx`](src/components/Navigation.tsx) passes **`theme`**.
+- **Fix:** [`card/[token]/page.tsx`](src/app/card/[token]/page.tsx) dropped invalid `useTheme().isDark` (not on context API; was unused — page remains fixed dark marketing chrome).
+- **Theme picker:** Business classic description avoids naming other products; paper mode keeps **zinc/slate-only** nav + control chrome ([`navigation-styles.ts`](src/lib/navigation-styles.ts), [`Navigation.tsx`](src/components/Navigation.tsx), [`ThemePicker.tsx`](src/components/ThemePicker.tsx), [`NotificationBell.tsx`](src/components/ui/NotificationBell.tsx)), **danger** buttons use dark zinc instead of red ([`Button.tsx`](src/components/ui/Button.tsx)).
+
 ## **Appearance: Sepia + Paper (newsprint) themes** (April 2026)
 
 - **Rename:** Former Kindle-style **`paper`** appearance is now **`sepia`** (`data-theme='sepia'`). New **`paper`** is a **grey newsprint** look (`data-theme='paper'`) — soft white/zinc, no teal or warm sepia.
@@ -41,6 +50,14 @@ This file tracks major modifications made to the ResumeWallet codebase.
 ## **Hub — My Files rows when block is new** (April 2026)
 
 - [`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx) **`MyFilesSection`**: Installed **Resume**, **DOT**, or **MVR** blocks now get a **`Not started`** row as soon as the block exists (no resume row, no DOT app, or no MVR order yet), so users can open the flow from **Block files** without hunting the tile on another hub page. **`empty`** document status + **Order MVR** / **Start** (DOT) / resume **Edit**; in-flight MVRs get **Open** from My Files.
+
+## **MVR self-order — CRA disclosure & consent copy** (April 2026)
+
+- [`MvrOrderForm.tsx`](src/components/MvrOrderForm.tsx): Vendor panel retitled **Your MVR and consumer reporting**; body text matches Key Background as **CRA**, secure ordering system vs Storm, and no independent MVR searches by Storm; **keybackground.com** link retained; checkbox uses express-consent language aligned with counsel-style wording (including **by checking this box and continuing** so pay/submit maps to **proceeding**).
+
+## **MVR payment — do not mark success when `/api/mvr/payment` fails** (April 2026)
+
+- [`MvrPaymentButton.tsx`](src/components/MvrPaymentButton.tsx): `executeMvrPayment` had an inner `try/catch` around the payment `fetch` that **logged errors (including 409) and still ran `setSuccess` + `onPaymentSuccess`**. That made the order form think payment was recorded and call `/api/mvr/order`, which then returned **403** when the `payments` row belonged to another user. Recording failures and 409 now **throw** so the outer handler shows an error and does not advance the flow.
 
 ## **MVR self-order — Key Background notice** (April 2026)
 
