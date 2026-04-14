@@ -9,7 +9,9 @@
  * for creating it via getAdminSupabaseClient().
  */
 
+import { nanoid } from 'nanoid'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getBlockDefinition } from '@/lib/block-registry'
 import type {
   UnifiedDriverProfile,
   UnifiedEmployment,
@@ -20,6 +22,7 @@ import type {
   MvrViolation,
   MvrAccident,
 } from '@/types/driver-profile'
+import type { ParsedResumeExtraction } from '@/types/resume-extraction'
 
 // ── Row types (DB shape) ────────────────────────────────────────────────────
 
@@ -479,5 +482,288 @@ export async function getFullDriverProfile(
     createdAt: cdl?.created_at || '',
     updatedAt: cdl?.updated_at || '',
   }
+}
+
+// ── Hub install + AI extraction apply ─────────────────────────────────────
+
+/** Install a registry block at the end of the hub if missing. Returns true if inserted. */
+export async function ensureHubBlockInstalled(
+  supabase: SupabaseClient,
+  userId: string,
+  blockType: string,
+): Promise<boolean> {
+  const def = getBlockDefinition(blockType)
+  if (!def) return false
+
+  const { data: existing } = await supabase
+    .from('hub_blocks')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('block_type', blockType)
+    .maybeSingle()
+
+  if (existing) return false
+
+  const { data: maxRow } = await supabase
+    .from('hub_blocks')
+    .select('position')
+    .eq('user_id', userId)
+    .order('position', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const position = typeof maxRow?.position === 'number' ? maxRow.position + 1 : 0
+
+  const { error } = await supabase.from('hub_blocks').insert({
+    user_id: userId,
+    block_type: blockType,
+    position,
+    config: {},
+  })
+
+  if (error && error.code !== '23505') {
+    console.error('[block-data] ensureHubBlockInstalled insert failed:', error.message)
+    return false
+  }
+
+  return true
+}
+
+function employmentDedupeKey(e: UnifiedEmployment): string {
+  return `${e.companyName.toLowerCase()}|${e.position.toLowerCase()}|${e.startDate}`
+}
+
+function mergeEmployments(existing: UnifiedEmployment[], incoming: UnifiedEmployment[]): UnifiedEmployment[] {
+  const seen = new Set(existing.map(employmentDedupeKey))
+  const add = incoming.filter((e) => !seen.has(employmentDedupeKey(e)))
+  return [...existing, ...add]
+}
+
+/** Build stormchain_resume_v1 structured_data from AI extraction (career card + PDF verify). */
+export function buildStructuredDataFromExtraction(ex: ParsedResumeExtraction): Record<string, unknown> {
+  return {
+    schema: 'stormchain_resume_v1',
+    personalInfo: {
+      firstName: ex.personalInfo?.firstName,
+      lastName: ex.personalInfo?.lastName,
+      email: ex.personalInfo?.email,
+      phone: ex.personalInfo?.phone,
+      city: ex.personalInfo?.city,
+      state: ex.personalInfo?.state,
+      zipCode: ex.personalInfo?.zipCode,
+      professionalSummary: ex.personalInfo?.professionalSummary,
+    },
+    cdlInfo: ex.cdlInfo
+      ? {
+          cdlClass: ex.cdlInfo.cdlClass,
+          cdlState: ex.cdlInfo.cdlState,
+          cdlNumber: ex.cdlInfo.cdlNumber,
+          expirationDate: ex.cdlInfo.cdlExpiration,
+          endorsements: ex.cdlInfo.endorsements ?? [],
+        }
+      : undefined,
+    employments: (ex.employments ?? []).map((e) => ({
+      companyName: e.companyName,
+      position: e.position,
+      location: e.location,
+      startDate: e.startDate,
+      endDate: e.endDate,
+      isCurrent: e.isCurrent,
+      responsibilities: e.responsibilities ?? [],
+    })),
+    educations: (ex.educations ?? []).map((ed) => ({
+      school: ed.school,
+      degree: ed.degree,
+      field: ed.field,
+      year: ed.year,
+      certifications: ed.certifications ?? [],
+    })),
+    skills: (ex.skills ?? []).map((s) => ({
+      name: s.name,
+      category: s.category ?? 'other',
+    })),
+    references: (ex.references ?? []).map((r) => ({
+      name: r.name,
+      phone: r.phone,
+      email: r.email,
+      relationship: r.relationship,
+      title: r.title,
+      company: r.company,
+    })),
+    _stormMeta: {
+      source: 'ai-extracted',
+      parsedAt: new Date().toISOString(),
+    },
+  }
+}
+
+export interface SaveExtractedResumeResult {
+  newlyInstalledBlocks: string[]
+  updated: {
+    cdl: boolean
+    employment: boolean
+    education: boolean
+    skills: boolean
+    references: boolean
+    profile: boolean
+    resumeStructuredData: boolean
+  }
+}
+
+/**
+ * Merge AI extraction into block_* tables, user_profiles, and the given resume's structured_data.
+ */
+export async function saveExtractedResumeData(
+  supabase: SupabaseClient,
+  userId: string,
+  resumeId: string,
+  extraction: ParsedResumeExtraction,
+): Promise<SaveExtractedResumeResult> {
+  const newlyInstalledBlocks: string[] = []
+  const updated: SaveExtractedResumeResult['updated'] = {
+    cdl: false,
+    employment: false,
+    education: false,
+    skills: false,
+    references: false,
+    profile: false,
+    resumeStructuredData: false,
+  }
+
+  if (await ensureHubBlockInstalled(supabase, userId, 'storm-resume')) {
+    newlyInstalledBlocks.push('storm-resume')
+  }
+
+  const cdl = extraction.cdlInfo
+  if (
+    cdl &&
+    (cdl.cdlClass ||
+      cdl.cdlState ||
+      cdl.cdlNumber ||
+      cdl.cdlExpiration ||
+      (cdl.endorsements && cdl.endorsements.length > 0))
+  ) {
+    if (await ensureHubBlockInstalled(supabase, userId, 'driver-cdl-credentials')) {
+      newlyInstalledBlocks.push('driver-cdl-credentials')
+    }
+    await saveCdlData(supabase, userId, {
+      cdl_number: cdl.cdlNumber ?? null,
+      cdl_state: cdl.cdlState ?? null,
+      cdl_class: cdl.cdlClass ?? null,
+      cdl_expiration: cdl.cdlExpiration ?? null,
+      endorsements: cdl.endorsements ?? [],
+      restrictions: [],
+    })
+    updated.cdl = true
+  }
+
+  if (extraction.employments && extraction.employments.length > 0) {
+    const existing = await getDriverEmployment(supabase, userId)
+    const incoming: UnifiedEmployment[] = extraction.employments.map((e) => ({
+      id: nanoid(),
+      companyName: (e.companyName ?? '').trim() || 'Unknown',
+      position: (e.position ?? '').trim() || 'Role',
+      location: (e.location ?? '').trim(),
+      startDate: e.startDate ?? '',
+      endDate: e.endDate ?? '',
+      isCurrent: Boolean(e.isCurrent),
+      responsibilities: e.responsibilities ?? [],
+      equipment: [],
+    }))
+    await saveDriverEmployment(supabase, userId, mergeEmployments(existing, incoming))
+    updated.employment = true
+  }
+
+  if (extraction.educations && extraction.educations.length > 0) {
+    const existing = await getEducation(supabase, userId)
+    const incoming: UnifiedEducation[] = extraction.educations.map((ed) => ({
+      id: nanoid(),
+      school: (ed.school ?? '').trim(),
+      degree: (ed.degree ?? '').trim(),
+      field: (ed.field ?? '').trim(),
+      year: ed.year ?? '',
+      certifications: ed.certifications ?? [],
+    }))
+    await saveEducation(supabase, userId, [...existing, ...incoming])
+    updated.education = true
+  }
+
+  if (extraction.skills && extraction.skills.length > 0) {
+    const existing = await getSkills(supabase, userId)
+    const incoming: UnifiedSkill[] = extraction.skills
+      .filter((s) => (s.name ?? '').trim().length > 0)
+      .map((s) => {
+        const cat = s.category
+        const safe: UnifiedSkill['category'] =
+          cat === 'equipment' || cat === 'route' || cat === 'technology' || cat === 'safety' ? cat : 'other'
+        return {
+          id: nanoid(),
+          name: s.name.trim(),
+          category: safe,
+        }
+      })
+    await saveSkills(supabase, userId, [...existing, ...incoming])
+    updated.skills = true
+  }
+
+  if (extraction.references && extraction.references.length > 0) {
+    const existing = await getReferences(supabase, userId)
+    const incoming: UnifiedReference[] = extraction.references.map((r) => ({
+      id: nanoid(),
+      name: (r.name ?? '').trim(),
+      phone: (r.phone ?? '').trim(),
+      email: (r.email ?? '').trim(),
+      relationship: (r.relationship ?? '').trim(),
+      title: r.title,
+      company: r.company,
+    }))
+    await saveReferences(supabase, userId, [...existing, ...incoming])
+    updated.references = true
+  }
+
+  const pi = extraction.personalInfo
+  if (
+    pi &&
+    (pi.firstName ||
+      pi.lastName ||
+      pi.email ||
+      pi.phone ||
+      pi.city ||
+      pi.state ||
+      pi.professionalSummary)
+  ) {
+    const patch: Record<string, string | undefined> = {}
+    if (pi.firstName?.trim()) patch.first_name = pi.firstName.trim()
+    if (pi.lastName?.trim()) patch.last_name = pi.lastName.trim()
+    if (pi.email?.trim()) patch.email = pi.email.trim()
+    if (pi.phone?.trim()) patch.phone = pi.phone.trim()
+    if (pi.city?.trim()) patch.city = pi.city.trim()
+    if (pi.state?.trim()) patch.state = pi.state.trim()
+    if (pi.professionalSummary?.trim()) patch.professional_summary = pi.professionalSummary.trim()
+
+    const { data: prof } = await supabase.from('user_profiles').select('user_id').eq('user_id', userId).maybeSingle()
+
+    if (prof) {
+      await supabase.from('user_profiles').update(patch).eq('user_id', userId)
+    } else {
+      await supabase.from('user_profiles').insert({ user_id: userId, ...patch })
+    }
+    updated.profile = true
+  }
+
+  const structuredData = buildStructuredDataFromExtraction(extraction)
+  const { error: resumeErr } = await supabase
+    .from('resumes')
+    .update({ structured_data: structuredData })
+    .eq('id', resumeId)
+    .eq('user_id', userId)
+
+  if (resumeErr) {
+    console.error('[block-data] saveExtractedResumeData resume update failed:', resumeErr.message)
+  } else {
+    updated.resumeStructuredData = true
+  }
+
+  return { newlyInstalledBlocks, updated }
 }
 

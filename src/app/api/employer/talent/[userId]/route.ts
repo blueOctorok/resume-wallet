@@ -112,6 +112,20 @@ export async function GET(
 
     card.employerCompanyMvr = companyMvrData
 
+    // Append-only: log that this employer opened this candidate's card (insights for the candidate)
+    try {
+      const { error: viewLogError } = await supabase.from('career_card_views').insert({
+        candidate_user_id: userId,
+        viewer_user_id: employer.id,
+        source: 'talent_search',
+      })
+      if (viewLogError) {
+        console.warn('[EMPLOYER TALENT] career_card_views insert:', viewLogError.message)
+      }
+    } catch (e) {
+      console.warn('[EMPLOYER TALENT] career_card_views insert failed:', e)
+    }
+
     const { data: pendingRequests } = await supabase
       .from('candidate_requests')
       .select('id, request_type, document_type, target_block_type, status, created_at')

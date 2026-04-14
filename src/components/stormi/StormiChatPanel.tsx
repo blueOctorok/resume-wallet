@@ -24,6 +24,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { cn } from '@/lib/utils'
 import type { HubContext } from '@/lib/ava-context'
+import { buildCandidateAutoWelcomeUserMessage } from '@/lib/ava-auto-welcome'
 import {
   sendToStormi,
   OutOfCreditsError,
@@ -291,6 +292,15 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
   /** Larger thread + wider bubbles + 2-col job cards (candidate) */
   const [chatExpanded, setChatExpanded] = useState(false)
 
+  const hubContextRef = useRef<HubContext>({})
+  const candidateEmptyHubRef = useRef(false)
+  const onAutoWelcomeSyncedRef = useRef<(() => void) | undefined>(undefined)
+  if (props.mode === 'candidate') {
+    hubContextRef.current = props.hubContext
+    candidateEmptyHubRef.current = props.candidateEmptyHub
+    onAutoWelcomeSyncedRef.current = props.onStormiAutoWelcomeSynced
+  }
+
   const [talkingPointsModalOpen, setTalkingPointsModalOpen] = useState(false)
   const [tpJobTitle, setTpJobTitle] = useState('')
   const [tpCompany, setTpCompany] = useState('')
@@ -318,6 +328,70 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
     if (!persistReady || !walletAddress) return
     saveStormiChatMessages(persistenceMode, walletAddress, messages)
   }, [messages, walletAddress, persistenceMode, persistReady])
+
+  // First open on candidate hub: one auto-welcome turn (DB idempotent via `autoWelcome: 'candidate'`).
+  useEffect(() => {
+    if (props.mode !== 'candidate') return
+    if (!walletAddress || !persistReady) return
+    if (props.stormiAutoWelcomeCandidateDone) return
+    if (messages.length > 0) return
+
+    const sessionKey = `stormi_autowelcome_fire_${walletAddress}`
+    try {
+      if (sessionStorage.getItem(sessionKey) === '1') return
+      sessionStorage.setItem(sessionKey, '1')
+    } catch {
+      /* if storage blocked, still attempt once per mount */
+    }
+
+    let cancelled = false
+    ;(async () => {
+      setIsLoading(true)
+      setChatError(null)
+      try {
+        const welcomeMessage = buildCandidateAutoWelcomeUserMessage(
+          hubContextRef.current,
+          candidateEmptyHubRef.current,
+        )
+        const res = await sendToStormi({
+          message: welcomeMessage,
+          walletAddress,
+          hubContext: hubContextRef.current,
+          autoWelcome: 'candidate',
+        })
+        if (cancelled) return
+        setMessages([{ role: 'ava', text: res.reply }])
+        setUsage(res.usage)
+        onAutoWelcomeSyncedRef.current?.()
+      } catch (err) {
+        if (cancelled) return
+        try {
+          sessionStorage.removeItem(sessionKey)
+        } catch {
+          /* ignore */
+        }
+        if (err instanceof OutOfCreditsError) {
+          setOutOfCredits(true)
+          setUsage(err.usage)
+        } else {
+          setChatError(err instanceof Error ? err.message : 'Auto-welcome failed')
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hubContext updates often; refs hold latest for the one-shot welcome
+  }, [
+    props.mode,
+    walletAddress,
+    persistReady,
+    props.stormiAutoWelcomeCandidateDone,
+    messages.length,
+  ])
 
   useEffect(() => {
     if (!walletAddress) return

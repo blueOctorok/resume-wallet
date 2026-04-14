@@ -11,6 +11,8 @@ export const STORMI_DAILY_FREE = 10
 export const STORMI_COVER_LETTER_DAILY_FREE = 3
 /** Free personalized job-list AI run per UTC day (cache reused until next day). */
 export const STORMI_JOB_MATCH_FREE_DAILY = 1
+/** Free AI resume text extractions per UTC day (populate blocks from PDF), then credits. */
+export const STORMI_RESUME_PARSE_DAILY_FREE = 1
 
 export const STORMI_UNLIMITED_WALLETS = new Set([
   '0x9d17cf2ac64ea97be08e3319fe17d94bd1a0660a',
@@ -22,6 +24,7 @@ export interface StormiUsage {
   totalMessages: number
   coverLettersDailyUsed: number
   jobMatchAiDailyUsed: number
+  resumeParseDailyUsed: number
   jobMatchCache: unknown | null
   jobMatchCacheAt: string | null
 }
@@ -40,6 +43,14 @@ export interface StormiCoverLetterCheck {
   model: 'sonnet' | 'haiku'
   usingCredits: boolean
   coverLettersDailyRemaining: number
+  credits: number
+}
+
+export interface StormiResumeParseCheck {
+  allowed: boolean
+  model: 'sonnet' | 'haiku'
+  usingCredits: boolean
+  resumeParseDailyRemaining: number
   credits: number
 }
 
@@ -62,6 +73,7 @@ function rowToUsage(data: Record<string, unknown>): StormiUsage {
     totalMessages: (data.total_messages as number) ?? 0,
     coverLettersDailyUsed: (data.cover_letters_daily_used as number) ?? 0,
     jobMatchAiDailyUsed: (data.job_match_ai_daily_used as number) ?? 0,
+    resumeParseDailyUsed: (data.resume_parse_daily_used as number) ?? 0,
     jobMatchCache: (data.job_match_cache as unknown) ?? null,
     jobMatchCacheAt: (data.job_match_cache_at as string) ?? null,
   }
@@ -74,7 +86,7 @@ export async function getOrCreateUsage(supabase: SupabaseClient, userId: string)
   const { data, error } = await supabase
     .from('ava_chat_usage')
     .select(
-      'daily_used, daily_reset_at, credits, total_messages, cover_letters_daily_used, job_match_ai_daily_used, job_match_cache, job_match_cache_at',
+      'daily_used, daily_reset_at, credits, total_messages, cover_letters_daily_used, job_match_ai_daily_used, resume_parse_daily_used, job_match_cache, job_match_cache_at',
     )
     .eq('user_id', userId)
     .maybeSingle()
@@ -103,6 +115,7 @@ export async function getOrCreateUsage(supabase: SupabaseClient, userId: string)
       totalMessages: 0,
       coverLettersDailyUsed: 0,
       jobMatchAiDailyUsed: 0,
+      resumeParseDailyUsed: 0,
       jobMatchCache: null,
       jobMatchCacheAt: null,
     }
@@ -116,6 +129,7 @@ export async function getOrCreateUsage(supabase: SupabaseClient, userId: string)
         daily_reset_at: todayUTC(),
         cover_letters_daily_used: 0,
         job_match_ai_daily_used: 0,
+        resume_parse_daily_used: 0,
         job_match_cache: null,
         job_match_cache_at: null,
         updated_at: new Date().toISOString(),
@@ -128,6 +142,7 @@ export async function getOrCreateUsage(supabase: SupabaseClient, userId: string)
       totalMessages: data.total_messages ?? 0,
       coverLettersDailyUsed: 0,
       jobMatchAiDailyUsed: 0,
+      resumeParseDailyUsed: 0,
       jobMatchCache: null,
       jobMatchCacheAt: null,
     }
@@ -313,4 +328,66 @@ export function getDailyRemaining(usage: StormiUsage): number {
 
 export function getCoverLetterDailyRemaining(usage: StormiUsage): number {
   return Math.max(0, STORMI_COVER_LETTER_DAILY_FREE - usage.coverLettersDailyUsed)
+}
+
+/** Resume PDF parse: 1× Sonnet/day, then 1 credit → Haiku (same pool as cover letters). */
+export function checkResumeParseUsage(usage: StormiUsage, isUnlimited: boolean): StormiResumeParseCheck {
+  if (isUnlimited) {
+    return {
+      allowed: true,
+      model: 'sonnet',
+      usingCredits: false,
+      resumeParseDailyRemaining: 999,
+      credits: usage.credits,
+    }
+  }
+
+  const used = usage.resumeParseDailyUsed
+  const remaining = Math.max(0, STORMI_RESUME_PARSE_DAILY_FREE - used)
+
+  if (remaining > 0) {
+    return {
+      allowed: true,
+      model: 'sonnet',
+      usingCredits: false,
+      resumeParseDailyRemaining: remaining,
+      credits: usage.credits,
+    }
+  }
+
+  if (usage.credits > 0) {
+    return {
+      allowed: true,
+      model: 'haiku',
+      usingCredits: true,
+      resumeParseDailyRemaining: 0,
+      credits: usage.credits,
+    }
+  }
+
+  return {
+    allowed: false,
+    model: 'haiku',
+    usingCredits: false,
+    resumeParseDailyRemaining: 0,
+    credits: 0,
+  }
+}
+
+export async function incrementResumeParseDaily(supabase: SupabaseClient, userId: string): Promise<void> {
+  const { error } = await supabase.rpc('increment_ava_resume_parse_daily', { p_user_id: userId })
+  if (error) {
+    const u = await getOrCreateUsage(supabase, userId)
+    await supabase
+      .from('ava_chat_usage')
+      .update({
+        resume_parse_daily_used: u.resumeParseDailyUsed + 1,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+  }
+}
+
+export function getResumeParseDailyRemaining(usage: StormiUsage): number {
+  return Math.max(0, STORMI_RESUME_PARSE_DAILY_FREE - usage.resumeParseDailyUsed)
 }

@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
     if (careerCard.resume_id) {
       const { data: res } = await supabase
         .from('resumes')
-        .select('id, title, filename, ipfs_hash, verification_status, structured_data, created_at')
+        .select('id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, structured_data, created_at')
         .eq('id', careerCard.resume_id)
         .single()
       resume = res
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
     if (careerCard.driver_application_id) {
       const { data: da } = await supabase
         .from('driver_applications')
-        .select('id, verification_status, is_complete, created_at')
+        .select('id, verification_status, is_complete, created_at, blockchain_tx_hash')
         .eq('id', careerCard.driver_application_id)
         .single()
       driverApplication = da
@@ -206,6 +206,7 @@ export async function GET(request: NextRequest) {
               filename: resume.filename,
               ipfsHash: resume.ipfs_hash,
               verificationStatus: resume.verification_status,
+              blockchainTxHash: resume.blockchain_tx_hash ?? null,
               structuredData: resume.structured_data,
               createdAt: resume.created_at,
             }
@@ -217,6 +218,7 @@ export async function GET(request: NextRequest) {
               status: driverApplication.verification_status,
               isComplete: driverApplication.is_complete,
               createdAt: driverApplication.created_at,
+              blockchainTxHash: driverApplication.blockchain_tx_hash ?? null,
             }
           : null,
 

@@ -8,6 +8,10 @@ import { PinataSDK } from 'pinata-web3'
 import { ethers } from 'ethers'
 import { generateStyledResumePDF } from '@/lib/resume-pdf-generator'
 import { getUserByWallet } from '@/lib/user-by-wallet'
+import { addResumeOnChain } from '@/lib/resume-registry-onchain'
+import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
+import { generateDeveloperResumePDFBuffer } from '@/lib/developer-resume-pdf'
+import type { DeveloperResumeData } from '@/components/DeveloperResumeBuilder'
 
 // Contract ABI for adding resume
 const RESUME_REGISTRY_ABI = [
@@ -104,154 +108,239 @@ export async function POST(
       }, { status: 400 })
     }
 
-    // Check if this is a built resume with structured data
-    if (resume.resume_type !== 'built' || !resume.structured_data) {
-      return NextResponse.json({ 
-        error: 'Only built resumes with structured data can be verified this way. For uploaded resumes, use the standard upload flow.' 
-      }, { status: 400 })
+    const isDeveloperBuilt = resume.resume_type === 'developer_built'
+    const isDriverBuilt = resume.resume_type === 'built'
+
+    // ── Uploaded PDF: IPFS hash already set — register on-chain (same as /api/blockchain/verify-resume)
+    if (!isDriverBuilt && !isDeveloperBuilt && isLiveResumeIpfsHash(resume.ipfs_hash)) {
+      let chain: Awaited<ReturnType<typeof addResumeOnChain>>
+      try {
+        chain = await addResumeOnChain({
+          ipfsHash: resume.ipfs_hash as string,
+          title: String(resume.title || 'Resume'),
+          filename: String(resume.filename || 'resume.pdf'),
+          isPublic: resume.is_public !== false,
+        })
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Unknown error'
+        if (msg === 'RESUME_REGISTRY_NOT_CONFIGURED') {
+          return NextResponse.json(
+            {
+              error: 'Blockchain verification is not configured on this server',
+              partial: true,
+            },
+            { status: 503 },
+          )
+        }
+        console.error('[VERIFY RESUME] uploaded IPFS path:', e)
+        return NextResponse.json(
+          { error: 'On-chain verification failed', details: msg },
+          { status: 500 },
+        )
+      }
+
+      const { error: upErr } = await supabase
+        .from('resumes')
+        .update({
+          verification_status: 'VERIFIED',
+          blockchain_tx_hash: chain.txHash,
+          blockchain_resume_id: chain.blockchainResumeId,
+          is_public: resume.is_public !== false,
+        })
+        .eq('id', id)
+
+      if (upErr) {
+        console.error('[VERIFY RESUME] DB update failed:', upErr)
+      }
+
+      return NextResponse.json({
+        success: true,
+        resumeId: id,
+        transactionHash: chain.txHash,
+        txHash: chain.txHash,
+        blockchainResumeId: chain.blockchainResumeId,
+        blockNumber: String(chain.blockNumber),
+        gasUsed: chain.gasUsed,
+        explorerUrl: chain.explorerUrl,
+      })
     }
 
-    console.log('📄 Verify Resume API: Generating styled PDF from structured data...')
+    if (!isDriverBuilt && !isDeveloperBuilt) {
+      return NextResponse.json(
+        {
+          error:
+            'This resume has no PDF on IPFS yet. Upload a PDF first, or build a resume in the builder to generate one for verification.',
+        },
+        { status: 400 },
+      )
+    }
 
-    // 3. Generate styled PDF from structured data (using same formatting as ResumeBuilder export)
-    // Resume Builder saves data in its own format, so we pass it directly to the PDF generator
-    // The structured_data from Resume Builder already has the correct field names
+    if (!resume.structured_data) {
+      return NextResponse.json(
+        {
+          error:
+            'Built and developer resumes need structured data before verification. Finish editing, then try again.',
+        },
+        { status: 400 },
+      )
+    }
+
+    console.log('📄 Verify Resume API: Generating PDF from structured data...')
+
     const structuredData = resume.structured_data as Record<string, unknown>
-    
-    // General resume (and future builders) set schema so we PDF-map even with zero jobs.
-    const schema = (structuredData as { schema?: string }).schema
-    // Detect format: Resume Builder format has `employments` with `companyName`,
-    // old format (from uploaded resumes) has `employments` with `company`
-    const isResumeBuilderFormat =
-      schema === 'stormchain_resume_v1' ||
-      (Array.isArray(structuredData.employments) &&
-        structuredData.employments.length > 0 &&
-        'companyName' in (structuredData.employments[0] as Record<string, unknown>))
-    
-    // Detect if skills are in Resume Builder format (array of {name, category}) 
-    // vs old format (array of {category, items[]})
-    const hasResumeBuilderSkillsFormat = Array.isArray(structuredData.skills) &&
-      structuredData.skills.length > 0 &&
-      'name' in (structuredData.skills[0] as Record<string, unknown>)
-    
-    let resumeData
-    
-    if (isResumeBuilderFormat) {
-      // Resume Builder format - data is already in the correct shape
-      console.log('📄 Detected Resume Builder format')
-      const pi = structuredData.personalInfo as Record<string, unknown> | undefined
-      resumeData = {
-        personalInfo: {
-          firstName: pi?.firstName as string | undefined,
-          lastName: pi?.lastName as string | undefined,
-          headline: pi?.headline as string | undefined,
-          email: pi?.email as string | undefined,
-          phone: pi?.phone as string | undefined,
-          address: pi?.address as string | undefined,
-          city: pi?.city as string | undefined,
-          state: pi?.state as string | undefined,
-          zipCode: pi?.zipCode as string | undefined,
-          professionalSummary: pi?.professionalSummary as string | undefined,
-        },
-        cdlInfo: {
-          cdlClass: (structuredData.cdlInfo as Record<string, unknown>)?.cdlClass as string | undefined,
-          cdlState: (structuredData.cdlInfo as Record<string, unknown>)?.cdlState as string | undefined,
-          cdlExpiration: (structuredData.cdlInfo as Record<string, unknown>)?.expirationDate as string | undefined,
-          endorsements: ((structuredData.cdlInfo as Record<string, unknown>)?.endorsements as string[]) || [],
-        },
-        employments: (structuredData.employments as Array<Record<string, unknown>> || []).map(emp => ({
-          companyName: emp.companyName as string | undefined,
-          position: emp.position as string | undefined,
-          location: emp.location as string | undefined,
-          startDate: emp.startDate as string | undefined,
-          endDate: emp.endDate as string | undefined,
-          isCurrent: emp.isCurrent as boolean | undefined,
-          responsibilities: (emp.responsibilities as string[]) || [],
-        })),
-        educations: (structuredData.educations as Array<Record<string, unknown>> || []).map(edu => ({
-          school: edu.school as string | undefined,
-          degree: edu.degree as string | undefined,
-          field: edu.field as string | undefined,
-          year: edu.year as string | undefined,
-          certifications: (edu.certifications as string[]) || [],
-        })),
-        skills: hasResumeBuilderSkillsFormat 
-          ? (structuredData.skills as Array<Record<string, unknown>> || []).map(skill => ({
-              name: skill.name as string | undefined,
-              category: (skill.category || 'other') as 'equipment' | 'route' | 'technology' | 'safety' | 'other',
-            }))
-          : [], // Will be converted from old format below
-        professionalCertifications: (
-          (structuredData.professionalCertifications as Array<Record<string, unknown>>) || []
-        ).map((c) => ({
-          name: c.name as string | undefined,
-          issuer: c.issuer as string | undefined,
-          date: (c.issuedDate ?? c.date) as string | undefined,
-          expiresDate: c.expiresDate as string | undefined,
-        })),
-        references: (structuredData.references as Array<Record<string, unknown>> || []).map(ref => ({
-          name: ref.name as string | undefined,
-          title: ref.title as string | undefined,
-          company: ref.company as string | undefined,
-          phone: ref.phone as string | undefined,
-          email: ref.email as string | undefined,
-        })),
-      }
+
+    let pdfBuffer: Buffer
+
+    if (isDeveloperBuilt) {
+      pdfBuffer = generateDeveloperResumePDFBuffer(structuredData as unknown as DeveloperResumeData)
     } else {
-      // Old format from uploaded/analyzed resumes - needs mapping
-      console.log('📄 Detected old StructuredResumeData format, mapping to Resume Builder format')
-      const oldData = structuredData as StructuredResumeData
-      resumeData = {
-        personalInfo: {
-          firstName: oldData.personalInfo?.firstName,
-          lastName: oldData.personalInfo?.lastName,
-          email: oldData.personalInfo?.email,
-          phone: oldData.personalInfo?.phone,
-          address: oldData.personalInfo?.address,
-          city: oldData.personalInfo?.city,
-          state: oldData.personalInfo?.state,
-          zipCode: oldData.personalInfo?.zipCode,
-          professionalSummary: oldData.personalInfo?.summary,
-        },
-        cdlInfo: {
-          cdlClass: oldData.cdlInfo?.cdlClass,
-          cdlState: oldData.cdlInfo?.cdlState,
-          cdlExpiration: oldData.cdlInfo?.cdlExpiration,
-          endorsements: oldData.cdlInfo?.endorsements || [],
-        },
-        employments: (oldData.employments || []).map(emp => ({
-          companyName: emp.company,
-          position: emp.position,
-          location: undefined,
-          startDate: emp.startDate,
-          endDate: emp.endDate,
-          isCurrent: emp.current,
-          responsibilities: emp.description ? [emp.description] : [],
-        })),
-        educations: (oldData.educations || []).map(edu => ({
-          school: edu.school,
-          degree: edu.degree,
-          field: edu.field,
-          year: edu.graduationDate,
-          certifications: [],
-        })),
-        skills: (oldData.skills || []).flatMap(skillGroup => 
-          (skillGroup.items || []).map(item => ({
-            name: item,
-            category: (skillGroup.category || 'other') as 'equipment' | 'route' | 'technology' | 'safety' | 'other',
-          }))
-        ),
-        references: (oldData.references || []).map(ref => ({
-          name: ref.name,
-          title: ref.relationship,
-          company: ref.company,
-          phone: ref.phone,
-          email: ref.email,
-        })),
+      // 3. Generate styled PDF from structured data (driver / general builder)
+      // General resume (and future builders) set schema so we PDF-map even with zero jobs.
+      const schema = (structuredData as { schema?: string }).schema
+      // Detect format: Resume Builder format has `employments` with `companyName`,
+      // old format (from uploaded resumes) has `employments` with `company`
+      const isResumeBuilderFormat =
+        schema === 'stormchain_resume_v1' ||
+        (Array.isArray(structuredData.employments) &&
+          structuredData.employments.length > 0 &&
+          'companyName' in (structuredData.employments[0] as Record<string, unknown>))
+
+      // Detect if skills are in Resume Builder format (array of {name, category})
+      // vs old format (array of {category, items[]})
+      const hasResumeBuilderSkillsFormat =
+        Array.isArray(structuredData.skills) &&
+        structuredData.skills.length > 0 &&
+        'name' in (structuredData.skills[0] as Record<string, unknown>)
+
+      let resumeData
+
+      if (isResumeBuilderFormat) {
+        // Resume Builder format - data is already in the correct shape
+        console.log('📄 Detected Resume Builder format')
+        const pi = structuredData.personalInfo as Record<string, unknown> | undefined
+        resumeData = {
+          personalInfo: {
+            firstName: pi?.firstName as string | undefined,
+            lastName: pi?.lastName as string | undefined,
+            headline: pi?.headline as string | undefined,
+            email: pi?.email as string | undefined,
+            phone: pi?.phone as string | undefined,
+            address: pi?.address as string | undefined,
+            city: pi?.city as string | undefined,
+            state: pi?.state as string | undefined,
+            zipCode: pi?.zipCode as string | undefined,
+            professionalSummary: pi?.professionalSummary as string | undefined,
+          },
+          cdlInfo: {
+            cdlClass: (structuredData.cdlInfo as Record<string, unknown>)?.cdlClass as string | undefined,
+            cdlState: (structuredData.cdlInfo as Record<string, unknown>)?.cdlState as string | undefined,
+            cdlExpiration: (structuredData.cdlInfo as Record<string, unknown>)?.expirationDate as string | undefined,
+            endorsements: ((structuredData.cdlInfo as Record<string, unknown>)?.endorsements as string[]) || [],
+          },
+          employments: (structuredData.employments as Array<Record<string, unknown>> || []).map((emp) => ({
+            companyName: emp.companyName as string | undefined,
+            position: emp.position as string | undefined,
+            location: emp.location as string | undefined,
+            startDate: emp.startDate as string | undefined,
+            endDate: emp.endDate as string | undefined,
+            isCurrent: emp.isCurrent as boolean | undefined,
+            responsibilities: (emp.responsibilities as string[]) || [],
+          })),
+          educations: (structuredData.educations as Array<Record<string, unknown>> || []).map((edu) => ({
+            school: edu.school as string | undefined,
+            degree: edu.degree as string | undefined,
+            field: edu.field as string | undefined,
+            year: edu.year as string | undefined,
+            certifications: (edu.certifications as string[]) || [],
+          })),
+          skills: hasResumeBuilderSkillsFormat
+            ? (structuredData.skills as Array<Record<string, unknown>> || []).map((skill) => ({
+                name: skill.name as string | undefined,
+                category: (skill.category || 'other') as
+                  | 'equipment'
+                  | 'route'
+                  | 'technology'
+                  | 'safety'
+                  | 'other',
+              }))
+            : [], // Will be converted from old format below
+          professionalCertifications: (
+            (structuredData.professionalCertifications as Array<Record<string, unknown>>) || []
+          ).map((c) => ({
+            name: c.name as string | undefined,
+            issuer: c.issuer as string | undefined,
+            date: (c.issuedDate ?? c.date) as string | undefined,
+            expiresDate: c.expiresDate as string | undefined,
+          })),
+          references: (structuredData.references as Array<Record<string, unknown>> || []).map((ref) => ({
+            name: ref.name as string | undefined,
+            title: ref.title as string | undefined,
+            company: ref.company as string | undefined,
+            phone: ref.phone as string | undefined,
+            email: ref.email as string | undefined,
+          })),
+        }
+      } else {
+        // Old format from uploaded/analyzed resumes - needs mapping
+        console.log('📄 Detected old StructuredResumeData format, mapping to Resume Builder format')
+        const oldData = structuredData as StructuredResumeData
+        resumeData = {
+          personalInfo: {
+            firstName: oldData.personalInfo?.firstName,
+            lastName: oldData.personalInfo?.lastName,
+            email: oldData.personalInfo?.email,
+            phone: oldData.personalInfo?.phone,
+            address: oldData.personalInfo?.address,
+            city: oldData.personalInfo?.city,
+            state: oldData.personalInfo?.state,
+            zipCode: oldData.personalInfo?.zipCode,
+            professionalSummary: oldData.personalInfo?.summary,
+          },
+          cdlInfo: {
+            cdlClass: oldData.cdlInfo?.cdlClass,
+            cdlState: oldData.cdlInfo?.cdlState,
+            cdlExpiration: oldData.cdlInfo?.cdlExpiration,
+            endorsements: oldData.cdlInfo?.endorsements || [],
+          },
+          employments: (oldData.employments || []).map((emp) => ({
+            companyName: emp.company,
+            position: emp.position,
+            location: undefined,
+            startDate: emp.startDate,
+            endDate: emp.endDate,
+            isCurrent: emp.current,
+            responsibilities: emp.description ? [emp.description] : [],
+          })),
+          educations: (oldData.educations || []).map((edu) => ({
+            school: edu.school,
+            degree: edu.degree,
+            field: edu.field,
+            year: edu.graduationDate,
+            certifications: [],
+          })),
+          skills: (oldData.skills || []).flatMap((skillGroup) =>
+            (skillGroup.items || []).map((item) => ({
+              name: item,
+              category: (skillGroup.category || 'other') as
+                | 'equipment'
+                | 'route'
+                | 'technology'
+                | 'safety'
+                | 'other',
+            })),
+          ),
+          references: (oldData.references || []).map((ref) => ({
+            name: ref.name,
+            title: ref.relationship,
+            company: ref.company,
+            phone: ref.phone,
+            email: ref.email,
+          })),
+        }
       }
+
+      pdfBuffer = generateStyledResumePDF(resumeData)
     }
-    
-    const pdfBuffer = generateStyledResumePDF(resumeData)
     
     // 4. Upload to IPFS via Pinata
     console.log('📤 Verify Resume API: Uploading to IPFS...')
@@ -360,6 +449,7 @@ export async function POST(
       ipfsHash,
       ipfsUrl,
       transactionHash: tx.hash,
+      txHash: tx.hash,
       blockchainResumeId: newResumeId.toString(),
       blockNumber: receipt.blockNumber,
       gasUsed: receipt.gasUsed.toString(),

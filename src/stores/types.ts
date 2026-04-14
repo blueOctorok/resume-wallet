@@ -126,6 +126,10 @@ export interface DriverHubStats {
   totalJobApplications: number
   pendingApplications: number
   totalSpentUSDC: number
+  /** Employer opens of this candidate's card (talent search / pipeline), last 7 days */
+  careerCardViewsThisWeek: number
+  /** All-time employer career card views */
+  careerCardViewsTotal: number
 }
 
 // Profile conflict resolution

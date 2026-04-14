@@ -1,6 +1,6 @@
+import { useMemo, useEffect, useState } from 'react'
 import { useInstalledBlocks, useHubOnboarding } from '@/stores/hub-blocks-store'
 import { useDriverHubStore } from '@/stores/driver-hub-store'
-import { useAuthStore } from '@/stores'
 import type { HubContext, EmployerHubContext, BlockContext } from '@/lib/ava-context'
 import type { StormiJobSuggestion } from '@/lib/ava-job-suggestions'
 import type { StormiAutoWelcomeMode } from '@/lib/ava-auto-welcome'
@@ -100,8 +100,51 @@ export function useHubContext(): HubContext {
   const mvrRecords = useDriverHubStore((s) => s.mvrRecords)
   const portfolio = useDriverHubStore((s) => s.portfolio)
   const github = useDriverHubStore((s) => s.github)
+  const stats = useDriverHubStore((s) => s.stats)
 
   const hubStore = { resumes, dotApplications, mvrRecords, portfolio, github }
+
+  const [daysSinceLastVisit, setDaysSinceLastVisit] = useState<number | null | undefined>(undefined)
+  useEffect(() => {
+    const key = 'storm_candidate_hub_last_visit_ts'
+    try {
+      const prev = localStorage.getItem(key)
+      const now = Date.now()
+      if (prev) {
+        const n = parseInt(prev, 10)
+        setDaysSinceLastVisit(Number.isNaN(n) ? null : Math.floor((now - n) / 86400000))
+      } else {
+        setDaysSinceLastVisit(null)
+      }
+      localStorage.setItem(key, String(now))
+    } catch {
+      setDaysSinceLastVisit(null)
+    }
+  }, [])
+
+  const incompleteBlocks = useMemo(() => {
+    return installedBlocks
+      .filter((b) => deriveBlockStatus(b.blockType, hubStore) !== 'complete')
+      .map((b) => {
+        const st = deriveBlockStatus(b.blockType, hubStore)
+        return {
+          blockType: b.blockType,
+          label: b.definition?.label ?? b.blockType,
+          hint:
+            st === 'in-progress'
+              ? 'In progress — finish the remaining steps.'
+              : 'Empty — add the main details employers expect.',
+        }
+      })
+  }, [installedBlocks, resumes, dotApplications, mvrRecords, portfolio, github])
+
+  const verifiedBlockCount = useMemo(() => {
+    let n = 0
+    if (resumes.some((r) => String(r.verificationStatus || '').toUpperCase() === 'VERIFIED')) n += 1
+    if (dotApplications.some((a) => String(a.verificationStatus || '').toUpperCase() === 'VERIFIED')) n += 1
+    if (mvrRecords.some((m) => m.orderStatus === 'completed' || m.orderStatus === 'needs_review')) n += 1
+    return n
+  }, [resumes, dotApplications, mvrRecords])
 
   return {
     occupation: onboarding?.occupation,
@@ -112,6 +155,13 @@ export function useHubContext(): HubContext {
       label: b.definition?.label ?? b.blockType,
       status: deriveBlockStatus(b.blockType, hubStore),
     })),
+    cardViewsThisWeek: stats?.careerCardViewsThisWeek,
+    cardViewsTotal: stats?.careerCardViewsTotal,
+    profileCompleteness: stats?.profileCompleteness,
+    daysSinceLastVisit,
+    incompleteBlocks,
+    verifiedBlockCount,
+    totalInstalledBlockCount: installedBlocks.length,
   }
 }
 

@@ -1,0 +1,247 @@
+---
+description: Storm product philosophy — competitive moats, quality bar, and candidate-first principles that govern every feature decision
+alwaysApply: true
+---
+
+# Storm Product Philosophy
+
+## Why Storm Exists
+
+Storm is a **candidate-owned career identity platform**. The candidate builds, owns, and controls their professional data. Employers see a **projection** of what the candidate chose to share. This is the opposite of employer-owned platforms (LinkedIn, Deel, Indeed) where candidates are passive inventory.
+
+**Every feature, every line of code must reinforce this power dynamic.**
+
+---
+
+## The Three Moats — Protect These Relentlessly
+
+### 1. Blockchain Verification = Trust That Can't Be Faked
+
+On-chain credential verification is Storm's **hardest-to-copy advantage**. No other platform combines blockchain-verified credentials with a candidate-facing career hub and AI coaching.
+
+**Rules:**
+- Verification status must be **unmissable** on the career card and employer-facing views — badges, timestamps, "verify on-chain" links. If an employer can't instantly see the difference between a verified and unverified credential, we've failed.
+- Every new block that produces a verifiable artifact (CDL, DOT app, MVR, certifications) **must** have an on-chain verification path. If a block can't be verified yet, show "pending verification" — never silently omit it.
+- Never downplay verification to simplify UI. Verification **is** the UI. It's the reason an employer trusts a Storm career card over a PDF resume.
+
+### 2. Career Card = The "Dating Profile" of Careers
+
+The career card is a **living, shareable professional identity** — not a static document. Like a dating profile, its quality directly determines outcomes (employer interest, interview requests, job matches).
+
+**Rules:**
+- **Never gate the career card behind completion.** A sparse card is live and visible. The natural consequence of a thin card (no employer interest) is the motivation engine — just like a dating profile with one blurry photo gets no matches.
+- **Always show what's missing, not just what's there.** Empty block slots, completion percentages, and "add this to improve your card" prompts are first-class UI elements, not afterthoughts.
+- **Design for the low-effort user first.** Assume the candidate will do the minimum. Make the minimum still produce *something* visible. Then make the path to "great" obvious and guided.
+- Career card sections must feel **alive** — not a static form dump. Show recency ("Updated 3 days ago"), verification badges, and employer interest signals ("2 employers viewed your card this week") when available.
+
+### 3. Stormi = Persistent Coach, Not Just a Chatbot
+
+Stormi is **the reason candidates improve their career card over time**. Every other AI job tool is transactional ("write my cover letter"). Stormi is relational ("I know your career, and here's what to do next").
+
+**Rules:**
+- Stormi must be **proactive, not just reactive.** Don't wait for the user to ask. Nudge them when blocks are empty, when their career card is thin, when employers in their area are searching for skills they haven't added.
+- Stormi must **frame improvement in terms of outcomes.** Not "your CDL block is empty" but "Employers in your area request CDL verification 73% of the time — add yours to stand out."
+- Stormi must **celebrate progress.** "Your DOT application was verified on-chain. That puts you ahead of most candidates who submit paper forms." Small wins compound into engagement.
+- Stormi must **re-engage dormant users.** "You started your MVR block 2 weeks ago. Want to finish? Takes about 5 minutes." Be persistent without being annoying.
+- When building Stormi features, always ask: "Would a great career coach say this?" If it sounds like a generic chatbot, rewrite it.
+
+---
+
+## The Employer Side — Why They Can't Get This Anywhere Else
+
+Storm's moats are two-sided. Candidates own their data; employers get something **no other platform offers**: access to **verified, structured, candidate-curated professional identities** — not keyword-stuffed resumes, not self-reported LinkedIn profiles, not agency-filtered candidates.
+
+### Verified Candidates > Unverified Resumes
+
+On every other platform, employers take candidate claims on faith (or pay $45–$70 per manual background check after the fact). On Storm, credentials are **verified on-chain before the employer ever sees them.** This flips the trust model.
+
+**Rules:**
+- Employer-facing views (career card modal, talent search results, applicant pipeline) must **lead with verification status.** A verified CDL badge or on-chain DOT app is the first thing an employer notices — not buried in a details panel.
+- Talent search ranking should **weight verified candidates higher.** A candidate with 3 verified blocks should surface above a candidate with 10 unverified self-reported fields. Verification is the signal; completeness without verification is noise.
+- Never let employers confuse Storm career cards with ordinary resumes. The UI, language, and presentation must communicate: "This is a verified professional identity, not a document someone typed up."
+
+### Structured Blocks > Free-Text Profiles
+
+Employers on Indeed/LinkedIn wade through inconsistent free-text profiles. Storm's composable blocks give employers **structured, filterable, comparable data** across candidates.
+
+**Rules:**
+- Talent search filters must be **block-driven from the registry.** When a new block category appears (nursing, logistics, trades), employer filters appear automatically — no per-career search pages.
+- Career card sections presented to employers must be **structured and scannable** — not walls of text. Blocks produce consistent data shapes (CDL class + endorsements, employment history entries, skills lists) that employers can compare across candidates at a glance.
+- Employer outreach (requests, invites) is **block-specific.** "Request MVR" or "Request CDL verification" — not "request more info." The specificity tells the candidate exactly what to do and tells the employer exactly what they'll get.
+
+### Stormi for Employers = Smarter Hiring, Not More Hiring
+
+Employer-side Stormi exists to help employers **find the right candidate faster**, not to help them spam more candidates.
+
+**Rules:**
+- Stormi for employers should surface **match quality signals** — "This candidate has verified CDL with hazmat endorsement and 5 years of employment history on-chain" — not just "here are 50 profiles that match your keywords."
+- Never build employer features that encourage **bulk outreach without context.** Every employer action (request, invite, recruit) should reference specific blocks or verified credentials.
+- Employer Stormi should help with **understanding candidates** ("What does this DOT application status mean?", "How current is this MVR?") — not replace the employer's judgment.
+
+### The Employer Flywheel
+
+More verified candidates → more employer trust → more employer subscriptions → more employer requests to candidates → more candidates motivated to verify → more verified candidates.
+
+**Every employer feature must strengthen this flywheel.** If a feature doesn't make employers trust Storm's candidates more, or doesn't drive candidates to verify more, it's not contributing to the moat.
+
+### Revenue Comes From Employer Trust
+
+Employers pay (subscriptions, MVR orders, future sponsored posts) because Storm's candidates are **pre-verified and structured** — saving them time and risk. If we dilute the verification signal or let unverified noise dominate, we lose the reason employers pay.
+
+- **Free tier** employers get a taste (blurred details, limited messaging) but can see verification badges — enough to know what they're missing.
+- **Pro tier** unlocks full access to verified career cards — the value proposition is "skip the background check, the candidate already did it on-chain."
+- Every pricing decision should reinforce: **verification is the premium.**
+
+---
+
+## Competitive Landscape — Know Them, Learn From Them, Beat Them
+
+Storm doesn't exist in a vacuum. These are the players in adjacent spaces. We track what they do well so we can steal the best ideas and execute them through our moats.
+
+### Job boards & employer platforms
+
+| Competitor | What they do | What they do well (steal this) | Where Storm wins |
+|---|---|---|---|
+| **LinkedIn** | Professional network + job board + recruiter tools | Network effects, ubiquity, employer trust at scale, "Easy Apply" | Candidate-owned (not platform-owned), on-chain verification, no engagement farming |
+| **Indeed / ZipRecruiter** | Two-sided job marketplace | Massive listing volume, simple apply UX, employer brand | Verified credentials (not self-reported), structured blocks (not free-text), Stormi coaching |
+| **Handshake** | Early-career / college recruiting platform | University partnerships, skills-over-resume matching, "Hiring Intelligence" AI that reads candidate signals, Promotions that surface jobs at peak intent | Storm isn't college-only — works for career changers, trades, CDL, dev; blockchain verification (Handshake has none); candidate owns data portably (not locked to .edu) |
+| **Deel** | Employer HR/payroll/EOR + recruitment agency marketplace | Global compliance, one-platform hiring, employer trust | Candidate-first (Deel treats candidates as inventory), portable identity, blockchain verification |
+
+### Employer-side ATS / hiring tools (not direct competitors, but shape employer expectations)
+
+| Competitor | What they do | What they do well (steal this) | Where Storm wins |
+|---|---|---|---|
+| **Lever** | ATS + CRM with AI (interview transcripts, funnel insights, candidate nurturing) | Relationship-focused hiring, structured interviewing with scorecards, 300+ integrations, self-scheduling | Storm is NOT an ATS (see employer-architecture rule). But Lever sets the bar for what employers expect from candidate data: structured, comparable, actionable. Our career card blocks must be at least as scannable as a Lever candidate profile. |
+| **Zoho Recruit** | ATS with Zia AI (matching, assessments, chatbots, profile summaries) | AI profile summaries in 6 languages, bias-free matching, candidate chatbot for pre-screening, assessment generation | Zoho's AI summaries of candidates are good — Storm's career card should be *better* because it's candidate-built + verified, not AI-guessed from a resume parse. Their chatbot idea (candidate self-service) is something Stormi already does better. |
+
+### AI auto-apply tools (the "minimum effort" wave — Storm's philosophical opposite)
+
+These platforms are growing fast. They optimize for **volume of applications**. Storm optimizes for **quality of candidate identity**. We will capture the same users, but convert them from spray-and-pray to invested career builders via Stormi.
+
+| Competitor | What they do | What they do well (steal this) | Where Storm wins |
+|---|---|---|---|
+| **AIApply** (aiapply.co) | AI resume builder + auto-apply + interview simulator. 1.1M+ users. Chrome extension gives real-time interview answers. | One-click resume from LinkedIn import, 99.8% ATS match optimization, mock interview prep, follow-up email automation. Massive adoption proves demand. | Auto-apply produces **generic, unverified** applications. Storm's "Apply with Career Card" sends **verified, structured** identity. Employers receiving 500 AIApply blasts vs. 1 Storm verified card — we win on signal-to-noise. |
+| **Sonara** | AI job scanner + auto-apply. Scans millions of listings, applies during optimal business hours, $5.95/mo. | Smart timing (timezone-aware send), salary trend analytics, real-time LinkedIn/Indeed/Glassdoor sync. Clean simple UX. | Same fundamental problem: no verification, no identity, no employer trust. Sonara candidates are anonymous applicants. Storm candidates have a career card employers can actually evaluate. |
+| **LoopCV** | Mass-apply automation + email recruiters + A/B test CVs. | A/B testing CVs is clever — measuring which version gets more replies. Analytics on email opens/replies. | LoopCV is a competitor to candidates' *effort*, not to Storm's *identity*. Their analytics idea (which CV performs best) could inspire Stormi insights ("Your career card with MVR gets 2x more employer views"). |
+| **LazyApply** | High-volume LinkedIn Easy Apply blasting. | Pure speed — most applications per hour. | Highest ban risk, lowest quality. This is the extreme end of what Storm stands against. But their users are our future users — people who tried volume, got ghosted, and are ready to try quality. |
+| **Simplify** | Autofill engine for application forms (no auto-submit). Free core. | Zero ban risk (human submits), excellent form-fill accuracy, clean tracker. Respects the candidate's control. | Closest in philosophy to Storm's "help you apply well, not apply blindly." But no identity layer, no verification, no employer marketplace. Storm + career card is Simplify's autofill on steroids. |
+| **Teal** | Resume builder + ATS optimizer + job tracker. | Resume tailoring per job, keyword optimization, application pipeline management. | Resume optimization is a feature, not a moat. Storm's blocks + verification make the resume secondary — the career card *is* the application. |
+| **JobCopilot** | Semi-automated apply with human oversight. | Human-in-the-loop prevents low-quality blasts. Review checkpoints before submit. | Right instinct (quality > volume), but still working with unverified resumes. Storm adds the trust layer they're missing. |
+
+### Blockchain / credential competitors
+
+| Competitor | What they do | What they do well (steal this) | Where Storm wins |
+|---|---|---|---|
+| **Velocity Career Labs** | Credential wallet infrastructure (Velocity Network) | Clean "own your credentials" messaging, institutional partnerships | Full candidate hub + AI + employer marketplace (not just a wallet) |
+| **TruScholar** | Blockchain wallet + AI resume, education-institution-driven | University partnerships, clean credential issuance flow | Candidate-initiated (not institution-gated), composable blocks, job discovery |
+| **SmartResume** | Skills-based marketplace with digital credentials | Skills-first matching, CredentialConnect API, three-sided marketplace | On-chain verification (not just digital badges), Stormi coaching, employer outreach |
+| **Bondex** | Web3 professional network | Web3-native audience, token incentives, verified profiles | Not crypto-only audience, broader career categories, employer-side tools |
+
+### What to steal and make better
+
+- **From LinkedIn:** The "profile strength" meter and "who viewed your profile" signals. Storm's version: career card completeness + employer view counts + Stormi framing ("2 employers viewed your card — add MVR to stand out").
+- **From Indeed:** Dead-simple apply flow. Storm's version: "Apply with Career Card" must be as fast as Indeed's Easy Apply, but the career card carries verified credentials the resume doesn't.
+- **From Handshake:** Skills-over-resume matching and "peak intent" job surfacing. Storm's version: Stormi surfaces jobs when the candidate just completed a block or verified a credential ("You just verified your CDL — here are 5 jobs that require it").
+- **From AIApply:** One-click resume import from LinkedIn. Storm's version: import as a starting point, then Stormi guides the candidate to add blocks and verify — turning a generic import into a verified identity.
+- **From Sonara:** Timezone-aware application timing and salary trend analytics. Storm's version: Stormi surfaces salary context ("Jobs matching your profile pay $55K–$75K in your area") and applies at smart times.
+- **From LoopCV:** A/B testing which CV version performs best. Storm's version: Stormi insights on which career card sections drive employer engagement ("Candidates with verified MVR get 3x more views").
+- **From Simplify:** Respect for candidate control (no auto-submit, human reviews). Storm's version: "Apply with Career Card" always shows the candidate what's being sent. No black-box applications.
+- **From Lever/Zoho:** Structured candidate profiles that employers can compare. Storm's version: our blocks already produce structured data — make sure employer views are at least as scannable as an ATS candidate card.
+- **From Deel:** Employer-side trust and compliance. Storm's version: verified-on-chain replaces background checks, structured blocks replace agency vetting.
+- **From Velocity:** Clean "own your data" narrative. Storm's version: same philosophy, but with an AI coach, job discovery, and employer marketplace wrapped around it.
+- **From Hinge (dating app):** "Designed to be deleted" — features that show you *why* your profile isn't working and *what* to fix. Storm's Stormi should feel like Hinge's prompts and insights, not like a generic chatbot.
+
+### The auto-apply wave: threat or opportunity?
+
+The explosion of AI auto-apply tools (AIApply at 1.1M users, Sonara, LoopCV, LazyApply, Simplify, Teal, JobCopilot) creates a **paradox that helps Storm:**
+
+1. **Employer inboxes are flooded** with AI-generated, unverified, mass-blasted applications. Signal-to-noise is collapsing.
+2. **Employers will pay more for signal** — verified candidates who put in real effort. This is Storm's career card.
+3. **Candidates who tried auto-apply and got ghosted** are the perfect Storm converts. Stormi's pitch: "You applied to 500 jobs and got 2 replies. Let's build something employers actually trust."
+4. **The worse auto-apply gets, the more valuable verification becomes.** Storm's moat deepens as the market gets noisier.
+
+Never panic about auto-apply growth. It's making our product **more necessary**, not less.
+
+---
+
+## Competitive Check Protocol — Stay Current in a Fast-Moving Market
+
+The AI agent has **web search** available in every conversation. Use it.
+
+### When building a new feature
+
+Before implementing any **candidate-facing feature**, **employer-facing feature**, or **Stormi capability**, the agent should:
+
+1. **Search** for how competitors handle the same problem (e.g. "How does LinkedIn handle profile completeness nudges 2026", "Deel employer talent search UX 2026", "LoopCV auto-apply flow 2026").
+2. **Identify** what they do well — specific UX patterns, copy, flows.
+3. **Apply the Storm lens** — how do we do this better using our moats (verification, career card, Stormi)?
+4. **Document** the competitive insight in a brief comment in the PR or conversation (not in code comments — in the conversation with the user).
+
+### When the user asks about a competitor
+
+If the user mentions a competitor or a product that sounds like it overlaps with Storm:
+
+1. **Look it up** (web search) — don't rely on training data alone.
+2. **Classify it**: Is this a data source (like Adzuna)? A competitor? A potential partner? Infrastructure?
+3. **Extract what's useful**: What do they do that we should learn from?
+4. **Identify the Storm angle**: Where do our moats make us better?
+
+### Periodic awareness (when starting major features)
+
+When beginning work on a **major new feature area** (new block category, new employer tool, new Stormi capability, new career card section), spend 2–3 web searches understanding the current state of that space. The market moves fast — what was true last month may not be true today.
+
+**The goal is not to copy competitors. The goal is to know what "good" looks like elsewhere so we can build "better" through our moats.**
+
+---
+
+## The Quality Bar — Ship It Better Than Last Week
+
+### Iterate, Don't Just Add
+
+Every feature shipped must be **better than the version before it**. When touching existing code, leave it better than you found it — cleaner, faster, more polished. This is not optional.
+
+- **Before adding a new feature**, audit the area you're touching. Fix rough edges, stale copy, missing dark mode variants, broken empty states.
+- **After shipping**, revisit within the same PR or next session. Does it feel right? Is the loading state graceful? Does the empty state guide the user? Does it work on mobile?
+
+### Stand Above, Don't Blend In
+
+Many platforms automate the **minimum effort** path (mass-apply, AI-generated cover letters, spray-and-pray). Storm's thesis is the opposite: **help candidates put in the right effort, not no effort.**
+
+- Never build features that encourage low-quality applications. Every "apply" flow should leverage the career card, not bypass it.
+- Never optimize for vanity metrics (applications sent, jobs viewed). Optimize for **quality signals** (career card completeness, employer engagement, verified credentials added).
+- When an AI-powered shortcut exists (auto-fill, generate, suggest), make sure it **elevates** the candidate's real profile, not fabricates one.
+
+### The Competitor Filter
+
+When evaluating a feature or design decision, ask:
+
+1. **Does LoopCV / Sonara already do this better?** → If yes, we shouldn't compete on their turf (mass automation). Find the Storm angle (quality + verification + identity).
+2. **Does LinkedIn already own this?** → If yes, we need a clear reason to exist here (candidate-owned, portable, blockchain-verified).
+3. **Would this work without blockchain / career card / Stormi?** → If yes, it's a commodity feature. Make sure it's **enhanced** by at least one of our moats.
+4. **Does this make the career card more valuable?** → If not, question whether it belongs in Storm at all.
+5. **Have we checked what competitors ship this week?** → Use web search to see the current state before building. See "Competitive Check Protocol" above.
+
+---
+
+## Candidate Journey Principles
+
+### Capture → Nurture → Verify → Connect
+
+1. **Capture** — Low barrier to start. One block, one upload, one piece of info. The career card exists immediately (even if sparse).
+2. **Nurture** — Stormi guides improvement. Show what's missing, frame it in outcomes, celebrate additions. The thin card gets thicker over time.
+3. **Verify** — On-chain verification of credentials, employment, certifications. This is the moment Storm becomes **irreplaceable** — a verified career card can't be replicated on a competitor.
+4. **Connect** — Employers discover verified candidates. The career card is the handshake. Job search (Adzuna, etc.) is the hook that brings candidates in; the career card is what keeps them.
+
+### Job Search Is the Hook, Not the Product
+
+External job listings (Adzuna today, potentially others later) exist to **bring candidates into Storm** and keep them engaged. The product is the **career identity + AI coaching + employer marketplace**, not the job aggregator. Never invest more in the job search layer than in the career card and Stormi layers.
+
+---
+
+## What Storm Is NOT
+
+- **Not a mass-apply tool.** We help candidates apply with quality, not volume.
+- **Not a job board.** Jobs are a feature, not the business.
+- **Not an employer ATS.** We show employers verified candidates; we don't replace their hiring workflow.
+- **Not a "grow in your current job" platform.** Focus is hiring, career transitions, and early-career signal. Narrow positioning beats broad ambiguity.
+- **Not a LinkedIn clone.** No feed, no social graph, no engagement farming. Career identity and verified credentials only.

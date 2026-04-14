@@ -137,6 +137,8 @@ const initialStats: DriverHubStats = {
   totalJobApplications: 0,
   pendingApplications: 0,
   totalSpentUSDC: 0,
+  careerCardViewsThisWeek: 0,
+  careerCardViewsTotal: 0,
 }
 
 const initialState: DriverHubState = {

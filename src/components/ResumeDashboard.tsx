@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore } from '@/stores'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
+import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
 import Modal from './ui/Modal'
 import { 
   Trash2, 
@@ -31,7 +32,7 @@ interface ResumeRecord {
   is_paid?: boolean
   file_size?: number
   mime_type?: string
-  resume_type?: 'uploaded' | 'built'
+  resume_type?: 'uploaded' | 'built' | 'developer_built'
   structured_data?: Record<string, unknown>
 }
 
@@ -403,13 +404,25 @@ export default function ResumeDashboard({
     }
   }
 
-  // Handle verify - for built resumes, do one-click verification
+  // One-click verify: built/developer PDF-from-structured, or uploaded PDF already on IPFS
   const handleVerify = async (resume: ResumeRecord) => {
-    // For built resumes with structured data, use one-click verification
-    if (resume.resume_type === 'built' && resume.structured_data && user?.address) {
+    if (!user?.address) return
+
+    const canOneClickVerify =
+      (resume.resume_type === 'built' && resume.structured_data) ||
+      (resume.resume_type === 'developer_built' && resume.structured_data) ||
+      (resume.resume_type === 'uploaded' && isLiveResumeIpfsHash(resume.ipfs_hash ?? null))
+
+    if (canOneClickVerify) {
       setIsVerifying(true)
-      setActionMessage({ type: 'success', text: 'Generating PDF and uploading to blockchain...' })
-      
+      setActionMessage({
+        type: 'success',
+        text:
+          resume.resume_type === 'uploaded'
+            ? 'Recording your resume on-chain...'
+            : 'Generating PDF and uploading to blockchain...',
+      })
+
       try {
         const response = await fetch(`/api/resumes/${resume.id}/verify`, {
           method: 'POST',
@@ -425,25 +438,26 @@ export default function ResumeDashboard({
           throw new Error(data.error || 'Verification failed')
         }
 
-        setActionMessage({ 
-          type: 'success', 
-          text: `Resume verified on blockchain! TX: ${data.transactionHash.slice(0, 10)}...` 
+        const tx = (data.transactionHash ?? data.txHash) as string | undefined
+        setActionMessage({
+          type: 'success',
+          text: tx
+            ? `Resume verified on blockchain! TX: ${tx.slice(0, 10)}...`
+            : 'Resume verification updated.',
         })
-        
-        // Refresh the list to show updated status
+
         fetchResumes(user.address)
         const wa = walletAddress || user.address
         if (wa) void syncDriverHubFromApi(wa)
       } catch (err) {
-        setActionMessage({ 
-          type: 'error', 
-          text: err instanceof Error ? err.message : 'Failed to verify resume' 
+        setActionMessage({
+          type: 'error',
+          text: err instanceof Error ? err.message : 'Failed to verify resume',
         })
       } finally {
         setIsVerifying(false)
       }
     } else if (onVerifyResume) {
-      // For uploaded resumes, use the parent's verify handler (redirect to upload flow)
       onVerifyResume(resume.id)
     }
   }
@@ -856,7 +870,8 @@ function ResumeDetail({
   const status = resume.verification_status || 'PENDING'
   const statusLabel = STATUS_LABELS[status] || status.toLowerCase()
   const isVerified = status === 'VERIFIED'
-  const isBuilt = resume.resume_type === 'built'
+  const isBuilt =
+    resume.resume_type === 'built' || resume.resume_type === 'developer_built'
 
   const InfoRow = ({
     label,

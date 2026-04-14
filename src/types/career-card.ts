@@ -16,6 +16,8 @@ export interface ResumeData {
   filename: string
   ipfsHash: string
   verificationStatus: string
+  /** Base Sepolia tx when resume registered on-chain */
+  blockchainTxHash?: string | null
   structuredData: Record<string, unknown> | null
   createdAt: string
 }
@@ -25,6 +27,10 @@ export interface DotAppData {
   status: string
   isComplete: boolean
   createdAt: string
+  /** Row last update — closer to on-chain confirmation time than createdAt */
+  updatedAt?: string | null
+  /** Base Sepolia tx when DOT app hash was submitted on-chain */
+  blockchainTxHash?: string | null
 }
 
 export interface MvrData {
@@ -121,6 +127,24 @@ export interface CareerCardSection<T extends SectionBlockType = SectionBlockType
   data: SectionDataMap[T]
 }
 
+/** One row in the career card “on-chain credentials” trust strip */
+export interface OnChainCredential {
+  blockType: SectionBlockType
+  label: string
+  txHash: string
+  /** ISO timestamp — resume uses created_at; DOT prefers updated_at when set */
+  verifiedAt: string
+}
+
+/** One row in the career card “employers confirmed employment” trust strip */
+export interface EmployerConfirmation {
+  companyName: string
+  position: string
+  startDate: string
+  endDate: string | null
+  verifiedAt: string
+}
+
 // ── Projected card ───────────────────────────────────────────────────────────
 
 export interface ProjectedCareerCard {
@@ -146,6 +170,14 @@ export interface ProjectedCareerCard {
   viewCount?: number
   /** Past employers who responded on-file (VERIFIED or PARTIALLY_VERIFIED) */
   employerConfirmedEmploymentCount: number
+  /** Itemized confirmations behind employerConfirmedEmploymentCount */
+  employerConfirmations: EmployerConfirmation[]
+  /** Resume + DOT (and similar) credentials with an on-chain tx hash */
+  onChainCredentialCount: number
+  /** Itemized on-chain proofs behind onChainCredentialCount */
+  onChainCredentials: OnChainCredential[]
+  /** 0–100 strength meter: sections + employer confirmations + on-chain proofs */
+  careerCardScore: number
   /**
    * Employer talent view only — this company's paid MVR (FCRA).
    * Omitted for self/public; never shown to the candidate or other employers.

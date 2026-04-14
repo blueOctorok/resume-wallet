@@ -1,5 +1,15 @@
 # Storm — Complete Project Roadmap
 
+## ⚡ **Moat acceleration plan** (April 2026)
+
+| Track | Status | Notes |
+|-------|--------|-------|
+| **P1 — AI resume parse → blocks** | ✅ Done | `/api/ai/parse-resume`, `saveExtractedResumeData`, upload flow + Stormi bridge message on apply |
+| **P2 — Real verify + card trust UI** | ✅ Done | `verify-resume` on-chain; projected + legacy card tx links; strength meter + verification strip; tier badges |
+| **P3 — Career card views + insights** | ✅ Done | `career_card_views` + employer log; hub insights strip; `HubContext` engagement fields for Stormi |
+| **P4 — Stormi nudges + auto-welcome** | ✅ Done | `StormiNudgeBanner`; candidate auto-welcome in `StormiChatPanel`; richer hub context (visits, incomplete blocks, verified counts) |
+| **Career card — itemized verification strips** | ✅ Done | `ProjectedCareerCard` data adds **`onChainCredentials`** + **`employerConfirmations`** (`career-card.ts`, `buildProjectedCareerCard`); UI lists each on-chain credential with **Base Sepolia** link + date, each employer confirmation with company / role / claimed range + **Confirmed** date; **Show all** when more than three rows. See **`docs/CHANGES.md`** (Moat acceleration). |
+
 ## 🧭 **Candidate hub — refresh & navigation** (March 2026)
 
 | Item | Status | Notes |

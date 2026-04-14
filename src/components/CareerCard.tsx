@@ -88,6 +88,7 @@ export interface CareerCardData {
     filename: string
     ipfsHash: string
     verificationStatus: string
+    blockchainTxHash?: string | null
     structuredData: Record<string, unknown> | null
     createdAt: string
   } | null
@@ -96,6 +97,7 @@ export interface CareerCardData {
     status: string
     isComplete: boolean
     createdAt: string
+    blockchainTxHash?: string | null
   } | null
   // Self-ordered MVR — shareable, visible to driver and all employers
   mvr: {
@@ -521,6 +523,18 @@ export default function CareerCard({
               }`}>
                 {data.resume.verificationStatus}
               </span>
+              {data.resume.verificationStatus === 'VERIFIED' && data.resume.blockchainTxHash ? (
+                <a
+                  href={`https://sepolia.basescan.org/tx/${data.resume.blockchainTxHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`flex items-center gap-1 text-xs font-medium ${
+                    theme === 'dark' ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-800'
+                  }`}
+                >
+                  View on Base <ExternalLink className="w-3 h-3" />
+                </a>
+              ) : null}
             </div>
           </div>
         ) : (
@@ -638,6 +652,18 @@ export default function CareerCard({
               }`}>
                 {data.driverApplication.status}
               </span>
+              {data.driverApplication.blockchainTxHash ? (
+                <a
+                  href={`https://sepolia.basescan.org/tx/${data.driverApplication.blockchainTxHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`flex items-center gap-1 text-xs font-medium ${
+                    theme === 'dark' ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-800'
+                  }`}
+                >
+                  View on Base <ExternalLink className="w-3 h-3" />
+                </a>
+              ) : null}
             </div>
           ) : (
             <EmptyState message="No DOT application on file" theme={theme} />

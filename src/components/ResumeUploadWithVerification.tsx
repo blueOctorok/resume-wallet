@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { useAccount, useSmartAccountClient } from '@account-kit/react'
 import { encodeFunctionData } from 'viem'
 import { calculateFileHash, validateFile } from '@/lib/hash-utils'
@@ -8,6 +8,10 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { useAssistantBridge } from '@/contexts/AssistantBridgeContext'
 import { Paperclip, FileText, X } from 'lucide-react'
 import BackToHubButton from './ui/BackToHubButton'
+import Button from './ui/Button'
+import Modal, { ModalHeader } from './ui/Modal'
+import type { ParsedResumeExtraction } from '@/types/resume-extraction'
+import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 
 interface UploadStep {
   id: string
@@ -99,6 +103,103 @@ export default function ResumeUploadWithVerification({
   ])
   const [uploading, setUploading] = useState(false)
   const [finalResult, setFinalResult] = useState<any>(null)
+  const [parseModalOpen, setParseModalOpen] = useState(false)
+  const [parseLoading, setParseLoading] = useState(false)
+  const [applyLoading, setApplyLoading] = useState(false)
+  const [parsedExtraction, setParsedExtraction] = useState<ParsedResumeExtraction | null>(null)
+  const [parseError, setParseError] = useState<string | null>(null)
+  const [pendingResumeId, setPendingResumeId] = useState<string | null>(null)
+
+  const runSmartImport = useCallback(
+    async (resumeId: string, wallet: string) => {
+      setParseLoading(true)
+      setParseError(null)
+      setParsedExtraction(null)
+      try {
+        const res = await fetch('/api/ai/parse-resume', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-wallet-address': wallet,
+          },
+          body: JSON.stringify({ resumeId }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          setParseError(
+            typeof data.message === 'string'
+              ? data.message
+              : typeof data.error === 'string'
+                ? data.error
+                : 'Could not analyze this PDF.',
+          )
+          return
+        }
+        const extraction = data.extraction as ParsedResumeExtraction | undefined
+        if (!extraction || typeof extraction !== 'object') {
+          setParseError('Parse returned no data. You can still use your resume as-is.')
+          return
+        }
+        setParsedExtraction(extraction)
+        setParseModalOpen(true)
+        notifyResumeUploadEvent?.({
+          type: 'analysis_ready',
+          step: 'analysis',
+          data: { resumeId },
+          message: 'Review what we extracted — confirm to fill your hub blocks.',
+        })
+      } catch {
+        setParseError('Could not analyze resume.')
+      } finally {
+        setParseLoading(false)
+      }
+    },
+    [notifyResumeUploadEvent],
+  )
+
+  const applyExtraction = useCallback(async () => {
+    if (!parsedExtraction || !pendingResumeId || !account?.address) return
+    setApplyLoading(true)
+    setParseError(null)
+    try {
+      const res = await fetch(`/api/resumes/${pendingResumeId}/apply-extraction`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': account.address,
+        },
+        body: JSON.stringify({ extraction: parsedExtraction }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setParseError(typeof data.error === 'string' ? data.error : 'Could not apply extraction.')
+        return
+      }
+      const empN = parsedExtraction.employments?.length ?? 0
+      const eduN = parsedExtraction.educations?.length ?? 0
+      const skN = parsedExtraction.skills?.length ?? 0
+      const hasCdl = Boolean(parsedExtraction.cdlInfo?.cdlNumber || parsedExtraction.cdlInfo?.cdlClass)
+      const parts = [
+        hasCdl ? 'CDL details' : null,
+        empN ? `${empN} job${empN === 1 ? '' : 's'}` : null,
+        eduN ? `${eduN} education entr${eduN === 1 ? 'y' : 'ies'}` : null,
+        skN ? `${skN} skills` : null,
+      ].filter(Boolean)
+      const summary = parts.length > 0 ? parts.join(', ') : 'your profile fields'
+      notifyResumeUploadEvent?.({
+        type: 'analysis_ready',
+        step: 'blocks_filled',
+        data: { resumeId: pendingResumeId, summary },
+        message: `Nice — I pulled ${summary} from your resume into your blocks. Your Career Card just got stronger.`,
+      })
+      void syncDriverHubFromApi(account.address)
+      setParseModalOpen(false)
+    } catch {
+      setParseError('Could not apply extraction.')
+    } finally {
+      setApplyLoading(false)
+    }
+  }, [parsedExtraction, pendingResumeId, account?.address, notifyResumeUploadEvent])
 
   const updateStep = (
     stepId: string,
@@ -285,6 +386,13 @@ export default function ResumeUploadWithVerification({
         }),
       })
 
+      let blockchainPayload: {
+        transactionHash?: string
+        resumeId?: string
+        contractAddress?: string
+        explorerUrl?: string
+      } | null = null
+
       if (!blockchainResponse.ok) {
         console.warn('⚠️ Blockchain verification failed, but upload succeeded')
         updateStep(
@@ -306,6 +414,13 @@ export default function ResumeUploadWithVerification({
           blockchainData
         )
 
+        blockchainPayload = {
+          transactionHash: blockchainData.transactionHash,
+          resumeId: blockchainData.resumeId,
+          contractAddress: blockchainData.contractAddress,
+          explorerUrl: blockchainData.explorerUrl,
+        }
+
         updateStep('blockchain', 'success', {
           transactionHash: blockchainData.transactionHash,
           resumeId: blockchainData.resumeId,
@@ -323,7 +438,7 @@ export default function ResumeUploadWithVerification({
         })
       }
 
-      // Set final result
+      // Set final result (use live blockchain payload — React state updates are async)
       const resultPayload = {
         ipfsHash: uploadData.resume.ipfsHash,
         ipfsUrl: uploadData.resume.ipfsUrl,
@@ -331,11 +446,7 @@ export default function ResumeUploadWithVerification({
         wasPaid: uploadData.resume.wasPaid,
         costUSDC: uploadData.resume.costUSDC,
         eligibility: uploadData.eligibility,
-        // Blockchain data if available
-        blockchainData:
-          steps.find((s) => s.id === 'blockchain')?.status === 'success'
-            ? steps.find((s) => s.id === 'blockchain')?.data
-            : null,
+        blockchainData: blockchainPayload,
       }
 
       setFinalResult(resultPayload)
@@ -344,18 +455,9 @@ export default function ResumeUploadWithVerification({
         finalResult: resultPayload,
       })
 
-      // Trigger analysis after upload completes
-      // This will extract data and show insights before prefilling
-      if (uploadData.resume.ipfsHash) {
-        notifyResumeUploadEvent?.({
-          type: 'analysis_ready',
-          step: 'analysis',
-          data: {
-            ipfsHash: uploadData.resume.ipfsHash,
-            resumeId: uploadData.resume.id,
-          },
-          message: '🔍 Analyzing your resume to extract key information...',
-        })
+      setPendingResumeId(uploadData.resume.id)
+      if (uploadData.resume.ipfsHash && account.address) {
+        void runSmartImport(uploadData.resume.id, account.address)
       }
 
       console.log('🎉 Upload completed successfully!')
@@ -592,17 +694,36 @@ export default function ResumeUploadWithVerification({
       </div>
 
       {/* Upload Button */}
-      <button
-        onClick={uploadResume}
+      <Button
+        type='button'
+        variant='primary'
+        className='w-full mb-6'
+        onClick={() => void uploadResume()}
         disabled={!file || !account?.address || uploading}
-        className={`w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed mb-6 ${
-          theme === 'dark'
-            ? 'bg-teal-600 text-white hover:bg-teal-500'
-            : 'bg-teal-700 text-white hover:bg-teal-700/90'
-        }`}
+        isLoading={uploading}
       >
-        {uploading ? 'Uploading...' : 'Upload Resume (Hash-First Process)'}
-      </button>
+        Upload Resume (hash-first)
+      </Button>
+
+      {parseLoading && (
+        <div
+          className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
+            theme === 'dark' ? 'border-teal-500/30 bg-teal-500/10 text-teal-100' : 'border-teal-200 bg-teal-50 text-teal-900'
+          }`}
+        >
+          Analyzing your resume — smart import runs after upload (may take a few seconds)…
+        </div>
+      )}
+
+      {parseError && !parseModalOpen && (
+        <div
+          className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
+            theme === 'dark' ? 'border-amber-500/30 bg-amber-500/10 text-amber-100' : 'border-amber-200 bg-amber-50 text-amber-900'
+          }`}
+        >
+          {parseError}
+        </div>
+      )}
 
       {/* Progress Steps */}
       <div className='space-y-4 mb-6'>
@@ -758,6 +879,59 @@ export default function ResumeUploadWithVerification({
         )}
         </div>
       </div>
+
+      {parseModalOpen ? (
+        <Modal onClose={() => setParseModalOpen(false)} maxWidth='max-w-lg' zIndex={1100}>
+          <ModalHeader
+            title='Smart resume import'
+            subtitle='Review what we extracted — confirm to merge into your hub blocks (CDL, jobs, education, skills).'
+            onClose={() => setParseModalOpen(false)}
+          />
+          <div className='p-4 space-y-4'>
+            {parsedExtraction ? (
+              <ul
+                className={`text-sm space-y-1.5 list-disc pl-5 ${
+                  theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                }`}
+              >
+                {parsedExtraction.personalInfo?.firstName || parsedExtraction.personalInfo?.lastName ? (
+                  <li>
+                    Name:{' '}
+                    {[parsedExtraction.personalInfo?.firstName, parsedExtraction.personalInfo?.lastName]
+                      .filter(Boolean)
+                      .join(' ')}
+                  </li>
+                ) : null}
+                {parsedExtraction.cdlInfo?.cdlClass || parsedExtraction.cdlInfo?.cdlState ? (
+                  <li>
+                    CDL: {parsedExtraction.cdlInfo?.cdlClass ?? '—'} / {parsedExtraction.cdlInfo?.cdlState ?? '—'}
+                  </li>
+                ) : null}
+                <li>Jobs found: {parsedExtraction.employments?.length ?? 0}</li>
+                <li>Education: {parsedExtraction.educations?.length ?? 0}</li>
+                <li>Skills: {parsedExtraction.skills?.length ?? 0}</li>
+              </ul>
+            ) : null}
+            {parseError ? (
+              <p className={`text-sm ${theme === 'dark' ? 'text-red-400' : 'text-red-700'}`}>{parseError}</p>
+            ) : null}
+            <div className='flex flex-wrap gap-2'>
+              <Button
+                type='button'
+                variant='primary'
+                onClick={() => void applyExtraction()}
+                disabled={!parsedExtraction}
+                isLoading={applyLoading}
+              >
+                Confirm &amp; fill blocks
+              </Button>
+              <Button type='button' variant='secondary' onClick={() => setParseModalOpen(false)}>
+                Not now
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
     </>
   )
 }

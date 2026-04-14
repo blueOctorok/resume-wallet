@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { FileText, CheckCircle, Maximize2, Briefcase } from 'lucide-react'
+import { FileText, CheckCircle, Maximize2, Briefcase, ExternalLink, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import ResumePreviewModal from '@/components/ResumePreviewModal'
 import ResumeFilePreviewModal from '@/components/hub/ResumeFilePreviewModal'
@@ -231,7 +231,13 @@ function DeveloperResumeSnapshot({
   )
 }
 
-export default function ResumeSection({ data, mode, isDark, walletAddress = '' }: ResumeSectionProps) {
+export default function ResumeSection({
+  data,
+  mode,
+  isDark,
+  onAction,
+  walletAddress = '',
+}: ResumeSectionProps) {
   const isVerified = String(data.verificationStatus || '').toLowerCase() === 'verified'
   const [showDriverPreview, setShowDriverPreview] = useState(false)
   const [showDevPreview, setShowDevPreview] = useState(false)
@@ -244,6 +250,11 @@ export default function ResumeSection({ data, mode, isDark, walletAddress = '' }
     rawSd != null && typeof rawSd === 'object' ? (rawSd as Record<string, unknown>) : null
   const isBuiltResume = structuredRecord !== null && Object.keys(structuredRecord).length > 0
   const isDevShape = isBuiltResume && isDeveloperResumeStructured(structuredRecord)
+  const stormMeta =
+    structuredRecord && typeof structuredRecord._stormMeta === 'object' && structuredRecord._stormMeta !== null
+      ? (structuredRecord._stormMeta as { source?: string })
+      : null
+  const isAiExtracted = stormMeta?.source === 'ai-extracted'
 
   const canOpenFull = isIpfsResume || isBuiltResume
 
@@ -269,6 +280,21 @@ export default function ResumeSection({ data, mode, isDark, walletAddress = '' }
             {isVerified && (
               <span className='flex items-center gap-1 text-xs text-green-500 dark:text-green-400 flex-shrink-0'>
                 <CheckCircle className='w-3 h-3' /> Verified
+              </span>
+            )}
+            {isAiExtracted && (
+              <span
+                className={cn(
+                  'text-[10px] font-medium px-2 py-0.5 rounded-md border flex-shrink-0',
+                  isDark ? 'bg-gray-600/40 text-gray-300 border-gray-500/40' : 'bg-gray-100 text-gray-600 border-gray-200',
+                )}
+              >
+                Parsed from resume
+              </span>
+            )}
+            {isVerified && data.blockchainTxHash && (
+              <span className='flex items-center gap-1 text-[10px] font-medium text-green-600 dark:text-green-400 flex-shrink-0'>
+                <Shield className='w-3 h-3' /> On-chain
               </span>
             )}
           </div>
@@ -303,8 +329,26 @@ export default function ResumeSection({ data, mode, isDark, walletAddress = '' }
             <p className={cn('text-sm font-medium truncate', isDark ? 'text-gray-200' : 'text-gray-800')}>
               {data.title || data.filename}
             </p>
-            <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
-              {isVerified ? 'Blockchain verified' : 'On file'} · {new Date(data.createdAt).toLocaleDateString()}
+            <p className={cn('text-xs flex flex-wrap items-center gap-x-1 gap-y-1', isDark ? 'text-gray-500' : 'text-gray-400')}>
+              <span>
+                {isVerified ? 'Blockchain verified' : 'On file'} · {new Date(data.createdAt).toLocaleDateString()}
+              </span>
+              {isVerified && data.blockchainTxHash ? (
+                <>
+                  <span aria-hidden>·</span>
+                  <a
+                    href={`https://sepolia.basescan.org/tx/${data.blockchainTxHash}`}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className={cn(
+                      'inline-flex items-center gap-0.5 font-medium',
+                      isDark ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-800',
+                    )}
+                  >
+                    View on Base <ExternalLink className='w-3 h-3' />
+                  </a>
+                </>
+              ) : null}
             </p>
           </div>
         </div>

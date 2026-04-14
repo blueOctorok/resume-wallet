@@ -38,6 +38,8 @@ import ResumePreviewModal from '@/components/ResumePreviewModal'
 import ReferralBanner from './ReferralBanner'
 import JobAlertsHubSection from './JobAlertsHubSection'
 import StormiChatPanel from '@/components/stormi/StormiChatPanel'
+import StormiNudgeBanner from '@/components/stormi/StormiNudgeBanner'
+import CareerCardInsightsStrip from '@/components/hub/CareerCardInsightsStrip'
 import HubSidebar from '@/components/hub/HubSidebar'
 import DeveloperResumePreviewModal from '@/components/DeveloperResumePreviewModal'
 import type { DeveloperResumeData } from '@/components/DeveloperResumeBuilder'
@@ -996,6 +998,10 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
           if (role !== 'driver' && role !== 'developer' && role !== 'general') continue
           const isBuilt =
             resume.resumeType === 'built' || resume.resumeType === 'developer_built'
+          const uploadedCanVerify =
+            !isBuilt &&
+            !resume.blockchainTxHash &&
+            isLiveResumeIpfsHash(resume.ipfsHash ?? null)
           docs.push({
             id: resume.id,
             type: 'resume',
@@ -1004,7 +1010,10 @@ function MyFilesSection({ refreshKey }: { refreshKey: number }) {
             createdAt: resume.createdAt,
             verified: !!resume.blockchainTxHash,
             txHash: resume.blockchainTxHash,
-            canVerify: Boolean(isBuilt && resume.structuredData && !resume.blockchainTxHash),
+            canVerify: Boolean(
+              !resume.blockchainTxHash &&
+                ((isBuilt && resume.structuredData) || uploadedCanVerify),
+            ),
             canDelete: true,
             editPage: hasStormResumeBlock
               ? 'storm-resume'
@@ -1809,6 +1818,7 @@ export default function CandidateHub() {
   const removeBlock = useHubBlocksStore((s) => s.removeBlock)
   const reorderBlocks = useHubBlocksStore((s) => s.reorderBlocks)
   const setEditMode = useHubBlocksStore((s) => s.setEditMode)
+  const setStormiAutoWelcomeCandidateDone = useHubBlocksStore((s) => s.setStormiAutoWelcomeCandidateDone)
 
   const installedBlocks = useInstalledBlocks()
   const hubContext = useHubContext()
@@ -1825,6 +1835,10 @@ export default function CandidateHub() {
   useEffect(() => {
     if (walletAddress) fetchHubData(walletAddress)
   }, [walletAddress, fetchHubData])
+
+  useEffect(() => {
+    if (walletAddress) void syncDriverHubFromApi(walletAddress)
+  }, [walletAddress])
 
   const refreshHub = useCallback(() => {
     if (walletAddress) fetchHubData(walletAddress)
@@ -1927,6 +1941,13 @@ export default function CandidateHub() {
           <div className='min-w-0 space-y-6 lg:col-start-1 lg:row-start-1 lg:self-start'>
             <HubProfileHeader />
 
+            {walletAddress ? (
+              <>
+                <StormiNudgeBanner isDark={isDark} walletAddress={walletAddress} />
+                <CareerCardInsightsStrip isDark={isDark} />
+              </>
+            ) : null}
+
             <div id='stormi-hub-panel' className='scroll-mt-24'>
               <HubSectionPanel isDark={isDark} accent='violet'>
                 <BlockCard
@@ -1949,7 +1970,10 @@ export default function CandidateHub() {
                     hubContext={hubContext}
                     candidateEmptyHub={installedBlocks.length === 0}
                     stormiAutoWelcomeCandidateDone={stormiAutoWelcomeCandidateDone}
-                    onStormiAutoWelcomeSynced={undefined}
+                    onStormiAutoWelcomeSynced={() => {
+                      setStormiAutoWelcomeCandidateDone(true)
+                      if (walletAddress) void fetchHubData(walletAddress)
+                    }}
                     hubEmbedSurface
                   />
                 </BlockCard>

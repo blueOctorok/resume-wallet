@@ -68,6 +68,8 @@ export async function GET(request: NextRequest) {
           contactedApplications: 0,
           totalSpentUSDC: 0,
           totalTransactions: 0,
+          careerCardViewsThisWeek: 0,
+          careerCardViewsTotal: 0,
         }
       })
     }
@@ -350,6 +352,19 @@ export async function GET(request: NextRequest) {
     // Calculate profile completeness
     const profileCompleteness = calculateProfileCompleteness(profile, resumes, dotApplications, mvrRecords)
 
+    const weekAgoIso = new Date(Date.now() - 7 * 86400000).toISOString()
+    const [{ count: cardViewsWeek }, { count: cardViewsTotal }] = await Promise.all([
+      supabase
+        .from('career_card_views')
+        .select('*', { count: 'exact', head: true })
+        .eq('candidate_user_id', user.id)
+        .gte('viewed_at', weekAgoIso),
+      supabase
+        .from('career_card_views')
+        .select('*', { count: 'exact', head: true })
+        .eq('candidate_user_id', user.id),
+    ])
+
     // Calculate total spent from transactions (more reliable than payments table)
     const totalSpent = transactions
       .filter(t => t.status === 'COMPLETED' && t.amount !== null)
@@ -374,6 +389,8 @@ export async function GET(request: NextRequest) {
       contactedApplications: jobApplications.filter(a => a.status === 'contacted').length,
       totalSpentUSDC: totalSpent,
       totalTransactions: transactions.length,
+      careerCardViewsThisWeek: cardViewsWeek ?? 0,
+      careerCardViewsTotal: cardViewsTotal ?? 0,
     }
 
     const portfolio = portfolioRow

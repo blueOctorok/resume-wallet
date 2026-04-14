@@ -1,13 +1,19 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { MapPin, Calendar, Mail, Phone, Eye, Plus, ShieldCheck, Lock } from 'lucide-react'
+import { useState } from 'react'
+import { MapPin, Calendar, Mail, Phone, Eye, Plus, ShieldCheck, Lock, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import Avatar from '@/components/ui/Avatar'
 import Button from '@/components/ui/Button'
 import VaultHorizontalVaultShell from '@/components/ui/VaultHorizontalVaultShell'
-import type { ProjectedCareerCard as CardData, CareerCardMode, CareerCardSection, SectionBlockType } from '@/types/career-card'
+import type {
+  ProjectedCareerCard as CardData,
+  CareerCardMode,
+  CareerCardSection,
+  SectionBlockType,
+} from '@/types/career-card'
 import type { ResumeData, DotAppData, MvrData, CdlData, PortfolioData, GitHubData, ProjectsData } from '@/types/career-card'
 
 import {
@@ -19,6 +25,57 @@ import {
   GitHubSection,
   ProjectsSection,
 } from './sections'
+
+const BASE_SEPOLIA_TX = 'https://sepolia.basescan.org/tx'
+const MAX_TRUST_STRIP_ITEMS = 3
+
+function formatTrustDate(iso: string): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+/** Claimed job dates on the employment verification strip */
+function formatClaimedJobRange(start: string, end: string | null): string {
+  const s = start ? formatTrustDate(start) : '—'
+  const e = end ? formatTrustDate(end) : 'Present'
+  return `${s}–${e}`
+}
+
+function CareerCardStrengthRing({ score, isDark }: { score: number; isDark: boolean }) {
+  const r = 17
+  const circumference = 2 * Math.PI * r
+  const pct = Math.min(100, Math.max(0, score))
+  const offset = circumference - (pct / 100) * circumference
+  return (
+    <div className='relative w-[52px] h-[52px] shrink-0' aria-hidden>
+      <svg width='52' height='52' viewBox='0 0 52 52' className={cn('rotate-[-90deg]', isDark ? 'text-gray-700' : 'text-gray-200')}>
+        <circle cx='26' cy='26' r={r} fill='none' stroke='currentColor' strokeWidth='5' />
+        <circle
+          cx='26'
+          cy='26'
+          r={r}
+          fill='none'
+          className={isDark ? 'text-teal-400' : 'text-teal-600'}
+          stroke='currentColor'
+          strokeWidth='5'
+          strokeLinecap='round'
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+        />
+      </svg>
+      <span
+        className={cn(
+          'absolute inset-0 flex items-center justify-center text-[11px] font-bold',
+          isDark ? 'text-white' : 'text-gray-900',
+        )}
+      >
+        {pct}
+      </span>
+    </div>
+  )
+}
 
 interface ProjectedCareerCardProps {
   data: CardData
@@ -53,6 +110,22 @@ export default function ProjectedCareerCard({
 }: ProjectedCareerCardProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
+  const onChainList = data.onChainCredentials ?? []
+  const onChainCount = data.onChainCredentialCount ?? onChainList.length
+  const employerList = data.employerConfirmations ?? []
+  const employerCount = data.employerConfirmedEmploymentCount ?? employerList.length
+
+  const [showAllOnChain, setShowAllOnChain] = useState(false)
+  const [showAllEmployer, setShowAllEmployer] = useState(false)
+
+  const visibleOnChain =
+    showAllOnChain || onChainList.length <= MAX_TRUST_STRIP_ITEMS
+      ? onChainList
+      : onChainList.slice(0, MAX_TRUST_STRIP_ITEMS)
+  const visibleEmployer =
+    showAllEmployer || employerList.length <= MAX_TRUST_STRIP_ITEMS
+      ? employerList
+      : employerList.slice(0, MAX_TRUST_STRIP_ITEMS)
 
   return (
     <VaultHorizontalVaultShell isDark={isDark} layout='nav' contentClassName='relative overflow-hidden'>
@@ -75,7 +148,9 @@ export default function ProjectedCareerCard({
                 <Avatar name={data.name} avatarUrl={data.avatarUrl} size='2xl' color='teal' round />
               </div>
             </div>
-            <div className='flex-1 min-w-0 pt-0.5'>
+            <div className='flex-1 min-w-0 pt-0.5 flex items-start gap-3'>
+              <CareerCardStrengthRing score={data.careerCardScore ?? 0} isDark={isDark} />
+              <div className='min-w-0 flex-1'>
               <p
                 className={cn(
                   'text-[10px] font-semibold uppercase tracking-[0.2em] mb-0.5',
@@ -97,6 +172,10 @@ export default function ProjectedCareerCard({
                   {data.occupation}
                 </p>
               )}
+              <p className={cn('text-[10px] mt-1', isDark ? 'text-gray-500' : 'text-gray-500')}>
+                Card strength
+              </p>
+              </div>
             </div>
           </div>
 
@@ -116,6 +195,70 @@ export default function ProjectedCareerCard({
               </span>
             )}
           </div>
+
+          {onChainCount > 0 && (
+            <div
+              className={cn(
+                'mt-4 rounded-xl border px-4 py-3',
+                isDark ? 'border-teal-500/30 bg-teal-500/[0.07]' : 'border-teal-200 bg-teal-50/90',
+              )}
+            >
+              <div className='flex items-start gap-2 min-w-0'>
+                <ShieldCheck
+                  className={cn('w-5 h-5 flex-shrink-0 mt-0.5', isDark ? 'text-teal-400' : 'text-teal-700')}
+                  aria-hidden
+                />
+                <div className='min-w-0 flex-1'>
+                  <p className={cn('text-sm font-semibold', isDark ? 'text-teal-100' : 'text-teal-900')}>
+                    {onChainCount} credential{onChainCount === 1 ? '' : 's'} verified on-chain
+                  </p>
+                  <p className={cn('text-[11px] mt-1', isDark ? 'text-teal-200/70' : 'text-teal-800/80')}>
+                    Base Sepolia — each row links to the transaction.
+                  </p>
+                  <ul className='mt-2 space-y-2'>
+                    {visibleOnChain.map((c) => (
+                      <li
+                        key={`${c.blockType}-${c.txHash}`}
+                        className='flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs'
+                      >
+                        <span className={cn('min-w-0', isDark ? 'text-teal-100/95' : 'text-teal-900')}>
+                          <span className='font-medium'>{c.label}</span>
+                          <span className={cn('ml-1.5', isDark ? 'text-teal-200/75' : 'text-teal-800/85')}>
+                            — {formatTrustDate(c.verifiedAt)}
+                          </span>
+                        </span>
+                        <a
+                          href={`${BASE_SEPOLIA_TX}/${c.txHash}`}
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className={cn(
+                            'inline-flex items-center gap-1 font-semibold shrink-0',
+                            isDark ? 'text-teal-300 hover:text-teal-200' : 'text-teal-700 hover:text-teal-800',
+                          )}
+                        >
+                          View tx <ExternalLink className='w-3 h-3' />
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                  {!showAllOnChain && onChainList.length > MAX_TRUST_STRIP_ITEMS ? (
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='sm'
+                      className={cn(
+                        'mt-2 -ml-2 h-8',
+                        isDark ? 'text-teal-300 hover:bg-teal-500/15' : 'text-teal-700 hover:bg-teal-100/80',
+                      )}
+                      onClick={() => setShowAllOnChain(true)}
+                    >
+                      Show all ({onChainList.length})
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Contact info (visible based on settings) */}
           {data.contact && (data.contact.email || data.contact.phone) && (
@@ -143,7 +286,7 @@ export default function ProjectedCareerCard({
           )}
 
           {/* Employer-confirmed employment — trust signal for shared / public card */}
-          {data.employerConfirmedEmploymentCount > 0 && (
+          {employerCount > 0 && (
             <div
               className={cn(
                 'mt-4 flex items-start gap-3 rounded-xl border px-4 py-3',
@@ -156,14 +299,51 @@ export default function ProjectedCareerCard({
                 className={cn('w-5 h-5 flex-shrink-0 mt-0.5', isDark ? 'text-emerald-400' : 'text-emerald-600')}
                 aria-hidden
               />
-              <div className='min-w-0'>
+              <div className='min-w-0 flex-1'>
                 <p className={cn('text-sm font-semibold', isDark ? 'text-emerald-100' : 'text-emerald-900')}>
-                  {data.employerConfirmedEmploymentCount} employer
-                  {data.employerConfirmedEmploymentCount === 1 ? '' : 's'} confirmed employment
+                  {employerCount} employer{employerCount === 1 ? '' : 's'} confirmed employment
                 </p>
-                <p className={cn('text-xs mt-0.5', isDark ? 'text-emerald-200/80' : 'text-emerald-800/80')}>
-                  Past employers verified roles and dates on file.
-                </p>
+                <ul className='mt-2 space-y-2'>
+                  {visibleEmployer.map((row, i) => (
+                    <li
+                      key={`${row.companyName}-${row.verifiedAt}-${i}`}
+                      className='flex flex-col gap-0.5 text-xs sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-3'
+                    >
+                      <span className={cn('min-w-0', isDark ? 'text-emerald-100/95' : 'text-emerald-900')}>
+                        <span className='font-medium'>{row.companyName}</span>
+                        <span className={cn('font-normal', isDark ? 'text-emerald-200/85' : 'text-emerald-800/90')}>
+                          {' '}
+                          — {row.position}{' '}
+                          <span className={cn(isDark ? 'text-emerald-200/70' : 'text-emerald-800/75')}>
+                            ({formatClaimedJobRange(row.startDate, row.endDate)})
+                          </span>
+                        </span>
+                      </span>
+                      <span
+                        className={cn(
+                          'shrink-0 font-medium whitespace-nowrap',
+                          isDark ? 'text-emerald-300/90' : 'text-emerald-800',
+                        )}
+                      >
+                        Confirmed {formatTrustDate(row.verifiedAt)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {!showAllEmployer && employerList.length > MAX_TRUST_STRIP_ITEMS ? (
+                  <Button
+                    type='button'
+                    variant='ghost'
+                    size='sm'
+                    className={cn(
+                      'mt-2 -ml-2 h-8',
+                      isDark ? 'text-emerald-300 hover:bg-emerald-500/15' : 'text-emerald-800 hover:bg-emerald-100/90',
+                    )}
+                    onClick={() => setShowAllEmployer(true)}
+                  >
+                    Show all ({employerList.length})
+                  </Button>
+                ) : null}
               </div>
             </div>
           )}

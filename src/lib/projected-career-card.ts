@@ -16,7 +16,61 @@ import type {
   PortfolioData,
   GitHubData,
   ProjectsData,
+  OnChainCredential,
 } from '@/types/career-card'
+
+function computeCareerCardSignals(
+  sections: CareerCardSection[],
+  employerConfirmedEmploymentCount: number,
+): {
+  onChainCredentialCount: number
+  careerCardScore: number
+  onChainCredentials: OnChainCredential[]
+} {
+  const onChainCredentials: OnChainCredential[] = []
+  for (const s of sections) {
+    if (
+      s.blockType === 'storm-resume' ||
+      s.blockType === 'driver-resume' ||
+      s.blockType === 'developer-resume' ||
+      s.blockType === 'general-resume'
+    ) {
+      const d = s.data as ResumeData
+      const tx = d.blockchainTxHash
+      if (tx && String(d.verificationStatus || '').toUpperCase() === 'VERIFIED') {
+        const def = getBlockDefinition(s.blockType)
+        onChainCredentials.push({
+          blockType: s.blockType,
+          label: def?.label ?? 'Resume',
+          txHash: tx,
+          verifiedAt: d.createdAt,
+        })
+      }
+    }
+    if (s.blockType === 'driver-dot-application') {
+      const d = s.data as DotAppData
+      const tx = d.blockchainTxHash
+      if (tx) {
+        const def = getBlockDefinition('driver-dot-application')
+        onChainCredentials.push({
+          blockType: 'driver-dot-application',
+          label: def?.label ?? 'DOT Application',
+          txHash: tx,
+          verifiedAt: d.updatedAt ?? d.createdAt,
+        })
+      }
+    }
+  }
+  const onChain = onChainCredentials.length
+  const sectionScore = Math.min(sections.length * 12, 60)
+  const employerBonus = Math.min(employerConfirmedEmploymentCount * 10, 20)
+  const chainBonus = Math.min(onChain * 12, 20)
+  return {
+    onChainCredentialCount: onChain,
+    careerCardScore: Math.min(100, sectionScore + employerBonus + chainBonus),
+    onChainCredentials,
+  }
+}
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export type ProjectedCareerCardContactMode = 'self' | 'public' | 'employer'
@@ -87,11 +141,24 @@ export async function buildProjectedCareerCard(
   const hasStormResume = installedTypes.includes('storm-resume')
   const legacyResumeBlockTypes = new Set(['driver-resume', 'developer-resume', 'general-resume'])
 
-  const { count: employerConfirmedEmploymentCount } = await supabase
+  const { data: evrRows } = await supabase
     .from('employment_verification_requests')
-    .select('*', { count: 'exact', head: true })
+    .select(
+      'previous_employer_name, claimed_position, claimed_start_date, claimed_end_date, verified_at, created_at',
+    )
     .eq('driver_id', userId)
     .in('status', ['VERIFIED', 'PARTIALLY_VERIFIED'])
+    .order('verified_at', { ascending: false })
+
+  const employerConfirmations = (evrRows ?? []).map((row) => ({
+    companyName: String(row.previous_employer_name ?? 'Employer'),
+    position: String(row.claimed_position ?? '—'),
+    startDate: String(row.claimed_start_date ?? ''),
+    endDate: row.claimed_end_date != null ? String(row.claimed_end_date) : null,
+    verifiedAt: String(row.verified_at ?? row.created_at ?? ''),
+  }))
+
+  const employerConfirmed = employerConfirmations.length
 
   const sections: CareerCardSection[] = []
 
@@ -111,6 +178,8 @@ export async function buildProjectedCareerCard(
     })
   }
 
+  const signals = computeCareerCardSignals(sections, employerConfirmed)
+
   return {
     userId,
     name: userName,
@@ -124,7 +193,11 @@ export async function buildProjectedCareerCard(
     settings: meta.shareSettings,
     contact,
     viewCount: meta.contactMode === 'public' ? meta.viewCount : undefined,
-    employerConfirmedEmploymentCount: employerConfirmedEmploymentCount ?? 0,
+    employerConfirmedEmploymentCount: employerConfirmed,
+    employerConfirmations,
+    onChainCredentialCount: signals.onChainCredentialCount,
+    onChainCredentials: signals.onChainCredentials,
+    careerCardScore: signals.careerCardScore,
   }
 }
 
@@ -167,7 +240,7 @@ async function fetchLatestResumeForUser(
 ): Promise<ResumeData | null> {
   const { data } = await supabase
     .from('resumes')
-    .select('id, title, filename, ipfs_hash, verification_status, structured_data, created_at')
+    .select('id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, structured_data, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -180,6 +253,7 @@ async function fetchLatestResumeForUser(
     filename: data.filename,
     ipfsHash: data.ipfs_hash,
     verificationStatus: data.verification_status,
+    blockchainTxHash: data.blockchain_tx_hash,
     structuredData: data.structured_data,
     createdAt: data.created_at,
   }
@@ -194,7 +268,7 @@ async function fetchResumeData(
     blockType === 'developer-resume' ? 'developer' : blockType === 'general-resume' ? 'general' : 'driver'
   const { data } = await supabase
     .from('resumes')
-    .select('id, title, filename, ipfs_hash, verification_status, structured_data, created_at')
+    .select('id, title, filename, ipfs_hash, verification_status, blockchain_tx_hash, structured_data, created_at')
     .eq('user_id', userId)
     .eq('source_role', sourceRole)
     .order('created_at', { ascending: false })
@@ -208,6 +282,7 @@ async function fetchResumeData(
     filename: data.filename,
     ipfsHash: data.ipfs_hash,
     verificationStatus: data.verification_status,
+    blockchainTxHash: data.blockchain_tx_hash,
     structuredData: data.structured_data,
     createdAt: data.created_at,
   }
@@ -216,7 +291,7 @@ async function fetchResumeData(
 async function fetchDotAppData(supabase: SupabaseClient, userId: string): Promise<DotAppData | null> {
   const { data } = await supabase
     .from('driver_applications')
-    .select('id, verification_status, is_complete, created_at')
+    .select('id, verification_status, is_complete, created_at, updated_at, blockchain_tx_hash')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -228,6 +303,8 @@ async function fetchDotAppData(supabase: SupabaseClient, userId: string): Promis
     status: data.verification_status,
     isComplete: data.is_complete,
     createdAt: data.created_at,
+    updatedAt: data.updated_at,
+    blockchainTxHash: data.blockchain_tx_hash,
   }
 }
 

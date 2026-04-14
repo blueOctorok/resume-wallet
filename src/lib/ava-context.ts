@@ -33,6 +33,24 @@ export interface HubContext {
     label: string
     status: 'complete' | 'in-progress' | 'empty'
   }>
+  /** Employer talent/pipeline opens of this candidate's career card */
+  cardViewsThisWeek?: number
+  cardViewsTotal?: number
+  /** Driver hub API completeness (0–100) */
+  profileCompleteness?: number
+  /**
+   * Days since last time they opened the candidate hub on this device (localStorage).
+   * `null` = first visit on this browser.
+   */
+  daysSinceLastVisit?: number | null
+  /** Installed blocks that are not yet complete — use hints to be specific in nudges */
+  incompleteBlocks?: Array<{ blockType: string; label: string; hint: string }>
+  /**
+   * Rough count of “verified” artifacts (verified resume, verified DOT, completed MVR order).
+   * Not the same as installed block count.
+   */
+  verifiedBlockCount?: number
+  totalInstalledBlockCount?: number
 }
 
 /** When a user clicks "Ask Stormi" on a specific block, include this */
@@ -130,6 +148,47 @@ export function buildStormiSystemPrompt(
       parts.push(buildBlockStatusSection(hubContext.installedBlocks))
       parts.push(buildCareerLaneSection(hubContext.installedBlocks))
     }
+  }
+
+  const hasEngagementSignals =
+    hubContext?.cardViewsThisWeek !== undefined ||
+    hubContext?.cardViewsTotal !== undefined ||
+    hubContext?.profileCompleteness !== undefined ||
+    hubContext?.daysSinceLastVisit !== undefined ||
+    (hubContext?.incompleteBlocks && hubContext.incompleteBlocks.length > 0) ||
+    hubContext?.verifiedBlockCount !== undefined
+
+  if (hasEngagementSignals) {
+    parts.push('\n## Engagement & profile signals (use to motivate — do not fabricate numbers)')
+    if (hubContext?.cardViewsThisWeek !== undefined) {
+      parts.push(`- **Career card views (last 7 days):** ${hubContext.cardViewsThisWeek}`)
+    }
+    if (hubContext?.cardViewsTotal !== undefined) {
+      parts.push(`- **Career card views (all time):** ${hubContext.cardViewsTotal}`)
+    }
+    if (hubContext?.profileCompleteness !== undefined) {
+      parts.push(`- **Profile / hub completeness (API):** ${hubContext.profileCompleteness}%`)
+    }
+    if (hubContext?.daysSinceLastVisit === null) {
+      parts.push('- **Days since last hub visit (this device):** first visit on this browser')
+    } else if (typeof hubContext?.daysSinceLastVisit === 'number') {
+      parts.push(`- **Days since last hub visit (this device):** ${hubContext.daysSinceLastVisit}`)
+    }
+    if (hubContext?.verifiedBlockCount !== undefined && hubContext?.totalInstalledBlockCount !== undefined) {
+      parts.push(
+        `- **Verified artifacts vs installed blocks:** ${hubContext.verifiedBlockCount} verified signals vs ${hubContext.totalInstalledBlockCount} installed blocks`,
+      )
+    }
+    if (hubContext?.incompleteBlocks && hubContext.incompleteBlocks.length > 0) {
+      const lines = hubContext.incompleteBlocks
+        .slice(0, 6)
+        .map((b) => `  - **${b.label}** (${b.blockType}): ${b.hint}`)
+      parts.push('- **Blocks to strengthen:**')
+      parts.push(...lines)
+    }
+    parts.push(
+      'When views are low, suggest one concrete block or verification step. When views are up, reinforce what worked.',
+    )
   }
 
   // Find Jobs + conversational job tools (see /api/ai/chat tool loop)
