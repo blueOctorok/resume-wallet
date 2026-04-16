@@ -10,6 +10,20 @@
 | **P4 — Stormi nudges + auto-welcome** | ✅ Done | `StormiNudgeBanner`; candidate auto-welcome in `StormiChatPanel`; richer hub context (visits, incomplete blocks, verified counts) |
 | **Career card — itemized verification strips** | ✅ Done | `ProjectedCareerCard` data adds **`onChainCredentials`** + **`employerConfirmations`** (`career-card.ts`, `buildProjectedCareerCard`); UI lists each on-chain credential with **Base Sepolia** link + date, each employer confirmation with company / role / claimed range + **Confirmed** date; **Show all** when more than three rows. See **`docs/CHANGES.md`** (Moat acceleration). |
 
+## **Composable Career Card — platform surfaces** (April 2026)
+
+| Track | Status | Notes |
+|-------|--------|-------|
+| **P1 — Dynamic OG + metadata** | ✅ Done | `/card/[token]/opengraph-image`, `layout.tsx` `generateMetadata`, `loadCareerCardByShareToken` (no view bump) |
+| **P2a — Career Card PDF** | ✅ Done | `/api/career-card/pdf`, `career-card-pdf.ts`, QR + ATS page |
+| **P2b — Embed + oEmbed** | ✅ Done | `/card/[token]/embed`, `CareerCardEmbed`, `/api/oembed`, CSP `frame-ancestors *` |
+| **P2c — Social image (1200²)** | ✅ Done | `/card/[token]/social-image` |
+| **P3a — Email signature PNG** | ✅ Done | `/card/[token]/signature` |
+| **P3b — README badge SVG** | ✅ Done | `/card/[token]/badge` |
+| **Share modal shell** | ✅ Done | `CareerCardShareModal` + `Modal` `panelShape="block"` use the same **`BlockPickerCategory`** card chrome (`rounded-xl border`, `bg-gray-800/40` / white); overflow uses **`.scrollbar-none`** in `globals.css` (scroll works, no bar). |
+| **Hub profile share CTA** | ✅ Done | `CandidateHub` `CareerCardMiniPreview`: **View card** + **Share** split row (same idea as sidebar `MiniCareerCard`). |
+| **P4 — Chrome extension** | 🔲 Future | `docs/CAREER_CARD_PLATFORM_INJECTION.md` — separate repo / Web Store |
+
 ## 🧭 **Candidate hub — refresh & navigation** (March 2026)
 
 | Item | Status | Notes |

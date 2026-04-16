@@ -565,6 +565,16 @@ button:disabled,
   filter: drop-shadow(0 0 8px rgba(200, 200, 200, 0.35));
 }
 
+/* Hide scrollbar (all breakpoints) — scroll still works via wheel / touch / keys */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Hide scrollbar on mobile devices */
 @media (max-width: 767px) {
   .scrollbar-hide-mobile {

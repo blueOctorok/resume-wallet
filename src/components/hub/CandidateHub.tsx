@@ -2,7 +2,30 @@
 
 import Image from 'next/image'
 import { useEffect, useCallback, useState, useRef, type ReactNode } from 'react'
-import { Plus, Loader2, AlertCircle, X, Eye, Pencil, Check, ShieldCheck, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, FileText, ClipboardCheck, Car, Trash2, Globe, Github, Compass, Sparkles, LayoutGrid } from 'lucide-react'
+import {
+  Plus,
+  Loader2,
+  AlertCircle,
+  X,
+  Eye,
+  Pencil,
+  Check,
+  ShieldCheck,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  ClipboardCheck,
+  Car,
+  Trash2,
+  Globe,
+  Github,
+  Compass,
+  Sparkles,
+  LayoutGrid,
+  Share2,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore, useJourneyStore, usePreferencesStore } from '@/stores'
@@ -40,6 +63,7 @@ import JobAlertsHubSection from './JobAlertsHubSection'
 import StormiChatPanel from '@/components/stormi/StormiChatPanel'
 import StormiNudgeBanner from '@/components/stormi/StormiNudgeBanner'
 import CareerCardInsightsStrip from '@/components/hub/CareerCardInsightsStrip'
+import CareerCardShareModal from '@/components/hub/CareerCardShareModal'
 import HubSidebar from '@/components/hub/HubSidebar'
 import DeveloperResumePreviewModal from '@/components/DeveloperResumePreviewModal'
 import type { DeveloperResumeData } from '@/components/DeveloperResumeBuilder'
@@ -477,6 +501,8 @@ function CareerCardMiniPreview({
 }) {
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const openPicker = useHubBlocksStore((s) => s.openPicker)
+  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
   const types = installedBlocks.map((b) => b.blockType)
   const hasResume = types.some((t) => t.includes('resume') || t === 'storm-resume')
   const hasDot = types.includes('driver-dot-application')
@@ -566,16 +592,40 @@ function CareerCardMiniPreview({
       </div>
 
       {hasBlocks ? (
-        <Button
-          type='button'
-          variant='primary'
-          size='sm'
-          onClick={() => setCurrentPage('career-card' as PageType)}
-          className='w-full sm:w-auto'
-        >
-          <Eye className='mr-1.5 h-4 w-4 shrink-0' />
-          View Career Card
-        </Button>
+        <>
+          {/* Same split as sidebar `MiniCareerCard`: half-width primary + secondary share */}
+          <div className='flex w-full gap-2 sm:max-w-md'>
+            <Button
+              type='button'
+              variant='primary'
+              size='sm'
+              title='Open your career card'
+              onClick={() => setCurrentPage('career-card' as PageType)}
+              className='min-w-0 flex-1 text-[11px] sm:text-xs'
+            >
+              <Eye className='mr-1 h-3.5 w-3.5 shrink-0 sm:mr-1.5 sm:h-4 sm:w-4' />
+              <span className='sm:hidden'>View card</span>
+              <span className='hidden sm:inline'>View career card</span>
+            </Button>
+            <Button
+              type='button'
+              variant='secondary'
+              size='sm'
+              title='Share link, image, QR, and embeds'
+              onClick={() => setShareModalOpen(true)}
+              className='min-w-0 flex-1 text-[11px] sm:text-xs'
+            >
+              <Share2 className='mr-1 h-3.5 w-3.5 shrink-0 sm:mr-1.5 sm:h-4 sm:w-4' />
+              Share
+            </Button>
+          </div>
+          <CareerCardShareModal
+            isOpen={shareModalOpen}
+            onClose={() => setShareModalOpen(false)}
+            walletAddress={walletAddress}
+            displayName={displayName}
+          />
+        </>
       ) : (
         <Button type='button' variant='primary' size='sm' onClick={openPicker} className='w-full sm:w-auto'>
           <Plus className='mr-1.5 h-4 w-4 shrink-0' />

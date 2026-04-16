@@ -23,6 +23,13 @@ interface ModalProps {
   zIndex?: number
   /** When true the backdrop click does NOT close the modal */
   disableBackdropClose?: boolean
+  /**
+   * `default` — rounded-2xl panel (standard dialogs).
+   * `block` — same shell as hub category cards (`BlockPickerCategory`): rounded-xl border, muted fill, hidden scrollbar on overflow.
+   */
+  panelShape?: 'default' | 'block'
+  /** Merged onto the panel div (extra utilities beyond shape defaults). */
+  panelClassName?: string
 }
 
 /**
@@ -48,8 +55,11 @@ export default function Modal({
   maxWidth = 'max-w-lg',
   zIndex = 1000,
   disableBackdropClose = false,
+  panelShape = 'default',
+  panelClassName,
 }: ModalProps) {
   const { theme } = useTheme()
+  const isDarkTheme = theme === 'dark'
   const panelRef = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
@@ -95,19 +105,30 @@ export default function Modal({
         role="dialog"
         aria-modal="true"
         className={cn(
-          'relative w-full max-h-[90vh] overflow-y-auto overflow-x-hidden rounded-2xl',
-          'shadow-[0_24px_64px_-12px_rgba(0,0,0,0.45)] dark:shadow-[0_28px_72px_-8px_rgba(0,0,0,0.75)]',
-          'ring-1 ring-white/15 dark:ring-white/10',
+          'relative w-full max-h-[90vh] overflow-y-auto overflow-x-hidden scrollbar-none',
+          panelShape === 'block'
+            ? cn(
+                'rounded-xl border shadow-xl ring-1 ring-teal-500/20 dark:ring-teal-500/25',
+                isDarkTheme
+                  ? 'border-gray-700 bg-gray-800/95'
+                  : 'border-gray-200 bg-white',
+              )
+            : cn(
+                'rounded-2xl ring-1 ring-white/15 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.45)] dark:ring-white/10 dark:shadow-[0_28px_72px_-8px_rgba(0,0,0,0.75)]',
+                isDarkTheme
+                  ? 'bg-gradient-to-b from-gray-900 to-gray-950 border border-gray-600/80'
+                  : 'bg-gradient-to-b from-white to-slate-50/95 border border-gray-200/90',
+              ),
           maxWidth,
-          theme === 'dark'
-            ? 'bg-gradient-to-b from-gray-900 to-gray-950 border border-gray-600/80'
-            : 'bg-gradient-to-b from-white to-slate-50/95 border border-gray-200/90'
+          panelClassName,
         )}
       >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-400/50 to-transparent dark:via-teal-400/40"
-        />
+        {panelShape !== 'block' ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-400/50 to-transparent dark:via-teal-400/40"
+          />
+        ) : null}
         {children}
       </div>
     </div>
@@ -123,27 +144,36 @@ interface ModalHeaderProps {
   title: string
   subtitle?: string
   onClose: () => void
+  /** Match `Modal` `panelShape="block"` — header edge aligns with category-card shell. */
+  variant?: 'default' | 'block'
 }
 
 /**
  * Sticky header for use inside Modal.  Handles the close button and title.
  * Use this instead of rewriting the header pattern every time.
  */
-export function ModalHeader({ title, subtitle, onClose }: ModalHeaderProps) {
+export function ModalHeader({ title, subtitle, onClose, variant = 'default' }: ModalHeaderProps) {
   const { theme } = useTheme()
+  const block = variant === 'block'
   return (
     <div
       className={cn(
-        'sticky top-0 z-10 flex items-start justify-between gap-4 p-4 sm:p-5 border-b relative',
+        'sticky top-0 z-10 flex items-start justify-between gap-4 p-4 sm:p-5 border-b',
         theme === 'dark'
-          ? 'border-gray-700/80 bg-gray-900/95 backdrop-blur-sm'
-          : 'border-gray-200/90 bg-white/95 backdrop-blur-sm'
+          ? block
+            ? 'border-gray-700 bg-gray-900/95 backdrop-blur-sm'
+            : 'border-gray-700/80 bg-gray-900/95 backdrop-blur-sm'
+          : block
+            ? 'border-gray-200 bg-white backdrop-blur-sm'
+            : 'border-gray-200/90 bg-white/95 backdrop-blur-sm',
       )}
     >
-      <div
-        aria-hidden
-        className="absolute bottom-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-teal-500/20 to-transparent dark:via-teal-400/15"
-      />
+      {!block ? (
+        <div
+          aria-hidden
+          className="absolute bottom-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-teal-500/20 to-transparent dark:via-teal-400/15"
+        />
+      ) : null}
       <div>
         <h3
           className={cn(
@@ -163,10 +193,11 @@ export function ModalHeader({ title, subtitle, onClose }: ModalHeaderProps) {
         onClick={onClose}
         aria-label="Close"
         className={cn(
-          'shrink-0 p-1.5 rounded-lg transition-colors',
+          'shrink-0 p-1.5 transition-colors',
+          'rounded-lg',
           theme === 'dark'
             ? 'text-gray-400 hover:text-white hover:bg-gray-700'
-            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100',
         )}
       >
         <X className="w-5 h-5" />

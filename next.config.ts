@@ -7,6 +7,21 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
 
+  /** Allow embedding the compact career card on third-party sites (Notion, portfolios, etc.) */
+  async headers() {
+    return [
+      {
+        source: '/card/:token/embed',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: 'frame-ancestors *',
+          },
+        ],
+      },
+    ]
+  },
+
   // Redirect old role-specific card routes to unified /card/[token]
   async redirects() {
     return [
