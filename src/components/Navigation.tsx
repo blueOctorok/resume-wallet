@@ -83,7 +83,10 @@ export default function Navigation({
   const [isHubDropdownOpen, setIsHubDropdownOpen] = useState(false)
   const hubDropdownRef = useRef<HTMLDivElement>(null)
   const { theme } = useTheme()
-  const { showJourneyModals, setShowJourneyModals } = usePreferencesStore()
+  const showJourneyModals = usePreferencesStore((s) => s.showJourneyModals)
+  const setShowJourneyModals = usePreferencesStore((s) => s.setShowJourneyModals)
+  const walkthroughDismissed = useHubBlocksStore((s) => s.walkthroughDismissed)
+  const setWalkthroughDismissed = useHubBlocksStore((s) => s.setWalkthroughDismissed)
   const requestWalkthrough = useJourneyStore((s) => s.requestWalkthrough)
   const { navigateToMessages, requestHubRefresh } = useUIStore()
   const hubBlocksLoading = useHubBlocksStore((s) => s.isLoading)
@@ -480,11 +483,33 @@ export default function Navigation({
                         <button
                           type='button'
                           onClick={() => {
-                            // Turning tips back on clears "show once" memory so hub welcome + journey modals can appear again
-                            if (!showJourneyModals) {
-                              usePreferencesStore.getState().resetCompletedJourneySteps()
-                            }
-                            setShowJourneyModals(!showJourneyModals)
+                            void (async () => {
+                              // Candidates: tips tied to `users.stormi_walkthrough_dismissed_at` (per wallet).
+                              if (userRole === 'candidate' && walletAddress) {
+                                const nextDismissed = !walkthroughDismissed
+                                const res = await fetch('/api/user/profile', {
+                                  method: 'PATCH',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                    'x-wallet-address': walletAddress,
+                                  },
+                                  body: JSON.stringify({ walkthrough_dismissed: nextDismissed }),
+                                })
+                                if (res.ok) {
+                                  setWalkthroughDismissed(nextDismissed)
+                                  if (!nextDismissed) {
+                                    requestWalkthrough()
+                                  }
+                                }
+                              } else {
+                                if (!showJourneyModals) {
+                                  usePreferencesStore.getState().resetCompletedJourneySteps()
+                                }
+                                setShowJourneyModals(!showJourneyModals)
+                              }
+                            })()
+                            setIsHubDropdownOpen(false)
+                            setIsMenuOpen(false)
                           }}
                           className={cn(
                             navDropdownItemClass(isDark),
@@ -499,7 +524,7 @@ export default function Navigation({
                           <span
                             className={cn(
                               'text-xs px-2 py-0.5 rounded-full font-medium',
-                              showJourneyModals
+                              (userRole === 'candidate' ? !walkthroughDismissed : showJourneyModals)
                                 ? isDark
                                   ? 'bg-teal-500/20 text-teal-400'
                                   : isPaperLight
@@ -512,7 +537,9 @@ export default function Navigation({
                                     : 'bg-slate-100 text-slate-600',
                             )}
                           >
-                            {showJourneyModals ? 'On' : 'Off'}
+                            {(userRole === 'candidate' ? !walkthroughDismissed : showJourneyModals)
+                              ? 'On'
+                              : 'Off'}
                           </span>
                         </button>
                         <button

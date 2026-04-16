@@ -61,11 +61,7 @@ import HubOnboardingForm from './HubOnboardingForm'
 import BlockPickerModal from './BlockPickerModal'
 import StormiWalkthrough from './StormiWalkthrough'
 import StormiContextModal from './StormiContextModal'
-import {
-  candidateHubStaticSteps,
-  CANDIDATE_HUB_WELCOME_STEP_ID,
-  type WalkthroughStep,
-} from '@/lib/walkthrough-config'
+import { candidateHubStaticSteps, type WalkthroughStep } from '@/lib/walkthrough-config'
 import { fetchStormiWelcomeStep, WALKTHROUGH_AI_LOADING_STEP } from '@/lib/walkthrough-ai'
 import MvrViewModal from '@/components/MvrViewModal'
 import DotAppPreviewModal from '@/components/career-card/DotAppPreviewModal'
@@ -1898,17 +1894,14 @@ export default function CandidateHub() {
 
   const hubYourBlocksExpanded = usePreferencesStore((s) => s.hubYourBlocksExpanded ?? true)
   const setHubYourBlocksExpanded = usePreferencesStore((s) => s.setHubYourBlocksExpanded)
-  const showJourneyModals = usePreferencesStore((s) => s.showJourneyModals)
-  // Select the boolean directly — selecting the function `s.hasCompletedJourneyStep` returns
-  // a stable reference that never triggers re-renders when completedJourneySteps changes.
-  const hubWelcomeCompleted = usePreferencesStore(
-    (s) => s.completedJourneySteps.includes(CANDIDATE_HUB_WELCOME_STEP_ID),
-  )
-  const markJourneyStepComplete = usePreferencesStore((s) => s.markJourneyStepComplete)
-  const setShowJourneyModals = usePreferencesStore((s) => s.setShowJourneyModals)
 
   const userProfile = useHubBlocksStore((s) => s.userProfile)
+  const walkthroughDismissed = useHubBlocksStore((s) => s.walkthroughDismissed)
+  const setWalkthroughDismissed = useHubBlocksStore((s) => s.setWalkthroughDismissed)
   const onboarding = useHubOnboarding()
+
+  /** After dismiss (X / Done / Browse), hide until next login or Journey Guide — not persisted (DB flag is separate). */
+  const [walkthroughSuppressedThisSession, setWalkthroughSuppressedThisSession] = useState(false)
 
   const hubStaticSteps = useMemo(
     () =>
@@ -1931,15 +1924,20 @@ export default function CandidateHub() {
   const hubContextRef = useRef(hubContext)
   hubContextRef.current = hubContext
 
-  /** Block-styled walkthrough for new candidates — after hub questionnaire + name, before they drown in the UI */
+  /** Per-wallet: `walkthroughDismissed` from DB. Per-session: suppressed after dismiss until replay / new login. */
+  useEffect(() => {
+    setWalkthroughSuppressedThisSession(false)
+  }, [walletAddress, walkthroughRequestNonce])
+
+  /** Block-styled walkthrough — after questionnaire + name; every hub load unless DB opted out or suppressed this session */
   const showStormiWalkthrough =
     !isLoading &&
     !fetchError &&
     !needsOnboarding &&
     !showProfileSetup &&
     Boolean(userProfile?.firstName?.trim()) &&
-    showJourneyModals &&
-    (!hubWelcomeCompleted || requestWalkthroughReplay)
+    (!walkthroughDismissed || requestWalkthroughReplay) &&
+    (!walkthroughSuppressedThisSession || requestWalkthroughReplay)
 
   const walkthroughSteps = useMemo(() => {
     if (isLoadingAiStep && !aiWelcomeStep) {
@@ -1988,6 +1986,32 @@ export default function CandidateHub() {
   ])
 
   const showYourBlocksPanel = installedBlocks.length === 0 || hubYourBlocksExpanded
+
+  const handleWalkthroughComplete = useCallback(() => {
+    setWalkthroughSuppressedThisSession(true)
+    clearWalkthroughRequest()
+  }, [clearWalkthroughRequest])
+
+  const handleWalkthroughDisableAll = useCallback(async () => {
+    if (!walletAddress) return
+    try {
+      const res = await fetch('/api/user/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': walletAddress,
+        },
+        body: JSON.stringify({ walkthrough_dismissed: true }),
+      })
+      if (res.ok) {
+        setWalkthroughDismissed(true)
+      }
+    } catch {
+      /* user asked to opt out — still suppress locally if PATCH fails */
+    }
+    setWalkthroughSuppressedThisSession(true)
+    clearWalkthroughRequest()
+  }, [walletAddress, setWalkthroughDismissed, clearWalkthroughRequest])
 
   useEffect(() => {
     if (walletAddress) fetchHubData(walletAddress)
@@ -2091,13 +2115,9 @@ export default function CandidateHub() {
         <StormiWalkthrough
           key={`hub-walk-${walkthroughRequestNonce}`}
           steps={walkthroughSteps}
-          onComplete={() => {
-            markJourneyStepComplete(CANDIDATE_HUB_WELCOME_STEP_ID)
-            clearWalkthroughRequest()
-          }}
+          onComplete={handleWalkthroughComplete}
           onDisableAll={() => {
-            setShowJourneyModals(false)
-            clearWalkthroughRequest()
+            void handleWalkthroughDisableAll()
           }}
           onBrowseBlocks={openPicker}
         />

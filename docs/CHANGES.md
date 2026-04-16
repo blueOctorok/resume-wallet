@@ -10,16 +10,20 @@ This file tracks major modifications made to the ResumeWallet codebase.
 New candidates land on a dense hub; the career path sidebar helps returning users, but first-timers need step-by-step popups before the layout makes sense.
 
 ### What shipped
-- **`src/components/hub/StormiWalkthrough.tsx`** — Reusable 3-step modal: **`Modal panelShape="block"`** + **`HubSectionPanel` + `BlockCard variant="embed"`** (same vault/block chrome as Ask Stormi on the hub), progress dots, Back/Next, final **Browse blocks** / **I'll explore on my own**, checkbox for `showJourneyModals`.
+- **`supabase/migrations/066_stormi_walkthrough_dismissed.sql`** — `users.stormi_walkthrough_dismissed_at` (per-wallet opt-out for candidate hub Stormi walkthrough / tips).
+- **`src/app/api/hub/blocks/route.ts`** — GET returns **`walkthroughDismissed`** from that column (with **`avaAutoWelcomeCandidateDone`**).
+- **`PATCH /api/user/profile`** ([`src/app/api/user/profile/route.ts`](src/app/api/user/profile/route.ts)) — Body **`{ walkthrough_dismissed: boolean }`**, header **`x-wallet-address`**; sets or clears `stormi_walkthrough_dismissed_at`.
+- **`src/stores/hub-blocks-store.ts`** — **`walkthroughDismissed`** + **`setWalkthroughDismissed`**; **`useWalkthroughDismissed`** exported from [`src/stores/index.ts`](src/stores/index.ts).
+- **`src/components/hub/StormiWalkthrough.tsx`** — Reusable 3-step modal: **`Modal panelShape="block"`** + **`HubSectionPanel` + `BlockCard variant="embed"`**, progress dots, Back/Next, **Browse blocks** / **I'll explore on my own**, checkbox persists opt-out via parent (**PATCH**), not localStorage alone.
 - **`src/components/hub/BlockPickerModal.tsx`** — **`panelShape="block"`** + **`ModalHeader variant="block"`** so Add Blocks matches hub modal shell.
-- **`src/lib/walkthrough-config.ts`** — `candidateHubStaticSteps(...)` (steps 2–3) + `CANDIDATE_HUB_WELCOME_STEP_ID` (`candidate.hubWelcome`) for `completedJourneySteps` persistence. Step 3 copy uses **`suggestCategories`** so General-only paths do not imply driver/dev blocks.
-- **`src/lib/walkthrough-ai.ts`** — Step 1 calls **`POST /api/ai/chat`** with `hubContext` + `walkthroughWelcome: true` (JSON `title`/`body`); offline **`fallbackStormiWelcomeStep`** on failure; loading row id matches **`WALKTHROUGH_AI_LOADING_STEP`** for skeleton UI.
-- **`src/app/api/ai/chat/route.ts`** — When **`walkthroughWelcome`** is true for candidates, job-search tools are skipped so the model returns reliable compact JSON.
-- **`src/components/hub/CandidateHub.tsx`** — Shows walkthrough when onboarding is done, profile setup is not open, first name exists, journey tips are on, and either `candidate.hubWelcome` is incomplete **or** `requestWalkthroughReplay` is set. Fetches AI step 1 on open; **`key={hub-walk-${walkthroughRequestNonce}}`** remounts on each **Stormi Journey Guide** request. Mobile **Career path** FAB scrolls to **`#candidate-hub-quest-sidebar`** instead of opening the legacy slide-over.
-- **`src/stores/journey-store.ts`** — **`requestWalkthrough()`** clears hub welcome completion, sets replay, and bumps **`walkthroughRequestNonce`**; **`clearWalkthroughRequest()`** clears replay after dismiss.
-- **`src/stores/preferences-store.ts`** — **`clearJourneyStepCompletion(stepId)`** so a single journey step can be reopened without wiping all tips.
-- **`src/components/Navigation.tsx`** — **Stormi Journey Guide** calls **`requestWalkthrough()`** (walkthrough modals) instead of **`openGuide()`** (deprecated duplicate of inline Career Path). Turning **Journey Tips** back **On** still calls **`resetCompletedJourneySteps()`**.
-- **`.cursor/rules/ui-components.mdc`** — Documented hub-aligned modal chrome (`panelShape="block"`, `ModalHeader variant="block"`, `HubSectionPanel` + `BlockCard` for hub panels).
+- **`src/lib/walkthrough-config.ts`** — `candidateHubStaticSteps(...)` (steps 2–3); step 3 uses **`suggestCategories`**. `CANDIDATE_HUB_WELCOME_STEP_ID` kept for identifiers/docs only — walkthrough visibility is no longer tied to **`completedJourneySteps`** for candidates.
+- **`src/lib/walkthrough-ai.ts`** — Step 1 calls **`POST /api/ai/chat`** with `hubContext` + **`walkthroughWelcome: true`**; **`fallbackStormiWelcomeStep`**; **`WALKTHROUGH_AI_LOADING_STEP`** skeleton.
+- **`src/app/api/ai/chat/route.ts`** — **`walkthroughWelcome`** skips job-search tools.
+- **`src/components/hub/CandidateHub.tsx`** — Walkthrough shows on every hub visit when **`!walkthroughDismissed`** (DB) and not **session-suppressed** after dismiss; **`requestWalkthroughReplay`** still forces replay. Checkbox / nav opt-out uses **PATCH**. Mobile **Career path** FAB scrolls to **`#candidate-hub-quest-sidebar`**.
+- **`src/stores/journey-store.ts`** — **`requestWalkthrough()`** only bumps **`walkthroughRequestNonce`** + replay flag (no localStorage).
+- **`src/components/Navigation.tsx`** — **Candidates:** **Journey Tips** toggles **`walkthrough_dismissed`** via **PATCH** + hub store; turning tips **On** calls **`requestWalkthrough()`**. **Driver / developer / employer:** still use **`preferences-store`** `showJourneyModals` + **`resetCompletedJourneySteps`** for **`JourneyModal`** / first-login flows.
+- **`src/stores/preferences-store.ts`** — Still holds **`showJourneyModals`** / **`completedJourneySteps`** for non-candidate journey modals; **`clearJourneyStepCompletion`** remains for those flows.
+- **`.cursor/rules/ui-components.mdc`** — Hub-aligned modal chrome (`panelShape="block"`, etc.).
 
 ---
 

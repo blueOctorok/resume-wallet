@@ -13,8 +13,6 @@ import {
   calculateEmployerProgress,
 } from '@/lib/journey-progress'
 import { useEmployerHiringPathStore } from '@/stores/employer-journey-snapshot-store'
-import { usePreferencesStore } from '@/stores/preferences-store'
-import { CANDIDATE_HUB_WELCOME_STEP_ID } from '@/lib/walkthrough-config'
 
 /**
  * Journey Store - Manages Stormi Journey Guide state
@@ -40,7 +38,7 @@ interface JourneyActions {
   closeGuide: () => void
   toggleGuide: () => void
   setHasSeenWelcome: (seen: boolean) => void
-  /** Clear hub welcome completion + flag so CandidateHub shows the walkthrough again */
+  /** Bump replay nonce so CandidateHub remounts the walkthrough (e.g. My Hub → Stormi Journey Guide) */
   requestWalkthrough: () => void
   clearWalkthroughRequest: () => void
 }
@@ -72,13 +70,11 @@ export const useJourneyStore = create<JourneyState & JourneyActions>()(
 
       setHasSeenWelcome: (seen) => set({ hasSeenWelcome: seen }),
 
-      requestWalkthrough: () => {
-        usePreferencesStore.getState().clearJourneyStepCompletion(CANDIDATE_HUB_WELCOME_STEP_ID)
+      requestWalkthrough: () =>
         set((s) => ({
           requestWalkthroughReplay: true,
           walkthroughRequestNonce: s.walkthroughRequestNonce + 1,
-        }))
-      },
+        })),
 
       clearWalkthroughRequest: () => set({ requestWalkthroughReplay: false }),
     }),

@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
-import { getAdminSupabaseClient } from '@/utils/supabase/admin';
-import { getUserByWallet } from '@/lib/user-by-wallet';
-import { isSupabaseNetworkError } from '@/lib/supabase-errors';
+import { NextRequest, NextResponse } from 'next/server'
+import { getAdminSupabaseClient } from '@/utils/supabase/admin'
+import { getUserByWallet } from '@/lib/user-by-wallet'
+import { isSupabaseNetworkError } from '@/lib/supabase-errors'
 
 export async function POST(request: Request) {
   try {
@@ -115,3 +115,58 @@ export async function POST(request: Request) {
   }
 }
 
+/**
+ * PATCH /api/user/profile
+ *
+ * Partial updates on `users` for the authenticated wallet.
+ * Headers: x-wallet-address
+ * Body: { walkthrough_dismissed: boolean } — maps to `stormi_walkthrough_dismissed_at`
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const walletAddress = request.headers.get('x-wallet-address')
+    if (!walletAddress) {
+      return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
+    }
+
+    const body = (await request.json()) as { walkthrough_dismissed?: unknown }
+    if (typeof body?.walkthrough_dismissed !== 'boolean') {
+      return NextResponse.json(
+        { error: 'walkthrough_dismissed (boolean) is required' },
+        { status: 400 },
+      )
+    }
+
+    const supabase = await getAdminSupabaseClient()
+    const user = await getUserByWallet(supabase, walletAddress)
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update({
+        stormi_walkthrough_dismissed_at: body.walkthrough_dismissed
+          ? new Date().toISOString()
+          : null,
+      })
+      .eq('id', user.id)
+
+    if (error) {
+      console.error('[PROFILE PATCH] Update error:', error)
+      return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      walkthroughDismissed: body.walkthrough_dismissed,
+    })
+  } catch (error) {
+    console.error('[PROFILE PATCH] Error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+function isNetworkError(message: string): boolean {
+  return /fetch failed|ECONNRESET|ENOTFOUND|ETIMEDOUT|network/i.test(message)
+}

@@ -59,6 +59,8 @@ interface HubBlocksState {
   userProfile: HubUserProfile | null
   /** Synced from GET /api/hub/blocks — DB `users.ava_auto_welcome_candidate_at` */
   avaAutoWelcomeCandidateDone: boolean
+  /** Synced from GET /api/hub/blocks — DB `users.stormi_walkthrough_dismissed_at` (per wallet) */
+  walkthroughDismissed: boolean
 
   isLoading: boolean
   isPickerOpen: boolean
@@ -97,6 +99,8 @@ interface HubBlocksActions {
 
   /** After Stormi auto-welcome completes server-side (keeps UI in sync without full refetch); DB column names unchanged */
   setStormiAutoWelcomeCandidateDone: (done: boolean) => void
+  /** After PATCH walkthrough preference or full hub refetch */
+  setWalkthroughDismissed: (dismissed: boolean) => void
 
   // Profile
   updateAvatarUrl: (url: string) => void
@@ -117,6 +121,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
   onboarding: null,
   userProfile: null,
   avaAutoWelcomeCandidateDone: false,
+  walkthroughDismissed: false,
   isLoading: false,
   isPickerOpen: false,
   isEditMode: false,
@@ -161,6 +166,7 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
         userProfile,
         needsOnboarding: !data.onboarding,
         avaAutoWelcomeCandidateDone: Boolean(data.avaAutoWelcomeCandidateDone),
+        walkthroughDismissed: Boolean(data.walkthroughDismissed),
         isLoading: false,
       })
 
@@ -303,6 +309,8 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
 
   setStormiAutoWelcomeCandidateDone: (done) => set({ avaAutoWelcomeCandidateDone: done }),
 
+  setWalkthroughDismissed: (dismissed) => set({ walkthroughDismissed: dismissed }),
+
   // ── Picker ──────────────────────────────────────────────────────────────────
   // ── Profile ─────────────────────────────────────────────────────────────────
   updateAvatarUrl: (url) =>
@@ -347,6 +355,9 @@ export const useHubOnboarding = () =>
 
 export const useStormiAutoWelcomeCandidateDone = () =>
   useHubBlocksStore((s) => s.avaAutoWelcomeCandidateDone)
+
+export const useWalkthroughDismissed = () =>
+  useHubBlocksStore((s) => s.walkthroughDismissed)
 
 /**
  * Returns block definitions the user has NOT yet installed.

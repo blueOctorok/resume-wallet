@@ -47,13 +47,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch hub blocks' }, { status: 500 })
     }
 
-    const u = user as { ava_auto_welcome_candidate_at?: string | null }
+    const u = user as {
+      ava_auto_welcome_candidate_at?: string | null
+      stormi_walkthrough_dismissed_at?: string | null
+    }
 
     return NextResponse.json({
       blocks: blocksResult.data ?? [],
       onboarding: onboardingResult.data ?? null,
       profile: profileResult.data ?? null,
       avaAutoWelcomeCandidateDone: Boolean(u.ava_auto_welcome_candidate_at),
+      walkthroughDismissed: Boolean(u.stormi_walkthrough_dismissed_at),
     })
   } catch (err) {
     console.error('[HUB BLOCKS] GET unexpected error:', err)

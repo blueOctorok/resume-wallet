@@ -16,7 +16,7 @@ export interface StormiWalkthroughProps {
   steps: WalkthroughStep[]
   /** Fires when user finishes the tour (last step) or closes via X / backdrop */
   onComplete: () => void
-  /** Fires when user checks "Don't show these again" — parent should setShowJourneyModals(false) */
+  /** Fires when user checks "Don't show these again" — parent persists opt-out (e.g. PATCH `walkthrough_dismissed`) */
   onDisableAll: () => void
   /** Last-step primary: open block picker then complete */
   onBrowseBlocks: () => void
