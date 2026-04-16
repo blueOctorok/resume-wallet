@@ -238,6 +238,25 @@ export default function CareerCardShareModal({
     a.remove()
   }
 
+  const downloadSocialImage = async () => {
+    if (!shareToken || !publicOrigin) return
+    try {
+      const res = await fetch(`${publicOrigin}/card/${shareToken}/social-image`)
+      if (!res.ok) throw new Error('fetch failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `storm-career-card-${shareToken}.png`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch {
+      alert('Could not download image')
+    }
+  }
+
   const embedSnippet =
     shareToken && publicOrigin
       ? `<iframe src="${publicOrigin}/card/${shareToken}/embed" width="420" height="360" style="border:0;border-radius:12px;max-width:100%;" title="Storm Career Card" loading="lazy"></iframe>`
@@ -579,10 +598,21 @@ export default function CareerCardShareModal({
                             )}
                             {copied && copiedField === 'post' ? 'Copied!' : 'Copy post'}
                           </Button>
+                          <Button
+                            variant='secondary'
+                            size='md'
+                            disabled={!shareToken || !publicOrigin}
+                            onClick={() => void downloadSocialImage()}
+                            title='Download card image (attach to LinkedIn for a larger preview)'
+                          >
+                            <Download className='h-4 w-4' />
+                            Image
+                          </Button>
                         </div>
 
                         <p className={cn('mt-2.5 text-[11px] leading-snug', isDark ? 'text-gray-500' : 'text-slate-500')}>
-                          Paste into LinkedIn, X, or any platform — the link auto-generates a preview card with your name, score, and photo.
+                          Paste into LinkedIn, X, or any platform — the link auto-generates a preview card.
+                          For a larger image on LinkedIn, download the image and attach it to your post.
                         </p>
                       </BlockCard>
                     </HubSectionPanel>
