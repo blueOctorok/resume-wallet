@@ -1899,7 +1899,11 @@ export default function CandidateHub() {
   const hubYourBlocksExpanded = usePreferencesStore((s) => s.hubYourBlocksExpanded ?? true)
   const setHubYourBlocksExpanded = usePreferencesStore((s) => s.setHubYourBlocksExpanded)
   const showJourneyModals = usePreferencesStore((s) => s.showJourneyModals)
-  const hasCompletedJourneyStep = usePreferencesStore((s) => s.hasCompletedJourneyStep)
+  // Select the boolean directly — selecting the function `s.hasCompletedJourneyStep` returns
+  // a stable reference that never triggers re-renders when completedJourneySteps changes.
+  const hubWelcomeCompleted = usePreferencesStore(
+    (s) => s.completedJourneySteps.includes(CANDIDATE_HUB_WELCOME_STEP_ID),
+  )
   const markJourneyStepComplete = usePreferencesStore((s) => s.markJourneyStepComplete)
   const setShowJourneyModals = usePreferencesStore((s) => s.setShowJourneyModals)
 
@@ -1935,7 +1939,7 @@ export default function CandidateHub() {
     !showProfileSetup &&
     Boolean(userProfile?.firstName?.trim()) &&
     showJourneyModals &&
-    (!hasCompletedJourneyStep(CANDIDATE_HUB_WELCOME_STEP_ID) || requestWalkthroughReplay)
+    (!hubWelcomeCompleted || requestWalkthroughReplay)
 
   const walkthroughSteps = useMemo(() => {
     if (isLoadingAiStep && !aiWelcomeStep) {
