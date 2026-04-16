@@ -234,11 +234,9 @@ export default function AlchemyAuth({
     }
   }
 
-  useEffect(() => {
-    if (onLogoutSuccess && handleLogout) {
-      ;(window as any).__alchemyLogout = handleLogout
-    }
-  }, [onLogoutSuccess])
+  // page.tsx now calls useLogout() directly — no need for the window.__alchemyLogout bridge.
+  // The old pattern captured a stale logout() closure from this unmounted component,
+  // which meant the SDK session was never cleared on first logout.
 
   const cardClass = isDark
     ? 'bg-gray-800/50 border-gray-700'

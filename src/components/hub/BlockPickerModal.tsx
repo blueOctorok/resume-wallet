@@ -61,8 +61,9 @@ export default function BlockPickerModal() {
   if (!isOpen) return null
 
   return (
-    <Modal onClose={closePicker} maxWidth='max-w-3xl'>
+    <Modal onClose={closePicker} maxWidth='max-w-3xl' panelShape='block'>
       <ModalHeader
+        variant='block'
         title='Add Blocks'
         subtitle={allAdded ? "You've added all available blocks!" : 'Choose blocks to build your hub'}
         onClose={closePicker}

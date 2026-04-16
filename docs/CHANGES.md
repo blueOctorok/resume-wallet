@@ -4,6 +4,59 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Stormi hub welcome walkthrough** (April 2026)
+
+### Why
+New candidates land on a dense hub; the career path sidebar helps returning users, but first-timers need step-by-step popups before the layout makes sense.
+
+### What shipped
+- **`src/components/hub/StormiWalkthrough.tsx`** — Reusable 3-step modal: **`Modal panelShape="block"`** + **`HubSectionPanel` + `BlockCard variant="embed"`** (same vault/block chrome as Ask Stormi on the hub), progress dots, Back/Next, final **Browse blocks** / **I'll explore on my own**, checkbox for `showJourneyModals`.
+- **`src/components/hub/BlockPickerModal.tsx`** — **`panelShape="block"`** + **`ModalHeader variant="block"`** so Add Blocks matches hub modal shell.
+- **`src/lib/walkthrough-config.ts`** — `candidateHubStaticSteps(...)` (steps 2–3) + `CANDIDATE_HUB_WELCOME_STEP_ID` (`candidate.hubWelcome`) for `completedJourneySteps` persistence. Step 3 copy uses **`suggestCategories`** so General-only paths do not imply driver/dev blocks.
+- **`src/lib/walkthrough-ai.ts`** — Step 1 calls **`POST /api/ai/chat`** with `hubContext` + `walkthroughWelcome: true` (JSON `title`/`body`); offline **`fallbackStormiWelcomeStep`** on failure; loading row id matches **`WALKTHROUGH_AI_LOADING_STEP`** for skeleton UI.
+- **`src/app/api/ai/chat/route.ts`** — When **`walkthroughWelcome`** is true for candidates, job-search tools are skipped so the model returns reliable compact JSON.
+- **`src/components/hub/CandidateHub.tsx`** — Shows walkthrough when onboarding is done, profile setup is not open, first name exists, journey tips are on, and either `candidate.hubWelcome` is incomplete **or** `requestWalkthroughReplay` is set. Fetches AI step 1 on open; **`key={hub-walk-${walkthroughRequestNonce}}`** remounts on each **Stormi Journey Guide** request. Mobile **Career path** FAB scrolls to **`#candidate-hub-quest-sidebar`** instead of opening the legacy slide-over.
+- **`src/stores/journey-store.ts`** — **`requestWalkthrough()`** clears hub welcome completion, sets replay, and bumps **`walkthroughRequestNonce`**; **`clearWalkthroughRequest()`** clears replay after dismiss.
+- **`src/stores/preferences-store.ts`** — **`clearJourneyStepCompletion(stepId)`** so a single journey step can be reopened without wiping all tips.
+- **`src/components/Navigation.tsx`** — **Stormi Journey Guide** calls **`requestWalkthrough()`** (walkthrough modals) instead of **`openGuide()`** (deprecated duplicate of inline Career Path). Turning **Journey Tips** back **On** still calls **`resetCompletedJourneySteps()`**.
+- **`.cursor/rules/ui-components.mdc`** — Documented hub-aligned modal chrome (`panelShape="block"`, `ModalHeader variant="block"`, `HubSectionPanel` + `BlockCard` for hub panels).
+
+---
+
+## **Fix: Double-logout required to actually sign out** (April 2026)
+
+### What broke
+Logging out once cleared the UI (user saw the landing page), but clicking "Sign In" immediately reconnected the same wallet without showing the Alchemy login modal. A second logout was needed.
+
+### Root cause
+`page.tsx`'s `handleLogout` called `setUser(null)` **before** the Alchemy SDK session was cleared. This triggered a re-render that remounted `DriverShell` → `AlchemyAuth`, which saw the still-active SDK session and immediately re-logged the user in via `onAuthSuccess`.
+
+The SDK logout itself was delegated to `window.__alchemyLogout` — a function set by `AlchemyAuth.tsx` when it mounted. But by the time a candidate logged out, `AlchemyAuth` had already unmounted (candidates use `CandidateShell`, not `DriverShell`), leaving a stale closure whose `logout()` from `useLogout()` was inert.
+
+### What changed
+- **`src/app/page.tsx`** — Imported `useLogout` from `@account-kit/react` and call it directly. The SDK session is now cleared **before** `setUser(null)`, so when `AlchemyAuth` remounts it sees no active session and shows the login form. Removed the `window.__alchemyLogout` call.
+- **`src/components/AlchemyAuth.tsx`** — Removed the `useEffect` that set `window.__alchemyLogout`. The local `handleLogout` (used by AlchemyAuth's own Sign Out button) still works as before.
+
+### Teaching note
+This is a classic **stale closure** bug. `window.__alchemyLogout` captured the `logout` function from `useLogout()` inside an `AlchemyAuth` component that later unmounted. React hooks are scoped to component lifecycle — when the component unmounts, the hook's internal references get cleaned up. The captured `logout()` silently did nothing. The fix is to call the hook from a component that's always mounted (`page.tsx`'s `HomeContent`), which lives for the entire session.
+
+---
+
+## **Fix: Post-onboarding scroll lock + "New Candidate" name bug** (April 2026)
+
+### What broke
+1. **Scroll lock after onboarding submission** — `HubOnboardingForm` (z:1000) and `ProfileSetupModal` (z:100) both mounted simultaneously as portaled `<Modal>` instances. Each incremented a shared `openModalCount` counter and set `document.body.style.overflow = 'hidden'`. When the onboarding form unmounted first, the counter went from 2→1 and the body stayed locked. The `ProfileSetupModal` (mounted second) captured `prev = 'hidden'` (already set by the first modal), so when it finally unmounted it restored overflow to `'hidden'` instead of `''` — permanently locking scroll.
+2. **"New Candidate" after profile setup** — `ProfileSetupModal.onComplete` only called `setShowProfileSetup(false)`. It never passed the newly entered name back to the hub blocks store, so `userProfile` stayed `null` and the header kept showing "New Candidate" until a full page refresh re-fetched from the server.
+
+### What changed
+- **`src/app/page.tsx`** — Imported `useHubBlocksStore` / `useNeedsOnboarding`. Gated `ProfileSetupModal` rendering on `!needsOnboarding` so it never coexists with `HubOnboardingForm`. Updated `onComplete` callback to call `updateUserProfile({ firstName, lastName })` so the name appears immediately.
+- **`src/components/ProfileSetupModal.tsx`** — Changed `onComplete` signature to `(firstName?: string, lastName?: string) => void`. `handleSubmit` now passes the trimmed name to the callback after a successful save.
+
+### Teaching note
+The `Modal` component uses a module-level `openModalCount` counter to manage body scroll-lock across nested modals. Each mount increments, each unmount decrements, and only when the count hits 0 does it restore the original `overflow` value. The bug was that two *sibling* modals (not nested) ran this same counter. The second one to mount captured `prev = 'hidden'` (set by the first), then restored that stale value when it was the last to close. The fix is simpler than reworking the counter: just don't let both modals exist at the same time. Gating on `needsOnboarding` sequences them naturally — onboarding first, then profile setup.
+
+---
+
 ## **Composable Career Card — distribution / Trojan horse** (April 2026)
 
 - **Per-token metadata + OG image:** [`src/app/card/[token]/layout.tsx`](src/app/card/[token]/layout.tsx) `generateMetadata` (title, description, Open Graph, Twitter card, canonical, oEmbed alternate). Dynamic PNG via [`opengraph-image.tsx`](src/app/card/[token]/opengraph-image.tsx) + [`career-card-opengraph-response.tsx`](src/lib/og/career-card-opengraph-response.tsx) + [`career-card-og-image.tsx`](src/lib/og/career-card-og-image.tsx). **Does not increment** `share_views_count` — new [`loadCareerCardByShareToken`](src/lib/career-card-by-share-token.ts) used for crawlers/previews. **OG/social image body:** [`career-card-og-image.tsx`](src/lib/og/career-card-og-image.tsx) adds a **Career highlights** panel (summary + per-section lines + on-chain + employer confirmations), fixes the large empty band caused by `flex: 1` with only pill labels; Satori-safe (no `conic-gradient` / `radial-gradient` on score ring / hero). **Crawler-facing OG:** layout now emits **absolute** `og:image` / `og:image:secure_url` / width / height / `png` type, `og:site_name`, and trims comma-separated `x-forwarded-*` headers so Slack/LinkedIn scrapers get a stable image URL (client-only card page no longer relies on implicit file-merge alone). Share modal copy for “Copy link” updated for **LinkedIn’s** plain-URL composer behavior vs other apps.

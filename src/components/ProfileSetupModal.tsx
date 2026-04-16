@@ -8,7 +8,7 @@ import { User, Mail, Phone, MapPin, Loader2, Sparkles } from 'lucide-react'
 interface ProfileSetupModalProps {
   isOpen: boolean
   onClose: () => void
-  onComplete: () => void
+  onComplete: (firstName?: string, lastName?: string) => void
   walletAddress: string
   userRole: 'driver' | 'developer' | 'candidate'
   userEmail?: string | null
@@ -99,7 +99,7 @@ export default function ProfileSetupModal({
         throw new Error('Failed to save profile')
       }
 
-      onComplete()
+      onComplete(form.firstName.trim(), form.lastName.trim())
     } catch (err) {
       console.error('Profile save error:', err)
       setError('Failed to save profile. Please try again.')

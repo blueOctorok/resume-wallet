@@ -15,6 +15,7 @@ import {
   useUser,
   useAccount,
   useSignerStatus,
+  useLogout,
 } from '@account-kit/react'
 import { AssistantBridgeProvider } from '@/contexts/AssistantBridgeContext'
 import type { ResumeUploadEvent } from '@/types/assistant'
@@ -22,6 +23,7 @@ import {
   useAuthStore,
   useUIStore,
 } from '@/stores'
+import { useHubBlocksStore, useNeedsOnboarding } from '@/stores/hub-blocks-store'
 import { useCandidateShellHistory } from '@/hooks/use-candidate-shell-history'
 import type { PageType } from '@/stores'
 
@@ -60,6 +62,7 @@ const HomeContent = () => {
   const { isConnected, isInitializing } = useSignerStatus()
   const alchemyUser = useUser()
   const account = useAccount({ type: 'LightAccount' })
+  const { logout: alchemyLogout } = useLogout()
 
   // -------------------------------------------------------
   // Zustand Stores
@@ -101,6 +104,11 @@ const HomeContent = () => {
     setShowProfileSetup,
     checkAndShowProfileSetup,
   } = authStore
+
+  // Gate ProfileSetupModal so it never overlaps with HubOnboardingForm —
+  // two simultaneous modals corrupt the shared openModalCount scroll-lock counter.
+  const needsOnboarding = useNeedsOnboarding()
+  const updateUserProfile = useHubBlocksStore((s) => s.updateUserProfile)
 
   // -------------------------------------------------------
   // Capture ?ref=CODE from URL for the referral system
@@ -268,24 +276,24 @@ const HomeContent = () => {
   }, [])
 
   const handleLogout = useCallback(async () => {
-    // Set flag FIRST so the sync effect doesn't re-login during Alchemy's async cleanup
+    // Set flag FIRST so the session-sync effect doesn't re-login during cleanup
     didExplicitLogoutRef.current = true
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem('stormchain-admin-wallet')
     }
-    // Clear user immediately for responsive UI
-    setUser(null)
-    // Then perform Alchemy logout (which clears SDK session)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((window as any).__alchemyLogout) {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (window as any).__alchemyLogout()
-      } catch (err) {
-        console.error('Alchemy logout error:', err)
-      }
+    // Clear the Alchemy SDK session BEFORE clearing app state.
+    // Old approach used window.__alchemyLogout (set by AlchemyAuth), but that captured
+    // a stale closure from an unmounted component — the SDK logout never actually ran.
+    // Meanwhile setUser(null) triggered a re-render that remounted AlchemyAuth, which
+    // saw the still-active SDK session and immediately re-logged the user in.
+    try {
+      await alchemyLogout()
+    } catch (err) {
+      console.error('Alchemy logout error:', err)
     }
-  }, [])
+    // NOW clear app state — AlchemyAuth remounts with no active SDK session
+    setUser(null)
+  }, [alchemyLogout])
 
   const handleRoleSelection = useCallback(
     async (role: 'candidate' | 'employer', companyName?: string, dotNumber?: string) => {
@@ -380,13 +388,19 @@ const HomeContent = () => {
           />
         )}
 
-        {/* Profile Setup Modal — for first-time users to add name/contact */}
-        {user && walletAddress && (userRole === 'driver' || userRole === 'developer' || userRole === 'candidate') && (
+        {/* Profile Setup Modal — for first-time users to add name/contact.
+            Gated on !needsOnboarding so this never renders at the same time as HubOnboardingForm —
+            two simultaneous portaled Modals corrupt the shared openModalCount scroll-lock counter,
+            leaving body overflow:hidden after the first one unmounts. */}
+        {user && walletAddress && !needsOnboarding && (userRole === 'driver' || userRole === 'developer' || userRole === 'candidate') && (
           <ProfileSetupModal
             isOpen={showProfileSetup}
             onClose={() => setShowProfileSetup(false)}
-            onComplete={() => {
+            onComplete={(firstName?: string, lastName?: string) => {
               setShowProfileSetup(false)
+              if (firstName && lastName) {
+                updateUserProfile({ firstName, lastName })
+              }
             }}
             walletAddress={walletAddress}
             userRole={userRole}

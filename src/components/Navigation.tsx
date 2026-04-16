@@ -84,7 +84,7 @@ export default function Navigation({
   const hubDropdownRef = useRef<HTMLDivElement>(null)
   const { theme } = useTheme()
   const { showJourneyModals, setShowJourneyModals } = usePreferencesStore()
-  const { openGuide } = useJourneyStore()
+  const requestWalkthrough = useJourneyStore((s) => s.requestWalkthrough)
   const { navigateToMessages, requestHubRefresh } = useUIStore()
   const hubBlocksLoading = useHubBlocksStore((s) => s.isLoading)
   const { notifications } = useNotificationStore()
@@ -479,7 +479,13 @@ export default function Navigation({
                         )}
                         <button
                           type='button'
-                          onClick={() => setShowJourneyModals(!showJourneyModals)}
+                          onClick={() => {
+                            // Turning tips back on clears "show once" memory so hub welcome + journey modals can appear again
+                            if (!showJourneyModals) {
+                              usePreferencesStore.getState().resetCompletedJourneySteps()
+                            }
+                            setShowJourneyModals(!showJourneyModals)
+                          }}
                           className={cn(
                             navDropdownItemClass(isDark),
                             navDropdownItemBorderClass(isDark),
@@ -512,7 +518,7 @@ export default function Navigation({
                         <button
                           type='button'
                           onClick={() => {
-                            openGuide()
+                            requestWalkthrough()
                             setIsHubDropdownOpen(false)
                             setIsMenuOpen(false)
                           }}

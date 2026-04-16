@@ -13,6 +13,8 @@ import {
   calculateEmployerProgress,
 } from '@/lib/journey-progress'
 import { useEmployerHiringPathStore } from '@/stores/employer-journey-snapshot-store'
+import { usePreferencesStore } from '@/stores/preferences-store'
+import { CANDIDATE_HUB_WELCOME_STEP_ID } from '@/lib/walkthrough-config'
 
 /**
  * Journey Store - Manages Stormi Journey Guide state
@@ -27,6 +29,10 @@ interface JourneyState {
   isGuideOpen: boolean
   hasSeenWelcome: boolean
   lastDismissedAt: string | null
+  /** Ephemeral: My Hub → Stormi Journey Guide re-opens the hub welcome modal even if it was completed. */
+  requestWalkthroughReplay: boolean
+  /** Increments on every `requestWalkthrough()` so the hub can remount + refetch AI even if replay was already true. */
+  walkthroughRequestNonce: number
 }
 
 interface JourneyActions {
@@ -34,12 +40,17 @@ interface JourneyActions {
   closeGuide: () => void
   toggleGuide: () => void
   setHasSeenWelcome: (seen: boolean) => void
+  /** Clear hub welcome completion + flag so CandidateHub shows the walkthrough again */
+  requestWalkthrough: () => void
+  clearWalkthroughRequest: () => void
 }
 
 const initialState: JourneyState = {
   isGuideOpen: false,
   hasSeenWelcome: false,
   lastDismissedAt: null,
+  requestWalkthroughReplay: false,
+  walkthroughRequestNonce: 0,
 }
 
 export const useJourneyStore = create<JourneyState & JourneyActions>()(
@@ -60,6 +71,16 @@ export const useJourneyStore = create<JourneyState & JourneyActions>()(
       })),
 
       setHasSeenWelcome: (seen) => set({ hasSeenWelcome: seen }),
+
+      requestWalkthrough: () => {
+        usePreferencesStore.getState().clearJourneyStepCompletion(CANDIDATE_HUB_WELCOME_STEP_ID)
+        set((s) => ({
+          requestWalkthroughReplay: true,
+          walkthroughRequestNonce: s.walkthroughRequestNonce + 1,
+        }))
+      },
+
+      clearWalkthroughRequest: () => set({ requestWalkthroughReplay: false }),
     }),
     {
       name: 'journey-guide',

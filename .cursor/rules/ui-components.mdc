@@ -109,6 +109,18 @@ You don't. The only exception is `LoadingScreen` (full-page takeover with no clo
 - [ ] Does NOT manually set `body.style.overflow` (Modal handles it)
 - [ ] Does NOT use `createPortal` directly (Modal handles it)
 
+### Hub-aligned modal chrome (`panelShape="block"`)
+
+Feature modals tied to the composable hub — block picker, Stormi walkthroughs, block-category flows — must use **block shell** styling so they match the hub vault, not generic SaaS `rounded-2xl` dialogs:
+
+- Pass **`panelShape="block"`** on `<Modal>` — same outer shell as hub category cards (`rounded-xl border`, teal `ring-1`, muted fill). See `Modal.tsx` and `BlockPickerModal`.
+- When using **`ModalHeader`**, pass **`variant="block"`** so the sticky header aligns with that shell.
+- **Custom headers** (e.g. avatar + title) are fine if they reuse the same border/background tokens as `ModalHeader variant="block"` — stay visually consistent with hub blocks.
+
+For **in-hub panels** (not portaled modals), use **`HubSectionPanel` + `BlockCard`** — never a raw `div` with ad-hoc `rounded-2xl border shadow-lg` card styling.
+
+**Reference implementation:** [`StormiWalkthrough.tsx`](src/components/hub/StormiWalkthrough.tsx) — `Modal` `panelShape="block"` with zero extra hand-rolled header chrome; inner content is `HubSectionPanel` + `BlockCard variant="embed"` (violet accent for Stormi). [`BlockPickerModal.tsx`](src/components/hub/BlockPickerModal.tsx) uses `panelShape="block"` + `ModalHeader variant="block"`.
+
 ---
 
 ## Dark Mode — Every Element Must Have Both Variants

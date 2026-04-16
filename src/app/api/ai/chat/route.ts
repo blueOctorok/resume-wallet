@@ -72,6 +72,8 @@ export async function POST(request: NextRequest) {
     const rawAutoWelcome = (body as { autoWelcome?: unknown }).autoWelcome
     const autoWelcome: StormiAutoWelcomeMode | undefined =
       rawAutoWelcome === 'candidate' || rawAutoWelcome === 'employer' ? rawAutoWelcome : undefined
+    /** Hub walkthrough step 1 — plain completion, no job-search tools (keeps JSON output reliable). */
+    const walkthroughWelcome = (body as { walkthroughWelcome?: unknown }).walkthroughWelcome === true
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return NextResponse.json(
@@ -124,6 +126,13 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
+    }
+
+    if (walkthroughWelcome && isEmployerChat) {
+      return NextResponse.json(
+        { error: 'walkthroughWelcome is only valid for candidate chat.' },
+        { status: 400 },
+      )
     }
 
     // Whitelisted wallets skip usage limits entirely (always Sonnet)
@@ -206,7 +215,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing or invalid message' }, { status: 400 })
     }
 
-    const useJobTools = !isEmployerChat && !autoWelcome
+    const useJobTools = !isEmployerChat && !autoWelcome && !walkthroughWelcome
 
     let reply: string
     let jobSuggestions: StormiJobSuggestion[] | undefined

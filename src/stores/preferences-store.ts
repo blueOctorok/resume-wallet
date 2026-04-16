@@ -24,6 +24,8 @@ interface PreferencesActions {
   setShowJourneyModals: (show: boolean) => void
   markJourneyStepComplete: (stepId: string) => void
   hasCompletedJourneyStep: (stepId: string) => boolean
+  /** Remove one step id so that walkthrough / modal can show again (e.g. My Hub → Stormi Journey Guide). */
+  clearJourneyStepCompletion: (stepId: string) => void
   resetCompletedJourneySteps: () => void
   setHubYourBlocksExpanded: (expanded: boolean) => void
   setHubBlockFilesExpanded: (expanded: boolean) => void
@@ -54,6 +56,11 @@ export const usePreferencesStore = create<PreferencesState & PreferencesActions>
       hasCompletedJourneyStep: (stepId) => {
         return get().completedJourneySteps.includes(stepId)
       },
+
+      clearJourneyStepCompletion: (stepId) =>
+        set((state) => ({
+          completedJourneySteps: state.completedJourneySteps.filter((id) => id !== stepId),
+        })),
 
       resetCompletedJourneySteps: () => set({ completedJourneySteps: [] }),
 

@@ -1,7 +1,15 @@
 'use client'
 
 import Image from 'next/image'
-import { useEffect, useCallback, useState, useRef, type ReactNode } from 'react'
+import {
+  useEffect,
+  useCallback,
+  useState,
+  useRef,
+  useMemo,
+  useLayoutEffect,
+  type ReactNode,
+} from 'react'
 import {
   Plus,
   Loader2,
@@ -36,6 +44,7 @@ import {
   useNeedsOnboarding,
   useIsEditMode,
   useStormiAutoWelcomeCandidateDone,
+  useHubOnboarding,
 } from '@/stores/hub-blocks-store'
 import type { InstalledBlock } from '@/stores/hub-blocks-store'
 import { getBlockColor, getBlockDefinition } from '@/lib/block-registry'
@@ -50,7 +59,14 @@ import STORMBalance from '@/components/STORMBalance'
 import CandidateRequestsSection from '@/components/CandidateRequestsSection'
 import HubOnboardingForm from './HubOnboardingForm'
 import BlockPickerModal from './BlockPickerModal'
+import StormiWalkthrough from './StormiWalkthrough'
 import StormiContextModal from './StormiContextModal'
+import {
+  candidateHubStaticSteps,
+  CANDIDATE_HUB_WELCOME_STEP_ID,
+  type WalkthroughStep,
+} from '@/lib/walkthrough-config'
+import { fetchStormiWelcomeStep, WALKTHROUGH_AI_LOADING_STEP } from '@/lib/walkthrough-ai'
 import MvrViewModal from '@/components/MvrViewModal'
 import DotAppPreviewModal from '@/components/career-card/DotAppPreviewModal'
 import ResumeFilePreviewModal from '@/components/hub/ResumeFilePreviewModal'
@@ -1854,9 +1870,12 @@ export default function CandidateHub() {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const walletAddress = useAuthStore((s) => s.walletAddress)
+  const showProfileSetup = useAuthStore((s) => s.showProfileSetup)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const hubRefreshNonce = useUIStore((s) => s.hubRefreshNonce)
-  const openJourneyGuide = useJourneyStore((s) => s.openGuide)
+  const requestWalkthroughReplay = useJourneyStore((s) => s.requestWalkthroughReplay)
+  const walkthroughRequestNonce = useJourneyStore((s) => s.walkthroughRequestNonce)
+  const clearWalkthroughRequest = useJourneyStore((s) => s.clearWalkthroughRequest)
 
   const [refreshKey, setRefreshKey] = useState(0)
   const lastHubRefreshNonce = useRef<number | null>(null)
@@ -1879,6 +1898,90 @@ export default function CandidateHub() {
 
   const hubYourBlocksExpanded = usePreferencesStore((s) => s.hubYourBlocksExpanded ?? true)
   const setHubYourBlocksExpanded = usePreferencesStore((s) => s.setHubYourBlocksExpanded)
+  const showJourneyModals = usePreferencesStore((s) => s.showJourneyModals)
+  const hasCompletedJourneyStep = usePreferencesStore((s) => s.hasCompletedJourneyStep)
+  const markJourneyStepComplete = usePreferencesStore((s) => s.markJourneyStepComplete)
+  const setShowJourneyModals = usePreferencesStore((s) => s.setShowJourneyModals)
+
+  const userProfile = useHubBlocksStore((s) => s.userProfile)
+  const onboarding = useHubOnboarding()
+
+  const hubStaticSteps = useMemo(
+    () =>
+      candidateHubStaticSteps({
+        firstName: userProfile?.firstName ?? '',
+        occupation: onboarding?.occupation ?? '',
+        seekingReason: onboarding?.seekingReason ?? '',
+        hasBlocks: installedBlocks.length > 0,
+      }),
+    [
+      userProfile?.firstName,
+      onboarding?.occupation,
+      onboarding?.seekingReason,
+      installedBlocks.length,
+    ],
+  )
+
+  const [aiWelcomeStep, setAiWelcomeStep] = useState<WalkthroughStep | null>(null)
+  const [isLoadingAiStep, setIsLoadingAiStep] = useState(false)
+  const hubContextRef = useRef(hubContext)
+  hubContextRef.current = hubContext
+
+  /** Block-styled walkthrough for new candidates — after hub questionnaire + name, before they drown in the UI */
+  const showStormiWalkthrough =
+    !isLoading &&
+    !fetchError &&
+    !needsOnboarding &&
+    !showProfileSetup &&
+    Boolean(userProfile?.firstName?.trim()) &&
+    showJourneyModals &&
+    (!hasCompletedJourneyStep(CANDIDATE_HUB_WELCOME_STEP_ID) || requestWalkthroughReplay)
+
+  const walkthroughSteps = useMemo(() => {
+    if (isLoadingAiStep && !aiWelcomeStep) {
+      return [WALKTHROUGH_AI_LOADING_STEP, ...hubStaticSteps]
+    }
+    if (aiWelcomeStep) {
+      return [aiWelcomeStep, ...hubStaticSteps]
+    }
+    return hubStaticSteps
+  }, [isLoadingAiStep, aiWelcomeStep, hubStaticSteps])
+
+  useLayoutEffect(() => {
+    if (!showStormiWalkthrough || !walletAddress) {
+      setIsLoadingAiStep(false)
+      setAiWelcomeStep(null)
+      return
+    }
+    setIsLoadingAiStep(true)
+    setAiWelcomeStep(null)
+  }, [showStormiWalkthrough, walletAddress, requestWalkthroughReplay, walkthroughRequestNonce])
+
+  useEffect(() => {
+    if (!showStormiWalkthrough || !walletAddress) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const step = await fetchStormiWelcomeStep(
+          walletAddress,
+          hubContextRef.current,
+          userProfile?.firstName ?? '',
+        )
+        if (!cancelled) setAiWelcomeStep(step)
+      } finally {
+        if (!cancelled) setIsLoadingAiStep(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [
+    showStormiWalkthrough,
+    walletAddress,
+    userProfile?.firstName,
+    requestWalkthroughReplay,
+    walkthroughRequestNonce,
+  ])
 
   const showYourBlocksPanel = installedBlocks.length === 0 || hubYourBlocksExpanded
 
@@ -1980,6 +2083,21 @@ export default function CandidateHub() {
     <>
       {needsOnboarding && <HubOnboardingForm />}
       <BlockPickerModal />
+      {showStormiWalkthrough && (
+        <StormiWalkthrough
+          key={`hub-walk-${walkthroughRequestNonce}`}
+          steps={walkthroughSteps}
+          onComplete={() => {
+            markJourneyStepComplete(CANDIDATE_HUB_WELCOME_STEP_ID)
+            clearWalkthroughRequest()
+          }}
+          onDisableAll={() => {
+            setShowJourneyModals(false)
+            clearWalkthroughRequest()
+          }}
+          onBrowseBlocks={openPicker}
+        />
+      )}
       {isStormiContextModalOpen && <StormiContextModal />}
 
       {/* Full width of page content (`max-w-7xl` + px from page.tsx) — avoids double-centering so main column aligns with nav band and sidebar sits right */}
@@ -2170,7 +2288,11 @@ export default function CandidateHub() {
           type='button'
           variant='primary'
           size='md'
-          onClick={() => openJourneyGuide()}
+          onClick={() => {
+            document
+              .getElementById('candidate-hub-quest-sidebar')
+              ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }}
           className={cn(
             'lg:hidden fixed z-30 rounded-full px-4 py-2.5 shadow-lg shadow-teal-900/15 dark:shadow-black/40',
             'bottom-20 right-4',
