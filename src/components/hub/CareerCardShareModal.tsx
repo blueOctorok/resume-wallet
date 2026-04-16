@@ -20,11 +20,13 @@ import {
   Info,
   QrCode,
   ArrowLeft,
-  Clipboard,
   Link2,
   Sparkles,
   Mail,
   Award,
+  ChevronLeft,
+  ChevronRight,
+  MessageSquareText,
 } from 'lucide-react'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -52,7 +54,7 @@ type SharePanel = 'share' | 'embed'
 /** Expandable help — why each option exists and when to use it. */
 const SHARE_INFO = {
   social:
-    'Post this image with the caption below to LinkedIn, X, or Instagram. People see your verified career card in their feed — no click required. The caption includes your link and a call-to-action so viewers can create their own.',
+    'Pick a ready-made post, copy it, and paste into LinkedIn, X, or any platform. The link in the post auto-generates a rich preview card with your name, score, and photo — no image upload needed. Each post includes a CTA so viewers can create their own.',
   link: 'Paste this URL into Slack, iMessage, WhatsApp, or email. Most apps show a rich preview with your name, score, and verification automatically.',
   pdf: "A two-page document: visual career card on page 1, ATS-parseable text on page 2. Upload this anywhere you'd upload a resume — Indeed, Greenhouse, Lever, Workday, or email it to a recruiter.",
   qr: 'For in-person networking: career fairs, conferences, interviews, or printed materials. Anyone with a phone camera can scan to instantly view your verified career card.',
@@ -102,7 +104,9 @@ export default function CareerCardShareModal({
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [qrWorking, setQrWorking] = useState(false)
   const [pdfLoading, setPdfLoading] = useState(false)
-  const [socialBusy, setSocialBusy] = useState(false)
+  const [postIndex, setPostIndex] = useState(0)
+  const [stormiPosts, setStormiPosts] = useState<string[] | null>(null)
+  const [stormiPostsLoading, setStormiPostsLoading] = useState(false)
   const [openInfo, setOpenInfo] = useState<ShareInfoId | null>(null)
   const [qrOverlayOpen, setQrOverlayOpen] = useState(false)
 
@@ -139,6 +143,8 @@ export default function CareerCardShareModal({
     setPanel('share')
     setOpenInfo(null)
     setQrOverlayOpen(false)
+    setStormiPosts(null)
+    setPostIndex(0)
     void loadToken()
   }, [isOpen, walletAddress, loadToken])
 
@@ -232,94 +238,58 @@ export default function CareerCardShareModal({
     a.remove()
   }
 
-  /** Fetch the social image as a Blob (shared between copy / share / download). */
-  const fetchSocialBlob = async (): Promise<Blob> => {
-    const res = await fetch(`${publicOrigin}/card/${shareToken}/social-image`)
-    if (!res.ok) throw new Error('fetch failed')
-    return res.blob()
-  }
-
-  /** True when the browser can share a PNG file via navigator.share(). */
-  const canNativeShare =
-    typeof navigator !== 'undefined' &&
-    typeof navigator.canShare === 'function' &&
-    navigator.canShare({
-      files: [new File([new Blob([''], { type: 'image/png' })], 'test.png', { type: 'image/png' })],
-    })
-
-  /** Native share — sends image + caption + link in one action (mobile share sheets). */
-  const nativeShareImage = async () => {
-    if (!shareToken || !publicOrigin) return
-    setSocialBusy(true)
-    try {
-      const blob = await fetchSocialBlob()
-      const file = new File([blob], `storm-career-card-${shareToken}.png`, { type: 'image/png' })
-      await navigator.share({
-        text: linkedinCaption,
-        files: [file],
-      })
-    } catch (err) {
-      if ((err as DOMException)?.name !== 'AbortError') {
-        alert('Could not share image')
-      }
-    } finally {
-      setSocialBusy(false)
-    }
-  }
-
-  /** Copy the image to the clipboard so the user can paste directly into a post composer. */
-  const copyImageToClipboard = async () => {
-    if (!shareToken || !publicOrigin) return
-    setSocialBusy(true)
-    try {
-      const blob = await fetchSocialBlob()
-      const pngBlob = blob.type === 'image/png' ? blob : new Blob([blob], { type: 'image/png' })
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })])
-      setCopiedField('image')
-      setCopied(true)
-      setTimeout(() => {
-        setCopied(false)
-        setCopiedField(null)
-      }, 2000)
-    } catch {
-      alert('Could not copy image — try the download button instead')
-    } finally {
-      setSocialBusy(false)
-    }
-  }
-
-  /** Fallback download for the social image. */
-  const downloadSocialImage = async () => {
-    if (!shareToken || !publicOrigin) return
-    setSocialBusy(true)
-    try {
-      const blob = await fetchSocialBlob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `storm-career-card-${shareToken}.png`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
-    } catch {
-      alert('Could not download image')
-    } finally {
-      setSocialBusy(false)
-    }
-  }
-
   const embedSnippet =
     shareToken && publicOrigin
       ? `<iframe src="${publicOrigin}/card/${shareToken}/embed" width="420" height="360" style="border:0;border-radius:12px;max-width:100%;" title="Storm Career Card" loading="lazy"></iframe>`
       : ''
 
-  const linkedinCaption =
-    shareToken && fullUrl && displayName
-      ? `Check out my verified Career Card on Storm \u2014 ${displayName}\n\nBlockchain-verified credentials, trust score, and professional history \u2014 all in one link.\n\n${fullUrl}\n\nWant your own? Create a free Career Card at https://stormchain.ai\n\n#CareerCard #Blockchain #Storm`
-      : shareToken && fullUrl
-        ? `Check out my verified Career Card on Storm.\n\nBlockchain-verified credentials, trust score, and professional history \u2014 all in one link.\n\n${fullUrl}\n\nWant your own? Create a free Career Card at https://stormchain.ai\n\n#CareerCard #Blockchain #Storm`
-        : ''
+  // ── Social posts: Stormi-generated → fallback to static templates ──────────
+
+  /** Static fallbacks shown instantly while Stormi generates personalized ones. */
+  const fallbackPosts: string[] = (() => {
+    if (!shareToken || !fullUrl) return []
+    const name = displayName ?? 'my'
+    return [
+      `I just got my career verified on the blockchain.\n\nNo fluff, no embellishments — ${name === 'my' ? 'my' : `${name}'s`} credentials, work history, and trust score are on-chain for any employer to check.\n\n${fullUrl}\n\nCreate your own free Career Card at https://stormchain.ai\n\n#CareerCard #Blockchain #VerifiedCredentials`,
+      `Resumes lie. Career Cards don't.\n\nMine is blockchain-verified — employers can confirm every credential without a background check.\n\n${fullUrl}\n\nGet yours free at https://stormchain.ai`,
+      `Just built something cool — a verified Career Card that lives on the blockchain.\n\nThink of it like a resume that can't be faked. Employers see the real you, instantly.\n\n${fullUrl}\n\nWant one? https://stormchain.ai #OpenToWork #Storm`,
+    ]
+  })()
+
+  // Ask Stormi to write personalized posts once we have a card URL
+  useEffect(() => {
+    if (!fullUrl || !walletAddress || stormiPosts) return
+    let cancelled = false
+    setStormiPostsLoading(true)
+    void (async () => {
+      try {
+        const res = await fetch('/api/ai/social-posts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-wallet-address': walletAddress,
+          },
+          body: JSON.stringify({ cardUrl: fullUrl }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (!cancelled && Array.isArray(data.posts) && data.posts.length > 0) {
+            setStormiPosts(data.posts)
+            setPostIndex(0)
+          }
+        }
+      } catch {
+        // Static fallbacks are already showing — no visible error needed
+      } finally {
+        if (!cancelled) setStormiPostsLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [fullUrl, walletAddress, stormiPosts])
+
+  const socialPosts = stormiPosts ?? fallbackPosts
+  const currentPost = socialPosts[postIndex] ?? ''
+  const postCount = socialPosts.length
 
   const signatureHtml =
     shareToken && publicOrigin && fullUrl
@@ -526,9 +496,9 @@ export default function CareerCardShareModal({
                     <HubSectionPanel isDark={isDark} accent='teal' contentClassName='p-2.5 sm:p-3'>
                       <BlockCard
                         variant='embed'
-                        icon={Share2}
+                        icon={MessageSquareText}
                         title='Post to social'
-                        description='LinkedIn, X, Instagram — image + caption so people see your card and can join Storm.'
+                        description='Copy a ready-made post for LinkedIn, X, or anywhere.'
                         headerActions={infoHeaderAction('social', 'How does posting to social work?')}
                       >
                         {openInfo === 'social' ? (
@@ -536,79 +506,84 @@ export default function CareerCardShareModal({
                             {SHARE_INFO.social}
                           </p>
                         ) : null}
-                        <div className='flex flex-col gap-3 sm:flex-row sm:items-stretch'>
-                          {canNativeShare ? (
-                            <Button
-                              variant='primary'
-                              size='lg'
-                              className='w-full sm:flex-1'
-                              isLoading={socialBusy}
-                              disabled={!shareToken || !publicOrigin}
-                              onClick={() => void nativeShareImage()}
-                            >
-                              <Share2 className='h-5 w-5' />
-                              Share image + caption
-                            </Button>
-                          ) : (
-                            <Button
-                              variant='primary'
-                              size='lg'
-                              className='w-full sm:flex-1'
-                              isLoading={socialBusy}
-                              disabled={!shareToken || !publicOrigin}
-                              onClick={() => void copyImageToClipboard()}
-                            >
-                              {copied && copiedField === 'image' ? (
-                                <Check className='h-5 w-5 text-green-200' />
-                              ) : (
-                                <Clipboard className='h-5 w-5' />
-                              )}
-                              {copied && copiedField === 'image' ? 'Image copied!' : 'Copy image to clipboard'}
-                            </Button>
-                          )}
-                          <Button
-                            variant='secondary'
-                            size='md'
-                            className='w-full shrink-0 sm:w-auto sm:min-w-[3rem]'
-                            disabled={!shareToken || !publicOrigin || socialBusy}
-                            onClick={() => void downloadSocialImage()}
-                            title='Save PNG to disk'
-                          >
-                            <Download className='h-4 w-4' />
-                          </Button>
-                        </div>
-                        {!canNativeShare ? (
-                          <p className={cn('mt-2 text-[11px]', isDark ? 'text-gray-500' : 'text-slate-500')}>
-                            Paste the image into your post, then paste the caption below.
-                          </p>
-                        ) : null}
 
-                        {linkedinCaption ? (
-                          <div className='mt-4 space-y-2 border-t border-slate-200/80 pt-4 dark:border-gray-700/80'>
-                            <p className={cn('text-xs font-medium', isDark ? 'text-gray-300' : 'text-slate-700')}>
-                              {canNativeShare ? 'Caption (included when you share)' : 'Caption — copy after the image'}
-                            </p>
-                            <textarea
-                              readOnly
-                              rows={4}
-                              value={linkedinCaption}
-                              className={cn(
-                                'scrollbar-none resize-none w-full rounded-lg border px-3 py-2.5 text-xs leading-relaxed shadow-inner',
-                                isDark
-                                  ? 'border-gray-600 bg-gray-950/50 text-gray-200'
-                                  : 'border-slate-200 bg-white text-slate-800',
-                              )}
-                            />
-                            <Button variant='secondary' size='md' onClick={() => copyText(linkedinCaption, 'caption')}>
-                              {copied && copiedField === 'caption' ? (
-                                <Check className='h-4 w-4 text-green-500' />
-                              ) : (
-                                <Copy className='h-4 w-4' />
-                              )}
-                              {copied && copiedField === 'caption' ? 'Caption copied' : 'Copy caption'}
-                            </Button>
+                        {postCount > 1 ? (
+                          <div className='mb-2 flex items-center justify-between'>
+                            <div className='flex items-center gap-1.5'>
+                              <p className={cn('text-[11px] font-medium', isDark ? 'text-gray-400' : 'text-slate-600')}>
+                                Post {postIndex + 1} of {postCount}
+                              </p>
+                              {stormiPostsLoading ? (
+                                <span className={cn('flex items-center gap-1 text-[10px]', isDark ? 'text-teal-400' : 'text-teal-600')}>
+                                  <Loader2 className='h-3 w-3 animate-spin' />
+                                  Stormi writing…
+                                </span>
+                              ) : stormiPosts ? (
+                                <span className={cn('flex items-center gap-1 text-[10px]', isDark ? 'text-teal-400/70' : 'text-teal-600/70')}>
+                                  <Sparkles className='h-3 w-3' />
+                                  by Stormi
+                                </span>
+                              ) : null}
+                            </div>
+                            <div className='flex gap-1'>
+                              <button
+                                type='button'
+                                onClick={() => setPostIndex((i) => (i - 1 + postCount) % postCount)}
+                                className={cn(
+                                  'rounded-md p-1 transition-colors',
+                                  isDark ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800',
+                                )}
+                                aria-label='Previous post'
+                              >
+                                <ChevronLeft className='h-4 w-4' />
+                              </button>
+                              <button
+                                type='button'
+                                onClick={() => setPostIndex((i) => (i + 1) % postCount)}
+                                className={cn(
+                                  'rounded-md p-1 transition-colors',
+                                  isDark ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800',
+                                )}
+                                aria-label='Next post'
+                              >
+                                <ChevronRight className='h-4 w-4' />
+                              </button>
+                            </div>
                           </div>
                         ) : null}
+
+                        <textarea
+                          readOnly
+                          rows={6}
+                          value={currentPost}
+                          className={cn(
+                            'scrollbar-none resize-none w-full rounded-lg border px-3 py-2.5 text-xs leading-relaxed shadow-inner',
+                            isDark
+                              ? 'border-gray-600 bg-gray-950/50 text-gray-200'
+                              : 'border-slate-200 bg-white text-slate-800',
+                          )}
+                        />
+
+                        <div className='mt-2 flex gap-2'>
+                          <Button
+                            variant='primary'
+                            size='md'
+                            className='flex-1'
+                            disabled={!currentPost}
+                            onClick={() => copyText(currentPost, 'post')}
+                          >
+                            {copied && copiedField === 'post' ? (
+                              <Check className='h-4 w-4 text-green-200' />
+                            ) : (
+                              <Copy className='h-4 w-4' />
+                            )}
+                            {copied && copiedField === 'post' ? 'Copied!' : 'Copy post'}
+                          </Button>
+                        </div>
+
+                        <p className={cn('mt-2.5 text-[11px] leading-snug', isDark ? 'text-gray-500' : 'text-slate-500')}>
+                          Paste into LinkedIn, X, or any platform — the link auto-generates a preview card with your name, score, and photo.
+                        </p>
                       </BlockCard>
                     </HubSectionPanel>
 
