@@ -61,6 +61,23 @@ interface SimpleModeState {
   /** True when the mobile swipe-up card sheet is open. Desktop ignores this. */
   isCardSheetOpen: boolean
   filters: SimpleJobFilters
+  /**
+   * Which lens is currently projected over the user's card. `null` = the
+   * default "Full profile" lens from the server. Ephemeral; URL sync lives
+   * in a separate hook in Phase 4.
+   */
+  activeLensId: string | null
+  /**
+   * Remembered so the quiet "undo" affordance in the chip area knows which
+   * lens Stormi auto-switched AWAY from when a new job is picked.
+   */
+  lastAutoPickedLensId: string | null
+  /**
+   * True when the user manually chose a lens this session. While true, the
+   * Phase 3 auto-picker respects the pick and does NOT switch on job change.
+   * Cleared automatically when the user switches to a different job.
+   */
+  overrideAutoPick: boolean
 }
 
 interface SimpleModeActions {
@@ -70,6 +87,10 @@ interface SimpleModeActions {
   closeCardSheet: () => void
   setFilter: <K extends keyof SimpleJobFilters>(key: K, value: SimpleJobFilters[K]) => void
   resetFilters: () => void
+  /** User-initiated lens change. Marks overrideAutoPick so auto-pick backs off. */
+  setActiveLens: (lensId: string | null) => void
+  /** Stormi-initiated switch. Does NOT mark overrideAutoPick. */
+  autoPickLens: (lensId: string | null) => void
 }
 
 export const useSimpleModeStore = create<SimpleModeState & SimpleModeActions>((set) => ({
@@ -78,13 +99,20 @@ export const useSimpleModeStore = create<SimpleModeState & SimpleModeActions>((s
   selectedJobSnapshot: null,
   isCardSheetOpen: false,
   filters: DEFAULT_FILTERS,
+  activeLensId: null,
+  lastAutoPickedLensId: null,
+  overrideAutoPick: false,
 
   setSelection: (snapshot) =>
-    set({
+    set((state) => ({
       selectedJobId: snapshot?.id ?? null,
       selectedJobSource: snapshot?.source ?? null,
       selectedJobSnapshot: snapshot,
-    }),
+      // A new job selection releases the override — Stormi gets to auto-pick
+      // again. If the user doesn't love the new pick, they can switch back.
+      overrideAutoPick:
+        snapshot?.id && snapshot.id === state.selectedJobId ? state.overrideAutoPick : false,
+    })),
 
   clearSelection: () =>
     set({ selectedJobId: null, selectedJobSource: null, selectedJobSnapshot: null }),
@@ -96,6 +124,15 @@ export const useSimpleModeStore = create<SimpleModeState & SimpleModeActions>((s
     set((state) => ({ filters: { ...state.filters, [key]: value } })),
 
   resetFilters: () => set({ filters: DEFAULT_FILTERS }),
+
+  setActiveLens: (lensId) =>
+    set({ activeLensId: lensId, overrideAutoPick: true }),
+
+  autoPickLens: (lensId) =>
+    set((state) => ({
+      activeLensId: lensId,
+      lastAutoPickedLensId: state.activeLensId,
+    })),
 }))
 
 export const useSelectedJobSnapshot = () =>

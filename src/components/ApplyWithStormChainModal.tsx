@@ -1,12 +1,21 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+/**
+ * Product guardrail: Storm is not a batch-apply tool. Lenses improve the
+ * quality of a single application; they do not multiply clicks. Do not add
+ * an "apply to N jobs with lens X" surface — that re-creates AIApply's spam
+ * dynamic and burns our employer-trust moat.
+ */
+
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import { Briefcase, CheckCircle, AlertCircle, User, X, Sparkles } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import type { StormiUsageInfo } from '@/lib/ava-chat'
+import { useSimpleModeStore } from '@/stores/simple-mode-store'
+import { useLenses } from '@/stores/career-card-lenses-store'
 
 const StormiCreditModal = dynamic(() => import('@/components/StormiCreditModal'), { ssr: false })
 import {
@@ -60,6 +69,16 @@ export default function ApplyWithStormChainModal({
   const [generatingLetter, setGeneratingLetter] = useState(false)
   const [showCreditModal, setShowCreditModal] = useState(false)
 
+  // Career Card Lens in effect for this submission. Simple Mode keeps the
+  // active lens id in the store; the modal just reads it. If empty, the
+  // server resolves to the default "Full profile" lens.
+  const activeLensId = useSimpleModeStore((s) => s.activeLensId)
+  const lenses = useLenses()
+  const activeLens = useMemo(() => {
+    if (activeLensId) return lenses.find((l) => l.id === activeLensId) ?? null
+    return lenses.find((l) => l.isDefault) ?? null
+  }, [activeLensId, lenses])
+
   const resetState = useCallback(() => {
     setCard(null)
     setLoading(true)
@@ -86,7 +105,8 @@ export default function ApplyWithStormChainModal({
       try {
         setLoading(true)
         setError(null)
-        const response = await fetch('/api/career-card', {
+        const qs = activeLensId ? `?lens=${encodeURIComponent(activeLensId)}` : ''
+        const response = await fetch(`/api/career-card${qs}`, {
           headers: { 'x-wallet-address': userAddress },
         })
         const data = await response.json()
@@ -105,7 +125,7 @@ export default function ApplyWithStormChainModal({
       }
     }
     void load()
-  }, [isOpen, userAddress, resetState])
+  }, [isOpen, userAddress, resetState, activeLensId])
 
   const handleGenerateCoverLetter = async () => {
     if (!job || !userAddress) return
@@ -164,6 +184,10 @@ export default function ApplyWithStormChainModal({
           jobLocation: job.location,
           jobUrl: job.redirect_url,
           coverLetter: coverLetter.trim() || undefined,
+          // Lens snapshot — server validates + rejects stray ids. The default
+          // lens submits `null` (server stores NULLs), which is intentional.
+          lensId: activeLens && !activeLens.isDefault ? activeLens.id : undefined,
+          lensName: activeLens && !activeLens.isDefault ? activeLens.name : undefined,
         }),
       })
 
@@ -407,9 +431,20 @@ export default function ApplyWithStormChainModal({
                 disabled={submitting || !eligibility.canApply}
                 isLoading={submitting}
               >
-                {eligibility.canApply ? 'Submit application' : 'Complete career card to apply'}
+                {eligibility.canApply
+                  ? activeLens && !activeLens.isDefault
+                    ? `Apply \u00b7 ${activeLens.name}`
+                    : 'Submit application'
+                  : 'Complete career card to apply'}
               </Button>
             </div>
+
+            {activeLens && !activeLens.isDefault && (
+              <p className={`text-xs text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                Submitting with your <span className="font-semibold">{activeLens.name}</span> lens.
+                <span className="opacity-60"> Change in Simple Mode before submitting.</span>
+              </p>
+            )}
 
             <p className={`text-xs text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               By submitting, employers receive your Storm application snapshot and link.

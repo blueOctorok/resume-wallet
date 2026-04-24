@@ -19,6 +19,9 @@ export async function GET(request: NextRequest) {
     const walletAddress = request.headers.get('x-wallet-address')
     const { searchParams } = new URL(request.url)
     const shareToken = searchParams.get('token')
+    // `?lens=<uuid>` is advisory — bad IDs silently fall back to default so a
+    // mistyped URL can never break the card.
+    const lensId = searchParams.get('lens')
 
     let userId: string
     let memberSince: string
@@ -52,6 +55,7 @@ export async function GET(request: NextRequest) {
         shareSettings,
         contactMode: 'public',
         viewCount: nextViews,
+        lensId,
       })
 
       return NextResponse.json({ success: true, card })
@@ -72,6 +76,7 @@ export async function GET(request: NextRequest) {
         shareToken: shareTokenValue,
         shareSettings,
         contactMode: 'self',
+        lensId,
       })
 
       return NextResponse.json({ success: true, card })

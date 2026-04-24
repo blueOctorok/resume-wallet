@@ -1,5 +1,20 @@
 # Storm — Complete Project Roadmap
 
+## 🪞 **Career Card Lenses — one card, many framings** (April 2026 — Phases 1–4 Complete)
+
+**Product principle:** Blocks are the truth, lenses are the rendering. A user can tailor how their career card is framed per job without maintaining duplicate resumes — update a block once, every lens refreshes. Stormi picks the right lens silently by default; advanced users get full control without ever being forced into a flow. See **`docs/CHANGES.md`** (Career Card Lenses — one card, many framings) for the full rationale.
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| **P1 — Data + projection plumbing** | ✅ Done | Migrations `068_career_card_lenses.sql` + `068b_career_card_lens_drafts.sql`; `career-card-lenses.ts` server helpers (ensure/list/get, soft-6/hard-10 caps, `applyLensOrderAndFilter`); `buildProjectedCareerCard(lensId)` filters + reorders + overrides summary; `/api/career-card/lenses` full CRUD; `/api/career-card` + `/api/career-card/pdf` accept `?lens=` |
+| **P2 — Store + subtle chip + manage modal** | ✅ Done | `career-card-lenses-store`; `activeLensId` / `lastAutoPickedLensId` / `overrideAutoPick` on `simple-mode-store`; subtle `{lens} · switch` chip on `ProjectedCareerCard`; `LensPickerPopover`; `LensManageModal` (rename / delete+undo / create blank / share link) with soft 6 / hard 10 caps |
+| **P3 — Stormi picks + drafts lenses** | ✅ Done | `pickBestLens` in `job-fit.ts` (per-lens `computeJobFit`, margin-aware); `SimpleCardPanel` silent auto-switch + "Switched · undo" chip; `StormiNextStepCard` secondary "Let Stormi tailor" / primary "tailor for this role" branches; `/api/ai/draft-lens` (Haiku + `career_card_lens_drafts` cache per user/job) |
+| **P4 — Apply snapshot + public share + employer view** | ✅ Done | Migration `069_application_lens_snapshot.sql` (`lens_id_snapshot`, `lens_name_snapshot`); `/api/applications/submit` validates lens + nulls out block-specific fields the lens hides; `ApplyWithStormChainModal` fetches with `?lens=` and submits with `lensId` + guardrail comment; `use-selected-job-sync` mirrors `?lens=` only on user override; employer `ApplicantsPage` shows read-only `"{lens} framing"` badge |
+| **Pattern-detection lens creation** | 🔲 Future | Ambient "you've viewed 5 logistics jobs — saved a lens" signal (Phase 3+) |
+| **Industry lens templates** | 🔲 Future | Out of scope until usage justifies |
+
+---
+
 ## 🧭 **Simple Mode — job-first guided experience** (April 2026 — Phases 0–6 Complete)
 
 **Product principle:** Two chromes over one engine. "Guided" (Simple) is job-first onboarding for the 80% who want a quick win; "Workspace" (Hub) is the feature-dense view for returning power users. Both render over the same stores and primitives — no forked state, no parallel features. See **`docs/CHANGES.md`** (Simple Mode — job-first guided experience) for the full change log.

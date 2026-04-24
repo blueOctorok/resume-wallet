@@ -81,6 +81,7 @@ export async function GET(request: NextRequest) {
         share_token,
         applicant_user_id,
         job_posting_id,
+        lens_name_snapshot,
         job_postings!inner (
           id,
           title,
@@ -174,6 +175,7 @@ export async function GET(request: NextRequest) {
         appliedAt: app.applied_at,
         viewCount: app.view_count || 0,
         lastViewedAt: app.last_viewed_at,
+        lensNameSnapshot: (app as Record<string, unknown>).lens_name_snapshot as string | null ?? null,
         coverLetter: app.cover_letter,
         reviewerNotes: app.reviewer_notes,
         shareToken: app.share_token,

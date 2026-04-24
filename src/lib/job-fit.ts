@@ -22,6 +22,7 @@
 import { BLOCK_DEFINITIONS, type BlockDefinition } from '@/lib/block-registry'
 import type { ProjectedCareerCard, SectionBlockType } from '@/types/career-card'
 import type { SelectedJobSnapshot } from '@/stores/simple-mode-store'
+import type { CareerCardLens } from '@/lib/career-card-lenses'
 
 export interface Requirement {
   /** Stable key — e.g. block id or canonical skill keyword */
@@ -296,5 +297,80 @@ export function computeJobFit({
     recommendedBlocks,
     toneBand: tone(score),
     label: labelFor(score),
+  }
+}
+
+// ── Lens picker ─────────────────────────────────────────────────────────────
+
+export interface LensFitEvaluation {
+  lensId: string
+  lensName: string
+  score: number
+  toneBand: JobFitResult['toneBand']
+}
+
+export interface PickBestLensResult {
+  /** Lens that scored highest; null if no lenses are provided. */
+  best: LensFitEvaluation | null
+  /** Score of the second-place lens, 0 if only one lens exists. */
+  runnerUpScore: number
+  /** `best.score - runnerUpScore`. Used to decide whether to suggest a draft. */
+  margin: number
+  /** Every lens evaluation — useful for the manage modal preview. */
+  evaluations: LensFitEvaluation[]
+}
+
+/**
+ * Score every lens against a job and return the best pick.
+ *
+ * "Score" here is `computeJobFit` with the lens's `visibleBlockTypes` treated
+ * as the candidate's installed set. This mirrors the real projection —
+ * requirements only count as matched if the lens actually shows that block.
+ *
+ * `null` visible_block_types = "all blocks visible" → uses `installedBlockTypes`
+ * unchanged, same as the default lens.
+ */
+export function pickBestLens({
+  lenses,
+  installedBlockTypes,
+  job,
+  externalRequirements,
+}: {
+  lenses: CareerCardLens[]
+  installedBlockTypes: string[]
+  job: SelectedJobSnapshot
+  externalRequirements?: ExternalRequirement[] | null
+}): PickBestLensResult {
+  if (lenses.length === 0) {
+    return { best: null, runnerUpScore: 0, margin: 0, evaluations: [] }
+  }
+
+  const evaluations: LensFitEvaluation[] = lenses.map((lens) => {
+    // "installed" for this lens = what the lens SHOWS. Missing visibleBlockTypes
+    // is the sentinel for "show all" (default/Full profile lens).
+    const lensVisible =
+      lens.visibleBlockTypes == null
+        ? installedBlockTypes
+        : installedBlockTypes.filter((b) => lens.visibleBlockTypes!.includes(b))
+
+    const fit = computeJobFit({
+      job,
+      installedBlockTypes: lensVisible,
+      externalRequirements,
+    })
+    return { lensId: lens.id, lensName: lens.name, score: fit.score, toneBand: fit.toneBand }
+  })
+
+  // Sort descending; ties broken by lens name for deterministic output.
+  const sorted = [...evaluations].sort((a, b) =>
+    b.score !== a.score ? b.score - a.score : a.lensName.localeCompare(b.lensName),
+  )
+  const best = sorted[0]
+  const runnerUpScore = sorted[1]?.score ?? 0
+  return {
+    best,
+    runnerUpScore,
+    margin: best.score - runnerUpScore,
+    evaluations,
   }
 }

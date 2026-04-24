@@ -183,6 +183,16 @@ export interface ProjectedCareerCard {
    * Omitted for self/public; never shown to the candidate or other employers.
    */
   employerCompanyMvr?: MvrData | null
+  /**
+   * The lens used to project this card. Always present in self/public views;
+   * the default "Full profile" lens is returned when no specific one is
+   * requested. Employer views omit this so the consumer stays framing-neutral.
+   */
+  activeLens?: {
+    id: string
+    name: string
+    isDefault: boolean
+  }
 }
 
 /** Props mode for the career card component */

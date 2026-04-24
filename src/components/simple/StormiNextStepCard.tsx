@@ -19,15 +19,22 @@
  */
 
 import { useMemo } from 'react'
-import { ArrowRight, CheckCircle2, Compass, ExternalLink, Plus, Sparkles } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Compass, ExternalLink, Eye, Loader2, Plus, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import Button from '@/components/ui/Button'
-import type { JobFitResult } from '@/lib/job-fit'
+import type { JobFitResult, PickBestLensResult } from '@/lib/job-fit'
 import type { SelectedJobSnapshot } from '@/stores/simple-mode-store'
 
 /** Match the threshold used in `SimpleJobDetailPanel` so the card and the apply button agree. */
 const APPLY_COVERAGE_THRESHOLD = 50
+
+/**
+ * If the best existing lens beats the second-best by < this much, Stormi
+ * offers a secondary "tailor a lens" link. Small margin = the current pick
+ * wasn't decisive enough to feel bespoke for this role.
+ */
+const LENS_DRAFT_MARGIN_THRESHOLD = 10
 
 export interface StormiNextStepCardProps {
   snap: SelectedJobSnapshot | null
@@ -42,6 +49,12 @@ export interface StormiNextStepCardProps {
    * so the user types their own. A preset string asks Stormi to act directly.
    */
   onAskStormi: (presetMessage: string | null) => void
+  /** Career-Card-Lenses — evaluation of the user's lenses against this job. */
+  lensPick?: PickBestLensResult | null
+  /** Request a Stormi-drafted lens for the currently-selected job. */
+  onDraftLens?: () => void
+  /** True while `/api/ai/draft-lens` is in flight so the CTA can show a spinner. */
+  isDraftingLens?: boolean
 }
 
 interface NextStep {
@@ -61,6 +74,9 @@ export default function StormiNextStepCard({
   onAddBlock,
   onApply,
   onAskStormi,
+  lensPick,
+  onDraftLens,
+  isDraftingLens = false,
 }: StormiNextStepCardProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
@@ -74,6 +90,31 @@ export default function StormiNextStepCard({
         title: 'Pick a job and I\u2019ll build your card around it',
         body: 'Choose something you actually want. I\u2019ll map the exact blocks and credentials that role asks for.',
         primary: { label: 'Ask me for ideas', onClick: () => onAskStormi('What kinds of jobs fit what I have today?'), variant: 'secondary' },
+      }
+    }
+
+    // Lens escape hatch #1: no lens clears a minimal coverage floor. Draft
+    // one before pushing more blocks or redirect — it's the smallest work
+    // with the biggest coverage jump when the user already has the pieces
+    // but in the wrong framing.
+    if (
+      onDraftLens &&
+      lensPick &&
+      lensPick.best &&
+      lensPick.best.score < APPLY_COVERAGE_THRESHOLD &&
+      installedCount > 0
+    ) {
+      return {
+        icon: Eye,
+        eyebrow: 'Reframe',
+        title: 'Let me tailor a lens for this role',
+        body: `None of your lenses clear ${APPLY_COVERAGE_THRESHOLD}% for "${snap.title}". I can reshape what your card emphasizes for this job — your blocks stay untouched.`,
+        primary: {
+          label: isDraftingLens ? 'Drafting\u2026' : 'Tailor a lens',
+          onClick: () => {
+            if (!isDraftingLens) onDraftLens()
+          },
+        },
       }
     }
 
@@ -128,6 +169,17 @@ export default function StormiNextStepCard({
     const nextBlock = fit.recommendedBlocks[0]
     if (nextBlock) {
       const crossesThreshold = fit.score < APPLY_COVERAGE_THRESHOLD
+      // Lens escape hatch #2: current lens didn't beat the runner-up by much,
+      // which usually means no existing framing is really "for" this job. Add
+      // a soft secondary — never the primary — so Stormi's block nudge stays
+      // the main action.
+      const shouldOfferDraft = Boolean(
+        onDraftLens &&
+          lensPick &&
+          lensPick.best &&
+          lensPick.margin !== null &&
+          lensPick.margin < LENS_DRAFT_MARGIN_THRESHOLD,
+      )
       return {
         icon: Plus,
         eyebrow: 'Do this next',
@@ -136,7 +188,14 @@ export default function StormiNextStepCard({
           ? `This pushes you past the ${APPLY_COVERAGE_THRESHOLD}% apply line for "${snap.title}".`
           : `Biggest single gap for "${snap.title}" \u2014 closes about ${Math.max(5, Math.round(100 / (fit.missingRequirements.length || 1)))} points.`,
         primary: { label: `Add ${nextBlock.label}`, onClick: () => onAddBlock(nextBlock.id) },
-        secondary: { label: 'Ask Stormi why', onClick: () => onAskStormi(`Why does adding ${nextBlock.label} help me for ${snap.title}?`) },
+        secondary: shouldOfferDraft
+          ? {
+              label: isDraftingLens ? 'Drafting lens\u2026' : 'Let Stormi tailor a lens',
+              onClick: () => {
+                if (!isDraftingLens && onDraftLens) onDraftLens()
+              },
+            }
+          : { label: 'Ask Stormi why', onClick: () => onAskStormi(`Why does adding ${nextBlock.label} help me for ${snap.title}?`) },
       }
     }
 
@@ -158,7 +217,7 @@ export default function StormiNextStepCard({
           }
         : undefined,
     }
-  }, [snap, fit, installedCount, onAddBlock, onApply, onAskStormi])
+  }, [snap, fit, installedCount, onAddBlock, onApply, onAskStormi, lensPick, onDraftLens, isDraftingLens])
 
   const Icon = step.icon
 
@@ -208,12 +267,26 @@ export default function StormiNextStepCard({
           size='sm'
           onClick={step.primary.onClick}
           className='gap-1'
+          disabled={isDraftingLens && step.primary.label.toLowerCase().startsWith('drafting')}
         >
+          {isDraftingLens && step.primary.label.toLowerCase().startsWith('drafting') ? (
+            <Loader2 className='w-3.5 h-3.5 animate-spin' />
+          ) : null}
           {step.primary.label}
-          <ArrowRight className='w-3.5 h-3.5' />
+          {!(isDraftingLens && step.primary.label.toLowerCase().startsWith('drafting')) && (
+            <ArrowRight className='w-3.5 h-3.5' />
+          )}
         </Button>
         {step.secondary && (
-          <Button variant='ghost' size='sm' onClick={step.secondary.onClick}>
+          <Button
+            variant='ghost'
+            size='sm'
+            onClick={step.secondary.onClick}
+            disabled={isDraftingLens && step.secondary.label.toLowerCase().startsWith('drafting')}
+          >
+            {isDraftingLens && step.secondary.label.toLowerCase().startsWith('drafting') ? (
+              <Loader2 className='w-3.5 h-3.5 animate-spin mr-1 inline' />
+            ) : null}
             {step.secondary.label}
           </Button>
         )}

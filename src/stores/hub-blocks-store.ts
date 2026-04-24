@@ -4,6 +4,7 @@ import { BLOCK_DEFINITIONS, getBlockDefinition } from '@/lib/block-registry'
 import type { BlockDefinition } from '@/lib/block-registry'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 import { useUIModeStore } from '@/stores/ui-mode-store'
+import { useCareerCardLensesStore } from '@/stores/career-card-lenses-store'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -176,6 +177,11 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
 
       // Stormi journey reads driver-hub-store (resume / DOT / MVR) — candidates never hit legacy DriverHub
       await syncDriverHubFromApi(walletAddress)
+
+      // Career Card Lenses: fetched alongside hub data so the chip + manage
+      // modal have data on first paint. Non-blocking — failures leave the
+      // default lens server-side; the card still renders.
+      void useCareerCardLensesStore.getState().fetchLenses(walletAddress)
     } catch (err) {
       set({
         fetchError: err instanceof Error ? err.message : 'Unknown error',

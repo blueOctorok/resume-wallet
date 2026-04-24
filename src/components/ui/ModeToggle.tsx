@@ -88,7 +88,7 @@ export default function ModeToggle({ variant = 'pill', onAfterToggle }: ModeTogg
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-0.5 rounded-full border p-0.5 text-xs font-semibold',
+        'inline-flex items-center gap-1 rounded-full border p-1 text-xs font-semibold',
         isDark ? 'border-gray-700 bg-gray-900/60' : 'border-slate-200 bg-white/80 shadow-sm',
       )}
       role='group'
@@ -98,27 +98,29 @@ export default function ModeToggle({ variant = 'pill', onAfterToggle }: ModeTogg
         type='button'
         onClick={() => mode !== 'simple' && handleToggle()}
         className={cn(
-          'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 transition-colors cursor-pointer',
+          'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 transition-colors cursor-pointer sm:px-3.5',
           active('simple'),
         )}
         aria-pressed={mode === 'simple'}
         title='Guided mode — job-first, Stormi as co-pilot'
       >
-        <Sparkles className='w-3 h-3' />
-        Guided
+        <Sparkles className='h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4' aria-hidden />
+        <span className='lg:hidden'>Guide</span>
+        <span className='hidden lg:inline'>Guided</span>
       </button>
       <button
         type='button'
         onClick={() => mode !== 'hub' && handleToggle()}
         className={cn(
-          'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 transition-colors cursor-pointer',
+          'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 transition-colors cursor-pointer sm:px-3.5',
           active('hub'),
         )}
         aria-pressed={mode === 'hub'}
         title='Workspace — the full composable hub'
       >
-        <LayoutDashboard className='w-3 h-3' />
-        Workspace
+        <LayoutDashboard className='h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4' aria-hidden />
+        <span className='lg:hidden'>Work</span>
+        <span className='hidden lg:inline'>Workspace</span>
       </button>
     </div>
   )

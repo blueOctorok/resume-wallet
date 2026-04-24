@@ -17,7 +17,11 @@ export async function POST(request: NextRequest) {
       jobSalaryMax,
       jobUrl,
       coverLetter,
-      jobSource = 'adzuna'
+      jobSource = 'adzuna',
+      // Career Card Lens snapshot. Both fields are optional; default-lens
+      // submissions send neither and get NULLs, which is fine.
+      lensId,
+      lensName,
     } = body
 
     console.log('[APPLICATION SUBMIT] Starting submission:', {
@@ -207,7 +211,44 @@ export async function POST(request: NextRequest) {
     // Generate unique share token
     const shareToken = nanoid(16)
 
-    // Career-card style snapshot for all candidates; CDL/DOT when present
+    // Validate lens (if provided) belongs to this user before snapshotting.
+    // A hostile/broken client could pass someone else's lens id; we fail
+    // soft — just strip the bad reference rather than rejecting the apply.
+    let verifiedLensId: string | null = null
+    let verifiedLensName: string | null = null
+    let lensVisibleBlockTypes: string[] | null = null
+    if (typeof lensId === 'string' && lensId) {
+      const { data: lensRow } = await adminSupabaseForBlocks
+        .from('career_card_lenses')
+        .select('id, name, visible_block_types, is_default')
+        .eq('id', lensId)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (lensRow) {
+        verifiedLensId = lensRow.id
+        verifiedLensName = (typeof lensName === 'string' && lensName.trim()) || lensRow.name
+        // Default lens = full profile; only respect filtering when non-default.
+        if (!lensRow.is_default) {
+          lensVisibleBlockTypes = lensRow.visible_block_types ?? null
+        }
+      }
+    }
+
+    // If the applied lens hides block types, filter the snapshot so the
+    // employer sees exactly what the candidate intended. Default lens or a
+    // NULL visibility list both mean "show everything" — no filtering.
+    const snapshotInstalledBlockTypes = lensVisibleBlockTypes
+      ? installedBlockTypes.filter((bt) => lensVisibleBlockTypes!.includes(bt))
+      : installedBlockTypes
+
+    // Helper: `block_type` is hidden if the lens exists AND its visibility
+    // list doesn't include it. `null` lens = full profile = nothing hidden.
+    const lensHides = (blockType: string) =>
+      lensVisibleBlockTypes !== null && !lensVisibleBlockTypes.includes(blockType)
+
+    // Career-card style snapshot for all candidates; CDL/DOT when present.
+    // Fields tied to lens-hidden blocks are nulled so employers see exactly
+    // the framing the candidate submitted with — not their full profile.
     const applicationData = {
       applicant_name: applicantName,
       applicant_email: userProfile?.email ?? user.email,
@@ -215,13 +256,20 @@ export async function POST(request: NextRequest) {
       occupation: userProfile?.headline ?? null,
       professional_summary: userProfile?.professional_summary ?? null,
       location: profileLocation,
-      installed_block_types: installedBlockTypes,
-      cdl_class: cdlData?.cdl_class ?? null,
-      cdl_endorsements: cdlData?.endorsements ?? null,
-      cdl_state: cdlData?.cdl_state ?? null,
-      resume_url: latestResume?.ipfs_url ?? null,
+      installed_block_types: snapshotInstalledBlockTypes,
+      cdl_class: lensHides('driver-cdl-credentials') ? null : cdlData?.cdl_class ?? null,
+      cdl_endorsements: lensHides('driver-cdl-credentials') ? null : cdlData?.endorsements ?? null,
+      cdl_state: lensHides('driver-cdl-credentials') ? null : cdlData?.cdl_state ?? null,
+      resume_url:
+        lensHides('general-resume') && lensHides('driver-resume') && lensHides('developer-resume')
+          ? null
+          : latestResume?.ipfs_url ?? null,
       dot_application:
-        latestDotApp?.is_complete ? latestDotApp.application_data ?? null : null,
+        lensHides('driver-dot-application')
+          ? null
+          : latestDotApp?.is_complete
+            ? latestDotApp.application_data ?? null
+            : null,
       submitted_at: new Date().toISOString(),
     }
 
@@ -237,7 +285,9 @@ export async function POST(request: NextRequest) {
         cover_letter: coverLetter,
         application_data: applicationData,
         share_token: shareToken,
-        status: 'submitted'
+        status: 'submitted',
+        lens_id_snapshot: verifiedLensId,
+        lens_name_snapshot: verifiedLensName,
       })
       .select()
       .single()

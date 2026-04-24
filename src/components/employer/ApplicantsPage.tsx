@@ -41,6 +41,12 @@ interface Applicant {
   resumeVerified: boolean
   resumeIpfsHash: string | null
   jobTargetRole: string
+  /**
+   * Career-Card-Lens name in effect when the candidate submitted. `null` =
+   * default "Full profile" or pre-lens application. Read-only; employers see
+   * this as a small badge to understand the framing the candidate chose.
+   */
+  lensNameSnapshot: string | null
 }
 
 interface Job {
@@ -379,11 +385,23 @@ function ApplicantCard({
               <p className={`text-sm truncate ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                 {applicant.jobTitle}
               </p>
-              <div className="flex items-center gap-4 mt-2 text-xs">
+              <div className="flex items-center gap-4 mt-2 text-xs flex-wrap">
                 <span className={`flex items-center gap-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-500'}`}>
                   <Calendar className="w-3 h-3" />
                   {formatDate(applicant.appliedAt)}
                 </span>
+                {applicant.lensNameSnapshot && (
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-medium ${
+                      theme === 'dark'
+                        ? 'bg-teal-500/10 text-teal-200 ring-1 ring-teal-400/30'
+                        : 'bg-teal-50 text-teal-800 ring-1 ring-teal-200'
+                    }`}
+                    title={`Candidate submitted with their ${applicant.lensNameSnapshot} framing`}
+                  >
+                    {applicant.lensNameSnapshot} framing
+                  </span>
+                )}
               </div>
             </div>
 

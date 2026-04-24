@@ -4,6 +4,62 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Career Card Lenses — one card, many framings** (April 2026)
+
+### Why
+Tailored applications outperform generic ones, but most candidates maintain exactly one resume/career card because maintaining several is a chore and they drift apart. The "multiple cards" shape is a tax on the user we explicitly set out to remove when we made blocks the unit of truth.
+
+A **lens** is cheap metadata over the single career card: a name, a list of block types to show, a list to emphasize, and an optional summary override. Stormi picks the best lens per job automatically (silent-first) and can draft a new one on demand. Updating any block refreshes every lens — no drift, no duplicate data, one source of truth.
+
+### What shipped
+
+- **Phase 1 — data + server-side projection (invisible to users)**
+  - `supabase/migrations/068_career_card_lenses.sql` — `career_card_lenses` table (id, user_id, name, is_default, visible_block_types, emphasized_block_types, custom_summary). Unique partial index enforces exactly one default per user. Backfill seeds a "Full profile" default for every existing user; a trigger does the same for new signups.
+  - `src/lib/career-card-lenses.ts` — server helpers: `ensureDefaultLensForUser`, `listLensesForUser`, `getLensOrDefault`, `applyLensOrderAndFilter`. Soft cap 6, hard cap 10.
+  - `src/lib/projected-career-card.ts` — `buildProjectedCareerCard` accepts an optional `lensId`. When present, sections are filtered and reordered by the lens's visibility/emphasis arrays and `professional_summary` is overridden by `custom_summary` if set. Result: the same blocks render differently per lens, server-side, for every consumer (self view, apply flow, PDF, public share).
+  - `src/app/api/career-card/route.ts` and `.../pdf/route.ts` — both accept `?lens=<id>`.
+  - `src/app/api/career-card/lenses/route.ts` (list + create) and `.../[id]/route.ts` (update + delete) — full CRUD with wallet-address auth.
+
+- **Phase 2 — store + subtle chip + manage modal (on demand)**
+  - `src/stores/career-card-lenses-store.ts` — Zustand store for lenses; `fetchLenses`, `createLens`, `renameLens`, `updateLens`, `deleteLens`. Loaded alongside other hub data via `useHubBlocksStore.fetchHubData`.
+  - `src/stores/simple-mode-store.ts` — gains `activeLensId`, `lastAutoPickedLensId`, `overrideAutoPick`, `setActiveLens`, `autoPickLens`. `setSelection` clears `overrideAutoPick` on job change so Stormi's auto-pick resumes.
+  - `src/components/career-card/ProjectedCareerCard.tsx` — renders a muted `{lens.name} · switch` chip in the top-right of the self view; zero dropdown chevron or accent color so lazy users don't notice. Supports a short-lived `lensSwitchNote` that displays "Switched to X · undo" for ~5s after a silent auto-pick.
+  - `src/components/career-card/LensPickerPopover.tsx` — lightweight popover (not a modal) listing lenses + "Manage lenses" + "+ New blank". Anchored to the chip.
+  - `src/components/career-card/LensManageModal.tsx` — minimal settings-style modal (uses `Modal panelShape='block'` per UI rules): list, activate, rename inline, delete (with undo), create new blank, soft-warn at 6, hard-block at 10. Also exposes "Share link" per lens that mints/reuses a share token and copies `...?lens=<id>` for non-default lenses.
+
+- **Phase 3 — Stormi picks + drafts lenses (silent-first)**
+  - `src/lib/job-fit.ts` — `pickBestLens({ lenses, installedBlockTypes, job, externalRequirements })` runs `computeJobFit` once per lens using that lens's visible blocks as the "installed" set, returns the winning lens, its score, and the margin to the runner-up.
+  - `src/components/simple/SimpleCardPanel.tsx` — on every `snap` change, calls `pickBestLens` and silently sets `activeLensId` unless `overrideAutoPick` is set. When a switch happens, writes `lensSwitchNote` so the chip shows the quiet "Switched to X · undo" affordance.
+  - `src/components/simple/StormiNextStepCard.tsx` — lens-aware but restrained. When a good lens is active: Stormi says nothing extra. When `margin < 10%`: secondary link "Let Stormi tailor a lens for this." When no lens clears the fit floor: primary CTA becomes "Let me tailor a lens for this role." The CTA shows a spinner while drafting.
+  - `src/app/api/ai/draft-lens/route.ts` — Claude Haiku endpoint that reads extracted job requirements + installed blocks and returns `{ name, visible_block_types, emphasized_block_types, summary }`. Draft is returned to the client as a *proposal* — the user saves with one click. Cached per `(user_id, job_id, source)` in `career_card_lens_drafts` (migration 068b) so re-clicking a job doesn't re-bill.
+
+- **Phase 4 — apply flow snapshot + public share + URL sync**
+  - `supabase/migrations/069_application_lens_snapshot.sql` — adds `applications.lens_id_snapshot` (UUID, `ON DELETE SET NULL`) and `lens_name_snapshot` (text). Snapshots are immutable — editing the lens later doesn't retroactively rewrite what the employer saw.
+  - `src/app/api/applications/submit/route.ts` — accepts `lensId` + `lensName`, validates the lens belongs to the submitter, then **filters `application_data.installed_block_types` and nulls block-specific fields (cdl_class, resume_url, dot_application, etc.) that the lens hides** so the employer sees exactly the framing the candidate chose, not their full profile.
+  - `src/components/ApplyWithStormChainModal.tsx` — reads `activeLensId` from `useSimpleModeStore`, fetches `/api/career-card?lens=<id>` for the preview, and passes `lensId` + `lensName` on submit. Submit button reads `Apply · {lens.name}` for non-default lenses, with a subtle "Submitting with your {lens.name} lens" line below. Top-of-file guardrail comment explicitly forbids batch-apply UIs.
+  - `src/app/api/employer/applicants/route.ts` + `src/components/employer/ApplicantsPage.tsx` — applicant rows surface a small read-only `"{lens} framing"` badge so employers see which framing the candidate chose. Reinforces that candidates are tailoring applications (trust), not spam-applying (noise).
+  - `src/hooks/use-selected-job-sync.ts` — mirrors `activeLensId` to `?lens=` only when `overrideAutoPick` is true. Silent auto-picks stay ephemeral so shared URLs are lean; explicit overrides persist across reload so the user's choice sticks.
+
+### Product guardrails
+- **Lenses are not AIApply.** The guardrail comment at the top of `ApplyWithStormChainModal.tsx` is intentional: lenses improve the quality of a single application, they do not multiply clicks. Any future "apply to N jobs with lens X" surface would burn the employer-trust moat and must be rejected at code review.
+- **Soft 6 / hard 10.** Above six lenses we nudge the user to merge; at ten we block. Storm's thesis is quality over volume — lens proliferation would undermine that.
+- **Default lens is sacred.** Reserved name "Full profile"; the UI never lets a user create another with that name, and the default lens cannot be deleted. It's the floor everyone ships on if everything else fails.
+
+### Teaching note
+The reason lenses work — and "multiple cards" wouldn't — is that we already made blocks the unit of truth. Adding a lens is adding a **view over a graph**: cheap, consistent, auto-updating. Adding a card would be adding another row in a denormalized table: duplicated data, drift, sync problems. The product decision ("let users tailor without chores") looks like UX, but it's really a data-model decision in disguise. Once the data model is right, the UI collapses to a chip and a popover; if the data model were wrong, no amount of UI polish would save it.
+
+Second lesson: **server-side projection is how you ship a feature once and get it everywhere.** Because `buildProjectedCareerCard(userId, meta, lensId)` is the single source of truth, the lens automatically applies to the self view, the apply modal preview, the employer-facing career card, the PDF export, and the public share link — all from one change. If each surface had its own projection, we'd be shipping the same bug four times.
+
+---
+
+## **Navigation — candidate hub row spacing** (April 2026)
+
+- **`src/components/Navigation.tsx`**: The bottom hub row (refresh, Guided/Workspace toggle, My Hub, STORM, theme) used three `flex-1` siblings with a tight `gap-2`, so the left cluster and My Hub visually collided. Replaced the `sm+` layout with a **three-column grid**, **`justify-self-start` / `center` / `end`**, and **wider column gaps**. Follow-up: **`minmax(0,1fr)` on the first column + `min-w-0` on the left cell** let the grid shrink the track below the mode toggle’s width, so **“Workspace” drew under My Hub** (overflow visible). First column is now **`minmax(min-content,1fr)`**, the left cell uses **`sm:min-w-min`**, and the hub dropdown wrapper gets **`z-[110]`** so the center control stacks above any stray overlap.
+- **`src/components/ui/ModeToggle.tsx`**: Pill gets **more padding**, **`whitespace-nowrap`**, slightly larger icons, and **responsive labels** — **Guide / Work** below `lg`, **Guided / Workspace** at `lg+` — so the nav stays readable when the vault is narrow.
+- **Follow-up (layout scan):** Automated browser hit **`/` unauthenticated** — only marketing + sign-in; **candidate hub row is not visible without a session**, so visual QA of Guided/Workspace/My Hub needs a signed-in candidate. **Code fix:** for **`userRole === 'candidate'`**, the hub row is now a **`max-xl` two-row grid** — row 1 = **refresh + mode** (left) and **STORM + theme** (right); row 2 = **My Hub** full width centered. From **`xl`**, the previous **single-row three-column** layout returns so wide screens stay compact.
+
+---
+
 ## **Simple Mode — Stormi-led UX + hub container consistency** (April 2026)
 
 ### Why

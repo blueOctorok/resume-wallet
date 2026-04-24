@@ -118,6 +118,22 @@ interface ProjectedCareerCardProps {
    * visual confirmation. Self mode only.
    */
   recentlyInstalledBlockIds?: string[]
+  /**
+   * Career Card Lenses — subtle "Full profile · switch" chip in the header
+   * top-right when the card is in self mode and the user has at least one
+   * non-default lens. Clicking `switch` fires `onOpenLensPicker`. Entirely
+   * presentational — this component does not fetch or mutate lenses.
+   */
+  activeLensName?: string | null
+  showLensChip?: boolean
+  onOpenLensPicker?: () => void
+  /**
+   * Ephemeral "Switched to X · undo" note shown in place of the chip for a
+   * few seconds after Stormi auto-switches lenses. When set, `onUndoLensSwitch`
+   * is the undo handler.
+   */
+  lensSwitchNote?: { toName: string } | null
+  onUndoLensSwitch?: () => void
 }
 
 /**
@@ -138,6 +154,11 @@ export default function ProjectedCareerCard({
   ghostSections,
   onGhostAction,
   recentlyInstalledBlockIds,
+  activeLensName,
+  showLensChip = false,
+  onOpenLensPicker,
+  lensSwitchNote,
+  onUndoLensSwitch,
 }: ProjectedCareerCardProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
@@ -162,6 +183,57 @@ export default function ProjectedCareerCard({
     <VaultHorizontalVaultShell isDark={isDark} layout='nav' contentClassName='relative overflow-hidden'>
       {/* ── Profile header (no hero gradient — stays on vault face so block sections read as one surface) ── */}
       <div className='px-6 sm:px-8 pt-6 sm:pt-7 pb-5 relative z-[1]'>
+          {/*
+            Lens chip — deliberately subtle. Muted text, only "switch" is a
+            link. Not bold, no chevron, no accent — sits in peripheral vision
+            for the power users who want it.
+
+            Auto-switch note takes priority when present — same spot, same
+            typography, just "Switched to X · undo" for ~5s, then back to the
+            regular chip.
+          */}
+          {mode === 'self' && showLensChip && (activeLensName || lensSwitchNote) ? (
+            <div
+              className={cn(
+                'absolute top-3 right-4 sm:right-6 flex items-center gap-1 text-[11px] transition-opacity duration-300',
+                isDark ? 'text-gray-500' : 'text-gray-400',
+              )}
+            >
+              {lensSwitchNote ? (
+                <>
+                  <span className='truncate max-w-[200px]'>
+                    Switched to {lensSwitchNote.toName}
+                  </span>
+                  <span>·</span>
+                  <button
+                    type='button'
+                    onClick={onUndoLensSwitch}
+                    className={cn(
+                      'underline underline-offset-2 hover:text-current',
+                      isDark ? 'hover:text-gray-300' : 'hover:text-gray-600',
+                    )}
+                  >
+                    undo
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span className='truncate max-w-[160px]'>{activeLensName}</span>
+                  <span>·</span>
+                  <button
+                    type='button'
+                    onClick={onOpenLensPicker}
+                    className={cn(
+                      'underline underline-offset-2 hover:text-current',
+                      isDark ? 'hover:text-gray-300' : 'hover:text-gray-600',
+                    )}
+                  >
+                    switch
+                  </button>
+                </>
+              )}
+            </div>
+          ) : null}
           <div className='flex items-start gap-4'>
             <div
               className={cn(

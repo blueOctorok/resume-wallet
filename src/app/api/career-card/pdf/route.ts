@@ -36,11 +36,14 @@ export async function GET(request: NextRequest) {
       (row.share_settings as { showContact?: boolean; allowConnect?: boolean }) ?? defaultShareSettings
 
     const memberSince = user.created_at ?? new Date().toISOString()
+    const { searchParams } = new URL(request.url)
+    const lensId = searchParams.get('lens')
     const card = await buildProjectedCareerCard(supabase, user.id, {
       memberSince,
       shareToken,
       shareSettings: { ...defaultShareSettings, ...shareSettings },
       contactMode: 'self',
+      lensId,
     })
 
     const base =

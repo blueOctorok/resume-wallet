@@ -72,6 +72,7 @@ function computeCareerCardSignals(
   }
 }
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { applyLensOrderAndFilter, getLensOrDefault } from '@/lib/career-card-lenses'
 
 export type ProjectedCareerCardContactMode = 'self' | 'public' | 'employer'
 
@@ -82,6 +83,13 @@ export interface BuildProjectedCareerCardInput {
   contactMode: ProjectedCareerCardContactMode
   /** Public share page only — shown on the card header */
   viewCount?: number
+  /**
+   * Optional lens to project through. Self + public views resolve this to the
+   * user's default "Full profile" when omitted. Employer view ignores lenses
+   * entirely so recruiters see the neutral projection, not a candidate-framed
+   * subset.
+   */
+  lensId?: string | null
 }
 
 /**
@@ -117,7 +125,19 @@ export async function buildProjectedCareerCard(
       ? `${userProfile.city}, ${userProfile.state}`
       : null
 
-  const summary = userProfile?.professional_summary ?? null
+  const profileSummary = userProfile?.professional_summary ?? null
+
+  // Resolve the lens up-front so section filtering can happen in one place
+  // downstream. Employer view bypasses lens framing (see note on BuildProjectedCareerCardInput).
+  const lensRow =
+    meta.contactMode === 'employer'
+      ? null
+      : await getLensOrDefault(supabase, userId, meta.lensId ?? null)
+
+  const summary =
+    lensRow?.custom_summary && lensRow.custom_summary.trim().length > 0
+      ? lensRow.custom_summary
+      : profileSummary
 
   const includeContact =
     meta.contactMode === 'self' ||
@@ -178,7 +198,11 @@ export async function buildProjectedCareerCard(
     })
   }
 
-  const signals = computeCareerCardSignals(sections, employerConfirmed)
+  // Apply the lens ordering + filter before computing signals so score reflects
+  // what's actually visible on the card. Employer view uses the raw sections.
+  const projectedSections = lensRow ? applyLensOrderAndFilter(sections, lensRow) : sections
+
+  const signals = computeCareerCardSignals(projectedSections, employerConfirmed)
 
   return {
     userId,
@@ -189,7 +213,7 @@ export async function buildProjectedCareerCard(
     location,
     memberSince: meta.memberSince,
     shareToken: meta.shareToken,
-    sections,
+    sections: projectedSections,
     settings: meta.shareSettings,
     contact,
     viewCount: meta.contactMode === 'public' ? meta.viewCount : undefined,
@@ -198,6 +222,9 @@ export async function buildProjectedCareerCard(
     onChainCredentialCount: signals.onChainCredentialCount,
     onChainCredentials: signals.onChainCredentials,
     careerCardScore: signals.careerCardScore,
+    activeLens: lensRow
+      ? { id: lensRow.id, name: lensRow.name, isDefault: lensRow.is_default }
+      : undefined,
   }
 }
 
