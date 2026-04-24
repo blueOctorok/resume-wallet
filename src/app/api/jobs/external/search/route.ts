@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchAdzunaJobsServer } from '@/lib/adzuna-server'
 
+/** Hard cap — Simple Mode surfaces a focused list, not a firehose. */
+const MAX_RESULTS_PER_PAGE = 30
+
 /**
  * Adzuna Job Search API Proxy — keys stay server-side.
+ *
+ * Simple Mode passes `salary_min`, `job_type`, and defaults to tight result
+ * counts so we show 30 relevant listings instead of 100 generic ones.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -11,15 +17,26 @@ export async function GET(request: NextRequest) {
     const keywords = searchParams.get('keywords') || 'truck driver CDL'
     const location = searchParams.get('location') || ''
     const page = parseInt(searchParams.get('page') || '1', 10) || 1
-    const resultsPerPage = searchParams.get('results_per_page') || '20'
+    const requestedPerPage = parseInt(searchParams.get('results_per_page') || '20', 10) || 20
+    const resultsPerPage = Math.min(requestedPerPage, MAX_RESULTS_PER_PAGE)
     const sortBy = searchParams.get('sort_by') === 'salary' ? 'salary' : 'date'
+
+    const salaryMinRaw = searchParams.get('salary_min')
+    const salaryMin = salaryMinRaw ? parseInt(salaryMinRaw, 10) : null
+    const jobTypeRaw = searchParams.get('job_type')
+    const jobType =
+      jobTypeRaw === 'full_time' || jobTypeRaw === 'part_time' || jobTypeRaw === 'contract'
+        ? jobTypeRaw
+        : null
 
     const { results, count } = await searchAdzunaJobsServer({
       keywords,
       location: location || undefined,
       page,
-      resultsPerPage: parseInt(resultsPerPage, 10) || 20,
+      resultsPerPage,
       sortBy,
+      salaryMin: salaryMin && Number.isFinite(salaryMin) && salaryMin > 0 ? salaryMin : null,
+      jobType,
     })
 
     const transformedResults = results.map((j) => ({
@@ -43,7 +60,7 @@ export async function GET(request: NextRequest) {
       results: transformedResults,
       count,
       page,
-      results_per_page: parseInt(resultsPerPage, 10) || 20,
+      results_per_page: resultsPerPage,
     })
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)

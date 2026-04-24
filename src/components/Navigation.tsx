@@ -42,6 +42,7 @@ import type { UserRole } from '@/stores/types'
 import { useNotificationStore } from '@/stores/notification-store'
 import MvrStatusBadge from './MvrStatusBadge'
 import NotificationBell from './ui/NotificationBell'
+import ModeToggle from './ui/ModeToggle'
 import { useStormTokenBalance } from '@/hooks/use-storm-token-balance'
 
 // Define the navigation page type
@@ -406,7 +407,7 @@ export default function Navigation({
               {/* Hub row: refresh (left) | My Hub (center) | STORM + theme (right) — balanced flex so hub stays centered */}
               {userRole && isAuthenticated && (
                 <div className='relative z-[100] flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:gap-3'>
-                  <div className='flex w-full min-w-0 flex-1 items-center justify-start'>
+                  <div className='flex w-full min-w-0 flex-1 items-center justify-start gap-2'>
                     {userRole === 'candidate' && walletAddress ? (
                       <div className={navHubGradientRingClass(theme)}>
                         <button
@@ -428,6 +429,9 @@ export default function Navigation({
                         </button>
                       </div>
                     ) : null}
+                    {userRole === 'candidate' && (
+                      <ModeToggle variant='pill' onAfterToggle={() => setIsMenuOpen(false)} />
+                    )}
                   </div>
 
                   <div

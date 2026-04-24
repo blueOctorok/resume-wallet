@@ -16,6 +16,7 @@ import type {
 } from '@/types/career-card'
 import type { ResumeData, DotAppData, MvrData, CdlData, PortfolioData, GitHubData, ProjectsData } from '@/types/career-card'
 
+import { Sparkles } from 'lucide-react'
 import {
   ResumeSection,
   DotAppSection,
@@ -25,6 +26,20 @@ import {
   GitHubSection,
   ProjectsSection,
 } from './sections'
+
+/**
+ * GhostSection — a placeholder for content the card *doesn't* have yet but
+ * the selected job needs. Rendered after the real sections in `self` mode
+ * with a dimmed outline and a Stormi-flavored CTA.
+ */
+export interface GhostSection {
+  blockId: string
+  label: string
+  /** e.g. "Add work history — 2 min" */
+  ctaLabel: string
+  /** Optional one-liner explaining why this matters for the selected job */
+  reason?: string
+}
 
 const BASE_SEPOLIA_TX = 'https://sepolia.basescan.org/tx'
 const MAX_TRUST_STRIP_ITEMS = 3
@@ -90,6 +105,19 @@ interface ProjectedCareerCardProps {
   walletAddress?: string
   /** Employer talent modal: recruit / messaging row below sections */
   footerSlot?: ReactNode
+  /**
+   * Simple-mode "glowing gaps" — sections the card is missing but the
+   * currently-selected job needs. Self mode only; ignored for public/employer.
+   */
+  ghostSections?: GhostSection[]
+  /** Click handler for a ghost section's CTA. Falls back to onNavigateToBlock. */
+  onGhostAction?: (blockId: string) => void
+  /**
+   * Block ids that just got installed — applies the `animate-card-settle`
+   * keyframe to their freshly-rendered section so the user gets a moment of
+   * visual confirmation. Self mode only.
+   */
+  recentlyInstalledBlockIds?: string[]
 }
 
 /**
@@ -107,6 +135,9 @@ export default function ProjectedCareerCard({
   onConnect,
   walletAddress,
   footerSlot,
+  ghostSections,
+  onGhostAction,
+  recentlyInstalledBlockIds,
 }: ProjectedCareerCardProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
@@ -351,21 +382,95 @@ export default function ProjectedCareerCard({
 
       {/* ── Dynamic Sections ── */}
       <div className='px-6 sm:px-8 pb-7 space-y-5 relative z-[1]'>
-        {data.sections.map((section) => (
-          <SectionRenderer
-            key={section.blockType}
-            section={section}
-            mode={mode}
-            isDark={isDark}
-            userId={data.userId}
-            walletAddress={walletAddress}
-            shareToken={data.shareToken}
-            onAction={mode === 'self' && onNavigateToBlock
-              ? () => onNavigateToBlock(section.blockType)
-              : undefined
-            }
-          />
-        ))}
+        {data.sections.map((section) => {
+          const recentlyInstalled = Boolean(
+            recentlyInstalledBlockIds?.includes(section.blockType),
+          )
+          return (
+            <div
+              key={section.blockType}
+              className={cn(recentlyInstalled && 'animate-card-settle')}
+            >
+              <SectionRenderer
+                section={section}
+                mode={mode}
+                isDark={isDark}
+                userId={data.userId}
+                walletAddress={walletAddress}
+                shareToken={data.shareToken}
+                onAction={mode === 'self' && onNavigateToBlock
+                  ? () => onNavigateToBlock(section.blockType)
+                  : undefined
+                }
+              />
+            </div>
+          )
+        })}
+
+        {/* ── Ghost sections — Simple mode "glowing gaps" ── */}
+        {mode === 'self' && ghostSections && ghostSections.length > 0 && (
+          <div className='space-y-3'>
+            {ghostSections.map((ghost) => (
+              <button
+                key={`ghost-${ghost.blockId}`}
+                type='button'
+                onClick={() =>
+                  onGhostAction
+                    ? onGhostAction(ghost.blockId)
+                    : onNavigateToBlock?.(ghost.blockId)
+                }
+                className={cn(
+                  'w-full text-left rounded-2xl border-2 border-dashed p-4',
+                  'transition-all hover:border-solid cursor-pointer',
+                  'animate-ghost-pulse',
+                  isDark
+                    ? 'border-teal-400/30 bg-teal-400/[0.04] hover:bg-teal-400/[0.08]'
+                    : 'border-teal-500/30 bg-teal-500/[0.04] hover:bg-teal-500/[0.08]',
+                )}
+                aria-label={`Add ${ghost.label}`}
+              >
+                <div className='flex items-start gap-3'>
+                  <div
+                    className={cn(
+                      'shrink-0 w-9 h-9 rounded-full flex items-center justify-center',
+                      isDark ? 'bg-teal-500/15 text-teal-300' : 'bg-teal-100 text-teal-700',
+                    )}
+                  >
+                    <Sparkles className='w-4 h-4' />
+                  </div>
+                  <div className='min-w-0 flex-1'>
+                    <p
+                      className={cn(
+                        'text-sm font-semibold',
+                        isDark ? 'text-teal-100' : 'text-teal-900',
+                      )}
+                    >
+                      {ghost.label}
+                    </p>
+                    {ghost.reason && (
+                      <p
+                        className={cn(
+                          'text-xs mt-0.5',
+                          isDark ? 'text-teal-200/75' : 'text-teal-800/85',
+                        )}
+                      >
+                        {ghost.reason}
+                      </p>
+                    )}
+                    <p
+                      className={cn(
+                        'text-xs mt-1.5 font-semibold inline-flex items-center gap-1',
+                        isDark ? 'text-teal-300' : 'text-teal-700',
+                      )}
+                    >
+                      {ghost.ctaLabel} →
+                    </p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Employer-only: company-paid MVR (never on candidate/public card) */}
         {mode === 'employer' && data.employerCompanyMvr && (

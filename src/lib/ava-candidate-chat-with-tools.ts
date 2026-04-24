@@ -31,8 +31,18 @@ export async function runCandidateStormiChatWithJobTools(params: {
   latestUserMessage: string
   supabase: SupabaseClient
   userId: string
+  /** Guided mode: default keywords/location for `suggest_alternate_jobs` when the model leans on context */
+  simpleModeAlternateDefaults?: { keywords: string; location?: string } | null
 }): Promise<{ reply: string; jobSuggestions: StormiJobSuggestion[] }> {
-  const { anthropic, systemPrompt, conversationHistory, latestUserMessage, supabase, userId } = params
+  const {
+    anthropic,
+    systemPrompt,
+    conversationHistory,
+    latestUserMessage,
+    supabase,
+    userId,
+    simpleModeAlternateDefaults,
+  } = params
 
   const initial = buildAnthropicMessagesFromHistory(conversationHistory, latestUserMessage)
   const messages: MessageParam[] = initial.map((m) => ({
@@ -40,7 +50,7 @@ export async function runCandidateStormiChatWithJobTools(params: {
     content: m.content,
   }))
 
-  const flags = { searchUsed: false, saveAlertUsed: false }
+  const flags = { searchUsed: false, saveAlertUsed: false, alternateUsed: false }
   let lastJobSuggestions: StormiJobSuggestion[] = []
   let rounds = 0
   /** After tools run, switch to Sonnet for synthesis and any further tool decisions */
@@ -72,7 +82,7 @@ export async function runCandidateStormiChatWithJobTools(params: {
         const executed = await executeStormiJobChatTool({
           name,
           input,
-          ctx: { supabase, userId },
+          ctx: { supabase, userId, simpleModeAlternateDefaults: simpleModeAlternateDefaults ?? null },
           flags,
         })
         if (executed.jobSuggestions?.length) {

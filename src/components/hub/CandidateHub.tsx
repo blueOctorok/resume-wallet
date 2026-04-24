@@ -69,6 +69,7 @@ import ResumeFilePreviewModal from '@/components/hub/ResumeFilePreviewModal'
 import { downloadDriverResumePdfFromStructured } from '@/lib/driver-resume-pdf-download'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 import { useHubContext } from '@/lib/ava-chat'
+import { isSimpleModeEnabled } from '@/lib/feature-flags'
 import ResumePreviewModal from '@/components/ResumePreviewModal'
 import ReferralBanner from './ReferralBanner'
 import JobAlertsHubSection from './JobAlertsHubSection'
@@ -1937,7 +1938,9 @@ export default function CandidateHub() {
     !showProfileSetup &&
     Boolean(userProfile?.firstName?.trim()) &&
     (!walkthroughDismissed || requestWalkthroughReplay) &&
-    (!walkthroughSuppressedThisSession || requestWalkthroughReplay)
+    (!walkthroughSuppressedThisSession || requestWalkthroughReplay) &&
+    // Guided mode teaches job-first; hub walkthrough stays available via nav replay only.
+    !isSimpleModeEnabled()
 
   const walkthroughSteps = useMemo(() => {
     if (isLoadingAiStep && !aiWelcomeStep) {

@@ -50,7 +50,11 @@ export async function GET(request: NextRequest) {
     const u = user as {
       ava_auto_welcome_candidate_at?: string | null
       stormi_walkthrough_dismissed_at?: string | null
+      ui_mode_preference?: string | null
     }
+
+    const uiMode: 'simple' | 'hub' =
+      u.ui_mode_preference === 'hub' ? 'hub' : 'simple'
 
     return NextResponse.json({
       blocks: blocksResult.data ?? [],
@@ -58,6 +62,7 @@ export async function GET(request: NextRequest) {
       profile: profileResult.data ?? null,
       avaAutoWelcomeCandidateDone: Boolean(u.ava_auto_welcome_candidate_at),
       walkthroughDismissed: Boolean(u.stormi_walkthrough_dismissed_at),
+      uiModePreference: uiMode,
     })
   } catch (err) {
     console.error('[HUB BLOCKS] GET unexpected error:', err)

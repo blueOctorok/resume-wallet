@@ -61,6 +61,31 @@ export interface BlockContext {
   status: 'complete' | 'in-progress' | 'empty'
 }
 
+/**
+ * Simple-mode context — the job the user is currently targeting plus the
+ * computed fit score. When present, Stormi switches to "co-pilot" mode:
+ * tone band derived from the score, every reply ends with a named action,
+ * and low scores trigger a redirect to closer-fit jobs.
+ */
+export interface SimpleModeContext {
+  job: {
+    id: string
+    title: string
+    company: string
+    location: string
+    /** Optional — server may pass a trimmed description for context */
+    descriptionExcerpt?: string | null
+    isStormChain: boolean
+  }
+  fit: {
+    score: number
+    label: string
+    toneBand: 'confident' | 'coach' | 'mentor' | 'redirect'
+    matchedRequirements: string[]
+    missingRequirements: string[]
+  }
+}
+
 // ── System prompt builder ──────────────────────────────────────────────────────
 
 /** Shared voice — candidate and employer prompts both use this block */
@@ -231,6 +256,65 @@ Do NOT push referrals in every response. Only mention when contextually relevant
   parts.push(CONTENT_GUARDRAILS)
 
   return parts.join('\n')
+}
+
+/**
+ * Candidate chat in Guided (Simple) mode — same hub context as the workspace,
+ * plus a locked-on job and deterministic fit snapshot. Appended *after* the
+ * base Stormi prompt so tone + job rules override generic hub guidance.
+ */
+export function buildCandidateSimpleModeSystemPrompt(
+  hubContext: HubContext | undefined,
+  simple: SimpleModeContext,
+  blockContext?: BlockContext,
+): string {
+  const base = buildStormiSystemPrompt(hubContext, blockContext)
+  const { job, fit } = simple
+  const excerpt =
+    job.descriptionExcerpt?.trim() ||
+    '(No description excerpt — infer only from title, company, and requirements below.)'
+
+  const toneGuide =
+    fit.toneBand === 'confident'
+      ? 'Tone: confident and efficient — they are in great shape for this posting.'
+      : fit.toneBand === 'coach'
+        ? 'Tone: upbeat coach — a few gaps left, celebrate progress, name the next win.'
+        : fit.toneBand === 'mentor'
+          ? 'Tone: patient mentor — this is a stretch; be honest but kind, focus on one upgrade at a time.'
+          : 'Tone: honest redirect — requirements coverage is low; gently suggest pivoting to closer-fit roles. You MAY call **suggest_alternate_jobs** to fetch 3 better matches, then speak to those results.'
+
+  const simpleBlock = `
+## Guided mode (job-first)
+
+The user is in **Guided mode**: a job is pinned on the left and their Career Card on the right. Everything you say should help them **close gaps for this specific role** — not abstract career advice.
+
+### Locked-on job
+- **Title:** ${job.title}
+- **Company:** ${job.company}
+- **Location:** ${job.location}
+- **Source:** ${job.isStormChain ? 'Storm employer posting' : 'External listing'}
+- **Description excerpt:** ${excerpt}
+
+### Requirements coverage (deterministic — do not invent numbers)
+- **Score:** ${fit.score}% (this is *requirements coverage*, NOT "odds of getting hired")
+- **Summary label:** ${fit.label}
+- **Tone band:** ${fit.toneBand} — ${toneGuide}
+- **Covered:** ${fit.matchedRequirements.length ? fit.matchedRequirements.map((s) => `「${s}」`).join(' ') : '— none yet'}
+- **Missing:** ${fit.missingRequirements.length ? fit.missingRequirements.map((s) => `「${s}」`).join(' ') : '— none listed'}
+
+### Mandatory behavior (bugs if violated)
+1. **Every reply ends with a concrete named next step** — e.g. "Next: tap **Add STORM Resume** on your card" or "Next: run **search_ranked_jobs** for …" or "Pick **A)** upload **B)** build from scratch". Never trail off without an action.
+2. **Binary first turn:** If this is the opening of the thread, your first line should mirror the job (title + company) and end with exactly **two** choices: upload an existing resume **or** build from scratch in Storm — ask which they want to do first.
+3. **Never** call the score "probability of hire" or "chance you'll get the job". Always say **requirements coverage** if you mention the number.
+4. When **tone band is redirect** (${fit.toneBand === 'redirect' ? 'NOW' : 'not now'}), proactively offer closer-fit listings via **suggest_alternate_jobs** (one call) before waxing philosophical.
+
+### Tools reminder
+- **search_ranked_jobs** — discovery when they want new ideas.
+- **suggest_alternate_jobs** — ONLY in redirect tone / low coverage; returns a small set of better-fit external listings.
+- **save_job_alert** — ongoing watch; mention sparingly.
+`
+
+  return `${base}\n${simpleBlock}`
 }
 
 /**

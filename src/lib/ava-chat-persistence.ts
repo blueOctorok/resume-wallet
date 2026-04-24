@@ -11,9 +11,21 @@ const MAX_MESSAGES = 120
 
 export type StormiChatPersistenceMode = 'candidate' | 'employer'
 
-export function stormiChatStorageKey(mode: StormiChatPersistenceMode, walletAddress: string): string {
+/**
+ * @param guidedJobId When set, thread is stored per Guided-mode job so switching
+ *   jobs does not collide with the hub drawer thread or other postings.
+ */
+export function stormiChatStorageKey(
+  mode: StormiChatPersistenceMode,
+  walletAddress: string,
+  guidedJobId?: string | null,
+): string {
   const w = walletAddress.trim().toLowerCase()
-  return `stormchain.ava-chat.v${STORAGE_VERSION}.${mode}.${w}`
+  const g =
+    guidedJobId && guidedJobId.trim()
+      ? `.gj.${encodeURIComponent(guidedJobId.trim()).slice(0, 120)}`
+      : ''
+  return `stormchain.ava-chat.v${STORAGE_VERSION}.${mode}.${w}${g}`
 }
 
 function isInterviewPrepPayload(x: unknown): boolean {
@@ -42,10 +54,14 @@ function isChatMessage(x: unknown): x is ChatMessage {
   return true
 }
 
-export function loadStormiChatMessages(mode: StormiChatPersistenceMode, walletAddress: string): ChatMessage[] {
+export function loadStormiChatMessages(
+  mode: StormiChatPersistenceMode,
+  walletAddress: string,
+  guidedJobId?: string | null,
+): ChatMessage[] {
   if (typeof window === 'undefined') return []
   try {
-    const raw = localStorage.getItem(stormiChatStorageKey(mode, walletAddress))
+    const raw = localStorage.getItem(stormiChatStorageKey(mode, walletAddress, guidedJobId))
     if (!raw) return []
     const parsed = JSON.parse(raw) as { messages?: unknown }
     const arr = parsed?.messages
@@ -64,10 +80,11 @@ export function saveStormiChatMessages(
   mode: StormiChatPersistenceMode,
   walletAddress: string,
   messages: ChatMessage[],
+  guidedJobId?: string | null,
 ): void {
   if (typeof window === 'undefined') return
   try {
-    const key = stormiChatStorageKey(mode, walletAddress)
+    const key = stormiChatStorageKey(mode, walletAddress, guidedJobId)
     if (messages.length === 0) {
       localStorage.removeItem(key)
       return

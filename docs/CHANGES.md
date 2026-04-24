@@ -4,6 +4,109 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Simple Mode — Stormi-led UX + hub container consistency** (April 2026)
+
+### Why
+After Phases 0–6 shipped, two layout problems surfaced in real-world use:
+
+1. **Stormi felt like a chat toy, not a co-pilot.** The chat panel lived at the bottom in its own section; users had to scroll to it and were expected to start conversations on their own. That's the opposite of the product thesis — Stormi should read what the user just did and proactively say "do this next."
+2. **Simple Mode containers used generic `rounded-2xl border` chrome** instead of the vault/block shell the hub has. Side by side the two modes felt like different apps.
+
+### What shipped
+
+- **`src/components/simple/StormiNextStepCard.tsx`** — new pure component that reads `fit` + installed-block state and renders ONE next action (plus an optional secondary). Logic branches:
+  - No job → "Pick a job" (routes to "ask me for ideas")
+  - Empty hub → "Start with a STORM resume" (unlocks ~30% coverage instantly)
+  - `toneBand === 'redirect'` → "This one's a stretch — show closer jobs" (calls `suggest_alternate_jobs` via chat preset)
+  - Fit < 80% → "Add {biggest missing block}" with the coverage gain
+  - Fit ≥ 80% → "Apply now" with optional polish
+  Every branch has a concrete CTA with an `ArrowRight`; dead-ends are impossible by design.
+
+- **`src/components/simple/SimpleCardPanel.tsx`** — reworked top-to-bottom:
+  1. Stormi "Do this next" card (violet accent) at the **top**.
+  2. Projected career card (teal accent) in the **middle** — fills remaining space, scrolls as part of the column.
+  3. Collapsed "Ask Stormi anything" bar at the **bottom** — expands to the full `StormiChatPanel` when the user wants free-form Q&A.
+  Chat preset support (`chatPreset` state): NextStep CTAs like "Show closer jobs" expand the drawer and render the suggested prompt as a dismissible pill so the user can send it (or type their own).
+
+- **Hub container pattern adopted everywhere in Simple Mode:**
+  - `SimpleJobRail` → wrapped in `HubSectionPanel accent='teal'` with an inline icon-tile header (the escape hatch for surfaces where `BlockCard`'s fixed header shape doesn't fit a scrolling rail).
+  - `SimpleJobDetailPanel` → wrapped in `HubSectionPanel accent='sky'`; lost its redundant `rounded-2xl border bg-white` div since the vault shell provides the chrome.
+  - `SimpleCardPanel` panels → `HubSectionPanel + BlockCard variant='embed'` (violet for Stormi, teal for the card, violet for the chat drawer) — same pairing as `CandidateHub`'s Ask Stormi + Block Hive sections.
+
+- **`.cursor/rules/ui-components.mdc`** — promoted the "In-App Panels" pattern from a buried sentence inside the modals section to a first-class top-level rule with accent-color palette, the `BlockCard`-won't-fit escape hatch example, and four reference implementations. Now every future feature screen gets the vault chrome automatically.
+
+### Teaching note
+Two patterns worth internalizing from this pass:
+
+1. **Proactive > reactive for AI copy.** The instinct is to give users a chat input and wait for them to type. Most won't. A `NextStepCard` that reads state and picks ONE action does more work than a blinking cursor ever will. The test: can the user sit and do nothing, and still make progress? If yes, the coach is doing its job. The chat drawer stays as an escape hatch for power users — collapsed by default so it doesn't compete with the suggestion.
+
+2. **Chrome consistency is a product decision, not decoration.** When we shipped Phase 1 with plain `rounded-2xl border` containers, the wireframe worked — but side-by-side with the hub it screamed "different team built this." Promoting `HubSectionPanel + BlockCard embed` to a cursor rule (not just an internal convention) means the next dev — human or AI — can't accidentally drift. The rule file is the cheapest form of architectural enforcement: zero runtime cost, catches the drift at authoring time.
+
+---
+
+## **Simple Mode — job-first guided experience** (April 2026)
+
+### Why
+The hub is powerful but overwhelming for the ~80% of users who just want a quick win: find a job, know their fit, apply. Instead of forcing everyone through career-card-first onboarding, Simple Mode reverses the flow — pick a job, then Stormi builds the exact card you need for that role. The hub stays intact as "Workspace" mode for returning power users.
+
+### What shipped (Phases 0–6)
+
+**Phase 0 — Foundation**
+- **`supabase/migrations/067_ui_mode_preference.sql`** — `users.ui_mode_preference` (`'simple' | 'hub'`, default `'simple'`) persists the preferred entry point across devices.
+- **`src/stores/ui-mode-store.ts`** — Zustand + `persist`; `hydrateFromServer` reconciles localStorage with server truth.
+- **`src/app/api/hub/blocks/route.ts`** + **`src/app/api/user/profile/route.ts`** — GET returns `uiModePreference`; PATCH accepts `ui_mode_preference` with validation.
+- **`src/lib/feature-flags.ts`** — `isSimpleModeEnabled()` reads `NEXT_PUBLIC_SIMPLE_MODE_ENABLED` (default on).
+- **`src/components/ui/ModeToggle.tsx`** — Pill toggle between Guided / Workspace; fire-and-forget PATCH + immediate local update.
+- **`src/components/app/CandidateShell.tsx`** — Branches on mode + flag to render `SimpleModeShell` or `CandidateHub`.
+
+**Phase 1 — SimpleModeShell layout**
+- **`src/components/simple/SimpleModeShell.tsx`** — 3-column grid at `lg+`, 2-col at `md`, stacked on mobile. Card panel lives in `SimpleCardSliver` + `SimpleCardSheet` on smaller viewports.
+- **`src/stores/simple-mode-store.ts`** — Ephemeral `selectedJobSnapshot` + `isCardSheetOpen`; see Phase 5 for filter additions.
+- **`src/hooks/use-job-search.ts`** — Extracted from `JobListings` so the rail and legacy list share one normalized `JobListing` shape + AbortController cancellation.
+- **`src/hooks/use-selected-job-sync.ts`** — Mirrors selection to `?selected=…&source=…` so sharing / back-button work.
+- **`src/components/simple/SimpleJobRail.tsx`**, **`SimpleJobDetailPanel.tsx`**, **`SimpleCardPanel.tsx`**, **`SimpleCardSliver.tsx`**, **`SimpleCardSheet.tsx`** — The four panels + mobile sheet chrome.
+
+**Phase 2 — Contextual projected card**
+- **`src/lib/job-fit.ts`** — Deterministic `computeJobFit`: requirements coverage %, matched / missing, recommended blocks, `toneBand` (confident / coach / mentor / redirect). Scoring is deterministic by design — LLMs extract structured requirements but never pick the number.
+- **`src/components/career-card/ProjectedCareerCard.tsx`** — New `ghostSections` prop renders dashed-border placeholders with CTAs for each missing requirement. `recentlyInstalledBlockIds` triggers an `animate-card-settle` pulse when a block fills in.
+- **`src/app/globals.css`** — `@keyframes card-settle` (one-shot glow on fill) + `ghost-pulse` (soft breathing on missing sections).
+
+**Phase 3 — Stormi as a job-first co-pilot**
+- **`src/lib/ava-context.ts`** — `SimpleModeContext` + `buildCandidateSimpleModeSystemPrompt`. Tone adapts to fit score; system prompt mandates a concrete next step in every turn.
+- **`src/lib/ava-job-chat-tools.ts`** — New `suggest_alternate_jobs` tool so Stormi can redirect stretch-fit users to better matches instead of dead-ending.
+- **`src/lib/ava-candidate-chat-with-tools.ts`** + **`src/app/api/ai/chat/route.ts`** — Route threads `simpleModeContext` + `simpleModeAlternateDefaults` through the chat pipeline.
+- **`src/components/stormi/StormiChatPanel.tsx`** — Per-job thread persistence (`guidedJobId` key) and a one-shot bootstrap message when a new job is selected. Hub auto-welcome is suppressed in Guided mode. `guidedBootstrapAttemptedRef` prevents re-fire loops on failed bootstraps.
+- **`src/lib/ava-chat-persistence.ts`** + **`src/lib/ava-chat.ts`** — Persistence keys + `SendToStormiPayload` extended for guided context.
+- **`src/lib/adzuna-smart-defaults.ts`** — Seeds initial search keywords from `occupation` + installed block hints (driver → truck driver, etc.).
+
+**Phase 4 — LLM-extracted fit scoring**
+- **`supabase/migrations/062_external_job_requirements.sql`** — `external_job_requirements` table caches extractions per `(job_id, source)`.
+- **`src/app/api/ai/extract-job-requirements/route.ts`** — Idempotent cache lookup → Haiku extraction → upsert. Heuristic fallback on failure keeps scoring alive.
+- **`src/hooks/use-extracted-requirements.ts`** — Client hook with `useRef`-based dedupe; returns `null` for StormChain / while loading so `computeJobFit` falls back to heuristics.
+- **`src/lib/job-fit.ts`** — New `ExternalRequirement` interface + `externalToRequirements` mapping (always includes a resume requirement). `computeJobFit` prefers external when available, never merges.
+- **`src/components/simple/SimpleJobDetailPanel.tsx`** + **`SimpleCardPanel.tsx`** — Both consume `useExtractedRequirements` and pass through to `computeJobFit`.
+
+**Phase 5 — Adzuna taming**
+- **`src/stores/simple-mode-store.ts`** — Added `filters` (`salaryFloor`, `jobType`, `remoteOnly`) + `setFilter` / `resetFilters`.
+- **`src/lib/adzuna-server.ts`** — Accepts `salaryMin` + `jobType` (maps to Adzuna's mutually-exclusive `full_time`/`part_time`/`contract` booleans).
+- **`src/app/api/jobs/external/search/route.ts`** — `MAX_RESULTS_PER_PAGE = 30` hard cap (was up to 100); parses `salary_min` + `job_type`.
+- **`src/hooks/use-job-search.ts`** — Threads the new filters through; `remoteOnly` is a client-side post-filter (`isRemoteLeaning`) since Adzuna lacks a reliable flag.
+- **`src/components/simple/SimpleJobRail.tsx`** — Collapsible filter chips (salary floor, job type, remote toggle, badge count, "Clear all"). First-run empty state shows a Stormi prompt + 3 trending-category shortcuts instead of firing a generic search.
+
+**Phase 6 — Graduation + polish**
+- **Graduation banner** — `SimpleModeShell` shows a one-time dismissible banner after `3+` installed blocks via `preferences-store.hasCompletedJourneyStep('simple-graduate-banner-dismissed')`. "Open workspace" flips `useUIModeStore`; "Not now" marks the step complete.
+- **`src/components/hub/CandidateHub.tsx`** — `showStormiWalkthrough` now includes `!isSimpleModeEnabled()` so the old hub walkthrough only fires when Simple Mode is off (and still replays on user request from Nav).
+- `ModeToggle` preserves selection across mode flips — the shell swap is pure render, no navigation.
+
+### Teaching note
+Two principles shaped this arc and are worth internalizing:
+
+1. **Deterministic scoring with LLM-extracted inputs.** We felt the pull to "just ask Haiku what percentage fit this is" — tempting because it's one call. We resisted. LLMs are non-deterministic; users who see 92% one reload and 87% the next will never trust the number again. Instead we let the LLM do the one thing it's great at (extracting structured requirements from fuzzy text) and kept the math in `computeJobFit`. Same card + same job = same score, every time. This is the same lesson as "don't let ChatGPT do your accounting" — use it for the fuzzy edges, keep the logic in code.
+
+2. **Two chromes, one engine.** Simple Mode and the Hub are not two apps — they're two entry points over the same stores (`hub-blocks-store`, `simple-mode-store`, `useAuthStore`). No duplicated block installers, no parallel career-card renderers. `ProjectedCareerCard` is the same component in both; it just receives `ghostSections` in Simple Mode. This is the only way the two modes stay in sync long-term without becoming a maintenance nightmare. If you catch yourself forking state for a mode, that's a smell — push the difference into props.
+
+---
+
 ## **Stormi hub welcome walkthrough** (April 2026)
 
 ### Why

@@ -24,6 +24,10 @@ export async function searchAdzunaJobsServer(params: {
   page?: number
   resultsPerPage?: number
   sortBy?: 'date' | 'salary'
+  /** Minimum annual salary floor. Adzuna accepts this server-side. */
+  salaryMin?: number | null
+  /** Contract type flag — Adzuna uses separate boolean params per type. */
+  jobType?: 'full_time' | 'part_time' | 'contract' | null
 }): Promise<{ results: AdzunaJobNormalized[]; count: number }> {
   const appId = process.env.ADZUNA_APP_ID
   const appKey = process.env.ADZUNA_APP_KEY
@@ -45,6 +49,13 @@ export async function searchAdzunaJobsServer(params: {
     adzunaUrl.searchParams.set('where', params.location.trim())
   }
   adzunaUrl.searchParams.set('sort_by', sortBy === 'salary' ? 'salary' : 'date')
+  if (params.salaryMin && params.salaryMin > 0) {
+    adzunaUrl.searchParams.set('salary_min', String(Math.floor(params.salaryMin)))
+  }
+  // Adzuna uses mutually-exclusive boolean flags for contract type
+  if (params.jobType === 'full_time') adzunaUrl.searchParams.set('full_time', '1')
+  else if (params.jobType === 'part_time') adzunaUrl.searchParams.set('part_time', '1')
+  else if (params.jobType === 'contract') adzunaUrl.searchParams.set('contract', '1')
 
   const response = await fetch(adzunaUrl.toString(), { headers: { Accept: 'application/json' } })
   if (!response.ok) {

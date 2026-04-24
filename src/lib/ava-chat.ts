@@ -1,7 +1,13 @@
 import { useMemo, useEffect, useState } from 'react'
 import { useInstalledBlocks, useHubOnboarding } from '@/stores/hub-blocks-store'
 import { useDriverHubStore } from '@/stores/driver-hub-store'
-import type { HubContext, EmployerHubContext, BlockContext } from '@/lib/ava-context'
+import type {
+  HubContext,
+  EmployerHubContext,
+  BlockContext,
+  SimpleModeContext,
+} from '@/lib/ava-context'
+import { useAuthStore } from '@/stores'
 import type { StormiJobSuggestion } from '@/lib/ava-job-suggestions'
 import type { StormiAutoWelcomeMode } from '@/lib/ava-auto-welcome'
 import type { StormiConversationTurn } from '@/lib/ava-conversation'
@@ -172,6 +178,13 @@ export type SendToStormiPayload =
       audience?: 'candidate'
       hubContext: HubContext
       blockContext?: BlockContext
+      /** Guided (Simple) mode — job + fit snapshot; switches server to co-pilot system prompt */
+      simpleModeContext?: SimpleModeContext
+      /**
+       * One-shot opening turn for Guided mode — server sends a synthetic user
+       * line and returns assistant-only copy (no job tools, keeps JSON tight).
+       */
+      simpleModeBootstrap?: boolean
       /** Prior turns only (excludes current `message`). Enables multi-turn memory. */
       conversationHistory?: StormiConversationTurn[]
       /** Server records completion on `users` — cross-device idempotency */
@@ -217,6 +230,8 @@ export async function sendToStormi(payload: SendToStormiPayload): Promise<Stormi
           hubContext: payload.hubContext,
           audience: 'candidate' as const,
           ...(payload.blockContext ? { blockContext: payload.blockContext } : {}),
+          ...(payload.simpleModeContext ? { simpleModeContext: payload.simpleModeContext } : {}),
+          ...(payload.simpleModeBootstrap ? { simpleModeBootstrap: true } : {}),
           ...history,
           ...autoWelcome,
         }

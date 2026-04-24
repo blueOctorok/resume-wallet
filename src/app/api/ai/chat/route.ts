@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
-import { buildStormiSystemPrompt, buildEmployerStormiSystemPrompt } from '@/lib/ava-context'
-import type { HubContext, BlockContext, EmployerHubContext } from '@/lib/ava-context'
+import {
+  buildStormiSystemPrompt,
+  buildEmployerStormiSystemPrompt,
+  buildCandidateSimpleModeSystemPrompt,
+} from '@/lib/ava-context'
+import type { HubContext, BlockContext, EmployerHubContext, SimpleModeContext } from '@/lib/ava-context'
 import { getAdminSupabaseClient } from '@/utils/supabase/admin'
 import { getUserByWallet } from '@/lib/user-by-wallet'
 import {
@@ -74,13 +78,48 @@ export async function POST(request: NextRequest) {
       rawAutoWelcome === 'candidate' || rawAutoWelcome === 'employer' ? rawAutoWelcome : undefined
     /** Hub walkthrough step 1 — plain completion, no job-search tools (keeps JSON output reliable). */
     const walkthroughWelcome = (body as { walkthroughWelcome?: unknown }).walkthroughWelcome === true
+    const simpleModeBootstrap = (body as { simpleModeBootstrap?: unknown }).simpleModeBootstrap === true
+    const simpleModeContext = (body as { simpleModeContext?: unknown }).simpleModeContext as
+      | SimpleModeContext
+      | undefined
 
-    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+    const isValidSimpleModeContext = (ctx: unknown): ctx is SimpleModeContext => {
+      if (!ctx || typeof ctx !== 'object') return false
+      const o = ctx as Record<string, unknown>
+      const job = o.job
+      const fit = o.fit
+      if (!job || typeof job !== 'object' || !fit || typeof fit !== 'object') return false
+      const j = job as Record<string, unknown>
+      const f = fit as Record<string, unknown>
+      if (typeof j.id !== 'string' || typeof j.title !== 'string' || typeof j.company !== 'string') return false
+      if (typeof j.location !== 'string' || typeof j.isStormChain !== 'boolean') return false
+      if (typeof f.score !== 'number' || typeof f.label !== 'string' || typeof f.toneBand !== 'string') return false
+      if (!Array.isArray(f.matchedRequirements) || !Array.isArray(f.missingRequirements)) return false
+      return true
+    }
+
+    if (simpleModeBootstrap) {
+      if (!isValidSimpleModeContext(simpleModeContext)) {
+        return NextResponse.json(
+          { error: 'simpleModeBootstrap requires a valid simpleModeContext object.' },
+          { status: 400 },
+        )
+      }
+    }
+
+    if (
+      !simpleModeBootstrap &&
+      (!message || typeof message !== 'string' || message.trim().length === 0)
+    ) {
       return NextResponse.json(
         { error: 'Missing or invalid message' },
         { status: 400 }
       )
     }
+
+    const effectiveUserMessage = simpleModeBootstrap
+      ? '(Guided mode — user focused on a job. Send your opening turn per system instructions.)'
+      : message.trim()
 
     // Resolve user
     let supabase
@@ -203,31 +242,43 @@ export async function POST(request: NextRequest) {
       ? MODEL_SONNET
       : usageCheck!.model === 'sonnet' ? MODEL_SONNET : MODEL_HAIKU
 
+    const simpleModePayload =
+      !isEmployerChat && isValidSimpleModeContext(simpleModeContext) ? simpleModeContext : undefined
+
     const systemPrompt = isEmployerChat
       ? buildEmployerStormiSystemPrompt(employerContext!)
-      : buildStormiSystemPrompt(hubContext, blockContext)
+      : simpleModePayload
+        ? buildCandidateSimpleModeSystemPrompt(hubContext, simpleModePayload, blockContext)
+        : buildStormiSystemPrompt(hubContext, blockContext)
 
     const messagesPayload = autoWelcome
       ? [{ role: 'user' as const, content: message.trim() }]
-      : buildAnthropicMessagesFromHistory(conversationHistory, message.trim())
+      : simpleModeBootstrap
+        ? [{ role: 'user' as const, content: effectiveUserMessage }]
+        : buildAnthropicMessagesFromHistory(conversationHistory, effectiveUserMessage)
 
     if (messagesPayload.length === 0) {
       return NextResponse.json({ error: 'Missing or invalid message' }, { status: 400 })
     }
 
-    const useJobTools = !isEmployerChat && !autoWelcome && !walkthroughWelcome
+    const useJobTools =
+      !isEmployerChat && !autoWelcome && !walkthroughWelcome && !simpleModeBootstrap
 
     let reply: string
     let jobSuggestions: StormiJobSuggestion[] | undefined
 
     if (useJobTools) {
+      const alternateDefaults = simpleModePayload
+        ? { keywords: simpleModePayload.job.title, location: simpleModePayload.job.location }
+        : null
       const out = await runCandidateStormiChatWithJobTools({
         anthropic,
         systemPrompt,
         conversationHistory,
-        latestUserMessage: message.trim(),
+        latestUserMessage: effectiveUserMessage,
         supabase,
         userId: user.id,
+        simpleModeAlternateDefaults: alternateDefaults,
       })
       reply = out.reply
       jobSuggestions = out.jobSuggestions.length ? out.jobSuggestions : undefined

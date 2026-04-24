@@ -16,6 +16,25 @@ import type { StormiJobSuggestion } from '@/lib/ava-job-suggestions'
 
 export const STORMI_JOB_CHAT_TOOLS = [
   {
+    name: 'suggest_alternate_jobs',
+    description:
+      'Use when requirements coverage for the user\'s *current* guided-mode job is low (<40%) or they are clearly a poor fit. Searches external boards and returns a small set of **better-fit** listings ranked against their profile. At most one call per user message. Prefer broader or adjacent keywords than the weak-fit posting.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        keywords: {
+          type: 'string',
+          description: 'Search query tuned for *better* matches — e.g. broader role family, adjacent title, or same skills in a less strict niche.',
+        },
+        location: {
+          type: 'string',
+          description: 'Optional: same as user region or "remote".',
+        },
+      },
+      required: ['keywords'],
+    },
+  },
+  {
     name: 'search_ranked_jobs',
     description:
       'Search external job boards (Adzuna) and rank results against this user\'s Storm profile (skills, blocks, headline, etc.). Use when they want to find jobs, see openings, explore roles, or ask what might fit them. If keywords are vague, infer reasonable search terms from their occupation and blocks. At most one call per user message.',
@@ -57,6 +76,11 @@ export const STORMI_JOB_CHAT_TOOLS = [
 export interface StormiJobToolContext {
   supabase: SupabaseClient
   userId: string
+  /**
+   * When the model omits keywords on `suggest_alternate_jobs`, fall back to
+   * these (e.g. job title + location from Guided mode).
+   */
+  simpleModeAlternateDefaults?: { keywords: string; location?: string } | null
 }
 
 function clampStr(s: string, max: number): string {
@@ -70,9 +94,112 @@ export async function executeStormiJobChatTool(params: {
   name: string
   input: unknown
   ctx: StormiJobToolContext
-  flags: { searchUsed: boolean; saveAlertUsed: boolean }
+  flags: { searchUsed: boolean; saveAlertUsed: boolean; alternateUsed: boolean }
 }): Promise<{ toolResult: string; jobSuggestions?: StormiJobSuggestion[] }> {
   const { name, input, ctx, flags } = params
+
+  if (name === 'suggest_alternate_jobs') {
+    if (flags.alternateUsed) {
+      return {
+        toolResult: JSON.stringify({
+          ok: false,
+          error: 'Only one suggest_alternate_jobs call per message.',
+        }),
+      }
+    }
+    flags.alternateUsed = true
+
+    const obj = input && typeof input === 'object' ? (input as Record<string, unknown>) : {}
+    let keywords = clampStr(String(obj.keywords ?? ''), 280)
+    const locationRaw =
+      obj.location != null
+        ? clampStr(String(obj.location), 120)
+        : ctx.simpleModeAlternateDefaults?.location ?? ''
+
+    if (!keywords && ctx.simpleModeAlternateDefaults?.keywords) {
+      keywords = clampStr(ctx.simpleModeAlternateDefaults.keywords, 280)
+    }
+    if (!keywords) {
+      return { toolResult: JSON.stringify({ ok: false, error: 'keywords required' }) }
+    }
+
+    if (!process.env.ADZUNA_APP_ID || !process.env.ADZUNA_APP_KEY) {
+      return {
+        toolResult: JSON.stringify({ ok: false, error: 'External job search is not configured.' }),
+      }
+    }
+    if (!process.env.AVA_BRAIN) {
+      return { toolResult: JSON.stringify({ ok: false, error: 'AI ranking is not configured.' }) }
+    }
+
+    try {
+      const { results } = await searchAdzunaJobsServer({
+        keywords: keywords || 'jobs',
+        location: locationRaw || undefined,
+        page: 1,
+        resultsPerPage: 12,
+        sortBy: 'date',
+      })
+      if (results.length === 0) {
+        return {
+          toolResult: JSON.stringify({
+            ok: true,
+            jobs: [],
+            message: 'No alternate listings found — try widening keywords or location.',
+          }),
+        }
+      }
+
+      const toScore = results.slice(0, 10)
+      const brief = await buildJobMatchCandidateBrief(ctx.supabase, ctx.userId)
+      const scored = await scoreJobsForCandidate({
+        candidateBrief: brief,
+        jobs: toScore,
+        model: 'sonnet',
+      })
+
+      const byId = new Map(scored.map((s) => [s.id, s]))
+      const merged: StormiJobSuggestion[] = []
+      for (const j of toScore) {
+        const sid = String(j.id)
+        const s = byId.get(sid)
+        if (!s) continue
+        merged.push({
+          id: sid,
+          title: j.title,
+          company: j.company,
+          location: j.location,
+          score: s.score,
+          reason: s.reason,
+          redirectUrl: j.redirect_url,
+          salary: j.salary,
+        })
+      }
+      merged.sort((a, b) => b.score - a.score)
+      const top = merged.slice(0, 3)
+
+      return {
+        toolResult: JSON.stringify({
+          ok: true,
+          jobs: top.map((j) => ({
+            id: j.id,
+            title: j.title,
+            company: j.company,
+            location: j.location,
+            score: j.score,
+            reason: j.reason,
+            has_apply_url: Boolean(j.redirectUrl),
+          })),
+          message: 'Top 3 better-fit external listings for this candidate.',
+        }),
+        jobSuggestions: top,
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error('[Stormi job tool] suggest_alternate_jobs:', msg)
+      return { toolResult: JSON.stringify({ ok: false, error: 'Alternate search failed.' }) }
+    }
+  }
 
   if (name === 'search_ranked_jobs') {
     if (flags.searchUsed) {

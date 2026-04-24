@@ -1,5 +1,22 @@
 # Storm — Complete Project Roadmap
 
+## 🧭 **Simple Mode — job-first guided experience** (April 2026 — Phases 0–6 Complete)
+
+**Product principle:** Two chromes over one engine. "Guided" (Simple) is job-first onboarding for the 80% who want a quick win; "Workspace" (Hub) is the feature-dense view for returning power users. Both render over the same stores and primitives — no forked state, no parallel features. See **`docs/CHANGES.md`** (Simple Mode — job-first guided experience) for the full change log.
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| **P0 — Foundation** | ✅ Done | `useUIModeStore` + persist; migration `067_ui_mode_preference`; `isSimpleModeEnabled()`; `ModeToggle`; `CandidateShell` branching |
+| **P1 — SimpleModeShell layout** | ✅ Done | `SimpleModeShell` grid, `simple-mode-store`, `useJobSearch` extracted, `useSelectedJobSync` (`?selected=…`), rail / detail / card / sliver / sheet |
+| **P2 — Contextual card** | ✅ Done | `computeJobFit` (deterministic %); `ProjectedCareerCard` `ghostSections` + `recentlyInstalledBlockIds`; `animate-card-settle` / `ghost-pulse` keyframes |
+| **P3 — Stormi co-pilot** | ✅ Done | `buildCandidateSimpleModeSystemPrompt` tone bands; `suggest_alternate_jobs` tool; per-job thread persistence; `adzuna-smart-defaults` |
+| **P4 — LLM-extracted fit scoring** | ✅ Done | `/api/ai/extract-job-requirements` (Haiku + cache); migration `062_external_job_requirements`; `useExtractedRequirements`; `ExternalRequirement` integrated into `computeJobFit` |
+| **P5 — Adzuna taming** | ✅ Done | Filter chips (salary floor / job type / remote) in `simple-mode-store`; server cap `MAX_RESULTS_PER_PAGE=30`; `salary_min` + `job_type` passthrough; first-run empty state w/ trending shortcuts |
+| **P6 — Graduation + polish** | ✅ Done | Graduation banner (≥3 blocks); `showStormiWalkthrough` gated on `!isSimpleModeEnabled()`; `ModeToggle` flips chrome without navigation |
+| **P7 — Stormi-led UX + chrome consistency** | ✅ Done | `StormiNextStepCard` (proactive "do this next"); reworked `SimpleCardPanel` (Stormi top / card middle / collapsed chat bottom); all Simple Mode surfaces now on `HubSectionPanel + BlockCard variant='embed'`; `ui-components.mdc` "In-App Panels" rule promoted to top-level |
+| **Homepage split-view demo** | 🔲 Next | Static preview of Guided mode on the unauthenticated landing page — own design pass |
+| **Score telemetry** | 🔲 Future | Track fit-score → apply-conversion to tune the `matched / missing` vocabulary |
+
 ## ⚡ **Moat acceleration plan** (April 2026)
 
 | Track | Status | Notes |

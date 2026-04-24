@@ -49,6 +49,76 @@ import BlockCard from '@/components/ui/BlockCard'
 
 ---
 
+## In-App Panels — Always Use `HubSectionPanel` + `BlockCard variant="embed"`
+
+**This is the unique "block/vault" chrome of the app** (rim glow, accent strip, chamfer, sheen). Any page or surface that renders a first-class content panel MUST use it — not just the Hub. Simple Mode, employer screens, dashboards, admin pages, and any future feature all follow this pattern so the product feels like one app, not a patchwork.
+
+**Pattern:**
+
+```tsx
+import HubSectionPanel from '@/components/hub/HubSectionPanel'
+import BlockCard from '@/components/ui/BlockCard'
+
+<HubSectionPanel isDark={isDark} accent='teal'>
+  <BlockCard
+    variant='embed'
+    icon={Briefcase}
+    title='Find jobs'
+    description='Pick a role — Stormi will shape your career card around it.'
+    headerActions={<Button size='sm'>Filters</Button>}
+  >
+    {/* content */}
+  </BlockCard>
+</HubSectionPanel>
+```
+
+**Accent colors** (`VaultAccentPreset`) — stay consistent across the app:
+
+| Accent    | Use for                                                        |
+|-----------|----------------------------------------------------------------|
+| `teal`    | Default — blocks, career card, job rail, primary content       |
+| `violet`  | Stormi (AI), co-pilot surfaces                                 |
+| `sky`     | Job alerts, selected-job context, referenceable external data  |
+| `amber`   | Employer requests, saved items, warning/attention surfaces     |
+| `indigo`  | STORM balance, tokenomics, identity / on-chain surfaces        |
+
+### When a `BlockCard` header is the wrong shape
+
+Some surfaces (a scrolling rail, a job detail with custom title chrome, an entire employer dashboard tab) don't fit `BlockCard`'s fixed `icon + title + description` header. In those cases, use `HubSectionPanel` alone and render a matching inline header — same teal/violet/etc. tinted icon tile + title/description text:
+
+```tsx
+<HubSectionPanel isDark={isDark} accent='teal' contentClassName='flex flex-col h-full min-h-0'>
+  <div className='flex items-start gap-3 pb-3 mb-3 border-b border-slate-200 dark:border-gray-700/50'>
+    <div className='flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-500/15 text-teal-700 dark:text-teal-200 ring-1 ring-teal-200 dark:ring-teal-400/30'>
+      <Briefcase className='h-4 w-4' />
+    </div>
+    <div>
+      <h3 className='text-sm font-semibold'>Find jobs</h3>
+      <p className='text-xs text-slate-600 dark:text-gray-400'>Pick a role.</p>
+    </div>
+  </div>
+  {/* scrolling content */}
+</HubSectionPanel>
+```
+
+**NEVER** do:
+
+```tsx
+// ❌ BAD — loses the vault chrome; product starts to feel like a different app
+<div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
+  <h3>Section title</h3>
+  {/* ... */}
+</div>
+```
+
+**Reference implementations:**
+- [`CandidateHub.tsx`](src/components/hub/CandidateHub.tsx) — every hub section
+- [`SimpleCardPanel.tsx`](src/components/simple/SimpleCardPanel.tsx) — Simple Mode right column (violet Stormi + teal career card + violet chat drawer)
+- [`SimpleJobDetailPanel.tsx`](src/components/simple/SimpleJobDetailPanel.tsx) — sky-accent panel with inline custom header
+- [`SimpleJobRail.tsx`](src/components/simple/SimpleJobRail.tsx) — teal rail using the inline-header escape hatch
+
+---
+
 ## Buttons — Always Use `Button`
 
 Use the `Button` component for all interactive buttons. Inline button Tailwind is not allowed for primary/secondary/danger actions.

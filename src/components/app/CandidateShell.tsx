@@ -9,7 +9,10 @@ import StormChainView from '@/components/StormChainView'
 import DotApplicationFlow from '@/components/app/DotApplicationFlow'
 import CareerCardView from '@/components/app/CareerCardView'
 import CandidateHub from '@/components/hub/CandidateHub'
+import SimpleModeShell from '@/components/simple/SimpleModeShell'
 import { useAuthStore, useUIStore } from '@/stores'
+import { useUIModeStore } from '@/stores/ui-mode-store'
+import { isSimpleModeEnabled } from '@/lib/feature-flags'
 import type { PageType } from '@/stores/types'
 
 /** Routes this shell renders — anything else is reset to hub in an effect (never during render). */
@@ -99,6 +102,7 @@ export default function CandidateShell() {
   const { user, walletAddress } = useAuthStore()
   const { currentPage, setCurrentPage, navigateToHub, initialThreadId, editingResumeId, setEditingResumeId } =
     useUIStore()
+  const uiMode = useUIModeStore((s) => s.mode)
 
   const unknownCandidatePage =
     currentPage !== null && !CANDIDATE_SHELL_PAGES.includes(currentPage)
@@ -242,6 +246,11 @@ export default function CandidateShell() {
     )
   }
 
-  // Default: the composable hub
+  // Default route: Simple mode (job-first split) when flag is on AND user preference is simple.
+  // Otherwise the composable hub. Both chromes read the same hub-blocks store, so toggling
+  // preserves installed blocks, saved jobs, etc.
+  if (isSimpleModeEnabled() && uiMode === 'simple') {
+    return <SimpleModeShell />
+  }
   return <CandidateHub />
 }

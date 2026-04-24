@@ -120,7 +120,9 @@ export async function POST(request: Request) {
  *
  * Partial updates on `users` for the authenticated wallet.
  * Headers: x-wallet-address
- * Body: { walkthrough_dismissed: boolean } — maps to `stormi_walkthrough_dismissed_at`
+ * Body (any combination):
+ *   - `walkthrough_dismissed: boolean` → `stormi_walkthrough_dismissed_at`
+ *   - `ui_mode_preference: 'simple' | 'hub'` → `ui_mode_preference`
  */
 export async function PATCH(request: NextRequest) {
   try {
@@ -129,10 +131,38 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Wallet address required' }, { status: 401 })
     }
 
-    const body = (await request.json()) as { walkthrough_dismissed?: unknown }
-    if (typeof body?.walkthrough_dismissed !== 'boolean') {
+    const body = (await request.json()) as {
+      walkthrough_dismissed?: unknown
+      ui_mode_preference?: unknown
+    }
+
+    const updates: Record<string, unknown> = {}
+
+    if (body.walkthrough_dismissed !== undefined) {
+      if (typeof body.walkthrough_dismissed !== 'boolean') {
+        return NextResponse.json(
+          { error: 'walkthrough_dismissed must be a boolean' },
+          { status: 400 },
+        )
+      }
+      updates.stormi_walkthrough_dismissed_at = body.walkthrough_dismissed
+        ? new Date().toISOString()
+        : null
+    }
+
+    if (body.ui_mode_preference !== undefined) {
+      if (body.ui_mode_preference !== 'simple' && body.ui_mode_preference !== 'hub') {
+        return NextResponse.json(
+          { error: "ui_mode_preference must be 'simple' or 'hub'" },
+          { status: 400 },
+        )
+      }
+      updates.ui_mode_preference = body.ui_mode_preference
+    }
+
+    if (Object.keys(updates).length === 0) {
       return NextResponse.json(
-        { error: 'walkthrough_dismissed (boolean) is required' },
+        { error: 'At least one supported field is required' },
         { status: 400 },
       )
     }
@@ -143,14 +173,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const { error } = await supabase
-      .from('users')
-      .update({
-        stormi_walkthrough_dismissed_at: body.walkthrough_dismissed
-          ? new Date().toISOString()
-          : null,
-      })
-      .eq('id', user.id)
+    const { error } = await supabase.from('users').update(updates).eq('id', user.id)
 
     if (error) {
       console.error('[PROFILE PATCH] Update error:', error)
@@ -159,7 +182,12 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      walkthroughDismissed: body.walkthrough_dismissed,
+      ...(body.walkthrough_dismissed !== undefined && {
+        walkthroughDismissed: body.walkthrough_dismissed,
+      }),
+      ...(body.ui_mode_preference !== undefined && {
+        uiModePreference: body.ui_mode_preference,
+      }),
     })
   } catch (error) {
     console.error('[PROFILE PATCH] Error:', error)

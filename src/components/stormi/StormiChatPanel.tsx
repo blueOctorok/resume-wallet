@@ -23,7 +23,7 @@ import {
 import { useTheme } from '@/contexts/ThemeContext'
 import { useHubBlocksStore } from '@/stores/hub-blocks-store'
 import { cn } from '@/lib/utils'
-import type { HubContext } from '@/lib/ava-context'
+import type { HubContext, SimpleModeContext } from '@/lib/ava-context'
 import { buildCandidateAutoWelcomeUserMessage } from '@/lib/ava-auto-welcome'
 import {
   sendToStormi,
@@ -257,6 +257,8 @@ export type StormiChatPanelProps =
        * Drops the standalone glow shell and duplicate empty-state title/copy (header lives on BlockCard).
        */
       hubEmbedSurface?: boolean
+      /** Guided (Simple) mode — job + fit; switches server system prompt + per-job chat persistence */
+      simpleModeContext?: SimpleModeContext | null
     }
   | {
       mode: 'employer'
@@ -274,6 +276,14 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
   const openStormiContextModal = useHubBlocksStore((s) => s.openStormiContextModal)
   const walletAddress = props.walletAddress
   const persistenceMode = props.mode
+
+  /** Narrow once so effects / deps don't touch discriminated-union props awkwardly. */
+  const candidateSimpleModeContext =
+    props.mode === 'candidate' ? (props.simpleModeContext ?? null) : null
+  const candidateStormiAutoWelcomeDone =
+    props.mode === 'candidate' ? props.stormiAutoWelcomeCandidateDone : true
+
+  const guidedJobId = candidateSimpleModeContext ? candidateSimpleModeContext.job.id : null
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
   /** Avoid writing [] to storage before we have loaded prior thread */
@@ -320,20 +330,21 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
       setPersistReady(true)
       return
     }
-    setMessages(loadStormiChatMessages(persistenceMode, walletAddress))
+    setMessages(loadStormiChatMessages(persistenceMode, walletAddress, guidedJobId))
     setPersistReady(true)
-  }, [walletAddress, persistenceMode])
+  }, [walletAddress, persistenceMode, guidedJobId])
 
   useEffect(() => {
     if (!persistReady || !walletAddress) return
-    saveStormiChatMessages(persistenceMode, walletAddress, messages)
-  }, [messages, walletAddress, persistenceMode, persistReady])
+    saveStormiChatMessages(persistenceMode, walletAddress, messages, guidedJobId)
+  }, [messages, walletAddress, persistenceMode, persistReady, guidedJobId])
 
   // First open on candidate hub: one auto-welcome turn (DB idempotent via `autoWelcome: 'candidate'`).
   useEffect(() => {
     if (props.mode !== 'candidate') return
+    if (candidateSimpleModeContext) return
     if (!walletAddress || !persistReady) return
-    if (props.stormiAutoWelcomeCandidateDone) return
+    if (candidateStormiAutoWelcomeDone) return
     if (messages.length > 0) return
 
     const sessionKey = `stormi_autowelcome_fire_${walletAddress}`
@@ -389,9 +400,57 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
     props.mode,
     walletAddress,
     persistReady,
-    props.stormiAutoWelcomeCandidateDone,
+    candidateStormiAutoWelcomeDone,
     messages.length,
+    candidateSimpleModeContext,
   ])
+
+  // Guided mode: one-shot opening when a job is selected and the thread is empty.
+  // Track which guided job id we've already attempted bootstrap for so a
+  // failed bootstrap (network error, out-of-credits) doesn't re-fire.
+  const guidedBootstrapAttemptedRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (props.mode !== 'candidate') return
+    const sm = candidateSimpleModeContext
+    if (!sm || !walletAddress || !persistReady) return
+    if (messages.length > 0) return
+    // One attempt per job — reset when guidedJobId changes via the persistence effect
+    if (guidedBootstrapAttemptedRef.current === sm.job.id) return
+    guidedBootstrapAttemptedRef.current = sm.job.id
+
+    let cancelled = false
+    ;(async () => {
+      setIsLoading(true)
+      setChatError(null)
+      try {
+        const res = await sendToStormi({
+          message: '',
+          walletAddress,
+          hubContext: hubContextRef.current,
+          simpleModeContext: sm,
+          simpleModeBootstrap: true,
+        })
+        if (cancelled) return
+        setMessages([{ role: 'ava', text: res.reply }])
+        setUsage(res.usage)
+      } catch (err) {
+        if (cancelled) return
+        if (err instanceof OutOfCreditsError) {
+          setOutOfCredits(true)
+          setUsage(err.usage)
+        } else {
+          setChatError(err instanceof Error ? err.message : 'Stormi could not start')
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [props.mode, candidateSimpleModeContext, walletAddress, persistReady, messages.length])
 
   useEffect(() => {
     if (!walletAddress) return
@@ -445,6 +504,7 @@ export default function StormiChatPanel(props: StormiChatPanelProps) {
               hubContext: props.hubContext,
               walletAddress,
               conversationHistory,
+              ...(candidateSimpleModeContext ? { simpleModeContext: candidateSimpleModeContext } : {}),
             })
           : await sendToStormi({
               message: trimmed,
