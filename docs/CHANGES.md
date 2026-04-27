@@ -81,13 +81,16 @@ Second lesson: **server-side projection is how you ship a feature once and get i
 - **`SimpleModeShell.tsx`**: Desktop grid gives the **selected job** column more width (`minmax(0,1.4fr)`); rail `min-w-0`; slightly tighter gaps.
 - **`SimpleJobDetailPanel.tsx`**: Posting body uses **comfortable line length** (`max-w-[72ch]`) and **larger line-height** (`text-base` / `leading-[1.7]`); title scales up on `lg`; empty state copy explains rail → center column flow.
 
-### Mobile — rail-first + tabbed bottom sheet (April 2026)
-- **Problem:** On iPhone, the old stack (`h-[300px]` rail + job detail below) showed ~1 job at a time after the search form.
-- **Fix:** Below `md`, the **job rail fills the viewport** (`flex-1` under a flex column shell). **Job detail + career card** move into **`SimpleMobileSheet`** — a `90vh` bottom sheet with **Job** / **Your card** tabs (`Button` tab strip). Tapping a job opens the sheet on the **Job** tab (`openCardSheet('job')` from `handleJobSelected`).
-- **`SimpleCardSheet.tsx` removed** — replaced by [`SimpleMobileSheet.tsx`](src/components/simple/SimpleMobileSheet.tsx) (tabbed; renders `SimpleJobDetailPanel` + `SimpleCardPanel`).
-- **`SimpleCardSliver.tsx`**: No props — reads `openCardSheet` from store. **No job:** read-only hint. **Job selected:** main tap opens sheet (last tab); **Job** / **Card** shortcut buttons call `openCardSheet('job'|'card')`.
-- **`simple-mode-store.ts`**: `mobileSheetTab: 'job' | 'card'`, `setMobileSheetTab`, `openCardSheet(tab?)`, `clearSelection` also closes the sheet and resets tab.
-- **`SimpleJobDetailPanel.tsx`**: Removed `onOpenCardSheet` / "Open my card" (tabs replace that affordance).
+### Mobile — animated tab bar (April 2026, supersedes tabbed sheet)
+- **Problem:** The prior tabbed-sheet approach (sliver + bottom-sheet with Job/Card tabs) broke on iPhone Safari — `position:fixed` buttons were obscured by the dynamic URL bar, and the sheet gesture conflicted with Safari's own swipe gestures.
+- **Fix:** Phones (`< md`) now use an **animated bottom tab bar** (`MobileTabBar.tsx`) with three full-screen views: **Jobs** (rail), **Job** (posting detail), **Card** (Stormi + career card). Adapted from Mauricio Bucardo's CodePen — active item pops up above the bar with a colored circle; a wavy SVG clip-path "notch" follows via `translate3d`. Icon strokes animate on switch.
+- **`src/components/simple/MobileTabBar.tsx`** (new): 3-tab bar with `env(safe-area-inset-bottom)` for iOS Safari. Inline SVGs for stroke animation. Colors: teal (Jobs), sky (Job), violet (Card). **Job** tab disabled/dimmed until a job is selected.
+- **`src/app/globals.css`**: Added `.tab-bar`, `.tab-item`, `.tab-icon`, `.tab-border`, `.tab-label` classes + `@keyframes tab-stroke` for the draw-on animation. `prefers-reduced-motion` support.
+- **`src/stores/simple-mode-store.ts`**: Added `mobileTab: 'jobs' | 'job' | 'card'` and `setMobileTab`. Sheet state (`isCardSheetOpen`, `mobileSheetTab`) retained for iPad portrait only.
+- **`src/components/simple/SimpleModeShell.tsx`**: Phone section (`md:hidden`) renders one active panel per tab + `MobileTabBar`. `handleJobSelected` sets `mobileTab('job')` on phones. Uses `100dvh` to avoid Safari viewport issues.
+- **`src/components/simple/SimpleCardSliver.tsx`**: Restricted to iPad portrait only (`hidden md:flex lg:hidden`). Simplified to a single "open card" button.
+- **`src/components/simple/SimpleMobileSheet.tsx`**: Simplified to card-only sheet for iPad portrait (`hidden md:flex lg:hidden`). No more tabs — just the career card panel.
+- **Breakpoint summary:** `< md` = tab bar (phones), `md–lg` = 2-col grid + sliver/sheet for card, `≥ lg` = 3-col grid.
 
 ---
 

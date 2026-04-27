@@ -1124,3 +1124,159 @@ button:disabled,
     animation: none !important;
   }
 }
+
+/* ==========================================================================
+   MobileTabBar — animated bottom nav for phones (< md).
+   Adapted from Mauricio Bucardo's CodePen.
+   ========================================================================== */
+
+.tab-bar {
+  --duration: 0.55s;
+  display: flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1.6em;
+  /* Safe area keeps the bar above Safari's URL bar chrome */
+  padding-bottom: env(safe-area-inset-bottom, 0.5em);
+}
+
+.tab-bar--light {
+  background-color: #ffffff;
+  box-shadow: 0 -1px 8px rgba(0, 0, 0, 0.06);
+}
+
+.tab-bar--dark {
+  background-color: #1d1d27;
+  box-shadow: 0 -1px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* ---- Individual tab item ---- */
+
+.tab-item {
+  all: unset;
+  flex-grow: 1;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  position: relative;
+  border-radius: 50%;
+  align-items: center;
+  will-change: transform;
+  justify-content: center;
+  padding: 0.4em 0 0.65em;
+  transition: transform var(--timeOut, var(--duration));
+}
+
+/* Colored circle behind the active icon */
+.tab-item::before {
+  content: '';
+  z-index: -1;
+  width: 3.2em;
+  height: 3.2em;
+  border-radius: 50%;
+  position: absolute;
+  top: -0.2em;
+  transform: scale(0);
+  transition: background-color var(--duration), transform var(--duration);
+}
+
+.tab-item--active {
+  transform: translate3d(0, -0.65em, 0);
+}
+
+.tab-item--active::before {
+  transform: scale(1);
+  background-color: var(--bgColorItem);
+}
+
+.tab-item--disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* ---- Icon (inline SVG) ---- */
+
+.tab-icon {
+  width: 1.7em;
+  height: 1.7em;
+  fill: transparent;
+  stroke-width: 1.8;
+  stroke-miterlimit: 10;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 400;
+}
+
+.tab-bar--light .tab-icon {
+  stroke: #475569;
+}
+
+.tab-bar--dark .tab-icon {
+  stroke: #94a3b8;
+}
+
+.tab-item--active .tab-icon {
+  stroke: white;
+  animation: tab-stroke 1.5s reverse;
+}
+
+@keyframes tab-stroke {
+  100% {
+    stroke-dashoffset: 400;
+  }
+}
+
+/* ---- Label under icon ---- */
+
+.tab-label {
+  font-size: 0.6em;
+  margin-top: 0.25em;
+  font-weight: 600;
+  transition: color var(--duration);
+}
+
+.tab-bar--light .tab-label {
+  color: #64748b;
+}
+
+.tab-bar--dark .tab-label {
+  color: #94a3b8;
+}
+
+.tab-item--active .tab-label {
+  color: white;
+}
+
+/* ---- Notch border (wavy SVG clip-path) ---- */
+
+.tab-border {
+  left: 0;
+  bottom: 99%;
+  width: 6.8em;
+  height: 1.8em;
+  position: absolute;
+  clip-path: url(#tab-notch);
+  will-change: transform;
+  transition: transform var(--timeOut, var(--duration));
+}
+
+.tab-bar--light .tab-border {
+  background-color: #ffffff;
+}
+
+.tab-bar--dark .tab-border {
+  background-color: #1d1d27;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-item,
+  .tab-item::before,
+  .tab-border {
+    transition: none !important;
+  }
+  .tab-item--active .tab-icon {
+    animation: none !important;
+  }
+}

@@ -57,6 +57,9 @@ export const DEFAULT_FILTERS: SimpleJobFilters = {
 /** Which pane is visible inside the mobile bottom sheet (job detail vs career card). */
 export type MobileGuidedSheetTab = 'job' | 'card'
 
+/** Phone tab bar — three full-screen views behind the animated nav. */
+export type MobileGuidedTab = 'jobs' | 'job' | 'card'
+
 interface SimpleModeState {
   selectedJobId: string | null
   selectedJobSource: JobSource | null
@@ -65,6 +68,8 @@ interface SimpleModeState {
   isCardSheetOpen: boolean
   /** Active tab inside the mobile sheet — job posting vs your card. */
   mobileSheetTab: MobileGuidedSheetTab
+  /** Phone tab bar — which full-screen view is active. Desktop ignores. */
+  mobileTab: MobileGuidedTab
   filters: SimpleJobFilters
   /**
    * Which lens is currently projected over the user's card. `null` = the
@@ -92,6 +97,7 @@ interface SimpleModeActions {
   openCardSheet: (tab?: MobileGuidedSheetTab) => void
   closeCardSheet: () => void
   setMobileSheetTab: (tab: MobileGuidedSheetTab) => void
+  setMobileTab: (tab: MobileGuidedTab) => void
   setFilter: <K extends keyof SimpleJobFilters>(key: K, value: SimpleJobFilters[K]) => void
   resetFilters: () => void
   /** User-initiated lens change. Marks overrideAutoPick so auto-pick backs off. */
@@ -106,6 +112,7 @@ export const useSimpleModeStore = create<SimpleModeState & SimpleModeActions>((s
   selectedJobSnapshot: null,
   isCardSheetOpen: false,
   mobileSheetTab: 'job',
+  mobileTab: 'jobs',
   filters: DEFAULT_FILTERS,
   activeLensId: null,
   lastAutoPickedLensId: null,
@@ -140,6 +147,8 @@ export const useSimpleModeStore = create<SimpleModeState & SimpleModeActions>((s
   closeCardSheet: () => set({ isCardSheetOpen: false }),
 
   setMobileSheetTab: (tab) => set({ mobileSheetTab: tab }),
+
+  setMobileTab: (tab) => set({ mobileTab: tab }),
 
   setFilter: (key, value) =>
     set((state) => ({ filters: { ...state.filters, [key]: value } })),

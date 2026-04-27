@@ -31,7 +31,7 @@
 | **P7 — Stormi-led UX + chrome consistency** | ✅ Done | `StormiNextStepCard` (proactive "do this next"); reworked `SimpleCardPanel` (Stormi top / card middle / collapsed chat bottom); all Simple Mode surfaces now on `HubSectionPanel + BlockCard variant='embed'`; `ui-components.mdc` "In-App Panels" rule promoted to top-level |
 | **Split layout polish + right-col overhaul** | ✅ Done | Stormi → compact inline strip; career card rendered directly (no wrapper); right column widened; rail denser; job detail readable type + `max-w-[72ch]` (`CHANGES.md` — Guided mode right-column overhaul) |
 | **Remove chat from Guided Mode** | ✅ Done | Stormi chat (collapsed bar + drawer + `StormiChatPanel`) removed entirely from `SimpleCardPanel`. `StormiNextStepCard` branches now route to Workspace for deeper help instead of opening a chat. Clear separation: Guided = coach-driven, Workspace = self-directed |
-| **Mobile rail-first + tabbed sheet** | ✅ Done | `<md`: full-height `SimpleJobRail`; `SimpleMobileSheet` (Job \| Your card tabs) replaces stacked rail+detail + `SimpleCardSheet`; sliver has Job/Card shortcuts; store `mobileSheetTab` + `openCardSheet(tab?)` (`CHANGES.md`) |
+| **Mobile animated tab bar** | ✅ Done | `<md`: `MobileTabBar` (Jobs/Job/Card) with pop-up active item + SVG notch border + `env(safe-area-inset-bottom)`. Supersedes tabbed sheet approach (Safari URL bar conflicts). Sliver/sheet retained for iPad portrait only (`md–lg`). (`CHANGES.md` — animated tab bar) |
 | **Homepage split-view demo** | 🔲 Next | Static preview of Guided mode on the unauthenticated landing page — own design pass |
 | **Score telemetry** | 🔲 Future | Track fit-score → apply-conversion to tune the `matched / missing` vocabulary |
 
