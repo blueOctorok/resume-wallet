@@ -4,6 +4,64 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Guided Everywhere — homepage v2, single job-discovery surface, lazy auth** (April 2026)
+
+### Why
+The marketing homepage was 1,142 lines of overlapping sections (two `VaultShowcase`s, a "problem" band, a separate "search jobs" band, an icon row that re-listed Blocks/Verify/Stormi, plus a standalone STORM-token section), and there were *two* job-browsing surfaces — the legacy 3-tab `JobListings.tsx` for guests/drivers and the new `SimpleModeShell` (Guided Mode) for candidates. Two surfaces meant two truths, and the homepage talked about a product (proactive coach + lenses + Build Mode) that the public couldn't actually see without first signing in. We unified everything behind Guided Mode and rewrote the homepage to match.
+
+### What shipped
+
+- **Homepage rewrite — five sections, ~500 lines (down from 1,142)**
+  - Section order matches user behavior: most arrivals are lazy and want a quick win, so Build Mode is the anchor. The Hub comes next as the graduation path. Employers come last because they're a smaller audience.
+  - **Hero**: positioning H1 + warm subhead + `Browse jobs` (no login) / `Connect a wallet` CTAs. Existing `VaultShowcase` carries the visual.
+  - **Build Mode**: the homepage's anchor band. Three pillars (job on the left, card on the right, apply with a lens) + a real split-view mock so visitors see the actual product before signing in.
+  - **Stormi**: coach framing — three positive-case bullets (gaps, lenses, progress) + a phone-frame mock of `StormiNextStepCard`.
+  - **The Hub**: graduation path. Three pillars folded the standalone token band into pillar #3 with the whitepaper link.
+  - **For employers + Bottom CTA**: combined band — three short employer lines + final `Browse jobs` / `Connect a wallet` CTAs.
+  - **Tone discipline (non-negotiable)**: positive case only, no competitor name-drops, no "not a chatbot" / "not a job board" framing. State what we are; let the reader infer the rest.
+  - **Cut**: second `VaultShowcase`, "credentials shouldn't be this hard" band, standalone job-search band, icon row, all `ava` references (anchor renamed to `stormi`), standalone STORM-token section, every "not a/no X" sentence.
+
+- **Guided Mode is the only job-discovery surface**
+  - `src/components/JobListings.tsx` — **deleted**. Legacy 3-tab browser is gone.
+  - `src/components/app/CandidateShell.tsx` — removed `'jobs'` from `CANDIDATE_SHELL_PAGES`, dropped the `JobListings` import, and added a redirect: if `currentPage === 'jobs'` is somehow still set (old bookmarks, deep links from notifications), the shell flips `uiMode='simple'` and clears `currentPage` so the user lands in Guided Mode rather than a 404.
+  - `src/components/app/DriverShell.tsx` and `src/components/app/DeveloperShell.tsx` — replaced their `JobListings` route branches with `SimpleModeShell`. Driver shell remains frozen otherwise per architecture rules.
+  - `src/app/page.tsx` — removed `'jobs'` from `validOnboardPages` and `validPages`. The string still exists in `PageType` (for backward compatibility with frozen legacy shells), but no route handler accepts it anymore.
+  - `src/components/Navigation.tsx` — removed `'jobs'` from local `NavPage` type. Guest "Browse jobs" button now calls a new `onBrowseGuided` prop.
+
+- **Indeed-style lazy auth — guests get the full Guided Mode**
+  - Public visitors can browse the blended job feed (Storm + Adzuna), open a job, and read the posting without an account. Sign-in is required only when they want to *apply, save, or build a card*.
+  - `src/components/simple/SimpleCardPanel.tsx` — new guest variant. When `walletAddress` is null, the right column renders a static `GuestStormiHint` ("Pick a job that interests you — I'll show you what to build") and a teaser block where `ProjectedCareerCard` would go: *"Your career card lives here. Sign in to start building it block by block."* with a primary `Connect a wallet` button.
+  - `src/components/simple/SimpleJobDetailPanel.tsx` — guest gating. Apply buttons read `Sign in to apply` and route to the sign-in page; the save action redirects too. Fit-coverage UI (requirements coverage, "would help" suggestions) hides for guests because there's no career card to compute against.
+  - `src/components/simple/StormiNextStepCard.tsx` — never renders for guests. The static `GuestStormiHint` in `SimpleCardPanel` carries the role.
+  - Hooks (`use-extracted-requirements`, `career-card-lenses-store`, etc.) already handled `walletAddress: null` gracefully — no changes needed there.
+  - `src/app/page.tsx` — page-level `showGuidedMode` flag. When a guest clicks "Browse jobs", the flag flips and `<SimpleModeShell />` renders directly (rendered *before* the DriverShell branch so the marketing homepage doesn't double-render). The flag is auto-cleared when a wallet connects, so authenticated users always follow the standard `useUIModeStore` flow.
+
+### Files changed
+- **Deleted**: `src/components/JobListings.tsx`
+- **Rewritten**: `src/components/HomePage.tsx`
+- **Modified**: `src/app/page.tsx`, `src/components/Navigation.tsx`, `src/components/app/CandidateShell.tsx`, `src/components/app/DriverShell.tsx`, `src/components/app/DeveloperShell.tsx`, `src/components/simple/SimpleCardPanel.tsx`, `src/components/simple/SimpleJobDetailPanel.tsx`, `src/components/ApplyWithStormChainModal.tsx`, `src/hooks/use-job-search.ts`
+
+### Teaching note
+The interesting architectural lesson here is that **deleting a surface is usually more valuable than building one**. Once Guided Mode could handle a guest, `JobListings.tsx` had nothing to offer that Guided Mode didn't — *and Guided Mode showed off the product better*. The two-surface world wasn't bad code; it was an artifact of our build order (we shipped JobListings first, then Guided Mode for signed-in candidates, then realized the experiences were redundant). The win was recognizing the redundancy and choosing the surface that exposes more of the product to anonymous visitors. Marketing pages talk a lot, but a working product page that a guest can poke at converts better than any hero copy. The lazy-auth pattern (browse free, sign in to act) lets the product itself be the marketing — the homepage just gets out of the way.
+
+### Product guardrails
+- **No "Apply without an account" magic.** Guests sign in *before* applying. We don't want anonymous applications hitting employers — that's the noise problem we built verification to fix.
+- **Guest fit-coverage stays hidden.** Showing "you'd be a 60% fit" without a real career card behind it would be dishonest. Better to show nothing than to fake a number.
+- **The `'jobs'` string is dead but not removed from `PageType`.** Legacy shells (DriverShell, DeveloperShell) and notification deep-links may still reference it; the redirect path in `CandidateShell` swallows them gracefully. Removing the union member is a future cleanup once analytics confirm no live deep-links rely on it.
+
+---
+
+## **Blended job feed — Storm jobs prioritized at top** (April 2026)
+
+- **Problem:** The job rail had "All jobs" / "Storm employers" tab toggle. Most users don't understand the distinction, and platform jobs (Storm employers) were hidden behind a second tab nobody clicks — the opposite of what we want. Indeed solved this years ago by blending sponsored/platform listings at the top of organic results.
+- **Fix:** Removed the source toggle entirely. `SimpleJobRail` now calls **both** `useJobSearch('stormchain')` and `useJobSearch('adzuna')` in parallel, then merges: Storm employer jobs first, Adzuna results below. One unified list, zero cognitive overhead.
+- **Storm badge:** Storm employer jobs get a small `⚡ STORM` pill (teal accent, like Indeed's "Sponsored" tag) so users can tell the difference without being forced to toggle.
+- **Files changed:**
+  - `src/components/simple/SimpleJobRail.tsx` — removed `source` state, `sourceTabs`, source toggle UI. Now uses two `useJobSearch` calls + `useMemo` merge. `jobToSnapshot` derives source from `job.isStormChain`. Filters apply to Adzuna results; Storm jobs always appear.
+- **Future:** Paid/promoted employer listings would slot into the prioritization layer in the `useMemo` merge — e.g. `[...promotedJobs, ...stormJobs, ...adzunaJobs]`. The blended architecture makes this trivial.
+
+---
+
 ## **Career Card Lenses — one card, many framings** (April 2026)
 
 ### Why
@@ -84,10 +142,12 @@ Second lesson: **server-side projection is how you ship a feature once and get i
 ### Mobile — animated tab bar (April 2026, supersedes tabbed sheet)
 - **Problem:** The prior tabbed-sheet approach (sliver + bottom-sheet with Job/Card tabs) broke on iPhone Safari — `position:fixed` buttons were obscured by the dynamic URL bar, and the sheet gesture conflicted with Safari's own swipe gestures.
 - **Fix:** Phones (`< md`) now use an **animated bottom tab bar** (`MobileTabBar.tsx`) with three full-screen views: **Jobs** (rail), **Job** (posting detail), **Card** (Stormi + career card). Adapted from Mauricio Bucardo's CodePen — active item pops up above the bar with a colored circle; a wavy SVG clip-path "notch" follows via `translate3d`. Icon strokes animate on switch.
-- **`src/components/simple/MobileTabBar.tsx`** (new): 3-tab bar with `env(safe-area-inset-bottom)` for iOS Safari. Inline SVGs for stroke animation. Colors: teal (Jobs), sky (Job), violet (Card). **Job** tab disabled/dimmed until a job is selected.
+- **`src/components/simple/MobileTabBar.tsx`** (new): 3-tab bar with `env(safe-area-inset-bottom)` for iOS Safari. Inline SVGs for stroke animation. Colors: teal (Jobs), sky (Job), violet (Card). **Job** tab disabled/dimmed until a job is selected. Bar hidden at `md+` via `md:hidden` class.
 - **`src/app/globals.css`**: Added `.tab-bar`, `.tab-item`, `.tab-icon`, `.tab-border`, `.tab-label` classes + `@keyframes tab-stroke` for the draw-on animation. `prefers-reduced-motion` support.
+  - **Glass / sticky refinement:** `.tab-bar` uses `position: fixed; bottom: 0` + `backdrop-filter: blur(16px) saturate(1.6)` with semi-transparent background (`rgba(…, 0.82)`) so content scrolls behind it. Notch border background matches the translucent value.
+  - **Circle centering fix:** `.tab-item::before` circle (3.4em) uses `left: 50%; top: calc(0.6em + 1.3em); transform: translate(-50%, -50%) scale(0/1)` so both the icon and label are vertically centered inside the circle, not clipped at its bottom edge.
 - **`src/stores/simple-mode-store.ts`**: Added `mobileTab: 'jobs' | 'job' | 'card'` and `setMobileTab`. Sheet state (`isCardSheetOpen`, `mobileSheetTab`) retained for iPad portrait only.
-- **`src/components/simple/SimpleModeShell.tsx`**: Phone section (`md:hidden`) renders one active panel per tab + `MobileTabBar`. `handleJobSelected` sets `mobileTab('job')` on phones. Uses `100dvh` to avoid Safari viewport issues.
+- **`src/components/simple/SimpleModeShell.tsx`**: Phone section (`md:hidden`) renders one active panel per tab + `MobileTabBar`. Content wrapper has `pb-[4.5rem]` bottom padding to prevent overlap with the fixed tab bar. `handleJobSelected` sets `mobileTab('job')` on phones. Uses `100dvh` to avoid Safari viewport issues.
 - **`src/components/simple/SimpleCardSliver.tsx`**: Restricted to iPad portrait only (`hidden md:flex lg:hidden`). Simplified to a single "open card" button.
 - **`src/components/simple/SimpleMobileSheet.tsx`**: Simplified to card-only sheet for iPad portrait (`hidden md:flex lg:hidden`). No more tabs — just the career card panel.
 - **Breakpoint summary:** `< md` = tab bar (phones), `md–lg` = 2-col grid + sliver/sheet for card, `≥ lg` = 3-col grid.

@@ -6,11 +6,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  * Shared job-search hook
  *
  * One place to hit Storm's internal `/api/jobs/search` and Adzuna's
- * `/api/jobs/external/search`. Returns a normalized `JobListing[]` so Simple
- * mode rail and the legacy `JobListings` component can share the same shape.
+ * `/api/jobs/external/search`. Returns a normalized `JobListing[]` used by
+ * Guided Mode's `SimpleJobRail` (the only job-discovery surface in the app
+ * since the legacy `JobListings` component was removed).
  *
- * Intentionally lean: no recommended-jobs logic (that requires credits +
- * belongs on the external tab of JobListings only).
+ * Intentionally lean: no recommended-jobs logic — Stormi's lens picker and
+ * career-card scoring handle role-aware ranking elsewhere.
  */
 
 export type JobSource = 'stormchain' | 'adzuna'

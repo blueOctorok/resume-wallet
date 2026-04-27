@@ -34,7 +34,7 @@ interface Job {
   salary?: string
   description?: string
   redirect_url?: string
-  /** Passed from JobListings; optional for apply + cover-letter context */
+  /** Optional context for apply + cover-letter prefill (Adzuna passes these). */
   salary_min?: number
   salary_max?: number
   created?: string

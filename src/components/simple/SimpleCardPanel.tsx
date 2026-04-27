@@ -13,18 +13,18 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Compass, CreditCard, Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useAuthStore } from '@/stores'
+import { useAuthStore, useUIStore } from '@/stores'
 import { useHubBlocksStore, useInstalledBlocks } from '@/stores/hub-blocks-store'
 import { useSimpleModeStore } from '@/stores/simple-mode-store'
 import { getBlockDefinition } from '@/lib/block-registry'
 import { useUIModeStore } from '@/stores/ui-mode-store'
+import Button from '@/components/ui/Button'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
-import BlockCard from '@/components/ui/BlockCard'
 import ProjectedCareerCard, { type GhostSection } from '@/components/career-card/ProjectedCareerCard'
 import StormiNextStepCard from './StormiNextStepCard'
 import LensPickerPopover from '@/components/career-card/LensPickerPopover'
@@ -87,10 +87,79 @@ function toApplyModalJob(snap: NonNullable<ReturnType<typeof useSimpleModeStore.
   }
 }
 
+/**
+ * Stormi hint shown to guests — same visual chrome as `StormiNextStepCard` but
+ * static copy. Branches on whether a job is selected so the message stays
+ * concrete without needing real fit data.
+ */
+function GuestStormiHint({
+  snap,
+  isDark,
+}: {
+  snap: ReturnType<typeof useSimpleModeStore.getState>['selectedJobSnapshot']
+  isDark: boolean
+}) {
+  const title = snap ? 'Sign in to build for this job' : 'Pick a job that interests you'
+  const body = snap
+    ? `I\u2019ll show you the exact blocks \u201c${snap.title}\u201d needs once you connect.`
+    : 'Browse the rail. Sign in when you\u2019re ready to start your career card.'
+
+  return (
+    <div
+      className={cn(
+        'flex flex-col gap-2 rounded-xl border px-3 py-2.5',
+        isDark
+          ? 'border-violet-400/20 bg-violet-500/5'
+          : 'border-violet-200/60 bg-violet-50/40 shadow-sm',
+      )}
+    >
+      <div className='flex items-start gap-2'>
+        <div
+          className={cn(
+            'mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg',
+            isDark
+              ? 'bg-violet-500/15 text-violet-200 ring-1 ring-violet-400/30'
+              : 'bg-violet-50 text-violet-700 ring-1 ring-violet-200',
+          )}
+        >
+          <Compass className='size-3' />
+        </div>
+        <div className='min-w-0 flex-1'>
+          <p
+            className={cn(
+              'text-[9px] font-bold uppercase tracking-wider',
+              isDark ? 'text-violet-300/80' : 'text-violet-600',
+            )}
+          >
+            Stormi
+          </p>
+          <p
+            className={cn(
+              'text-[13px] font-semibold leading-snug',
+              isDark ? 'text-white' : 'text-slate-900',
+            )}
+          >
+            {title}
+          </p>
+          <p
+            className={cn(
+              'mt-0.5 text-[11px] leading-relaxed',
+              isDark ? 'text-gray-300' : 'text-slate-600',
+            )}
+          >
+            {body}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function SimpleCardPanel() {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const walletAddress = useAuthStore((s) => s.walletAddress)
+  const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const openPicker = useHubBlocksStore((s) => s.openPicker)
   const installedBlocks = useInstalledBlocks()
   const snap = useSimpleModeStore((s) => s.selectedJobSnapshot)
@@ -251,24 +320,65 @@ export default function SimpleCardPanel() {
     }))
   }, [fit, snap])
 
+  // Guest variant: same right-column shape (Stormi strip on top, card below) but
+  // both are read-only teasers. No fit logic, no lens auto-pick, no API calls —
+  // those are gated above by `walletAddress` checks. The "Connect a wallet" CTA
+  // jumps straight to the sign-in page so the user can come back and start building.
   if (!walletAddress) {
     return (
-      <HubSectionPanel isDark={isDark}>
-        <BlockCard
-          variant='embed'
-          headerIconSlot={
-            <Image
-              src='/ava-robot.png'
-              alt=''
-              width={36}
-              height={36}
-              className={cn('object-contain', !isDark && 'invert')}
-            />
-          }
-          title='Connect your wallet'
-          description='Your career card lives on-chain. Connect to start building alongside this job.'
-        />
-      </HubSectionPanel>
+      <div className='flex h-full min-h-0 flex-col gap-2 overflow-y-auto scrollbar-none'>
+        <GuestStormiHint snap={snap} isDark={isDark} />
+        <div className='relative min-h-0 flex-1'>
+          <HubSectionPanel isDark={isDark} accent='teal' contentClassName='p-6 sm:p-8'>
+            <div className='text-center'>
+              <div
+                className={cn(
+                  'mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ring-1',
+                  isDark
+                    ? 'bg-teal-500/15 text-teal-300 ring-teal-400/30'
+                    : 'bg-teal-50 text-teal-700 ring-teal-200',
+                )}
+              >
+                <CreditCard className='h-5 w-5' />
+              </div>
+              <h3 className={cn('text-base font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                Your career card lives here.
+              </h3>
+              <p className={cn('mt-2 text-sm leading-relaxed', isDark ? 'text-gray-400' : 'text-slate-600')}>
+                Sign in to start building it block by block. Verified credentials, tailored framings, owned by you.
+              </p>
+              <Button
+                variant='primary'
+                size='md'
+                onClick={() => setCurrentPage('signin')}
+                className='mt-5'
+              >
+                Connect a wallet
+                <ArrowRight className='size-4' />
+              </Button>
+              <ul
+                className={cn(
+                  'mx-auto mt-6 max-w-xs space-y-2 text-left text-xs',
+                  isDark ? 'text-gray-400' : 'text-slate-600',
+                )}
+              >
+                {[
+                  'Build with composable blocks',
+                  'Verify credentials on-chain',
+                  'Apply with a tailored lens',
+                ].map((line) => (
+                  <li key={line} className='flex gap-2'>
+                    <CheckCircle2
+                      className={cn('mt-0.5 size-3 shrink-0', isDark ? 'text-teal-300' : 'text-teal-600')}
+                    />
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </HubSectionPanel>
+        </div>
+      </div>
     )
   }
 

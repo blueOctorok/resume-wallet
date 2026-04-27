@@ -32,6 +32,8 @@ import DriverShell from '@/components/app/DriverShell'
 import EmployerShell from '@/components/app/EmployerShell'
 import DeveloperShell from '@/components/app/DeveloperShell'
 import CandidateShell from '@/components/app/CandidateShell'
+// Guests browsing jobs land in this shell (Indeed-style lazy auth).
+import SimpleModeShell from '@/components/simple/SimpleModeShell'
 import ErrorBoundary from '@/components/app/ErrorBoundary'
 import { JourneyModal } from '@/components/ui'
 import StormiJourneyGuide from '@/components/StormiJourneyGuide'
@@ -98,6 +100,17 @@ const HomeContent = () => {
   // Tracks whether the user explicitly signed out. Prevents the session-sync
   // effect from immediately re-logging them in while Alchemy's async cleanup runs.
   const didExplicitLogoutRef = useRef(false)
+
+  // Page-level routing flag for guests entering Guided Mode without signing in
+  // (Indeed-style lazy auth). Local useState is appropriate here — this is a
+  // transient routing toggle, not data anyone else needs to read.
+  const [showGuidedMode, setShowGuidedMode] = useState(false)
+  const enterGuidedMode = useCallback(() => setShowGuidedMode(true), [])
+  // When a wallet connects we drop back to the normal authenticated flow
+  // (CandidateShell / DriverShell / etc.) so the guest flag never strands us.
+  useEffect(() => {
+    if (user) setShowGuidedMode(false)
+  }, [user])
 
   const {
     showProfileSetup,
@@ -229,7 +242,9 @@ const HomeContent = () => {
 
     // onboard param is the block's `pageRoute` from the registry (e.g. 'dotapp', 'resume', 'mvr').
     // Cast directly — these already match PageType values in CandidateShell.
-    const validOnboardPages: PageType[] = ['dotapp', 'resume', 'storm-resume', 'general-resume', 'developer-resume', 'mvr', 'portfolio', 'github', 'jobs', 'hunt-desk', 'applications', 'employment-verification']
+    // 'jobs' intentionally absent — Guided Mode is the unified job-discovery surface.
+    // Employer onboard invites for "browse jobs" route through `?guided=1` instead.
+    const validOnboardPages: PageType[] = ['dotapp', 'resume', 'storm-resume', 'general-resume', 'developer-resume', 'mvr', 'portfolio', 'github', 'hunt-desk', 'applications', 'employment-verification']
     const target = onboardAction as PageType
     if (validOnboardPages.includes(target)) {
       setCurrentPage(target)
@@ -352,12 +367,17 @@ const HomeContent = () => {
           userRole={userRole}
           onStatusClick={openModal}
           onNavigate={(page) => {
-            const validPages: PageType[] = ['signin', 'resume', 'dotapp', 'jobs', 'applications', 'mvr', 'stormchain']
+            // 'jobs' removed: navigation's "Browse jobs" guest button now flips into
+            // Guided Mode via `onBrowseGuided` rather than navigating to a 'jobs' page.
+            const validPages: PageType[] = ['signin', 'resume', 'dotapp', 'applications', 'mvr', 'stormchain']
             const mapped = page === 'home' || page === 'hub' ? null : page as PageType
             if (page === 'home' || page === 'hub' || validPages.includes(page as PageType)) {
+              // Going home explicitly should also exit guest Guided Mode.
+              if (page === 'home') setShowGuidedMode(false)
               setCurrentPage(mapped)
             }
           }}
+          onBrowseGuided={enterGuidedMode}
           mvrWalletAddress={user?.address || null}
           walletAddress={walletAddress ?? null}
           onSwitchRole={() => setShowRoleSelection(true)}
@@ -449,14 +469,28 @@ const HomeContent = () => {
             </ErrorBoundary>
           )}
 
+          {/*
+           Guest Guided Mode — rendered BEFORE the DriverShell branch so a
+           visitor who hits "Browse jobs" goes straight into SimpleModeShell
+           with no wallet. SimpleCardPanel detects walletAddress=null and
+           renders the sign-in teaser; the rail and job detail work as-is.
+          */}
+          {!user && showGuidedMode && !isRoleLoading && (
+            <ErrorBoundary section='Guided Mode'>
+              <SimpleModeShell />
+            </ErrorBoundary>
+          )}
+
           {/* ── Driver (or unauthenticated landing) ── */}
-          {(!user || userRole === 'driver' || (user && !userRole && !showRoleSelection)) &&
+          {(!showGuidedMode || !!user) &&
+            (!user || userRole === 'driver' || (user && !userRole && !showRoleSelection)) &&
             !isRoleLoading && (
               <ErrorBoundary section='Driver Hub'>
                 <DriverShell
                   onAuthSuccess={handleAuthSuccess}
                   onResumeUploadEvent={handleResumeUploadEvent}
                   onSetLatestResumeIpfsHash={setLatestResumeIpfsHash}
+                  onBrowseGuided={enterGuidedMode}
                 />
               </ErrorBoundary>
             )}

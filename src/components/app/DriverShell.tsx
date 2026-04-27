@@ -45,9 +45,9 @@ const ResumeUploadWithVerification = dynamic(
   { ssr: false, loading: () => <LoadingScreen message='Loading resume upload...' fullScreen={false} /> }
 )
 
-const JobListings = dynamic(
-  () => import('@/components/JobListings').then((mod) => mod.default),
-  { ssr: false, loading: () => <LoadingScreen message='Loading job listings...' fullScreen={false} /> }
+const SimpleModeShell = dynamic(
+  () => import('@/components/simple/SimpleModeShell').then((mod) => mod.default),
+  { ssr: false, loading: () => <LoadingScreen message='Loading jobs...' fullScreen={false} /> }
 )
 
 const MyApplications = dynamic(
@@ -82,6 +82,13 @@ interface DriverShellProps {
   onResumeUploadEvent: (event: ResumeUploadEvent) => void
   /** Called to set the latest IPFS hash (for Stormi / form prefill) */
   onSetLatestResumeIpfsHash: (hash: string | null) => void
+  /**
+   * Guest "Browse jobs" entry. Lets unauthenticated visitors enter Guided Mode
+   * (via the page-level `showGuidedMode` flag) without forcing a sign-in.
+   * When signed in, the in-shell `currentPage='jobs'` redirect handles the
+   * same flow — this prop is wired for marketing-home guests only.
+   */
+  onBrowseGuided?: () => void
 }
 
 /**
@@ -96,6 +103,7 @@ export default function DriverShell({
   onAuthSuccess,
   onResumeUploadEvent,
   onSetLatestResumeIpfsHash,
+  onBrowseGuided,
 }: DriverShellProps) {
   const { theme } = useTheme()
 
@@ -377,22 +385,14 @@ export default function DriverShell({
     )
   }
 
+  /*
+   Unified job discovery: signed-in drivers and unauthenticated guests both
+   land in Guided Mode (`SimpleModeShell`). The shell handles the
+   wallet/no-wallet split internally — see `SimpleCardPanel`'s guest variant.
+   The legacy 3-tab `JobListings` browser is gone.
+  */
   if (currentPage === 'jobs') {
-    return (
-      <div className='max-w-7xl mx-auto relative z-0'>
-        {!user ? (
-          <JobListings
-            onBack={handleNavigateToHub}
-            userAddress={null}
-            publicBrowseMode
-            onSignIn={() => setCurrentPage('signin')}
-            backLabel='Back to home'
-          />
-        ) : (
-          <JobListings onBack={handleNavigateToHub} userAddress={user.address} />
-        )}
-      </div>
-    )
+    return <SimpleModeShell />
   }
 
   if (currentPage === 'applications') {
@@ -525,7 +525,16 @@ export default function DriverShell({
       <HomePage
         isAuthenticated={false}
         onGetStarted={() => setCurrentPage('signin')}
-        onBrowseJobs={() => setCurrentPage('jobs')}
+        // If the page provides a guided-mode entry, prefer it. Falls back to
+        // the legacy currentPage='jobs' alias which DriverShell now redirects
+        // to SimpleModeShell anyway, so guests always land in Guided Mode.
+        onBrowseJobs={() => {
+          if (onBrowseGuided) {
+            onBrowseGuided()
+          } else {
+            setCurrentPage('jobs')
+          }
+        }}
       />
     )
   }

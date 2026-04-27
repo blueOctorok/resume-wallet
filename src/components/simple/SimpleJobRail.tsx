@@ -1,22 +1,19 @@
 'use client'
 
 /**
- * SimpleJobRail — the left column of Simple mode.
+ * SimpleJobRail — the left column of Guided mode.
  *
- * Shows a tight list of jobs with a single search bar. Clicking a card
- * updates `useSimpleModeStore.selectedJobSnapshot`; the right panel reacts.
- *
- * Kept deliberately simple vs the legacy `JobListings` component — Simple
- * mode owns a different UX (no tabs dominating the screen, one source at a
- * time, tight density). Heavy power-user features (filters, pagination) live
- * under a collapsible control so first-run users see just results.
+ * Blended feed: Storm employer jobs are always fetched and sit at the top of
+ * the list (like Indeed's "Sponsored" slots). Adzuna external listings fill
+ * the rest once the user commits a keyword search. No source toggle — one
+ * unified list, Storm jobs prioritized.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Briefcase, MapPin, Loader2, Search, Globe, Zap, X, Sparkles } from 'lucide-react'
+import { Briefcase, MapPin, Loader2, Search, Zap, X, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
-import { useJobSearch, type JobListing, type JobSource } from '@/hooks/use-job-search'
+import { useJobSearch, type JobListing } from '@/hooks/use-job-search'
 import {
   useSimpleModeStore,
   type SelectedJobSnapshot,
@@ -46,10 +43,10 @@ interface SimpleJobRailProps {
   onJobSelected?: (snapshot: SelectedJobSnapshot) => void
 }
 
-function jobToSnapshot(job: JobListing, source: JobSource): SelectedJobSnapshot {
+function jobToSnapshot(job: JobListing): SelectedJobSnapshot {
   return {
     id: job.id,
-    source: source === 'stormchain' ? 'stormchain' : 'adzuna',
+    source: job.isStormChain ? 'stormchain' : 'adzuna',
     title: job.title,
     company: job.company,
     location: job.location,
@@ -81,27 +78,42 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
     [onboarding, installedBlocks],
   )
 
-  const [source, setSource] = useState<JobSource>('adzuna')
   const [keywords, setKeywords] = useState(smartDefaults.keywords)
   const [location, setLocation] = useState(smartDefaults.location)
-  // `committed*` is what actually drives the query — debounces typing
   const [committedKeywords, setCommittedKeywords] = useState(smartDefaults.keywords)
   const [committedLocation, setCommittedLocation] = useState(smartDefaults.location)
   const [filtersOpen, setFiltersOpen] = useState(false)
 
-  // Skip the initial fetch entirely when we have no keywords — shows the
-  // first-run "ask Stormi" empty state instead of 20 random generic listings.
-  const shouldSkipSearch = !committedKeywords.trim() && source === 'adzuna'
+  const hasKeywords = !!committedKeywords.trim()
 
-  const { jobs, isLoading, error } = useJobSearch({
-    source,
+  // Storm employer jobs — always fetch so platform listings are visible even
+  // before the user searches. They sit at the top of the blended list (like
+  // Indeed's "Sponsored" slots).
+  const { jobs: stormJobs, isLoading: stormLoading } = useJobSearch({
+    source: 'stormchain',
     keywords: committedKeywords,
     location: committedLocation,
-    skip: shouldSkipSearch,
+    skip: false,
+  })
+
+  // Adzuna (external aggregator) — only fetch once the user has committed a query.
+  const { jobs: adzunaJobs, isLoading: adzunaLoading, error } = useJobSearch({
+    source: 'adzuna',
+    keywords: committedKeywords,
+    location: committedLocation,
+    skip: !hasKeywords,
     salaryMin: filters.salaryFloor,
     jobType: filters.jobType,
     remoteOnly: filters.remoteOnly,
   })
+
+  // Blended feed: Storm employer jobs first (prioritized), then Adzuna.
+  // Later this is where paid/promoted employer ranking would slot in.
+  const jobs = useMemo(
+    () => [...stormJobs, ...adzunaJobs],
+    [stormJobs, adzunaJobs],
+  )
+  const isLoading = stormLoading || adzunaLoading
 
   const activeFilterCount =
     (filters.salaryFloor ? 1 : 0) + (filters.jobType ? 1 : 0) + (filters.remoteOnly ? 1 : 0)
@@ -134,35 +146,22 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
     [],
   )
 
-  // Auto-promote the first result when a URL-hydrated selection points to a job
-  // we just loaded but don't yet have a snapshot for.
   const snapshotlessSelectedId = useSimpleModeStore(
     (s) => (s.selectedJobId && !s.selectedJobSnapshot ? s.selectedJobId : null),
   )
   useEffect(() => {
     if (!snapshotlessSelectedId) return
     const found = jobs.find((j) => j.id === snapshotlessSelectedId)
-    if (found) {
-      setSelection(jobToSnapshot(found, source))
-    }
-  }, [snapshotlessSelectedId, jobs, source, setSelection])
+    if (found) setSelection(jobToSnapshot(found))
+  }, [snapshotlessSelectedId, jobs, setSelection])
 
   const handleSelect = useCallback(
     (job: JobListing) => {
-      const snap = jobToSnapshot(job, source)
+      const snap = jobToSnapshot(job)
       setSelection(snap)
       onJobSelected?.(snap)
     },
-    [source, setSelection, onJobSelected],
-  )
-
-  const sourceTabs = useMemo(
-    () =>
-      [
-        { id: 'adzuna' as const, label: 'All jobs', icon: Globe },
-        { id: 'stormchain' as const, label: 'Storm employers', icon: Zap },
-      ],
-    [],
+    [setSelection, onJobSelected],
   )
 
   return (
@@ -173,62 +172,26 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
       // Tighter padding so search + list read as one column — rail is narrow; vertical space is precious.
       contentClassName='flex flex-col h-full min-h-0 !p-3 sm:!p-4'
     >
-      {/* One tight strip: title + source — description lives in title attr so we don't stack 3 text rows */}
-      <div className='flex flex-wrap items-center gap-2 pb-2 mb-2 border-b border-slate-300/80 dark:border-gray-700/50'>
-        <div className='flex min-w-0 flex-1 items-center gap-2'>
-          <div
-            className={cn(
-              'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
-              isDark
-                ? 'bg-teal-500/15 text-teal-200 ring-1 ring-teal-400/30'
-                : 'bg-teal-50 text-teal-700 ring-1 ring-teal-200',
-            )}
-          >
-            <Briefcase className='h-3.5 w-3.5' />
-          </div>
-          <h3
-            className={cn(
-              'min-w-0 truncate text-sm font-semibold tracking-tight',
-              isDark ? 'text-white' : 'text-slate-900',
-            )}
-            title='Pick a role — Stormi shapes your career card around what you target.'
-          >
-            Find jobs
-          </h3>
-        </div>
-        {/* Source toggle — same row when rail is wide enough; wraps on md split */}
+      <div className='flex items-center gap-2 pb-2 mb-2 border-b border-slate-300/80 dark:border-gray-700/50'>
         <div
           className={cn(
-            'flex shrink-0 gap-0.5 rounded-full border p-0.5 text-[11px] font-semibold',
-            isDark ? 'bg-gray-900/60 border-gray-700' : 'bg-white border-slate-200 shadow-sm',
+            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+            isDark
+              ? 'bg-teal-500/15 text-teal-200 ring-1 ring-teal-400/30'
+              : 'bg-teal-50 text-teal-700 ring-1 ring-teal-200',
           )}
         >
-        {sourceTabs.map((t) => {
-          const Icon = t.icon
-          const active = t.id === source
-          return (
-            <button
-              key={t.id}
-              type='button'
-              onClick={() => setSource(t.id)}
-              className={cn(
-                'inline-flex items-center gap-0.5 rounded-full px-2 py-1 transition-colors cursor-pointer sm:gap-1 sm:px-2.5 sm:py-1.5',
-                active
-                  ? isDark
-                    ? 'bg-teal-500/25 text-teal-100'
-                    : 'bg-teal-500/15 text-teal-700'
-                  : isDark
-                    ? 'text-gray-400 hover:text-gray-200'
-                    : 'text-slate-500 hover:text-slate-700',
-              )}
-              aria-pressed={active}
-            >
-              <Icon className='w-3.5 h-3.5' />
-              {t.label}
-            </button>
-          )
-        })}
+          <Briefcase className='h-3.5 w-3.5' />
         </div>
+        <h3
+          className={cn(
+            'min-w-0 truncate text-sm font-semibold tracking-tight',
+            isDark ? 'text-white' : 'text-slate-900',
+          )}
+          title='Pick a role — Stormi shapes your career card around what you target.'
+        >
+          Find jobs
+        </h3>
       </div>
 
       {/* Search form — sits directly above results */}
@@ -298,8 +261,7 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
           >
             Search
           </button>
-          {source === 'adzuna' && (
-            <button
+          <button
               type='button'
               onClick={() => setFiltersOpen((v) => !v)}
               aria-expanded={filtersOpen}
@@ -326,12 +288,11 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
                 </span>
               )}
             </button>
-          )}
         </div>
       </form>
 
-      {/* Filter chips — Adzuna only; StormChain listings are already curated */}
-      {source === 'adzuna' && filtersOpen && (
+      {/* Filter chips — apply to Adzuna results in the blended feed */}
+      {filtersOpen && (
         <div
           className={cn(
             'mb-2 space-y-2 rounded-lg border p-2.5',
@@ -472,10 +433,9 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
           </p>
         )}
 
-        {/* First-run / zero-context state: no committed search yet. Rather than
-            showing 20 random listings, invite the user to pick a trending
-            shortcut or lean on Stormi. This is Phase 5's "tame Adzuna" piece. */}
-        {!isLoading && !error && jobs.length === 0 && shouldSkipSearch && (
+        {/* First-run / zero-context state: no committed search yet and no Storm
+            jobs loaded. Show trending shortcuts to get started. */}
+        {!isLoading && !error && jobs.length === 0 && !hasKeywords && (
           <div
             className={cn(
               'space-y-2 rounded-lg border p-2.5',
@@ -519,7 +479,7 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
         )}
 
         {/* Committed-search empty state — query returned nothing */}
-        {!isLoading && !error && jobs.length === 0 && !shouldSkipSearch && (
+        {!isLoading && !error && jobs.length === 0 && hasKeywords && (
           <div
             className={cn(
               'rounded-lg border border-dashed py-6 text-center text-xs',
@@ -535,7 +495,7 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
           const selected = job.id === selectedJobId
           return (
             <button
-              key={`${source}-${job.id}`}
+              key={`${job.isStormChain ? 'sc' : 'az'}-${job.id}`}
               type='button'
               onClick={() => handleSelect(job)}
               className={cn(
@@ -549,14 +509,29 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
                     : 'border-slate-200 bg-white hover:border-slate-300 shadow-sm',
               )}
             >
-              <p
-                className={cn(
-                  'line-clamp-2 text-[13px] font-semibold leading-snug',
-                  isDark ? 'text-white' : 'text-slate-900',
+              <div className='flex items-start justify-between gap-1.5'>
+                <p
+                  className={cn(
+                    'line-clamp-2 text-[13px] font-semibold leading-snug',
+                    isDark ? 'text-white' : 'text-slate-900',
+                  )}
+                >
+                  {job.title}
+                </p>
+                {job.isStormChain && (
+                  <span
+                    className={cn(
+                      'mt-0.5 inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide',
+                      isDark
+                        ? 'bg-teal-500/20 text-teal-300 ring-1 ring-teal-400/30'
+                        : 'bg-teal-50 text-teal-700 ring-1 ring-teal-200',
+                    )}
+                  >
+                    <Zap className='h-2.5 w-2.5' />
+                    Storm
+                  </span>
                 )}
-              >
-                {job.title}
-              </p>
+              </div>
               <p
                 className={cn(
                   'mt-0.5 line-clamp-1 text-[11px]',

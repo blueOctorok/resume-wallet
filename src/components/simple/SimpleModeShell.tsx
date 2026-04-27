@@ -133,27 +133,27 @@ export default function SimpleModeShell() {
 
       {/* ================================================
           Phone — tab bar navigation, < md
+          Content gets bottom padding so it never hides behind the fixed bar.
           ================================================ */}
-      <div className='flex min-h-0 flex-1 flex-col md:hidden'>
-        <div className='min-h-0 flex-1 overflow-hidden'>
-          {mobileTab === 'jobs' && (
-            <div className='flex h-full flex-col px-2'>
-              <SimpleJobRail userAddress={walletAddress ?? null} onJobSelected={handleJobSelected} />
-            </div>
-          )}
-          {mobileTab === 'job' && (
-            <div className='flex h-full flex-col px-2'>
-              <SimpleJobDetailPanel userAddress={walletAddress ?? null} />
-            </div>
-          )}
-          {mobileTab === 'card' && (
-            <div className='flex h-full flex-col overflow-y-auto px-2 py-2'>
-              <SimpleCardPanel />
-            </div>
-          )}
-        </div>
-        <MobileTabBar />
+      <div className='flex min-h-0 flex-1 flex-col pb-[4.5rem] md:hidden'>
+        {mobileTab === 'jobs' && (
+          <div className='flex min-h-0 flex-1 flex-col px-2'>
+            <SimpleJobRail userAddress={walletAddress ?? null} onJobSelected={handleJobSelected} />
+          </div>
+        )}
+        {mobileTab === 'job' && (
+          <div className='flex min-h-0 flex-1 flex-col px-2'>
+            <SimpleJobDetailPanel userAddress={walletAddress ?? null} />
+          </div>
+        )}
+        {mobileTab === 'card' && (
+          <div className='flex min-h-0 flex-1 flex-col overflow-y-auto px-2 py-2'>
+            <SimpleCardPanel />
+          </div>
+        )}
       </div>
+      {/* Fixed bar — renders outside the content container */}
+      <MobileTabBar />
     </div>
   )
 }

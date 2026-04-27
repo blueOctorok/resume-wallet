@@ -4,56 +4,42 @@ import { useEffect, useRef, useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   ArrowRight,
-  CreditCard,
-  Shield,
-  Zap,
-  Sparkles,
-  Truck,
-  Code2,
-  Wrench,
-  FileText,
-  ClipboardList,
-  Car,
-  Globe,
-  Github,
-  Search,
-  FileCheck,
-  Building2,
-  Coins,
   BookOpen,
-  TrendingUp,
-  Gift,
   Briefcase,
-  QrCode,
+  Building2,
+  Car,
   CheckCircle,
-  Mail,
-  MapPin,
-  Bot,
-  Radar,
-  BellRing,
+  ClipboardList,
+  Compass,
+  Eye,
+  Github,
+  Globe,
+  IdCard,
   Layers,
   Link2,
-  IdCard,
-  UserCheck,
-  MousePointerClick,
-  Handshake,
-  UserPlus,
+  Plus,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Zap,
 } from 'lucide-react'
 import StormChainView from '@/components/StormChainView'
 import StormChainWordmark from '@/components/ui/StormChainWordmark'
 import { VaultShowcase } from '@/components/hub/HubBlockVault'
 import VaultHorizontalVaultShell from '@/components/ui/VaultHorizontalVaultShell'
+import HubSectionPanel from '@/components/hub/HubSectionPanel'
+import BlockCard from '@/components/ui/BlockCard'
 import Button from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 
 interface HomePageProps {
   isAuthenticated: boolean
   onGetStarted: () => void
-  /** Guest: open public job browse (no wallet) */
+  /** Guest: open public Guided Mode (no wallet required to browse) */
   onBrowseJobs?: () => void
 }
 
-// ── Vault showcase blocks — hero + section 3 (same topology as in-app hub) ───
+// Six iconic blocks that ride along in the hero vault — same as the in-app hub.
 const HIVE_BLOCKS = [
   { id: 'driver-dot-application', icon: ClipboardList, label: 'DOT App' },
   { id: 'storm-resume', icon: Sparkles, label: 'STORM Resume' },
@@ -63,10 +49,11 @@ const HIVE_BLOCKS = [
   { id: 'driver-cdl-credentials', icon: IdCard, label: 'CDL' },
 ]
 
-// ── Scroll-reveal hook ───────────────────────────────────────────────────────
-// Elements with data-reveal fade+slide in when they enter the viewport.
-// Accepts a `reattachKey` — when it changes (e.g. returning from whitepaper),
-// the effect re-runs and observes the fresh DOM nodes.
+/**
+ * Scroll-reveal hook — adds a `revealed` class when an element enters the viewport.
+ * `reattachKey` is the modal-open flag: when the whitepaper closes we re-observe
+ * the fresh DOM nodes so the homepage animates back in cleanly.
+ */
 function useScrollReveal(reattachKey: unknown) {
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -83,7 +70,7 @@ function useScrollReveal(reattachKey: unknown) {
           }
         })
       },
-      { threshold: 0.15 }
+      { threshold: 0.15 },
     )
 
     container.querySelectorAll('[data-reveal]').forEach((el) => observer.observe(el))
@@ -93,115 +80,194 @@ function useScrollReveal(reattachKey: unknown) {
   return containerRef
 }
 
-// ── Glass card wrapper — same frosted / void panel language as hub vault shells ──
-function GlassCard({ children, className = '', isDark }: {
-  children: React.ReactNode
-  className?: string
-  isDark: boolean
-}) {
+// ─────────────────────────────────────────────────────────────────────────────
+// Build Mode mock — visually echoes the in-app SimpleModeShell split view.
+// Left card = the job. Right card = the career card growing in real time.
+// Static visual; the homepage doesn't drive real fit logic.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function BuildModeMockup({ isDark }: { isDark: boolean }) {
+  const surface = isDark
+    ? 'bg-gray-900/70 border-white/[0.08] text-white'
+    : 'bg-white/85 border-slate-200 text-slate-900'
+  const subtle = isDark ? 'bg-white/[0.04] text-gray-400' : 'bg-slate-50 text-slate-600'
+  const muted = isDark ? 'text-gray-400' : 'text-slate-600'
+
+  return (
+    <div className='relative grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4'>
+      {/* Left: job card */}
+      <div className={cn('rounded-2xl border p-4 backdrop-blur-md shadow-md', surface)}>
+        <div className='mb-3 flex items-center gap-2'>
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide',
+              isDark
+                ? 'bg-teal-500/20 text-teal-300 ring-1 ring-teal-400/30'
+                : 'bg-teal-50 text-teal-700 ring-1 ring-teal-200',
+            )}
+          >
+            <Zap className='h-2.5 w-2.5' /> Storm
+          </span>
+          <span className={cn('text-[10px] uppercase tracking-wider', muted)}>Job</span>
+        </div>
+        <h4 className='text-sm font-semibold leading-snug'>CDL-A regional driver</h4>
+        <p className={cn('mt-0.5 text-xs', muted)}>Werner Enterprises · Dallas, TX</p>
+        <div className={cn('mt-3 rounded-lg p-2.5 text-[11px] leading-relaxed', subtle)}>
+          <p className='mb-1 font-semibold'>What this role asks for</p>
+          <ul className='space-y-0.5'>
+            <li>• Class A CDL with hazmat</li>
+            <li>• 2+ years OTR experience</li>
+            <li>• Clean MVR, current DOT app</li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Right: career card */}
+      <div className={cn('rounded-2xl border p-4 backdrop-blur-md shadow-md', surface)}>
+        <div className='mb-3 flex items-center gap-2'>
+          <div className='flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-teal-600 text-[10px] font-bold text-white'>
+            JD
+          </div>
+          <div className='min-w-0 flex-1'>
+            <p className='truncate text-xs font-semibold'>Jane Doe</p>
+            <p className={cn('text-[10px]', muted)}>CDL-A · 8 yrs</p>
+          </div>
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold',
+              isDark ? 'text-emerald-300' : 'text-emerald-700',
+            )}
+          >
+            <ShieldCheck className='h-2.5 w-2.5' /> Verified
+          </span>
+        </div>
+
+        <div className={cn('mb-2 rounded-lg p-2', subtle)}>
+          <div className='mb-1 flex items-center justify-between text-[10px]'>
+            <span className='font-medium'>Coverage for this role</span>
+            <span className={cn('font-bold', isDark ? 'text-teal-300' : 'text-teal-700')}>78%</span>
+          </div>
+          <div className={cn('h-1 rounded-full', isDark ? 'bg-gray-700' : 'bg-slate-200')}>
+            <div className='h-full w-[78%] rounded-full bg-gradient-to-r from-teal-400 to-emerald-400' />
+          </div>
+        </div>
+
+        <div className='space-y-1.5'>
+          {[
+            { label: 'CDL credentials', done: true },
+            { label: 'DOT application', done: true },
+            { label: 'MVR', done: true },
+            { label: 'Hazmat endorsement', done: false },
+          ].map((row) => (
+            <div
+              key={row.label}
+              className={cn('flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px]', subtle)}
+            >
+              {row.done ? (
+                <CheckCircle className='h-3 w-3 shrink-0 text-emerald-400' />
+              ) : (
+                <Plus className={cn('h-3 w-3 shrink-0', isDark ? 'text-amber-300' : 'text-amber-600')} />
+              )}
+              <span className={row.done ? '' : muted}>{row.label}</span>
+              {!row.done && (
+                <span className={cn('ml-auto text-[9px] font-semibold', isDark ? 'text-amber-300' : 'text-amber-700')}>
+                  Add
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Stormi card mock — static visual that mirrors the real StormiNextStepCard
+// in the app. Lives inside a phone-frame in the Stormi section.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function StormiCardMock({ isDark }: { isDark: boolean }) {
   return (
     <div
       className={cn(
-        'rounded-2xl transition-all duration-300',
-        isDark ? 'storm-glass-panel border border-white/[0.1]' : 'storm-light-panel',
-        className,
+        'flex flex-col gap-2 rounded-xl border px-3 py-2.5',
+        isDark
+          ? 'border-violet-400/20 bg-violet-500/5'
+          : 'border-violet-200/60 bg-violet-50/40 shadow-sm',
       )}
     >
-      {children}
+      <div className='flex items-start gap-2'>
+        <div
+          className={cn(
+            'mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg',
+            isDark
+              ? 'bg-violet-500/15 text-violet-200 ring-1 ring-violet-400/30'
+              : 'bg-violet-50 text-violet-700 ring-1 ring-violet-200',
+          )}
+        >
+          <Plus className='size-3' />
+        </div>
+        <div className='min-w-0 flex-1'>
+          <p
+            className={cn(
+              'text-[9px] font-bold uppercase tracking-wider',
+              isDark ? 'text-violet-300/80' : 'text-violet-600',
+            )}
+          >
+            Do this next
+          </p>
+          <p className={cn('text-[13px] font-semibold leading-snug', isDark ? 'text-white' : 'text-slate-900')}>
+            Add hazmat endorsement
+          </p>
+          <p className={cn('mt-0.5 text-[11px] leading-relaxed', isDark ? 'text-gray-300' : 'text-slate-600')}>
+            Closes the biggest gap for this CDL-A role &mdash; pushes you past the apply line.
+          </p>
+        </div>
+      </div>
+      <div className='flex flex-wrap items-center gap-1.5 pl-8'>
+        <span
+          className={cn(
+            'inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-semibold',
+            isDark ? 'bg-teal-500 text-white' : 'bg-teal-600 text-white',
+          )}
+        >
+          Add hazmat
+          <ArrowRight className='size-3' />
+        </span>
+        <span className={cn('text-[10px]', isDark ? 'text-gray-400' : 'text-slate-500')}>or tailor a lens</span>
+      </div>
     </div>
   )
 }
 
-// ── Career Card mockup ───────────────────────────────────────────────────────
-// Pure visual showing what a completed Career Card looks like.
-function CareerCardMockup({ isDark }: { isDark: boolean }) {
-  const cardBg = isDark ? 'bg-gray-900/80 border-white/[0.08]' : 'bg-white/80 border-gray-200'
-  const subtleBg = isDark ? 'bg-gray-800/60' : 'bg-gray-100/80'
-  const textPrimary = isDark ? 'text-white' : 'text-gray-900'
-  const textMuted = isDark ? 'text-gray-400' : 'text-gray-500'
-
+function PhoneFrame({ children, isDark }: { children: React.ReactNode; isDark: boolean }) {
   return (
     <div
-      className={`relative w-[300px] sm:w-[360px] rounded-2xl border backdrop-blur-md p-5 sm:p-6 shadow-2xl ${cardBg}`}
-      style={{ animation: 'card-float 6s ease-in-out infinite alternate' }}
+      className={cn(
+        'relative mx-auto w-[280px] rounded-[2.5rem] border-[10px] p-2 shadow-2xl',
+        isDark ? 'border-gray-800 bg-gray-950' : 'border-slate-300 bg-slate-100',
+      )}
     >
-      <div className='absolute -inset-[1px] rounded-2xl bg-gradient-to-br from-teal-400/20 via-transparent to-cyan-400/20 -z-10 blur-sm' />
-
-      {/* Header */}
-      <div className='flex items-center gap-3 mb-4'>
-        <div className='w-12 h-12 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white font-bold text-lg'>
-          JD
-        </div>
-        <div>
-          <p className={`font-bold text-sm ${textPrimary}`}>Jane Doe</p>
-          <p className={`text-xs ${textMuted}`}>CDL-A Driver · 8 years exp.</p>
-        </div>
-        <div className='ml-auto'>
-          <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${subtleBg}`}>
-            <QrCode className={`w-5 h-5 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
-          </div>
-        </div>
-      </div>
-
-      {/* Score bar */}
-      <div className={`rounded-lg p-2.5 mb-4 ${subtleBg}`}>
-        <div className='flex items-center justify-between mb-1.5'>
-          <span className={`text-xs font-medium ${textPrimary}`}>Profile Completeness</span>
-          <span className='text-xs font-bold text-green-400'>92%</span>
-        </div>
-        <div className={`h-1.5 rounded-full overflow-hidden ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
-          <div className='h-full w-[92%] rounded-full bg-gradient-to-r from-teal-400 to-green-400' />
-        </div>
-      </div>
-
-      {/* Credential badges */}
-      <div className='flex flex-wrap gap-1.5 mb-4'>
-        {['Resume', 'DOT App', 'MVR', 'Skills'].map((label) => (
-          <span key={label} className='flex items-center gap-1 px-2 py-0.5 rounded-full'>
-            <CheckCircle className='w-3 h-3 text-green-400' />
-            <span className={`text-[10px] font-semibold ${textPrimary}`}>{label}</span>
-          </span>
-        ))}
-      </div>
-
-      {/* Mock sections */}
-      <div className='space-y-2.5'>
-        <div className={`rounded-lg p-2.5 ${subtleBg}`}>
-          <div className='flex items-center gap-4'>
-            <div className='flex items-center gap-1.5'>
-              <Mail className={`w-3 h-3 ${textMuted}`} />
-              <span className={`text-[10px] ${textMuted}`}>jane@email.com</span>
-            </div>
-            <div className='flex items-center gap-1.5'>
-              <MapPin className={`w-3 h-3 ${textMuted}`} />
-              <span className={`text-[10px] ${textMuted}`}>Dallas, TX</span>
-            </div>
-          </div>
-        </div>
-
-        <div className={`rounded-lg p-2.5 ${subtleBg}`}>
-          <p className={`text-[10px] font-semibold mb-1 ${textPrimary}`}>Work History</p>
-          <div className='flex items-center gap-2'>
-            <Briefcase className={`w-3 h-3 ${textMuted}`} />
-            <span className={`text-[10px] ${textMuted}`}>Werner Enterprises · 2019 – Present</span>
-            <CheckCircle className='w-3 h-3 text-green-400 ml-auto' />
-          </div>
-        </div>
-
-        <div className='flex items-center justify-center gap-1.5 pt-1'>
-          <Shield className={`w-3 h-3 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
-          <span className={`text-[10px] font-medium ${isDark ? 'text-teal-400' : 'text-teal-600'}`}>
-            Verified on Storm
-          </span>
-        </div>
+      <div
+        className={cn(
+          'absolute left-1/2 top-1.5 z-10 h-1 w-16 -translate-x-1/2 rounded-full',
+          isDark ? 'bg-gray-800' : 'bg-slate-300',
+        )}
+      />
+      <div className={cn('rounded-[2rem] p-3', isDark ? 'bg-gray-900' : 'bg-white')}>
+        <p className={cn('mb-2 px-1 text-[10px] font-semibold uppercase tracking-widest', isDark ? 'text-gray-500' : 'text-slate-500')}>
+          Build Mode
+        </p>
+        {children}
       </div>
     </div>
   )
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// ── HomePage ─────────────────────────────────────────────────────────────────
-// ══════════════════════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────────────────
+// HomePage
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }: HomePageProps) {
   const { theme } = useTheme()
@@ -218,31 +284,24 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
     window.scrollTo({ top: 0 })
   }
 
-  const scrollToSection = (id: string) => {
-    const el = document.getElementById(id)
-    if (!el) return
-    const reduce =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
-  }
-
   if (showWhitepaper) {
     return <StormChainView onBack={closeWhitepaper} backLabel='Back to Home' />
   }
 
+  // The connect/dashboard CTA label flips for signed-in users.
+  const primaryLabel = isAuthenticated ? 'Go to dashboard' : 'Connect a wallet'
+
   return (
     <>
       {/*
-        Iridescent film — sits above StormBackground vault canvas (z-[-3]) + bubbles (z-[-1]) but below
-        this page’s content (z-10). Light mode has bubbles only (no cloud). Slow spin reads as
-        shifting teal / indigo / violet without competing with readability. prefers-reduced-motion: static wash, no spin.
+        Iridescent background film — sits above StormBackground (z-[-3]) but below
+        page content (z-10). Slow-spinning conic gradient reads as shifting teal /
+        indigo / violet without competing with copy. Reduced motion: static.
       */}
       <div
         aria-hidden
         className='pointer-events-none fixed inset-0 z-[5] overflow-hidden mix-blend-soft-light dark:mix-blend-soft-light'
       >
-        {/* Muted iridescence: low layer opacity + softer stops + extra blur so color stays a whisper */}
         <div className='absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2'>
           <div
             className='h-[min(200vmin,120rem)] w-[min(200vmin,120rem)] blur-[110px] sm:blur-[150px] opacity-[0.2] dark:opacity-[0.16] motion-reduce:animate-none animate-spin [animation-duration:100s]'
@@ -258,883 +317,487 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
             }}
           />
         </div>
-        <div className='absolute left-1/2 top-[58%] -translate-x-1/2 -translate-y-1/2'>
-          <div
-            className='h-[min(160vmin,90rem)] w-[min(160vmin,90rem)] blur-[130px] sm:blur-[170px] opacity-[0.12] dark:opacity-[0.1] motion-reduce:animate-none animate-spin [animation-duration:160s] [animation-direction:reverse]'
-            style={{
-              background: `conic-gradient(from 200deg at 50% 50%,
-                rgba(129,140,248,0.38) 0deg,
-                rgba(34,211,238,0.32) 90deg,
-                rgba(16,185,129,0.36) 180deg,
-                rgba(99,102,241,0.32) 270deg,
-                rgba(129,140,248,0.38) 360deg)`,
-            }}
-          />
-        </div>
         <div className='absolute inset-0 bg-gradient-to-b from-white/[0.12] via-transparent to-indigo-950/[0.18] dark:from-gray-950/45 dark:via-transparent dark:to-slate-950/55 mix-blend-normal opacity-95' />
-        <div
-          className='absolute inset-0 mix-blend-normal pointer-events-none'
-          style={{
-            background:
-              'radial-gradient(ellipse 100% 85% at 50% 35%, transparent 0%, transparent 38%, rgba(15,23,42,0.22) 100%)',
-          }}
-        />
-        <div
-          className='absolute inset-0 mix-blend-normal dark:hidden opacity-90'
-          style={{
-            background:
-              'radial-gradient(ellipse 90% 80% at 50% 40%, transparent 0%, transparent 45%, rgba(255,255,255,0.48) 100%)',
-          }}
-        />
       </div>
 
-      <div ref={revealRef} className='relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-hidden'>
-
-      {/* Slim gateway — same network; hero below is product-first (candidates) */}
-      <section
-        id='home-gateway'
-        className='relative isolate pt-8 sm:pt-10 pb-6 text-center max-w-3xl mx-auto scroll-mt-24 border-b border-slate-300/50 dark:border-gray-700/80'
-      >
-        <p
-          className={`text-sm sm:text-base font-medium ${isDark ? 'text-gray-400' : 'text-slate-600'}`}
-        >
-          One Storm network —{' '}
-          <button
-            type='button'
-            onClick={() => scrollToSection('for-employers')}
-            className={`font-semibold underline-offset-4 hover:underline ${isDark ? 'text-teal-400' : 'text-teal-700'}`}
-          >
-            hiring teams
-          </button>
-          {' '}and{' '}
-          <button
-            type='button'
-            onClick={() => scrollToSection('for-candidates')}
-            className={`font-semibold underline-offset-4 hover:underline ${isDark ? 'text-teal-400' : 'text-teal-700'}`}
-          >
-            candidates
-          </button>
-          {' '}each get the tools they need.
-        </p>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════════
-          SECTION 1 — Candidates first: Career Card hero + vault (same chrome as in-app hub)
-          ═══════════════════════════════════════════════════════════════════════ */}
-      <section
-        id='for-candidates'
-        className='relative isolate scroll-mt-24 pt-4 sm:pt-6 pb-12 sm:pb-20 overflow-x-hidden overflow-y-visible border-t border-gray-200 dark:border-gray-700'
-      >
+      <div ref={revealRef} className='relative z-10 mx-auto max-w-7xl overflow-hidden px-4 sm:px-6 lg:px-8'>
         {/*
-          Large blurred blooms + radial mask so color never ends in a sharp rectangle
-          against StormBackground — avoids the obvious “overlay box” edge.
+         ═══════════════════════════════════════════════════════════════════════
+         SECTION 1 — Hero
+         Positioning + two CTAs. The brand visual (VaultShowcase) does the
+         "what is this thing?" work without copy.
+         ═══════════════════════════════════════════════════════════════════════
         */}
-        <div
-          aria-hidden
-          className='pointer-events-none absolute inset-0 -z-10 flex items-start justify-center pt-0 overflow-hidden'
-        >
-          <div
-            className='relative w-[min(135vw,85rem)] h-[min(85vh,44rem)] shrink-0 -translate-y-[8%] opacity-80 dark:opacity-[0.65] [mask-image:radial-gradient(ellipse_72%_68%_at_50%_42%,#000_0%,transparent_78%)] [-webkit-mask-image:radial-gradient(ellipse_72%_68%_at_50%_42%,#000_0%,transparent_78%)]'
-          >
-            <div className='absolute left-1/2 top-[18%] h-[min(75vw,48rem)] w-[min(75vw,48rem)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-teal-400/35 blur-[100px] dark:bg-teal-400/18 dark:blur-[128px]' />
-            <div className='absolute right-[-8%] top-[8%] h-[min(55vw,28rem)] w-[min(55vw,28rem)] rounded-full bg-cyan-400/25 blur-[88px] dark:bg-violet-500/20 dark:blur-[104px]' />
-            <div className='absolute left-[-5%] bottom-[-5%] h-[min(50vw,26rem)] w-[min(50vw,26rem)] rounded-full bg-teal-500/20 blur-[96px] dark:bg-cyan-500/12 dark:blur-[112px]' />
-          </div>
-        </div>
-
-        <div className='text-center relative'>
-          {/* Same lockup as token whitepaper (`StormChainView`), larger via `size="display"` */}
-          <div className='mb-8 sm:mb-10 flex justify-center px-2' data-reveal>
+        <section className='relative isolate scroll-mt-24 pt-10 pb-16 sm:pt-14 sm:pb-24'>
+          <div className='mb-8 flex justify-center px-2' data-reveal>
             <StormChainWordmark size='display' />
           </div>
-          <p
-            className={`text-xs sm:text-sm font-bold uppercase tracking-widest mb-6 ${
-              isDark ? 'text-teal-400' : 'text-teal-700'
-            }`}
-          >
-            For candidates
-          </p>
-          <div className='mb-5 flex flex-wrap justify-center gap-2'>
-            <span
-              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider border ${
-                isDark
-                  ? 'bg-teal-500/15 text-teal-300 border-teal-500/35'
-                  : 'bg-teal-50 text-teal-800 border-teal-200'
-              }`}
-            >
-              <Layers className='w-3.5 h-3.5' />
-              Industry blocks
-            </span>
-            <span
-              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider border ${
-                isDark
-                  ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/35'
-                  : 'bg-cyan-50 text-cyan-900 border-cyan-200'
-              }`}
-            >
-              <CreditCard className='w-3.5 h-3.5' />
-              Career Card
-            </span>
-            <span
-              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider border ${
-                isDark
-                  ? 'bg-white/[0.06] text-gray-300 border-white/[0.12]'
-                  : 'bg-gray-100 text-gray-800 border-gray-200'
-              }`}
-            >
-              <Link2 className='w-3.5 h-3.5' />
-              Verify on-chain
-            </span>
-            <span
-              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider border ${
-                isDark
-                  ? 'bg-violet-500/15 text-violet-300 border-violet-500/35'
-                  : 'bg-violet-50 text-violet-800 border-violet-200'
-              }`}
-            >
-              <Bot className='w-3.5 h-3.5' />
-              Stormi helps
-            </span>
-          </div>
 
-          <h1
-            className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 leading-[1.08] tracking-tight max-w-5xl mx-auto ${
-              isDark ? 'text-white' : 'text-gray-900'
-            }`}
-          >
-            <span className='block'>Build the Career Card —</span>
-            <span className='bg-gradient-to-r from-teal-400 via-cyan-400 to-violet-400 bg-clip-text text-transparent'>
-              the jobs will come
-            </span>
-            <span
-              className={`block mt-3 text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold leading-snug tracking-tight max-w-4xl mx-auto ${
-                isDark ? 'text-gray-400' : 'text-slate-600'
-              }`}
-            >
-              Stack industry blocks once, verify what matters, share one card — Stormi helps you finish the work and find the
-              right roles.
-            </span>
-          </h1>
-
-          <p
-            className={`text-base sm:text-lg md:text-xl mb-8 max-w-3xl mx-auto leading-relaxed ${
-              isDark ? 'text-gray-400' : 'text-slate-600'
-            }`}
-          >
-            <strong className={isDark ? 'text-gray-200' : 'text-slate-800'}>Blocks</strong> capture the real paperwork for
-            your trade — DOT, MVR, CDL, portfolio, résumé — in one place.{' '}
-            <strong className={isDark ? 'text-gray-200' : 'text-slate-800'}>Verification</strong> makes that story
-            portable and durable.{' '}
-            <strong className={isDark ? 'text-gray-200' : 'text-slate-800'}>Stormi</strong> is your copilot for matches,
-            forms, and prep — you stay in control of every application you send.
-          </p>
-
-          {/* Same vault credential tiles as the in-app hub — horizontal shell matches profile / nav chrome */}
-          <div className='mb-10 sm:mb-14 max-w-5xl mx-auto px-1'>
-            <VaultHorizontalVaultShell isDark={isDark} layout='panel' contentClassName='p-5 sm:p-7 lg:p-9'>
+          <div className='grid items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-16'>
+            <div className='text-center lg:text-left' data-reveal>
               <p
-                className={`text-center text-xs font-bold uppercase tracking-[0.2em] mb-1 ${
-                  isDark ? 'text-teal-400/90' : 'text-teal-700'
-                }`}
+                className={cn(
+                  'mb-4 text-[11px] font-semibold uppercase tracking-[0.18em]',
+                  isDark ? 'text-teal-300/90' : 'text-teal-700',
+                )}
               >
-                Your hub, in the wild
+                verified on-chain &middot; candidate-owned &middot; tailored per job
               </p>
+              <h1
+                className={cn(
+                  'text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl md:text-6xl',
+                  isDark ? 'text-white' : 'text-gray-900',
+                )}
+              >
+                The career identity{' '}
+                <span className='bg-gradient-to-r from-teal-400 via-cyan-400 to-violet-400 bg-clip-text text-transparent'>
+                  employers can actually trust.
+                </span>
+              </h1>
               <p
-                className={`text-center text-sm sm:text-base mb-6 max-w-xl mx-auto ${
-                  isDark ? 'text-gray-400' : 'text-slate-600'
-                }`}
+                className={cn(
+                  'mx-auto mt-5 max-w-xl text-base leading-relaxed sm:text-lg lg:mx-0',
+                  isDark ? 'text-gray-400' : 'text-slate-600',
+                )}
               >
-                Chamfered vault tiles, rim glow, and frost — identical energy to the blocks you install in the product.
+                Browse real jobs, build a verified career card block by block with Stormi as your coach, and apply with proof, not promises.
               </p>
-              <div
-                className='flex justify-center [mask-image:radial-gradient(ellipse_88%_78%_at_50%_50%,#000_45%,transparent_98%)] [-webkit-mask-image:radial-gradient(ellipse_88%_78%_at_50%_50%,#000_45%,transparent_98%)]'
-              >
-                <VaultShowcase blocks={HIVE_BLOCKS} isDark={isDark} />
+
+              <div className='mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center lg:justify-start'>
+                {onBrowseJobs && (
+                  <Button
+                    variant='primary'
+                    size='lg'
+                    onClick={onBrowseJobs}
+                    className='group h-auto rounded-xl px-8 py-4 text-base shadow-lg shadow-teal-900/20 dark:shadow-black/40'
+                  >
+                    <Search className='h-5 w-5' />
+                    <span>Browse jobs &mdash; no login</span>
+                    <ArrowRight className='h-5 w-5 transition-transform group-hover:translate-x-1' />
+                  </Button>
+                )}
+                <Button
+                  variant='secondary'
+                  size='lg'
+                  onClick={onGetStarted}
+                  className='h-auto rounded-xl border-2 px-8 py-4 text-base'
+                >
+                  {primaryLabel}
+                </Button>
               </div>
-            </VaultHorizontalVaultShell>
-          </div>
+            </div>
 
-          <div className='flex flex-col sm:flex-row flex-wrap gap-3 justify-center items-stretch sm:items-center mb-10 max-w-xl mx-auto sm:max-w-none'>
-            <Button
-              variant='primary'
-              size='lg'
-              onClick={onGetStarted}
-              className='group text-base px-8 py-4 h-auto rounded-xl shadow-lg shadow-teal-900/20 dark:shadow-black/40'
+            {/* Vault visual — same chrome as the in-app hub block hive */}
+            <div data-reveal className='reveal-item'>
+              <VaultHorizontalVaultShell isDark={isDark} layout='panel' contentClassName='p-5 sm:p-7'>
+                <p
+                  className={cn(
+                    'mb-1 text-center text-[10px] font-bold uppercase tracking-[0.2em]',
+                    isDark ? 'text-teal-400/90' : 'text-teal-700',
+                  )}
+                >
+                  Your hub, in the wild
+                </p>
+                <p className={cn('mb-5 text-center text-xs sm:text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>
+                  The same vault tiles you stack inside the app.
+                </p>
+                <div className='flex justify-center [mask-image:radial-gradient(ellipse_88%_78%_at_50%_50%,#000_45%,transparent_98%)] [-webkit-mask-image:radial-gradient(ellipse_88%_78%_at_50%_50%,#000_45%,transparent_98%)]'>
+                  <VaultShowcase blocks={HIVE_BLOCKS} isDark={isDark} />
+                </div>
+              </VaultHorizontalVaultShell>
+            </div>
+          </div>
+        </section>
+
+        {/*
+         ═══════════════════════════════════════════════════════════════════════
+         SECTION 2 — Build Mode (the main attraction)
+         Anchor section. The split-view mockup is the page's primary product
+         visual; the three pillars carry the story. Most users will live here
+         inside the app, so the homepage spends real estate on it.
+         ═══════════════════════════════════════════════════════════════════════
+        */}
+        <section id='build-mode' className='scroll-mt-24 py-16 sm:py-24'>
+          <HubSectionPanel isDark={isDark} accent='teal' contentClassName='p-6 sm:p-8 lg:p-10'>
+            <BlockCard
+              variant='embed'
+              icon={Briefcase}
+              title='Build Mode'
+              description='Pick the job. Watch your career card take shape.'
             >
-              <span>{isAuthenticated ? 'Go to dashboard' : 'Connect wallet'}</span>
-              <ArrowRight className='w-5 h-5 group-hover:translate-x-1 transition-transform' />
-            </Button>
-            {onBrowseJobs && (
+              <div className='grid items-start gap-10 lg:grid-cols-[1fr_1fr] lg:gap-14'>
+                <div data-reveal className='reveal-item'>
+                  <BuildModeMockup isDark={isDark} />
+                </div>
+
+                <div data-reveal className='reveal-item'>
+                  <p className={cn('text-base leading-relaxed sm:text-lg', isDark ? 'text-gray-300' : 'text-slate-700')}>
+                    Storm starts with the role you actually want, then guides you to build only what that job needs. Your verified career card grows in real time on the right while the job stays anchored on the left, and you graduate when you&rsquo;re ready to apply.
+                  </p>
+
+                  <ol className='mt-8 space-y-6'>
+                    {[
+                      {
+                        n: '1',
+                        title: 'The job goes on the left.',
+                        body: (
+                          <>
+                            Pick any open role from a blended feed &mdash; Storm employers first, aggregated listings underneath. Storm reads the requirements and reverse-engineers exactly what you&rsquo;ll need to stand out.
+                          </>
+                        ),
+                      },
+                      {
+                        n: '2',
+                        title: 'Your card grows on the right.',
+                        body: (
+                          <>
+                            CDL, employment history, GitHub, MVR, portfolio &mdash; drop in only what this job needs. Each block is verified independently and updates everywhere it&rsquo;s used.
+                          </>
+                        ),
+                      },
+                      {
+                        n: '3',
+                        title: 'Apply with a tailored lens.',
+                        body: (
+                          <>
+                            Stormi drafts a focused view of your card &mdash; a <em>lens</em> &mdash; for every application. One verified profile, every angle. Employers see exactly what you chose to share.
+                          </>
+                        ),
+                      },
+                    ].map((item) => (
+                      <li key={item.n} className='flex gap-4'>
+                        <span
+                          className={cn(
+                            'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ring-1',
+                            isDark
+                              ? 'bg-teal-500/15 text-teal-200 ring-teal-400/30'
+                              : 'bg-teal-50 text-teal-700 ring-teal-200',
+                          )}
+                        >
+                          {item.n}
+                        </span>
+                        <div className='min-w-0'>
+                          <h3 className={cn('text-base font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+                            {item.title}
+                          </h3>
+                          <p className={cn('mt-1 text-sm leading-relaxed', isDark ? 'text-gray-400' : 'text-slate-600')}>
+                            {item.body}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+
+                  {onBrowseJobs && (
+                    <div className='mt-8'>
+                      <Button variant='primary' size='lg' onClick={onBrowseJobs} className='h-auto rounded-xl px-7 py-3.5'>
+                        <Search className='h-5 w-5' />
+                        Try Build Mode &mdash; no login
+                        <ArrowRight className='h-5 w-5' />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </BlockCard>
+          </HubSectionPanel>
+        </section>
+
+        {/*
+         ═══════════════════════════════════════════════════════════════════════
+         SECTION 3 — Stormi
+         The coach moat. A static mock of the real StormiNextStepCard sits in
+         a phone frame so visitors see exactly what coaching looks like.
+         ═══════════════════════════════════════════════════════════════════════
+        */}
+        <section id='stormi' className='scroll-mt-24 py-16 sm:py-24'>
+          <HubSectionPanel isDark={isDark} accent='violet' contentClassName='p-6 sm:p-8 lg:p-10'>
+            <BlockCard
+              variant='embed'
+              icon={Sparkles}
+              title='Meet Stormi'
+              description='A coach who knows your career.'
+            >
+              <div className='grid items-center gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-14'>
+                <div data-reveal className='reveal-item'>
+                  <p className={cn('text-base leading-relaxed sm:text-lg', isDark ? 'text-gray-300' : 'text-slate-700')}>
+                    Stormi watches what you&rsquo;ve built, sees the job you&rsquo;re chasing, and tells you exactly what to do next. Every conversation builds on the last.
+                  </p>
+
+                  <ul className='mt-6 space-y-4'>
+                    {[
+                      {
+                        icon: Eye,
+                        text: 'Spots the gaps employers care about and shows you which to close first.',
+                      },
+                      {
+                        icon: Layers,
+                        text: 'Drafts a tailored lens for every job so one career card fits every application.',
+                      },
+                      {
+                        icon: Compass,
+                        text: 'Tracks your progress, celebrates each verified credential, and re-engages you when life gets in the way.',
+                      },
+                    ].map((row) => {
+                      const Icon = row.icon
+                      return (
+                        <li key={row.text} className='flex gap-3'>
+                          <span
+                            className={cn(
+                              'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ring-1',
+                              isDark
+                                ? 'bg-violet-500/15 text-violet-200 ring-violet-400/30'
+                                : 'bg-violet-50 text-violet-700 ring-violet-200',
+                            )}
+                          >
+                            <Icon className='h-3.5 w-3.5' />
+                          </span>
+                          <p
+                            className={cn(
+                              'text-sm leading-relaxed sm:text-base',
+                              isDark ? 'text-gray-300' : 'text-slate-700',
+                            )}
+                          >
+                            {row.text}
+                          </p>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+
+                <div data-reveal className='reveal-item flex justify-center'>
+                  <PhoneFrame isDark={isDark}>
+                    <StormiCardMock isDark={isDark} />
+                  </PhoneFrame>
+                </div>
+              </div>
+            </BlockCard>
+          </HubSectionPanel>
+        </section>
+
+        {/*
+         ═══════════════════════════════════════════════════════════════════════
+         SECTION 4 — The Hub (graduation path)
+         For users who get hooked and want full ownership of their career.
+         Token + whitepaper live inside the third pillar, not their own band.
+         ═══════════════════════════════════════════════════════════════════════
+        */}
+        <section id='hub' className='scroll-mt-24 py-16 sm:py-24'>
+          <HubSectionPanel isDark={isDark} accent='indigo' contentClassName='p-6 sm:p-8 lg:p-10'>
+            <BlockCard
+              variant='embed'
+              icon={Building2}
+              title='When you&rsquo;re ready to go deeper'
+              description='The Hub: your full career workspace.'
+            >
+              <p
+                className={cn(
+                  'max-w-3xl text-base leading-relaxed sm:text-lg',
+                  isDark ? 'text-gray-300' : 'text-slate-700',
+                )}
+              >
+                Most users get what they need from Build Mode and that&rsquo;s fine. When you want full ownership of your career, the Hub is waiting &mdash; every block category, open chat with Stormi, your STORM balance, and tools to manage your verified identity over time.
+              </p>
+
+              <div className='mt-8 grid gap-4 lg:grid-cols-3'>
+                {[
+                  {
+                    icon: Layers,
+                    title: 'The full block library.',
+                    body: (
+                      <>
+                        Every category, even the ones your current target doesn&rsquo;t need. Build the career you want, not just the one a job is asking for.
+                      </>
+                    ),
+                    accent: isDark ? 'text-teal-300' : 'text-teal-700',
+                    ring: isDark ? 'ring-teal-400/30 bg-teal-500/15' : 'ring-teal-200 bg-teal-50',
+                  },
+                  {
+                    icon: Sparkles,
+                    title: 'Stormi on your terms.',
+                    body: (
+                      <>
+                        Open chat for career questions, deep-dives, and what-ifs that go beyond the job in front of you.
+                      </>
+                    ),
+                    accent: isDark ? 'text-violet-300' : 'text-violet-700',
+                    ring: isDark ? 'ring-violet-400/30 bg-violet-500/15' : 'ring-violet-200 bg-violet-50',
+                    isWhitepaper: false,
+                  },
+                  {
+                    icon: Link2,
+                    title: 'STORM token and on-chain identity.',
+                    body: (
+                      <>
+                        Earn verifications, manage credential issuers, and put your credibility on the chain.
+                      </>
+                    ),
+                    accent: isDark ? 'text-cyan-300' : 'text-cyan-700',
+                    ring: isDark ? 'ring-cyan-400/30 bg-cyan-500/15' : 'ring-cyan-200 bg-cyan-50',
+                    isWhitepaper: true,
+                  },
+                ].map((cell) => {
+                  const Icon = cell.icon
+                  return (
+                    <div
+                      key={cell.title}
+                      data-reveal
+                      className={cn(
+                        'reveal-item rounded-xl border p-5',
+                        isDark ? 'border-white/[0.08] bg-white/[0.02]' : 'border-slate-200 bg-white/70',
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          'mb-3 flex h-9 w-9 items-center justify-center rounded-lg ring-1',
+                          cell.ring,
+                          cell.accent,
+                        )}
+                      >
+                        <Icon className='h-4 w-4' />
+                      </div>
+                      <h3 className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>
+                        {cell.title}
+                      </h3>
+                      <p className={cn('mt-1 text-sm leading-relaxed', isDark ? 'text-gray-400' : 'text-slate-600')}>
+                        {cell.body}
+                      </p>
+                      {cell.isWhitepaper && (
+                        <button
+                          type='button'
+                          onClick={openWhitepaper}
+                          className={cn(
+                            'mt-3 inline-flex items-center gap-1.5 text-xs font-semibold underline-offset-4 hover:underline',
+                            isDark ? 'text-cyan-300' : 'text-cyan-700',
+                          )}
+                        >
+                          <BookOpen className='h-3.5 w-3.5' />
+                          Read the whitepaper
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </BlockCard>
+          </HubSectionPanel>
+        </section>
+
+        {/*
+         ═══════════════════════════════════════════════════════════════════════
+         SECTION 5 — For employers + Bottom CTA (combined)
+         Brief employer pitch (3 short lines, no card grid), then the final
+         invite. Employers come last because they're a smaller audience and
+         their value is downstream of having verified candidates here first.
+         ═══════════════════════════════════════════════════════════════════════
+        */}
+        <section id='for-employers' className='scroll-mt-24 py-16 sm:py-24'>
+          <div className='mx-auto max-w-3xl'>
+            {/* 5a — For employers */}
+            <div data-reveal className='reveal-item text-center'>
+              <p
+                className={cn(
+                  'mb-3 text-[11px] font-semibold uppercase tracking-[0.18em]',
+                  isDark ? 'text-cyan-300/90' : 'text-cyan-700',
+                )}
+              >
+                For employers
+              </p>
+              <h2 className={cn('text-2xl font-bold sm:text-3xl', isDark ? 'text-white' : 'text-gray-900')}>
+                Verified candidates, curated framings, real signal.
+              </h2>
+              <ul
+                className={cn(
+                  'mx-auto mt-6 max-w-2xl space-y-3 text-left text-sm leading-relaxed sm:text-base',
+                  isDark ? 'text-gray-300' : 'text-slate-700',
+                )}
+              >
+                {[
+                  'On-chain verified credentials let you trust a candidate at a glance.',
+                  'Structured blocks let you compare candidates fairly across one consistent shape.',
+                  'Lens framings show exactly what each candidate chose to highlight for your role.',
+                ].map((line) => (
+                  <li key={line} className='flex gap-3'>
+                    <CheckCircle
+                      className={cn('mt-1 h-4 w-4 shrink-0', isDark ? 'text-cyan-300' : 'text-cyan-700')}
+                    />
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
               <Button
                 variant='secondary'
-                size='lg'
-                onClick={onBrowseJobs}
-                className='text-base px-8 py-4 h-auto rounded-xl border-2'
+                size='md'
+                onClick={onGetStarted}
+                className='mt-8 h-auto rounded-xl px-6 py-3'
               >
-                <Search className='w-5 h-5' />
-                Browse jobs — no login
+                <Building2 className='h-4 w-4' />
+                See employer pricing
               </Button>
-            )}
-          </div>
-          <div className='flex flex-wrap justify-center gap-x-4 gap-y-2 mb-10'>
-            <a
-              href='#composable-blocks'
-              onClick={(e) => {
-                e.preventDefault()
-                scrollToSection('composable-blocks')
-              }}
-              className={`inline-flex items-center justify-center px-6 py-3.5 text-sm font-semibold rounded-xl transition-colors ${
-                isDark ? 'text-cyan-400 hover:text-cyan-300' : 'text-cyan-700 hover:text-cyan-800'
-              }`}
-            >
-              Industry blocks ↓
-            </a>
-            <a
-              href='#ava-intelligence'
-              onClick={(e) => {
-                e.preventDefault()
-                scrollToSection('ava-intelligence')
-              }}
-              className={`inline-flex items-center justify-center px-6 py-3.5 text-sm font-semibold rounded-xl transition-colors ${
-                isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-800'
-              }`}
-            >
-              Meet Stormi ↓
-            </a>
-            <button
-              type='button'
-              onClick={() => scrollToSection('for-employers')}
-              className={`inline-flex items-center justify-center px-6 py-3.5 text-sm font-semibold rounded-xl transition-colors ${
-                isDark ? 'text-cyan-400 hover:text-cyan-300' : 'text-cyan-700 hover:text-cyan-800'
-              }`}
-            >
-              For employers ↓
-            </button>
-          </div>
-        </div>
-
-        <div className='flex flex-col lg:flex-row items-center justify-center gap-10 lg:gap-16 mb-12'>
-          <CareerCardMockup isDark={isDark} />
-          <div className={`max-w-md text-left space-y-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            <p className={`text-sm font-bold uppercase tracking-widest ${isDark ? 'text-teal-400' : 'text-teal-700'}`}>
-              The order that matters
-            </p>
-            <ul className='space-y-3 text-sm sm:text-base'>
-              <li className='flex gap-3'>
-                <Layers className={`w-5 h-5 shrink-0 mt-0.5 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
-                <span>
-                  <strong className={isDark ? 'text-gray-200' : 'text-gray-900'}>1 · Build with blocks:</strong>{' '}
-                  career-specific workflows fill out your Career Card — not generic profile fields. Most hiring products
-                  skip this entirely.
-                </span>
-              </li>
-              <li className='flex gap-3'>
-                <Link2 className={`w-5 h-5 shrink-0 mt-0.5 ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`} />
-                <span>
-                  <strong className={isDark ? 'text-gray-200' : 'text-gray-900'}>2 · Verify permanently:</strong>{' '}
-                  blockchain-backed clarity for what&apos;s on your card — proof that outlasts a one-off upload.
-                </span>
-              </li>
-              <li className='flex gap-3'>
-                <Bot className={`w-5 h-5 shrink-0 mt-0.5 ${isDark ? 'text-violet-400' : 'text-violet-600'}`} />
-                <span>
-                  <strong className={isDark ? 'text-gray-200' : 'text-gray-900'}>3 · Stormi helps:</strong>{' '}
-                  third, not first — guidance, matches, and optional copy so you&apos;re never stuck. AI supports the card
-                  you built; it doesn&apos;t replace it.
-                </span>
-              </li>
-              <li className='flex gap-3'>
-                <MousePointerClick className={`w-5 h-5 shrink-0 mt-0.5 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
-                <span>
-                  <strong className={isDark ? 'text-gray-200' : 'text-gray-900'}>You choose every send:</strong>{' '}
-                  build the card first; when you apply, it&apos;s always your click — clear intent to employers.
-                </span>
-              </li>
-              <li className='flex gap-3'>
-                <Zap className={`w-5 h-5 shrink-0 mt-0.5 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
-                <span>
-                  <strong className={isDark ? 'text-gray-200' : 'text-gray-900'}>Wallet-native:</strong> your address
-                  is your anchor; STORM rewards real progress. No duplicate accounts — the chain of record is you.
-                </span>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div className='flex flex-wrap justify-center gap-x-8 gap-y-3 sm:gap-x-12'>
-          {[
-            { icon: Layers, text: '1 · Blocks' },
-            { icon: CreditCard, text: 'Career Card' },
-            { icon: Link2, text: '2 · Verify on-chain' },
-            { icon: Bot, text: '3 · Stormi helps' },
-            { icon: Zap, text: 'STORM on Base' },
-          ].map((item) => (
-            <div key={item.text} className='flex items-center gap-2'>
-              <item.icon className={`w-4 h-4 ${isDark ? 'text-teal-400/80' : 'text-teal-600/80'}`} />
-              <span className={`text-xs sm:text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                {item.text}
-              </span>
             </div>
-          ))}
-        </div>
-      </section>
 
-      {/* Stormi — product depth (was missing when homepage shipped) */}
-      <section id='ava-intelligence' className='py-16 sm:py-24 scroll-mt-24'>
-        <div data-reveal className='reveal-item text-center mb-12 max-w-3xl mx-auto'>
-          <h2 className={`text-3xl sm:text-4xl md:text-5xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Meet{' '}
-            <span className='bg-gradient-to-r from-violet-400 to-teal-400 bg-clip-text text-transparent'>Stormi</span>
-          </h2>
-          <p className={`text-lg ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
-            <strong className={isDark ? 'text-gray-200' : 'text-slate-800'}>Stormi</strong> is the assistant inside Storm:
-            ranked matches, interview prep, journey nudges, and optional drafts when you apply. It plugs into the blocks and
-            verification you already built — so you move faster without outsourcing your judgment on where (or whether) to
-            apply.
-          </p>
-        </div>
-
-        <div className='grid sm:grid-cols-2 gap-4 lg:gap-5 max-w-5xl mx-auto'>
-          {[
-            {
-              icon: Radar,
-              title: 'Ranked job matches',
-              body: 'Stormi pulls real listings and scores them against your headline, skills, and blocks — so you spend time on roles worth applying to, not infinite scroll.',
-              accent: isDark ? 'from-teal-500/20 to-cyan-500/10' : 'from-teal-100 to-cyan-50',
-            },
-            {
-              icon: FileText,
-              title: 'Easy Apply + cover letters',
-              body: 'When you choose to apply, one guided flow ships your verified Career Card. Stormi can draft optional cover copy for you to edit and send.',
-              accent: isDark ? 'from-violet-500/20 to-indigo-500/10' : 'from-violet-100 to-indigo-50',
-            },
-            {
-              icon: BellRing,
-              title: 'AI job alerts',
-              body: 'Save keywords, location, and salary floor — we scan, match, and notify when strong listings land. You decide what to open and what to apply to.',
-              accent: isDark ? 'from-amber-500/15 to-orange-500/10' : 'from-amber-50 to-orange-50',
-            },
-            {
-              icon: Sparkles,
-              title: 'Journey guide',
-              body: 'Stormi tracks which blocks employers see and what is still empty — nudges tied to your card, whether you are applying this week or still assembling proof.',
-              accent: isDark ? 'from-emerald-500/20 to-teal-500/10' : 'from-emerald-50 to-teal-50',
-            },
-          ].map((cell) => (
-            <div key={cell.title} data-reveal className='reveal-item'>
-              <GlassCard
-                isDark={isDark}
-                className={`p-6 sm:p-7 h-full text-left bg-gradient-to-br ${cell.accent} hover:scale-[1.02] transition-transform duration-300`}
-              >
-                <div
-                  className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${
-                    isDark ? 'bg-gray-900/60 text-teal-300' : 'bg-white/90 text-teal-700 shadow-sm'
-                  }`}
-                >
-                  <cell.icon className='w-5 h-5' />
-                </div>
-                <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>{cell.title}</h3>
-                <p className={`text-sm leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{cell.body}</p>
-              </GlassCard>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Public job browse CTA — discovery before wallet */}
-      {onBrowseJobs && (
-        <section className='py-14 sm:py-20'>
-          <div
-            data-reveal
-            className={`reveal-item relative overflow-hidden rounded-3xl border px-6 py-10 sm:px-12 sm:py-14 max-w-5xl mx-auto ${
-              isDark
-                ? 'border-gray-700 bg-gradient-to-br from-gray-900 via-gray-900 to-teal-950/40'
-                : 'border-gray-200 bg-gradient-to-br from-white via-teal-50/40 to-cyan-50/30'
-            }`}
-          >
+            {/* 5b — Bottom CTA */}
             <div
-              className={`absolute -right-20 -top-20 w-64 h-64 rounded-full blur-3xl pointer-events-none ${
-                isDark ? 'bg-teal-500/20' : 'bg-teal-400/25'
-              }`}
-            />
-            <div className='relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 text-center lg:text-left'>
-              <div className='max-w-xl mx-auto lg:mx-0'>
-                <Briefcase className={`w-10 h-10 mx-auto lg:mx-0 mb-4 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
-                <h2 className={`text-2xl sm:text-3xl font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  Search real jobs before you connect
-                </h2>
-                <p className={`text-sm sm:text-base ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Storm postings plus aggregated boards — same search experience as logged-in users. Applying,
-                  Stormi match scores, and alerts stay tied to your wallet so we never mint empty profiles.
-                </p>
-              </div>
-              <div className='flex flex-col sm:flex-row gap-3 justify-center lg:justify-end shrink-0'>
-                <Button variant='primary' size='lg' onClick={onBrowseJobs} className='h-auto py-4 px-8 rounded-xl'>
-                  <Search className='w-5 h-5' />
-                  Open job search
-                </Button>
-                <Button variant='secondary' size='lg' onClick={onGetStarted} className='h-auto py-4 px-8 rounded-xl'>
-                  Connect to apply
+              data-reveal
+              className={cn(
+                'reveal-item mt-16 border-t pt-12 text-center sm:mt-20 sm:pt-16',
+                isDark ? 'border-gray-800' : 'border-slate-200',
+              )}
+            >
+              <h2 className={cn('text-3xl font-bold sm:text-4xl md:text-5xl', isDark ? 'text-white' : 'text-gray-900')}>
+                Ready when you are.
+              </h2>
+              <p
+                className={cn(
+                  'mx-auto mt-4 max-w-xl text-base leading-relaxed sm:text-lg',
+                  isDark ? 'text-gray-400' : 'text-slate-600',
+                )}
+              >
+                Browse without an account. Connect when you&rsquo;re ready to apply.
+              </p>
+
+              <div className='mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center'>
+                {onBrowseJobs && (
+                  <Button
+                    variant='primary'
+                    size='lg'
+                    onClick={onBrowseJobs}
+                    className='group h-auto rounded-xl px-8 py-4 text-base shadow-xl'
+                  >
+                    <Search className='h-5 w-5' />
+                    Browse jobs
+                    <ArrowRight className='h-5 w-5 transition-transform group-hover:translate-x-1' />
+                  </Button>
+                )}
+                <Button
+                  variant='secondary'
+                  size='lg'
+                  onClick={onGetStarted}
+                  className='h-auto rounded-xl px-8 py-4 text-base'
+                >
+                  {primaryLabel}
                 </Button>
               </div>
             </div>
           </div>
         </section>
-      )}
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-          SECTION 2 — The Problem
-          ═══════════════════════════════════════════════════════════════════════ */}
-      <section className='py-16 sm:py-24 max-w-4xl mx-auto'>
-        <h2
-          data-reveal
-          className={`reveal-item text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-12 ${
-            isDark ? 'text-white' : 'text-gray-900'
-          }`}
-        >
-          Credentials shouldn&apos;t be this hard
-        </h2>
-
-        <div className='space-y-8'>
-          {[
-            'The same complex forms, filled out again and again. Every new job, start from scratch.',
-            'Verified records scattered across systems. Employers can\'t find proof, even when it exists.',
-            'Compliance paperwork that nobody wants to digitize — so you\'re stuck with paper and fax machines.',
-          ].map((line, i) => (
-            <p
-              key={i}
-              data-reveal
-              className={`reveal-item text-xl sm:text-2xl md:text-3xl font-light text-center leading-relaxed ${
-                isDark ? 'text-gray-400' : 'text-gray-500'
-              }`}
-              style={{ transitionDelay: `${i * 150}ms` }}
-            >
-              {line}
-            </p>
-          ))}
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════════
-          SECTION 3 — The Solution: Composable Blocks
-          ═══════════════════════════════════════════════════════════════════════ */}
-      <section id='composable-blocks' className='py-16 sm:py-24 scroll-mt-24'>
-        <div data-reveal className='reveal-item text-center mb-12'>
-          <h2 className={`text-3xl sm:text-4xl md:text-5xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Your hire story, assembled
-            <br />
-            <span className='bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent'>
-              from blocks
-            </span>
-          </h2>
-          <p className={`text-lg sm:text-xl max-w-2xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            Install the blocks your trade needs for <strong className={isDark ? 'text-gray-300' : 'text-gray-700'}>applications and employers</strong>{' '}
-            — DOT, CDL, portfolio, resume, skills — without refilling the same story for every posting. One verified Career
-            Card you bring to each hire.
-          </p>
-        </div>
-
-        {/* Hive inside vault shell — reinforces “same tiles as hub” after the story beat */}
-        <div data-reveal className='reveal-item mb-14 max-w-5xl mx-auto px-2'>
-          <VaultHorizontalVaultShell isDark={isDark} layout='panel' contentClassName='p-5 sm:p-8'>
-            <div
-              className='flex justify-center [mask-image:radial-gradient(ellipse_82%_76%_at_50%_50%,#000_48%,transparent_96%)] [-webkit-mask-image:radial-gradient(ellipse_82%_76%_at_50%_50%,#000_48%,transparent_96%)]'
-            >
-              <VaultShowcase blocks={HIVE_BLOCKS} isDark={isDark} />
-            </div>
-          </VaultHorizontalVaultShell>
-        </div>
-
-        {/* Profession callouts */}
-        <div className='grid sm:grid-cols-3 gap-4 max-w-4xl mx-auto'>
-          {[
-            {
-              icon: Truck,
-              title: 'Drivers',
-              desc: 'DOT applications, MVR records, CDL credentials',
-              accent: isDark ? 'text-blue-400' : 'text-blue-600',
-            },
-            {
-              icon: Code2,
-              title: 'Developers',
-              desc: 'Portfolio, GitHub activity, project showcase',
-              accent: isDark ? 'text-cyan-400' : 'text-cyan-600',
-            },
-            {
-              icon: Wrench,
-              title: 'Everyone',
-              desc: 'Skills, work history — and more blocks coming',
-              accent: isDark ? 'text-teal-400' : 'text-teal-600',
-            },
-          ].map((item) => (
-            <GlassCard key={item.title} isDark={isDark} className='p-5 text-center'>
-              <item.icon className={`w-6 h-6 mx-auto mb-2 ${item.accent}`} />
-              <h3 className={`text-sm font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {item.title}
-              </h3>
-              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                {item.desc}
-              </p>
-            </GlassCard>
-          ))}
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════════
-          SECTION 4 — How It Works
-          ═══════════════════════════════════════════════════════════════════════ */}
-      <section id='how-it-works' className='py-16 sm:py-24'>
-        <h2
-          data-reveal
-          className={`reveal-item text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-14 ${
-            isDark ? 'text-white' : 'text-gray-900'
-          }`}
-        >
-          How It Works
-        </h2>
-
-        <div className='grid md:grid-cols-3 gap-6 max-w-5xl mx-auto'>
-          {[
-            {
-              step: '1',
-              title: 'Connect & stack blocks',
-              desc: 'Wallet or email, then install the industry blocks that fill your Career Card — the tedious trade work, done once.',
-              icon: Layers,
-            },
-            {
-              step: '2',
-              title: 'Verify on-chain',
-              desc: "Permanent verification for what's on your card — portable proof, not another lost PDF.",
-              icon: Link2,
-            },
-            {
-              step: '3',
-              title: 'Stormi helps · share the card',
-              desc: 'AI keeps you unstuck on forms and matches; then one link or QR. Build the card — strong jobs and employers find you there.',
-              icon: Bot,
-            },
-          ].map((item, i) => (
-            <div key={item.step} data-reveal className='reveal-item' style={{ transitionDelay: `${i * 120}ms` }}>
-              <GlassCard isDark={isDark} className='p-6 sm:p-8 text-center h-full hover:scale-[1.03] transition-transform duration-300'>
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                  isDark ? 'bg-teal-500/20' : 'bg-teal-100'
-                }`}>
-                  <span className={`text-xl font-bold ${isDark ? 'text-teal-400' : 'text-teal-700'}`}>
-                    {item.step}
-                  </span>
-                </div>
-                <item.icon className={`w-8 h-8 mx-auto mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
-                <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  {item.title}
-                </h3>
-                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {item.desc}
-                </p>
-              </GlassCard>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Proof + network — after you’ve seen the product story; calm, confident (not anti–AI-slop) */}
-      <section id='signal-not-spam' className='py-14 sm:py-20 scroll-mt-24 border-t border-slate-300/50 dark:border-gray-700'>
-        <div data-reveal className='reveal-item text-center mb-10 max-w-3xl mx-auto px-1'>
-          <h2 className={`text-2xl sm:text-3xl md:text-4xl font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Verification both sides can trust
-          </h2>
-          <p className={`text-base sm:text-lg ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
-            Storm is built around a simple idea: when candidates put real work into a{' '}
-            <strong className={isDark ? 'text-gray-200' : 'text-slate-800'}>Career Card</strong>, employers get structured
-            artifacts they can request and review — not another inbox of mystery attachments. Same rails for talent and
-            hiring teams.
-          </p>
-          <p className={`text-sm sm:text-base mt-4 max-w-2xl mx-auto ${isDark ? 'text-gray-500' : 'text-slate-600'}`}>
-            Blocks → verification → Stormi: the product order is intentional — your card stays the source of truth, and
-            every application you send stays yours to choose.
-          </p>
-        </div>
-
-        <div className='grid sm:grid-cols-3 gap-4 max-w-5xl mx-auto'>
-          {[
-            {
-              icon: UserCheck,
-              title: 'Your sends, your timing',
-              body: 'Applications go out when you decide. Employers see deliberate intent — the same card you built, not a spray of anonymous clicks.',
-              accent: isDark ? 'from-teal-500/20 to-emerald-500/10' : 'from-teal-50 to-emerald-50',
-            },
-            {
-              icon: Shield,
-              title: 'Blocks are the proof',
-              body: 'DOT, MVR, résumé, portfolio — the tedious trade work lives in blocks once, then projects onto your Career Card. Stormi helps you finish; it does not replace the record.',
-              accent: isDark ? 'from-violet-500/20 to-indigo-500/10' : 'from-violet-50 to-indigo-50',
-            },
-            {
-              icon: Handshake,
-              title: 'One network',
-              body: 'Candidates and employers share the same Storm graph: requests, compliance orders, and verified blocks line up because everyone is looking at the same underlying card.',
-              accent: isDark ? 'from-slate-500/20 to-gray-500/10' : 'from-slate-50 to-gray-50',
-            },
-          ].map((cell) => (
-            <div key={cell.title} data-reveal className='reveal-item'>
-              <GlassCard
-                isDark={isDark}
-                className={`p-6 sm:p-7 h-full text-left bg-gradient-to-br ${cell.accent}`}
-              >
-                <div
-                  className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${
-                    isDark ? 'bg-gray-900/60 text-teal-300' : 'bg-white/80 text-teal-800 shadow-sm ring-1 ring-slate-300/50'
-                  }`}
-                >
-                  <cell.icon className='w-5 h-5' />
-                </div>
-                <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>{cell.title}</h3>
-                <p className={`text-sm leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{cell.body}</p>
-              </GlassCard>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════════
-          SECTION — Employers: recurring hiring stack (not an afterthought)
-          ═══════════════════════════════════════════════════════════════════════ */}
-      <section
-        id='for-employers'
-        className='py-16 sm:py-24 scroll-mt-24 border-t-2 border-gray-200 dark:border-gray-600'
-      >
-        <div data-reveal className='reveal-item text-center mb-12 max-w-3xl mx-auto px-1'>
-          <p
-            className={`text-xs sm:text-sm font-bold uppercase tracking-widest mb-3 ${
-              isDark ? 'text-cyan-400' : 'text-cyan-700'
-            }`}
-          >
-            For employers
-          </p>
-          <h2 className={`text-3xl sm:text-4xl md:text-5xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            The other half of Storm
-          </h2>
-          <p className={`text-lg sm:text-xl ${isDark ? 'text-gray-400' : 'text-slate-600'}`}>
-            Candidates build Career Cards once; you get <strong className={isDark ? 'text-gray-200' : 'text-slate-800'}>repeatable</strong>{' '}
-            hiring workflows — talent search, block requests, MVR and compliance orders, applicant pipeline — the kind of
-            work that runs <strong className={isDark ? 'text-gray-200' : 'text-slate-800'}>every hire cycle</strong>. You work
-            from the same verified blocks they put on their card.
-          </p>
-        </div>
-
-        <div className='grid md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-14'>
-          {[
-            {
-              step: '1',
-              title: 'Find & request',
-              desc: 'Search talent, send invites, request the blocks you need — résumé, MVR, DOT, portfolio. Candidates already built the card; you ask for proof.',
-              icon: UserPlus,
-            },
-            {
-              step: '2',
-              title: 'Review verified signal',
-              desc: 'Open the same block-backed artifacts candidates verified on-chain — résumé, DOT, MVR, portfolio — before you spend interview time.',
-              icon: FileCheck,
-            },
-            {
-              step: '3',
-              title: 'Compliance & pipeline',
-              desc: 'Order MVR and background checks, move people through stages, repeat next requisition. Tools your team logs back into — not a one-off job post.',
-              icon: Briefcase,
-            },
-          ].map((item, i) => (
-            <div key={item.step} data-reveal className='reveal-item' style={{ transitionDelay: `${i * 100}ms` }}>
-              <GlassCard isDark={isDark} className='p-6 sm:p-8 h-full text-left'>
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center mb-4 text-sm font-bold ${
-                    isDark ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-100 text-cyan-800'
-                  }`}
-                >
-                  {item.step}
-                </div>
-                <item.icon className={`w-7 h-7 mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
-                <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>{item.title}</h3>
-                <p className={`text-sm leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{item.desc}</p>
-              </GlassCard>
-            </div>
-          ))}
-        </div>
-
-        <div data-reveal className='reveal-item'>
-          <GlassCard isDark={isDark} className='p-8 sm:p-10 max-w-4xl mx-auto'>
-            <div className='text-center'>
-              <div className='flex flex-wrap justify-center gap-3 mb-6'>
-                {[
-                  { icon: Search, text: 'Talent search & invites' },
-                  { icon: ClipboardList, text: 'Block & credential requests' },
-                  { icon: Shield, text: 'MVR & background orders' },
-                  { icon: Building2, text: 'Industry-specific blocks' },
-                ].map((pill) => (
-                  <div
-                    key={pill.text}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border ${
-                      isDark
-                        ? 'bg-white/[0.04] border-white/[0.08] text-gray-300'
-                        : 'bg-white/60 border-white/40 text-gray-700'
-                    }`}
-                  >
-                    <pill.icon className='w-4 h-4' />
-                    {pill.text}
-                  </div>
-                ))}
-              </div>
-              <p className={`text-sm mb-6 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                Large organizations can add company-specific blocks for their own workflows — same composable model as
-                candidates.
-              </p>
-              <Button variant='primary' size='lg' onClick={onGetStarted} className='h-auto py-4 px-8 rounded-xl'>
-                <Building2 className='w-5 h-5' />
-                <span>{isAuthenticated ? 'Go to dashboard' : 'Connect wallet'}</span>
-                <ArrowRight className='w-5 h-5' />
-              </Button>
-            </div>
-          </GlassCard>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════════
-          SECTION 6 — STORM Token
-          ═══════════════════════════════════════════════════════════════════════ */}
-      <section className='py-16 sm:py-24'>
-        <div data-reveal className='reveal-item'>
-          <GlassCard isDark={isDark} className='p-8 sm:p-12 max-w-4xl mx-auto overflow-hidden relative'>
-            {/* Subtle glow accent */}
-            <div className='absolute -top-16 -right-16 w-64 h-64 rounded-full bg-teal-500/10 blur-3xl pointer-events-none' />
-
-            <div className='text-center relative z-[1]'>
-              <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                isDark ? 'bg-teal-500/20' : 'bg-teal-100'
-              }`}>
-                <Coins className={`w-7 h-7 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
-              </div>
-
-              <h2 className={`text-3xl sm:text-4xl font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Powered by{' '}
-                <span className='bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent'>
-                  STORM
-                </span>
-              </h2>
-
-              <p className={`text-lg mb-8 max-w-2xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                Storm runs on its own token economy. Earn STORM for completing your profile,
-                installing blocks, and contributing verified credentials. Spend it on premium features.
-              </p>
-
-              {/* Token utility pills */}
-              <div className='flex flex-wrap justify-center gap-3 mb-10'>
-                {[
-                  { icon: Gift,       text: 'Earn for contributions' },
-                  { icon: TrendingUp, text: 'Unlock premium blocks' },
-                  { icon: Shield,     text: 'On-chain transparency' },
-                ].map((item) => (
-                  <div
-                    key={item.text}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border ${
-                      isDark
-                        ? 'bg-teal-500/10 text-teal-300 border-teal-500/20'
-                        : 'bg-teal-50 text-teal-700 border-teal-300/50'
-                    }`}
-                  >
-                    <item.icon className='w-4 h-4' />
-                    {item.text}
-                  </div>
-                ))}
-              </div>
-
-              {/* Whitepaper CTA */}
-              <button
-                onClick={openWhitepaper}
-                className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl border-2 font-semibold transition-all duration-300 hover:scale-105 ${
-                  isDark
-                    ? 'border-teal-500/40 text-teal-300 hover:bg-teal-500/10'
-                    : 'border-teal-500/60 text-teal-700 hover:bg-teal-50'
-                }`}
-              >
-                <BookOpen className='w-5 h-5' />
-                Read the STORM Whitepaper
-              </button>
-            </div>
-          </GlassCard>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════════
-          SECTION 7 — Bottom CTA
-          ═══════════════════════════════════════════════════════════════════════ */}
-      <section className='text-center py-16 sm:py-24 pb-20 sm:pb-32'>
-        <div data-reveal className='reveal-item'>
-          <h2 className={`text-3xl sm:text-4xl md:text-5xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Ready when you are
-          </h2>
-          <p className={`text-lg mb-8 max-w-2xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            <strong className={isDark ? 'text-gray-300' : 'text-gray-700'}>Candidates:</strong> peek at jobs without an
-            account; connect when you&apos;re ready to apply with your Career Card and Stormi.{' '}
-            <strong className={isDark ? 'text-gray-300' : 'text-gray-700'}>Employers:</strong> same login — search,
-            request blocks, and run compliance on the people you actually want to talk to.
-          </p>
-
-          <div className='flex flex-col sm:flex-row flex-wrap gap-3 justify-center items-center mb-6'>
-            <Button
-              variant='primary'
-              size='lg'
-              onClick={onGetStarted}
-              className='group text-lg px-10 py-5 h-auto rounded-xl shadow-xl'
-            >
-              <span>{isAuthenticated ? 'Go to dashboard' : 'Connect wallet'}</span>
-              <ArrowRight className='w-6 h-6 group-hover:translate-x-1 transition-transform' />
-            </Button>
-            {onBrowseJobs && (
-              <Button variant='secondary' size='lg' onClick={onBrowseJobs} className='text-lg px-10 py-5 h-auto rounded-xl'>
-                <Briefcase className='w-5 h-5' />
-                Browse jobs
-              </Button>
-            )}
-            <Button
-              variant='secondary'
-              size='lg'
-              type='button'
-              onClick={() => scrollToSection('for-employers')}
-              className='text-lg px-10 py-5 h-auto rounded-xl border-2'
-            >
-              <Building2 className='w-5 h-5' />
-              Employer product
-            </Button>
-          </div>
-
-          <button
-            type='button'
-            onClick={openWhitepaper}
-            className={`text-sm underline underline-offset-4 transition-colors ${
-              isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            Read the STORM whitepaper
-          </button>
-        </div>
-      </section>
-
-      {/* ── Scroll reveal + animation CSS ─────────────────────────────────── */}
-      <style jsx>{`
-        .reveal-item {
-          opacity: 0;
-          transform: translateY(24px);
-          transition: opacity 0.7s ease, transform 0.7s ease;
-        }
-        .revealed .reveal-item,
-        .reveal-item.revealed {
-          opacity: 1;
-          transform: translateY(0);
-        }
-        @keyframes card-float {
-          0%   { transform: translateY(0) rotate(0deg); }
-          50%  { transform: translateY(-6px) rotate(0.5deg); }
-          100% { transform: translateY(0) rotate(-0.5deg); }
-        }
-      `}</style>
+        {/* Reveal animation */}
+        <style jsx>{`
+          .reveal-item {
+            opacity: 0;
+            transform: translateY(24px);
+            transition:
+              opacity 0.7s ease,
+              transform 0.7s ease;
+          }
+          .revealed .reveal-item,
+          .reveal-item.revealed {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        `}</style>
       </div>
     </>
   )

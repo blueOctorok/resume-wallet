@@ -1132,23 +1132,30 @@ button:disabled,
 
 .tab-bar {
   --duration: 0.55s;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
   display: flex;
-  position: relative;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   padding: 0 1.6em;
-  /* Safe area keeps the bar above Safari's URL bar chrome */
-  padding-bottom: env(safe-area-inset-bottom, 0.5em);
+  padding-bottom: env(safe-area-inset-bottom, 0.4em);
 }
 
 .tab-bar--light {
-  background-color: #ffffff;
-  box-shadow: 0 -1px 8px rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px) saturate(1.6);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  box-shadow: 0 -1px 12px rgba(0, 0, 0, 0.06);
 }
 
 .tab-bar--dark {
-  background-color: #1d1d27;
-  box-shadow: 0 -1px 8px rgba(0, 0, 0, 0.5);
+  background: rgba(29, 29, 39, 0.82);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  box-shadow: 0 -1px 12px rgba(0, 0, 0, 0.5);
 }
 
 /* ---- Individual tab item ---- */
@@ -1161,33 +1168,35 @@ button:disabled,
   flex-direction: column;
   cursor: pointer;
   position: relative;
-  border-radius: 50%;
   align-items: center;
   will-change: transform;
   justify-content: center;
-  padding: 0.4em 0 0.65em;
+  padding: 0.6em 0 0.5em;
   transition: transform var(--timeOut, var(--duration));
 }
 
-/* Colored circle behind the active icon */
+/* Colored circle behind the active icon + label */
 .tab-item::before {
   content: '';
   z-index: -1;
-  width: 3.2em;
-  height: 3.2em;
+  width: 3.4em;
+  height: 3.4em;
   border-radius: 50%;
   position: absolute;
-  top: -0.2em;
-  transform: scale(0);
+  /* Center on the icon+label combo: padding-top (0.6) + half the icon+gap+label
+     block (~1.3em) puts the midpoint at ~1.9em from the button top. */
+  left: 50%;
+  top: calc(0.6em + 1.3em);
+  transform: translate(-50%, -50%) scale(0);
   transition: background-color var(--duration), transform var(--duration);
 }
 
 .tab-item--active {
-  transform: translate3d(0, -0.65em, 0);
+  transform: translate3d(0, -0.7em, 0);
 }
 
 .tab-item--active::before {
-  transform: scale(1);
+  transform: translate(-50%, -50%) scale(1);
   background-color: var(--bgColorItem);
 }
 
@@ -1263,11 +1272,11 @@ button:disabled,
 }
 
 .tab-bar--light .tab-border {
-  background-color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.82);
 }
 
 .tab-bar--dark .tab-border {
-  background-color: #1d1d27;
+  background-color: rgba(29, 29, 39, 0.82);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -31,11 +31,11 @@ const ResumeBuilder = dynamic(
   }
 )
 
-const JobListings = dynamic(
-  () => import('@/components/JobListings').then((mod) => mod.default),
+const SimpleModeShell = dynamic(
+  () => import('@/components/simple/SimpleModeShell').then((mod) => mod.default),
   {
     ssr: false,
-    loading: () => <LoadingScreen message='Loading Jobs...' fullScreen={false} />,
+    loading: () => <LoadingScreen message='Loading jobs...' fullScreen={false} />,
   }
 )
 
@@ -115,12 +115,13 @@ export default function DeveloperShell({ userAddress }: DeveloperShellProps) {
     )
   }
 
+  /*
+   Unified job discovery — same SimpleModeShell as candidates and drivers.
+   Legacy `JobListings.tsx` deleted; this redirect keeps existing developer
+   navigation working.
+  */
   if (currentPage === 'jobs') {
-    return (
-      <div className='max-w-7xl mx-auto relative z-0'>
-        <JobListings onBack={goBack} userAddress={userAddress} />
-      </div>
-    )
+    return <SimpleModeShell />
   }
 
   if (currentPage === 'messages') {

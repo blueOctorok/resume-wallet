@@ -46,11 +46,15 @@ import ModeToggle from './ui/ModeToggle'
 import { useStormTokenBalance } from '@/hooks/use-storm-token-balance'
 
 // Define the navigation page type
+//
+// 'jobs' is no longer a navigable target from this component — guests use
+// `onBrowseGuided` instead, which flips the page-level guided-mode flag and
+// renders `SimpleModeShell`. The string lingers in `PageType` for legacy
+// shells (see `CandidateShell`'s redirect effect).
 type NavPage =
   | 'signin'
   | 'resume'
   | 'dotapp'
-  | 'jobs'
   | 'applications'
   | 'home'
   | 'hub'
@@ -67,6 +71,12 @@ interface NavigationProps {
   onTClick?: () => void
   /** Callback to switch user role */
   onSwitchRole?: () => void
+  /**
+   * Guests' "Browse jobs" button calls this instead of navigating to a route.
+   * page.tsx flips a `showGuidedMode` flag and renders `SimpleModeShell` for
+   * unauthenticated users — this is the Indeed-style lazy-auth entry point.
+   */
+  onBrowseGuided?: () => void
 }
 
 export default function Navigation({
@@ -79,6 +89,7 @@ export default function Navigation({
   tHasUnread = false,
   onTClick,
   onSwitchRole,
+  onBrowseGuided,
 }: NavigationProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isHubDropdownOpen, setIsHubDropdownOpen] = useState(false)
@@ -360,7 +371,9 @@ export default function Navigation({
                   <button
                     type='button'
                     onClick={() => {
-                      handleNavigation('jobs')
+                      // Guest entry into Guided Mode — page.tsx renders
+                      // SimpleModeShell with a null wallet, no signin required.
+                      onBrowseGuided?.()
                       setIsMenuOpen(false)
                     }}
                     className={cn('flex items-center gap-2 px-4 py-2', navTextLinkClass(isDark, 'teal', theme))}

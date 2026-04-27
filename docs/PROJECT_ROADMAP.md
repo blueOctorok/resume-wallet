@@ -1,5 +1,19 @@
 # Storm — Complete Project Roadmap
 
+## 🚪 **Guided Everywhere — homepage v2 + single job-discovery surface** (April 2026 — Done)
+
+**Product principle:** The homepage's job is to point at the product, not retell it. Once Guided Mode (`SimpleModeShell`) could handle a guest, there was no reason to keep two job-browsing surfaces — and a working product page that visitors can poke at converts better than any hero copy. Indeed-style lazy auth: browse free, sign in to act. See **`docs/CHANGES.md`** (Guided Everywhere — homepage v2, single job-discovery surface, lazy auth) for the full rationale.
+
+| Track | Status | Notes |
+|-------|--------|-------|
+| **Homepage rewrite — 5 sections, ~500 lines** | ✅ Done | Hero / Build Mode / Stormi / The Hub / Employers + Bottom CTA. Order matches user behavior: Build Mode anchors (lazy users live there), Hub is the graduation path, employers come last. Tone discipline: positive case only, no competitor name-drops, no "not a chatbot" framing. Cut: second `VaultShowcase`, problem band, standalone job-search band, icon row, `ava` references, standalone token band. (Down from 1,142 lines.) |
+| **Delete `JobListings.tsx`** | ✅ Done | Legacy 3-tab guest browser removed. Driver / Developer / Candidate shells now route `currentPage === 'jobs'` (or its equivalents) to `SimpleModeShell` instead. The `'jobs'` `PageType` string is retained for backward compatibility with notification deep-links and frozen legacy shells, but no route handler accepts it anymore. |
+| **Indeed-style lazy auth in `SimpleModeShell`** | ✅ Done | Guests browse the blended job feed, open jobs, and read postings without signing in. `SimpleCardPanel` shows a `GuestStormiHint` + career card teaser ("Your career card lives here. Sign in to start building it block by block."). `SimpleJobDetailPanel` gates apply / save → "Sign in to apply"; fit-coverage UI hides for guests (no card to compute against). `StormiNextStepCard` doesn't render for guests; the static hint carries the role. |
+| **Page-level guest routing** | ✅ Done | `page.tsx` introduces a transient `showGuidedMode` flag (Indeed-style). Navigation's guest "Browse jobs" button calls a new `onBrowseGuided` prop that flips the flag → `SimpleModeShell` renders directly with `walletAddress=null`. The flag auto-clears when a wallet connects, so authenticated users always follow the standard `useUIModeStore` flow. |
+| **Future: track guest → sign-in conversion** | 🔲 Future | Once analytics are wired, log "guest opened job → guest hit apply gate → guest signed in" funnel to validate the lazy-auth thesis. |
+
+---
+
 ## 🪞 **Career Card Lenses — one card, many framings** (April 2026 — Phases 1–4 Complete)
 
 **Product principle:** Blocks are the truth, lenses are the rendering. A user can tailor how their career card is framed per job without maintaining duplicate resumes — update a block once, every lens refreshes. Stormi picks the right lens silently by default; advanced users get full control without ever being forced into a flow. See **`docs/CHANGES.md`** (Career Card Lenses — one card, many framings) for the full rationale.

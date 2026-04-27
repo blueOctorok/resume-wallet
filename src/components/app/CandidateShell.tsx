@@ -27,7 +27,9 @@ const CANDIDATE_SHELL_PAGES: readonly PageType[] = [
   'mvr',
   'portfolio',
   'github',
-  'jobs',
+  // 'jobs' intentionally omitted — legacy nav targets get redirected to
+  // Guided Mode below (uiMode='simple' + clear page) so we have ONE
+  // job-discovery surface across the app.
   'hunt-desk',
   'applications',
   'stormchain',
@@ -58,11 +60,6 @@ const StormResumeBlock = dynamic(
 const EmploymentVerificationBlock = dynamic(
   () => import('@/components/blocks/EmploymentVerificationBlock'),
   { ssr: false, loading: () => <LoadingScreen message='Loading…' fullScreen={false} /> }
-)
-
-const JobListings = dynamic(
-  () => import('@/components/JobListings').then((mod) => mod.default),
-  { ssr: false, loading: () => <LoadingScreen message='Loading jobs...' fullScreen={false} /> }
 )
 
 const MyApplications = dynamic(
@@ -103,15 +100,27 @@ export default function CandidateShell() {
   const { currentPage, setCurrentPage, navigateToHub, initialThreadId, editingResumeId, setEditingResumeId } =
     useUIStore()
   const uiMode = useUIModeStore((s) => s.mode)
+  const setUiMode = useUIModeStore((s) => s.setMode)
 
   const unknownCandidatePage =
     currentPage !== null && !CANDIDATE_SHELL_PAGES.includes(currentPage)
 
+  /*
+   Legacy `'jobs'` redirect: old bookmarks, journey configs, hub explore links,
+   and Stormi tools all still navigate to `'jobs'`. We now have a single
+   job-discovery surface (Guided Mode), so when we see that target we flip into
+   simple mode AND clear the page so the SimpleModeShell renders.
+  */
   useEffect(() => {
+    if (currentPage === 'jobs') {
+      setUiMode('simple')
+      setCurrentPage(null)
+      return
+    }
     if (unknownCandidatePage) {
       setCurrentPage(null)
     }
-  }, [unknownCandidatePage, setCurrentPage])
+  }, [currentPage, unknownCandidatePage, setCurrentPage, setUiMode])
 
   const goBack = useCallback(() => {
     setEditingResumeId(undefined)
@@ -200,14 +209,6 @@ export default function CandidateShell() {
 
   if (currentPage === 'github') {
     return <GitHubPage userAddress={user?.address ?? ''} onBack={goBack} />
-  }
-
-  if (currentPage === 'jobs') {
-    return (
-      <div className='max-w-7xl mx-auto relative z-0'>
-        <JobListings onBack={goBack} userAddress={user?.address ?? null} />
-      </div>
-    )
   }
 
   if (currentPage === 'hunt-desk') {
