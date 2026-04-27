@@ -7,9 +7,9 @@
  *   - ≥ md: 3-column desktop grid (rail | job detail | card panel) that
  *     collapses to 2-column on smaller screens. iPad landscape fits the
  *     3-col layout naturally because md breakpoint hits at 768px.
- *   - Mobile/portrait (< md): job rail + detail stack; card lives in the
- *     swipe-up `SimpleCardSheet`. A `SimpleCardSliver` stays pinned so the
- *     card is always one tap away.
+ *   - Mobile/portrait (< md): full-height job rail; posting + career card
+ *     live in a tabbed `SimpleMobileSheet`. `SimpleCardSliver` opens the sheet
+ *     or jumps to Job / Your card.
  *
  * The selection pointer (`simple-mode-store`) is mirrored to `?selected=`
  * via `useSelectedJobSync` so shared links + browser-back work. The shell
@@ -29,7 +29,7 @@ import SimpleJobRail from './SimpleJobRail'
 import SimpleJobDetailPanel from './SimpleJobDetailPanel'
 import SimpleCardPanel from './SimpleCardPanel'
 import SimpleCardSliver from './SimpleCardSliver'
-import SimpleCardSheet from './SimpleCardSheet'
+import SimpleMobileSheet from './SimpleMobileSheet'
 
 const GRADUATE_BANNER_STEP = 'simple-graduate-banner-dismissed'
 const GRADUATE_BLOCK_THRESHOLD = 3
@@ -55,16 +55,17 @@ export default function SimpleModeShell() {
   useSelectedJobSync()
 
   const handleJobSelected = useCallback(() => {
-    // On mobile, nudge the sliver visible — parent already re-renders the
-    // detail panel so the user sees the job. The sheet stays closed until
-    // tapped — we don't want to spring the card over a user who's still
-    // reading the job description.
-  }, [])
+    // Mobile: rail is full-screen — open the sheet on the Job tab so they read
+    // the posting first. Desktop: no-op (inline panels already show everything).
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches) {
+      openCardSheet('job')
+    }
+  }, [openCardSheet])
 
   return (
     <div
       className={cn(
-        'w-full min-h-[calc(100vh-7rem)] px-3 sm:px-4 lg:px-6 py-4',
+        'flex w-full min-h-[calc(100vh-7rem)] flex-col px-3 sm:px-4 lg:px-6 py-4',
         isDark ? 'text-white' : 'text-slate-900',
       )}
     >
@@ -125,23 +126,14 @@ export default function SimpleModeShell() {
         </aside>
       </div>
 
-      {/* Mobile — stack detail above; rail compact at top */}
-      <div className='md:hidden flex flex-col gap-3 pb-24'>
-        <div className='h-[300px]'>
-          <SimpleJobRail userAddress={walletAddress ?? null} onJobSelected={handleJobSelected} />
-        </div>
-        <div className='min-h-[400px]'>
-          <SimpleJobDetailPanel
-            userAddress={walletAddress ?? null}
-            onOpenCardSheet={openCardSheet}
-          />
-        </div>
+      {/* Mobile — rail fills space under nav; job + card live in SimpleMobileSheet */}
+      <div className='flex min-h-0 flex-1 flex-col pb-24 md:hidden'>
+        <SimpleJobRail userAddress={walletAddress ?? null} onJobSelected={handleJobSelected} />
       </div>
 
-      {/* Sliver + sheet cover anything below `lg` — the sliver itself handles
-          the breakpoint via `lg:hidden`, so iPad portrait + phones both get it. */}
-      <SimpleCardSliver onOpen={openCardSheet} />
-      <SimpleCardSheet open={isCardSheetOpen} onClose={closeCardSheet} />
+      {/* Sliver + sheet below `lg` — iPad portrait + phones */}
+      <SimpleCardSliver />
+      <SimpleMobileSheet open={isCardSheetOpen} onClose={closeCardSheet} />
     </div>
   )
 }

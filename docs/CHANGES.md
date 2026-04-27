@@ -81,6 +81,14 @@ Second lesson: **server-side projection is how you ship a feature once and get i
 - **`SimpleModeShell.tsx`**: Desktop grid gives the **selected job** column more width (`minmax(0,1.4fr)`); rail `min-w-0`; slightly tighter gaps.
 - **`SimpleJobDetailPanel.tsx`**: Posting body uses **comfortable line length** (`max-w-[72ch]`) and **larger line-height** (`text-base` / `leading-[1.7]`); title scales up on `lg`; empty state copy explains rail → center column flow.
 
+### Mobile — rail-first + tabbed bottom sheet (April 2026)
+- **Problem:** On iPhone, the old stack (`h-[300px]` rail + job detail below) showed ~1 job at a time after the search form.
+- **Fix:** Below `md`, the **job rail fills the viewport** (`flex-1` under a flex column shell). **Job detail + career card** move into **`SimpleMobileSheet`** — a `90vh` bottom sheet with **Job** / **Your card** tabs (`Button` tab strip). Tapping a job opens the sheet on the **Job** tab (`openCardSheet('job')` from `handleJobSelected`).
+- **`SimpleCardSheet.tsx` removed** — replaced by [`SimpleMobileSheet.tsx`](src/components/simple/SimpleMobileSheet.tsx) (tabbed; renders `SimpleJobDetailPanel` + `SimpleCardPanel`).
+- **`SimpleCardSliver.tsx`**: No props — reads `openCardSheet` from store. **No job:** read-only hint. **Job selected:** main tap opens sheet (last tab); **Job** / **Card** shortcut buttons call `openCardSheet('job'|'card')`.
+- **`simple-mode-store.ts`**: `mobileSheetTab: 'job' | 'card'`, `setMobileSheetTab`, `openCardSheet(tab?)`, `clearSelection` also closes the sheet and resets tab.
+- **`SimpleJobDetailPanel.tsx`**: Removed `onOpenCardSheet` / "Open my card" (tabs replace that affordance).
+
 ---
 
 ## **Simple Mode — Stormi-led UX + hub container consistency** (April 2026)
@@ -139,11 +147,11 @@ The hub is powerful but overwhelming for the ~80% of users who just want a quick
 - **`src/components/app/CandidateShell.tsx`** — Branches on mode + flag to render `SimpleModeShell` or `CandidateHub`.
 
 **Phase 1 — SimpleModeShell layout**
-- **`src/components/simple/SimpleModeShell.tsx`** — 3-column grid at `lg+`, 2-col at `md`, stacked on mobile. Card panel lives in `SimpleCardSliver` + `SimpleCardSheet` on smaller viewports.
+- **`src/components/simple/SimpleModeShell.tsx`** — 3-column grid at `lg+`, 2-col at `md`; below `md` full-height rail + `SimpleCardSliver` + tabbed `SimpleMobileSheet`.
 - **`src/stores/simple-mode-store.ts`** — Ephemeral `selectedJobSnapshot` + `isCardSheetOpen`; see Phase 5 for filter additions.
 - **`src/hooks/use-job-search.ts`** — Extracted from `JobListings` so the rail and legacy list share one normalized `JobListing` shape + AbortController cancellation.
 - **`src/hooks/use-selected-job-sync.ts`** — Mirrors selection to `?selected=…&source=…` so sharing / back-button work.
-- **`src/components/simple/SimpleJobRail.tsx`**, **`SimpleJobDetailPanel.tsx`**, **`SimpleCardPanel.tsx`**, **`SimpleCardSliver.tsx`**, **`SimpleCardSheet.tsx`** — The four panels + mobile sheet chrome.
+- **`src/components/simple/SimpleJobRail.tsx`**, **`SimpleJobDetailPanel.tsx`**, **`SimpleCardPanel.tsx`**, **`SimpleCardSliver.tsx`**, **`SimpleMobileSheet.tsx`** — Panels + mobile sheet chrome.
 
 **Phase 2 — Contextual projected card**
 - **`src/lib/job-fit.ts`** — Deterministic `computeJobFit`: requirements coverage %, matched / missing, recommended blocks, `toneBand` (confident / coach / mentor / redirect). Scoring is deterministic by design — LLMs extract structured requirements but never pick the number.

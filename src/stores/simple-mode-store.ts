@@ -54,12 +54,17 @@ export const DEFAULT_FILTERS: SimpleJobFilters = {
   remoteOnly: false,
 }
 
+/** Which pane is visible inside the mobile bottom sheet (job detail vs career card). */
+export type MobileGuidedSheetTab = 'job' | 'card'
+
 interface SimpleModeState {
   selectedJobId: string | null
   selectedJobSource: JobSource | null
   selectedJobSnapshot: SelectedJobSnapshot | null
   /** True when the mobile swipe-up card sheet is open. Desktop ignores this. */
   isCardSheetOpen: boolean
+  /** Active tab inside the mobile sheet — job posting vs your card. */
+  mobileSheetTab: MobileGuidedSheetTab
   filters: SimpleJobFilters
   /**
    * Which lens is currently projected over the user's card. `null` = the
@@ -83,8 +88,10 @@ interface SimpleModeState {
 interface SimpleModeActions {
   setSelection: (snapshot: SelectedJobSnapshot | null) => void
   clearSelection: () => void
-  openCardSheet: () => void
+  /** Pass a tab to switch when opening (e.g. after picking a job → `'job'`). Omit to keep the current tab. */
+  openCardSheet: (tab?: MobileGuidedSheetTab) => void
   closeCardSheet: () => void
+  setMobileSheetTab: (tab: MobileGuidedSheetTab) => void
   setFilter: <K extends keyof SimpleJobFilters>(key: K, value: SimpleJobFilters[K]) => void
   resetFilters: () => void
   /** User-initiated lens change. Marks overrideAutoPick so auto-pick backs off. */
@@ -98,6 +105,7 @@ export const useSimpleModeStore = create<SimpleModeState & SimpleModeActions>((s
   selectedJobSource: null,
   selectedJobSnapshot: null,
   isCardSheetOpen: false,
+  mobileSheetTab: 'job',
   filters: DEFAULT_FILTERS,
   activeLensId: null,
   lastAutoPickedLensId: null,
@@ -115,10 +123,23 @@ export const useSimpleModeStore = create<SimpleModeState & SimpleModeActions>((s
     })),
 
   clearSelection: () =>
-    set({ selectedJobId: null, selectedJobSource: null, selectedJobSnapshot: null }),
+    set({
+      selectedJobId: null,
+      selectedJobSource: null,
+      selectedJobSnapshot: null,
+      isCardSheetOpen: false,
+      mobileSheetTab: 'job',
+    }),
 
-  openCardSheet: () => set({ isCardSheetOpen: true }),
+  openCardSheet: (tab) =>
+    set({
+      isCardSheetOpen: true,
+      ...(tab !== undefined ? { mobileSheetTab: tab } : {}),
+    }),
+
   closeCardSheet: () => set({ isCardSheetOpen: false }),
+
+  setMobileSheetTab: (tab) => set({ mobileSheetTab: tab }),
 
   setFilter: (key, value) =>
     set((state) => ({ filters: { ...state.filters, [key]: value } })),

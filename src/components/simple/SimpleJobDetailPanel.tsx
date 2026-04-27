@@ -1,9 +1,9 @@
 'use client'
 
 /**
- * SimpleJobDetailPanel — rendered on the left (wide/desktop) as the selected
- * job's full description. On mobile it's the "job full-screen" body and the
- * sliver bar sits below it.
+ * SimpleJobDetailPanel — center column on desktop (`md+`). On phones the same
+ * component renders inside `SimpleMobileSheet` on the **Job** tab (full-height
+ * rail stays behind the sheet for search + results).
  *
  * Intentionally read-only for copy: no stats, no filters — just the info a
  * user needs to decide "is this me?" plus an Apply affordance. Fit scoring
@@ -34,8 +34,6 @@ const APPLY_COVERAGE_THRESHOLD = 50
 
 interface SimpleJobDetailPanelProps {
   userAddress: string | null
-  /** Open the mobile card sheet from inline CTAs. Desktop ignores this. */
-  onOpenCardSheet?: () => void
 }
 
 function stripHtml(html: string): string {
@@ -60,10 +58,7 @@ function toApplyModalJob(snap: SelectedJobSnapshot) {
   }
 }
 
-export default function SimpleJobDetailPanel({
-  userAddress,
-  onOpenCardSheet,
-}: SimpleJobDetailPanelProps) {
+export default function SimpleJobDetailPanel({ userAddress }: SimpleJobDetailPanelProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const snap = useSimpleModeStore((s) => s.selectedJobSnapshot)
@@ -131,7 +126,7 @@ export default function SimpleJobDetailPanel({
             Pick a job
           </p>
           <p className={cn('text-xs leading-relaxed', isDark ? 'text-gray-500' : 'text-slate-500')}>
-            Choose one from the list — it opens here while your career card updates on the right.
+            Choose one from the list — your career card updates for whatever you target.
           </p>
         </div>
       </HubSectionPanel>
@@ -292,16 +287,6 @@ export default function SimpleJobDetailPanel({
           isDark ? 'border-gray-700/60' : 'border-slate-200',
         )}
       >
-        {onOpenCardSheet && (
-          <Button
-            variant='secondary'
-            size='sm'
-            onClick={onOpenCardSheet}
-            className='md:hidden flex-1'
-          >
-            Open my card
-          </Button>
-        )}
         {snap.isStormChain ? (
           <div className='flex flex-col gap-1 flex-1 min-w-0'>
             <Button
