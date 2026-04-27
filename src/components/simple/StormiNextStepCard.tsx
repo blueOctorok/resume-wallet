@@ -3,36 +3,34 @@
 /**
  * StormiNextStepCard — Stormi's proactive "do this next" card.
  *
- * Simple Mode uses Stormi as a coach, not a chat toy. This card reads the
- * live `fit` result and picks ONE concrete action for the user. Once they
- * take it, the parent re-renders and the card proposes the next step.
+ * In Guided Mode, Stormi is a coach — not a chatbot. This card reads the
+ * live `fit` result and picks ONE concrete action. Once the user takes it,
+ * the parent re-renders and the card proposes the next step. There is no
+ * free-form chat in Guided Mode; deeper exploration happens in Workspace.
  *
  * Copy branches on:
- *   - No job selected
- *   - Empty hub (zero blocks) + job selected
- *   - `toneBand === 'redirect'` → offer alternate jobs (opens chat preset)
- *   - Missing block + fit < apply threshold → install the biggest gap
- *   - Fit ≥ apply threshold → apply now (+ optional polish)
- *
- * The card itself is presentational — the parent wires side effects (open
- * picker, open apply modal, expand chat with preset).
+ *   - No job selected → nudge to pick one
+ *   - Empty hub (zero blocks) + job selected → start with a resume
+ *   - No lens clears apply threshold → offer lens draft
+ *   - `toneBand === 'redirect'` → suggest picking a better-fit job
+ *   - Missing block → install the biggest gap
+ *   - Fit ≥ 80% → apply now
+ *   - Fallback → nudge to Workspace for deeper Stormi help
  */
 
 import { useMemo } from 'react'
-import { ArrowRight, CheckCircle2, Compass, ExternalLink, Eye, Loader2, Plus, Sparkles } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Compass, ExternalLink, Eye, LayoutDashboard, Loader2, Plus, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import Button from '@/components/ui/Button'
 import type { JobFitResult, PickBestLensResult } from '@/lib/job-fit'
 import type { SelectedJobSnapshot } from '@/stores/simple-mode-store'
 
-/** Match the threshold used in `SimpleJobDetailPanel` so the card and the apply button agree. */
 const APPLY_COVERAGE_THRESHOLD = 50
 
 /**
  * If the best existing lens beats the second-best by < this much, Stormi
- * offers a secondary "tailor a lens" link. Small margin = the current pick
- * wasn't decisive enough to feel bespoke for this role.
+ * offers a secondary "tailor a lens" link.
  */
 const LENS_DRAFT_MARGIN_THRESHOLD = 10
 
@@ -40,25 +38,16 @@ export interface StormiNextStepCardProps {
   snap: SelectedJobSnapshot | null
   fit: JobFitResult | null
   installedCount: number
-  /** Open the block picker modal (hub store). */
   onAddBlock: (blockId?: string) => void
-  /** Fire the apply flow. StormChain opens the modal; Adzuna opens the redirect URL. */
   onApply: () => void
-  /**
-   * Expand the chat drawer with a preset message. `null` = open without presetting
-   * so the user types their own. A preset string asks Stormi to act directly.
-   */
-  onAskStormi: (presetMessage: string | null) => void
-  /** Career-Card-Lenses — evaluation of the user's lenses against this job. */
+  /** Switch to Workspace mode for deeper Stormi help. */
+  onGoToWorkspace: () => void
   lensPick?: PickBestLensResult | null
-  /** Request a Stormi-drafted lens for the currently-selected job. */
   onDraftLens?: () => void
-  /** True while `/api/ai/draft-lens` is in flight so the CTA can show a spinner. */
   isDraftingLens?: boolean
 }
 
 interface NextStep {
-  /** Icon rendered in the rail-style accent tile. */
   icon: typeof Plus
   eyebrow: string
   title: string
@@ -73,7 +62,7 @@ export default function StormiNextStepCard({
   installedCount,
   onAddBlock,
   onApply,
-  onAskStormi,
+  onGoToWorkspace,
   lensPick,
   onDraftLens,
   isDraftingLens = false,
@@ -82,21 +71,18 @@ export default function StormiNextStepCard({
   const isDark = theme === 'dark'
 
   const step: NextStep = useMemo(() => {
-    // No job picked — the rail is the action. Card nudges to that.
+    // No job picked — the rail is the action.
     if (!snap || !fit) {
       return {
         icon: Compass,
         eyebrow: 'Start here',
-        title: 'Pick a job and I\u2019ll build your card around it',
+        title: 'Pick a job from the list',
         body: 'Choose something you actually want. I\u2019ll map the exact blocks and credentials that role asks for.',
-        primary: { label: 'Ask me for ideas', onClick: () => onAskStormi('What kinds of jobs fit what I have today?'), variant: 'secondary' },
+        primary: { label: 'Browse jobs \u2190', onClick: () => {}, variant: 'secondary' },
       }
     }
 
-    // Lens escape hatch #1: no lens clears a minimal coverage floor. Draft
-    // one before pushing more blocks or redirect — it's the smallest work
-    // with the biggest coverage jump when the user already has the pieces
-    // but in the wrong framing.
+    // No lens clears a minimal coverage floor — draft one before pushing blocks.
     if (
       onDraftLens &&
       lensPick &&
@@ -108,44 +94,38 @@ export default function StormiNextStepCard({
         icon: Eye,
         eyebrow: 'Reframe',
         title: 'Let me tailor a lens for this role',
-        body: `None of your lenses clear ${APPLY_COVERAGE_THRESHOLD}% for "${snap.title}". I can reshape what your card emphasizes for this job — your blocks stay untouched.`,
+        body: `None of your lenses clear ${APPLY_COVERAGE_THRESHOLD}% for \u201c${snap.title}\u201d. I can reshape what your card emphasizes \u2014 your blocks stay untouched.`,
         primary: {
           label: isDraftingLens ? 'Drafting\u2026' : 'Tailor a lens',
-          onClick: () => {
-            if (!isDraftingLens) onDraftLens()
-          },
+          onClick: () => { if (!isDraftingLens) onDraftLens() },
         },
       }
     }
 
-    // Fresh hub — the universal first step is a resume.
+    // Fresh hub — universal first step is a resume.
     if (installedCount === 0) {
       return {
         icon: Plus,
         eyebrow: 'Do this next',
         title: 'Start with a STORM resume',
-        body: `Almost every role wants one \u2014 adding it is your first ~30% of coverage for "${snap.title}" and unlocks Career Card sharing.`,
+        body: `Almost every role wants one \u2014 adding it is your first ~30% of coverage for \u201c${snap.title}\u201d.`,
         primary: { label: 'Add STORM Resume', onClick: () => onAddBlock('storm-resume') },
       }
     }
 
-    // Low-fit stretch — redirect to closer jobs instead of pushing blocks.
+    // Low-fit stretch — suggest picking a better-fit job instead of grinding blocks.
     if (fit.toneBand === 'redirect') {
       return {
         icon: Compass,
         eyebrow: 'Honest take',
         title: 'This one\u2019s a stretch right now',
-        body: `Your card is only ${fit.score}% coverage for "${snap.title}". I can find closer fits that actually match what you\u2019ve built.`,
-        primary: {
-          label: 'Show closer jobs',
-          onClick: () =>
-            onAskStormi(`Suggest jobs that are a better match for my current blocks than "${snap.title}".`),
-        },
-        secondary: { label: 'I still want to try', onClick: () => onAskStormi(null) },
+        body: `Your card is only ${fit.score}% coverage for \u201c${snap.title}\u201d. Try picking a role that\u2019s closer to what you\u2019ve built \u2014 or switch to Workspace for deeper Stormi help.`,
+        primary: { label: 'Pick a closer fit \u2190', onClick: () => {}, variant: 'secondary' },
+        secondary: { label: 'Go to Workspace', onClick: onGoToWorkspace },
       }
     }
 
-    // Ready to apply — one primary action, polish as optional.
+    // Ready to apply.
     if (fit.score >= APPLY_COVERAGE_THRESHOLD && fit.score >= 80) {
       const polish = fit.missingRequirements[0]
       return {
@@ -153,7 +133,7 @@ export default function StormiNextStepCard({
         eyebrow: 'You\u2019re ready',
         title: `${fit.score}% coverage \u2014 apply now`,
         body: polish
-          ? `Strong match for ${snap.title}. You can apply today, or polish first by adding ${polish.label.toLowerCase()}.`
+          ? `Strong match for ${snap.title}. You can apply today, or polish by adding ${polish.label.toLowerCase()}.`
           : `Strong match for ${snap.title}. Go send it.`,
         primary: {
           label: snap.isStormChain ? 'Apply with career card' : 'Open employer site',
@@ -165,14 +145,10 @@ export default function StormiNextStepCard({
       }
     }
 
-    // Just above the apply line but still closing gaps — lead with the missing block.
+    // Just above the apply line — lead with the missing block.
     const nextBlock = fit.recommendedBlocks[0]
     if (nextBlock) {
       const crossesThreshold = fit.score < APPLY_COVERAGE_THRESHOLD
-      // Lens escape hatch #2: current lens didn't beat the runner-up by much,
-      // which usually means no existing framing is really "for" this job. Add
-      // a soft secondary — never the primary — so Stormi's block nudge stays
-      // the main action.
       const shouldOfferDraft = Boolean(
         onDraftLens &&
           lensPick &&
@@ -185,59 +161,63 @@ export default function StormiNextStepCard({
         eyebrow: 'Do this next',
         title: `Add ${nextBlock.label}`,
         body: crossesThreshold
-          ? `This pushes you past the ${APPLY_COVERAGE_THRESHOLD}% apply line for "${snap.title}".`
-          : `Biggest single gap for "${snap.title}" \u2014 closes about ${Math.max(5, Math.round(100 / (fit.missingRequirements.length || 1)))} points.`,
+          ? `This pushes you past the ${APPLY_COVERAGE_THRESHOLD}% apply line for \u201c${snap.title}\u201d.`
+          : `Biggest single gap for \u201c${snap.title}\u201d \u2014 closes about ${Math.max(5, Math.round(100 / (fit.missingRequirements.length || 1)))} points.`,
         primary: { label: `Add ${nextBlock.label}`, onClick: () => onAddBlock(nextBlock.id) },
         secondary: shouldOfferDraft
           ? {
-              label: isDraftingLens ? 'Drafting lens\u2026' : 'Let Stormi tailor a lens',
-              onClick: () => {
-                if (!isDraftingLens && onDraftLens) onDraftLens()
-              },
+              label: isDraftingLens ? 'Drafting lens\u2026' : 'Tailor a lens instead',
+              onClick: () => { if (!isDraftingLens && onDraftLens) onDraftLens() },
             }
-          : { label: 'Ask Stormi why', onClick: () => onAskStormi(`Why does adding ${nextBlock.label} help me for ${snap.title}?`) },
+          : undefined,
       }
     }
 
-    // Fallback — job selected, blocks installed, nothing specific missing from heuristic.
-    // Steer toward applying or asking Stormi for a deeper review.
+    // Fallback — nothing obvious missing from heuristic. Nudge to Workspace
+    // where Stormi chat can do a deeper review.
     return {
       icon: Sparkles,
       eyebrow: 'Next move',
-      title: `${fit.score}% coverage \u2014 what now?`,
-      body: `I don\u2019t see an obvious missing block for "${snap.title}". Want me to review your card and suggest the smartest polish?`,
+      title: `${fit.score}% coverage \u2014 looking good`,
+      body: `I don\u2019t see an obvious gap for \u201c${snap.title}\u201d. Switch to Workspace where I can do a deeper card review.`,
       primary: {
-        label: 'Review my card',
-        onClick: () => onAskStormi(`Review my career card for "${snap.title}" and suggest the smartest polish.`),
+        label: snap.isStormChain || snap.redirectUrl
+          ? (snap.isStormChain ? 'Apply with career card' : 'Open employer site')
+          : 'Go to Workspace',
+        onClick: snap.isStormChain || snap.redirectUrl ? onApply : onGoToWorkspace,
       },
       secondary: snap.isStormChain || snap.redirectUrl
-        ? {
-            label: snap.isStormChain ? 'Apply with career card' : 'Open employer site',
-            onClick: onApply,
-          }
+        ? { label: 'Go to Workspace', onClick: onGoToWorkspace }
         : undefined,
     }
-  }, [snap, fit, installedCount, onAddBlock, onApply, onAskStormi, lensPick, onDraftLens, isDraftingLens])
+  }, [snap, fit, installedCount, onAddBlock, onApply, onGoToWorkspace, lensPick, onDraftLens, isDraftingLens])
 
   const Icon = step.icon
 
   return (
-    <div className='flex flex-col gap-3'>
-      <div className='flex items-start gap-3'>
+    <div
+      className={cn(
+        'flex flex-col gap-2 rounded-xl border px-3 py-2.5',
+        isDark
+          ? 'border-violet-400/20 bg-violet-500/5'
+          : 'border-violet-200/60 bg-violet-50/40 shadow-sm',
+      )}
+    >
+      <div className='flex items-start gap-2'>
         <div
           className={cn(
-            'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl',
+            'mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg',
             isDark
               ? 'bg-violet-500/15 text-violet-200 ring-1 ring-violet-400/30'
               : 'bg-violet-50 text-violet-700 ring-1 ring-violet-200',
           )}
         >
-          <Icon className='h-4 w-4' />
+          <Icon className='size-3' />
         </div>
         <div className='min-w-0 flex-1'>
           <p
             className={cn(
-              'text-[10px] font-bold uppercase tracking-wider mb-0.5',
+              'text-[9px] font-bold uppercase tracking-wider',
               isDark ? 'text-violet-300/80' : 'text-violet-600',
             )}
           >
@@ -245,7 +225,7 @@ export default function StormiNextStepCard({
           </p>
           <p
             className={cn(
-              'text-sm font-semibold leading-snug',
+              'text-[13px] font-semibold leading-snug',
               isDark ? 'text-white' : 'text-slate-900',
             )}
           >
@@ -253,7 +233,7 @@ export default function StormiNextStepCard({
           </p>
           <p
             className={cn(
-              'mt-1 text-xs leading-relaxed',
+              'mt-0.5 text-[11px] leading-relaxed',
               isDark ? 'text-gray-300' : 'text-slate-600',
             )}
           >
@@ -261,20 +241,20 @@ export default function StormiNextStepCard({
           </p>
         </div>
       </div>
-      <div className='flex flex-wrap gap-2 pl-12'>
+      <div className='flex flex-wrap items-center gap-1.5 pl-8'>
         <Button
           variant={step.primary.variant ?? 'primary'}
           size='sm'
           onClick={step.primary.onClick}
-          className='gap-1'
+          className='gap-1 !px-2.5 !py-1 !text-xs'
           disabled={isDraftingLens && step.primary.label.toLowerCase().startsWith('drafting')}
         >
           {isDraftingLens && step.primary.label.toLowerCase().startsWith('drafting') ? (
-            <Loader2 className='w-3.5 h-3.5 animate-spin' />
+            <Loader2 className='size-3 animate-spin' />
           ) : null}
           {step.primary.label}
           {!(isDraftingLens && step.primary.label.toLowerCase().startsWith('drafting')) && (
-            <ArrowRight className='w-3.5 h-3.5' />
+            <ArrowRight className='size-3' />
           )}
         </Button>
         {step.secondary && (
@@ -282,19 +262,20 @@ export default function StormiNextStepCard({
             variant='ghost'
             size='sm'
             onClick={step.secondary.onClick}
+            className='!px-2 !py-1 !text-[11px]'
             disabled={isDraftingLens && step.secondary.label.toLowerCase().startsWith('drafting')}
           >
             {isDraftingLens && step.secondary.label.toLowerCase().startsWith('drafting') ? (
-              <Loader2 className='w-3.5 h-3.5 animate-spin mr-1 inline' />
+              <Loader2 className='size-3 animate-spin mr-0.5 inline' />
             ) : null}
+            {step.secondary.label === 'Go to Workspace' && <LayoutDashboard className='mr-0.5 size-3 inline' />}
             {step.secondary.label}
           </Button>
         )}
-        {/* External-site apply icon hint for Adzuna at ≥80% */}
         {step.primary.label === 'Open employer site' && (
           <ExternalLink
             aria-hidden
-            className={cn('w-3.5 h-3.5 self-center', isDark ? 'text-gray-500' : 'text-slate-400')}
+            className={cn('size-3 self-center', isDark ? 'text-gray-500' : 'text-slate-400')}
           />
         )}
       </div>

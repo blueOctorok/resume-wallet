@@ -404,25 +404,11 @@ export default function Navigation({
                 </button>
               )}
 
-              {/* Hub row — candidates: below xl, two bands (tools | STORM) then My Hub full width so
-                  Guided/Workspace never shares a horizontal lane with My Hub. xl+: one row grid. */}
+              {/* Hub row — flex-wrap so items flow naturally; My Hub stays centered via
+                  auto margins, and the row wraps cleanly at narrow widths instead of overlapping. */}
               {userRole && isAuthenticated && (
-                <div
-                  className={cn(
-                    'relative z-[100] w-full',
-                    userRole === 'candidate'
-                      ? 'grid grid-cols-2 gap-x-4 gap-y-3 xl:grid-cols-[minmax(min-content,1fr)_auto_minmax(0,1fr)] xl:items-center xl:gap-x-10 xl:gap-y-0'
-                      : 'flex flex-col gap-4 sm:grid sm:grid-cols-[minmax(min-content,1fr)_auto_minmax(0,1fr)] sm:items-center sm:gap-x-6 lg:gap-x-10 sm:gap-y-0',
-                  )}
-                >
-                  <div
-                    className={cn(
-                      'flex w-full items-center justify-start gap-3',
-                      userRole === 'candidate'
-                        ? 'col-start-1 row-start-1 min-w-0 justify-self-start xl:pr-2'
-                        : 'min-w-0 sm:min-w-min sm:justify-self-start sm:pr-2',
-                    )}
-                  >
+                <div className='relative z-[100] flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-3'>
+                  <div className='flex shrink-0 items-center gap-3'>
                     {userRole === 'candidate' && walletAddress ? (
                       <div className={cn(navHubGradientRingClass(theme), 'shrink-0')}>
                         <button
@@ -453,12 +439,7 @@ export default function Navigation({
 
                   <div
                     ref={hubDropdownRef}
-                    className={cn(
-                      'relative z-[110] flex w-full shrink-0 justify-center sm:w-auto',
-                      userRole === 'candidate'
-                        ? 'col-span-2 row-start-2 xl:col-span-1 xl:col-start-2 xl:row-start-1 xl:w-auto xl:justify-self-center'
-                        : 'sm:justify-self-center',
-                    )}
+                    className='relative z-[110] flex shrink-0 justify-center'
                   >
                     <div className={navHubGradientRingClass(theme)}>
                       <button
@@ -589,14 +570,7 @@ export default function Navigation({
                     )}
                   </div>
 
-                  <div
-                    className={cn(
-                      'flex w-full min-w-0 items-center justify-end gap-3',
-                      userRole === 'candidate'
-                        ? 'col-start-2 row-start-1 justify-self-end xl:col-start-3 xl:justify-self-end xl:pl-1'
-                        : 'sm:justify-self-end sm:pl-1',
-                    )}
-                  >
+                  <div className='flex shrink-0 items-center gap-3'>
                     {userRole && (
                       <button
                         type='button'

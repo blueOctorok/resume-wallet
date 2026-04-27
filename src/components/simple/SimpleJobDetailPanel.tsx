@@ -116,22 +116,22 @@ export default function SimpleJobDetailPanel({
         isDark={isDark}
         accent='sky'
         className='h-full'
-        contentClassName='h-full flex items-center justify-center p-8 text-center'
+        contentClassName='flex h-full items-center justify-center !p-6 text-center sm:!p-8'
       >
-        <div className='max-w-xs'>
+        <div className='max-w-[18rem]'>
           <Briefcase
-            className={cn('w-8 h-8 mx-auto mb-3', isDark ? 'text-gray-600' : 'text-slate-300')}
+            className={cn('mx-auto mb-2 size-7', isDark ? 'text-gray-600' : 'text-slate-300')}
           />
           <p
             className={cn(
-              'text-sm font-semibold mb-1',
+              'mb-0.5 text-sm font-semibold',
               isDark ? 'text-gray-300' : 'text-slate-700',
             )}
           >
-            Pick a job to get started
+            Pick a job
           </p>
-          <p className={cn('text-xs', isDark ? 'text-gray-500' : 'text-slate-500')}>
-            Stormi builds your career card around what you&apos;re targeting.
+          <p className={cn('text-xs leading-relaxed', isDark ? 'text-gray-500' : 'text-slate-500')}>
+            Choose one from the list — it opens here while your career card updates on the right.
           </p>
         </div>
       </HubSectionPanel>
@@ -146,12 +146,12 @@ export default function SimpleJobDetailPanel({
       isDark={isDark}
       accent='sky'
       className='h-full'
-      contentClassName='h-full min-h-0 flex flex-col'
+      contentClassName='flex h-full min-h-0 flex-col !p-4 sm:!p-5'
     >
-      {/* Header */}
+      {/* Header — high contrast for quick scanning */}
       <div
         className={cn(
-          'pb-4 mb-3 border-b',
+          'mb-2 border-b pb-3',
           isDark ? 'border-gray-700/60' : 'border-slate-200',
         )}
       >
@@ -159,7 +159,7 @@ export default function SimpleJobDetailPanel({
           <div className='min-w-0 flex-1'>
             <h2
               className={cn(
-                'text-xl sm:text-2xl font-bold leading-tight',
+                'text-xl font-bold leading-snug tracking-tight sm:text-2xl lg:text-[1.65rem] lg:leading-tight',
                 isDark ? 'text-white' : 'text-slate-900',
               )}
             >
@@ -167,8 +167,8 @@ export default function SimpleJobDetailPanel({
             </h2>
             <div
               className={cn(
-                'mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm',
-                isDark ? 'text-gray-400' : 'text-slate-600',
+                'mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:text-[0.9375rem]',
+                isDark ? 'text-gray-300' : 'text-slate-600',
               )}
             >
               <span className='inline-flex items-center gap-1'>
@@ -220,7 +220,7 @@ export default function SimpleJobDetailPanel({
             </div>
           ) : (
             <p className={cn('text-xs', isDark ? 'text-amber-200/90' : 'text-amber-800')}>
-              This one&apos;s a stretch for your card right now — Stormi can suggest closer fits in chat.
+              This one&apos;s a stretch for your card right now — try picking a role closer to what you&apos;ve built.
             </p>
           )}
           <button
@@ -271,22 +271,24 @@ export default function SimpleJobDetailPanel({
         </div>
       </div>
 
-      {/* Description */}
-      <div className='flex-1 min-h-0 overflow-y-auto scrollbar-none'>
-        <p
-          className={cn(
-            'text-sm whitespace-pre-wrap leading-relaxed',
-            isDark ? 'text-gray-300' : 'text-slate-700',
-          )}
-        >
-          {snap.description ? stripHtml(snap.description) : 'No description provided.'}
-        </p>
+      {/* Description — comfortable measure for long postings */}
+      <div className='scrollbar-none min-h-0 flex-1 overflow-y-auto pt-1'>
+        <div className='max-w-[72ch]'>
+          <p
+            className={cn(
+              'whitespace-pre-wrap text-[0.9375rem] leading-[1.65] sm:text-base sm:leading-[1.7]',
+              isDark ? 'text-gray-200' : 'text-slate-800',
+            )}
+          >
+            {snap.description ? stripHtml(snap.description) : 'No description provided.'}
+          </p>
+        </div>
       </div>
 
       {/* Action bar */}
       <div
         className={cn(
-          'pt-3 mt-3 border-t flex items-center gap-2',
+          'mt-2 flex items-center gap-2 border-t pt-3',
           isDark ? 'border-gray-700/60' : 'border-slate-200',
         )}
       >

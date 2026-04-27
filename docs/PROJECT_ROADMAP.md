@@ -29,6 +29,8 @@
 | **P5 — Adzuna taming** | ✅ Done | Filter chips (salary floor / job type / remote) in `simple-mode-store`; server cap `MAX_RESULTS_PER_PAGE=30`; `salary_min` + `job_type` passthrough; first-run empty state w/ trending shortcuts |
 | **P6 — Graduation + polish** | ✅ Done | Graduation banner (≥3 blocks); `showStormiWalkthrough` gated on `!isSimpleModeEnabled()`; `ModeToggle` flips chrome without navigation |
 | **P7 — Stormi-led UX + chrome consistency** | ✅ Done | `StormiNextStepCard` (proactive "do this next"); reworked `SimpleCardPanel` (Stormi top / card middle / collapsed chat bottom); all Simple Mode surfaces now on `HubSectionPanel + BlockCard variant='embed'`; `ui-components.mdc` "In-App Panels" rule promoted to top-level |
+| **Split layout polish + right-col overhaul** | ✅ Done | Stormi → compact inline strip; career card rendered directly (no wrapper); right column widened; rail denser; job detail readable type + `max-w-[72ch]` (`CHANGES.md` — Guided mode right-column overhaul) |
+| **Remove chat from Guided Mode** | ✅ Done | Stormi chat (collapsed bar + drawer + `StormiChatPanel`) removed entirely from `SimpleCardPanel`. `StormiNextStepCard` branches now route to Workspace for deeper help instead of opening a chat. Clear separation: Guided = coach-driven, Workspace = self-directed |
 | **Homepage split-view demo** | 🔲 Next | Static preview of Guided mode on the unauthenticated landing page — own design pass |
 | **Score telemetry** | 🔲 Future | Track fit-score → apply-conversion to tune the `matched / missing` vocabulary |
 
@@ -64,6 +66,7 @@
 | Obvious **Refresh hub** control | ✅ Done | **Inside** `HubProfileHeader` vault: **centered** **`primary`** **Refresh hub** + short helper line (`border-t` strip); re-fetches hub + `refreshKey` for **My Files** |
 | **Collapsible hub sections** | ✅ Done | **Your blocks** + **Block files** (chevron in `BlockCard` header when relevant); state in persisted **`usePreferencesStore`** — **Stormi** not collapsible |
 | Browser / OS **back** vs shell | ✅ Done | `useCandidateShellHistory` + `navigateToHub()` — cannot remove system back UI; history is synced so back returns to hub when possible |
+| Nav **hub row spacing** | ✅ Done | Container widened `max-w-2xl` → `max-w-4xl` in `VaultHorizontalVaultShell`; hub row changed from CSS grid to `flex flex-wrap` — all 5 controls on one row at 1024px+, graceful wrap below |
 | Nav **horizontal vault bar** | ✅ Done | `NavVaultShell` → shared [`VaultHorizontalVaultShell`](src/components/ui/VaultHorizontalVaultShell.tsx) (`layout='nav'`) + `VAULT_CLIP_HORIZONTAL`: rim, frost/tile texture, conic/sheen/strip (same family as wordmark + hub); clip on **decorative layer only** so hub dropdown isn’t cut off; removed `.nav-shell-shape` breathe keyframes |
 | Hub **profile header** vault | ✅ Done | `HubProfileHeader` uses **`VaultHorizontalVaultShell` `layout='panel'`** (full width, `VaultLightFrostTexture` tile variant) instead of **`Card` elevated** — matches nav vault language |
 | Hub **Job alerts / Referral / Employer requests / STORM** panels | ✅ Done | Same **vault shell + `BlockCard` embed** as My Files; distinct **`accent`** presets (**sky / violet / indigo / amber**) in `vault-accent-presets.ts` |

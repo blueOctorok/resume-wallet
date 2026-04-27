@@ -106,14 +106,16 @@ export default function SimpleModeShell() {
       {/* Desktop / iPad landscape — 3-column grid, md+ */}
       <div
         className={cn(
-          'hidden md:grid gap-4 h-[calc(100vh-8rem)]',
-          'grid-cols-[300px_1fr] lg:grid-cols-[320px_1.2fr_1fr]',
+          'hidden md:grid gap-3 lg:gap-4 h-[calc(100vh-8rem)]',
+          // Rail capped so the job column always wins horizontal space on md (2-col).
+          'grid-cols-[minmax(240px,300px)_minmax(0,1fr)]',
+          'lg:grid-cols-[minmax(250px,280px)_minmax(0,1.4fr)_minmax(320px,1.15fr)]',
         )}
       >
-        <section aria-label='Job list' className='min-h-0'>
+        <section aria-label='Job list' className='min-h-0 min-w-0'>
           <SimpleJobRail userAddress={walletAddress ?? null} onJobSelected={handleJobSelected} />
         </section>
-        <section aria-label='Selected job' className='min-h-0'>
+        <section aria-label='Selected job' className='min-h-0 min-w-0'>
           <SimpleJobDetailPanel userAddress={walletAddress ?? null} />
         </section>
         {/* The card panel only appears at lg+ so md (iPad portrait-ish) users

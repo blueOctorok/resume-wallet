@@ -170,42 +170,39 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
       isDark={isDark}
       accent='teal'
       className='h-full'
-      contentClassName='flex flex-col h-full min-h-0 p-4 sm:p-5'
+      // Tighter padding so search + list read as one column — rail is narrow; vertical space is precious.
+      contentClassName='flex flex-col h-full min-h-0 !p-3 sm:!p-4'
     >
-      {/* Inline header — matches BlockCard icon + title + description chrome without
-          BlockCard's fixed children-padding, which fights our flex-column layout. */}
-      <div className='flex items-start gap-3 pb-3 mb-3 border-b border-slate-300/80 dark:border-gray-700/50'>
-        <div
-          className={cn(
-            'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl',
-            isDark
-              ? 'bg-teal-500/15 text-teal-200 ring-1 ring-teal-400/30'
-              : 'bg-teal-50 text-teal-700 ring-1 ring-teal-200',
-          )}
-        >
-          <Briefcase className='h-4 w-4' />
-        </div>
-        <div className='min-w-0 flex-1'>
+      {/* One tight strip: title + source — description lives in title attr so we don't stack 3 text rows */}
+      <div className='flex flex-wrap items-center gap-2 pb-2 mb-2 border-b border-slate-300/80 dark:border-gray-700/50'>
+        <div className='flex min-w-0 flex-1 items-center gap-2'>
+          <div
+            className={cn(
+              'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+              isDark
+                ? 'bg-teal-500/15 text-teal-200 ring-1 ring-teal-400/30'
+                : 'bg-teal-50 text-teal-700 ring-1 ring-teal-200',
+            )}
+          >
+            <Briefcase className='h-3.5 w-3.5' />
+          </div>
           <h3
             className={cn(
-              'text-sm font-semibold tracking-tight',
+              'min-w-0 truncate text-sm font-semibold tracking-tight',
               isDark ? 'text-white' : 'text-slate-900',
             )}
+            title='Pick a role — Stormi shapes your career card around what you target.'
           >
             Find jobs
           </h3>
-          <p className={cn('text-xs mt-0.5', isDark ? 'text-gray-400' : 'text-slate-600')}>
-            Pick a role &mdash; Stormi will shape your career card around it.
-          </p>
         </div>
-      </div>
-      {/* Source toggle */}
-      <div
-        className={cn(
-          'flex gap-1 p-1 rounded-full border text-xs font-semibold mb-3 self-start',
-          isDark ? 'bg-gray-900/60 border-gray-700' : 'bg-white border-slate-200 shadow-sm',
-        )}
-      >
+        {/* Source toggle — same row when rail is wide enough; wraps on md split */}
+        <div
+          className={cn(
+            'flex shrink-0 gap-0.5 rounded-full border p-0.5 text-[11px] font-semibold',
+            isDark ? 'bg-gray-900/60 border-gray-700' : 'bg-white border-slate-200 shadow-sm',
+          )}
+        >
         {sourceTabs.map((t) => {
           const Icon = t.icon
           const active = t.id === source
@@ -215,7 +212,7 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
               type='button'
               onClick={() => setSource(t.id)}
               className={cn(
-                'inline-flex items-center gap-1 rounded-full px-3 py-1.5 transition-colors cursor-pointer',
+                'inline-flex items-center gap-0.5 rounded-full px-2 py-1 transition-colors cursor-pointer sm:gap-1 sm:px-2.5 sm:py-1.5',
                 active
                   ? isDark
                     ? 'bg-teal-500/25 text-teal-100'
@@ -231,14 +228,15 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
             </button>
           )
         })}
+        </div>
       </div>
 
-      {/* Search form */}
-      <form onSubmit={handleSearchSubmit} className='mb-3 space-y-2'>
+      {/* Search form — sits directly above results */}
+      <form onSubmit={handleSearchSubmit} className='mb-2 space-y-1.5'>
         <div className='relative'>
           <Search
             className={cn(
-              'absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4',
+              'absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2',
               isDark ? 'text-gray-500' : 'text-slate-400',
             )}
           />
@@ -248,7 +246,7 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
             onChange={(e) => setKeywords(e.target.value)}
             placeholder='Job title, skill, or company'
             className={cn(
-              'w-full pl-10 pr-3 py-2 rounded-xl border text-sm outline-none',
+              'w-full rounded-lg border py-1.5 pl-9 pr-3 text-xs outline-none sm:text-[13px]',
               isDark
                 ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
                 : 'bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-teal-500',
@@ -271,7 +269,7 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
         <div className='relative'>
           <MapPin
             className={cn(
-              'absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4',
+              'absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2',
               isDark ? 'text-gray-500' : 'text-slate-400',
             )}
           />
@@ -281,18 +279,18 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
             onChange={(e) => setLocation(e.target.value)}
             placeholder='City or ZIP (optional)'
             className={cn(
-              'w-full pl-10 pr-3 py-2 rounded-xl border text-sm outline-none',
+              'w-full pl-9 pr-3 py-1.5 rounded-lg border text-xs outline-none sm:text-[13px]',
               isDark
                 ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-teal-500'
                 : 'bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-teal-500',
             )}
           />
         </div>
-        <div className='flex gap-2'>
+        <div className='flex gap-1.5'>
           <button
             type='submit'
             className={cn(
-              'flex-1 py-2 rounded-xl text-sm font-semibold transition-colors cursor-pointer',
+              'flex-1 rounded-lg py-1.5 text-xs font-semibold transition-colors cursor-pointer sm:text-sm',
               isDark
                 ? 'bg-teal-500 text-white hover:bg-teal-400'
                 : 'bg-teal-600 text-white hover:bg-teal-500',
@@ -306,7 +304,7 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
               onClick={() => setFiltersOpen((v) => !v)}
               aria-expanded={filtersOpen}
               className={cn(
-                'px-3 py-2 rounded-xl text-sm font-semibold border transition-colors cursor-pointer',
+                'rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer sm:px-3 sm:text-sm',
                 filtersOpen || activeFilterCount > 0
                   ? isDark
                     ? 'border-teal-400/60 bg-teal-500/10 text-teal-200'
@@ -336,7 +334,7 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
       {source === 'adzuna' && filtersOpen && (
         <div
           className={cn(
-            'mb-3 rounded-xl border p-3 space-y-3',
+            'mb-2 space-y-2 rounded-lg border p-2.5',
             isDark ? 'bg-gray-900/50 border-gray-700' : 'bg-white border-slate-200',
           )}
         >
@@ -451,7 +449,7 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
       {/* Results */}
       <div
         className={cn(
-          'flex-1 min-h-0 overflow-y-auto pr-1 -mr-1 space-y-2',
+          'flex-1 min-h-0 -mr-1 space-y-1.5 overflow-y-auto pr-1',
           'scrollbar-none',
         )}
       >
@@ -480,35 +478,34 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
         {!isLoading && !error && jobs.length === 0 && shouldSkipSearch && (
           <div
             className={cn(
-              'rounded-xl border p-4 space-y-3',
+              'space-y-2 rounded-lg border p-2.5',
               isDark ? 'border-gray-700 bg-gray-900/40' : 'border-slate-200 bg-white',
             )}
           >
-            <div className='flex items-start gap-2'>
+            <div className='flex items-start gap-1.5'>
               <Sparkles
                 className={cn(
-                  'w-4 h-4 mt-0.5 flex-shrink-0',
+                  'mt-0.5 size-3.5 shrink-0',
                   isDark ? 'text-teal-300' : 'text-teal-600',
                 )}
               />
               <p
                 className={cn(
-                  'text-sm leading-snug',
+                  'text-[11px] leading-snug sm:text-xs',
                   isDark ? 'text-gray-200' : 'text-slate-700',
                 )}
               >
-                Not sure where to start? Pick a trending search — or ask Stormi
-                to match you to jobs that fit your skills.
+                Pick a trending search below, or ask Stormi in the card column for ideas.
               </p>
             </div>
-            <div className='flex flex-wrap gap-1.5'>
+            <div className='flex flex-wrap gap-1'>
               {TRENDING_SEARCHES.map((t) => (
                 <button
                   key={t.label}
                   type='button'
                   onClick={() => handleTrendingPick(t.keywords)}
                   className={cn(
-                    'px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer',
+                    'rounded-full border px-2 py-1 text-[11px] font-semibold transition-colors cursor-pointer sm:px-2.5 sm:text-xs',
                     isDark
                       ? 'bg-gray-800 border-gray-700 text-gray-200 hover:border-teal-400/60 hover:text-teal-200'
                       : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-teal-500/60 hover:text-teal-700',
@@ -525,11 +522,11 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
         {!isLoading && !error && jobs.length === 0 && !shouldSkipSearch && (
           <div
             className={cn(
-              'text-center py-10 rounded-xl border border-dashed text-sm',
+              'rounded-lg border border-dashed py-6 text-center text-xs',
               isDark ? 'border-gray-700 text-gray-500' : 'border-slate-200 text-slate-500',
             )}
           >
-            <Briefcase className='w-6 h-6 mx-auto mb-2 opacity-50' />
+            <Briefcase className='mx-auto mb-1.5 size-5 opacity-50' />
             No jobs matched. Try broader keywords or clear a filter.
           </div>
         )}
@@ -542,7 +539,7 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
               type='button'
               onClick={() => handleSelect(job)}
               className={cn(
-                'w-full text-left rounded-xl border p-3 transition-all cursor-pointer',
+                'w-full cursor-pointer rounded-lg border p-2.5 text-left transition-all',
                 selected
                   ? isDark
                     ? 'border-teal-400/60 bg-teal-500/10 shadow-lg shadow-teal-500/10'
@@ -554,7 +551,7 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
             >
               <p
                 className={cn(
-                  'text-sm font-semibold line-clamp-2',
+                  'line-clamp-2 text-[13px] font-semibold leading-snug',
                   isDark ? 'text-white' : 'text-slate-900',
                 )}
               >
@@ -562,7 +559,7 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
               </p>
               <p
                 className={cn(
-                  'text-xs mt-0.5 line-clamp-1',
+                  'mt-0.5 line-clamp-1 text-[11px]',
                   isDark ? 'text-gray-400' : 'text-slate-600',
                 )}
               >
@@ -570,7 +567,7 @@ export default function SimpleJobRail({ onJobSelected }: SimpleJobRailProps) {
               </p>
               <p
                 className={cn(
-                  'text-[11px] mt-1 flex items-center gap-1',
+                  'mt-0.5 flex items-center gap-1 text-[10px]',
                   isDark ? 'text-gray-500' : 'text-slate-500',
                 )}
               >

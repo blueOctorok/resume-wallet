@@ -52,11 +52,34 @@ Second lesson: **server-side projection is how you ship a feature once and get i
 
 ---
 
-## **Navigation — candidate hub row spacing** (April 2026)
+## **Navigation — candidate hub row spacing (final fix)** (April 2026)
 
-- **`src/components/Navigation.tsx`**: The bottom hub row (refresh, Guided/Workspace toggle, My Hub, STORM, theme) used three `flex-1` siblings with a tight `gap-2`, so the left cluster and My Hub visually collided. Replaced the `sm+` layout with a **three-column grid**, **`justify-self-start` / `center` / `end`**, and **wider column gaps**. Follow-up: **`minmax(0,1fr)` on the first column + `min-w-0` on the left cell** let the grid shrink the track below the mode toggle’s width, so **“Workspace” drew under My Hub** (overflow visible). First column is now **`minmax(min-content,1fr)`**, the left cell uses **`sm:min-w-min`**, and the hub dropdown wrapper gets **`z-[110]`** so the center control stacks above any stray overlap.
+- **`src/components/Navigation.tsx`**: The bottom hub row (refresh, Guided/Workspace toggle, My Hub, STORM, theme) had its nav container capped at `max-w-2xl` (672px) — far too narrow for five controls. Combined with a CSS grid layout that assigned items to explicit columns, elements overlapped. **Fix:** widened container to `max-w-4xl` (896px) in `VaultHorizontalVaultShell.tsx`, and replaced the grid with `flex flex-wrap justify-center gap-x-4 gap-y-3` — items sit on one row at 1024px+ and wrap naturally below that, so the left cluster and My Hub visually collided. Replaced the `sm+` layout with a **three-column grid**, **`justify-self-start` / `center` / `end`**, and **wider column gaps**. Follow-up: **`minmax(0,1fr)` on the first column + `min-w-0` on the left cell** let the grid shrink the track below the mode toggle’s width, so **“Workspace” drew under My Hub** (overflow visible). First column is now **`minmax(min-content,1fr)`**, the left cell uses **`sm:min-w-min`**, and the hub dropdown wrapper gets **`z-[110]`** so the center control stacks above any stray overlap.
 - **`src/components/ui/ModeToggle.tsx`**: Pill gets **more padding**, **`whitespace-nowrap`**, slightly larger icons, and **responsive labels** — **Guide / Work** below `lg`, **Guided / Workspace** at `lg+` — so the nav stays readable when the vault is narrow.
-- **Follow-up (layout scan):** Automated browser hit **`/` unauthenticated** — only marketing + sign-in; **candidate hub row is not visible without a session**, so visual QA of Guided/Workspace/My Hub needs a signed-in candidate. **Code fix:** for **`userRole === 'candidate'`**, the hub row is now a **`max-xl` two-row grid** — row 1 = **refresh + mode** (left) and **STORM + theme** (right); row 2 = **My Hub** full width centered. From **`xl`**, the previous **single-row three-column** layout returns so wide screens stay compact.
+- **Lesson:** `flex-wrap` beats CSS grid for toolbar-style rows with variable-width items — zero breakpoint configuration needed.
+- **Earlier attempts (superseded):** Automated browser hit **`/` unauthenticated** — only marketing + sign-in; **candidate hub row is not visible without a session**, so visual QA of Guided/Workspace/My Hub needs a signed-in candidate. **Code fix:** for **`userRole === 'candidate'`**, the hub row is now a **`max-xl` two-row grid** — row 1 = **refresh + mode** (left) and **STORM + theme** (right); row 2 = **My Hub** full width centered. From **`xl`**, the previous **single-row three-column** layout returns so wide screens stay compact.
+
+---
+
+## **Guided mode — right-column overhaul + split layout density** (April 2026)
+
+### Chat removed — Guided Mode is coach-only (latest)
+- **Stormi chat completely removed** from Guided Mode. No collapsed bar, no expandable drawer, no `StormiChatPanel`. The full free-form Stormi chat lives exclusively in Workspace/Hub — separating "easy mode" (proactive coaching) from "power mode" (self-directed exploration).
+- **`SimpleCardPanel.tsx`**: Removed `chatOpen`/`chatPreset` state, `StormiChatPanel` import, `useHubContext`, `SimpleModeContext` computation, `ChevronDown` import, `useStormiAutoWelcomeCandidateDone`. Added `useUIModeStore` for workspace navigation.
+- **`StormiNextStepCard.tsx`**: Replaced `onAskStormi` prop with `onGoToWorkspace`. Branches that previously opened chat now either perform a direct action or show a "Go to Workspace" secondary button with a `LayoutDashboard` icon. Users who want deeper Stormi help are guided to switch modes — not stuck in a half-baked chat.
+- **Product rationale**: Guided Mode users are the 80% who want quick wins. They don't want to manage a chat — they want to be told what to do next and do it. Workspace is where the 20% dig deeper. Keeping the chat here blurred that line and made the mode feel like a watered-down hub instead of a focused coach.
+
+### Right column (SimpleCardPanel) — prior changes
+- **Stormi** flattened from a full `HubSectionPanel + BlockCard` into a **compact inline strip** (violet border, ~60px tall) that sits directly above the career card. Provides one proactive CTA — no redundant header chrome.
+- **Career card** renders **without any wrapper container**. `ProjectedCareerCard` IS the container — removing the `HubSectionPanel + BlockCard` wrapper gives it the full column width and eliminates double-border visual noise.
+- **`StormiNextStepCard`** itself got tighter: `size-6` icon tile, `text-[13px]` title, `text-[11px]` body, smaller buttons (`!px-2.5 !py-1 !text-xs`). Actions indent under the icon (`pl-8`).
+- **Draft lens proposal** card also simplified — plain `rounded-xl` border instead of vault shell.
+- **Grid column widened** in `SimpleModeShell.tsx`: right column `minmax(320px,1.15fr)` (was `minmax(280px,1fr)`); rail narrowed to `minmax(250px,280px)` so the card isn't cramped.
+
+### Left column + center (prior changes in same pass)
+- **`SimpleJobRail.tsx`**: Title row merged with source tabs (one strip); long subtitle removed from the stack (hint on `title` only); tighter panel padding and smaller form controls so **search sits directly above the job list** with more rows visible.
+- **`SimpleModeShell.tsx`**: Desktop grid gives the **selected job** column more width (`minmax(0,1.4fr)`); rail `min-w-0`; slightly tighter gaps.
+- **`SimpleJobDetailPanel.tsx`**: Posting body uses **comfortable line length** (`max-w-[72ch]`) and **larger line-height** (`text-base` / `leading-[1.7]`); title scales up on `lg`; empty state copy explains rail → center column flow.
 
 ---
 
