@@ -7,10 +7,10 @@ import ResumePreviewModal from '@/components/ResumePreviewModal'
 import ResumeFilePreviewModal from '@/components/hub/ResumeFilePreviewModal'
 import DeveloperResumePreviewModal from '@/components/DeveloperResumePreviewModal'
 import Button from '@/components/ui/Button'
-import { downloadDriverResumePdfFromStructured } from '@/lib/driver-resume-pdf-download'
 import type { DeveloperResumeData } from '@/components/DeveloperResumeBuilder'
 import type { ResumeData } from '@/types/career-card'
 import type { CareerCardMode } from '@/types/career-card'
+import { isCareerCardOwnerMode } from '@/types/career-card'
 import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
 import { isDeveloperResumeStructured } from '@/lib/career-card-resume-shape'
 
@@ -242,7 +242,34 @@ export default function ResumeSection({
   const [showDriverPreview, setShowDriverPreview] = useState(false)
   const [showDevPreview, setShowDevPreview] = useState(false)
   const [showIpfsPreview, setShowIpfsPreview] = useState(false)
-  const [pdfLoading, setPdfLoading] = useState(false)
+
+  const isPlaceholderResume =
+    data.id === '__storm_resume_placeholder__' ||
+    (String(data.verificationStatus || '').toUpperCase() === 'EMPTY' &&
+      !data.title?.trim() &&
+      !data.filename?.trim())
+
+  if (isPlaceholderResume) {
+    return (
+      <div
+        className={cn(
+          'rounded-xl border-2 border-dashed p-6 text-center',
+          isDark ? 'border-teal-400/25 bg-teal-500/[0.06]' : 'border-teal-300/60 bg-teal-50/50',
+        )}
+      >
+        <FileText className={cn('mx-auto mb-2 h-8 w-8', isDark ? 'text-teal-300' : 'text-teal-600')} />
+        <p className={cn('text-sm font-semibold', isDark ? 'text-white' : 'text-gray-900')}>Add your resume</p>
+        <p className={cn('mt-1 text-xs', isDark ? 'text-gray-400' : 'text-gray-600')}>
+          Upload a PDF or build in STORM Resume — it&apos;s the first thing employers scan.
+        </p>
+        {isCareerCardOwnerMode(mode) && onAction ? (
+          <Button type='button' variant='primary' size='sm' className='mt-4' onClick={onAction}>
+            Upload or build
+          </Button>
+        ) : null}
+      </div>
+    )
+  }
 
   const isIpfsResume = isLiveResumeIpfsHash(data.ipfsHash)
   const rawSd = data.structuredData
@@ -387,19 +414,6 @@ export default function ResumeSection({
           title={data.title || 'Resume'}
           structuredData={data.structuredData as Parameters<typeof ResumePreviewModal>[0]['structuredData']}
           onClose={() => setShowDriverPreview(false)}
-          onDownload={async () => {
-            if (!data.structuredData) return
-            setPdfLoading(true)
-            try {
-              await downloadDriverResumePdfFromStructured(
-                data.structuredData as Record<string, unknown>,
-                data.title || 'Resume',
-              )
-            } finally {
-              setPdfLoading(false)
-            }
-          }}
-          isDownloading={pdfLoading}
           theme={isDark ? 'dark' : 'light'}
           zIndex={10100}
         />
@@ -407,7 +421,7 @@ export default function ResumeSection({
 
       {showDevPreview && isBuiltResume && structuredRecord && isDevShape && (
         <DeveloperResumePreviewModal
-          viewOnly={mode !== 'self'}
+          viewOnly={!isCareerCardOwnerMode(mode)}
           resume={{
             id: data.id,
             title: data.title || data.filename,

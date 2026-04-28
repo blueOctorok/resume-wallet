@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { shallow } from 'zustand/shallow'
-import { BLOCK_DEFINITIONS, getBlockDefinition } from '@/lib/block-registry'
+import { BLOCK_DEFINITIONS, getBlockDefinition, isCoreBlock } from '@/lib/block-registry'
 import type { BlockDefinition } from '@/lib/block-registry'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 import { useUIModeStore } from '@/stores/ui-mode-store'
@@ -182,6 +182,19 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
       // modal have data on first paint. Non-blocking — failures leave the
       // default lens server-side; the card still renders.
       void useCareerCardLensesStore.getState().fetchLenses(walletAddress)
+
+      // Mandatory STORM Resume — every hub has this block first (not pickable).
+      const hasStormResume = get().installedBlocks.some((b) => b.blockType === 'storm-resume')
+      if (!hasStormResume) {
+        await get().addBlock('storm-resume', walletAddress)
+        const after = get().installedBlocks
+        const stormIdx = after.findIndex((b) => b.blockType === 'storm-resume')
+        if (stormIdx > 0) {
+          const storm = after[stormIdx]
+          const rest = after.filter((_, i) => i !== stormIdx)
+          await get().reorderBlocks([storm, ...rest], walletAddress)
+        }
+      }
     } catch (err) {
       set({
         fetchError: err instanceof Error ? err.message : 'Unknown error',
@@ -242,6 +255,12 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
 
   // ── Remove block ────────────────────────────────────────────────────────────
   removeBlock: async (blockId, walletAddress) => {
+    const target = get().installedBlocks.find((b) => b.id === blockId)
+    if (target && isCoreBlock(target.blockType)) {
+      console.warn('[HubBlocksStore] Refused removeBlock for core block:', target.blockType)
+      return
+    }
+
     const previous = get().installedBlocks
 
     // Optimistic removal

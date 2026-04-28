@@ -25,7 +25,7 @@ interface ModalProps {
   disableBackdropClose?: boolean
   /**
    * `default` — rounded-2xl panel (standard dialogs).
-   * `block` — same shell as hub category cards (`BlockPickerCategory`): rounded-xl border, muted fill, hidden scrollbar on overflow.
+   * `block` — same shell as hub block-picker / category cards: rounded-xl border, muted fill, hidden scrollbar on overflow.
    */
   panelShape?: 'default' | 'block'
   /** Merged onto the panel div (extra utilities beyond shape defaults). */

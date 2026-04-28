@@ -4,6 +4,28 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Construct mode on the card + resume as core** (April 2026)
+
+### Why
+Block management lived in a separate **Block files** hub section while the career card was only a preview. Apply mode treated the whole card as interactive even though the product story is: **Apply = employer preview + resume**; **Construct = workshop** with verify/delete/edit per block.
+
+### What shipped
+
+- **`storm-resume` is core:** `coreBlock` + `hiddenFromBlockPicker` in `block-registry.ts`; hub store auto-installs at position 0 and blocks removal; `EMPTY_STORM_RESUME_CARD` placeholder in `buildProjectedCareerCard` so the API always projects a resume section.
+- **Construct mode on the hub card:** `ProjectedCareerCard` `mode='construct'` wraps sections in `ConstructSectionWrapper` (mini vault tile + former My Files actions). `HubWorkspaceCareerCard` uses `useHubDocuments` (`src/hooks/use-hub-documents.tsx`) and renders `renderModals()` for previews (hook renamed from `.ts` → `.tsx` for JSX).
+- **Removed `MyFilesSection`** from `CandidateHub.tsx` (~950 lines) — inbox + account unchanged; main column is nudge → card → inbox → account.
+- **Apply mode (`SimpleCardPanel`):** `selfSectionNav='resume-only'` on `ProjectedCareerCard`; non-resume taps / ghost CTAs call `setUIMode('hub')`, `setReturnToApply(true)`, and deep-link to the block page (or one-shot `openPickerAfterHub` when no `pageRoute`). Empty hub CTA uses **Open Construct mode** + picker flag instead of opening the picker in place.
+- **`StormiNextStepCard`:** `resumeNeedsStart` (derived from projected card resume section / placeholder) replaces `installedCount === 0` now that the core resume block is always installed.
+- **Return flow:** `ReturnToApplyBanner` in Construct when `returnToApply`; `CandidateHub` `useEffect` opens the block picker once when `openPickerAfterHub` is set.
+- **PDF export (UI only):** Removed download buttons from `ResumePreviewModal` (optional `onDownload`), `DeveloperResumePreviewModal`, `ResumeFilePreviewModal`, `ResumeSection`, `DriverHub` resume preview path; kept generator modules and APIs for admin/fallback.
+- **Preferences:** Dropped `hubBlockFilesExpanded` (only used by removed Block files panel). **Stormi:** `candidateEmptyHub` when only core blocks remain (`isCoreBlock`).
+- **`CareerCard.tsx`:** Restored missing `normEmploymentField` helper used by work-history ↔ verification matching (regression fix).
+
+### Files touched (high level)
+`block-registry.ts`, `hub-blocks-store.ts`, `projected-career-card.ts`, `types/career-card.ts`, `ui-mode-store.ts`, `hub-document-types.ts`, `use-hub-documents.tsx`, `ConstructSectionWrapper.tsx`, `ProjectedCareerCard.tsx`, `HubWorkspaceCareerCard.tsx`, `CandidateHub.tsx`, `SimpleCardPanel.tsx`, `StormiNextStepCard.tsx`, `ResumeSection.tsx`, `ResumePreviewModal.tsx`, `DeveloperResumePreviewModal.tsx`, `ResumeFilePreviewModal.tsx`, `preferences-store.ts`, `DriverHub.tsx`, `CareerCard.tsx`, section components using `isCareerCardOwnerMode`.
+
+---
+
 ## **Hub-as-Card — career card is the workspace** (April 2026)
 
 ### Why
@@ -12,12 +34,18 @@ The candidate hub stacked many first-class surfaces (profile title card, mini ca
 ### What shipped
 
 - **Workspace hub layout**
-  - Main column: `StormiNudgeBanner` (when wallet) → **full `ProjectedCareerCard` (`HubWorkspaceCareerCard`)** → `My Files` → **tabbed `HubInboxSection`** (Alerts / Employer requests / Applications shortcut) → **collapsible `HubAccountSection`** (STORM + USDC + referral).
+  - Main column: `StormiNudgeBanner` (when wallet) → **full `ProjectedCareerCard` (`HubWorkspaceCareerCard`, Construct mode + inline block actions)** → **tabbed `HubInboxSection`** (Alerts / Employer requests / Applications shortcut) → **collapsible `HubAccountSection`** (STORM + USDC + referral). *(Standalone “Block files” / My Files hub section removed — see **Construct mode on the card + resume as core** above.)*
   - Right column (lg+): **Ask Stormi** (`StormiChatPanel`) in a sticky violet `HubSectionPanel` — self-service chat, not competing with the card for width on desktop.
 - **Removed from hub:** `HubProfileHeader`, `CareerCardMiniPreview`, block hive (`VaultHubGrid` / DnD), `CareerCardInsightsStrip`, `HubSidebar` on this page (sidebar file kept for `StormiJourneyGuide` drawer), mobile “Career path” FAB, `StormiWalkthrough` on hub load (Guided Mode + Journey replay cover onboarding).
 - **Deleted:** `src/components/hub/CareerCardInsightsStrip.tsx` (only hub consumer).
 - **Shared hook:** `src/hooks/use-projected-career-card.ts` — `CandidateHub` / `SimpleCardPanel` use the same `/api/career-card` fetch pattern (`refreshNonce`, `installedBlockCount`, optional `lensId`).
 - **Copy tweak:** `ProjectedCareerCard` empty-state lines reframed (“ready to build” / install order) so the hub doesn’t talk about a separate “hub” abstraction.
+
+### Follow-up: Block Picker vault redesign (April 2026)
+- **Two-step flow:** Step 1 — full-width **category cards** with `VaultCredentialChrome`, category icon + copy + `N/M blocks added`, suggested ring preserved. Step 2 — **per-block rows**: compact vault tile (~5.25rem) with `getBlockIllustration` + `getBlockColor` glow, label, complexity, description, **Add** button below description (`Button` primary). `BackToHubButton` label **Back to categories**.
+- **Footer copy** on step 1: *More career-specific blocks coming soon* + `Sparkles` icon.
+- **Motion:** `block-picker-stagger` + `block-picker-mini-pulse` keyframes in [`globals.css`](src/app/globals.css); `data-block-picker-animate` respects `prefers-reduced-motion`.
+- **Removed:** `BlockPickerCategory.tsx` (accordion). **New:** [`BlockPickerCategoryCard.tsx`](src/components/hub/BlockPickerCategoryCard.tsx), [`BlockPickerBlockRow.tsx`](src/components/hub/BlockPickerBlockRow.tsx). [`BlockPickerModal.tsx`](src/components/hub/BlockPickerModal.tsx) rewired. Docs: [`COMPOSABLE_HUB_BUILD_GUIDE.md`](docs/COMPOSABLE_HUB_BUILD_GUIDE.md), [`Modal.tsx`](src/components/ui/Modal.tsx) comment.
 
 ### Follow-up: homepage hero — career card mockup replaces block tiles
 - Replaced the "Your hub, in the wild" `VaultShowcase` (hex block tiles) with a `HeroCareerCardMockup` — a static career card showing avatar, verified badge, card strength bar, on-chain block list. Shows the finished product instead of building blocks.
@@ -3380,11 +3408,11 @@ for testing: `UPDATE profiles SET role = 'candidate' WHERE wallet_address = '...
 
 ### What was built
 - `BlockPickerModal.tsx` — main modal overlay triggered by `useIsPickerOpen()`
-- `BlockPickerCategory.tsx` — accordion sections showing blocks per category
+- ~~`BlockPickerCategory.tsx`~~ — **superseded April 2026** by two-step vault UI: `BlockPickerCategoryCard.tsx` + `BlockPickerBlockRow.tsx` (see Hub-as-Card follow-up in current log).
 
 ### Key design decisions
 - **No separate `BlockPickerItem.tsx`** — block items are simple enough to live inside the category component (KISS)
-- **Accordion pattern** — categories expand/collapse; suggested ones (from AvA onboarding) start open
+- **Accordion pattern** — categories expand/collapse; suggested ones (from AvA onboarding) start open *(historical — replaced by category → block rows)*
 - **Optimistic add** — clicking "Add" updates the hub instantly with a spinner, rolls back on failure
 - **Sorted categories** — suggested categories float to the top, marked with a teal "Suggested" badge
 - **Already-installed blocks** are greyed out with "Added ✓" — not clickable

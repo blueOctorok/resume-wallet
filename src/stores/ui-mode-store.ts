@@ -22,6 +22,13 @@ interface UIModeState {
   mode: UIMode
   /** True once the server preference has been applied (prevents flash). */
   hydrated: boolean
+  /**
+   * User left Apply mode to work in Construct; hub can show "Back to Apply?"
+   * Not persisted — session-only.
+   */
+  returnToApply: boolean
+  /** One-shot: open the block picker once after landing in Construct from Apply. */
+  openPickerAfterHub: boolean
 }
 
 interface UIModeActions {
@@ -29,6 +36,8 @@ interface UIModeActions {
   toggleMode: () => void
   /** Called after `/api/user/profile` resolves. No-op if the local value already matches. */
   hydrateFromServer: (serverMode: UIMode | null | undefined) => void
+  setReturnToApply: (value: boolean) => void
+  setOpenPickerAfterHub: (value: boolean) => void
 }
 
 const DEFAULT_MODE: UIMode = 'simple'
@@ -38,11 +47,23 @@ export const useUIModeStore = create<UIModeState & UIModeActions>()(
     (set, get) => ({
       mode: DEFAULT_MODE,
       hydrated: false,
+      returnToApply: false,
+      openPickerAfterHub: false,
 
-      setMode: (mode) => set({ mode }),
+      setMode: (mode) =>
+        set({
+          mode,
+          ...(mode === 'simple'
+            ? { returnToApply: false, openPickerAfterHub: false }
+            : {}),
+        }),
 
       toggleMode: () =>
-        set({ mode: get().mode === 'simple' ? 'hub' : 'simple' }),
+        set({
+          mode: get().mode === 'simple' ? 'hub' : 'simple',
+          returnToApply: false,
+          openPickerAfterHub: false,
+        }),
 
       hydrateFromServer: (serverMode) => {
         if (get().hydrated) return
@@ -52,6 +73,9 @@ export const useUIModeStore = create<UIModeState & UIModeActions>()(
           set({ hydrated: true })
         }
       },
+
+      setReturnToApply: (value) => set({ returnToApply: value }),
+      setOpenPickerAfterHub: (value) => set({ openPickerAfterHub: value }),
     }),
     {
       name: 'stormchain-ui-mode',

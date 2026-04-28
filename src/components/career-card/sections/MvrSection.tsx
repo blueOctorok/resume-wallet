@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Car, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { MvrData, CareerCardMode } from '@/types/career-card'
+import { isCareerCardOwnerMode } from '@/types/career-card'
 import MvrViewModal from '@/components/MvrViewModal'
 
 interface MvrSectionProps {
@@ -37,7 +38,7 @@ export default function MvrSection({
   }
 
   const showSelfButton =
-    mode === 'self' &&
+    isCareerCardOwnerMode(mode) &&
     (isComplete ? Boolean(walletAddress && data.orderId) : Boolean(onNavigateToOrder))
 
   return (

@@ -166,11 +166,11 @@ Categorized catalog, click-to-add (drag-and-drop deferred to Phase 4b).
 ### Files created
 ```
 src/components/hub/BlockPickerModal.tsx     (main modal shell)
-src/components/hub/BlockPickerCategory.tsx  (category accordion + block items)
+src/components/hub/BlockPickerModal.tsx + `BlockPickerCategoryCard.tsx` + `BlockPickerBlockRow.tsx` (two-step picker: category vault cards, then per-block rows)
 ```
 
 `BlockPickerItem.tsx` was intentionally omitted — the block item UI is simple
-enough to live inside `BlockPickerCategory` without a separate file (KISS).
+enough to live inside `BlockPickerModal` without over-splitting (KISS).
 
 ### How it works
 - Opens when `isPickerOpen` is true (via `useIsPickerOpen()`)

@@ -17,7 +17,6 @@ interface PreferencesState {
 
   /** Candidate hub — large panels (persisted so scroll preferences stick) */
   hubYourBlocksExpanded: boolean
-  hubBlockFilesExpanded: boolean
 }
 
 interface PreferencesActions {
@@ -28,14 +27,12 @@ interface PreferencesActions {
   clearJourneyStepCompletion: (stepId: string) => void
   resetCompletedJourneySteps: () => void
   setHubYourBlocksExpanded: (expanded: boolean) => void
-  setHubBlockFilesExpanded: (expanded: boolean) => void
 }
 
 const initialState: PreferencesState = {
   showJourneyModals: true, // Enabled by default - help new users
   completedJourneySteps: [],
   hubYourBlocksExpanded: true,
-  hubBlockFilesExpanded: true,
 }
 
 export const usePreferencesStore = create<PreferencesState & PreferencesActions>()(
@@ -65,7 +62,6 @@ export const usePreferencesStore = create<PreferencesState & PreferencesActions>
       resetCompletedJourneySteps: () => set({ completedJourneySteps: [] }),
 
       setHubYourBlocksExpanded: (expanded) => set({ hubYourBlocksExpanded: expanded }),
-      setHubBlockFilesExpanded: (expanded) => set({ hubBlockFilesExpanded: expanded }),
     }),
     {
       name: 'stormchain-preferences',
@@ -73,7 +69,6 @@ export const usePreferencesStore = create<PreferencesState & PreferencesActions>
         showJourneyModals: state.showJourneyModals,
         completedJourneySteps: state.completedJourneySteps,
         hubYourBlocksExpanded: state.hubYourBlocksExpanded,
-        hubBlockFilesExpanded: state.hubBlockFilesExpanded,
       }),
     }
   )

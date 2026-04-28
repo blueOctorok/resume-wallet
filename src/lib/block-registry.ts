@@ -90,6 +90,11 @@ export interface BlockDefinition {
    * Omit from Add Blocks picker (legacy aliases). Keeps registry + hub_rows working.
    */
   hiddenFromBlockPicker?: boolean
+  /**
+   * Core blocks are mandatory for every candidate hub (auto-installed, cannot be removed from the picker flow).
+   * Use for STORM Resume — the foundation of the career card, not an optional add-on.
+   */
+  coreBlock?: boolean
 }
 
 export interface BlockCategory {
@@ -177,6 +182,9 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     employerRequestable: true,
     requestLabel: 'Resume',
     completionField: 'hasResume',
+    /** Mandatory first step — not pickable; auto-installed for every hub. */
+    hiddenFromBlockPicker: true,
+    coreBlock: true,
   },
   {
     id: 'general-resume',
@@ -479,6 +487,11 @@ export function getBlockColor(blockType: string): BlockColorSet {
 /** Get a block definition by its id. Returns undefined for unknown types. */
 export function getBlockDefinition(blockType: string): BlockDefinition | undefined {
   return BLOCK_DEFINITIONS.find((b) => b.id === blockType)
+}
+
+/** True when the block is mandatory and must not be removed from the hub. */
+export function isCoreBlock(blockType: string): boolean {
+  return getBlockDefinition(blockType)?.coreBlock === true
 }
 
 /** All blocks that employers can request from candidates via talent search. */

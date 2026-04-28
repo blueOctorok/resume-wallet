@@ -19,6 +19,17 @@ import type {
   OnChainCredential,
 } from '@/types/career-card'
 
+/** Shown on the career card when storm-resume is installed but no resume row exists yet. */
+export const EMPTY_STORM_RESUME_CARD: ResumeData = {
+  id: '__storm_resume_placeholder__',
+  title: '',
+  filename: '',
+  ipfsHash: '',
+  verificationStatus: 'EMPTY',
+  structuredData: null,
+  createdAt: new Date(0).toISOString(),
+}
+
 function computeCareerCardSignals(
   sections: CareerCardSection[],
   employerConfirmedEmploymentCount: number,
@@ -187,8 +198,12 @@ export async function buildProjectedCareerCard(
     const def = getBlockDefinition(blockType)
     if (!def || !def.appearsOnCareerCard) continue
 
-    const sectionData = await fetchSectionData(supabase, userId, blockType as SectionBlockType, avatarUrl)
-    if (!sectionData) continue
+    let sectionData = await fetchSectionData(supabase, userId, blockType as SectionBlockType, avatarUrl)
+    if (blockType === 'storm-resume' && !sectionData) {
+      sectionData = EMPTY_STORM_RESUME_CARD
+    } else if (!sectionData) {
+      continue
+    }
 
     sections.push({
       blockType: blockType as SectionBlockType,
@@ -196,6 +211,12 @@ export async function buildProjectedCareerCard(
       icon: def.icon,
       data: sectionData,
     })
+  }
+
+  const stormIdx = sections.findIndex((s) => s.blockType === 'storm-resume')
+  if (stormIdx > 0) {
+    const [storm] = sections.splice(stormIdx, 1)
+    sections.unshift(storm)
   }
 
   // Apply the lens ordering + filter before computing signals so score reflects

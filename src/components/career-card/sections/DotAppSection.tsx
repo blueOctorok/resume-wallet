@@ -5,6 +5,7 @@ import { ClipboardList, CheckCircle, Clock, ExternalLink, Shield } from 'lucide-
 import { cn } from '@/lib/utils'
 import DotAppPreviewModal from '@/components/career-card/DotAppPreviewModal'
 import type { DotAppData, CareerCardMode } from '@/types/career-card'
+import { isCareerCardOwnerMode } from '@/types/career-card'
 
 interface DotAppSectionProps {
   data: DotAppData
@@ -43,7 +44,7 @@ export default function DotAppSection({ data, mode, isDark, onAction, userId, wa
               </span>
             )}
           </div>
-          {mode === 'self' && handleAction && (
+          {isCareerCardOwnerMode(mode) && handleAction && (
             <button
               type='button'
               onClick={handleAction}

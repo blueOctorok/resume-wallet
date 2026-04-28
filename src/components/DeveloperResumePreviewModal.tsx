@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   X,
-  Download,
   Edit,
   Shield,
   Trash2,
@@ -22,7 +21,6 @@ import {
 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import type { DeveloperResumeData } from './DeveloperResumeBuilder'
-import { generateDeveloperResumePDF } from '@/lib/developer-resume-pdf'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
 
 interface DeveloperResumePreviewModalProps {
@@ -54,32 +52,12 @@ export default function DeveloperResumePreviewModal({
   viewOnly = false,
 }: DeveloperResumePreviewModalProps) {
   const { theme } = useTheme()
-  const [isDownloading, setIsDownloading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isVerifying, setIsVerifying] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const data = resume.structured_data
   const isVerified = resume.verification_status === 'VERIFIED'
-
-  const handleDownload = async () => {
-    setIsDownloading(true)
-    try {
-      const pdfBlob = await generateDeveloperResumePDF(data)
-      const url = URL.createObjectURL(pdfBlob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${data.personalInfo.firstName}_${data.personalInfo.lastName}_Resume.pdf`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error('Download error:', error)
-    } finally {
-      setIsDownloading(false)
-    }
-  }
 
   const handleVerify = async () => {
     setIsVerifying(true)
@@ -164,27 +142,13 @@ export default function DeveloperResumePreviewModal({
           </button>
         </div>
 
-        {/* Actions — full toolbar unless viewOnly (My Files row owns Edit / Verify / Delete) */}
+        {/* Actions — view-only previews hide the toolbar (Construct row owns actions). */}
+        {!viewOnly && (
         <div
           className={`flex flex-wrap gap-2 p-4 border-b ${
             theme === 'dark' ? 'border-gray-800' : 'border-gray-200'
           }`}
         >
-          <button
-            onClick={handleDownload}
-            disabled={isDownloading}
-            className='flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-500 disabled:opacity-50'
-          >
-            {isDownloading ? (
-              <Loader2 className='w-4 h-4 animate-spin' />
-            ) : (
-              <Download className='w-4 h-4' />
-            )}
-            Download PDF
-          </button>
-
-          {!viewOnly && (
-            <>
               <button
                 onClick={onEdit}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${
@@ -219,9 +183,8 @@ export default function DeveloperResumePreviewModal({
                 <Trash2 className='w-4 h-4' />
                 Delete
               </button>
-            </>
-          )}
         </div>
+        )}
 
         {/* Content */}
         <div

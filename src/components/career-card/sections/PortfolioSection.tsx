@@ -3,6 +3,7 @@
 import { Globe, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { PortfolioData, CareerCardMode } from '@/types/career-card'
+import { isCareerCardOwnerMode } from '@/types/career-card'
 
 const isSafePreviewUrl = (url: string) => /^https?:\/\//i.test(url.trim())
 
@@ -15,7 +16,7 @@ interface PortfolioSectionProps {
 
 export default function PortfolioSection({ data, mode, isDark, onAction }: PortfolioSectionProps) {
   if (!data.portfolioUrl) {
-    if (mode !== 'self') return null
+    if (!isCareerCardOwnerMode(mode)) return null
     return (
       <div className={cn(
         'rounded-xl border border-dashed p-4',

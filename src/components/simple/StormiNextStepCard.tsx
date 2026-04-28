@@ -37,7 +37,8 @@ const LENS_DRAFT_MARGIN_THRESHOLD = 10
 export interface StormiNextStepCardProps {
   snap: SelectedJobSnapshot | null
   fit: JobFitResult | null
-  installedCount: number
+  /** True when STORM resume is still empty (core block is installed but no artifact yet). */
+  resumeNeedsStart: boolean
   onAddBlock: (blockId?: string) => void
   onApply: () => void
   /** Switch to Construct mode for deeper Stormi help. */
@@ -59,7 +60,7 @@ interface NextStep {
 export default function StormiNextStepCard({
   snap,
   fit,
-  installedCount,
+  resumeNeedsStart,
   onAddBlock,
   onApply,
   onGoToWorkspace,
@@ -88,7 +89,7 @@ export default function StormiNextStepCard({
       lensPick &&
       lensPick.best &&
       lensPick.best.score < APPLY_COVERAGE_THRESHOLD &&
-      installedCount > 0
+      !resumeNeedsStart
     ) {
       return {
         icon: Eye,
@@ -102,8 +103,8 @@ export default function StormiNextStepCard({
       }
     }
 
-    // Fresh hub — universal first step is a resume.
-    if (installedCount === 0) {
+    // Fresh card — universal first step is a resume (core block may already be installed).
+    if (resumeNeedsStart) {
       return {
         icon: Plus,
         eyebrow: 'Do this next',
@@ -190,7 +191,7 @@ export default function StormiNextStepCard({
         ? { label: 'Go to Construct', onClick: onGoToWorkspace }
         : undefined,
     }
-  }, [snap, fit, installedCount, onAddBlock, onApply, onGoToWorkspace, lensPick, onDraftLens, isDraftingLens])
+  }, [snap, fit, resumeNeedsStart, onAddBlock, onApply, onGoToWorkspace, lensPick, onDraftLens, isDraftingLens])
 
   const Icon = step.icon
 

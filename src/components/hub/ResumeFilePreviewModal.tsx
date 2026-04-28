@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ExternalLink, Download, Loader2 } from 'lucide-react'
+import { ExternalLink, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Modal, { ModalHeader } from '@/components/ui/Modal'
 
@@ -87,7 +87,7 @@ export default function ResumeFilePreviewModal({
     <Modal onClose={onClose} maxWidth='max-w-4xl' zIndex={10100}>
       <ModalHeader
         title={title}
-        subtitle='Uploaded resume — preview and PDF'
+        subtitle='Uploaded resume — in-app preview'
         onClose={onClose}
       />
       <div
@@ -99,10 +99,6 @@ export default function ResumeFilePreviewModal({
         <a href={ipfsUrl} target='_blank' rel='noopener noreferrer' className={btnClass}>
           <ExternalLink className='w-4 h-4' />
           Open PDF in new tab
-        </a>
-        <a href={ipfsUrl} target='_blank' rel='noopener noreferrer' download className={btnClass}>
-          <Download className='w-4 h-4' />
-          Download PDF
         </a>
       </div>
       <p className={cn('px-4 py-2 text-xs', isDark ? 'text-gray-500' : 'text-gray-500')}>

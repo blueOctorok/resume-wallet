@@ -195,5 +195,10 @@ export interface ProjectedCareerCard {
   }
 }
 
-/** Props mode for the career card component */
-export type CareerCardMode = 'self' | 'public' | 'employer'
+/** Props mode for the career card component (`construct` = hub workshop with inline block controls) */
+export type CareerCardMode = 'self' | 'construct' | 'public' | 'employer'
+
+/** Self + Construct — candidate can edit; public/employer are read-only projections. */
+export function isCareerCardOwnerMode(mode: CareerCardMode): boolean {
+  return mode === 'self' || mode === 'construct'
+}

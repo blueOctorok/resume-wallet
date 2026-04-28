@@ -12,6 +12,7 @@ import ProjectedCareerCard from '@/components/career-card/ProjectedCareerCard'
 import Button from '@/components/ui/Button'
 import CareerCardShareModal from '@/components/hub/CareerCardShareModal'
 import { useProjectedCareerCard } from '@/hooks/use-projected-career-card'
+import { useHubDocuments } from '@/hooks/use-hub-documents'
 
 export interface HubWorkspaceCareerCardProps {
   /** Bumps when hub data is refreshed so the card refetches from `/api/career-card`. */
@@ -33,6 +34,8 @@ export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCar
   const updateAvatarUrl = useHubBlocksStore((s) => s.updateAvatarUrl)
   const installedBlocks = useInstalledBlocks()
   const [shareOpen, setShareOpen] = useState(false)
+
+  const hubDocs = useHubDocuments(refreshNonce)
 
   const { card, loading, error, refresh } = useProjectedCareerCard(walletAddress, {
     refreshNonce,
@@ -85,7 +88,8 @@ export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCar
     <div className='min-w-0'>
       <ProjectedCareerCard
         data={card}
-        mode='self'
+        mode='construct'
+        hubDocuments={hubDocs}
         walletAddress={walletAddress}
         onNavigateToBlock={handleNavigateToBlock}
         onAddBlock={openPicker}
@@ -121,6 +125,7 @@ export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCar
           </>
         }
       />
+      {hubDocs.renderModals()}
       <CareerCardShareModal
         isOpen={shareOpen}
         onClose={() => setShareOpen(false)}

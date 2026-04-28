@@ -23,6 +23,8 @@ import { useHubBlocksStore, useInstalledBlocks } from '@/stores/hub-blocks-store
 import { useSimpleModeStore } from '@/stores/simple-mode-store'
 import { getBlockDefinition } from '@/lib/block-registry'
 import { useUIModeStore } from '@/stores/ui-mode-store'
+import type { PageType } from '@/stores/types'
+import type { ResumeData } from '@/types/career-card'
 import Button from '@/components/ui/Button'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import ProjectedCareerCard, { type GhostSection } from '@/components/career-card/ProjectedCareerCard'
@@ -34,6 +36,13 @@ import type { ProjectedCareerCard as CardData } from '@/types/career-card'
 import { computeJobFit, pickBestLens } from '@/lib/job-fit'
 import { useExtractedRequirements } from '@/hooks/use-extracted-requirements'
 import { useProjectedCareerCard } from '@/hooks/use-projected-career-card'
+
+const RESUME_BLOCK_TYPES = new Set([
+  'storm-resume',
+  'driver-resume',
+  'developer-resume',
+  'general-resume',
+])
 
 const ApplyWithStormChainModal = dynamic(
   () => import('@/components/ApplyWithStormChainModal'),
@@ -128,7 +137,6 @@ export default function SimpleCardPanel() {
   const isDark = theme === 'dark'
   const walletAddress = useAuthStore((s) => s.walletAddress)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
-  const openPicker = useHubBlocksStore((s) => s.openPicker)
   const updateAvatarUrl = useHubBlocksStore((s) => s.updateAvatarUrl)
   const installedBlocks = useInstalledBlocks()
   const snap = useSimpleModeStore((s) => s.selectedJobSnapshot)
@@ -139,6 +147,8 @@ export default function SimpleCardPanel() {
   const lenses = useLenses()
   const createLens = useCareerCardLensesStore((s) => s.createLens)
   const setUiMode = useUIModeStore((s) => s.setMode)
+  const setReturnToApply = useUIModeStore((s) => s.setReturnToApply)
+  const setOpenPickerAfterHub = useUIModeStore((s) => s.setOpenPickerAfterHub)
 
   const { card, loading, error, refresh } = useProjectedCareerCard(walletAddress, {
     lensId: activeLensId,
@@ -162,12 +172,42 @@ export default function SimpleCardPanel() {
   } | null>(null)
   const [isDraftingLens, setIsDraftingLens] = useState(false)
 
+  const resumeNeedsStart = useMemo(() => {
+    if (!card) return true
+    const sec = card.sections.find((s) => RESUME_BLOCK_TYPES.has(s.blockType))
+    if (!sec) return true
+    const d = sec.data as ResumeData
+    if (d.id === '__storm_resume_placeholder__') return true
+    if (
+      String(d.verificationStatus || '').toUpperCase() === 'EMPTY' &&
+      !d.title?.trim() &&
+      !d.filename?.trim()
+    )
+      return true
+    return false
+  }, [card])
+
+  const handleAddBlockFromApply = useCallback(() => {
+    setReturnToApply(true)
+    setUiMode('hub')
+    setOpenPickerAfterHub(true)
+  }, [setReturnToApply, setUiMode, setOpenPickerAfterHub])
+
   const handleNavigateToBlock = useCallback(
     (blockType?: string) => {
-      if (blockType) getBlockDefinition(blockType)
-      openPicker()
+      const bt = blockType ?? 'storm-resume'
+      if (RESUME_BLOCK_TYPES.has(bt)) {
+        const route = getBlockDefinition(bt)?.pageRoute
+        if (route) setCurrentPage(route as PageType)
+        return
+      }
+      setReturnToApply(true)
+      setUiMode('hub')
+      const route = getBlockDefinition(bt)?.pageRoute
+      if (route) queueMicrotask(() => setCurrentPage(route as PageType))
+      else setOpenPickerAfterHub(true)
     },
-    [openPicker],
+    [setReturnToApply, setUiMode, setCurrentPage, setOpenPickerAfterHub],
   )
 
   const handleApply = useCallback(() => {
@@ -360,7 +400,7 @@ export default function SimpleCardPanel() {
       <StormiNextStepCard
         snap={snap}
         fit={fit}
-        installedCount={installedBlocks.length}
+        resumeNeedsStart={resumeNeedsStart}
         onAddBlock={handleNavigateToBlock}
         onApply={handleApply}
         onGoToWorkspace={handleGoToWorkspace}
@@ -384,8 +424,9 @@ export default function SimpleCardPanel() {
             <ProjectedCareerCard
               data={card}
               mode='self'
+              selfSectionNav='resume-only'
               onNavigateToBlock={handleNavigateToBlock}
-              onAddBlock={openPicker}
+              onAddBlock={handleAddBlockFromApply}
               walletAddress={walletAddress}
               onAvatarUploadSuccess={(url) => {
                 updateAvatarUrl(url)

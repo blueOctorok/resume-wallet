@@ -35,6 +35,13 @@ import ResumePreviewModal from '@/components/ResumePreviewModal'
 import Avatar from '@/components/ui/Avatar'
 import type { DotForm1Data, DotForm2Data, DotForm3Data } from '@/lib/dot-form-mapper'
 
+/** Normalize employer / title strings for matching verified jobs to work history rows. */
+function normEmploymentField(value: string | null | undefined): string {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+}
+
 // ─── Shared type ─────────────────────────────────────────────────────────────
 // Legacy shell: DriverCareerCardSection + /api/driver/career-card.
 // Employer modal uses ProjectedCareerCard + /api/employer/talent/[userId] (projected card).
@@ -739,7 +746,6 @@ export default function CareerCard({
           title={data.resume.title || 'Resume'}
           structuredData={data.resume.structuredData as Parameters<typeof ResumePreviewModal>[0]['structuredData']}
           onClose={() => setShowResumePreview(false)}
-          onDownload={() => {}}
           theme={theme}
           zIndex={10100}
         />

@@ -15,6 +15,10 @@ import type {
   CareerCardSection,
   SectionBlockType,
 } from '@/types/career-card'
+import { isCareerCardOwnerMode } from '@/types/career-card'
+import { pickHubDocForCareerBlock } from '@/lib/hub-document-types'
+import type { HubDocumentsHandle } from '@/hooks/use-hub-documents'
+import ConstructSectionWrapper from '@/components/career-card/ConstructSectionWrapper'
 import type { ResumeData, DotAppData, MvrData, CdlData, PortfolioData, GitHubData, ProjectsData } from '@/types/career-card'
 
 import { Sparkles } from 'lucide-react'
@@ -139,6 +143,13 @@ interface ProjectedCareerCardProps {
   selfHeaderActions?: ReactNode
   /** Self mode + wallet: after POST /api/user/avatar — parent refetches card / syncs hub store */
   onAvatarUploadSuccess?: (url: string) => void
+  /**
+   * Apply mode: only resume sections receive `onAction` (navigate to resume builder).
+   * Other blocks are read-only until the user switches to Construct mode.
+   */
+  selfSectionNav?: 'resume-only' | 'all'
+  /** Construct mode: hub document hook for inline verify / delete / preview */
+  hubDocuments?: HubDocumentsHandle
 }
 
 /**
@@ -166,6 +177,8 @@ export default function ProjectedCareerCard({
   onUndoLensSwitch,
   selfHeaderActions,
   onAvatarUploadSuccess,
+  selfSectionNav = 'all',
+  hubDocuments,
 }: ProjectedCareerCardProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
@@ -199,7 +212,7 @@ export default function ProjectedCareerCard({
             typography, just "Switched to X · undo" for ~5s, then back to the
             regular chip.
           */}
-          {(mode === 'self' && selfHeaderActions) ||
+          {(isCareerCardOwnerMode(mode) && selfHeaderActions) ||
           (mode === 'self' && showLensChip && (activeLensName || lensSwitchNote)) ? (
             <div
               className={cn(
@@ -207,7 +220,7 @@ export default function ProjectedCareerCard({
                 'transition-opacity duration-300',
               )}
             >
-              {mode === 'self' && selfHeaderActions ? (
+              {isCareerCardOwnerMode(mode) && selfHeaderActions ? (
                 <div className='flex shrink-0 items-center gap-0.5'>{selfHeaderActions}</div>
               ) : null}
               {mode === 'self' && showLensChip && (activeLensName || lensSwitchNote) ? (
@@ -253,7 +266,7 @@ export default function ProjectedCareerCard({
             </div>
           ) : null}
           <div className='flex items-start gap-4'>
-            {mode === 'self' && walletAddress && onAvatarUploadSuccess ? (
+            {isCareerCardOwnerMode(mode) && walletAddress && onAvatarUploadSuccess ? (
               /* AvatarUpload sits OUTSIDE overflow-hidden so the camera badge isn't clipped */
               <div className='relative shrink-0'>
                 <div
@@ -502,23 +515,52 @@ export default function ProjectedCareerCard({
           const recentlyInstalled = Boolean(
             recentlyInstalledBlockIds?.includes(section.blockType),
           )
+          const resumeTypes = new Set([
+            'storm-resume',
+            'driver-resume',
+            'developer-resume',
+            'general-resume',
+          ])
+          const navAll = (selfSectionNav ?? 'all') === 'all' || mode === 'construct'
+          const allowSectionNav =
+            isCareerCardOwnerMode(mode) &&
+            onNavigateToBlock &&
+            (navAll || resumeTypes.has(section.blockType))
+
+          const sectionInner = (
+            <SectionRenderer
+              section={section}
+              mode={mode}
+              isDark={isDark}
+              userId={data.userId}
+              walletAddress={walletAddress}
+              shareToken={data.shareToken}
+              onAction={
+                allowSectionNav && onNavigateToBlock
+                  ? () => onNavigateToBlock(section.blockType)
+                  : undefined
+              }
+            />
+          )
+
           return (
             <div
               key={section.blockType}
               className={cn(recentlyInstalled && 'animate-card-settle')}
             >
-              <SectionRenderer
-                section={section}
-                mode={mode}
-                isDark={isDark}
-                userId={data.userId}
-                walletAddress={walletAddress}
-                shareToken={data.shareToken}
-                onAction={mode === 'self' && onNavigateToBlock
-                  ? () => onNavigateToBlock(section.blockType)
-                  : undefined
-                }
-              />
+              {mode === 'construct' && hubDocuments && onNavigateToBlock ? (
+                <ConstructSectionWrapper
+                  blockType={section.blockType}
+                  isDark={isDark}
+                  doc={pickHubDocForCareerBlock(hubDocuments.documents, section.blockType)}
+                  hub={hubDocuments}
+                  onNavigateToBlock={onNavigateToBlock}
+                >
+                  {sectionInner}
+                </ConstructSectionWrapper>
+              ) : (
+                sectionInner
+              )}
             </div>
           )
         })}
@@ -631,8 +673,8 @@ export default function ProjectedCareerCard({
           </div>
         )}
 
-        {/* ── Empty state for self mode ── */}
-        {mode === 'self' && data.sections.length === 0 && (
+        {/* ── Empty state (self / construct) ── */}
+        {(mode === 'self' || mode === 'construct') && data.sections.length === 0 && (
           <div
             className={cn(
               'rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center',
@@ -641,15 +683,17 @@ export default function ProjectedCareerCard({
             )}
           >
             <p className={cn('text-sm font-semibold mb-1', isDark ? 'text-white' : 'text-gray-900')}>
-              Your career card is ready to build
+              {selfSectionNav === 'resume-only' ? 'Add credentials in Construct mode' : 'Your career card is ready to build'}
             </p>
             <p className={cn('text-xs mb-5 max-w-xs mx-auto', isDark ? 'text-gray-400' : 'text-gray-600')}>
-              Add blocks — they appear here in the order you install them. Each block is a capability employers can discover.
+              {selfSectionNav === 'resume-only'
+                ? 'Specialized blocks (DOT, MVR, portfolio, etc.) are added in Construct — your resume stays here in Apply.'
+                : 'Add blocks — they appear here in the order you install them. Each block is a capability employers can discover.'}
             </p>
             {onAddBlock && (
-              <Button type="button" variant="primary" size="sm" onClick={onAddBlock}>
-                <Plus className="w-4 h-4" />
-                Add blocks
+              <Button type='button' variant='primary' size='sm' onClick={onAddBlock}>
+                <Plus className='w-4 h-4' />
+                {selfSectionNav === 'resume-only' ? 'Open Construct mode' : 'Add blocks'}
               </Button>
             )}
           </div>
@@ -751,7 +795,7 @@ function SectionRenderer({
           mode={mode}
           isDark={isDark}
           walletAddress={walletAddress}
-          onNavigateToOrder={mode === 'self' && onAction ? onAction : undefined}
+          onNavigateToOrder={isCareerCardOwnerMode(mode) && onAction ? onAction : undefined}
         />
       )
     case 'driver-cdl-credentials':

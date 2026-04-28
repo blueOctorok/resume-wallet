@@ -13,6 +13,20 @@
 
 ---
 
+## 🛠️ **Construct on the card + mandatory STORM resume** (April 2026 — Done)
+
+**Product principle:** The career card in Construct is the **workshop** — each section carries verify / delete / edit affordances (mini vault tile + actions) without a parallel “Block files” list. In Apply, the card reads as an **employer preview** except the **resume**, which stays editable in flow. `storm-resume` is **core** (always installed, never in the picker, first on the card). PDF download buttons are removed from candidate-facing previews; generation code remains for admin/fallback.
+
+| Track | Status | Notes |
+|-------|--------|-------|
+| **Resume as core** | ✅ Done | Registry `coreBlock` / `hiddenFromBlockPicker`; hub store auto-install + non-removable; placeholder section when no DB row. |
+| **ConstructSectionWrapper + `useHubDocuments`** | ✅ Done | Extracted former My Files fetch/verify/delete/modals; hub workspace card runs `mode='construct'`. |
+| **Remove My Files hub section** | ✅ Done | `CandidateHub` slimmer column; prefs `hubBlockFilesExpanded` removed. |
+| **Apply ↔ Construct transitions** | ✅ Done | `selfSectionNav`, `returnToApply`, `openPickerAfterHub`, `ReturnToApplyBanner`. |
+| **PDF UI removal** | ✅ Done | Modals + `ResumeSection` + legacy `DriverHub` preview; optional `onDownload` on driver modal. |
+
+---
+
 ## 🚪 **Guided Everywhere — homepage v2 + single job-discovery surface** (April 2026 — Done)
 
 **Product principle:** The homepage's job is to point at the product, not retell it. Once Guided Mode (`SimpleModeShell`) could handle a guest, there was no reason to keep two job-browsing surfaces — and a working product page that visitors can poke at converts better than any hero copy. Indeed-style lazy auth: browse free, sign in to act. See **`docs/CHANGES.md`** (Guided Everywhere — homepage v2, single job-discovery surface, lazy auth) for the full rationale.
@@ -82,7 +96,7 @@
 | **P2c — Social image (1200²)** | ✅ Done | `/card/[token]/social-image` |
 | **P3a — Email signature PNG** | ✅ Done | `/card/[token]/signature` |
 | **P3b — README badge SVG** | ✅ Done | `/card/[token]/badge` |
-| **Share modal shell** | ✅ Done | `CareerCardShareModal` + `Modal` `panelShape="block"` use the same **`BlockPickerCategory`** card chrome (`rounded-xl border`, `bg-gray-800/40` / white); overflow uses **`.scrollbar-none`** in `globals.css` (scroll works, no bar). |
+| **Share modal shell** | ✅ Done | `CareerCardShareModal` + `Modal` `panelShape="block"` use the same **block-picker** card chrome (`rounded-xl border`, `bg-gray-800/40` / white); overflow uses **`.scrollbar-none`** in `globals.css` (scroll works, no bar). |
 | **Hub profile share CTA** | ✅ Done | `CandidateHub` `CareerCardMiniPreview`: **View card** + **Share** split row (same idea as sidebar `MiniCareerCard`). |
 | **P4 — Chrome extension** | 🔲 Future | `docs/CAREER_CARD_PLATFORM_INJECTION.md` — separate repo / Web Store |
 

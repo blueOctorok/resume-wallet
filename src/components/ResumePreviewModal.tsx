@@ -75,7 +75,8 @@ interface ResumePreviewModalProps {
   title: string
   structuredData: StructuredResumeData | null
   onClose: () => void
-  onDownload: () => void
+  /** Omitted in product UI — PDF generation remains available server-side for admins/fallback. */
+  onDownload?: () => void
   isDownloading?: boolean
   theme: string
   // Optional action handlers
@@ -100,7 +101,7 @@ export default function ResumePreviewModal({
   title,
   structuredData,
   onClose,
-  onDownload,
+  onDownload: onDownloadProp,
   isDownloading = false,
   theme,
   onEdit,
@@ -159,24 +160,26 @@ export default function ResumePreviewModal({
           
           {/* Action buttons row */}
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Primary: Download PDF */}
-            <button
-              onClick={onDownload}
-              disabled={isDownloading}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 ${
-                theme === 'dark'
-                  ? 'bg-teal-500 text-gray-900 hover:bg-teal-400'
-                  : 'bg-teal-600 text-white hover:bg-teal-700'
-              }`}
-            >
-              {isDownloading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4" />
-              )}
-              {isDownloading ? 'Generating...' : 'Download PDF'}
-            </button>
-            
+            {onDownloadProp ? (
+              <button
+                type="button"
+                onClick={onDownloadProp}
+                disabled={isDownloading}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 ${
+                  theme === 'dark'
+                    ? 'bg-teal-500 text-gray-900 hover:bg-teal-400'
+                    : 'bg-teal-600 text-white hover:bg-teal-700'
+                }`}
+              >
+                {isDownloading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                {isDownloading ? 'Generating...' : 'Download PDF'}
+              </button>
+            ) : null}
+
             {/* Edit button */}
             {onEdit && (
               <button
