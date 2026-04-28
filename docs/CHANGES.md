@@ -12,6 +12,19 @@ This file tracks major modifications made to the ResumeWallet codebase.
 - **`ProjectedCareerCard`:** `onCardMutation` + delegates section body to `CareerCardDynamicSections`; `groupSectionsByCardPage` helper in `career-card-pages.ts`.
 - **Stormi Apply:** `computeReorderSuggestion` + `StormiNextStepCard` “Reorder for this job” / dismiss; `SimpleCardPanel` wires `reorderBlocks` + refresh.
 
+### Iteration v2 — DnD UX, per-block page chips, "apply" CTA
+
+Same feature, second pass after the first version proved confusing on mobile and the divider button wasn't actionable enough.
+
+- **DnD pickup feedback:** Added a `DragOverlay` so the dragged section floats with the cursor/finger and the original slot dims to a placeholder. Activation now uses `PointerSensor { distance: 6 }`, `TouchSensor { delay: 220, tolerance: 6 }` (long-press to start on mobile so casual scrolls still work), `KeyboardSensor` for a11y. Modifiers `restrictToVerticalAxis` + `restrictToParentElement` keep the drag clean. Grip handle widened to a tall `min-h-[3.5rem] w-7` button with `touch-none select-none` so phones don't fight the gesture.
+- **Per-block page chips:** Replaced the global "Move blocks below to next page" divider button with two **named** chips on each non-core block: "Move {Block Label} to page N-1" / "Move {Block Label} to page N+1", plus a "Page N" badge. One click → patches that block's `config.cardPage`. Bidirectional, capped at `CARD_PAGE_MAX = 5`. Storm Resume stays pinned to page 1.
+- **Visible page boundaries in Construct:** When two adjacent blocks have different `cardPage` values we render a "── Page N ──" inline divider so the pagination plan is obvious without flipping. Construct stays a single scroll for editing; flip + dots remain for read views.
+- **"Use this card to apply" CTA:** New `selfHeaderActionsBelow` slot on `ProjectedCareerCard` renders a primary teal-ringed button under Share / Edit in Construct mode. Clicks `useUIModeStore.setMode('simple')` to drop straight into Apply mode with the same card and Stormi co-pilot.
+- **Dependency:** added `@dnd-kit/modifiers`.
+
+### Files touched (v2)
+`CareerCardDynamicSections.tsx` (rewritten), `ProjectedCareerCard.tsx` (new `selfHeaderActionsBelow` slot), `HubWorkspaceCareerCard.tsx` (apply CTA)
+
 ---
 
 ## **Construct UX polish — tab bar, block removal, add button** (April 2026)

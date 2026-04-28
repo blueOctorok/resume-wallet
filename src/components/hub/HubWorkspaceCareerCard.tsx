@@ -1,11 +1,12 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { Loader2, AlertCircle, Pencil, Share2 } from 'lucide-react'
+import { Loader2, AlertCircle, Pencil, Share2, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthStore, useUIStore } from '@/stores'
 import { useHubBlocksStore, useInstalledBlocks } from '@/stores/hub-blocks-store'
+import { useUIModeStore } from '@/stores/ui-mode-store'
 import { getBlockDefinition } from '@/lib/block-registry'
 import type { PageType } from '@/stores/types'
 import ProjectedCareerCard from '@/components/career-card/ProjectedCareerCard'
@@ -32,6 +33,7 @@ export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCar
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const openPicker = useHubBlocksStore((s) => s.openPicker)
   const updateAvatarUrl = useHubBlocksStore((s) => s.updateAvatarUrl)
+  const setUIMode = useUIModeStore((s) => s.setMode)
   const installedBlocks = useInstalledBlocks()
   const [shareOpen, setShareOpen] = useState(false)
 
@@ -124,6 +126,19 @@ export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCar
               <span className='hidden text-xs font-medium sm:inline'>Edit</span>
             </Button>
           </>
+        }
+        selfHeaderActionsBelow={
+          <Button
+            type='button'
+            variant='primary'
+            size='sm'
+            className='gap-1.5 shadow-sm shadow-teal-500/20 ring-1 ring-teal-400/40'
+            title='Switch to Apply mode and use this card on a job'
+            onClick={() => setUIMode('simple')}
+          >
+            <Sparkles className='h-3.5 w-3.5' />
+            <span className='text-xs font-semibold'>Use this card to apply</span>
+          </Button>
         }
       />
       {hubDocs.renderModals()}

@@ -140,6 +140,12 @@ interface ProjectedCareerCardProps {
   onUndoLensSwitch?: () => void
   /** Self mode: pinned top-right inside the vault header (e.g. Share + Edit). Sits above the lens chip when both exist. */
   selfHeaderActions?: ReactNode
+  /**
+   * Self mode: extra header content placed BELOW `selfHeaderActions` in the
+   * top-right column. Used by Construct for the "Use this card to apply" CTA
+   * so it shows up under Share / Edit without crowding the icon row.
+   */
+  selfHeaderActionsBelow?: ReactNode
   /** Self mode + wallet: after POST /api/user/avatar — parent refetches card / syncs hub store */
   onAvatarUploadSuccess?: (url: string) => void
   /**
@@ -177,6 +183,7 @@ export default function ProjectedCareerCard({
   lensSwitchNote,
   onUndoLensSwitch,
   selfHeaderActions,
+  selfHeaderActionsBelow,
   onAvatarUploadSuccess,
   selfSectionNav = 'all',
   hubDocuments,
@@ -214,7 +221,7 @@ export default function ProjectedCareerCard({
             typography, just "Switched to X · undo" for ~5s, then back to the
             regular chip.
           */}
-          {(isCareerCardOwnerMode(mode) && selfHeaderActions) ||
+          {(isCareerCardOwnerMode(mode) && (selfHeaderActions || selfHeaderActionsBelow)) ||
           (mode === 'self' && showLensChip && (activeLensName || lensSwitchNote)) ? (
             <div
               className={cn(
@@ -224,6 +231,9 @@ export default function ProjectedCareerCard({
             >
               {isCareerCardOwnerMode(mode) && selfHeaderActions ? (
                 <div className='flex shrink-0 items-center gap-0.5'>{selfHeaderActions}</div>
+              ) : null}
+              {isCareerCardOwnerMode(mode) && selfHeaderActionsBelow ? (
+                <div className='flex shrink-0 items-center justify-end'>{selfHeaderActionsBelow}</div>
               ) : null}
               {mode === 'self' && showLensChip && (activeLensName || lensSwitchNote) ? (
                 <div
