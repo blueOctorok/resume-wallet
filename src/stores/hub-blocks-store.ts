@@ -87,6 +87,15 @@ interface HubBlocksActions {
    * installed blocks. Optimistically updates local state, then syncs to API.
    */
   reorderBlocks: (reordered: InstalledBlock[], walletAddress: string) => Promise<void>
+  /**
+   * Merge keys into `hub_blocks.config` for one block (e.g. `cardPage`).
+   * Optimistically merges into local `installedBlocks` then PATCHes API.
+   */
+  patchBlockConfig: (
+    blockId: string,
+    configPatch: Record<string, unknown>,
+    walletAddress: string,
+  ) => Promise<void>
 
   // Onboarding
   completeOnboarding: (
@@ -306,6 +315,43 @@ export const useHubBlocksStore = create<HubBlocksState & HubBlocksActions>()((se
       // No rollback here — a stale order is recoverable on next fetch.
       // Silently re-fetch to get consistent server state.
       await get().fetchHubData(walletAddress)
+    }
+  },
+
+  patchBlockConfig: async (blockId, configPatch, walletAddress) => {
+    const prev = get().installedBlocks
+    const target = prev.find((b) => b.id === blockId)
+    if (!target) return
+
+    const merged = { ...target.config, ...configPatch }
+    set({
+      installedBlocks: prev.map((b) => (b.id === blockId ? { ...b, config: merged } : b)),
+    })
+
+    try {
+      const res = await fetch(`/api/hub/blocks/${blockId}/config`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': walletAddress,
+        },
+        body: JSON.stringify({ config: configPatch }),
+      })
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}))
+        throw new Error((errBody as { error?: string }).error ?? 'Failed to patch config')
+      }
+      const data = (await res.json()) as { config?: Record<string, unknown> }
+      if (data.config) {
+        set({
+          installedBlocks: get().installedBlocks.map((b) =>
+            b.id === blockId ? { ...b, config: data.config! } : b,
+          ),
+        })
+      }
+    } catch (err) {
+      console.error('[HubBlocksStore] patchBlockConfig failed:', err)
+      set({ installedBlocks: prev })
     }
   },
 

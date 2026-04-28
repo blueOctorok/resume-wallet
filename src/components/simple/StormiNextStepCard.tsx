@@ -19,11 +19,12 @@
  */
 
 import { useMemo } from 'react'
-import { ArrowRight, CheckCircle2, Compass, ExternalLink, Eye, LayoutDashboard, Loader2, Plus, Sparkles } from 'lucide-react'
+import { ArrowRight, ArrowUpDown, CheckCircle2, Compass, ExternalLink, Eye, LayoutDashboard, Loader2, Plus, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import Button from '@/components/ui/Button'
 import type { JobFitResult, PickBestLensResult } from '@/lib/job-fit'
+import type { ReorderSuggestion } from '@/lib/card-reorder-suggestions'
 import type { SelectedJobSnapshot } from '@/stores/simple-mode-store'
 
 const APPLY_COVERAGE_THRESHOLD = 50
@@ -46,6 +47,10 @@ export interface StormiNextStepCardProps {
   lensPick?: PickBestLensResult | null
   onDraftLens?: () => void
   isDraftingLens?: boolean
+  /** Deterministic card reorder nudge for the selected job */
+  reorderSuggestion?: ReorderSuggestion | null
+  onApplyReorder?: () => void
+  onDismissReorder?: () => void
 }
 
 interface NextStep {
@@ -67,6 +72,9 @@ export default function StormiNextStepCard({
   lensPick,
   onDraftLens,
   isDraftingLens = false,
+  reorderSuggestion,
+  onApplyReorder,
+  onDismissReorder,
 }: StormiNextStepCardProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
@@ -111,6 +119,18 @@ export default function StormiNextStepCard({
         title: 'Start with a STORM resume',
         body: `Almost every role wants one \u2014 adding it is your first ~30% of coverage for \u201c${snap.title}\u201d.`,
         primary: { label: 'Add STORM Resume', onClick: () => onAddBlock('storm-resume') },
+      }
+    }
+
+    // Job-matched credentials buried on page 2+ or deep in the list — one-tap reorder.
+    if (reorderSuggestion && onApplyReorder && onDismissReorder) {
+      return {
+        icon: ArrowUpDown,
+        eyebrow: 'For this job',
+        title: 'Bring key credentials up front',
+        body: reorderSuggestion.reason,
+        primary: { label: 'Reorder for this job', onClick: onApplyReorder },
+        secondary: { label: 'Keep current order', onClick: onDismissReorder },
       }
     }
 
@@ -191,7 +211,20 @@ export default function StormiNextStepCard({
         ? { label: 'Go to Construct', onClick: onGoToWorkspace }
         : undefined,
     }
-  }, [snap, fit, resumeNeedsStart, onAddBlock, onApply, onGoToWorkspace, lensPick, onDraftLens, isDraftingLens])
+  }, [
+    snap,
+    fit,
+    resumeNeedsStart,
+    onAddBlock,
+    onApply,
+    onGoToWorkspace,
+    lensPick,
+    onDraftLens,
+    isDraftingLens,
+    reorderSuggestion,
+    onApplyReorder,
+    onDismissReorder,
+  ])
 
   const Icon = step.icon
 

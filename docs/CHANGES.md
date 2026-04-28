@@ -4,6 +4,27 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Career card pagination + reorder + Stormi** (April 2026)
+
+- **`hub_blocks.config.cardPage`:** `PATCH /api/hub/blocks/[id]/config` merges JSON; `hub-blocks-store.patchBlockConfig`; `readCardPage` / `CARD_PAGE_MAX` in `hub-block-config.ts`; `buildProjectedCareerCard` selects `id, block_type, config` and sets `CareerCardSection.hubBlockId` + `cardPage` (storm forced page 1).
+- **Lens + pages:** `applyLensOrderAndFilterPerPage` in `career-card-lenses.ts` applies emphasis inside each page then concatenates.
+- **`CareerCardDynamicSections`:** Construct = flat list + `@dnd-kit` reorder (storm pinned) + page-break actions when ≥3 blocks; Apply/self/employer/public = dot pager + light 3D flip when multiple pages; merge last page control.
+- **`ProjectedCareerCard`:** `onCardMutation` + delegates section body to `CareerCardDynamicSections`; `groupSectionsByCardPage` helper in `career-card-pages.ts`.
+- **Stormi Apply:** `computeReorderSuggestion` + `StormiNextStepCard` “Reorder for this job” / dismiss; `SimpleCardPanel` wires `reorderBlocks` + refresh.
+
+---
+
+## **Construct UX polish — tab bar, block removal, add button** (April 2026)
+
+- **Mobile tab bar hidden on desktop:** `.tab-bar` CSS had `display: flex` overriding Tailwind's `md:hidden` (custom CSS > layered utilities in Tailwind v4). Added `@media (min-width: 768px) { display: none }` to the `.tab-bar` rule; removed redundant `md:hidden` from JSX.
+- **Block removal in Construct mode:** `ConstructSectionWrapper` previously only had artifact-level delete (which doesn't uninstall the block). Replaced with a "Remove" button that calls `removeBlock(blockId, walletAddress)` from `hub-blocks-store`, with a confirmation prompt. Core blocks (`storm-resume`) still can't be removed.
+- **"Add block" button in Construct card:** Added a persistent dashed-border `+ Add block` button below all sections in `ProjectedCareerCard` when `mode === 'construct'`. Wired to `onAddBlock` (→ `openPicker`).
+
+### Files touched
+`globals.css`, `MobileTabBar.tsx`, `ConstructSectionWrapper.tsx`, `ProjectedCareerCard.tsx`
+
+---
+
 ## **Construct mode on the card + resume as core** (April 2026)
 
 ### Why

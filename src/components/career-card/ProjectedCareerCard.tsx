@@ -16,9 +16,8 @@ import type {
   SectionBlockType,
 } from '@/types/career-card'
 import { isCareerCardOwnerMode } from '@/types/career-card'
-import { pickHubDocForCareerBlock } from '@/lib/hub-document-types'
 import type { HubDocumentsHandle } from '@/hooks/use-hub-documents'
-import ConstructSectionWrapper from '@/components/career-card/ConstructSectionWrapper'
+import CareerCardDynamicSections from '@/components/career-card/CareerCardDynamicSections'
 import type { ResumeData, DotAppData, MvrData, CdlData, PortfolioData, GitHubData, ProjectsData } from '@/types/career-card'
 
 import { Sparkles } from 'lucide-react'
@@ -150,6 +149,8 @@ interface ProjectedCareerCardProps {
   selfSectionNav?: 'resume-only' | 'all'
   /** Construct mode: hub document hook for inline verify / delete / preview */
   hubDocuments?: HubDocumentsHandle
+  /** After reorder / card page patch — parent refetches projected card */
+  onCardMutation?: () => void
 }
 
 /**
@@ -179,6 +180,7 @@ export default function ProjectedCareerCard({
   onAvatarUploadSuccess,
   selfSectionNav = 'all',
   hubDocuments,
+  onCardMutation,
 }: ProjectedCareerCardProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
@@ -511,59 +513,33 @@ export default function ProjectedCareerCard({
 
       {/* ── Dynamic Sections ── */}
       <div className='px-6 sm:px-8 pb-7 space-y-5 relative z-[1]'>
-        {data.sections.map((section) => {
-          const recentlyInstalled = Boolean(
-            recentlyInstalledBlockIds?.includes(section.blockType),
-          )
-          const resumeTypes = new Set([
-            'storm-resume',
-            'driver-resume',
-            'developer-resume',
-            'general-resume',
-          ])
-          const navAll = (selfSectionNav ?? 'all') === 'all' || mode === 'construct'
-          const allowSectionNav =
-            isCareerCardOwnerMode(mode) &&
-            onNavigateToBlock &&
-            (navAll || resumeTypes.has(section.blockType))
-
-          const sectionInner = (
-            <SectionRenderer
-              section={section}
-              mode={mode}
-              isDark={isDark}
-              userId={data.userId}
-              walletAddress={walletAddress}
-              shareToken={data.shareToken}
-              onAction={
-                allowSectionNav && onNavigateToBlock
-                  ? () => onNavigateToBlock(section.blockType)
-                  : undefined
-              }
-            />
-          )
-
-          return (
-            <div
-              key={section.blockType}
-              className={cn(recentlyInstalled && 'animate-card-settle')}
-            >
-              {mode === 'construct' && hubDocuments && onNavigateToBlock ? (
-                <ConstructSectionWrapper
-                  blockType={section.blockType}
-                  isDark={isDark}
-                  doc={pickHubDocForCareerBlock(hubDocuments.documents, section.blockType)}
-                  hub={hubDocuments}
-                  onNavigateToBlock={onNavigateToBlock}
-                >
-                  {sectionInner}
-                </ConstructSectionWrapper>
-              ) : (
-                sectionInner
-              )}
-            </div>
-          )
-        })}
+        {data.sections.length > 0 ? (
+          <CareerCardDynamicSections
+            sections={data.sections}
+            mode={mode}
+            isDark={isDark}
+            walletAddress={walletAddress}
+            onNavigateToBlock={onNavigateToBlock}
+            onAddBlock={onAddBlock}
+            hubDocuments={hubDocuments}
+            selfSectionNav={selfSectionNav}
+            recentlyInstalledBlockIds={recentlyInstalledBlockIds}
+            onCardMutation={onCardMutation}
+            renderSectionInner={(section, allowNav) => (
+              <SectionRenderer
+                section={section}
+                mode={mode}
+                isDark={isDark}
+                userId={data.userId}
+                walletAddress={walletAddress}
+                shareToken={data.shareToken}
+                onAction={
+                  allowNav && onNavigateToBlock ? () => onNavigateToBlock(section.blockType) : undefined
+                }
+              />
+            )}
+          />
+        ) : null}
 
         {/* ── Ghost sections — Simple mode "glowing gaps" ── */}
         {mode === 'self' && ghostSections && ghostSections.length > 0 && (

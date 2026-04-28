@@ -1151,6 +1151,14 @@ button:disabled,
   .animate-ghost-pulse {
     animation: none !important;
   }
+  .card-flip-inner {
+    transition: none !important;
+  }
+}
+
+/* Career card multi-page flip (Apply / employer / public) */
+.card-flip-inner {
+  transition: transform 280ms ease-out, opacity 280ms ease-out;
 }
 
 /* ==========================================================================
@@ -1170,6 +1178,9 @@ button:disabled,
   justify-content: center;
   padding: 0 1.6em;
   padding-bottom: env(safe-area-inset-bottom, 0.4em);
+}
+@media (min-width: 768px) {
+  .tab-bar { display: none; }
 }
 
 .tab-bar--light {

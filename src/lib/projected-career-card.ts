@@ -83,7 +83,8 @@ function computeCareerCardSignals(
   }
 }
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { applyLensOrderAndFilter, getLensOrDefault } from '@/lib/career-card-lenses'
+import { applyLensOrderAndFilterPerPage, getLensOrDefault } from '@/lib/career-card-lenses'
+import { readCardPage } from '@/lib/hub-block-config'
 
 export type ProjectedCareerCardContactMode = 'self' | 'public' | 'employer'
 
@@ -164,11 +165,13 @@ export async function buildProjectedCareerCard(
 
   const { data: hubBlocks } = await supabase
     .from('hub_blocks')
-    .select('block_type')
+    .select('id, block_type, config')
     .eq('user_id', userId)
     .order('position', { ascending: true })
 
-  const installedTypes = (hubBlocks ?? []).map((b) => b.block_type)
+  type HubRow = { id: string; block_type: string; config: Record<string, unknown> | null }
+  const hubRows = (hubBlocks ?? []) as HubRow[]
+  const installedTypes = hubRows.map((b) => b.block_type)
   const hasStormResume = installedTypes.includes('storm-resume')
   const legacyResumeBlockTypes = new Set(['driver-resume', 'developer-resume', 'general-resume'])
 
@@ -193,7 +196,8 @@ export async function buildProjectedCareerCard(
 
   const sections: CareerCardSection[] = []
 
-  for (const blockType of installedTypes) {
+  for (const row of hubRows) {
+    const blockType = row.block_type
     if (hasStormResume && legacyResumeBlockTypes.has(blockType)) continue
     const def = getBlockDefinition(blockType)
     if (!def || !def.appearsOnCareerCard) continue
@@ -205,11 +209,18 @@ export async function buildProjectedCareerCard(
       continue
     }
 
+    let cardPage = readCardPage(row.config ?? undefined)
+    if (blockType === 'storm-resume') {
+      cardPage = 1
+    }
+
     sections.push({
       blockType: blockType as SectionBlockType,
       label: def.label,
       icon: def.icon,
       data: sectionData,
+      hubBlockId: row.id,
+      cardPage,
     })
   }
 
@@ -221,7 +232,10 @@ export async function buildProjectedCareerCard(
 
   // Apply the lens ordering + filter before computing signals so score reflects
   // what's actually visible on the card. Employer view uses the raw sections.
-  const projectedSections = lensRow ? applyLensOrderAndFilter(sections, lensRow) : sections
+  // Per-page lens so `cardPage` boundaries stay stable under emphasis reorder.
+  const projectedSections = lensRow
+    ? applyLensOrderAndFilterPerPage(sections, lensRow)
+    : sections
 
   const signals = computeCareerCardSignals(projectedSections, employerConfirmed)
 

@@ -125,6 +125,10 @@ export interface CareerCardSection<T extends SectionBlockType = SectionBlockType
   label: string
   icon: string
   data: SectionDataMap[T]
+  /** `hub_blocks.id` — present for candidate-owned cards from projection; used for reorder + config. */
+  hubBlockId?: string
+  /** Career card flip page (1-based). From `hub_blocks.config.cardPage`, default 1. */
+  cardPage?: number
 }
 
 /** One row in the career card “on-chain credentials” trust strip */

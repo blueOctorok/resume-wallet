@@ -5,7 +5,8 @@
  * Mirrors Block Picker row chrome; actions reuse former “Block files” behavior.
  */
 
-import { Eye, Loader2, Pencil, ShieldCheck, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { Eye, Loader2, Pencil, ShieldCheck, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
 import { VaultCredentialChrome } from '@/components/hub/HubBlockVault'
@@ -13,7 +14,8 @@ import { getBlockColor, getBlockDefinition, isCoreBlock } from '@/lib/block-regi
 import { getBlockIllustration } from '@/components/hub/BlockIllustrations'
 import type { HubDocument } from '@/lib/hub-document-types'
 import type { HubDocumentsHandle } from '@/hooks/use-hub-documents'
-import { useUIStore } from '@/stores'
+import { useAuthStore, useUIStore } from '@/stores'
+import { useHubBlocksStore, useInstalledBlocks } from '@/stores/hub-blocks-store'
 import type { PageType } from '@/stores/types'
 import { isLiveResumeIpfsHash } from '@/lib/resume-ipfs-guards'
 
@@ -41,6 +43,10 @@ export default function ConstructSectionWrapper({
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const setEditingResumeId = useUIStore((s) => s.setEditingResumeId)
   const setStormResumeInitialPanel = useUIStore((s) => s.setStormResumeInitialPanel)
+  const walletAddress = useAuthStore((s) => s.walletAddress)
+  const removeBlock = useHubBlocksStore((s) => s.removeBlock)
+  const installedBlocks = useInstalledBlocks()
+  const [confirmRemove, setConfirmRemove] = useState(false)
 
   const colors = getBlockColor(blockType)
   const Illustration = getBlockIllustration(blockType)
@@ -55,6 +61,13 @@ export default function ConstructSectionWrapper({
   const dangerBtn = isDark ? 'bg-red-500/15 text-red-400 hover:bg-red-500/25' : 'bg-red-50 text-red-600 hover:bg-red-100'
 
   const core = isCoreBlock(blockType)
+  const installed = installedBlocks.find((b) => b.blockType === blockType)
+
+  const handleRemoveBlock = async () => {
+    if (!installed || !walletAddress || core) return
+    await removeBlock(installed.id, walletAddress)
+    setConfirmRemove(false)
+  }
 
   const openResumeEditor = (d: HubDocument) => {
     if (d.id !== 'resume-hub-placeholder') setEditingResumeId(d.id)
@@ -218,47 +231,38 @@ export default function ConstructSectionWrapper({
                   Verify
                 </button>
               )}
-              {doc?.canDelete && !core && (
+              {!core && installed && (
                 <button
                   type='button'
-                  onClick={() => hub.setConfirmDelete(doc.id)}
-                  disabled={hub.deleting === doc.id}
-                  className={cn(btn, dangerBtn, 'disabled:opacity-50')}
+                  onClick={() => setConfirmRemove(true)}
+                  className={cn(btn, dangerBtn)}
                 >
-                  {hub.deleting === doc.id ? (
-                    <Loader2 className='w-3 h-3 animate-spin' />
-                  ) : (
-                    <Trash2 className='w-3 h-3' />
-                  )}
-                  Delete
-                </button>
-              )}
-              {doc?.type === 'dotapp' && !doc.canDelete && (
-                <button type='button' disabled title='Verified on-chain — cannot delete' className={cn(btn, 'cursor-not-allowed opacity-45', isDark ? 'text-gray-500' : 'text-gray-400')}>
-                  <Trash2 className='w-3 h-3' /> Delete
+                  <X className='w-3 h-3' /> Remove
                 </button>
               )}
             </div>
           </div>
 
-          {doc && hub.confirmDelete === doc.id && (
+          {confirmRemove && (
             <div
               className={cn(
                 'flex flex-col gap-2 rounded-xl px-3 py-2 text-xs sm:flex-row sm:items-center sm:justify-between',
                 isDark ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-50 border border-red-200',
               )}
             >
-              <span className={isDark ? 'text-red-400' : 'text-red-600'}>Delete this? Cannot be undone.</span>
+              <span className={isDark ? 'text-red-400' : 'text-red-600'}>
+                Remove this block from your card?
+              </span>
               <div className='flex gap-2'>
                 <button
                   type='button'
-                  onClick={() => hub.setConfirmDelete(null)}
+                  onClick={() => setConfirmRemove(false)}
                   className={cn('px-2 py-1 rounded', isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700')}
                 >
                   Cancel
                 </button>
-                <button type='button' onClick={() => hub.handleDelete(doc)} className='rounded bg-red-500 px-2 py-1 text-white hover:bg-red-600'>
-                  Delete
+                <button type='button' onClick={handleRemoveBlock} className='rounded bg-red-500 px-2 py-1 text-white hover:bg-red-600'>
+                  Remove
                 </button>
               </div>
             </div>

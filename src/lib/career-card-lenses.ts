@@ -12,6 +12,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { CARD_PAGE_MAX } from '@/lib/hub-block-config'
 
 /** Reserved name for the one-and-only default lens per user. UI forbids reuse. */
 export const FULL_PROFILE_LENS_NAME = 'Full profile'
@@ -170,4 +171,24 @@ export function applyLensOrderAndFilter<T extends { blockType: string }>(
     return ai - bi
   })
   return [...emphasized, ...rest]
+}
+
+/**
+ * Apply lens filter + emphasis order **within each card page** only, then
+ * concatenate pages in ascending order. Keeps pagination boundaries intact
+ * when a lens would otherwise pull a page-2 block ahead of page-1 content.
+ */
+export function applyLensOrderAndFilterPerPage<T extends { blockType: string; cardPage?: number }>(
+  sections: T[],
+  lens: Pick<CareerCardLensRow, 'visible_block_types' | 'emphasized_block_types'>,
+): T[] {
+  const byPage = new Map<number, T[]>()
+  for (const s of sections) {
+    const raw = s.cardPage
+    const p = Math.min(CARD_PAGE_MAX, Math.max(1, typeof raw === 'number' && Number.isFinite(raw) ? Math.floor(raw) : 1))
+    if (!byPage.has(p)) byPage.set(p, [])
+    byPage.get(p)!.push(s)
+  }
+  const pages = [...byPage.keys()].sort((a, b) => a - b)
+  return pages.flatMap((p) => applyLensOrderAndFilter(byPage.get(p)!, lens))
 }

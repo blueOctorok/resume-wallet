@@ -93,6 +93,7 @@ export default function HubWorkspaceCareerCard({ refreshNonce }: HubWorkspaceCar
         walletAddress={walletAddress}
         onNavigateToBlock={handleNavigateToBlock}
         onAddBlock={openPicker}
+        onCardMutation={() => void refresh()}
         onAvatarUploadSuccess={(url) => {
           updateAvatarUrl(url)
           void refresh()

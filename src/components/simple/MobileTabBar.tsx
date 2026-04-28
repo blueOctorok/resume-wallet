@@ -123,7 +123,7 @@ export default function MobileTabBar() {
       <div
         ref={menuRef}
         className={cn(
-          'tab-bar md:hidden',
+          'tab-bar',
           isDark ? 'tab-bar--dark' : 'tab-bar--light',
         )}
         role='tablist'

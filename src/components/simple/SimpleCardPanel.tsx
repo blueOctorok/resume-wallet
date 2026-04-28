@@ -34,6 +34,7 @@ import LensManageModal from '@/components/career-card/LensManageModal'
 import { useCareerCardLensesStore, useLenses } from '@/stores/career-card-lenses-store'
 import type { ProjectedCareerCard as CardData } from '@/types/career-card'
 import { computeJobFit, pickBestLens } from '@/lib/job-fit'
+import { computeReorderSuggestion } from '@/lib/card-reorder-suggestions'
 import { useExtractedRequirements } from '@/hooks/use-extracted-requirements'
 import { useProjectedCareerCard } from '@/hooks/use-projected-career-card'
 
@@ -138,7 +139,9 @@ export default function SimpleCardPanel() {
   const walletAddress = useAuthStore((s) => s.walletAddress)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const updateAvatarUrl = useHubBlocksStore((s) => s.updateAvatarUrl)
+  const reorderBlocks = useHubBlocksStore((s) => s.reorderBlocks)
   const installedBlocks = useInstalledBlocks()
+  const [reorderDismissed, setReorderDismissed] = useState(false)
   const snap = useSimpleModeStore((s) => s.selectedJobSnapshot)
   const activeLensId = useSimpleModeStore((s) => s.activeLensId)
   const overrideAutoPick = useSimpleModeStore((s) => s.overrideAutoPick)
@@ -322,6 +325,25 @@ export default function SimpleCardPanel() {
     setDraftLens(null)
   }, [snap?.id])
 
+  useEffect(() => {
+    setReorderDismissed(false)
+  }, [snap?.id])
+
+  const reorderSuggestion = useMemo(() => {
+    if (!card || !fit || reorderDismissed) return null
+    return computeReorderSuggestion(card.sections, fit)
+  }, [card, fit, reorderDismissed])
+
+  const handleApplyReorder = useCallback(() => {
+    if (!walletAddress || !reorderSuggestion) return
+    const byType = new Map(installedBlocks.map((b) => [b.blockType, b]))
+    const ordered = reorderSuggestion.suggestedBlockTypes
+      .map((t) => byType.get(t))
+      .filter((b): b is (typeof installedBlocks)[number] => Boolean(b))
+    if (ordered.length !== installedBlocks.length) return
+    void reorderBlocks(ordered, walletAddress).then(() => refresh())
+  }, [walletAddress, reorderSuggestion, installedBlocks, reorderBlocks, refresh])
+
   const ghostSections: GhostSection[] = useMemo(() => {
     if (!fit) return []
     return fit.recommendedBlocks.map((block) => ({
@@ -407,6 +429,9 @@ export default function SimpleCardPanel() {
         lensPick={lensPick}
         onDraftLens={handleDraftLens}
         isDraftingLens={isDraftingLens}
+        reorderSuggestion={reorderSuggestion}
+        onApplyReorder={handleApplyReorder}
+        onDismissReorder={() => setReorderDismissed(true)}
       />
 
       {/* Career card — rendered directly, the card IS the container */}
@@ -428,6 +453,7 @@ export default function SimpleCardPanel() {
               onNavigateToBlock={handleNavigateToBlock}
               onAddBlock={handleAddBlockFromApply}
               walletAddress={walletAddress}
+              onCardMutation={() => void refresh()}
               onAvatarUploadSuccess={(url) => {
                 updateAvatarUrl(url)
                 void refresh()
