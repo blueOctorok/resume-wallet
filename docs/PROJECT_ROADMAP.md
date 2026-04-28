@@ -1,5 +1,18 @@
 # Storm — Complete Project Roadmap
 
+## 🎂 **Hub-as-Card — Workspace hub = the career card** (April 2026 — Done)
+
+**Product principle:** The card is the cake; everything else is icing. Workspace is **self-driven** identity building (no job target), distinct from Guided Mode’s job-first flow. Users always see the live projected card and launch block pages from it; verifications reflect immediately from `/api/career-card` refetches.
+
+| Track | Status | Notes |
+|-------|--------|-------|
+| **Phase 1 — Subtraction + inbox + account** | ✅ Done | Removed profile title card, insights strip, hub walkthrough on load, sticky `HubSidebar` from hub page (sidebar retained for `StormiJourneyGuide`), mobile FAB. `HubInboxSection` tabs: job alerts, employer requests, applications CTA. `HubAccountSection`: foldable STORM + USDC + referral. |
+| **Phase 2 — Card as canvas** | ✅ Done | `HubWorkspaceCareerCard` + `useProjectedCareerCard`; block hive + DnD reorder UI removed (picker + card order remain). Edit profile → `showProfileSetup`; refresh icon refetches card. |
+| **Phase 3 — Stormi right column** | ✅ Done | `lg:grid-cols-[1fr_22rem]`; sticky Ask Stormi aside; mobile stacks main column first. |
+| **Phase 4 — Account in My Hub dropdown** | 🔲 Deferred | Plan optional — ship collapsible Account card first; revisit if still noisy. |
+
+---
+
 ## 🚪 **Guided Everywhere — homepage v2 + single job-discovery surface** (April 2026 — Done)
 
 **Product principle:** The homepage's job is to point at the product, not retell it. Once Guided Mode (`SimpleModeShell`) could handle a guest, there was no reason to keep two job-browsing surfaces — and a working product page that visitors can poke at converts better than any hero copy. Indeed-style lazy auth: browse free, sign in to act. See **`docs/CHANGES.md`** (Guided Everywhere — homepage v2, single job-discovery surface, lazy auth) for the full rationale.

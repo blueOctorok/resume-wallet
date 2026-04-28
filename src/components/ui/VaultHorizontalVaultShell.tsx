@@ -56,7 +56,7 @@ export default function VaultHorizontalVaultShell({
     <div
       className={cn(
         'relative w-full overflow-visible pointer-events-auto',
-        isNav && 'mx-auto max-w-4xl',
+        isNav && 'mx-auto max-w-3xl',
         className,
       )}
       style={{ filter: outerFilter }}

@@ -4,6 +4,72 @@ This file tracks major modifications made to the ResumeWallet codebase.
 
 ---
 
+## **Hub-as-Card — career card is the workspace** (April 2026)
+
+### Why
+The candidate hub stacked many first-class surfaces (profile title card, mini career card preview, insights strip, Stormi chat, abstract block hive, block files, job alerts, referral, employer requests, STORM, USDC, plus a sticky sidebar duplicating path steps and another mini card). Guided Mode already teaches job-first flow; the hub needed a single clear noun: **the career card is the cake; everything else is icing.**
+
+### What shipped
+
+- **Workspace hub layout**
+  - Main column: `StormiNudgeBanner` (when wallet) → **full `ProjectedCareerCard` (`HubWorkspaceCareerCard`)** → `My Files` → **tabbed `HubInboxSection`** (Alerts / Employer requests / Applications shortcut) → **collapsible `HubAccountSection`** (STORM + USDC + referral).
+  - Right column (lg+): **Ask Stormi** (`StormiChatPanel`) in a sticky violet `HubSectionPanel` — self-service chat, not competing with the card for width on desktop.
+- **Removed from hub:** `HubProfileHeader`, `CareerCardMiniPreview`, block hive (`VaultHubGrid` / DnD), `CareerCardInsightsStrip`, `HubSidebar` on this page (sidebar file kept for `StormiJourneyGuide` drawer), mobile “Career path” FAB, `StormiWalkthrough` on hub load (Guided Mode + Journey replay cover onboarding).
+- **Deleted:** `src/components/hub/CareerCardInsightsStrip.tsx` (only hub consumer).
+- **Shared hook:** `src/hooks/use-projected-career-card.ts` — `CandidateHub` / `SimpleCardPanel` use the same `/api/career-card` fetch pattern (`refreshNonce`, `installedBlockCount`, optional `lensId`).
+- **Copy tweak:** `ProjectedCareerCard` empty-state lines reframed (“ready to build” / install order) so the hub doesn’t talk about a separate “hub” abstraction.
+
+### Follow-up: homepage hero — career card mockup replaces block tiles
+- Replaced the "Your hub, in the wild" `VaultShowcase` (hex block tiles) with a `HeroCareerCardMockup` — a static career card showing avatar, verified badge, card strength bar, on-chain block list. Shows the finished product instead of building blocks.
+- Removed unused `VaultShowcase` import, `HIVE_BLOCKS` constant, and 5 dead icon imports (`Car`, `ClipboardList`, `Github`, `Globe`, `IdCard`).
+
+### Follow-up: mode rename (Guided → Apply, Workspace → Build)
+- `ModeToggle.tsx` labels renamed: **Apply** (job-first, Stormi co-pilot) and **Build** (full composable hub). Simplified responsive spans since the new labels are short enough to show at all breakpoints.
+
+### Follow-up: hub mode label — **Construct** (replaces Manage / Build in UI)
+- Second pill + tooltips: **Construct** (`ModeToggle`). Menu variant: "Open Construct mode" / "Back to Apply".
+- Apply-mode nudges: `StormiNextStepCard` + `SimpleModeShell` graduate banner use **Go to Construct** / "Construct mode" in copy (was Workspace / Manage).
+- HomePage: hub section title **Construct Mode**; section anchor `id='apply-mode'` (was `build-mode`); Construct section description uses "full hub" wording.
+- `HubWorkspaceCareerCard`: Share header control shows **Share** text (sm+) next to the icon, matching Edit.
+
+### Follow-up: nav actually tightened
+- Outer vault shell reduced from `max-w-4xl` (896px) to `max-w-3xl` (768px) — the previous `max-w-5xl` on the inner content was useless since the outer shell was already smaller. Removed it.
+
+### Follow-up: removed redundant card-in-card wrapper
+`HubWorkspaceCareerCard` was wrapping the career card in `HubSectionPanel` → the card already owns its own `VaultHorizontalVaultShell`, so the panel was a second rounded-border container. Removed the `HubSectionPanel` — the card IS the container now.
+
+### Follow-up: avatar badge clip fix + nav tightening
+- **Avatar clip:** `AvatarUpload` (self mode) moved outside the `overflow-hidden` wrapper in `ProjectedCareerCard` so the persistent camera badge is no longer clipped by the circular frame.
+- **Nav tighter:** Outer vault shell reduced from `max-w-4xl` (896px) to `max-w-3xl` (768px) in `VaultHorizontalVaultShell`. Inner padding reduced (`px-3 sm:px-4`). Outer header padding in `Navigation.tsx` reduced to `px-3 sm:px-5`. Noticeably less dead space.
+- **Logo larger:** `StormChainWordmark` nav size bumped from `text-[1.5rem]` to `text-[1.75rem]` (and proportionally at `sm`/`lg`).
+
+### Follow-up: mode rename (Guided → Apply, Workspace → Build)
+- `ModeToggle.tsx` labels renamed: **Apply** (job-first, Stormi co-pilot) and **Build** (full composable hub). Simplified responsive spans since the new labels are short enough to show at all breakpoints.
+
+### Follow-up: career card profile photo upload (restored)
+- Self-view `ProjectedCareerCard` uses `AvatarUpload` + **`POST /api/user/avatar`** when `onAvatarUploadSuccess` is provided (hub workspace, guided card panel, full career card page). Persistent camera badge + hover overlay match the old hub hero behavior.
+
+### Follow-up: workspace career card header (Share + Edit in-card)
+- Removed duplicate **Refresh** above the hub career card (nav already refreshes the hub).
+- **Edit** and **Share** (social / link / QR via `CareerCardShareModal`) sit in the **top-right of the vault header** via new `selfHeaderActions` on `ProjectedCareerCard`, supplied by `HubWorkspaceCareerCard`.
+
+### Follow-up: wider Stormi column + flat inbox alerts
+- **Ask Stormi:** Workspace grid right column widened from `22rem` to `26rem` so chat and rich replies have more room without stealing the main column (`minmax(0,1fr)` still absorbs the rest).
+- **Inbox Alerts tab:** `JobAlertsHubSection` takes `embedded` — when rendered from `HubInboxSection`, it skips the nested sky `HubSectionPanel` + `BlockCard` so job alerts sit inside the amber inbox shell only (no blue card-in-card).
+
+### Files touched
+- **New:** `src/components/hub/HubWorkspaceCareerCard.tsx`, `HubInboxSection.tsx`, `HubAccountSection.tsx`, `src/hooks/use-projected-career-card.ts`
+- **Major edit:** `src/components/hub/CandidateHub.tsx` (removed ~800 lines of tile grid + profile header + walkthrough wiring)
+- **Modified:** `src/components/simple/SimpleCardPanel.tsx` (uses shared hook)
+- **Modified:** `src/components/career-card/ProjectedCareerCard.tsx` (empty-state copy)
+- **Modified:** `src/components/hub/JobAlertsHubSection.tsx` (`embedded` prop), `HubInboxSection.tsx` (passes `embedded`), `CandidateHub.tsx` (Stormi column width)
+- **Modified:** `src/components/career-card/ProjectedCareerCard.tsx` (`selfHeaderActions`, `onAvatarUploadSuccess` + `AvatarUpload`), `src/components/hub/HubWorkspaceCareerCard.tsx` (Share modal + in-header actions, no duplicate refresh), `src/components/ui/AvatarUpload.tsx` (`round`, `title`), `SimpleCardPanel.tsx`, `CareerCardView.tsx`
+
+### Phase 4 (plan)
+Account + STORM stay in the collapsible hub card for now. **Deferred:** moving token/referral entirely into the “My Hub” nav dropdown — revisit if the Account card still feels heavy after usage.
+
+---
+
 ## **Guided Everywhere — homepage v2, single job-discovery surface, lazy auth** (April 2026)
 
 ### Why

@@ -135,7 +135,7 @@ export default function Navigation({
 
   return (
     <header
-      className='sticky top-4 z-50 px-4 sm:px-6 pointer-events-none'
+      className='sticky top-4 z-50 px-3 sm:px-5 pointer-events-none'
       style={{ transform: 'translate3d(0,0,0)', backfaceVisibility: 'hidden' }}
     >
       <NavVaultShell isDark={isDark}>

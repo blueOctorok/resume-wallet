@@ -6,7 +6,7 @@
  * In Guided Mode, Stormi is a coach — not a chatbot. This card reads the
  * live `fit` result and picks ONE concrete action. Once the user takes it,
  * the parent re-renders and the card proposes the next step. There is no
- * free-form chat in Guided Mode; deeper exploration happens in Workspace.
+ * free-form chat in Apply mode; deeper exploration happens in Construct mode.
  *
  * Copy branches on:
  *   - No job selected → nudge to pick one
@@ -15,7 +15,7 @@
  *   - `toneBand === 'redirect'` → suggest picking a better-fit job
  *   - Missing block → install the biggest gap
  *   - Fit ≥ 80% → apply now
- *   - Fallback → nudge to Workspace for deeper Stormi help
+ *   - Fallback → nudge to Construct mode for deeper Stormi help
  */
 
 import { useMemo } from 'react'
@@ -40,7 +40,7 @@ export interface StormiNextStepCardProps {
   installedCount: number
   onAddBlock: (blockId?: string) => void
   onApply: () => void
-  /** Switch to Workspace mode for deeper Stormi help. */
+  /** Switch to Construct mode for deeper Stormi help. */
   onGoToWorkspace: () => void
   lensPick?: PickBestLensResult | null
   onDraftLens?: () => void
@@ -119,9 +119,9 @@ export default function StormiNextStepCard({
         icon: Compass,
         eyebrow: 'Honest take',
         title: 'This one\u2019s a stretch right now',
-        body: `Your card is only ${fit.score}% coverage for \u201c${snap.title}\u201d. Try picking a role that\u2019s closer to what you\u2019ve built \u2014 or switch to Workspace for deeper Stormi help.`,
+        body: `Your card is only ${fit.score}% coverage for \u201c${snap.title}\u201d. Try picking a role that\u2019s closer to what you\u2019ve built \u2014 or switch to Construct mode for deeper Stormi help.`,
         primary: { label: 'Pick a closer fit \u2190', onClick: () => {}, variant: 'secondary' },
-        secondary: { label: 'Go to Workspace', onClick: onGoToWorkspace },
+        secondary: { label: 'Go to Construct', onClick: onGoToWorkspace },
       }
     }
 
@@ -173,21 +173,21 @@ export default function StormiNextStepCard({
       }
     }
 
-    // Fallback — nothing obvious missing from heuristic. Nudge to Workspace
+    // Fallback — nothing obvious missing from heuristic. Nudge to Construct mode
     // where Stormi chat can do a deeper review.
     return {
       icon: Sparkles,
       eyebrow: 'Next move',
       title: `${fit.score}% coverage \u2014 looking good`,
-      body: `I don\u2019t see an obvious gap for \u201c${snap.title}\u201d. Switch to Workspace where I can do a deeper card review.`,
+      body: `I don\u2019t see an obvious gap for \u201c${snap.title}\u201d. Switch to Construct mode where I can do a deeper card review.`,
       primary: {
         label: snap.isStormChain || snap.redirectUrl
           ? (snap.isStormChain ? 'Apply with career card' : 'Open employer site')
-          : 'Go to Workspace',
+          : 'Go to Construct',
         onClick: snap.isStormChain || snap.redirectUrl ? onApply : onGoToWorkspace,
       },
       secondary: snap.isStormChain || snap.redirectUrl
-        ? { label: 'Go to Workspace', onClick: onGoToWorkspace }
+        ? { label: 'Go to Construct', onClick: onGoToWorkspace }
         : undefined,
     }
   }, [snap, fit, installedCount, onAddBlock, onApply, onGoToWorkspace, lensPick, onDraftLens, isDraftingLens])
@@ -268,7 +268,7 @@ export default function StormiNextStepCard({
             {isDraftingLens && step.secondary.label.toLowerCase().startsWith('drafting') ? (
               <Loader2 className='size-3 animate-spin mr-0.5 inline' />
             ) : null}
-            {step.secondary.label === 'Go to Workspace' && <LayoutDashboard className='mr-0.5 size-3 inline' />}
+            {step.secondary.label === 'Go to Construct' && <LayoutDashboard className='mr-0.5 size-3 inline' />}
             {step.secondary.label}
           </Button>
         )}

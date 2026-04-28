@@ -19,7 +19,7 @@ export default function NavVaultShell({ isDark, children, className }: NavVaultS
       layout='nav'
       isDark={isDark}
       className={className}
-      contentClassName='px-4 pb-[13px] pt-3 sm:px-6 sm:pb-[14px] sm:pt-4'
+      contentClassName='px-3 pb-[13px] pt-3 sm:px-4 sm:pb-[14px] sm:pt-4'
     >
       {children}
     </VaultHorizontalVaultShell>

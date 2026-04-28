@@ -6,6 +6,7 @@ import { MapPin, Calendar, Mail, Phone, Eye, Plus, ShieldCheck, Lock, ExternalLi
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import Avatar from '@/components/ui/Avatar'
+import AvatarUpload from '@/components/ui/AvatarUpload'
 import Button from '@/components/ui/Button'
 import VaultHorizontalVaultShell from '@/components/ui/VaultHorizontalVaultShell'
 import type {
@@ -134,6 +135,10 @@ interface ProjectedCareerCardProps {
    */
   lensSwitchNote?: { toName: string } | null
   onUndoLensSwitch?: () => void
+  /** Self mode: pinned top-right inside the vault header (e.g. Share + Edit). Sits above the lens chip when both exist. */
+  selfHeaderActions?: ReactNode
+  /** Self mode + wallet: after POST /api/user/avatar — parent refetches card / syncs hub store */
+  onAvatarUploadSuccess?: (url: string) => void
 }
 
 /**
@@ -159,6 +164,8 @@ export default function ProjectedCareerCard({
   onOpenLensPicker,
   lensSwitchNote,
   onUndoLensSwitch,
+  selfHeaderActions,
+  onAvatarUploadSuccess,
 }: ProjectedCareerCardProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
@@ -192,65 +199,102 @@ export default function ProjectedCareerCard({
             typography, just "Switched to X · undo" for ~5s, then back to the
             regular chip.
           */}
-          {mode === 'self' && showLensChip && (activeLensName || lensSwitchNote) ? (
+          {(mode === 'self' && selfHeaderActions) ||
+          (mode === 'self' && showLensChip && (activeLensName || lensSwitchNote)) ? (
             <div
               className={cn(
-                'absolute top-3 right-4 sm:right-6 flex items-center gap-1 text-[11px] transition-opacity duration-300',
-                isDark ? 'text-gray-500' : 'text-gray-400',
+                'absolute top-3 right-4 z-[2] flex flex-col items-end gap-1.5 sm:right-6',
+                'transition-opacity duration-300',
               )}
             >
-              {lensSwitchNote ? (
-                <>
-                  <span className='truncate max-w-[200px]'>
-                    Switched to {lensSwitchNote.toName}
-                  </span>
-                  <span>·</span>
-                  <button
-                    type='button'
-                    onClick={onUndoLensSwitch}
-                    className={cn(
-                      'underline underline-offset-2 hover:text-current',
-                      isDark ? 'hover:text-gray-300' : 'hover:text-gray-600',
-                    )}
-                  >
-                    undo
-                  </button>
-                </>
-              ) : (
-                <>
-                  <span className='truncate max-w-[160px]'>{activeLensName}</span>
-                  <span>·</span>
-                  <button
-                    type='button'
-                    onClick={onOpenLensPicker}
-                    className={cn(
-                      'underline underline-offset-2 hover:text-current',
-                      isDark ? 'hover:text-gray-300' : 'hover:text-gray-600',
-                    )}
-                  >
-                    switch
-                  </button>
-                </>
-              )}
+              {mode === 'self' && selfHeaderActions ? (
+                <div className='flex shrink-0 items-center gap-0.5'>{selfHeaderActions}</div>
+              ) : null}
+              {mode === 'self' && showLensChip && (activeLensName || lensSwitchNote) ? (
+                <div
+                  className={cn(
+                    'flex max-w-[min(100vw-5rem,18rem)] items-center gap-1 text-[11px] sm:max-w-[20rem]',
+                    isDark ? 'text-gray-500' : 'text-gray-400',
+                  )}
+                >
+                  {lensSwitchNote ? (
+                    <>
+                      <span className='truncate'>Switched to {lensSwitchNote.toName}</span>
+                      <span>·</span>
+                      <button
+                        type='button'
+                        onClick={onUndoLensSwitch}
+                        className={cn(
+                          'shrink-0 underline underline-offset-2 hover:text-current',
+                          isDark ? 'hover:text-gray-300' : 'hover:text-gray-600',
+                        )}
+                      >
+                        undo
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className='truncate'>{activeLensName}</span>
+                      <span>·</span>
+                      <button
+                        type='button'
+                        onClick={onOpenLensPicker}
+                        className={cn(
+                          'shrink-0 underline underline-offset-2 hover:text-current',
+                          isDark ? 'hover:text-gray-300' : 'hover:text-gray-600',
+                        )}
+                      >
+                        switch
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : null}
             </div>
           ) : null}
           <div className='flex items-start gap-4'>
-            <div
-              className={cn(
-                'rounded-full p-[2px] shrink-0',
-                'bg-teal-500/15 dark:bg-teal-400/10',
-                'ring-1 ring-teal-500/35 dark:ring-teal-400/25',
-              )}
-            >
+            {mode === 'self' && walletAddress && onAvatarUploadSuccess ? (
+              /* AvatarUpload sits OUTSIDE overflow-hidden so the camera badge isn't clipped */
+              <div className='relative shrink-0'>
+                <div
+                  className={cn(
+                    'rounded-full p-[2px]',
+                    'bg-teal-500/15 dark:bg-teal-400/10',
+                    'ring-1 ring-teal-500/35 dark:ring-teal-400/25',
+                  )}
+                >
+                  <AvatarUpload
+                    name={data.name}
+                    avatarUrl={data.avatarUrl}
+                    size='2xl'
+                    color='teal'
+                    round
+                    uploadEndpoint='/api/user/avatar'
+                    walletAddress={walletAddress}
+                    persistentUploadHint
+                    onSuccess={onAvatarUploadSuccess}
+                    title='Add or change profile photo'
+                  />
+                </div>
+              </div>
+            ) : (
               <div
                 className={cn(
-                  'rounded-full overflow-hidden border-[3px]',
-                  isDark ? 'border-gray-900/90' : 'border-white',
+                  'rounded-full p-[2px] shrink-0',
+                  'bg-teal-500/15 dark:bg-teal-400/10',
+                  'ring-1 ring-teal-500/35 dark:ring-teal-400/25',
                 )}
               >
-                <Avatar name={data.name} avatarUrl={data.avatarUrl} size='2xl' color='teal' round />
+                <div
+                  className={cn(
+                    'rounded-full overflow-hidden border-[3px]',
+                    isDark ? 'border-gray-900/90' : 'border-white',
+                  )}
+                >
+                  <Avatar name={data.name} avatarUrl={data.avatarUrl} size='2xl' color='teal' round />
+                </div>
               </div>
-            </div>
+            )}
             <div className='flex-1 min-w-0 pt-0.5 flex items-start gap-3'>
               <CareerCardStrengthRing score={data.careerCardScore ?? 0} isDark={isDark} />
               <div className='min-w-0 flex-1'>
@@ -597,10 +641,10 @@ export default function ProjectedCareerCard({
             )}
           >
             <p className={cn('text-sm font-semibold mb-1', isDark ? 'text-white' : 'text-gray-900')}>
-              Your career card is empty
+              Your career card is ready to build
             </p>
             <p className={cn('text-xs mb-5 max-w-xs mx-auto', isDark ? 'text-gray-400' : 'text-gray-600')}>
-              Add blocks to your hub — they appear here in the order you arrange them.
+              Add blocks — they appear here in the order you install them. Each block is a capability employers can discover.
             </p>
             {onAddBlock && (
               <Button type="button" variant="primary" size="sm" onClick={onAddBlock}>

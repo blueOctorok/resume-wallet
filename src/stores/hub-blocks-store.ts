@@ -95,7 +95,7 @@ interface HubBlocksActions {
     walletAddress: string,
     extraContext?: string | null
   ) => Promise<void>
-  /** Open the Stormi context modal — edit hub onboarding answers anytime (wired in StormiChatPanel + HubProfileHeader) */
+  /** Open the Stormi context modal — edit hub onboarding answers anytime (wired in StormiChatPanel + profile flows) */
   openStormiContextModal: () => void
   closeStormiContextModal: () => void
 

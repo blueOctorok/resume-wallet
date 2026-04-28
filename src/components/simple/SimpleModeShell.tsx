@@ -80,7 +80,7 @@ export default function SimpleModeShell() {
         >
           <p className={cn('text-sm', isDark ? 'text-teal-100' : 'text-teal-900')}>
             <span className='font-semibold'>You&apos;ve got the hang of this.</span>{' '}
-            Try the full workspace for power tools — you can flip back anytime.
+            Try Construct mode for power tools — you can flip back anytime.
           </p>
           <div className='flex gap-2 shrink-0'>
             <Button
@@ -100,7 +100,7 @@ export default function SimpleModeShell() {
                 setUiMode('hub')
               }}
             >
-              Open workspace
+              Open Construct mode
             </Button>
           </div>
         </div>

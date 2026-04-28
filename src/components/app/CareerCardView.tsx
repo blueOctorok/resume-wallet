@@ -150,6 +150,7 @@ export default function CareerCardView({ onBack }: CareerCardViewProps) {
         onNavigateToBlock={handleNavigateToBlock}
         onAddBlock={openPicker}
         walletAddress={walletAddress ?? undefined}
+        onAvatarUploadSuccess={() => void fetchCard(true)}
       />
     </div>
   )

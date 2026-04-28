@@ -19,6 +19,10 @@ interface AvatarUploadProps {
    * Use on hub hero avatars so new users see they can add a photo.
    */
   persistentUploadHint?: boolean
+  /** Match `Avatar` — circular frame (career card ring). */
+  round?: boolean
+  /** Native tooltip on the click target (accessibility hint). */
+  title?: string
 }
 
 /**
@@ -40,6 +44,8 @@ export default function AvatarUpload({
   onSuccess,
   className = '',
   persistentUploadHint = false,
+  round = false,
+  title,
 }: AvatarUploadProps) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
@@ -77,14 +83,15 @@ export default function AvatarUpload({
     }
   }
 
+  const shape = round ? 'rounded-full' : 'rounded-2xl'
+
   return (
-    <div className={`relative group cursor-pointer ${className}`} onClick={() => fileRef.current?.click()}>
-      <Avatar
-        name={name}
-        avatarUrl={localUrl ?? avatarUrl}
-        size={size}
-        color={color}
-      />
+    <div
+      className={`relative cursor-pointer group ${round ? 'rounded-full' : ''} ${className}`}
+      title={title}
+      onClick={() => fileRef.current?.click()}
+    >
+      <Avatar name={name} avatarUrl={localUrl ?? avatarUrl} size={size} color={color} round={round} />
 
       {persistentUploadHint && !uploading ? (
         <span
@@ -96,9 +103,11 @@ export default function AvatarUpload({
       ) : null}
 
       {/* Camera overlay — visible on hover or while uploading */}
-      <div className={`absolute inset-0 flex items-center justify-center rounded-inherit transition-opacity ${
-        uploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-      } bg-black/50 rounded-2xl`}>
+      <div
+        className={`absolute inset-0 flex items-center justify-center transition-opacity ${
+          uploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        } bg-black/50 ${shape}`}
+      >
         {uploading
           ? <Loader2 className="w-5 h-5 text-white animate-spin" />
           : <Camera className="w-5 h-5 text-white" />

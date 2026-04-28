@@ -325,7 +325,7 @@ export default function StormChainWordmark({
               : 'text-slate-800',
           )
         : cn(
-            'text-[1.5rem] sm:text-[1.75rem] lg:text-[2rem]',
+            'text-[1.75rem] sm:text-[2rem] lg:text-[2.25rem]',
             isDark
               ? 'text-slate-200/95 [text-shadow:0_1px_0_rgba(255,255,255,0.06),0_-1px_3px_rgba(0,0,0,0.6)]'
               : 'text-slate-800',

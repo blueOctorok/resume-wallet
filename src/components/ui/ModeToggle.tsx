@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * ModeToggle — flips between Simple (job-first) and Hub (workspace) chromes.
+ * ModeToggle — flips between Simple / Apply (job-first) and Hub / Construct (full hub) chromes.
  *
  * Visible only to candidates once the Simple mode feature flag is on. The flip
  * is instant (local zustand) and a fire-and-forget PATCH persists the choice
@@ -69,7 +69,7 @@ export default function ModeToggle({ variant = 'pill', onAfterToggle }: ModeTogg
       >
         {mode === 'simple' ? <LayoutDashboard className='w-4 h-4' /> : <Sparkles className='w-4 h-4' />}
         <span className='font-medium'>
-          {mode === 'simple' ? 'Open full workspace' : 'Back to guided'}
+          {mode === 'simple' ? 'Open Construct mode' : 'Back to Apply'}
         </span>
       </button>
     )
@@ -102,11 +102,10 @@ export default function ModeToggle({ variant = 'pill', onAfterToggle }: ModeTogg
           active('simple'),
         )}
         aria-pressed={mode === 'simple'}
-        title='Guided mode — job-first, Stormi as co-pilot'
+        title='Apply mode — job-first, Stormi as co-pilot'
       >
         <Sparkles className='h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4' aria-hidden />
-        <span className='lg:hidden'>Guide</span>
-        <span className='hidden lg:inline'>Guided</span>
+        <span>Apply</span>
       </button>
       <button
         type='button'
@@ -116,11 +115,10 @@ export default function ModeToggle({ variant = 'pill', onAfterToggle }: ModeTogg
           active('hub'),
         )}
         aria-pressed={mode === 'hub'}
-        title='Workspace — the full composable hub'
+        title='Construct mode — the full composable hub'
       >
         <LayoutDashboard className='h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4' aria-hidden />
-        <span className='lg:hidden'>Work</span>
-        <span className='hidden lg:inline'>Workspace</span>
+        <span>Construct</span>
       </button>
     </div>
   )

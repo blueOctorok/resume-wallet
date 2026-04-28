@@ -8,7 +8,7 @@
  *   2. ProjectedCareerCard — rendered directly; the card IS the container.
  *
  * No free-form chat here — Guided Mode is coach-driven. Stormi tells the user
- * what to do next via the strip; the full chat lives in Workspace/Hub for
+ * what to do next via the strip; the full chat lives in Construct mode / Hub for
  * users who want to dig deeper on their own.
  */
 
@@ -33,44 +33,12 @@ import { useCareerCardLensesStore, useLenses } from '@/stores/career-card-lenses
 import type { ProjectedCareerCard as CardData } from '@/types/career-card'
 import { computeJobFit, pickBestLens } from '@/lib/job-fit'
 import { useExtractedRequirements } from '@/hooks/use-extracted-requirements'
+import { useProjectedCareerCard } from '@/hooks/use-projected-career-card'
 
 const ApplyWithStormChainModal = dynamic(
   () => import('@/components/ApplyWithStormChainModal'),
   { ssr: false },
 )
-
-function useProjectedCard(walletAddress: string | null, lensId: string | null) {
-  const [card, setCard] = useState<CardData | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const installedBlocks = useInstalledBlocks()
-
-  const refresh = useCallback(async () => {
-    if (!walletAddress) return
-    setLoading(true)
-    setError(null)
-    try {
-      const qs = lensId ? `?lens=${encodeURIComponent(lensId)}` : ''
-      const res = await fetch(`/api/career-card${qs}`, {
-        headers: { 'x-wallet-address': walletAddress },
-      })
-      if (!res.ok) throw new Error('Failed to load career card')
-      const json = await res.json()
-      setCard(json.card ?? null)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error')
-    } finally {
-      setLoading(false)
-    }
-  }, [walletAddress, lensId])
-
-  useEffect(() => {
-    if (!walletAddress) return
-    void refresh()
-  }, [walletAddress, refresh, installedBlocks.length])
-
-  return { card, loading, error, refresh }
-}
 
 function toApplyModalJob(snap: NonNullable<ReturnType<typeof useSimpleModeStore.getState>['selectedJobSnapshot']>) {
   return {
@@ -161,6 +129,7 @@ export default function SimpleCardPanel() {
   const walletAddress = useAuthStore((s) => s.walletAddress)
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const openPicker = useHubBlocksStore((s) => s.openPicker)
+  const updateAvatarUrl = useHubBlocksStore((s) => s.updateAvatarUrl)
   const installedBlocks = useInstalledBlocks()
   const snap = useSimpleModeStore((s) => s.selectedJobSnapshot)
   const activeLensId = useSimpleModeStore((s) => s.activeLensId)
@@ -171,7 +140,10 @@ export default function SimpleCardPanel() {
   const createLens = useCareerCardLensesStore((s) => s.createLens)
   const setUiMode = useUIModeStore((s) => s.setMode)
 
-  const { card, loading, error } = useProjectedCard(walletAddress, activeLensId)
+  const { card, loading, error, refresh } = useProjectedCareerCard(walletAddress, {
+    lensId: activeLensId,
+    installedBlockCount: installedBlocks.length,
+  })
   const externalReqs = useExtractedRequirements(snap, walletAddress)
 
   const [applyOpen, setApplyOpen] = useState(false)
@@ -207,7 +179,7 @@ export default function SimpleCardPanel() {
     }
   }, [snap])
 
-  // Guided Mode has no chat — "deeper help" routes to Workspace where Stormi
+  // Apply mode has no chat — "deeper help" routes to Construct mode where Stormi
   // chat lives. This keeps the two modes distinct: coach vs. self-service.
   const handleGoToWorkspace = useCallback(() => {
     setUiMode('hub')
@@ -415,6 +387,10 @@ export default function SimpleCardPanel() {
               onNavigateToBlock={handleNavigateToBlock}
               onAddBlock={openPicker}
               walletAddress={walletAddress}
+              onAvatarUploadSuccess={(url) => {
+                updateAvatarUrl(url)
+                void refresh()
+              }}
               ghostSections={ghostSections}
               onGhostAction={handleNavigateToBlock}
               showLensChip={lenses.length > 0}

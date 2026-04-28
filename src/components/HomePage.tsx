@@ -7,14 +7,9 @@ import {
   BookOpen,
   Briefcase,
   Building2,
-  Car,
   CheckCircle,
-  ClipboardList,
   Compass,
   Eye,
-  Github,
-  Globe,
-  IdCard,
   Layers,
   Link2,
   Plus,
@@ -25,7 +20,6 @@ import {
 } from 'lucide-react'
 import StormChainView from '@/components/StormChainView'
 import StormChainWordmark from '@/components/ui/StormChainWordmark'
-import { VaultShowcase } from '@/components/hub/HubBlockVault'
 import VaultHorizontalVaultShell from '@/components/ui/VaultHorizontalVaultShell'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
 import BlockCard from '@/components/ui/BlockCard'
@@ -39,15 +33,6 @@ interface HomePageProps {
   onBrowseJobs?: () => void
 }
 
-// Six iconic blocks that ride along in the hero vault — same as the in-app hub.
-const HIVE_BLOCKS = [
-  { id: 'driver-dot-application', icon: ClipboardList, label: 'DOT App' },
-  { id: 'storm-resume', icon: Sparkles, label: 'STORM Resume' },
-  { id: 'driver-mvr', icon: Car, label: 'MVR' },
-  { id: 'developer-portfolio', icon: Globe, label: 'Portfolio' },
-  { id: 'developer-github', icon: Github, label: 'GitHub' },
-  { id: 'driver-cdl-credentials', icon: IdCard, label: 'CDL' },
-]
 
 /**
  * Scroll-reveal hook — adds a `revealed` class when an element enters the viewport.
@@ -81,7 +66,7 @@ function useScrollReveal(reattachKey: unknown) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Build Mode mock — visually echoes the in-app SimpleModeShell split view.
+// Apply Mode mock — visually echoes the in-app SimpleModeShell split view.
 // Left card = the job. Right card = the career card growing in real time.
 // Static visual; the homepage doesn't drive real fit logic.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -183,6 +168,106 @@ function BuildModeMockup({ isDark }: { isDark: boolean }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Hero career card mockup — replaces the old block-tile showcase. Shows the
+// finished career card so visitors immediately understand the product output.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function HeroCareerCardMockup({ isDark }: { isDark: boolean }) {
+  const surface = isDark
+    ? 'border-white/[0.08]'
+    : 'border-slate-200'
+  const muted = isDark ? 'text-gray-400' : 'text-slate-500'
+  const subtle = isDark ? 'bg-white/[0.04]' : 'bg-slate-50'
+
+  const blocks = [
+    { label: 'CDL-A with hazmat', verified: true },
+    { label: 'DOT application', verified: true },
+    { label: 'MVR — clean record', verified: true },
+    { label: 'Employment history', verified: true },
+    { label: 'STORM Resume', verified: false },
+  ]
+
+  return (
+    <VaultHorizontalVaultShell isDark={isDark} layout='panel' contentClassName='p-5 sm:p-6'>
+      <div className='flex flex-col gap-4'>
+        {/* Header — avatar + name + verified badge */}
+        <div className='flex items-start gap-3'>
+          <div
+            className={cn(
+              'flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold',
+              'bg-gradient-to-br from-teal-400 to-teal-600 text-white ring-2',
+              isDark ? 'ring-teal-400/25' : 'ring-teal-500/20',
+            )}
+          >
+            BB
+          </div>
+          <div className='min-w-0 flex-1'>
+            <div className='flex items-center gap-2'>
+              <h4 className={cn('text-base font-semibold', isDark ? 'text-white' : 'text-slate-900')}>
+                Barry Burton
+              </h4>
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold',
+                  isDark
+                    ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/30'
+                    : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
+                )}
+              >
+                <ShieldCheck className='h-3 w-3' /> Verified
+              </span>
+            </div>
+            <p className={cn('text-xs', muted)}>CDL-A driver · 8 years experience</p>
+            <p className={cn('text-[10px]', muted)}>Dallas, TX · Member since Jan 2026</p>
+          </div>
+        </div>
+
+        {/* Card strength bar */}
+        <div className={cn('rounded-lg p-3', subtle)}>
+          <div className='flex items-center justify-between text-[11px]'>
+            <span className={cn('font-medium', isDark ? 'text-gray-300' : 'text-slate-700')}>Card strength</span>
+            <span className={cn('font-bold', isDark ? 'text-teal-300' : 'text-teal-700')}>Strong</span>
+          </div>
+          <div className={cn('mt-1.5 h-1.5 rounded-full', isDark ? 'bg-gray-700' : 'bg-slate-200')}>
+            <div className='h-full w-[85%] rounded-full bg-gradient-to-r from-teal-400 to-emerald-400' />
+          </div>
+        </div>
+
+        {/* Block list */}
+        <div className='space-y-1.5'>
+          {blocks.map((b) => (
+            <div
+              key={b.label}
+              className={cn(
+                'flex items-center gap-2 rounded-lg px-3 py-2 text-xs',
+                subtle,
+              )}
+            >
+              {b.verified ? (
+                <CheckCircle className='h-3.5 w-3.5 shrink-0 text-emerald-400' />
+              ) : (
+                <Plus className={cn('h-3.5 w-3.5 shrink-0', isDark ? 'text-gray-500' : 'text-slate-400')} />
+              )}
+              <span className={isDark ? 'text-gray-200' : 'text-slate-700'}>{b.label}</span>
+              {b.verified && (
+                <span className={cn('ml-auto text-[9px] font-semibold', isDark ? 'text-emerald-400/70' : 'text-emerald-600/70')}>
+                  On-chain
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom label */}
+        <p className={cn('text-center text-[10px] font-semibold uppercase tracking-[0.15em]', muted)}>
+          Career Card
+        </p>
+      </div>
+    </VaultHorizontalVaultShell>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Stormi card mock — static visual that mirrors the real StormiNextStepCard
 // in the app. Lives inside a phone-frame in the Stormi section.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -257,7 +342,7 @@ function PhoneFrame({ children, isDark }: { children: React.ReactNode; isDark: b
       />
       <div className={cn('rounded-[2rem] p-3', isDark ? 'bg-gray-900' : 'bg-white')}>
         <p className={cn('mb-2 px-1 text-[10px] font-semibold uppercase tracking-widest', isDark ? 'text-gray-500' : 'text-slate-500')}>
-          Build Mode
+          Apply Mode
         </p>
         {children}
       </div>
@@ -324,7 +409,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
         {/*
          ═══════════════════════════════════════════════════════════════════════
          SECTION 1 — Hero
-         Positioning + two CTAs. The brand visual (VaultShowcase) does the
+         Positioning + two CTAs. The career card mockup does the
          "what is this thing?" work without copy.
          ═══════════════════════════════════════════════════════════════════════
         */}
@@ -387,42 +472,27 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
               </div>
             </div>
 
-            {/* Vault visual — same chrome as the in-app hub block hive */}
+            {/* Career card mockup — shows the finished product, not building blocks */}
             <div data-reveal className='reveal-item'>
-              <VaultHorizontalVaultShell isDark={isDark} layout='panel' contentClassName='p-5 sm:p-7'>
-                <p
-                  className={cn(
-                    'mb-1 text-center text-[10px] font-bold uppercase tracking-[0.2em]',
-                    isDark ? 'text-teal-400/90' : 'text-teal-700',
-                  )}
-                >
-                  Your hub, in the wild
-                </p>
-                <p className={cn('mb-5 text-center text-xs sm:text-sm', isDark ? 'text-gray-400' : 'text-slate-600')}>
-                  The same vault tiles you stack inside the app.
-                </p>
-                <div className='flex justify-center [mask-image:radial-gradient(ellipse_88%_78%_at_50%_50%,#000_45%,transparent_98%)] [-webkit-mask-image:radial-gradient(ellipse_88%_78%_at_50%_50%,#000_45%,transparent_98%)]'>
-                  <VaultShowcase blocks={HIVE_BLOCKS} isDark={isDark} />
-                </div>
-              </VaultHorizontalVaultShell>
+              <HeroCareerCardMockup isDark={isDark} />
             </div>
           </div>
         </section>
 
         {/*
          ═══════════════════════════════════════════════════════════════════════
-         SECTION 2 — Build Mode (the main attraction)
+         SECTION 2 — Apply Mode (the main attraction)
          Anchor section. The split-view mockup is the page's primary product
          visual; the three pillars carry the story. Most users will live here
          inside the app, so the homepage spends real estate on it.
          ═══════════════════════════════════════════════════════════════════════
         */}
-        <section id='build-mode' className='scroll-mt-24 py-16 sm:py-24'>
+        <section id='apply-mode' className='scroll-mt-24 py-16 sm:py-24'>
           <HubSectionPanel isDark={isDark} accent='teal' contentClassName='p-6 sm:p-8 lg:p-10'>
             <BlockCard
               variant='embed'
               icon={Briefcase}
-              title='Build Mode'
+              title='Apply Mode'
               description='Pick the job. Watch your career card take shape.'
             >
               <div className='grid items-start gap-10 lg:grid-cols-[1fr_1fr] lg:gap-14'>
@@ -492,7 +562,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
                     <div className='mt-8'>
                       <Button variant='primary' size='lg' onClick={onBrowseJobs} className='h-auto rounded-xl px-7 py-3.5'>
                         <Search className='h-5 w-5' />
-                        Try Build Mode &mdash; no login
+                        Try Apply Mode &mdash; no login
                         <ArrowRight className='h-5 w-5' />
                       </Button>
                     </div>
@@ -588,8 +658,8 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
             <BlockCard
               variant='embed'
               icon={Building2}
-              title='When you&rsquo;re ready to go deeper'
-              description='The Hub: your full career workspace.'
+              title='Construct Mode'
+              description='The full hub — every block, every credential, on your terms.'
             >
               <p
                 className={cn(
@@ -597,7 +667,7 @@ export default function HomePage({ isAuthenticated, onGetStarted, onBrowseJobs }
                   isDark ? 'text-gray-300' : 'text-slate-700',
                 )}
               >
-                Most users get what they need from Build Mode and that&rsquo;s fine. When you want full ownership of your career, the Hub is waiting &mdash; every block category, open chat with Stormi, your STORM balance, and tools to manage your verified identity over time.
+                Most users get what they need from Apply Mode and that&rsquo;s fine. When you want full ownership of your career, switch to Construct Mode &mdash; every block category, open chat with Stormi, your STORM balance, and tools to maintain your verified identity over time.
               </p>
 
               <div className='mt-8 grid gap-4 lg:grid-cols-3'>

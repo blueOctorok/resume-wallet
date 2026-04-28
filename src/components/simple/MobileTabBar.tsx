@@ -127,7 +127,7 @@ export default function MobileTabBar() {
           isDark ? 'tab-bar--dark' : 'tab-bar--light',
         )}
         role='tablist'
-        aria-label='Guided mode navigation'
+        aria-label='Apply mode navigation'
       >
         {TABS.map((tab, i) => {
           const Icon = ICONS[tab.id]
