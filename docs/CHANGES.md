@@ -21,8 +21,13 @@ Block management lived in a separate **Block files** hub section while the caree
 - **Preferences:** Dropped `hubBlockFilesExpanded` (only used by removed Block files panel). **Stormi:** `candidateEmptyHub` when only core blocks remain (`isCoreBlock`).
 - **`CareerCard.tsx`:** Restored missing `normEmploymentField` helper used by work-history ↔ verification matching (regression fix).
 
+### Regression fix — onboarding + initial mode (same batch)
+- **`fetchHubData` lifted to `CandidateShell`:** Previously only called from `CandidateHub` (Construct mode), so Simple-mode users never got hub data, onboarding state, or the server UI-mode preference hydrated. Now runs once in `CandidateShell` regardless of which mode renders.
+- **`HubOnboardingForm` moved to `CandidateShell`:** The "what you do" onboarding modal was inside `CandidateHub`, invisible to Simple-mode users. Moved to `CandidateShell` so it renders in both modes. `CandidateHub` no longer imports or renders it.
+- **`ProfileSetupModal` (name input) unblocked:** It was gated on `!needsOnboarding`; since onboarding never completed for Simple-mode users, the name modal was blocked too. Both issues resolved by the above two fixes.
+
 ### Files touched (high level)
-`block-registry.ts`, `hub-blocks-store.ts`, `projected-career-card.ts`, `types/career-card.ts`, `ui-mode-store.ts`, `hub-document-types.ts`, `use-hub-documents.tsx`, `ConstructSectionWrapper.tsx`, `ProjectedCareerCard.tsx`, `HubWorkspaceCareerCard.tsx`, `CandidateHub.tsx`, `SimpleCardPanel.tsx`, `StormiNextStepCard.tsx`, `ResumeSection.tsx`, `ResumePreviewModal.tsx`, `DeveloperResumePreviewModal.tsx`, `ResumeFilePreviewModal.tsx`, `preferences-store.ts`, `DriverHub.tsx`, `CareerCard.tsx`, section components using `isCareerCardOwnerMode`.
+`block-registry.ts`, `hub-blocks-store.ts`, `projected-career-card.ts`, `types/career-card.ts`, `ui-mode-store.ts`, `hub-document-types.ts`, `use-hub-documents.tsx`, `ConstructSectionWrapper.tsx`, `ProjectedCareerCard.tsx`, `HubWorkspaceCareerCard.tsx`, `CandidateHub.tsx`, `CandidateShell.tsx`, `SimpleCardPanel.tsx`, `StormiNextStepCard.tsx`, `ResumeSection.tsx`, `ResumePreviewModal.tsx`, `DeveloperResumePreviewModal.tsx`, `ResumeFilePreviewModal.tsx`, `preferences-store.ts`, `DriverHub.tsx`, `CareerCard.tsx`, section components using `isCareerCardOwnerMode`.
 
 ---
 

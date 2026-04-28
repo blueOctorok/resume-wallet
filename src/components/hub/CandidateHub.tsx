@@ -10,7 +10,6 @@ import type { PageType } from '@/stores/types'
 import {
   useHubBlocksStore,
   useInstalledBlocks,
-  useNeedsOnboarding,
   useStormiAutoWelcomeCandidateDone,
 } from '@/stores/hub-blocks-store'
 import { useUIModeStore } from '@/stores/ui-mode-store'
@@ -18,7 +17,6 @@ import { getBlockDefinition, isCoreBlock } from '@/lib/block-registry'
 import Button from '@/components/ui/Button'
 import BlockCard from '@/components/ui/BlockCard'
 import HubSectionPanel from '@/components/hub/HubSectionPanel'
-import HubOnboardingForm from './HubOnboardingForm'
 import BlockPickerModal from './BlockPickerModal'
 import StormiContextModal from './StormiContextModal'
 import { syncDriverHubFromApi } from '@/lib/sync-driver-hub-store'
@@ -81,15 +79,13 @@ export default function CandidateHub() {
   const installedBlocks = useInstalledBlocks()
   const hubContext = useHubContext()
   const stormiAutoWelcomeCandidateDone = useStormiAutoWelcomeCandidateDone()
-  const needsOnboarding = useNeedsOnboarding()
   const isStormiContextModalOpen = useHubBlocksStore((s) => s.isStormiContextModalOpen)
 
   const candidateEmptyHub = installedBlocks.every((b) => isCoreBlock(b.blockType))
 
-  useEffect(() => {
-    if (walletAddress) fetchHubData(walletAddress)
-  }, [walletAddress, fetchHubData])
-
+  // Primary fetchHubData call lives in CandidateShell (serves both modes).
+  // syncDriverHubFromApi is already called inside fetchHubData, but we keep
+  // this for in-Construct refreshes (e.g. after block edits).
   useEffect(() => {
     if (walletAddress) void syncDriverHubFromApi(walletAddress)
   }, [walletAddress])
@@ -145,7 +141,6 @@ export default function CandidateHub() {
 
   return (
     <>
-      {needsOnboarding && <HubOnboardingForm />}
       <BlockPickerModal />
       {isStormiContextModalOpen && <StormiContextModal />}
 

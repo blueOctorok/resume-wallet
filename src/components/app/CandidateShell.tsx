@@ -12,8 +12,10 @@ import CandidateHub from '@/components/hub/CandidateHub'
 import SimpleModeShell from '@/components/simple/SimpleModeShell'
 import { useAuthStore, useUIStore } from '@/stores'
 import { useUIModeStore } from '@/stores/ui-mode-store'
+import { useHubBlocksStore, useNeedsOnboarding } from '@/stores/hub-blocks-store'
 import { isSimpleModeEnabled } from '@/lib/feature-flags'
 import type { PageType } from '@/stores/types'
+import HubOnboardingForm from '@/components/hub/HubOnboardingForm'
 
 /** Routes this shell renders — anything else is reset to hub in an effect (never during render). */
 const CANDIDATE_SHELL_PAGES: readonly PageType[] = [
@@ -101,6 +103,15 @@ export default function CandidateShell() {
     useUIStore()
   const uiMode = useUIModeStore((s) => s.mode)
   const setUiMode = useUIModeStore((s) => s.setMode)
+  const needsOnboarding = useNeedsOnboarding()
+  const fetchHubData = useHubBlocksStore((s) => s.fetchHubData)
+
+  // Hub data must be fetched here (not in CandidateHub) so that both
+  // Simple mode and Construct mode have installed blocks, onboarding state,
+  // user profile, and the server-side UI mode preference available.
+  useEffect(() => {
+    if (walletAddress) fetchHubData(walletAddress)
+  }, [walletAddress, fetchHubData])
 
   const unknownCandidatePage =
     currentPage !== null && !CANDIDATE_SHELL_PAGES.includes(currentPage)
@@ -126,6 +137,12 @@ export default function CandidateShell() {
     setEditingResumeId(undefined)
     navigateToHub()
   }, [navigateToHub, setEditingResumeId])
+
+  // Onboarding form renders as a portal (Modal), so it works in any mode.
+  // Must live here (not CandidateHub) so it shows for Simple-mode users too.
+  if (needsOnboarding) {
+    return <HubOnboardingForm />
+  }
 
   if (unknownCandidatePage) {
     return null
