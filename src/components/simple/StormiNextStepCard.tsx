@@ -19,7 +19,7 @@
  */
 
 import { useMemo } from 'react'
-import { ArrowRight, ArrowUpDown, CheckCircle2, Compass, ExternalLink, Eye, LayoutDashboard, Loader2, Plus, Sparkles } from 'lucide-react'
+import { AlertTriangle, ArrowRight, ArrowUpDown, CheckCircle2, Compass, ExternalLink, Eye, LayoutDashboard, Loader2, Plus, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import Button from '@/components/ui/Button'
@@ -51,6 +51,10 @@ export interface StormiNextStepCardProps {
   reorderSuggestion?: ReorderSuggestion | null
   onApplyReorder?: () => void
   onDismissReorder?: () => void
+  /** Block labels that are installed but have no data yet. */
+  incompleteBlocks?: { blockType: string; label: string }[]
+  /** True while the career card is still loading — Stormi shows a thinking state. */
+  isCardLoading?: boolean
 }
 
 interface NextStep {
@@ -75,11 +79,16 @@ export default function StormiNextStepCard({
   reorderSuggestion,
   onApplyReorder,
   onDismissReorder,
+  incompleteBlocks,
+  isCardLoading = false,
 }: StormiNextStepCardProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
 
-  const step: NextStep = useMemo(() => {
+  const step: NextStep | null = useMemo(() => {
+    // Card data still loading — null signals the thinking state below.
+    if (isCardLoading && snap) return null
+
     // No job picked — the rail is the action.
     if (!snap || !fit) {
       return {
@@ -88,6 +97,23 @@ export default function StormiNextStepCard({
         title: 'Pick a job from the list',
         body: 'Choose something you actually want. I\u2019ll map the exact blocks and credentials that role asks for.',
         primary: { label: 'Browse jobs \u2190', onClick: () => {}, variant: 'secondary' },
+      }
+    }
+
+    // Installed blocks that haven't been started — warn before anything else.
+    if (incompleteBlocks && incompleteBlocks.length > 0) {
+      const names = incompleteBlocks.map((b) => b.label)
+      const first = incompleteBlocks[0]
+      const listText = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+      return {
+        icon: AlertTriangle,
+        eyebrow: 'Heads up',
+        title: `${names.length === 1 ? `${names[0]} needs` : 'Some blocks need'} your attention`,
+        body: `You added ${listText} but haven\u2019t set ${names.length === 1 ? 'it' : 'them'} up yet. Finish ${names.length === 1 ? 'it' : 'them'} before applying \u2014 empty blocks won\u2019t help your card.`,
+        primary: { label: `Set up ${first.label}`, onClick: () => onAddBlock(first.blockType) },
+        secondary: names.length > 1
+          ? { label: 'Go to Construct', onClick: onGoToWorkspace }
+          : undefined,
       }
     }
 
@@ -224,7 +250,57 @@ export default function StormiNextStepCard({
     reorderSuggestion,
     onApplyReorder,
     onDismissReorder,
+    incompleteBlocks,
+    isCardLoading,
   ])
+
+  // Thinking state while card data loads
+  if (!step) {
+    return (
+      <div
+        className={cn(
+          'flex items-center gap-2.5 rounded-xl border px-3 py-3',
+          isDark
+            ? 'border-violet-400/20 bg-violet-500/5'
+            : 'border-violet-200/60 bg-violet-50/40 shadow-sm',
+        )}
+      >
+        <div
+          className={cn(
+            'flex size-6 shrink-0 items-center justify-center rounded-lg',
+            isDark
+              ? 'bg-violet-500/15 text-violet-200 ring-1 ring-violet-400/30'
+              : 'bg-violet-50 text-violet-700 ring-1 ring-violet-200',
+          )}
+        >
+          <Loader2 className='size-3 animate-spin' />
+        </div>
+        <div className='min-w-0 flex-1'>
+          <p
+            className={cn(
+              'text-[9px] font-bold uppercase tracking-wider',
+              isDark ? 'text-violet-300/80' : 'text-violet-600',
+            )}
+          >
+            Stormi
+          </p>
+          <p
+            className={cn(
+              'text-[13px] font-semibold leading-snug',
+              isDark ? 'text-white' : 'text-slate-900',
+            )}
+          >
+            Analyzing your card&hellip;
+          </p>
+          <div className='mt-1 flex items-center gap-1'>
+            <span className={cn('size-1.5 rounded-full animate-pulse', isDark ? 'bg-violet-400' : 'bg-violet-500')} style={{ animationDelay: '0ms' }} />
+            <span className={cn('size-1.5 rounded-full animate-pulse', isDark ? 'bg-violet-400' : 'bg-violet-500')} style={{ animationDelay: '200ms' }} />
+            <span className={cn('size-1.5 rounded-full animate-pulse', isDark ? 'bg-violet-400' : 'bg-violet-500')} style={{ animationDelay: '400ms' }} />
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const Icon = step.icon
 

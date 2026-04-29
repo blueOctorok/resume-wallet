@@ -1,18 +1,24 @@
 'use client'
 
-import { IdCard, Award } from 'lucide-react'
+import { IdCard } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { CdlData, CareerCardMode } from '@/types/career-card'
+import { isCareerCardOwnerMode } from '@/types/career-card'
+import SectionNeedsSetup from './SectionNeedsSetup'
 
 interface CdlSectionProps {
   data: CdlData
   mode: CareerCardMode
   isDark: boolean
+  onAction?: () => void
 }
 
-export default function CdlSection({ data, isDark }: CdlSectionProps) {
+export default function CdlSection({ data, mode, isDark, onAction }: CdlSectionProps) {
   const hasData = data.cdlClass || data.cdlState || (data.endorsements.length > 0)
-  if (!hasData) return null
+  if (!hasData) {
+    if (!isCareerCardOwnerMode(mode)) return null
+    return <SectionNeedsSetup icon={IdCard} label='CDL Credentials' isDark={isDark} onAction={onAction} />
+  }
 
   return (
     <div className={cn(

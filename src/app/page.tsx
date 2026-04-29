@@ -105,12 +105,18 @@ const HomeContent = () => {
   // (Indeed-style lazy auth). Local useState is appropriate here — this is a
   // transient routing toggle, not data anyone else needs to read.
   const [showGuidedMode, setShowGuidedMode] = useState(false)
-  const enterGuidedMode = useCallback(() => setShowGuidedMode(true), [])
-  // When a wallet connects we drop back to the normal authenticated flow
-  // (CandidateShell / DriverShell / etc.) so the guest flag never strands us.
+  const enterGuidedMode = useCallback(() => {
+    setShowGuidedMode(true)
+    // Reset currentPage so a later setCurrentPage('signin') from
+    // SimpleCardPanel's "Connect a wallet" button actually triggers
+    // a state change (and thus the exit-guided-mode effect).
+    setCurrentPage(null)
+  }, [setCurrentPage])
+  // When a wallet connects — or the user navigates to sign-in — we drop back
+  // to the normal auth / landing flow so the guest flag never strands us.
   useEffect(() => {
-    if (user) setShowGuidedMode(false)
-  }, [user])
+    if (user || currentPage === 'signin') setShowGuidedMode(false)
+  }, [user, currentPage])
 
   const {
     showProfileSetup,
@@ -372,8 +378,9 @@ const HomeContent = () => {
             const validPages: PageType[] = ['signin', 'resume', 'dotapp', 'applications', 'mvr', 'stormchain']
             const mapped = page === 'home' || page === 'hub' ? null : page as PageType
             if (page === 'home' || page === 'hub' || validPages.includes(page as PageType)) {
-              // Going home explicitly should also exit guest Guided Mode.
-              if (page === 'home') setShowGuidedMode(false)
+              // Exit guest Guided Mode when going home or to sign-in so the
+              // normal auth / landing flow renders instead of SimpleModeShell.
+              if (page === 'home' || page === 'signin') setShowGuidedMode(false)
               setCurrentPage(mapped)
             }
           }}

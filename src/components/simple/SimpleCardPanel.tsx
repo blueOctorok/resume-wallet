@@ -136,7 +136,11 @@ function GuestStormiHint({
 export default function SimpleCardPanel() {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
+  const user = useAuthStore((s) => s.user)
   const walletAddress = useAuthStore((s) => s.walletAddress)
+  // sessionStorage may hold a stale walletAddress after the Alchemy session
+  // expires. Guard against it: treat as guest if there's no live user object.
+  const isGuest = !user || !walletAddress
   const setCurrentPage = useUIStore((s) => s.setCurrentPage)
   const updateAvatarUrl = useHubBlocksStore((s) => s.updateAvatarUrl)
   const reorderBlocks = useHubBlocksStore((s) => s.reorderBlocks)
@@ -290,6 +294,13 @@ export default function SimpleCardPanel() {
     })
   }, [snap, installedBlockTypes, card, externalReqs])
 
+  const incompleteBlocks = useMemo(() => {
+    if (!card) return []
+    return card.sections
+      .filter((s) => s.needsSetup)
+      .map((s) => ({ blockType: s.blockType, label: s.label }))
+  }, [card])
+
   const lensPick = useMemo(() => {
     if (!snap || lenses.length <= 1) return null
     return pickBestLens({
@@ -358,7 +369,7 @@ export default function SimpleCardPanel() {
   // both are read-only teasers. No fit logic, no lens auto-pick, no API calls —
   // those are gated above by `walletAddress` checks. The "Connect a wallet" CTA
   // jumps straight to the sign-in page so the user can come back and start building.
-  if (!walletAddress) {
+  if (isGuest) {
     return (
       <div className='flex h-full min-h-0 flex-col gap-2 overflow-y-auto scrollbar-none'>
         <GuestStormiHint snap={snap} isDark={isDark} />
@@ -432,6 +443,8 @@ export default function SimpleCardPanel() {
         reorderSuggestion={reorderSuggestion}
         onApplyReorder={handleApplyReorder}
         onDismissReorder={() => setReorderDismissed(true)}
+        incompleteBlocks={incompleteBlocks}
+        isCardLoading={loading && !card}
       />
 
       {/* Career card — rendered directly, the card IS the container */}

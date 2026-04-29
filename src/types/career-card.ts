@@ -129,6 +129,8 @@ export interface CareerCardSection<T extends SectionBlockType = SectionBlockType
   hubBlockId?: string
   /** Career card flip page (1-based). From `hub_blocks.config.cardPage`, default 1. */
   cardPage?: number
+  /** True when the block is installed but has no real data yet (using EMPTY_SECTION_DATA fallback). */
+  needsSetup?: boolean
 }
 
 /** One row in the career card “on-chain credentials” trust strip */

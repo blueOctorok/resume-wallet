@@ -3,15 +3,21 @@
 import { FolderGit2, ExternalLink, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ProjectsData, CareerCardMode } from '@/types/career-card'
+import { isCareerCardOwnerMode } from '@/types/career-card'
+import SectionNeedsSetup from './SectionNeedsSetup'
 
 interface ProjectsSectionProps {
   data: ProjectsData
   mode: CareerCardMode
   isDark: boolean
+  onAction?: () => void
 }
 
-export default function ProjectsSection({ data, isDark }: ProjectsSectionProps) {
-  if (!data.projects.length) return null
+export default function ProjectsSection({ data, mode, isDark, onAction }: ProjectsSectionProps) {
+  if (!data.projects.length) {
+    if (!isCareerCardOwnerMode(mode)) return null
+    return <SectionNeedsSetup icon={FolderGit2} label='Projects' isDark={isDark} onAction={onAction} />
+  }
 
   return (
     <div className={cn(

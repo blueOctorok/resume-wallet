@@ -4,6 +4,8 @@ import dynamic from 'next/dynamic'
 import { Github, ExternalLink, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { GitHubData, CareerCardMode } from '@/types/career-card'
+import { isCareerCardOwnerMode } from '@/types/career-card'
+import SectionNeedsSetup from './SectionNeedsSetup'
 
 const GitHubContributionGraph = dynamic(
   () => import('@/components/GitHubContributionGraph'),
@@ -16,10 +18,14 @@ interface GitHubSectionProps {
   isDark: boolean
   shareToken?: string | null
   walletAddress?: string
+  onAction?: () => void
 }
 
-export default function GitHubSection({ data, isDark, shareToken, walletAddress }: GitHubSectionProps) {
-  if (!data.username) return null
+export default function GitHubSection({ data, mode, isDark, shareToken, walletAddress, onAction }: GitHubSectionProps) {
+  if (!data.username) {
+    if (!isCareerCardOwnerMode(mode)) return null
+    return <SectionNeedsSetup icon={Github} label='GitHub Activity' isDark={isDark} onAction={onAction} />
+  }
 
   const languageEntries = Object.entries(data.languages)
     .sort(([, a], [, b]) => b - a)

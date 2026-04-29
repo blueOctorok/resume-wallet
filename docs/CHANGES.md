@@ -25,6 +25,42 @@ Same feature, second pass after the first version proved confusing on mobile and
 ### Files touched (v2)
 `CareerCardDynamicSections.tsx` (rewritten), `ProjectedCareerCard.tsx` (new `selfHeaderActionsBelow` slot), `HubWorkspaceCareerCard.tsx` (apply CTA)
 
+### Iteration v3 — Real pagination in all modes + empty block fallback
+
+- **All modes paginate identically:** Construct, Apply, self, employer, public — when `cardPage` values span more than one page, only the active page is rendered at a time with dot navigation + flip + swipe. Construct previously showed all pages in one scroll with a text divider; now it shows one page at a time with DnD operating within the visible page only.
+- **Empty block fallback:** `EMPTY_SECTION_DATA` map in `projected-career-card.ts` provides typed fallback data for every `SectionBlockType`. Before this, installing a block with no data yet (e.g. Projects with no projects in DB) silently dropped it from the career card — now it renders immediately with a "Set up" button in Construct.
+- **Page chip cleanup:** "Move to page N-1" / "Move to page N+1" chips now hidden (not disabled) when they'd be a no-op (already on page 1, or at max page).
+
+### Files touched (v3)
+`CareerCardDynamicSections.tsx` (rewritten again — unified pagination), `projected-career-card.ts` (`EMPTY_SECTION_DATA` + fallback logic)
+
+### Iteration v4 — No DnD; arrow reorder; clearer pager; no merge
+
+- **Removed `@dnd-kit`** (only consumer was the career card). Reorder is two stacked **↑ / ↓** buttons on the left of each non-core block in Construct; they patch hub `position` via existing `reorderBlocks` (same global order rules: `storm-resume` stays first).
+- **Pager:** Replaced tiny dots with **Previous / Next** `Button`s, one **Page N** pill per page (large tap targets), and a **“X of Y”** line. Swipe between pages unchanged.
+- **Removed “Merge page N”** — users move blocks back with **Move {block} to page N−1** only; empty pages disappear when no blocks reference them.
+
+### Iteration v5 — Guest mode auth buttons fix
+
+- **"Sign in" + "Connect a wallet" not working in guest Browse-jobs mode:** Root cause was that `SimpleCardPanel`'s "Connect a wallet" calls `setCurrentPage('signin')` but the `showGuidedMode` flag (local `useState` in `page.tsx`) wasn't being cleared, so `SimpleModeShell` stayed mounted instead of yielding to `DriverShell`'s sign-in view.
+- **Fix 1 — `page.tsx` effect:** Added `currentPage` to the `showGuidedMode` exit effect so navigating to `signin` exits guided mode.
+- **Fix 2 — `page.tsx` `enterGuidedMode`:** Now resets `setCurrentPage(null)` when entering guided mode, preventing a stale `currentPage === 'signin'` from blocking subsequent state changes (Zustand no-ops when setting the same value).
+- **Fix 3 — `page.tsx` `onNavigate('signin')`:** Also calls `setShowGuidedMode(false)` synchronously for the nav "Sign in" button, so the transition is immediate (no effect delay).
+- **`SimpleCardPanel` guest guard (from earlier iteration):** `isGuest = !user || !walletAddress` prevents stale `sessionStorage` wallet addresses from showing a previous user's card.
+
+### Files touched (v5)
+`page.tsx` (guided-mode exit logic), `SimpleCardPanel.tsx` (guest guard — prior iteration)
+
+### Iteration v6 — Incomplete blocks visible + Stormi guardrail + thinking indicator
+
+- **Empty blocks now visible in Apply mode:** Section components (`GitHubSection`, `ProjectsSection`, `CdlSection`) previously returned `null` when data was empty, making installed-but-unstarted blocks invisible in Apply mode. They now show an amber-tinted "Not started yet" placeholder with a "Set up" button in owner modes (`self` + `construct`). Shared via new `SectionNeedsSetup` component. `PortfolioSection` already had this pattern.
+- **`needsSetup` flag on `CareerCardSection`:** `buildProjectedCareerCard` now marks sections that used the `EMPTY_SECTION_DATA` fallback with `needsSetup: true`. This travels through the API to the client so Stormi can detect which blocks need attention without re-checking data shapes.
+- **Stormi flags incomplete blocks:** `StormiNextStepCard` accepts `incompleteBlocks` prop (derived from `card.sections.filter(s => s.needsSetup)`). When present, Stormi's top-priority step becomes a "Heads up — {block} needs your attention" warning with a CTA to set up the first incomplete block. This fires before "apply now" or any other step, protecting the user from submitting a card with empty blocks.
+- **Stormi "thinking" indicator:** New `isCardLoading` prop on `StormiNextStepCard`. When true (card data is fetching) and a job is selected, Stormi renders a pulsing "Analyzing your card…" state with animated dots instead of a stale or empty card. Provides immediate visual feedback when entering Apply mode.
+
+### Files touched (v6)
+`CareerCardSection` type (`career-card.ts`), `projected-career-card.ts` (`needsSetup` flag), `SectionNeedsSetup.tsx` (new), `GitHubSection.tsx`, `ProjectsSection.tsx`, `CdlSection.tsx` (empty-state placeholders), `ProjectedCareerCard.tsx` (pass `onAction` to all sections), `StormiNextStepCard.tsx` (incomplete blocks + thinking), `SimpleCardPanel.tsx` (wire `incompleteBlocks` + `isCardLoading`)
+
 ---
 
 ## **Construct UX polish — tab bar, block removal, add button** (April 2026)

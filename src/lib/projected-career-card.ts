@@ -30,6 +30,26 @@ export const EMPTY_STORM_RESUME_CARD: ResumeData = {
   createdAt: new Date(0).toISOString(),
 }
 
+/**
+ * Fallback data for installed blocks that have no user data yet.
+ * Without this, blocks the user just added would silently disappear from the
+ * career card because `fetchSectionData` returns null → the section loop
+ * skips them. The empty placeholder ensures the block still renders
+ * (particularly in Construct with a "Set up" button).
+ */
+const EMPTY_SECTION_DATA: Record<string, unknown> = {
+  'storm-resume': EMPTY_STORM_RESUME_CARD,
+  'driver-resume': EMPTY_STORM_RESUME_CARD,
+  'developer-resume': EMPTY_STORM_RESUME_CARD,
+  'general-resume': EMPTY_STORM_RESUME_CARD,
+  'driver-dot-application': { id: '', status: 'empty', isComplete: false, createdAt: '' } satisfies DotAppData,
+  'driver-mvr': { orderId: '', orderStatus: 'none', licenseState: '', orderedAt: '', completedAt: null, results: null } satisfies MvrData,
+  'driver-cdl-credentials': { cdlNumber: null, cdlState: null, cdlClass: null, cdlExpiration: null, endorsements: [], restrictions: [] } satisfies CdlData,
+  'developer-portfolio': { portfolioUrl: null } satisfies PortfolioData,
+  'developer-github': { username: null, avatarUrl: null, bio: null, publicRepos: 0, followers: 0, languages: {}, topRepos: [] } satisfies GitHubData,
+  'developer-projects': { projects: [] } satisfies ProjectsData,
+}
+
 function computeCareerCardSignals(
   sections: CareerCardSection[],
   employerConfirmedEmploymentCount: number,
@@ -203,10 +223,12 @@ export async function buildProjectedCareerCard(
     if (!def || !def.appearsOnCareerCard) continue
 
     let sectionData = await fetchSectionData(supabase, userId, blockType as SectionBlockType, avatarUrl)
-    if (blockType === 'storm-resume' && !sectionData) {
-      sectionData = EMPTY_STORM_RESUME_CARD
-    } else if (!sectionData) {
-      continue
+    let needsSetup = false
+    if (!sectionData) {
+      const fallback = EMPTY_SECTION_DATA[blockType]
+      if (!fallback) continue
+      sectionData = fallback as typeof sectionData
+      needsSetup = true
     }
 
     let cardPage = readCardPage(row.config ?? undefined)
@@ -221,6 +243,7 @@ export async function buildProjectedCareerCard(
       data: sectionData,
       hubBlockId: row.id,
       cardPage,
+      needsSetup,
     })
   }
 

@@ -785,13 +785,13 @@ function SectionRenderer({
         />
       )
     case 'driver-cdl-credentials':
-      return <CdlSection data={section.data as CdlData} mode={mode} isDark={isDark} />
+      return <CdlSection data={section.data as CdlData} mode={mode} isDark={isDark} onAction={onAction} />
     case 'developer-portfolio':
       return <PortfolioSection data={section.data as PortfolioData} mode={mode} isDark={isDark} onAction={onAction} />
     case 'developer-github':
-      return <GitHubSection data={section.data as GitHubData} mode={mode} isDark={isDark} shareToken={shareToken} walletAddress={walletAddress} />
+      return <GitHubSection data={section.data as GitHubData} mode={mode} isDark={isDark} shareToken={shareToken} walletAddress={walletAddress} onAction={onAction} />
     case 'developer-projects':
-      return <ProjectsSection data={section.data as ProjectsData} mode={mode} isDark={isDark} />
+      return <ProjectsSection data={section.data as ProjectsData} mode={mode} isDark={isDark} onAction={onAction} />
     default:
       return null
   }
